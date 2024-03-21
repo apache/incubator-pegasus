@@ -17,9 +17,6 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <iostream>
@@ -29,6 +26,7 @@
 
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "include/pegasus/error.h"
 #include "replica_admin_types.h"
@@ -36,6 +34,7 @@
 #include "test/function_test/utils/test_util.h"
 #include "test/function_test/utils/utils.h"
 #include "utils/error_code.h"
+#include "utils/test_macros.h"
 #include "utils/utils.h"
 
 using namespace ::dsn;
@@ -64,7 +63,7 @@ protected:
         TRICKY_CODE_TO_AVOID_LINK_ERROR;
         test_util::SetUp();
 
-        ASSERT_NO_FATAL_FAILURE(run_cmd_from_project_root(
+        NO_FATALS(run_cmd_from_project_root(
             "curl 'localhost:34101/updateConfig?enable_detect_hotkey=true'"));
     }
 
@@ -98,9 +97,10 @@ protected:
         bool find_hotkey = false;
         dsn::replication::detect_hotkey_response resp;
         for (int partition_index = 0; partition_index < partitions_.size(); partition_index++) {
-            req.pid = dsn::gpid(app_id_, partition_index);
-            ASSERT_EQ(dsn::ERR_OK,
-                      ddl_client_->detect_hotkey(partitions_[partition_index].primary, req, resp));
+            req.pid = dsn::gpid(table_id_, partition_index);
+            ASSERT_EQ(
+                dsn::ERR_OK,
+                ddl_client_->detect_hotkey(partitions_[partition_index].hp_primary, req, resp));
             if (!resp.hotkey_result.empty()) {
                 find_hotkey = true;
                 break;
@@ -119,16 +119,18 @@ protected:
 
         req.action = dsn::replication::detect_action::STOP;
         for (int partition_index = 0; partition_index < partitions_.size(); partition_index++) {
-            ASSERT_EQ(dsn::ERR_OK,
-                      ddl_client_->detect_hotkey(partitions_[partition_index].primary, req, resp));
+            ASSERT_EQ(
+                dsn::ERR_OK,
+                ddl_client_->detect_hotkey(partitions_[partition_index].hp_primary, req, resp));
             ASSERT_EQ(dsn::ERR_OK, resp.err);
         }
 
         req.action = dsn::replication::detect_action::QUERY;
         for (int partition_index = 0; partition_index < partitions_.size(); partition_index++) {
-            req.pid = dsn::gpid(app_id_, partition_index);
-            ASSERT_EQ(dsn::ERR_OK,
-                      ddl_client_->detect_hotkey(partitions_[partition_index].primary, req, resp));
+            req.pid = dsn::gpid(table_id_, partition_index);
+            ASSERT_EQ(
+                dsn::ERR_OK,
+                ddl_client_->detect_hotkey(partitions_[partition_index].hp_primary, req, resp));
             ASSERT_EQ("Can't get hotkey now, now state: hotkey_collector_state::STOPPED",
                       resp.err_hint);
         }
@@ -136,18 +138,18 @@ protected:
 
     void write_hotspot_data()
     {
-        ASSERT_NO_FATAL_FAILURE(
+        NO_FATALS(
             generate_dataset(warmup_second, detection_type::write_data, key_type::random_dataset));
-        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+        NO_FATALS(generate_dataset(
             max_detection_second, detection_type::write_data, key_type::hotspot_dataset));
-        ASSERT_NO_FATAL_FAILURE(get_result(detection_type::write_data, key_type::hotspot_dataset));
+        NO_FATALS(get_result(detection_type::write_data, key_type::hotspot_dataset));
     }
 
     void write_random_data()
     {
-        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+        NO_FATALS(generate_dataset(
             max_detection_second, detection_type::write_data, key_type::random_dataset));
-        ASSERT_NO_FATAL_FAILURE(get_result(detection_type::write_data, key_type::random_dataset));
+        NO_FATALS(get_result(detection_type::write_data, key_type::random_dataset));
     }
 
     void capture_until_maxtime()
@@ -156,63 +158,63 @@ protected:
         dsn::replication::detect_hotkey_request req;
         req.type = dsn::replication::hotkey_type::type::WRITE;
         req.action = dsn::replication::detect_action::START;
-        req.pid = dsn::gpid(app_id_, target_partition);
+        req.pid = dsn::gpid(table_id_, target_partition);
 
         dsn::replication::detect_hotkey_response resp;
         ASSERT_EQ(dsn::ERR_OK,
-                  ddl_client_->detect_hotkey(partitions_[target_partition].primary, req, resp));
+                  ddl_client_->detect_hotkey(partitions_[target_partition].hp_primary, req, resp));
         ASSERT_EQ(dsn::ERR_OK, resp.err);
 
         req.action = dsn::replication::detect_action::QUERY;
         ASSERT_EQ(dsn::ERR_OK,
-                  ddl_client_->detect_hotkey(partitions_[target_partition].primary, req, resp));
+                  ddl_client_->detect_hotkey(partitions_[target_partition].hp_primary, req, resp));
         ASSERT_EQ("Can't get hotkey now, now state: hotkey_collector_state::COARSE_DETECTING",
                   resp.err_hint);
 
         // max_detection_second > max_seconds_to_detect_hotkey
         int max_seconds_to_detect_hotkey = 160;
-        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+        NO_FATALS(generate_dataset(
             max_seconds_to_detect_hotkey, detection_type::write_data, key_type::random_dataset));
 
         req.action = dsn::replication::detect_action::QUERY;
         ASSERT_EQ(dsn::ERR_OK,
-                  ddl_client_->detect_hotkey(partitions_[target_partition].primary, req, resp));
+                  ddl_client_->detect_hotkey(partitions_[target_partition].hp_primary, req, resp));
         ASSERT_EQ("Can't get hotkey now, now state: hotkey_collector_state::STOPPED",
                   resp.err_hint);
     }
 
     void read_hotspot_data()
     {
-        ASSERT_NO_FATAL_FAILURE(
+        NO_FATALS(
             generate_dataset(warmup_second, detection_type::read_data, key_type::hotspot_dataset));
-        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+        NO_FATALS(generate_dataset(
             max_detection_second, detection_type::read_data, key_type::hotspot_dataset));
-        ASSERT_NO_FATAL_FAILURE(get_result(detection_type::read_data, key_type::hotspot_dataset));
+        NO_FATALS(get_result(detection_type::read_data, key_type::hotspot_dataset));
     }
 
     void read_random_data()
     {
-        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+        NO_FATALS(generate_dataset(
             max_detection_second, detection_type::read_data, key_type::random_dataset));
-        ASSERT_NO_FATAL_FAILURE(get_result(detection_type::read_data, key_type::random_dataset));
+        NO_FATALS(get_result(detection_type::read_data, key_type::random_dataset));
     }
 };
 
 TEST_F(detect_hotspot_test, write_hotspot_data_test)
 {
     std::cout << "start testing write hotspot data..." << std::endl;
-    ASSERT_NO_FATAL_FAILURE(write_hotspot_data());
+    NO_FATALS(write_hotspot_data());
     std::cout << "write hotspot data passed....." << std::endl;
     std::cout << "start testing write random data..." << std::endl;
-    ASSERT_NO_FATAL_FAILURE(write_random_data());
+    NO_FATALS(write_random_data());
     std::cout << "write random data passed....." << std::endl;
     std::cout << "start testing max detection time..." << std::endl;
-    ASSERT_NO_FATAL_FAILURE(capture_until_maxtime());
+    NO_FATALS(capture_until_maxtime());
     std::cout << "max detection time passed....." << std::endl;
     std::cout << "start testing read hotspot data..." << std::endl;
-    ASSERT_NO_FATAL_FAILURE(read_hotspot_data());
+    NO_FATALS(read_hotspot_data());
     std::cout << "read hotspot data passed....." << std::endl;
     std::cout << "start testing read random data..." << std::endl;
-    ASSERT_NO_FATAL_FAILURE(read_random_data());
+    NO_FATALS(read_random_data());
     std::cout << "read random data passed....." << std::endl;
 }

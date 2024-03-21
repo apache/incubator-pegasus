@@ -24,17 +24,8 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     the meta server's options, impl file
- *
- * Revision history:
- *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #include "meta_options.h"
 
-#include <stddef.h>
 #include <map>
 #include <utility>
 
@@ -43,37 +34,27 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace replication {
 // TODO(yingchun): add more description for string configs, and add validators
 DSN_DEFINE_string(meta_server,
                   meta_state_service_parameters,
                   "",
-                  "meta_state_service provider parameters");
+                  "Initialization parameters for metadata storage services");
 DSN_DEFINE_string(meta_server,
                   meta_function_level_on_start,
                   "steady",
-                  "meta function level on start");
+                  "The default function_level state when MetaServer starts. "
+                  "The 'steady' represents a stable state without load balancing");
 DSN_DEFINE_string(meta_server,
                   distributed_lock_service_parameters,
                   "",
-                  "distributed_lock_service provider parameters");
+                  "Initialization parameters for distributed lock services");
 DSN_DEFINE_string(meta_server,
                   replica_white_list,
                   "",
                   "white list of replica-servers in meta-server");
 
-std::string meta_options::concat_path_unix_style(const std::string &prefix,
-                                                 const std::string &postfix)
-{
-    size_t pos1 = prefix.size(); // last_valid_pos + 1
-    while (pos1 > 0 && prefix[pos1 - 1] == '/')
-        pos1--;
-    size_t pos2 = 0; // first non '/' position
-    while (pos2 < postfix.size() && postfix[pos2] == '/')
-        pos2++;
-    return prefix.substr(0, pos1) + "/" + postfix.substr(pos2);
-}
+namespace dsn {
+namespace replication {
 
 void meta_options::initialize()
 {

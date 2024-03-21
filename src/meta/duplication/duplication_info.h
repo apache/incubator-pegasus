@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <algorithm>
 #include <cstdint>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
@@ -30,10 +31,11 @@
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -56,7 +58,7 @@ public:
                      int32_t partition_count,
                      uint64_t create_now_ms,
                      std::string follower_cluster_name,
-                     std::vector<rpc_address> &&follower_cluster_metas,
+                     std::vector<host_port> &&follower_cluster_metas,
                      std::string meta_store_path)
         : id(dupid),
           app_id(appid),
@@ -186,12 +188,17 @@ public:
     // Test util
     bool equals_to(const duplication_info &rhs) const { return to_string() == rhs.to_string(); }
 
-    // To json encoded string.
-    std::string to_string() const;
+    friend std::ostream &operator<<(std::ostream &os, const duplication_info &di)
+    {
+        return os << di.to_string();
+    }
 
     const char *log_prefix() const { return prefix_for_log.c_str(); }
 
 private:
+    // To json encoded string.
+    std::string to_string() const;
+
     friend class duplication_info_test;
     friend class meta_duplication_service_test;
 
@@ -240,7 +247,7 @@ public:
     const int32_t partition_count{0};
 
     const std::string follower_cluster_name;
-    const std::vector<rpc_address> follower_cluster_metas;
+    const std::vector<host_port> follower_cluster_metas;
     const std::string store_path; // store path on meta service = get_duplication_path(app, dupid)
     const uint64_t create_timestamp_ms{0}; // the time when this dup is created.
     const std::string prefix_for_log;
@@ -256,3 +263,5 @@ extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::
 
 } // namespace replication
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::duplication_info);

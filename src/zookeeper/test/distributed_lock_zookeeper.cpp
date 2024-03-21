@@ -24,12 +24,8 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdlib.h>
 #include <time.h>
-#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <string>
@@ -37,6 +33,7 @@
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "runtime/service_app.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"

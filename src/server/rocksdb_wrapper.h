@@ -29,16 +29,13 @@
 
 #include "pegasus_value_schema.h"
 #include "replica/replica_base.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
+#include "utils/metrics.h"
 
 namespace rocksdb {
 class ColumnFamilyHandle;
 class DB;
 } // namespace rocksdb
-
-namespace dsn {
-class perf_counter_wrapper;
-} // namespace dsn
 
 namespace pegasus {
 
@@ -57,18 +54,18 @@ public:
     /// is returned.
     /// \result ctx.expired=true if record expired. Still rocksdb::Status::kOk is returned.
     /// \result ctx.found=false if record is not found. Still rocksdb::Status::kOk is returned.
-    int get(dsn::string_view raw_key, /*out*/ db_get_context *ctx);
+    int get(absl::string_view raw_key, /*out*/ db_get_context *ctx);
 
     int write_batch_put(int64_t decree,
-                        dsn::string_view raw_key,
-                        dsn::string_view value,
+                        absl::string_view raw_key,
+                        absl::string_view value,
                         uint32_t expire_sec);
     int write_batch_put_ctx(const db_write_context &ctx,
-                            dsn::string_view raw_key,
-                            dsn::string_view value,
+                            absl::string_view raw_key,
+                            absl::string_view value,
                             uint32_t expire_sec);
     int write(int64_t decree);
-    int write_batch_delete(int64_t decree, dsn::string_view raw_key);
+    int write_batch_delete(int64_t decree, absl::string_view raw_key);
     void clear_up_write_batch();
     int ingest_files(int64_t decree,
                      const std::vector<std::string> &sst_file_list,
@@ -87,7 +84,7 @@ private:
     rocksdb::ColumnFamilyHandle *_meta_cf;
 
     const uint32_t _pegasus_data_version;
-    dsn::perf_counter_wrapper &_pfc_recent_expire_count;
+    METRIC_VAR_DECLARE_counter(read_expired_values);
     volatile uint32_t _default_ttl;
 
     friend class rocksdb_wrapper_test;

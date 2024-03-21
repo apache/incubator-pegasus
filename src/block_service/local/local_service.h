@@ -39,8 +39,10 @@ struct file_metadata
 {
     int64_t size = 0;
     std::string md5;
+
+    file_metadata(int64_t s = 0, const std::string &m = "") : size(s), md5(m) {}
 };
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(file_metadata, size, md5)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(file_metadata, size, md5);
 
 class local_service : public block_filesystem
 {
@@ -102,7 +104,6 @@ public:
                                    dsn::task_tracker *tracker = nullptr) override;
 
     error_code load_metadata();
-    error_code store_metadata();
 
 private:
     std::string compute_md5();

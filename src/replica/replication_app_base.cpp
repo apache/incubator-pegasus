@@ -25,14 +25,14 @@
  */
 
 #include <alloca.h>
+#include <fmt/core.h>
 #include <rocksdb/env.h>
-#include <rocksdb/slice.h>
 #include <rocksdb/status.h>
-#include <fstream>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "common/bulk_load_common.h"
 #include "common/duplication_common.h"
 #include "common/replica_envs.h"
@@ -43,110 +43,42 @@
 #include "mutation.h"
 #include "replica.h"
 #include "replica/replication_app_base.h"
-#include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
+#include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
-#include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/factory_store.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
-#include "utils/string_view.h"
+#include "utils/load_dump_object.h"
+
+METRIC_DEFINE_counter(replica,
+                      committed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of committed requests");
 
 namespace dsn {
 
 namespace replication {
 
+const std::string replica_app_info::kAppInfo = ".app-info";
 const std::string replica_init_info::kInitInfo = ".init-info";
+const std::string kms_info::kKmsInfo = ".kms-info";
 
-namespace {
-error_code write_blob_to_file(const std::string &fname, const blob &data)
+std::string replica_init_info::to_string() const
 {
-    // TODO(yingchun): consider not encrypt the meta files.
-    std::string tmp_fname = fname + ".tmp";
-    auto cleanup = defer([tmp_fname]() { utils::filesystem::remove_path(tmp_fname); });
-    auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                   rocksdb::Slice(data.data(), data.length()),
-                                   tmp_fname,
-                                   /* should_sync */ true);
-    LOG_AND_RETURN_NOT_TRUE(
-        ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "write file {} failed", tmp_fname);
-    LOG_AND_RETURN_NOT_TRUE(ERROR,
-                            utils::filesystem::rename_path(tmp_fname, fname),
-                            ERR_FILE_OPERATION_FAILED,
-                            "move file from {} to {} failed",
-                            tmp_fname,
-                            fname);
-    return ERR_OK;
-}
-} // namespace
-
-error_code replica_init_info::load(const std::string &dir)
-{
-    std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
-    LOG_AND_RETURN_NOT_TRUE(ERROR,
-                            utils::filesystem::path_exists(info_path),
-                            ERR_PATH_NOT_FOUND,
-                            "file({}) not exist",
-                            info_path);
-    LOG_AND_RETURN_NOT_OK(
-        ERROR, load_json(info_path), "load replica_init_info from {} failed", info_path);
-    LOG_INFO("load replica_init_info from {} succeed: {}", info_path, to_string());
-    return ERR_OK;
-}
-
-error_code replica_init_info::store(const std::string &dir)
-{
-    uint64_t start = dsn_now_ns();
-    std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
-    LOG_AND_RETURN_NOT_OK(ERROR,
-                          store_json(info_path),
-                          "store replica_init_info to {} failed, time_used_ns = {}",
-                          info_path,
-                          dsn_now_ns() - start);
-    LOG_INFO("store replica_init_info to {} succeed, time_used_ns = {}: {}",
-             info_path,
-             dsn_now_ns() - start,
-             to_string());
-    return ERR_OK;
-}
-
-error_code replica_init_info::load_json(const std::string &fname)
-{
-    std::string data;
-    auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fname, &data);
-    LOG_AND_RETURN_NOT_TRUE(ERROR, s.ok(), ERR_FILE_OPERATION_FAILED, "read file {} failed", fname);
-    LOG_AND_RETURN_NOT_TRUE(ERROR,
-                            json::json_forwarder<replica_init_info>::decode(
-                                blob::create_from_bytes(std::move(data)), *this),
-                            ERR_FILE_OPERATION_FAILED,
-                            "decode json from file {} failed",
-                            fname);
-    return ERR_OK;
-}
-
-error_code replica_init_info::store_json(const std::string &fname)
-{
-    return write_blob_to_file(fname, json::json_forwarder<replica_init_info>::encode(*this));
-}
-
-std::string replica_init_info::to_string()
-{
-    // TODO(yingchun): use fmt instead
-    std::ostringstream oss;
-    oss << "init_ballot = " << init_ballot << ", init_durable_decree = " << init_durable_decree
-        << ", init_offset_in_shared_log = " << init_offset_in_shared_log
-        << ", init_offset_in_private_log = " << init_offset_in_private_log;
-    return oss.str();
+    return fmt::format(
+        "init_ballot = {}, init_durable_decree = {}, init_offset_in_private_log = {}",
+        init_ballot,
+        init_durable_decree,
+        init_offset_in_private_log);
 }
 
 error_code replica_app_info::load(const std::string &fname)
@@ -184,8 +116,12 @@ error_code replica_app_info::store(const std::string &fname)
         marshall(writer, tmp, DSF_THRIFT_JSON);
     }
 
-    return write_blob_to_file(fname, writer.get_buffer());
+    return dsn::utils::write_data_to_file(
+        fname, writer.get_buffer(), dsn::utils::FileDataType::kSensitive);
 }
+
+const std::string replication_app_base::kDataDir = "data";
+const std::string replication_app_base::kRdbDir = "rdb";
 
 /*static*/
 void replication_app_base::register_storage_engine(const std::string &name, factory f)
@@ -200,9 +136,10 @@ replication_app_base *replication_app_base::new_storage_instance(const std::stri
     return utils::factory_store<replication_app_base>::create(name.c_str(), PROVIDER_TYPE_MAIN, r);
 }
 
-replication_app_base::replication_app_base(replica *replica) : replica_base(replica)
+replication_app_base::replication_app_base(replica *replica)
+    : replica_base(replica), METRIC_VAR_INIT_replica(committed_requests)
 {
-    _dir_data = utils::filesystem::path_combine(replica->dir(), "data");
+    _dir_data = utils::filesystem::path_combine(replica->dir(), kDataDir);
     _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
     _dir_backup = utils::filesystem::path_combine(replica->dir(), "backup");
     _dir_bulk_load = utils::filesystem::path_combine(replica->dir(),
@@ -242,7 +179,8 @@ error_code replication_app_base::open_internal(replica *r)
 
     _last_committed_decree = last_durable_decree();
 
-    auto err = _info.load(r->dir());
+    auto err = dsn::utils::load_rjobj_from_file(
+        utils::filesystem::path_combine(r->dir(), replica_init_info::kInitInfo), &_info);
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, err, "load replica_init_info failed");
 
     LOG_AND_RETURN_NOT_TRUE(ERROR_PREFIX,
@@ -256,9 +194,7 @@ error_code replication_app_base::open_internal(replica *r)
     return ERR_OK;
 }
 
-error_code replication_app_base::open_new_internal(replica *r,
-                                                   int64_t shared_log_start,
-                                                   int64_t private_log_start)
+error_code replication_app_base::open_new_internal(replica *r, int64_t private_log_start)
 {
     CHECK(utils::filesystem::remove_path(_dir_data), "remove data dir {} failed", _dir_data);
     CHECK(utils::filesystem::create_directory(_dir_data), "create data dir {} failed", _dir_data);
@@ -270,9 +206,8 @@ error_code replication_app_base::open_new_internal(replica *r,
 
     LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, open(), "open replica app failed");
     _last_committed_decree = last_durable_decree();
-    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
-                          update_init_info(_replica, shared_log_start, private_log_start, 0),
-                          "open replica app failed");
+    LOG_AND_RETURN_NOT_OK(
+        ERROR_PREFIX, update_init_info(_replica, private_log_start, 0), "open replica app failed");
     return ERR_OK;
 }
 
@@ -345,7 +280,8 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
 
 error_code replication_app_base::apply_mutation(const mutation *mu)
 {
-    FAIL_POINT_INJECT_F("replication_app_base_apply_mutation", [](string_view) { return ERR_OK; });
+    FAIL_POINT_INJECT_F("replication_app_base_apply_mutation",
+                        [](absl::string_view) { return ERR_OK; });
 
     CHECK_EQ_PREFIX(mu->data.header.decree, last_committed_decree() + 1);
     CHECK_EQ_PREFIX(mu->data.updates.size(), mu->client_requests.size());
@@ -441,13 +377,12 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
             "mutation {} committed on {}, batched_count = {}", mu->name(), str, batched_count);
     }
 
-    _replica->update_commit_qps(batched_count);
+    METRIC_VAR_INCREMENT_BY(committed_requests, batched_count);
 
     return ERR_OK;
 }
 
 error_code replication_app_base::update_init_info(replica *r,
-                                                  int64_t shared_log_offset,
                                                   int64_t private_log_offset,
                                                   int64_t durable_decree)
 {
@@ -455,20 +390,20 @@ error_code replication_app_base::update_init_info(replica *r,
     _info.magic = 0xdeadbeef;
     _info.init_ballot = r->get_ballot();
     _info.init_durable_decree = durable_decree;
-    _info.init_offset_in_shared_log = shared_log_offset;
     _info.init_offset_in_private_log = private_log_offset;
 
-    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX, _info.store(r->dir()), "store replica_init_info failed");
+    LOG_AND_RETURN_NOT_OK(
+        ERROR_PREFIX,
+        utils::dump_rjobj_to_file(
+            _info, utils::filesystem::path_combine(r->dir(), replica_init_info::kInitInfo)),
+        "store replica_init_info failed");
 
     return ERR_OK;
 }
 
 error_code replication_app_base::update_init_info_ballot_and_decree(replica *r)
 {
-    return update_init_info(r,
-                            _info.init_offset_in_shared_log,
-                            _info.init_offset_in_private_log,
-                            r->last_durable_decree());
+    return update_init_info(r, _info.init_offset_in_private_log, r->last_durable_decree());
 }
 
 const app_info *replication_app_base::get_app_info() const { return _replica->get_app_info(); }

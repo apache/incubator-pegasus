@@ -24,17 +24,13 @@
  * THE SOFTWARE.
  */
 
-// some useful utility functions provided by rDSN,
-// such as logging, performance counter, checksum,
-// command line interface registration and invocation,
-// etc.
+// Some useful utility functions for logging and mocking provided by rDSN.
 
 #pragma once
 
-#include <stdarg.h>
-
-#include "ports.h"
+#include "utils/enum_helper.h"
 #include "utils/fmt_utils.h"
+#include "utils/ports.h"
 
 /*!
 @defgroup logging Logging Service
@@ -48,7 +44,8 @@
 @{
 */
 
-typedef enum dsn_log_level_t {
+enum log_level_t
+{
     LOG_LEVEL_DEBUG,
     LOG_LEVEL_INFO,
     LOG_LEVEL_WARNING,
@@ -56,39 +53,25 @@ typedef enum dsn_log_level_t {
     LOG_LEVEL_FATAL,
     LOG_LEVEL_COUNT,
     LOG_LEVEL_INVALID
-} dsn_log_level_t;
+};
 
-USER_DEFINED_ENUM_FORMATTER(dsn_log_level_t)
+ENUM_BEGIN(log_level_t, LOG_LEVEL_INVALID)
+ENUM_REG(LOG_LEVEL_DEBUG)
+ENUM_REG(LOG_LEVEL_INFO)
+ENUM_REG(LOG_LEVEL_WARNING)
+ENUM_REG(LOG_LEVEL_ERROR)
+ENUM_REG(LOG_LEVEL_FATAL)
+ENUM_END(log_level_t)
+
+USER_DEFINED_ENUM_FORMATTER(log_level_t)
 
 // logs with level smaller than this start_level will not be logged
-extern dsn_log_level_t dsn_log_start_level;
-extern dsn_log_level_t dsn_log_get_start_level();
-extern void dsn_log_set_start_level(dsn_log_level_t level);
-extern void dsn_logv(const char *file,
-                     const char *function,
-                     const int line,
-                     dsn_log_level_t log_level,
-                     const char *fmt,
-                     va_list args);
-extern void dsn_logf(const char *file,
-                     const char *function,
-                     const int line,
-                     dsn_log_level_t log_level,
-                     const char *fmt,
-                     ...);
-extern void dsn_log(const char *file,
-                    const char *function,
-                    const int line,
-                    dsn_log_level_t log_level,
-                    const char *str);
+extern log_level_t log_start_level;
+extern log_level_t get_log_start_level();
+extern void set_log_start_level(log_level_t level);
+extern void global_log(
+    const char *file, const char *function, const int line, log_level_t log_level, const char *str);
 extern void dsn_coredump();
-
-// __FILENAME__ macro comes from the cmake, in which we calculate a filename without path.
-#define dlog(level, ...)                                                                           \
-    do {                                                                                           \
-        if (level >= dsn_log_start_level)                                                          \
-            dsn_logf(__FILENAME__, __FUNCTION__, __LINE__, level, __VA_ARGS__);                    \
-    } while (false)
 
 #define dreturn_not_ok_logged(err, ...)                                                            \
     do {                                                                                           \
@@ -98,7 +81,7 @@ extern void dsn_coredump();
         }                                                                                          \
     } while (0)
 
-#ifdef DSN_MOCK_TEST
+#ifdef MOCK_TEST
 #define mock_private public
 #define mock_virtual virtual
 #else
@@ -124,7 +107,7 @@ extern void dsn_coredump();
 #define dverify_logged(exp, level, ...)                                                            \
     do {                                                                                           \
         if (dsn_unlikely(!(exp))) {                                                                \
-            dlog(level, __VA_ARGS__);                                                              \
+            LOG(level, __VA_ARGS__);                                                               \
             return false;                                                                          \
         }                                                                                          \
     } while (0)
@@ -135,7 +118,7 @@ extern void dsn_coredump();
 #define dstop_on_false_logged(exp, level, ...)                                                     \
     do {                                                                                           \
         if (dsn_unlikely(!(exp))) {                                                                \
-            dlog(level, __VA_ARGS__);                                                              \
+            LOG(level, __VA_ARGS__);                                                               \
             return;                                                                                \
         }                                                                                          \
     } while (0)

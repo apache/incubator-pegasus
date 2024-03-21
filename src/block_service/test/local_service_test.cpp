@@ -18,26 +18,21 @@
  */
 
 #include <boost/filesystem/operations.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <nlohmann/detail/json_ref.hpp>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <rocksdb/env.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
-#include <initializer_list>
-#include <map>
-#include <stdexcept>
+#include <stdint.h>
 #include <string>
-#include <vector>
 
 #include "block_service/local/local_service.h"
+#include "gtest/gtest.h"
 #include "test_util/test_util.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
+#include "utils/load_dump_object.h"
 
 namespace dsn {
 namespace dist {
@@ -48,25 +43,20 @@ class local_service_test : public pegasus::encrypt_data_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, local_service_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, local_service_test, ::testing::Values(false, true));
 
-TEST_P(local_service_test, store_metadata)
+TEST_P(local_service_test, file_metadata)
 {
-    local_file_object file("a.txt");
-    error_code ec = file.store_metadata();
-    ASSERT_EQ(ERR_OK, ec);
-
-    auto meta_file_path = local_service::get_metafile(file.file_name());
+    const int64_t kSize = 12345;
+    const std::string kMD5 = "0123456789abcdef0123456789abcdef";
+    auto meta_file_path = local_service::get_metafile("a.txt");
+    ASSERT_EQ(ERR_OK, dsn::utils::dump_njobj_to_file(file_metadata(kSize, kMD5), meta_file_path));
     ASSERT_TRUE(boost::filesystem::exists(meta_file_path));
 
-    std::string data;
-    auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), meta_file_path, &data);
-    ASSERT_TRUE(s.ok()) << s.ToString();
-
-    nlohmann::json j = nlohmann::json::parse(data);
-    ASSERT_EQ("", j["md5"]);
-    ASSERT_EQ(0, j["size"]);
+    file_metadata fm;
+    ASSERT_EQ(ERR_OK, dsn::utils::load_njobj_from_file(meta_file_path, &fm));
+    ASSERT_EQ(kSize, fm.size);
+    ASSERT_EQ(kMD5, fm.md5);
 }
 
 TEST_P(local_service_test, load_metadata)
@@ -75,15 +65,8 @@ TEST_P(local_service_test, load_metadata)
     auto meta_file_path = local_service::get_metafile(file.file_name());
 
     {
-        nlohmann::json j({{"md5", "abcde"}, {"size", 5}});
-        std::string data = j.dump();
-        auto s =
-            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                       rocksdb::Slice(data),
-                                       meta_file_path,
-                                       /* should_sync */ true);
-        ASSERT_TRUE(s.ok()) << s.ToString();
-
+        ASSERT_EQ(ERR_OK,
+                  dsn::utils::dump_njobj_to_file(file_metadata(5, "abcde"), meta_file_path));
         ASSERT_EQ(ERR_OK, file.load_metadata());
         ASSERT_EQ("abcde", file.get_md5sum());
         ASSERT_EQ(5, file.get_size());
@@ -98,7 +81,7 @@ TEST_P(local_service_test, load_metadata)
         ASSERT_TRUE(s.ok()) << s.ToString();
 
         local_file_object file2("a.txt");
-        ASSERT_EQ(file2.load_metadata(), ERR_FS_INTERNAL);
+        ASSERT_EQ(ERR_FS_INTERNAL, file2.load_metadata());
     }
 
     {

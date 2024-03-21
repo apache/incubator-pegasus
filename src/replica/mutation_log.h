@@ -26,16 +26,13 @@
 
 #pragma once
 
-#include <fmt/core.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <algorithm>
 #include <atomic>
 #include <functional>
-#include <iosfwd>
 #include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -52,12 +49,10 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 class binary_writer;
-class perf_counter_wrapper;
 
 namespace replication {
 
@@ -190,11 +185,6 @@ public:
     // thread safe
     int64_t on_partition_reset(gpid gpid, decree max_decree);
 
-    // remove entry from _previous_log_max_decrees when a partition is removed.
-    // only used for private log.
-    // thread safe
-    void on_partition_removed(gpid gpid);
-
     // update current max decree
     // thread safe
     void update_max_decree(gpid gpid, decree d);
@@ -224,27 +214,15 @@ public:
                            int64_t reserve_max_size,
                            int64_t reserve_max_time);
 
-    // Garbage collection for shared log.
-    // `prevent_gc_replicas' will store replicas which prevent log files from being deleted
-    // for gc.
-    //
-    // Since slog had been deprecated, no new slog files would be created. Therefore, our
-    // target is to remove all of the existing slog files according to the progressive durable
-    // decree for each replica.
-    //
-    // Thread safe.
-    void garbage_collection(const replica_log_info_map &replica_durable_decrees,
-                            std::set<gpid> &prevent_gc_replicas);
-
     //
     // when this is a private log, log files are learned by remote replicas
     // return true if private log surely covers the learning range
     //
     bool get_learn_state(gpid gpid, decree start, /*out*/ learn_state &state) const;
 
-    // only valid for private log
-    // get parent mutations in memory and private log files during partition split
-    // total_file_size is used for split perf-counter
+    // only valid for private log.
+    // get parent mutations in memory and private log files during partition split.
+    // `total_file_size` is used for the metrics of partition split.
     void get_parent_mutations_and_logs(gpid pid,
                                        decree start_decree,
                                        ballot start_ballot,
@@ -303,58 +281,6 @@ public:
 
     task_tracker *tracker() { return &_tracker; }
 
-    struct reserved_slog_info
-    {
-        size_t file_count = 0;
-        int64_t log_size = 0;
-        int min_file_index = 0;
-        int max_file_index = 0;
-
-        std::string to_string() const
-        {
-            return fmt::format("reserved_slog_info = [file_count = {}, log_size = {}, "
-                               "min_file_index = {}, max_file_index = {}]",
-                               file_count,
-                               log_size,
-                               min_file_index,
-                               max_file_index);
-        }
-
-        friend std::ostream &operator<<(std::ostream &os, const reserved_slog_info &reserved_log)
-        {
-            return os << reserved_log.to_string();
-        }
-    };
-
-    struct slog_deletion_info
-    {
-        int to_delete_file_count = 0;
-        int64_t to_delete_log_size = 0;
-        int deleted_file_count = 0;
-        int64_t deleted_log_size = 0;
-        int deleted_min_file_index = 0;
-        int deleted_max_file_index = 0;
-
-        std::string to_string() const
-        {
-            return fmt::format("slog_deletion_info = [to_delete_file_count = {}, "
-                               "to_delete_log_size = {}, deleted_file_count = {}, "
-                               "deleted_log_size = {}, deleted_min_file_index = {}, "
-                               "deleted_max_file_index = {}]",
-                               to_delete_file_count,
-                               to_delete_log_size,
-                               deleted_file_count,
-                               deleted_log_size,
-                               deleted_min_file_index,
-                               deleted_max_file_index);
-        }
-
-        friend std::ostream &operator<<(std::ostream &os, const slog_deletion_info &log_deletion)
-        {
-            return os << log_deletion.to_string();
-        }
-    };
-
 protected:
     // thread-safe
     // 'size' is data size to write; the '_global_end_offset' will be updated by 'size'.
@@ -400,15 +326,9 @@ private:
     // get total size ithout lock.
     int64_t total_size_no_lock() const;
 
-    // Closing and remove all of slog files whose indexes are less than (i.e. older) or equal to
-    // `max_file_index_to_delete`.
-    void remove_obsolete_slog_files(const int max_file_index_to_delete,
-                                    log_file_map_by_index &files,
-                                    reserved_slog_info &reserved_log,
-                                    slog_deletion_info &log_deletion);
-
 protected:
     std::string _dir;
+    // TODO(yingchun): Check whether they are useful anymore.
     bool _is_private;
     gpid _private_gpid;      // only used for private log
     replica *_owner_replica; // only used for private log
@@ -424,7 +344,6 @@ protected:
 private:
     friend class mutation_log_test;
     friend class mock_mutation_log_private;
-    friend class mock_mutation_log_shared;
 
     ///////////////////////////////////////////////
     //// memory states
@@ -446,9 +365,6 @@ private:
     // - log_info.max_decree: the max decree of mutations up to now
     // - log_info.valid_start_offset: the same with replica_init_info::init_offset
 
-    // replica log info for shared log
-    replica_log_info_map _shared_log_info_map;
-
     // replica log info for private log
     replica_log_info _private_log_info;
     decree
@@ -457,61 +373,6 @@ private:
                                      // the ending of private log should be covered by shared log
 };
 typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
-
-class mutation_log_shared : public mutation_log
-{
-public:
-    mutation_log_shared(const std::string &dir,
-                        int32_t max_log_file_mb,
-                        bool force_flush,
-                        perf_counter_wrapper *write_size_counter = nullptr)
-        : mutation_log(dir, max_log_file_mb, dsn::gpid(), nullptr),
-          _is_writing(false),
-          _force_flush(force_flush),
-          _write_size_counter(write_size_counter)
-    {
-    }
-
-    ~mutation_log_shared() override
-    {
-        close();
-        _tracker.cancel_outstanding_tasks();
-    }
-
-    ::dsn::task_ptr append(mutation_ptr &mu,
-                           dsn::task_code callback_code,
-                           dsn::task_tracker *tracker,
-                           aio_handler &&callback,
-                           int hash = 0,
-                           int64_t *pending_size = nullptr) override;
-
-    void flush() override;
-    void flush_once() override;
-
-private:
-    // async write pending mutations into log file
-    // Preconditions:
-    // - _pending_write != nullptr
-    // - _issued_write.expired() == true (because only one async write is allowed at the same time)
-    // release_lock_required should always be true => this function must release the lock
-    // appropriately for less lock contention
-    void write_pending_mutations(bool release_lock_required);
-
-    void commit_pending_mutations(log_file_ptr &lf, std::shared_ptr<log_appender> &pending);
-
-    // flush at most count times
-    // if count <= 0, means flush until all data is on disk
-    void flush_internal(int max_count);
-
-private:
-    // bufferring - only one concurrent write is allowed
-    mutable zlock _slock;
-    std::atomic_bool _is_writing;
-    std::shared_ptr<log_appender> _pending_write;
-
-    bool _force_flush;
-    perf_counter_wrapper *_write_size_counter;
-};
 
 class mutation_log_private : public mutation_log, private replica_base
 {
@@ -581,6 +442,3 @@ private:
 
 } // namespace replication
 } // namespace dsn
-
-USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::mutation_log::reserved_slog_info);
-USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::mutation_log::slog_deletion_info);

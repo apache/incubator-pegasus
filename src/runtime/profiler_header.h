@@ -25,45 +25,56 @@
  */
 
 #pragma once
+
 #include <iomanip>
-#include "perf_counter/perf_counter_wrapper.h"
+
+#include "utils/autoref_ptr.h"
+#include "utils/metrics.h"
 
 namespace dsn {
 namespace tools {
 
-enum perf_counter_ptr_type
-{
-    TASK_QUEUEING_TIME_NS,
-    TASK_EXEC_TIME_NS,
-    TASK_THROUGHPUT,
-    TASK_CANCELLED,
-    AIO_LATENCY_NS,
-    RPC_SERVER_LATENCY_NS,
-    RPC_SERVER_SIZE_PER_REQUEST_IN_BYTES,
-    RPC_SERVER_SIZE_PER_RESPONSE_IN_BYTES,
-    RPC_CLIENT_NON_TIMEOUT_LATENCY_NS,
-    RPC_CLIENT_TIMEOUT_THROUGHPUT,
-    TASK_IN_QUEUE,
-    RPC_DROPPED_IF_TIMEOUT,
-
-    PERF_COUNTER_COUNT,
-    PERF_COUNTER_INVALID
-};
-
 struct task_spec_profiler
 {
-    perf_counter_wrapper ptr[PERF_COUNTER_COUNT];
     bool collect_call_count;
     bool is_profile;
-    std::atomic<int64_t> *call_counts;
+    std::unique_ptr<std::atomic<int64_t>[]> call_counts;
 
-    task_spec_profiler()
-    {
-        collect_call_count = false;
-        is_profile = false;
-        call_counts = nullptr;
-        memset((void *)ptr, 0, sizeof(ptr));
-    }
+    task_spec_profiler() = default;
+    task_spec_profiler(int code);
+    const metric_entity_ptr &profiler_metric_entity() const;
+
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_queued_tasks)
+    METRIC_DEFINE_DECREMENT_NOTNULL(profiler_queued_tasks)
+    METRIC_DEFINE_SET_NOTNULL(profiler_queue_latency_ns, int64_t)
+    METRIC_DEFINE_SET_NOTNULL(profiler_execute_latency_ns, int64_t)
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_executed_tasks)
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_cancelled_tasks)
+    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_latency_ns, int64_t)
+    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_request_bytes, int64_t)
+    METRIC_DEFINE_SET_NOTNULL(profiler_server_rpc_response_bytes, int64_t)
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_dropped_timeout_rpcs)
+    METRIC_DEFINE_SET_NOTNULL(profiler_client_rpc_latency_ns, int64_t)
+    METRIC_DEFINE_INCREMENT_NOTNULL(profiler_client_timeout_rpcs)
+    METRIC_DEFINE_SET_NOTNULL(profiler_aio_latency_ns, int64_t)
+
+private:
+    const std::string _task_name;
+    const metric_entity_ptr _profiler_metric_entity;
+
+    METRIC_VAR_DECLARE_gauge_int64(profiler_queued_tasks);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_queue_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_execute_latency_ns);
+    METRIC_VAR_DECLARE_counter(profiler_executed_tasks);
+    METRIC_VAR_DECLARE_counter(profiler_cancelled_tasks);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_server_rpc_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_server_rpc_request_bytes);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_server_rpc_response_bytes);
+    METRIC_VAR_DECLARE_counter(profiler_dropped_timeout_rpcs);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_client_rpc_latency_ns);
+    METRIC_VAR_DECLARE_counter(profiler_client_timeout_rpcs);
+    METRIC_VAR_DECLARE_percentile_int64(profiler_aio_latency_ns);
 };
+
 } // namespace tools
 } // namespace dsn

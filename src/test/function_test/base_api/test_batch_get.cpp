@@ -17,24 +17,20 @@
 * under the License.
 */
 
-#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <rrdb/rrdb_types.h>
 #include <stdint.h>
-#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "base/pegasus_const.h"
 #include "base/pegasus_key_schema.h"
 #include "client/partition_resolver.h"
+#include "gtest/gtest.h"
 #include "include/rrdb/rrdb.client.h"
 #include "test/function_test/utils/test_util.h"
 #include "utils/blob.h"
@@ -52,7 +48,7 @@ class batch_get : public test_util
 TEST_F(batch_get, set_and_then_batch_get)
 {
     auto rrdb_client =
-        new ::dsn::apps::rrdb_client(cluster_name_.c_str(), meta_list_, app_name_.c_str());
+        new ::dsn::apps::rrdb_client(kClusterName.c_str(), meta_list_, table_name_.c_str());
 
     int test_data_count = 100;
     int test_timeout_milliseconds = 3000;

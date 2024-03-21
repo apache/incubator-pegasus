@@ -22,6 +22,7 @@
 
 #include "proxy_layer.h"
 #include "runtime/rpc/network.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
@@ -61,7 +62,7 @@ proxy_stub::proxy_stub(const proxy_session::factory &f,
 
 void proxy_stub::on_rpc_request(dsn::message_ex *request)
 {
-    ::dsn::rpc_address source = request->header->from_address;
+    auto source = ::dsn::host_port::from_address(request->header->from_address);
     std::shared_ptr<proxy_session> session;
     {
         ::dsn::zauto_read_lock l(_lock);
@@ -86,21 +87,21 @@ void proxy_stub::on_rpc_request(dsn::message_ex *request)
 
 void proxy_stub::on_recv_remove_session_request(dsn::message_ex *request)
 {
-    ::dsn::rpc_address source = request->header->from_address;
+    auto source = ::dsn::host_port::from_address(request->header->from_address);
     remove_session(source);
 }
 
-void proxy_stub::remove_session(dsn::rpc_address remote_address)
+void proxy_stub::remove_session(dsn::host_port remote)
 {
     std::shared_ptr<proxy_session> session;
     {
         ::dsn::zauto_write_lock l(_lock);
-        auto iter = _sessions.find(remote_address);
+        auto iter = _sessions.find(remote);
         if (iter == _sessions.end()) {
-            LOG_WARNING("{} has been removed from proxy stub", remote_address);
+            LOG_WARNING("{} has been removed from proxy stub", remote);
             return;
         }
-        LOG_INFO("remove {} from proxy stub", remote_address);
+        LOG_INFO("remove {} from proxy stub", remote);
         session = std::move(iter->second);
         _sessions.erase(iter);
     }
@@ -113,14 +114,15 @@ proxy_session::proxy_session(proxy_stub *op, dsn::message_ex *first_msg)
     CHECK_NOTNULL(first_msg, "null msg when create session");
     _backup_one_request->add_ref();
 
-    _remote_address = _backup_one_request->header->from_address;
-    CHECK_EQ_MSG(_remote_address.type(), HOST_TYPE_IPV4, "invalid rpc_address type");
+    _session_remote = ::dsn::host_port::from_address(_backup_one_request->header->from_address);
+    _session_remote_str = _session_remote.to_string();
+    CHECK_EQ_MSG(_session_remote.type(), HOST_TYPE_IPV4, "invalid host_port type");
 }
 
 proxy_session::~proxy_session()
 {
     _backup_one_request->release_ref();
-    LOG_INFO("proxy session {} destroyed", _remote_address);
+    LOG_INFO_PREFIX("destroyed");
 }
 
 void proxy_session::on_recv_request(dsn::message_ex *msg)
@@ -134,11 +136,10 @@ void proxy_session::on_recv_request(dsn::message_ex *msg)
     // 2. as "on_recv_request" won't be called concurrently, it's not necessary to call
     //    "parse" with a lock. a subclass may implement a lock inside parse if necessary
     if (!parse(msg)) {
-        LOG_ERROR("{}: got invalid message, try to remove proxy session from proxy stub",
-                  _remote_address);
-        _stub->remove_session(_remote_address);
+        LOG_ERROR_PREFIX("got invalid message, try to remove the proxy session from proxy stub");
+        _stub->remove_session(_session_remote);
 
-        LOG_ERROR("close the rpc session {}", _remote_address);
+        LOG_ERROR_PREFIX("close the proxy session");
         ((dsn::message_ex *)_backup_one_request)->io_session->close();
     }
 }

@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a simple version of meta state service for development
- *
- * Revision history:
- *     2015-11-03, @imzhenyu (Zhenyu.Guo@microsoft.com), setup the sketch
- *     2015-11-11, Tianyi WANG, first version done
- */
-
 #include <stddef.h>
 #include <stdint.h>
 #include <functional>
@@ -66,7 +57,8 @@ DEFINE_TASK_CODE_AIO(LPC_META_STATE_SERVICE_SIMPLE_INTERNAL,
                      TASK_PRIORITY_HIGH,
                      THREAD_POOL_DEFAULT);
 
-// Only for test purpose.
+// A simple version of meta state service.
+// NOTE: Only for test purpose.
 class meta_state_service_simple : public meta_state_service
 {
 public:

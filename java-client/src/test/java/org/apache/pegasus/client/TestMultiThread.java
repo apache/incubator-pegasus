@@ -18,9 +18,11 @@
  */
 package org.apache.pegasus.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** Created by mi on 16-3-23. */
 public class TestMultiThread {
@@ -63,7 +65,7 @@ public class TestMultiThread {
             client.set(TABLE_NAME, key.getBytes(), null, value.getBytes(), 0);
           } catch (PException e) {
             e.printStackTrace();
-            Assert.assertTrue(false);
+            assertTrue(false);
           }
           --left_put;
           ++key_cursor;
@@ -77,7 +79,7 @@ public class TestMultiThread {
             }
           } catch (PException e) {
             e.printStackTrace();
-            Assert.assertTrue(false);
+            assertTrue(false);
           }
         }
       }
@@ -101,7 +103,7 @@ public class TestMultiThread {
       for (int v : values) {
         expected_sum += v;
       }
-      Assert.assertEquals(expected_sum, value_sum);
+      assertEquals(expected_sum, value_sum);
     }
   }
 

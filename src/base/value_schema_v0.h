@@ -25,7 +25,7 @@
 
 #include "pegasus_value_schema.h"
 #include "utils/blob.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "value_field.h"
 
 namespace pegasus {
@@ -37,7 +37,7 @@ class value_schema_v0 : public value_schema
 public:
     value_schema_v0() = default;
 
-    std::unique_ptr<value_field> extract_field(dsn::string_view value,
+    std::unique_ptr<value_field> extract_field(absl::string_view value,
                                                value_field_type type) override;
     dsn::blob extract_user_data(std::string &&value) override;
     void update_field(std::string &value, std::unique_ptr<value_field> field) override;
@@ -45,7 +45,7 @@ public:
     data_version version() const override { return data_version::VERSION_0; }
 
 private:
-    std::unique_ptr<value_field> extract_timestamp(dsn::string_view value);
+    std::unique_ptr<value_field> extract_timestamp(absl::string_view value);
     void update_expire_ts(std::string &value, std::unique_ptr<value_field> field);
 };
 } // namespace pegasus

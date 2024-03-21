@@ -24,23 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     interface of the reliable meta state service
- *     it is usually for storing meta state of dist systems, such as membership
- *
- * Revision history:
- *     2015-10-28, Weijie Sun, first version
- *     2015-11-05, @imzhenyu (Zhenyu Guo), adjust the interface, so that
- *                (1) return task_ptr/tracker for callers to cancel or wait;
- *                (2) add factory for provider registration;
- *                (3) add cb_code parameter, then users can specify where the callback
- *                    should be executed
- *     2015-11-06, @imzhenyu (Zhenyu Guo), add watch/unwatch API
- *     2015-12-28, @shengofsun (Weijie SUn), add transaction api
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <functional>
@@ -68,6 +51,8 @@ typedef std::function<void(error_code ec, const std::vector<std::string> &ret_st
 typedef future_task<error_code, std::vector<std::string>> err_stringv_future;
 typedef dsn::ref_ptr<err_stringv_future> err_stringv_future_ptr;
 
+// The interface of the reliable meta state service.
+// It is usually for storing meta state of dist systems, such as membership.
 class meta_state_service
 {
 public:

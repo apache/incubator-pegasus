@@ -24,12 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <boost/cstdint.hpp>
-#include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <algorithm>
 #include <chrono>
@@ -37,18 +31,21 @@
 #include <string>
 #include <utility>
 
+#include "gtest/gtest.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/priority_queue.h"
 
+namespace dsn {
 typedef std::function<void(error_code, dsn::message_ex *, dsn::message_ex *)> rpc_reply_handler;
 
 static dsn::rpc_address build_group()
@@ -57,30 +54,17 @@ static dsn::rpc_address build_group()
     server_group.assign_group("server_group.test");
     dsn::rpc_group_address *g = server_group.group_address();
     for (uint16_t p = TEST_PORT_BEGIN; p <= TEST_PORT_END; ++p) {
-        CHECK(g->add(dsn::rpc_address("localhost", p)), "");
+        CHECK(g->add(dsn::rpc_address::from_host_port("localhost", p)), "");
     }
 
-    g->set_leader(dsn::rpc_address("localhost", TEST_PORT_BEGIN));
+    g->set_leader(dsn::rpc_address::from_host_port("localhost", TEST_PORT_BEGIN));
     return server_group;
-}
-
-static ::dsn::rpc_address dsn_address_from_string(const std::string &str)
-{
-    size_t pos = str.find(":");
-    if (pos != std::string::npos) {
-        std::string host = str.substr(0, pos);
-        uint16_t port = boost::lexical_cast<uint16_t>(str.substr(pos + 1));
-        return ::dsn::rpc_address(host.c_str(), port);
-    } else {
-        // invalid address
-        return ::dsn::rpc_address();
-    }
 }
 
 TEST(core, rpc)
 {
     int req = 0;
-    ::dsn::rpc_address server("localhost", 20101);
+    const auto server = ::dsn::rpc_address::from_host_port("localhost", 20101);
 
     auto result = ::dsn::rpc::call_wait<std::string>(
         server, RPC_TEST_HASH, req, std::chrono::milliseconds(0), 1);
@@ -96,10 +80,10 @@ TEST(core, group_address_talk_to_others)
 
     auto typed_callback = [addr](error_code err_code, const std::string &result) {
         EXPECT_EQ(ERR_OK, err_code);
-        dsn::rpc_address addr_got;
         LOG_INFO("talk to others callback, result: {}", result);
-        EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
-        EXPECT_EQ(TEST_PORT_END, addr_got.port());
+        const auto hp_got = host_port::from_string(result);
+        EXPECT_TRUE(hp_got);
+        EXPECT_EQ(TEST_PORT_END, hp_got.port());
     };
     ::dsn::task_ptr resp = ::dsn::rpc::call(addr,
                                             RPC_TEST_STRING_COMMAND,
@@ -117,10 +101,10 @@ TEST(core, group_address_change_leader)
     auto typed_callback = [addr, &rpc_err](error_code err_code, const std::string &result) -> void {
         rpc_err = err_code;
         if (ERR_OK == err_code) {
-            ::dsn::rpc_address addr_got;
+            const auto hp_got = host_port::from_string(result);
             LOG_INFO("talk to others callback, result: {}", result);
-            EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
-            EXPECT_EQ(TEST_PORT_END, addr_got.port());
+            EXPECT_FALSE(hp_got.is_invalid());
+            EXPECT_EQ(TEST_PORT_END, hp_got.port());
         }
     };
 
@@ -128,7 +112,8 @@ TEST(core, group_address_change_leader)
 
     // not update leader on forwarding
     addr.group_address()->set_update_leader_automatically(false);
-    addr.group_address()->set_leader(dsn::rpc_address("localhost", TEST_PORT_BEGIN));
+    addr.group_address()->set_leader(
+        dsn::rpc_address::from_host_port("localhost", TEST_PORT_BEGIN));
     resp_task = ::dsn::rpc::call(addr,
                                  RPC_TEST_STRING_COMMAND,
                                  std::string("expect_talk_to_others"),
@@ -136,13 +121,14 @@ TEST(core, group_address_change_leader)
                                  typed_callback);
     resp_task->wait();
     if (rpc_err == ERR_OK) {
-        EXPECT_EQ(dsn::rpc_address("localhost", TEST_PORT_BEGIN),
+        EXPECT_EQ(dsn::rpc_address::from_host_port("localhost", TEST_PORT_BEGIN),
                   dsn::rpc_address(addr.group_address()->leader()));
     }
 
     // update leader on forwarding
     addr.group_address()->set_update_leader_automatically(true);
-    addr.group_address()->set_leader(dsn::rpc_address("localhost", TEST_PORT_BEGIN));
+    addr.group_address()->set_leader(
+        dsn::rpc_address::from_host_port("localhost", TEST_PORT_BEGIN));
     resp_task = dsn::rpc::call(addr,
                                RPC_TEST_STRING_COMMAND,
                                std::string("expect_talk_to_others"),
@@ -219,17 +205,17 @@ TEST(core, group_address_no_response_2)
     ::dsn::rpc_address addr = build_group();
     rpc_reply_handler action_on_succeed =
         [](error_code err, dsn::message_ex *, dsn::message_ex *resp) {
-            EXPECT_TRUE(err == ERR_OK);
+            EXPECT_EQ(ERR_OK, err);
             std::string result;
             ::dsn::unmarshall(resp, result);
-            ::dsn::rpc_address a = dsn_address_from_string(result);
-            EXPECT_TRUE(a.port() == TEST_PORT_END);
+            const auto hp_got = host_port::from_string(result);
+            EXPECT_EQ(TEST_PORT_END, hp_got.port());
         };
 
     rpc_reply_handler action_on_failure =
         [](error_code err, dsn::message_ex *req, dsn::message_ex *) {
             if (err == ERR_TIMEOUT) {
-                EXPECT_TRUE(((dsn::message_ex *)req)->to_address.port() != TEST_PORT_END);
+                EXPECT_NE(TEST_PORT_END, ((dsn::message_ex *)req)->to_address.port());
             }
         };
 
@@ -239,8 +225,8 @@ TEST(core, group_address_no_response_2)
 TEST(core, send_to_invalid_address)
 {
     ::dsn::rpc_address group = build_group();
-    /* here we assume 10.255.254.253:32766 is not assigned */
-    group.group_address()->set_leader(dsn::rpc_address("10.255.254.253", 32766));
+    /* here we assume 127.0.0.1:32766 is not assigned */
+    group.group_address()->set_leader(dsn::rpc_address::from_ip_port("127.0.0.1", 32766));
 
     rpc_reply_handler action_on_succeed =
         [](error_code err, dsn::message_ex *, dsn::message_ex *resp) {
@@ -255,3 +241,4 @@ TEST(core, send_to_invalid_address)
 
     send_message(group, std::string("echo hehehe"), 1, action_on_succeed, action_on_failure);
 }
+} // namespace dsn

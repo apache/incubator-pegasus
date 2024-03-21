@@ -65,7 +65,7 @@ func main() {
 	for t := 0; t < 10; t++ {
 		var sortKeys [][]byte
 		for i := 0; i < 10; i++ {
-			sortKeys = append(sortKeys, []byte("sort"+string(i)))
+			sortKeys = append(sortKeys, []byte("sort"+fmt.Sprint(i)))
 		}
 		for i := 0; i < 10; i++ {
 			err = tb.Set(context.Background(), []byte("hash"), sortKeys[i], value)

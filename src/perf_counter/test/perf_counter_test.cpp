@@ -24,19 +24,7 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for perf counter.
- *
- * Revision history:
- *     Nov., 2015, @shengofsun (Weijie Sun), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 // IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdlib.h>
 #include <algorithm>
 #include <chrono>
@@ -45,6 +33,7 @@
 #include <thread>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_atomic.h"
 #include "utils/autoref_ptr.h"
@@ -52,15 +41,15 @@
 #include "utils/fmt_logging.h"
 #include "utils/shared_io_service.h"
 
-using namespace dsn;
-using namespace dsn::tools;
-
-const int count_times = 10000;
-
 DSN_DEFINE_int32(components.simple_perf_counter,
                  counter_computation_interval_seconds_for_testing,
                  3,
                  "period");
+
+using namespace dsn;
+using namespace dsn::tools;
+
+const int count_times = 10000;
 
 static void adder_function(perf_counter_ptr pc, int id, const std::vector<int> &vec)
 {

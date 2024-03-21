@@ -32,6 +32,7 @@
 #include "runtime/rpc/rpc_address.h"
 #include "utils/api_utilities.h"
 #include "utils/autoref_ptr.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
 #include "utils/synchronize.h"
 
@@ -46,16 +47,13 @@ public:
     void add_list(const std::vector<rpc_address> &addrs)
     {
         for (const auto &addr : addrs) {
-            // TODO(yingchun): add LOG_WARNING_IF/LOG_ERROR_IF
-            if (!add(addr)) {
-                LOG_WARNING("duplicate adress {}", addr);
-            }
+            LOG_WARNING_IF(!add(addr), "duplicate adress {}", addr);
         }
     }
     void set_leader(rpc_address addr);
     bool remove(rpc_address addr) WARN_UNUSED_RESULT;
     bool contains(rpc_address addr) const WARN_UNUSED_RESULT;
-    int count();
+    int count() const;
 
     const std::vector<rpc_address> &members() const { return _members; }
     rpc_address random_member() const
@@ -194,7 +192,7 @@ inline bool rpc_group_address::contains(rpc_address addr) const
     return _members.end() != std::find(_members.begin(), _members.end(), addr);
 }
 
-inline int rpc_group_address::count()
+inline int rpc_group_address::count() const
 {
     alr_t l(_lock);
     return _members.size();

@@ -15,7 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM apache/pegasus:build-env-ubuntu2004
+ARG GITHUB_BRANCH=master
+FROM apache/pegasus:build-env-ubuntu2004-${GITHUB_BRANCH}
 
 ARG SERVER_PKG_NAME
 

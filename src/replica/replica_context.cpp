@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     context for replica with different roles
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <algorithm>
 #include <atomic>
 #include <vector>
@@ -43,6 +34,7 @@
 #include "replica.h"
 #include "replica_context.h"
 #include "replica_stub.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
 
 namespace dsn {
@@ -113,11 +105,11 @@ void primary_context::reset_membership(const partition_configuration &config, bo
 
     membership = config;
 
-    if (membership.primary.is_invalid() == false) {
-        statuses[membership.primary] = partition_status::PS_PRIMARY;
+    if (membership.hp_primary.is_invalid() == false) {
+        statuses[membership.hp_primary] = partition_status::PS_PRIMARY;
     }
 
-    for (auto it = config.secondaries.begin(); it != config.secondaries.end(); ++it) {
+    for (auto it = config.hp_secondaries.begin(); it != config.hp_secondaries.end(); ++it) {
         statuses[*it] = partition_status::PS_SECONDARY;
         learners.erase(*it);
     }
@@ -133,19 +125,21 @@ void primary_context::get_replica_config(partition_status::type st,
 {
     config.pid = membership.pid;
     config.primary = membership.primary;
+    config.__set_hp_primary(membership.hp_primary);
     config.ballot = membership.ballot;
     config.status = st;
     config.learner_signature = learner_signature;
 }
 
-bool primary_context::check_exist(::dsn::rpc_address node, partition_status::type st)
+bool primary_context::check_exist(::dsn::host_port node, partition_status::type st)
 {
     switch (st) {
     case partition_status::PS_PRIMARY:
-        return membership.primary == node;
+        return membership.hp_primary == node;
     case partition_status::PS_SECONDARY:
-        return std::find(membership.secondaries.begin(), membership.secondaries.end(), node) !=
-               membership.secondaries.end();
+        return std::find(membership.hp_secondaries.begin(),
+                         membership.hp_secondaries.end(),
+                         node) != membership.hp_secondaries.end();
     case partition_status::PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
     default:
@@ -154,7 +148,7 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status::typ
     }
 }
 
-void primary_context::reset_node_bulk_load_states(const rpc_address &node)
+void primary_context::reset_node_bulk_load_states(const host_port &node)
 {
     secondary_bulk_load_states[node].__set_download_progress(0);
     secondary_bulk_load_states[node].__set_download_status(ERR_OK);
@@ -186,7 +180,7 @@ bool primary_context::secondary_disk_abnormal() const
         if (kv.second != disk_status::NORMAL) {
             LOG_INFO("partition[{}] secondary[{}] disk space is {}",
                      membership.pid,
-                     kv.first.to_string(),
+                     kv.first,
                      enum_to_string(kv.second));
             return true;
         }

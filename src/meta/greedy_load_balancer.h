@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     A greedy load balancer based on Dijkstra & Ford-Fulkerson
- *
- * Revision history:
- *     2016-02-03, Weijie Sun, first version
- */
-
 #pragma once
 
 #include <memory>
@@ -40,17 +32,19 @@
 
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "server_load_balancer.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 class command_deregister;
+class host_port;
 class rpc_address;
 
 namespace replication {
 class load_balance_policy;
 class meta_service;
 
+// A greedy load balancer based on Dijkstra & Ford-Fulkerson.
 class greedy_load_balancer : public server_load_balancer
 {
 public:
@@ -86,26 +80,27 @@ private:
 
     std::unique_ptr<command_deregister> _get_balance_operation_count;
 
-    // perf counters
-    perf_counter_wrapper _balance_operation_count;
-    perf_counter_wrapper _recent_balance_move_primary_count;
-    perf_counter_wrapper _recent_balance_copy_primary_count;
-    perf_counter_wrapper _recent_balance_copy_secondary_count;
-
 private:
     void greedy_balancer(bool balance_checker);
     bool all_replica_infos_collected(const node_state &ns);
 };
 
-inline configuration_proposal_action
-new_proposal_action(const rpc_address &target, const rpc_address &node, config_type::type type)
+inline configuration_proposal_action new_proposal_action(const rpc_address &target,
+                                                         const rpc_address &node,
+                                                         const host_port &hp_target,
+                                                         const host_port &hp_node,
+                                                         config_type::type type)
 {
     configuration_proposal_action act;
     act.__set_target(target);
     act.__set_node(node);
+    act.__set_hp_target(hp_target);
+    act.__set_hp_node(hp_node);
     act.__set_type(type);
     return act;
 }
 
 } // namespace replication
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::configuration_proposal_action);

@@ -15,13 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-#include <gtest/gtest.h>
 #include <chrono>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "common/replication_common.h"
+#include "gtest/gtest.h"
 #include "replication_service_test_app.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
@@ -35,6 +35,8 @@ replication_service_test_app *app;
 class cold_backup_context_test : public pegasus::encrypt_data_test_base
 {
 };
+
+INSTANTIATE_TEST_SUITE_P(, cold_backup_context_test, ::testing::Values(false, true));
 
 TEST_P(cold_backup_context_test, check_backup_on_remote) { app->check_backup_on_remote_test(); }
 
@@ -67,7 +69,8 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn::service_app::register_factory<replication_service_test_app>("replica");
+    dsn::service_app::register_factory<replication_service_test_app>(
+        dsn::replication::replication_options::kReplicaAppType.c_str());
 
     dsn_run_config("config-test.ini", false);
     while (gtest_flags == 0) {

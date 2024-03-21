@@ -17,11 +17,6 @@
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/status.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -33,8 +28,7 @@
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "duplication_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
+#include "gtest/gtest.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/log_file.h"
@@ -54,6 +48,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem/operations.hpp>
@@ -72,6 +67,8 @@
 #include "replica/duplication/load_from_private_log.h"
 #include "replica/mutation_log_utils.h"
 #include "test_util/test_util.h"
+
+DSN_DECLARE_bool(plog_force_flush);
 
 namespace dsn {
 namespace replication {
@@ -149,7 +146,6 @@ public:
         int last_commit_decree_start = 5;
         int decree_start = 10;
         {
-            DSN_DECLARE_bool(plog_force_flush);
             auto reserved_plog_force_flush = FLAGS_plog_force_flush;
             FLAGS_plog_force_flush = true;
             for (int i = decree_start; i <= num_entries + decree_start; i++) {
@@ -277,7 +273,7 @@ public:
     std::unique_ptr<replica_duplicator> duplicator;
 };
 
-INSTANTIATE_TEST_CASE_P(, load_from_private_log_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, load_from_private_log_test, ::testing::Values(false, true));
 
 TEST_P(load_from_private_log_test, find_log_file_to_start) { test_find_log_file_to_start(); }
 
@@ -407,6 +403,8 @@ public:
         load = std::make_unique<load_from_private_log>(_replica.get(), duplicator.get());
         load->TEST_set_repeat_delay(0_ms); // no delay
         load->set_start_decree(duplicator->progress().last_decree + 1);
+        load->METRIC_VAR_NAME(dup_log_file_load_failed_count)->reset();
+        load->METRIC_VAR_NAME(dup_log_file_load_skipped_bytes)->reset();
         end_stage = std::make_unique<end_stage_t>(
             [this, num_entries](decree &&d, mutation_tuple_set &&mutations) {
                 load->set_start_decree(d + 1);
@@ -424,12 +422,12 @@ public:
     std::unique_ptr<end_stage_t> end_stage;
 };
 
-INSTANTIATE_TEST_CASE_P(, load_fail_mode_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, load_fail_mode_test, ::testing::Values(false, true));
 
 TEST_P(load_fail_mode_test, fail_skip)
 {
     duplicator->update_fail_mode(duplication_fail_mode::FAIL_SKIP);
-    ASSERT_EQ(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
 
     // will trigger fail-skip and read the subsequent file, some mutations will be lost.
     auto repeats = load->MAX_ALLOWED_BLOCK_REPEATS * load->MAX_ALLOWED_FILE_REPEATS;
@@ -439,16 +437,16 @@ TEST_P(load_fail_mode_test, fail_skip)
     duplicator->wait_all();
     fail::teardown();
 
-    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(),
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_failed_count),
               load_from_private_log::MAX_ALLOWED_FILE_REPEATS);
-    ASSERT_GT(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+    ASSERT_GT(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
 }
 
 TEST_P(load_fail_mode_test, fail_slow)
 {
     duplicator->update_fail_mode(duplication_fail_mode::FAIL_SLOW);
-    ASSERT_EQ(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
-    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(), 0);
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_failed_count), 0);
 
     // will trigger fail-slow and retry infinitely
     auto repeats = load->MAX_ALLOWED_BLOCK_REPEATS * load->MAX_ALLOWED_FILE_REPEATS;
@@ -458,9 +456,9 @@ TEST_P(load_fail_mode_test, fail_slow)
     duplicator->wait_all();
     fail::teardown();
 
-    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(),
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_failed_count),
               load_from_private_log::MAX_ALLOWED_FILE_REPEATS);
-    ASSERT_EQ(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
 }
 
 TEST_P(load_fail_mode_test, fail_skip_real_corrupted_file)
@@ -495,9 +493,9 @@ TEST_P(load_fail_mode_test, fail_skip_real_corrupted_file)
     duplicator->wait_all();
 
     // ensure the bad file will be skipped
-    ASSERT_EQ(load->_counter_dup_load_file_failed_count->get_integer_value(),
+    ASSERT_EQ(METRIC_VALUE(*load, dup_log_file_load_failed_count),
               load_from_private_log::MAX_ALLOWED_FILE_REPEATS);
-    ASSERT_GT(load->_counter_dup_load_skipped_bytes_count->get_integer_value(), 0);
+    ASSERT_GT(METRIC_VALUE(*load, dup_log_file_load_skipped_bytes), 0);
 }
 
 } // namespace replication

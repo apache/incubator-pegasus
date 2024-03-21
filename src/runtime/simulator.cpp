@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "runtime/simulator.h"
 
 #include <map>
@@ -51,10 +42,10 @@
 #include "utils/threadpool_spec.h"
 #include "utils/zlock_provider.h"
 
+DSN_DECLARE_int32(random_seed);
+
 namespace dsn {
 namespace tools {
-
-DSN_DECLARE_int32(random_seed);
 
 /*static*/
 void simulator::register_checker(const std::string &name, checker::factory f)

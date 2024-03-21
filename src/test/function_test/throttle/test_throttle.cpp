@@ -18,14 +18,8 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
-#include <unistd.h>
-#include <algorithm>
 #include <atomic>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -35,6 +29,7 @@
 #include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 #include "runtime/api_layer1.h"
@@ -42,17 +37,10 @@
 #include "test/function_test/utils/utils.h"
 #include "test_util/test_util.h"
 #include "utils/error_code.h"
-#include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
-
-using namespace dsn;
-using namespace dsn::replication;
-using namespace pegasus;
-using std::string;
-
-static const uint64_t kLimitDurationMs = 10 * 1000;
+#include "utils/test_macros.h"
 
 DSN_DEFINE_int32(function_test.throttle_test,
                  throttle_test_medium_value_kb,
@@ -63,6 +51,13 @@ DSN_DEFINE_int32(function_test.throttle_test,
                  throttle_test_large_value_kb,
                  50,
                  "The size of generated large value for test");
+
+using namespace dsn;
+using namespace dsn::replication;
+using namespace pegasus;
+using std::string;
+
+static const uint64_t kLimitDurationMs = 10 * 1000;
 
 enum class throttle_type
 {
@@ -158,18 +153,18 @@ public:
             keys.emplace_back("replica.write_throttling_by_size");
             values.emplace_back(fmt::format("{}*reject*200", value));
         }
-        ASSERT_EQ(ERR_OK, ddl_client_->set_app_envs(app_name_, keys, values).get_error().code());
+        NO_FATALS(update_table_env(keys, values));
     }
 
     void restore_throttle()
     {
         std::map<string, string> envs;
-        ASSERT_EQ(ERR_OK, ddl_client_->get_app_envs(app_name_, envs));
+        ASSERT_EQ(ERR_OK, ddl_client_->get_app_envs(table_name_, envs));
         std::vector<string> keys;
         for (const auto &env : envs) {
             keys.emplace_back(env.first);
         }
-        ASSERT_EQ(ERR_OK, ddl_client_->del_app_envs(app_name_, keys));
+        ASSERT_EQ(ERR_OK, ddl_client_->del_app_envs(table_name_, keys));
     }
 
     void start_test(const throttle_test_plan &test_plan)
@@ -332,42 +327,34 @@ TEST_F(throttle_test, test)
     throttle_test_plan plan;
 
     plan = {"set test / throttle by size / normal value size", operation_type::set, 1024, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_size,
-                                         plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size,
+                           plan.limit_qps * plan.single_value_sz * plan.multi_count));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 15);
 
     plan = {"set test / throttle by qps / normal value size", operation_type::set, 1024, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env " << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 15);
 
     plan = {"get test / throttle by size / normal value size", operation_type::get, 1024, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_size,
-                                         plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size,
+                           plan.limit_qps * plan.single_value_sz * plan.multi_count));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     auto actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                         plan.multi_count * plan.limit_qps;
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
     plan = {"get test / throttle by qps", operation_type::get, 1024, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 15);
 
@@ -376,14 +363,11 @@ TEST_F(throttle_test, test)
             1024,
             50,
             50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::read_by_size,
-                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size,
+                           (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
@@ -394,39 +378,32 @@ TEST_F(throttle_test, test)
             1024,
             50,
             50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::write_by_size,
-                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size,
+                           (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
     plan = {
         "set test / throttle by qps&size / normal value size", operation_type::set, 1024, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_size,
-                                         plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size,
+                           plan.limit_qps * plan.single_value_sz * plan.multi_count));
+    NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 15);
 
     plan = {
         "get test / throttle by qps&size / normal value size", operation_type::get, 1024, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_size,
-                                         plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size,
+                           plan.limit_qps * plan.single_value_sz * plan.multi_count));
+    NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 15);
 
@@ -436,15 +413,13 @@ TEST_F(throttle_test, test)
             1024,
             1,
             50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(
+    NO_FATALS(set_throttle(
         throttle_type::write_by_size,
         plan.limit_qps * (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
             plan.multi_count * 1000));
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 15);
 
@@ -453,15 +428,13 @@ TEST_F(throttle_test, test)
             1024,
             1,
             50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(
+    NO_FATALS(set_throttle(
         throttle_type::read_by_size,
         plan.limit_qps * (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
             plan.multi_count * 1000));
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 15);
 
@@ -470,13 +443,11 @@ TEST_F(throttle_test, test)
             1024,
             1,
             50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_size,
-                                         plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_qps, plan.limit_qps * 1000));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size,
+                           plan.limit_qps * plan.single_value_sz * plan.multi_count));
+    NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps * 1000));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
@@ -487,13 +458,11 @@ TEST_F(throttle_test, test)
             1024,
             1,
             50};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_size,
-                                         plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_qps, plan.limit_qps * 1000));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size,
+                           plan.limit_qps * plan.single_value_sz * plan.multi_count));
+    NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps * 1000));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
@@ -505,14 +474,11 @@ TEST_F(throttle_test, test)
             1024 * FLAGS_throttle_test_medium_value_kb,
             1,
             50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::write_by_size,
-                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size,
+                           (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
@@ -523,14 +489,11 @@ TEST_F(throttle_test, test)
             1024 * FLAGS_throttle_test_medium_value_kb,
             1,
             50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::read_by_size,
-                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size,
+                           (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
@@ -541,14 +504,11 @@ TEST_F(throttle_test, test)
             1024 * FLAGS_throttle_test_large_value_kb,
             1,
             50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::write_by_size,
-                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size,
+                           (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
@@ -559,70 +519,55 @@ TEST_F(throttle_test, test)
             1024 * FLAGS_throttle_test_large_value_kb,
             1,
             50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::read_by_size,
-                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size,
+                           (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
     plan = {"set test / throttle by size / 100b value size", operation_type::set, 100, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::write_by_size,
-                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size,
+                           (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
     plan = {"get test / throttle by size / 100b value size", operation_type::get, 100, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::read_by_size,
-                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size,
+                           (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
     plan = {"set test / throttle by size / 10b value size", operation_type::set, 10, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::write_by_size,
-                     (plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size,
+                           (plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
     plan = {"get test / throttle by size / 10b value size", operation_type::get, 10, 1, 50};
-    ASSERT_NO_FATAL_FAILURE(
-        set_throttle(throttle_type::read_by_size,
-                     (plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
-                         plan.multi_count * plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size,
+                           (plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                               plan.multi_count * plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                    plan.multi_count * plan.limit_qps;
     result.finalize();
@@ -635,11 +580,9 @@ TEST_F(throttle_test, test)
             50,
             50,
             true};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_size, 5000000));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size, 5000000));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, (uint64_t)5000000, (uint64_t)5000000 * 0.3);
 
@@ -649,55 +592,45 @@ TEST_F(throttle_test, test)
             50,
             50,
             true};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_size, 5000000));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size, 5000000));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, (uint64_t)5000000, (uint64_t)5000000 * 0.3);
 
     // hotkey test
     plan = {
         "get test / throttle by qps / hotkey test", operation_type::get, 1024, 1, 50, false, true};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_qps, plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 15);
 
     plan = {
         "set test / throttle by qps / hotkey test", operation_type::set, 1024, 1, 50, false, true};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_qps, plan.limit_qps));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 15);
 
     plan = {
         "set test / throttle by size / hotkey test", operation_type::set, 1024, 1, 50, false, true};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::write_by_size,
-                                         plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::write_by_size,
+                           plan.limit_qps * plan.single_value_sz * plan.multi_count));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)plan.limit_qps * plan.single_value_sz * plan.multi_count;
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
 
     plan = {
         "get test / throttle by size / hotkey test", operation_type::get, 1024, 1, 50, false, true};
-    ASSERT_NO_FATAL_FAILURE(set_throttle(throttle_type::read_by_size,
-                                         plan.limit_qps * plan.single_value_sz * plan.multi_count));
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(set_throttle(throttle_type::read_by_size,
+                           plan.limit_qps * plan.single_value_sz * plan.multi_count));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     actual_value = (uint64_t)plan.limit_qps * plan.single_value_sz * plan.multi_count;
     result.finalize();
     ASSERT_NEAR(result.total_size_per_sec, actual_value, actual_value * 0.3);
@@ -705,55 +638,31 @@ TEST_F(throttle_test, test)
     // mix delay&reject test
     plan = {
         "set test / throttle by qps 500 / no delay throttle", operation_type::set, 1024, 1, 500};
-    ASSERT_EQ(ERR_OK,
-              ddl_client_->set_app_envs(app_name_, {"replica.write_throttling"}, {"500*reject*200"})
-                  .get_error()
-                  .code());
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(update_table_env({"replica.write_throttling"}, {"500*reject*200"}));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 100);
 
     plan = {
         "get test / throttle by qps 500 / no delay throttle", operation_type::get, 1024, 1, 500};
-    ASSERT_EQ(ERR_OK,
-              ddl_client_->set_app_envs(app_name_, {"replica.read_throttling"}, {"500*reject*200"})
-                  .get_error()
-                  .code());
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(update_table_env({"replica.read_throttling"}, {"500*reject*200"}));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 100);
 
     plan = {"set test / throttle by qps 500 / delay throttle", operation_type::set, 1024, 1, 500};
-    ASSERT_EQ(ERR_OK,
-              ddl_client_
-                  ->set_app_envs(
-                      app_name_, {"replica.write_throttling"}, {"300*delay*100,500*reject*200"})
-                  .get_error()
-                  .code());
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(update_table_env({"replica.write_throttling"}, {"300*delay*100,500*reject*200"}));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 100);
 
     plan = {"get test / throttle by qps 500 / delay throttle", operation_type::get, 1024, 1, 500};
-    ASSERT_EQ(
-        ERR_OK,
-        ddl_client_
-            ->set_app_envs(app_name_, {"replica.read_throttling"}, {"300*delay*100,500*reject*200"})
-            .get_error()
-            .code());
-    std::cout << "wait 30s for setting env" << std::endl;
-    sleep(30);
-    ASSERT_NO_FATAL_FAILURE(start_test(plan));
-    ASSERT_NO_FATAL_FAILURE(restore_throttle());
+    NO_FATALS(update_table_env({"replica.read_throttling"}, {"300*delay*100,500*reject*200"}));
+    NO_FATALS(start_test(plan));
+    NO_FATALS(restore_throttle());
     result.finalize();
     ASSERT_NEAR(result.total_qps, plan.limit_qps, 100);
 }

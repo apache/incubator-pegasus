@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <stdarg.h>
 #include <cstdio>
 #include <string>
 
@@ -46,26 +45,17 @@ public:
     explicit screen_logger(bool short_header);
     ~screen_logger() override;
 
-    void dsn_logv(const char *file,
-                  const char *function,
-                  const int line,
-                  dsn_log_level_t log_level,
-                  const char *fmt,
-                  va_list args) override;
-
-    void dsn_log(const char *file,
-                 const char *function,
-                 const int line,
-                 dsn_log_level_t log_level,
-                 const char *str) override
-    {
-    }
+    void log(const char *file,
+             const char *function,
+             const int line,
+             log_level_t log_level,
+             const char *str) override;
 
     virtual void flush();
 
 private:
     ::dsn::utils::ex_lock_nr _lock;
-    bool _short_header;
+    const bool _short_header;
 };
 
 /*
@@ -78,18 +68,11 @@ public:
     simple_logger(const char *log_dir);
     ~simple_logger() override;
 
-    void dsn_logv(const char *file,
-                  const char *function,
-                  const int line,
-                  dsn_log_level_t log_level,
-                  const char *fmt,
-                  va_list args) override;
-
-    void dsn_log(const char *file,
-                 const char *function,
-                 const int line,
-                 dsn_log_level_t log_level,
-                 const char *str) override;
+    void log(const char *file,
+             const char *function,
+             const int line,
+             log_level_t log_level,
+             const char *str) override;
 
     void flush() override;
 
@@ -97,14 +80,14 @@ private:
     void create_log_file();
 
 private:
-    std::string _log_dir;
     ::dsn::utils::ex_lock _lock; // use recursive lock to avoid dead lock when flush() is called
                                  // in signal handler if cored for bad logging format reason.
+    const std::string _log_dir;
     FILE *_log;
     int _start_index;
     int _index;
     int _lines;
-    dsn_log_level_t _stderr_start_level;
+    log_level_t _stderr_start_level;
 };
 } // namespace tools
 } // namespace dsn

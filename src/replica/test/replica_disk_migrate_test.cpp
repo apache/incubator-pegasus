@@ -18,10 +18,6 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <map>
 #include <memory>
 #include <set>
@@ -34,6 +30,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "metadata_types.h"
 #include "replica/replica.h"
 #include "replica/replica_disk_migrator.h"
@@ -150,7 +147,7 @@ private:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_disk_migrate_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_disk_migrate_test, ::testing::Values(false, true));
 
 TEST_P(replica_disk_migrate_test, on_migrate_replica)
 {
@@ -238,27 +235,26 @@ TEST_P(replica_disk_migrate_test, disk_migrate_replica_run)
     request.pid = dsn::gpid(app_info_1.app_id, 2);
     request.origin_disk = "tag_1";
     request.target_disk = "tag_empty_1";
-    set_replica_dir(request.pid,
-                    fmt::format("./{}/{}.replica", request.origin_disk, request.pid.to_string()));
+    set_replica_dir(request.pid, fmt::format("./{}/{}.replica", request.origin_disk, request.pid));
     set_migration_status(request.pid, disk_migration_status::MOVING);
 
-    const std::string kTargetReplicaDir = fmt::format(
-        "./{}/{}.replica.disk.migrate.tmp/", request.target_disk, request.pid.to_string());
+    const std::string kTargetReplicaDir =
+        fmt::format("./{}/{}.replica.disk.migrate.tmp/", request.target_disk, request.pid);
 
-    const std::string kTargetDataDir = fmt::format(
-        "./{}/{}.replica.disk.migrate.tmp/data/rdb/", request.target_disk, request.pid.to_string());
+    const std::string kTargetDataDir =
+        fmt::format("./{}/{}.replica.disk.migrate.tmp/data/rdb/", request.target_disk, request.pid);
     const std::string kTargetCheckPointFile =
         fmt::format("./{}/{}.replica.disk.migrate.tmp/data/rdb/checkpoint.file",
                     request.target_disk,
-                    request.pid.to_string());
+                    request.pid);
     const std::string kTargetInitInfoFile = fmt::format("./{}/{}.replica.disk.migrate.tmp/{}",
                                                         request.target_disk,
-                                                        request.pid.to_string(),
+                                                        request.pid,
                                                         replica_init_info::kInitInfo);
     const std::string kTargetAppInfoFile = fmt::format("./{}/{}.replica.disk.migrate.tmp/{}",
                                                        request.target_disk,
-                                                       request.pid.to_string(),
-                                                       replica::kAppInfo);
+                                                       request.pid,
+                                                       replica_app_info::kAppInfo);
 
     init_migration_target_dir(fake_migrate_rpc);
     ASSERT_TRUE(utils::filesystem::directory_exists(kTargetDataDir));
@@ -319,13 +315,13 @@ TEST_P(replica_disk_migrate_test, disk_migrate_replica_update)
     request.target_disk = "tag_empty_1";
 
     const std::string kReplicaOriginDir =
-        fmt::format("./{}/{}.replica", request.origin_disk, request.pid.to_string());
-    const std::string kReplicaNewTempDir = fmt::format(
-        "./{}/{}.replica.disk.migrate.tmp/", request.target_disk, request.pid.to_string());
-    const std::string kReplicaOriginSuffixDir = fmt::format(
-        "./{}/{}.replica.disk.migrate.ori/", request.origin_disk, request.pid.to_string());
+        fmt::format("./{}/{}.replica", request.origin_disk, request.pid);
+    const std::string kReplicaNewTempDir =
+        fmt::format("./{}/{}.replica.disk.migrate.tmp/", request.target_disk, request.pid);
+    const std::string kReplicaOriginSuffixDir =
+        fmt::format("./{}/{}.replica.disk.migrate.ori/", request.origin_disk, request.pid);
     const std::string kReplicaNewDir =
-        fmt::format("./{}/{}.replica/", request.target_disk, request.pid.to_string());
+        fmt::format("./{}/{}.replica/", request.target_disk, request.pid);
 
     utils::filesystem::create_directory(kReplicaOriginDir);
     utils::filesystem::create_directory(kReplicaNewTempDir);

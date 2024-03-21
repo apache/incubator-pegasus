@@ -17,8 +17,6 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
-#include <rocksdb/env.h>
-#include <rocksdb/status.h>
 #include <stdint.h>
 #include <atomic>
 #include <fstream>
@@ -34,7 +32,6 @@
 #include "block_service/block_service_manager.h"
 #include "common/backup_common.h"
 #include "common/gpid.h"
-#include "common/json_helper.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
 #include "failure_detector/failure_detector_multimaster.h"
@@ -42,7 +39,7 @@
 #include "metadata_types.h"
 #include "replica.h"
 #include "replica_stub.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
@@ -55,6 +52,7 @@
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/load_dump_object.h"
 
 using namespace dsn::dist::block_service;
 
@@ -91,31 +89,6 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
             return false;
         }
         LOG_INFO_PREFIX("remove useless file({}) succeed", pair.second);
-    }
-    return true;
-}
-
-bool replica::read_cold_backup_metadata(const std::string &fname,
-                                        cold_backup_metadata &backup_metadata)
-{
-    if (!::dsn::utils::filesystem::file_exists(fname)) {
-        LOG_ERROR_PREFIX(
-            "checkpoint on remote storage media is damaged, coz file({}) doesn't exist", fname);
-        return false;
-    }
-
-    std::string data;
-    auto s = rocksdb::ReadFileToString(
-        dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive), fname, &data);
-    if (!s.ok()) {
-        LOG_ERROR_PREFIX("read file '{}' failed, err = {}", fname, s.ToString());
-        return false;
-    }
-
-    if (!::dsn::json::json_forwarder<cold_backup_metadata>::decode(
-            blob::create_from_bytes(std::move(data)), backup_metadata)) {
-        LOG_ERROR_PREFIX("file({}) under checkpoint is damaged", fname);
-        return false;
     }
     return true;
 }
@@ -206,13 +179,14 @@ error_code replica::get_backup_metadata(block_filesystem *fs,
         return err;
     }
 
-    // parse cold_backup_meta from metadata file
+    // Load cold_backup_metadata from metadata file.
     const std::string local_backup_metada_file =
         utils::filesystem::path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
-    if (!read_cold_backup_metadata(local_backup_metada_file, backup_metadata)) {
-        LOG_ERROR_PREFIX("read cold_backup_metadata from file({}) failed",
+    auto ec = dsn::utils::load_rjobj_from_file(local_backup_metada_file, &backup_metadata);
+    if (ec != ERR_OK) {
+        LOG_ERROR_PREFIX("load cold_backup_metadata from file({}) failed",
                          local_backup_metada_file);
-        return ERR_FILE_OPERATION_FAILED;
+        return ec;
     }
 
     _chkpt_total_size = backup_metadata.checkpoint_total_size;
@@ -281,9 +255,8 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
         ->wait();
 
     if (create_response.err != dsn::ERR_OK) {
-        LOG_ERROR("{}: create file of block_service failed, reason {}",
-                  name(),
-                  create_response.err.to_string());
+        LOG_ERROR(
+            "{}: create file of block_service failed, reason {}", name(), create_response.err);
         return create_response.err;
     }
 
@@ -300,7 +273,7 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
         LOG_ERROR("{}: read file {} failed, reason {}",
                   name(),
                   create_response.file_handle->file_name(),
-                  r.err.to_string());
+                  r.err);
         return r.err;
     }
 
@@ -430,7 +403,8 @@ void replica::tell_meta_to_restore_rollback()
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_DROP_APP);
     ::dsn::marshall(msg, request);
 
-    rpc_address target(_stub->_failure_detector->get_servers());
+    const auto &target =
+        dsn::dns_resolver::instance().resolve_address(_stub->_failure_detector->get_servers());
     rpc::call(target,
               msg,
               &_tracker,
@@ -459,7 +433,8 @@ void replica::report_restore_status_to_meta()
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_REPORT_RESTORE_STATUS);
     ::dsn::marshall(msg, request);
-    rpc_address target(_stub->_failure_detector->get_servers());
+    const auto &target =
+        dsn::dns_resolver::instance().resolve_address(_stub->_failure_detector->get_servers());
     rpc::call(target,
               msg,
               &_tracker,

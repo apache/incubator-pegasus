@@ -24,13 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     distributed lock service implemented with zookeeper, the definition of each lock structure
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
 #pragma once
 
 #include <stdint.h>

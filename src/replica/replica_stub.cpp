@@ -24,32 +24,24 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     replica container - replica stub
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
+#include <absl/strings/str_split.h>
 #include <boost/algorithm/string/replace.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <deque>
-#include <limits>
 #include <mutex>
 #include <ostream>
 #include <set>
+#include <type_traits>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "backup/replica_backup_server.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
@@ -59,34 +51,32 @@
 #include "disk_cleaner.h"
 #include "duplication/duplication_sync_timer.h"
 #include "meta_admin_types.h"
-#include "mutation.h"
 #include "mutation_log.h"
 #include "nfs/nfs_node.h"
 #include "nfs_types.h"
-#include "perf_counter/perf_counter.h"
+#include "ranger/access_type.h"
 #include "replica.h"
 #include "replica/duplication/replica_follower.h"
-#include "replica/log_file.h"
+#include "replica/kms_key_provider.h"
 #include "replica/replica_context.h"
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_disk_migrator.h"
-#include "replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "runtime/ranger/access_type.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/security/access_controller.h"
 #include "runtime/task/async_calls.h"
+#include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/command_manager.h"
+#include "utils/env.h"
+#include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/load_dump_object.h"
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/rand.h"
-#include "utils/string_conv.h"
-#include "utils/string_view.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #ifdef DSN_ENABLE_GPERF
@@ -98,12 +88,159 @@
 #include "remote_cmd/remote_command.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
-namespace replication {
+static const char *kMaxConcurrentBulkLoadDownloadingCountDesc =
+    "The maximum concurrent bulk load downloading replica count";
+DSN_DEFINE_int32(replication,
+                 max_concurrent_bulk_load_downloading_count,
+                 5,
+                 kMaxConcurrentBulkLoadDownloadingCountDesc);
+DSN_DEFINE_validator(max_concurrent_bulk_load_downloading_count,
+                     [](int32_t value) -> bool { return value >= 0; });
+
+METRIC_DEFINE_gauge_int64(server,
+                          total_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The total number of replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          opening_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of opening replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          closing_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of closing replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          learning_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of learning replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          learning_replicas_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration among all learning replicas");
+
+METRIC_DEFINE_gauge_int64(
+    server,
+    learning_replicas_max_copy_file_bytes,
+    dsn::metric_unit::kBytes,
+    "The max size of files that are copied from learnee among all learning replicas");
+
+METRIC_DEFINE_counter(server,
+                      moved_error_replicas,
+                      dsn::metric_unit::kReplicas,
+                      "The number of replicas whose dirs are moved as error");
+
+METRIC_DEFINE_counter(server,
+                      moved_garbage_replicas,
+                      dsn::metric_unit::kReplicas,
+                      "The number of replicas whose dirs are moved as garbage");
+
+METRIC_DEFINE_counter(server,
+                      replica_removed_dirs,
+                      dsn::metric_unit::kDirs,
+                      "The number of removed replica dirs");
+
+METRIC_DEFINE_gauge_int64(server,
+                          replica_error_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of error replica dirs (*.err)");
+
+METRIC_DEFINE_gauge_int64(server,
+                          replica_garbage_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of garbage replica dirs (*.gar)");
+
+METRIC_DEFINE_gauge_int64(server,
+                          replica_tmp_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of tmp replica dirs (*.tmp) for disk migration");
+
+METRIC_DEFINE_gauge_int64(server,
+                          replica_origin_dirs,
+                          dsn::metric_unit::kDirs,
+                          "The number of origin replica dirs (*.ori) for disk migration");
+
+#ifdef DSN_ENABLE_GPERF
+METRIC_DEFINE_counter(server,
+                      tcmalloc_released_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The memory bytes that are released accumulatively by tcmalloc");
+#endif
+
+METRIC_DEFINE_counter(server,
+                      read_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed read requests");
+
+METRIC_DEFINE_counter(server,
+                      write_failed_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of failed write requests");
+
+METRIC_DEFINE_counter(server,
+                      read_busy_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of busy read requests");
+
+METRIC_DEFINE_counter(server,
+                      write_busy_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of busy write requests");
+
+METRIC_DEFINE_gauge_int64(server,
+                          bulk_load_running_count,
+                          dsn::metric_unit::kBulkLoads,
+                          "The number of current running bulk loads");
+
+METRIC_DEFINE_gauge_int64(server,
+                          bulk_load_ingestion_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration of ingestions for bulk loads");
+
+METRIC_DEFINE_gauge_int64(server,
+                          bulk_load_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration of bulk loads");
+
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of current splitting replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration among all splitting replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas_async_learn_max_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The max duration among all splitting replicas for async learns");
+
+METRIC_DEFINE_gauge_int64(server,
+                          splitting_replicas_max_copy_file_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The max size of copied files among all splitting replicas");
+
+DSN_DECLARE_bool(duplication_enabled);
+DSN_DECLARE_bool(enable_acl);
+DSN_DECLARE_bool(encrypt_data_at_rest);
+DSN_DECLARE_int32(fd_beacon_interval_seconds);
+DSN_DECLARE_int32(fd_check_interval_seconds);
+DSN_DECLARE_int32(fd_grace_seconds);
+DSN_DECLARE_int32(fd_lease_seconds);
+DSN_DECLARE_int32(gc_interval_ms);
+DSN_DECLARE_string(cluster_name);
+DSN_DECLARE_string(data_dirs);
+DSN_DECLARE_string(server_key);
+
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
                 false,
-                "whether to deny client read and write requests when starting the server");
+                "Whether to deny client read and write requests when starting the server");
 DSN_DEFINE_bool(replication,
                 verbose_client_log_on_start,
                 false,
@@ -113,11 +250,11 @@ DSN_DEFINE_bool(replication,
                 mem_release_enabled,
                 true,
                 "whether to enable periodic memory release");
-DSN_DEFINE_bool(replication,
-                log_shared_force_flush,
-                false,
-                "when write shared log, whether to flush file after write done");
-DSN_DEFINE_bool(replication, gc_disabled, false, "whether to disable garbage collection");
+DSN_DEFINE_bool(
+    replication,
+    gc_disabled,
+    false,
+    "Whether to disable replica statistics. The name contains 'gc' is for legacy reason");
 DSN_DEFINE_bool(replication, disk_stat_disabled, false, "whether to disable disk stat");
 DSN_DEFINE_bool(replication,
                 delay_for_fd_timeout_on_start,
@@ -127,20 +264,13 @@ DSN_DEFINE_bool(replication,
 DSN_DEFINE_bool(replication,
                 config_sync_disabled,
                 false,
-                "whether to disable replica configuration periodical sync with the meta server");
-DSN_DEFINE_bool(replication, fd_disabled, false, "whether to disable failure detection");
+                "Whether to disable replica server to send replica config-sync "
+                "requests to meta server periodically");
+DSN_DEFINE_bool(replication, fd_disabled, false, "Whether to disable failure detection");
 DSN_DEFINE_bool(replication,
                 verbose_commit_log_on_start,
                 false,
                 "whether to print verbose log when commit mutation when starting the server");
-DSN_DEFINE_bool(
-    replication,
-    crash_on_slog_error,
-    false,
-    "whether to exit the process while fail to open slog. If true, the process will exit and leave "
-    "the corrupted slog and replicas to be handled by the administrator. If false, the process "
-    "will continue, and remove the slog and move all the replicas to corresponding error "
-    "directories");
 DSN_DEFINE_uint32(replication,
                   max_concurrent_manual_emergency_checkpointing_count,
                   10,
@@ -162,20 +292,8 @@ DSN_DEFINE_int32(replication,
 DSN_DEFINE_int32(replication,
                  gc_memory_replica_interval_ms,
                  10 * 60 * 1000,
-                 "after closing a healthy replica (due to LB), the replica will remain in memory "
-                 "for this long (ms) for quick recover");
-DSN_DEFINE_int32(replication,
-                 log_shared_file_size_mb,
-                 32,
-                 "shared log maximum segment file size (MB)");
-
-DSN_DEFINE_uint64(
-    replication,
-    log_shared_gc_flush_replicas_limit,
-    64,
-    "The number of submitted replicas that are flushed for gc shared logs; 0 means no limit");
-DSN_TAG_VARIABLE(log_shared_gc_flush_replicas_limit, FT_MUTABLE);
-
+                 "The milliseconds of a replica remain in memory for quick recover aim after it's "
+                 "closed in healthy state (due to LB)");
 DSN_DEFINE_int32(
     replication,
     mem_release_check_interval_ms,
@@ -187,32 +305,83 @@ DSN_DEFINE_int32(
     10,
     "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
     "memory, replica server will release the exceeding memory back to operating system");
+bool check_mem_release_max_reserved_mem_percentage(int32_t value)
+{
+    return value > 0 && value <= 100;
+}
+DSN_DEFINE_validator(mem_release_max_reserved_mem_percentage,
+                     &check_mem_release_max_reserved_mem_percentage);
 
-DSN_DECLARE_bool(duplication_enabled);
-DSN_DECLARE_int32(fd_beacon_interval_seconds);
-DSN_DECLARE_int32(fd_check_interval_seconds);
-DSN_DECLARE_int32(fd_grace_seconds);
-DSN_DECLARE_int32(fd_lease_seconds);
-DSN_DECLARE_int32(gc_interval_ms);
+DSN_DEFINE_string(
+    pegasus.server,
+    hadoop_kms_url,
+    "",
+    "Provide the comma-separated list of URLs from which to retrieve the "
+    "file system's server key. Example format: 'hostname1:1234/kms,hostname2:1234/kms'.");
 
+DSN_DEFINE_group_validator(encrypt_data_at_rest_pre_check, [](std::string &message) -> bool {
+    if (!FLAGS_enable_acl && FLAGS_encrypt_data_at_rest) {
+        message = fmt::format("[pegasus.server] encrypt_data_at_rest should be enabled only if "
+                              "[security] enable_acl is enabled.");
+        return false;
+    }
+    return true;
+});
+
+DSN_DEFINE_group_validator(encrypt_data_at_rest_with_kms_url, [](std::string &message) -> bool {
+#ifndef MOCK_TEST
+    if (FLAGS_encrypt_data_at_rest && dsn::utils::is_empty(FLAGS_hadoop_kms_url)) {
+        message = fmt::format("[security] hadoop_kms_url should not be empty when [pegasus.server] "
+                              "encrypt_data_at_rest is enabled.");
+        return false;
+    }
+#endif
+    return true;
+});
+
+namespace dsn {
+namespace replication {
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
                            bool is_long_subscriber /* = true*/)
     : serverlet("replica_stub"),
-      _last_prevent_gc_replica_count(0),
-      _real_log_shared_gc_flush_replicas_limit(0),
-      _mock_flush_replicas_for_test(0),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
       _release_tcmalloc_memory(false),
       _mem_release_max_reserved_mem_percentage(10),
-      _max_concurrent_bulk_load_downloading_count(5),
       _learn_app_concurrent_count(0),
       _bulk_load_downloading_count(0),
       _manual_emergency_checkpointing_count(0),
-      _is_running(false)
+      _is_running(false),
+      METRIC_VAR_INIT_server(total_replicas),
+      METRIC_VAR_INIT_server(opening_replicas),
+      METRIC_VAR_INIT_server(closing_replicas),
+      METRIC_VAR_INIT_server(learning_replicas),
+      METRIC_VAR_INIT_server(learning_replicas_max_duration_ms),
+      METRIC_VAR_INIT_server(learning_replicas_max_copy_file_bytes),
+      METRIC_VAR_INIT_server(moved_error_replicas),
+      METRIC_VAR_INIT_server(moved_garbage_replicas),
+      METRIC_VAR_INIT_server(replica_removed_dirs),
+      METRIC_VAR_INIT_server(replica_error_dirs),
+      METRIC_VAR_INIT_server(replica_garbage_dirs),
+      METRIC_VAR_INIT_server(replica_tmp_dirs),
+      METRIC_VAR_INIT_server(replica_origin_dirs),
+#ifdef DSN_ENABLE_GPERF
+      METRIC_VAR_INIT_server(tcmalloc_released_bytes),
+#endif
+      METRIC_VAR_INIT_server(read_failed_requests),
+      METRIC_VAR_INIT_server(write_failed_requests),
+      METRIC_VAR_INIT_server(read_busy_requests),
+      METRIC_VAR_INIT_server(write_busy_requests),
+      METRIC_VAR_INIT_server(bulk_load_running_count),
+      METRIC_VAR_INIT_server(bulk_load_ingestion_max_duration_ms),
+      METRIC_VAR_INIT_server(bulk_load_max_duration_ms),
+      METRIC_VAR_INIT_server(splitting_replicas),
+      METRIC_VAR_INIT_server(splitting_replicas_max_duration_ms),
+      METRIC_VAR_INIT_server(splitting_replicas_async_learn_max_duration_ms),
+      METRIC_VAR_INIT_server(splitting_replicas_max_copy_file_bytes)
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
@@ -221,358 +390,9 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     _is_long_subscriber = is_long_subscriber;
     _failure_detector = nullptr;
     _state = NS_Disconnected;
-    _log = nullptr;
-    _primary_address_str[0] = '\0';
-    install_perf_counters();
 }
 
 replica_stub::~replica_stub(void) { close(); }
-
-void replica_stub::install_perf_counters()
-{
-    _counter_replicas_count.init_app_counter(
-        "eon.replica_stub", "replica(Count)", COUNTER_TYPE_NUMBER, "# in replica_stub._replicas");
-    _counter_replicas_opening_count.init_app_counter("eon.replica_stub",
-                                                     "opening.replica(Count)",
-                                                     COUNTER_TYPE_NUMBER,
-                                                     "# in replica_stub._opening_replicas");
-    _counter_replicas_closing_count.init_app_counter("eon.replica_stub",
-                                                     "closing.replica(Count)",
-                                                     COUNTER_TYPE_NUMBER,
-                                                     "# in replica_stub._closing_replicas");
-    _counter_replicas_commit_qps.init_app_counter("eon.replica_stub",
-                                                  "replicas.commit.qps",
-                                                  COUNTER_TYPE_RATE,
-                                                  "server-level commit throughput");
-    _counter_replicas_learning_count.init_app_counter("eon.replica_stub",
-                                                      "replicas.learning.count",
-                                                      COUNTER_TYPE_NUMBER,
-                                                      "current learning count");
-    _counter_replicas_learning_max_duration_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.max.duration.time(ms)",
-        COUNTER_TYPE_NUMBER,
-        "current learning max duration time(ms)");
-    _counter_replicas_learning_max_copy_file_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.max.copy.file.size",
-        COUNTER_TYPE_NUMBER,
-        "current learning max copy file size");
-    _counter_replicas_learning_recent_start_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.start.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current learning start count in the recent period");
-    _counter_replicas_learning_recent_round_start_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.round.start.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning round start count in the recent period");
-    _counter_replicas_learning_recent_copy_file_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.copy.file.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning copy file count in the recent period");
-    _counter_replicas_learning_recent_copy_file_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.copy.file.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning copy file size in the recent period");
-    _counter_replicas_learning_recent_copy_buffer_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.copy.buffer.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning copy buffer size in the recent period");
-    _counter_replicas_learning_recent_learn_cache_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.cache.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning LT_CACHE count in the recent period");
-    _counter_replicas_learning_recent_learn_app_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.app.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning LT_APP count in the recent period");
-    _counter_replicas_learning_recent_learn_log_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.log.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning LT_LOG count in the recent period");
-    _counter_replicas_learning_recent_learn_reset_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.reset.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning reset count in the recent period"
-        "for the reason of resp.last_committed_decree < _app->last_committed_decree()");
-    _counter_replicas_learning_recent_learn_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning fail count in the recent period");
-    _counter_replicas_learning_recent_learn_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.learning.recent.learn.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "learning succeed count in the recent period");
-
-    _counter_replicas_recent_prepare_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.prepare.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "prepare fail count in the recent period");
-    _counter_replicas_recent_replica_move_error_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.replica.move.error.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "replica move to error count in the recent period");
-    _counter_replicas_recent_replica_move_garbage_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.replica.move.garbage.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "replica move to garbage count in the recent period");
-    _counter_replicas_recent_replica_remove_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.replica.remove.dir.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "replica directory remove count in the recent period");
-    _counter_replicas_error_replica_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.error.replica.dir.count",
-        COUNTER_TYPE_NUMBER,
-        "error replica directory(*.err) count");
-    _counter_replicas_garbage_replica_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.garbage.replica.dir.count",
-        COUNTER_TYPE_NUMBER,
-        "garbage replica directory(*.gar) count");
-    _counter_replicas_tmp_replica_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.tmp.replica.dir.count",
-        COUNTER_TYPE_NUMBER,
-        "disk migration tmp replica directory(*.tmp) count");
-    _counter_replicas_origin_replica_dir_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.origin.replica.dir.count",
-        COUNTER_TYPE_NUMBER,
-        "disk migration origin replica directory(.ori) count");
-
-    _counter_replicas_recent_group_check_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.recent.group.check.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "group check fail count in the recent period");
-
-    _counter_shared_log_size.init_app_counter(
-        "eon.replica_stub", "shared.log.size(MB)", COUNTER_TYPE_NUMBER, "shared log size(MB)");
-    _counter_shared_log_recent_write_size.init_app_counter(
-        "eon.replica_stub",
-        "shared.log.recent.write.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "shared log write size in the recent period");
-    _counter_recent_trigger_emergency_checkpoint_count.init_app_counter(
-        "eon.replica_stub",
-        "recent.trigger.emergency.checkpoint.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "trigger emergency checkpoint count in the recent period");
-
-    // <- Duplication Metrics ->
-
-    _counter_dup_confirmed_rate.init_app_counter("eon.replica_stub",
-                                                 "dup.confirmed_rate",
-                                                 COUNTER_TYPE_RATE,
-                                                 "increasing rate of confirmed mutations");
-    _counter_dup_pending_mutations_count.init_app_counter(
-        "eon.replica_stub",
-        "dup.pending_mutations_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "number of mutations pending for duplication");
-
-    // <- Cold Backup Metrics ->
-
-    _counter_cold_backup_running_count.init_app_counter("eon.replica_stub",
-                                                        "cold.backup.running.count",
-                                                        COUNTER_TYPE_NUMBER,
-                                                        "current cold backup count");
-    _counter_cold_backup_recent_start_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.start.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup start count in the recent period");
-    _counter_cold_backup_recent_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup succeed count in the recent period");
-    _counter_cold_backup_recent_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup fail count in the recent period");
-    _counter_cold_backup_recent_cancel_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.cancel.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup cancel count in the recent period");
-    _counter_cold_backup_recent_pause_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.pause.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup pause count in the recent period");
-    _counter_cold_backup_recent_upload_file_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.upload.file.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup upload file succeed count in the recent period");
-    _counter_cold_backup_recent_upload_file_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.upload.file.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup upload file failed count in the recent period");
-    _counter_cold_backup_recent_upload_file_size.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.recent.upload.file.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current cold backup upload file size in the recent perriod");
-    _counter_cold_backup_max_duration_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.max.duration.time.ms",
-        COUNTER_TYPE_NUMBER,
-        "current cold backup max duration time");
-    _counter_cold_backup_max_upload_file_size.init_app_counter(
-        "eon.replica_stub",
-        "cold.backup.max.upload.file.size",
-        COUNTER_TYPE_NUMBER,
-        "current cold backup max upload file size");
-
-    _counter_recent_read_fail_count.init_app_counter("eon.replica_stub",
-                                                     "recent.read.fail.count",
-                                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                                     "read fail count in the recent period");
-    _counter_recent_write_fail_count.init_app_counter("eon.replica_stub",
-                                                      "recent.write.fail.count",
-                                                      COUNTER_TYPE_VOLATILE_NUMBER,
-                                                      "write fail count in the recent period");
-    _counter_recent_read_busy_count.init_app_counter("eon.replica_stub",
-                                                     "recent.read.busy.count",
-                                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                                     "read busy count in the recent period");
-    _counter_recent_write_busy_count.init_app_counter("eon.replica_stub",
-                                                      "recent.write.busy.count",
-                                                      COUNTER_TYPE_VOLATILE_NUMBER,
-                                                      "write busy count in the recent period");
-
-    _counter_recent_write_size_exceed_threshold_count.init_app_counter(
-        "eon.replica_stub",
-        "recent_write_size_exceed_threshold_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "write size exceed threshold count in the recent period");
-
-    // <- Bulk Load Metrics ->
-
-    _counter_bulk_load_running_count.init_app_counter("eon.replica_stub",
-                                                      "bulk.load.running.count",
-                                                      COUNTER_TYPE_VOLATILE_NUMBER,
-                                                      "current bulk load running count");
-    _counter_bulk_load_downloading_count.init_app_counter("eon.replica_stub",
-                                                          "bulk.load.downloading.count",
-                                                          COUNTER_TYPE_VOLATILE_NUMBER,
-                                                          "current bulk load downloading count");
-    _counter_bulk_load_ingestion_count.init_app_counter("eon.replica_stub",
-                                                        "bulk.load.ingestion.count",
-                                                        COUNTER_TYPE_VOLATILE_NUMBER,
-                                                        "current bulk load ingestion count");
-    _counter_bulk_load_succeed_count.init_app_counter("eon.replica_stub",
-                                                      "bulk.load.succeed.count",
-                                                      COUNTER_TYPE_VOLATILE_NUMBER,
-                                                      "current bulk load succeed count");
-    _counter_bulk_load_failed_count.init_app_counter("eon.replica_stub",
-                                                     "bulk.load.failed.count",
-                                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                                     "current bulk load failed count");
-    _counter_bulk_load_download_file_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "bulk.load.download.file.success.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "bulk load recent download file success count");
-    _counter_bulk_load_download_file_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "bulk.load.download.file.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "bulk load recent download file failed count");
-    _counter_bulk_load_download_file_size.init_app_counter("eon.replica_stub",
-                                                           "bulk.load.download.file.size",
-                                                           COUNTER_TYPE_VOLATILE_NUMBER,
-                                                           "bulk load recent download file size");
-    _counter_bulk_load_max_ingestion_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "bulk.load.max.ingestion.duration.time.ms",
-        COUNTER_TYPE_NUMBER,
-        "bulk load max ingestion duration time(ms)");
-    _counter_bulk_load_max_duration_time_ms.init_app_counter("eon.replica_stub",
-                                                             "bulk.load.max.duration.time.ms",
-                                                             COUNTER_TYPE_NUMBER,
-                                                             "bulk load max duration time(ms)");
-
-#ifdef DSN_ENABLE_GPERF
-    _counter_tcmalloc_release_memory_size.init_app_counter("eon.replica_stub",
-                                                           "tcmalloc.release.memory.size",
-                                                           COUNTER_TYPE_NUMBER,
-                                                           "current tcmalloc release memory size");
-#endif
-
-    // <- Partition split Metrics ->
-
-    _counter_replicas_splitting_count.init_app_counter("eon.replica_stub",
-                                                       "replicas.splitting.count",
-                                                       COUNTER_TYPE_NUMBER,
-                                                       "current partition splitting count");
-
-    _counter_replicas_splitting_max_duration_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.max.duration.time(ms)",
-        COUNTER_TYPE_NUMBER,
-        "current partition splitting max duration time(ms)");
-    _counter_replicas_splitting_max_async_learn_time_ms.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.max.async.learn.time(ms)",
-        COUNTER_TYPE_NUMBER,
-        "current partition splitting max async learn time(ms)");
-    _counter_replicas_splitting_max_copy_file_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.max.copy.file.size",
-        COUNTER_TYPE_NUMBER,
-        "current splitting max copy file size");
-    _counter_replicas_splitting_recent_start_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.start.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "current splitting start count in the recent period");
-    _counter_replicas_splitting_recent_copy_file_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.copy.file.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting copy file count in the recent period");
-    _counter_replicas_splitting_recent_copy_file_size.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.copy.file.size",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting copy file size in the recent period");
-    _counter_replicas_splitting_recent_copy_mutation_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.copy.mutation.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting copy mutation count in the recent period");
-    _counter_replicas_splitting_recent_split_succ_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.split.succ.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting succeed count in the recent period");
-    _counter_replicas_splitting_recent_split_fail_count.init_app_counter(
-        "eon.replica_stub",
-        "replicas.splitting.recent.split.fail.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "splitting fail count in the recent period");
-}
 
 void replica_stub::initialize(bool clear /* = false*/)
 {
@@ -584,9 +404,9 @@ void replica_stub::initialize(bool clear /* = false*/)
 
 void replica_stub::initialize(const replication_options &opts, bool clear /* = false*/)
 {
-    _primary_address = dsn_primary_address();
-    strcpy(_primary_address_str, _primary_address.to_string());
-    LOG_INFO("primary_address = {}", _primary_address_str);
+    _primary_host_port = dsn_primary_host_port();
+    _primary_host_port_cache = _primary_host_port.to_string();
+    LOG_INFO("primary_host_port = {}", _primary_host_port_cache);
 
     set_options(opts);
     LOG_INFO("meta_servers = {}", fmt::join(_options.meta_servers, ", "));
@@ -596,8 +416,6 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     _verbose_commit_log = FLAGS_verbose_commit_log_on_start;
     _release_tcmalloc_memory = FLAGS_mem_release_enabled;
     _mem_release_max_reserved_mem_percentage = FLAGS_mem_release_max_reserved_mem_percentage;
-    _max_concurrent_bulk_load_downloading_count =
-        _options.max_concurrent_bulk_load_downloading_count;
 
     // clear dirs if need
     if (clear) {
@@ -609,22 +427,61 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         }
     }
 
+    const auto &kms_path =
+        utils::filesystem::path_combine(_options.data_dirs[0], kms_info::kKmsInfo);
+    // FLAGS_data_dirs may be empty when load configuration, use LOG_FATAL instead of group
+    // validator.
+    if (!FLAGS_encrypt_data_at_rest && utils::filesystem::path_exists(kms_path)) {
+        LOG_FATAL("The kms_info file exists at ({}), but [pegasus.server] "
+                  "encrypt_data_at_rest is enbale."
+                  "Encryption in Pegasus is irreversible after its initial activation.",
+                  kms_path);
+    }
+
+    dsn::replication::kms_info kms_info;
+    if (FLAGS_encrypt_data_at_rest && !utils::is_empty(FLAGS_hadoop_kms_url)) {
+        _key_provider.reset(new dsn::security::kms_key_provider(
+            ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()), FLAGS_cluster_name));
+        const auto &ec = dsn::utils::load_rjobj_from_file(
+            kms_path, dsn::utils::FileDataType::kNonSensitive, &kms_info);
+        if (ec != dsn::ERR_PATH_NOT_FOUND && ec != dsn::ERR_OK) {
+            CHECK_EQ_MSG(dsn::ERR_OK, ec, "Can't load kms key from kms-info file");
+        }
+        // Upon the first launch, the encryption key should be empty. The process will then retrieve
+        // EEK, IV, and KV from KMS.
+        // After the first launch, the encryption key, obtained from the kms-info file, should not
+        // be empty. The process will then acquire the DEK from KMS.
+        if (ec == dsn::ERR_PATH_NOT_FOUND) {
+            LOG_WARNING("It's normal to encounter a temporary inability to open the kms-info file "
+                        "during the first process launch.");
+            CHECK_OK(_key_provider->GenerateEncryptionKey(&kms_info),
+                     "Generate encryption key from kms failed");
+        }
+        CHECK_OK(_key_provider->DecryptEncryptionKey(kms_info, &_server_key),
+                 "Get decryption key failed from {}",
+                 kms_path);
+        FLAGS_server_key = _server_key.c_str();
+    }
+
     // Initialize the file system manager.
     _fs_manager.initialize(_options.data_dirs, _options.data_dir_tags);
 
-    // TODO(yingchun): remove the slog related code.
-    // Create slog directory if it does not exist.
-    std::string cdir;
-    std::string err_msg;
-    CHECK(utils::filesystem::create_directory(_options.slog_dir, cdir, err_msg), err_msg);
-    _options.slog_dir = cdir;
+    if (_key_provider && !utils::filesystem::path_exists(kms_path)) {
+        const auto &err = dsn::utils::dump_rjobj_to_file(
+            kms_info, dsn::utils::FileDataType::kNonSensitive, kms_path);
+        CHECK_EQ_MSG(dsn::ERR_OK, err, "Can't store kms key to kms-info file");
+    }
 
-    // Initialize slog.
-    _log = new mutation_log_shared(_options.slog_dir,
-                                   FLAGS_log_shared_file_size_mb,
-                                   FLAGS_log_shared_force_flush,
-                                   &_counter_shared_log_recent_write_size);
-    LOG_INFO("slog_dir = {}", _options.slog_dir);
+    // Check slog is not exist.
+    auto full_slog_path = fmt::format("{}/replica/slog/", _options.slog_dir);
+    if (utils::filesystem::directory_exists(full_slog_path)) {
+        std::vector<std::string> slog_files;
+        CHECK(utils::filesystem::get_subfiles(full_slog_path, slog_files, false),
+              "check slog files failed");
+        CHECK(slog_files.empty(),
+              "slog({}) files are not empty. Make sure you are upgrading from 2.5.0",
+              full_slog_path);
+    }
 
     // Start to load replicas in available data directories.
     LOG_INFO("start to load replicas");
@@ -695,67 +552,6 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
              rps.size(),
              finish_time - start_time);
 
-    // init shared prepare log
-    LOG_INFO("start to replay shared log");
-
-    std::map<gpid, decree> replay_condition;
-    for (auto it = rps.begin(); it != rps.end(); ++it) {
-        replay_condition[it->first] = it->second->last_committed_decree();
-    }
-
-    start_time = dsn_now_ms();
-    error_code err = _log->open(
-        [&rps](int log_length, mutation_ptr &mu) {
-            auto it = rps.find(mu->data.header.pid);
-            if (it != rps.end()) {
-                return it->second->replay_mutation(mu, false);
-            } else {
-                return false;
-            }
-        },
-        [this](error_code err) { this->handle_log_failure(err); },
-        replay_condition);
-    finish_time = dsn_now_ms();
-
-    if (err == ERR_OK) {
-        LOG_INFO("replay shared log succeed, time_used = {} ms", finish_time - start_time);
-    } else {
-        if (FLAGS_crash_on_slog_error) {
-            LOG_FATAL("replay shared log failed, err = {}, please check the error details", err);
-        }
-        LOG_ERROR("replay shared log failed, err = {}, time_used = {} ms, clear all logs ...",
-                  err,
-                  finish_time - start_time);
-
-        // we must delete or update meta server the error for all replicas
-        // before we fix the logs
-        // otherwise, the next process restart may consider the replicas'
-        // state complete
-
-        // delete all replicas
-        // TODO: checkpoint latest state and update on meta server so learning is cheaper
-        for (auto it = rps.begin(); it != rps.end(); ++it) {
-            it->second->close();
-            move_to_err_path(it->second->dir(), "initialize replica");
-            _counter_replicas_recent_replica_move_error_count->increment();
-        }
-        rps.clear();
-
-        // restart log service
-        _log->close();
-        _log = nullptr;
-        CHECK(utils::filesystem::remove_path(_options.slog_dir),
-              "remove directory {} failed",
-              _options.slog_dir);
-        _log = new mutation_log_shared(_options.slog_dir,
-                                       FLAGS_log_shared_file_size_mb,
-                                       FLAGS_log_shared_force_flush,
-                                       &_counter_shared_log_recent_write_size);
-        CHECK_EQ_MSG(_log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); }),
-                     ERR_OK,
-                     "restart log service failed");
-    }
-
     bool is_log_complete = true;
     for (auto it = rps.begin(); it != rps.end(); ++it) {
         CHECK_EQ_MSG(it->second->background_sync_checkpoint(), ERR_OK, "sync checkpoint failed");
@@ -770,20 +566,17 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         }
 
         LOG_INFO(
-            "{}: load replica done, err = {}, durable = {}, committed = {}, "
+            "{}: load replica done, durable = {}, committed = {}, "
             "prepared = {}, ballot = {}, "
-            "valid_offset_in_plog = {}, max_decree_in_plog = {}, max_commit_on_disk_in_plog = {}, "
-            "valid_offset_in_slog = {}",
+            "valid_offset_in_plog = {}, max_decree_in_plog = {}, max_commit_on_disk_in_plog = {}",
             it->second->name(),
-            err.to_string(),
             it->second->last_durable_decree(),
             it->second->last_committed_decree(),
             it->second->max_prepared_decree(),
             it->second->get_ballot(),
             it->second->get_app()->init_info().init_offset_in_private_log,
             pmax,
-            pmax_commit,
-            it->second->get_app()->init_info().init_offset_in_shared_log);
+            pmax_commit);
     }
 
     // we will mark all replicas inactive not transient unless all logs are complete
@@ -795,12 +588,12 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         }
     }
 
-    // gc
+    // replicas stat
     if (!FLAGS_gc_disabled) {
-        _gc_timer_task = tasking::enqueue_timer(
+        _replicas_stat_timer_task = tasking::enqueue_timer(
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
             &_tracker,
-            [this] { on_gc(); },
+            [this] { on_replicas_stat(); },
             std::chrono::milliseconds(FLAGS_gc_interval_ms),
             0,
             std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms)));
@@ -819,7 +612,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     // attach rps
     _replicas = std::move(rps);
-    _counter_replicas_count->add((uint64_t)_replicas.size());
+    METRIC_VAR_INCREMENT_BY(total_replicas, _replicas.size());
     for (const auto &kv : _replicas) {
         _fs_manager.add_replica(kv.first, kv.second->dir());
     }
@@ -894,6 +687,7 @@ void replica_stub::initialize_start()
             [this]() { this->on_meta_server_disconnected(); },
             [this]() { this->on_meta_server_connected(); });
 
+        CHECK_GT_MSG(FLAGS_fd_grace_seconds, FLAGS_fd_lease_seconds, "");
         CHECK_EQ_MSG(_failure_detector->start(FLAGS_fd_check_interval_seconds,
                                               FLAGS_fd_beacon_interval_seconds,
                                               FLAGS_fd_lease_seconds,
@@ -970,7 +764,7 @@ void replica_stub::on_client_write(gpid id, dsn::message_ex *request)
     if (_verbose_client_log && request) {
         LOG_INFO("{}@{}: client = {}, code = {}, timeout = {}",
                  id,
-                 _primary_address_str,
+                 _primary_host_port_cache,
                  request->header->from_address,
                  request->header->rpc_name,
                  request->header->client.timeout_ms);
@@ -992,7 +786,7 @@ void replica_stub::on_client_read(gpid id, dsn::message_ex *request)
     if (_verbose_client_log && request) {
         LOG_INFO("{}@{}: client = {}, code = {}, timeout = {}",
                  id,
-                 _primary_address_str,
+                 _primary_host_port_cache,
                  request->header->from_address,
                  request->header->rpc_name,
                  request->header->client.timeout_ms);
@@ -1010,16 +804,17 @@ void replica_stub::on_config_proposal(const configuration_update_request &propos
     if (!is_connected()) {
         LOG_WARNING("{}@{}: received config proposal {} for {}: not connected, ignore",
                     proposal.config.pid,
-                    _primary_address_str,
+                    _primary_host_port_cache,
                     enum_to_string(proposal.type),
                     proposal.node);
         return;
     }
 
-    LOG_INFO("{}@{}: received config proposal {} for {}",
+    LOG_INFO("{}@{}: received config proposal {} for {}({})",
              proposal.config.pid,
-             _primary_address_str,
+             _primary_host_port_cache,
              enum_to_string(proposal.type),
+             proposal.hp_node,
              proposal.node);
 
     replica_ptr rep = get_replica(proposal.config.pid);
@@ -1122,8 +917,8 @@ void replica_stub::on_query_disk_info(query_disk_info_rpc rpc)
 
     resp.disk_infos = _fs_manager.get_disk_infos(app_id);
     // Get the statistics from fs_manager's metrics, they are thread-safe.
-    resp.total_capacity_mb = _fs_manager._counter_total_capacity_mb->get_integer_value();
-    resp.total_available_mb = _fs_manager._counter_total_available_mb->get_integer_value();
+    resp.total_capacity_mb = _fs_manager._total_capacity_mb.load(std::memory_order_relaxed);
+    resp.total_available_mb = _fs_manager._total_available_mb.load(std::memory_order_relaxed);
     resp.err = ERR_OK;
 }
 
@@ -1186,8 +981,12 @@ void replica_stub::on_add_new_disk(add_new_disk_rpc rpc)
     std::vector<std::string> data_dir_tags;
     std::string err_msg;
     if (disk_str.empty() ||
-        !replication_options::get_data_dir_and_tag(
-            disk_str, "", "replica", data_dirs, data_dir_tags, err_msg)) {
+        !replication_options::get_data_dir_and_tag(disk_str,
+                                                   "",
+                                                   replication_options::kReplicaAppType,
+                                                   data_dirs,
+                                                   data_dir_tags,
+                                                   err_msg)) {
         resp.err = ERR_INVALID_PARAMETERS;
         resp.__set_err_hint(fmt::format("invalid str({}), err_msg: {}", disk_str, err_msg));
         return;
@@ -1264,14 +1063,15 @@ void replica_stub::on_group_check(group_check_rpc rpc)
     if (!is_connected()) {
         LOG_WARNING("{}@{}: received group check: not connected, ignore",
                     request.config.pid,
-                    _primary_address_str);
+                    _primary_host_port_cache);
         return;
     }
 
-    LOG_INFO("{}@{}: received group check, primary = {}, ballot = {}, status = {}, "
+    LOG_INFO("{}@{}: received group check, primary = {}({}), ballot = {}, status = {}, "
              "last_committed_decree = {}",
              request.config.pid,
-             _primary_address_str,
+             _primary_host_port_cache,
+             request.config.hp_primary,
              request.config.primary,
              request.config.ballot,
              enum_to_string(request.config.status),
@@ -1331,17 +1131,19 @@ void replica_stub::on_learn_completion_notification(learn_completion_notificatio
 void replica_stub::on_add_learner(const group_check_request &request)
 {
     if (!is_connected()) {
-        LOG_WARNING("{}@{}: received add learner, primary = {}, not connected, ignore",
+        LOG_WARNING("{}@{}: received add learner, primary = {}({}), not connected, ignore",
                     request.config.pid,
-                    _primary_address_str,
+                    _primary_host_port_cache,
+                    request.config.hp_primary,
                     request.config.primary);
         return;
     }
 
-    LOG_INFO("{}@{}: received add learner, primary = {}, ballot = {}, status = {}, "
+    LOG_INFO("{}@{}: received add learner, primary = {}({}), ballot = {}, status = {}, "
              "last_committed_decree = {}",
              request.config.pid,
-             _primary_address_str,
+             _primary_host_port_cache,
+             request.config.hp_primary,
              request.config.primary,
              request.config.ballot,
              enum_to_string(request.config.status),
@@ -1421,7 +1223,8 @@ void replica_stub::query_configuration_by_node()
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_CONFIG_SYNC);
 
     configuration_query_by_node_request req;
-    req.node = _primary_address;
+    req.node = primary_address();
+    req.__set_hp_node(_primary_host_port);
 
     // TODO: send stored replicas may cost network, we shouldn't config the frequency
     get_local_replicas(req.stored_replicas);
@@ -1432,7 +1235,8 @@ void replica_stub::query_configuration_by_node()
     LOG_INFO("send query node partitions request to meta server, stored_replicas_count = {}",
              req.stored_replicas.size());
 
-    rpc_address target(_failure_detector->get_servers());
+    const auto &target =
+        dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
     _config_query_task =
         rpc::call(target,
                   msg,
@@ -1579,17 +1383,17 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_,
                                 req.__isset.meta_split_status ? req.meta_split_status
                                                               : split_status::NOT_SPLIT);
     } else {
-        if (req.config.primary == _primary_address) {
+        if (req.config.hp_primary == _primary_host_port) {
             LOG_INFO("{}@{}: replica not exists on replica server, which is primary, remove it "
                      "from meta server",
                      req.config.pid,
-                     _primary_address_str);
+                     _primary_host_port_cache);
             remove_replica_on_meta_server(req.info, req.config);
         } else {
             LOG_INFO(
                 "{}@{}: replica not exists on replica server, which is not primary, just ignore",
                 req.config.pid,
-                _primary_address_str);
+                _primary_host_port_cache);
         }
     }
 }
@@ -1627,23 +1431,24 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
     request->info = info;
     request->config = config;
     request->config.ballot++;
-    request->node = _primary_address;
+    request->node = primary_address();
+    request->__set_hp_node(_primary_host_port);
     request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
 
-    if (_primary_address == config.primary) {
+    if (_primary_host_port == config.hp_primary) {
         request->config.primary.set_invalid();
-    } else if (replica_helper::remove_node(_primary_address, request->config.secondaries)) {
+        request->config.hp_primary.reset();
+    } else if (replica_helper::remove_node(primary_address(), request->config.secondaries) &&
+               replica_helper::remove_node(_primary_host_port, request->config.hp_secondaries)) {
     } else {
         return;
     }
 
     ::dsn::marshall(msg, *request);
 
-    rpc_address target(_failure_detector->get_servers());
-    rpc::call(_failure_detector->get_servers(),
-              msg,
-              nullptr,
-              [](error_code err, dsn::message_ex *, dsn::message_ex *) {});
+    const auto &target =
+        dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
+    rpc::call(target, msg, nullptr, [](error_code err, dsn::message_ex *, dsn::message_ex *) {});
 }
 
 void replica_stub::on_meta_server_disconnected()
@@ -1694,18 +1499,20 @@ void replica_stub::response_client(gpid id,
                                    error_code error)
 {
     if (error == ERR_BUSY) {
-        if (is_read)
-            _counter_recent_read_busy_count->increment();
-        else
-            _counter_recent_write_busy_count->increment();
+        if (is_read) {
+            METRIC_VAR_INCREMENT(read_busy_requests);
+        } else {
+            METRIC_VAR_INCREMENT(write_busy_requests);
+        }
     } else if (error != ERR_OK) {
-        if (is_read)
-            _counter_recent_read_fail_count->increment();
-        else
-            _counter_recent_write_fail_count->increment();
+        if (is_read) {
+            METRIC_VAR_INCREMENT(read_failed_requests);
+        } else {
+            METRIC_VAR_INCREMENT(write_failed_requests);
+        }
         LOG_ERROR("{}@{}: {} fail: client = {}, code = {}, timeout = {}, status = {}, error = {}",
                   id,
-                  _primary_address_str,
+                  _primary_host_port_cache,
                   is_read ? "read" : "write",
                   request == nullptr ? "null" : request->header->from_address.to_string(),
                   request == nullptr ? "null" : request->header->rpc_name,
@@ -1717,17 +1524,6 @@ void replica_stub::response_client(gpid id,
     if (request != nullptr) {
         dsn_rpc_reply(request->create_response(), error);
     }
-}
-
-void replica_stub::init_gc_for_test()
-{
-    CHECK(FLAGS_gc_disabled, "");
-
-    _gc_timer_task = tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
-                                      &_tracker,
-                                      [this] { on_gc(); },
-                                      0,
-                                      std::chrono::milliseconds(FLAGS_gc_interval_ms));
 }
 
 void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
@@ -1754,7 +1550,7 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
     CHECK(
         dsn::utils::filesystem::directory_exists(replica_path), "dir({}) not exist", replica_path);
     LOG_INFO("start to move replica({}) as garbage, path: {}", id, replica_path);
-    const auto rename_path = fmt::format("{}.{}.gar", replica_path, dsn_now_us());
+    const auto rename_path = fmt::format("{}.{}{}", replica_path, dsn_now_us(), kFolderSuffixGar);
     if (!dsn::utils::filesystem::rename_path(replica_path, rename_path)) {
         LOG_WARNING("gc_replica: failed to move directory '{}' to '{}'", replica_path, rename_path);
 
@@ -1768,214 +1564,36 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
         LOG_WARNING("gc_replica: replica_dir_op succeed to move directory '{}' to '{}'",
                     replica_path,
                     rename_path);
-        _counter_replicas_recent_replica_move_garbage_count->increment();
+        METRIC_VAR_INCREMENT(moved_garbage_replicas);
     }
 }
 
-void replica_stub::gc_slog(const replica_gc_info_map &replica_gc_map)
-{
-    if (_log == nullptr) {
-        return;
-    }
-
-    replica_log_info_map replica_durable_decrees;
-    for (auto &replica_gc : replica_gc_map) {
-        replica_log_info replica_log;
-        auto &rep = replica_gc.second.rep;
-        auto &plog = replica_gc.second.plog;
-        if (plog) {
-            // Flush private log to update `plog_max_commit_on_disk`, and just flush once
-            // to avoid flushing infinitely.
-            plog->flush_once();
-            auto plog_max_commit_on_disk = plog->max_commit_on_disk();
-
-            replica_log.max_decree =
-                std::min(replica_gc.second.last_durable_decree, plog_max_commit_on_disk);
-            LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
-                     "last_durable_decree= {}, plog_max_commit_on_disk = {}",
-                     rep->name(),
-                     enum_to_string(replica_gc.second.status),
-                     replica_log.max_decree,
-                     replica_gc.second.last_durable_decree,
-                     plog_max_commit_on_disk);
-        } else {
-            replica_log.max_decree = replica_gc.second.last_durable_decree;
-            LOG_INFO("gc_shared: gc condition for {}, status = {}, garbage_max_decree = {}, "
-                     "last_durable_decree = {}",
-                     rep->name(),
-                     enum_to_string(replica_gc.second.status),
-                     replica_log.max_decree,
-                     replica_gc.second.last_durable_decree);
-        }
-        replica_log.valid_start_offset = replica_gc.second.init_offset_in_shared_log;
-        replica_durable_decrees[replica_gc.first] = replica_log;
-    }
-
-    // Garbage collection for shared log files.
-    std::set<gpid> prevent_gc_replicas;
-    _log->garbage_collection(replica_durable_decrees, prevent_gc_replicas);
-
-    // Trigger checkpoint to flush memtables once some replicas were found that prevent
-    // slog files from being removed for gc.
-    flush_replicas_for_slog_gc(replica_gc_map, prevent_gc_replicas);
-
-    auto total_size = _log->total_size();
-    _counter_shared_log_size->set(total_size / (1024 * 1024));
-
-    // TODO(wangdan): currently we could not yet call _log.reset() as below to close slog and
-    // reset it to nullptr even if it was found that slog had become empty (which means there
-    // had not been any file for slog).
-    // if (total_size == 0) {
-    //     _log.reset();
-    // }
-    //
-    // The reason for this point is that on_gc() is scheduled by timer to run asynchronously
-    // during the initialization of replica_stub. It might happen before slog.on_partition_reset()
-    // (building slog._shared_log_info_map), which means slog would be closed mistakenly before
-    // it was initialized completely.
-    //
-    // All of slog files would removed on v2.5; thus it is safe to remove all of slog code (which
-    // means even slog object would not be created) on the next version (namely 2.6), and this
-    // problem would also be resolved.
-}
-
-void replica_stub::limit_flush_replicas_for_slog_gc(size_t prevent_gc_replica_count)
-{
-    const size_t log_shared_gc_flush_replicas_limit = FLAGS_log_shared_gc_flush_replicas_limit;
-    if (log_shared_gc_flush_replicas_limit == 0) {
-        // 0 for log_shared_gc_flush_replicas_limit means no limit.
-        _real_log_shared_gc_flush_replicas_limit = std::numeric_limits<size_t>::max();
-        return;
-    }
-
-    if (_last_prevent_gc_replica_count == 0) {
-        // Initialize it for the 1st time.
-        _real_log_shared_gc_flush_replicas_limit = log_shared_gc_flush_replicas_limit;
-        return;
-    }
-
-    CHECK_GE(_last_prevent_gc_replica_count, prevent_gc_replica_count);
-    size_t flushed_replicas = _last_prevent_gc_replica_count - prevent_gc_replica_count;
-    if (flushed_replicas == 0) {
-        // It's too busy to process more flush tasks.
-        _real_log_shared_gc_flush_replicas_limit =
-            std::min(2UL, log_shared_gc_flush_replicas_limit);
-        return;
-    }
-
-    if (_real_log_shared_gc_flush_replicas_limit == 0 ||
-        _real_log_shared_gc_flush_replicas_limit == std::numeric_limits<size_t>::max()) {
-        // Once it was previously set with some special values, it should be reset.
-        _real_log_shared_gc_flush_replicas_limit = log_shared_gc_flush_replicas_limit;
-        return;
-    }
-
-    if (flushed_replicas < _real_log_shared_gc_flush_replicas_limit) {
-        // Keep it unchanged.
-        return;
-    }
-
-    // Increase it to process more flush tasks.
-    _real_log_shared_gc_flush_replicas_limit =
-        std::min(log_shared_gc_flush_replicas_limit, _real_log_shared_gc_flush_replicas_limit << 1);
-}
-
-void replica_stub::flush_replicas_for_slog_gc(const replica_gc_info_map &replica_gc_map,
-                                              const std::set<gpid> &prevent_gc_replicas)
-{
-    // Trigger checkpoints to flush memtables once some replicas were found that prevent slog files
-    // from being removed for gc.
-    //
-    // How to trigger memtable flush ?
-    //   A parameter `is_emergency' was added for `replica::background_async_checkpoint()` function;
-    //   once it's set true, underlying storage engine would flush memtable as soon as possiable.
-    //
-    // When memtable flush is triggered ?
-    //   1. After a fixed interval (specified by `[replication].gc_interval_ms` option), try to find
-    //   if there are some replicas preventing slog files from being removed for gc; if any, all of
-    //   them would be deleted "gradually" ("gradually" means the number of the replicas whose
-    //   memtables are submitted to storage engine to be flushed would be limited).
-    //   2. `[replication].checkpoint_max_interval_hours' option specified the max interval between
-    //   the two adjacent checkpoints.
-
-    if (prevent_gc_replicas.empty()) {
-        return;
-    }
-
-    limit_flush_replicas_for_slog_gc(prevent_gc_replicas.size());
-    _last_prevent_gc_replica_count = prevent_gc_replicas.size();
-
-    LOG_INFO("gc_shared: trigger emergency checkpoints to flush replicas for gc shared logs: "
-             "log_shared_gc_flush_replicas_limit = {}/{}, prevent_gc_replicas({}) = {}",
-             _real_log_shared_gc_flush_replicas_limit,
-             FLAGS_log_shared_gc_flush_replicas_limit,
-             prevent_gc_replicas.size(),
-             fmt::join(prevent_gc_replicas, ", "));
-
-    size_t i = 0;
-    for (const auto &pid : prevent_gc_replicas) {
-        const auto &replica_gc = replica_gc_map.find(pid);
-        if (replica_gc == replica_gc_map.end()) {
-            continue;
-        }
-
-        if (++i > _real_log_shared_gc_flush_replicas_limit) {
-            break;
-        }
-
-        bool mock_flush = false;
-        FAIL_POINT_INJECT_NOT_RETURN_F(
-            "mock_flush_replicas_for_slog_gc", [&mock_flush, this, i](dsn::string_view str) {
-                CHECK(buf2bool(str, mock_flush),
-                      "invalid mock_flush_replicas_for_slog_gc toggle, should be true or false: {}",
-                      str);
-                _mock_flush_replicas_for_test = i;
-            });
-        if (dsn_unlikely(mock_flush)) {
-            continue;
-        }
-
-        tasking::enqueue(
-            LPC_PER_REPLICA_CHECKPOINT_TIMER,
-            replica_gc->second.rep->tracker(),
-            std::bind(&replica_stub::trigger_checkpoint, this, replica_gc->second.rep, true),
-            pid.thread_hash(),
-            std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
-    }
-}
-
-void replica_stub::on_gc()
+void replica_stub::on_replicas_stat()
 {
     uint64_t start = dsn_now_ns();
 
-    replica_gc_info_map replica_gc_map;
+    replica_stat_info_by_gpid rep_stat_info_by_gpid;
     {
         zauto_read_lock l(_replicas_lock);
         // A replica was removed from _replicas before it would be closed by replica::close().
         // Thus it's safe to use the replica after fetching its ref pointer from _replicas.
-        for (const auto &rep_pair : _replicas) {
-            const replica_ptr &rep = rep_pair.second;
+        for (const auto &replica : _replicas) {
+            const auto &rep = replica.second;
 
-            auto &replica_gc = replica_gc_map[rep_pair.first];
-            replica_gc.rep = rep;
-            replica_gc.status = rep->status();
-            replica_gc.plog = rep->private_log();
-            replica_gc.last_durable_decree = rep->last_durable_decree();
-            replica_gc.init_offset_in_shared_log =
-                rep->get_app()->init_info().init_offset_in_shared_log;
+            auto &rep_stat_info = rep_stat_info_by_gpid[replica.first];
+            rep_stat_info.rep = rep;
+            rep_stat_info.status = rep->status();
+            rep_stat_info.plog = rep->private_log();
+            rep_stat_info.last_durable_decree = rep->last_durable_decree();
         }
     }
 
-    LOG_INFO("start to garbage collection, replica_count = {}", replica_gc_map.size());
-    gc_slog(replica_gc_map);
+    LOG_INFO("start replicas statistics, replica_count = {}", rep_stat_info_by_gpid.size());
 
     // statistic learning info
     uint64_t learning_count = 0;
     uint64_t learning_max_duration_time_ms = 0;
     uint64_t learning_max_copy_file_size = 0;
-    uint64_t cold_backup_running_count = 0;
-    uint64_t cold_backup_max_duration_time_ms = 0;
-    uint64_t cold_backup_max_upload_file_size = 0;
     uint64_t bulk_load_running_count = 0;
     uint64_t bulk_load_max_ingestion_time_ms = 0;
     uint64_t bulk_load_max_duration_time_ms = 0;
@@ -1983,8 +1601,8 @@ void replica_stub::on_gc()
     uint64_t splitting_max_duration_time_ms = 0;
     uint64_t splitting_max_async_learn_time_ms = 0;
     uint64_t splitting_max_copy_file_size = 0;
-    for (auto &kv : replica_gc_map) {
-        replica_ptr &rep = kv.second.rep;
+    for (const auto & [ _, rep_stat_info ] : rep_stat_info_by_gpid) {
+        const auto &rep = rep_stat_info.rep;
         if (rep->status() == partition_status::PS_POTENTIAL_SECONDARY) {
             learning_count++;
             learning_max_duration_time_ms = std::max(
@@ -1995,12 +1613,6 @@ void replica_stub::on_gc()
         }
         if (rep->status() == partition_status::PS_PRIMARY ||
             rep->status() == partition_status::PS_SECONDARY) {
-            cold_backup_running_count += rep->_cold_backup_running_count.load();
-            cold_backup_max_duration_time_ms = std::max(
-                cold_backup_max_duration_time_ms, rep->_cold_backup_max_duration_time_ms.load());
-            cold_backup_max_upload_file_size = std::max(
-                cold_backup_max_upload_file_size, rep->_cold_backup_max_upload_file_size.load());
-
             if (rep->get_bulk_loader()->get_bulk_load_status() != bulk_load_status::BLS_INVALID) {
                 bulk_load_running_count++;
                 bulk_load_max_ingestion_time_ms =
@@ -2021,21 +1633,19 @@ void replica_stub::on_gc()
         }
     }
 
-    _counter_replicas_learning_count->set(learning_count);
-    _counter_replicas_learning_max_duration_time_ms->set(learning_max_duration_time_ms);
-    _counter_replicas_learning_max_copy_file_size->set(learning_max_copy_file_size);
-    _counter_cold_backup_running_count->set(cold_backup_running_count);
-    _counter_cold_backup_max_duration_time_ms->set(cold_backup_max_duration_time_ms);
-    _counter_cold_backup_max_upload_file_size->set(cold_backup_max_upload_file_size);
-    _counter_bulk_load_running_count->set(bulk_load_running_count);
-    _counter_bulk_load_max_ingestion_time_ms->set(bulk_load_max_ingestion_time_ms);
-    _counter_bulk_load_max_duration_time_ms->set(bulk_load_max_duration_time_ms);
-    _counter_replicas_splitting_count->set(splitting_count);
-    _counter_replicas_splitting_max_duration_time_ms->set(splitting_max_duration_time_ms);
-    _counter_replicas_splitting_max_async_learn_time_ms->set(splitting_max_async_learn_time_ms);
-    _counter_replicas_splitting_max_copy_file_size->set(splitting_max_copy_file_size);
+    METRIC_VAR_SET(learning_replicas, learning_count);
+    METRIC_VAR_SET(learning_replicas_max_duration_ms, learning_max_duration_time_ms);
+    METRIC_VAR_SET(learning_replicas_max_copy_file_bytes, learning_max_copy_file_size);
+    METRIC_VAR_SET(bulk_load_running_count, bulk_load_running_count);
+    METRIC_VAR_SET(bulk_load_ingestion_max_duration_ms, bulk_load_max_ingestion_time_ms);
+    METRIC_VAR_SET(bulk_load_max_duration_ms, bulk_load_max_duration_time_ms);
+    METRIC_VAR_SET(splitting_replicas, splitting_count);
+    METRIC_VAR_SET(splitting_replicas_max_duration_ms, splitting_max_duration_time_ms);
+    METRIC_VAR_SET(splitting_replicas_async_learn_max_duration_ms,
+                   splitting_max_async_learn_time_ms);
+    METRIC_VAR_SET(splitting_replicas_max_copy_file_bytes, splitting_max_copy_file_size);
 
-    LOG_INFO("finish to garbage collection, time_used_ns = {}", dsn_now_ns() - start);
+    LOG_INFO("finish replicas statistics, time used {}ns", dsn_now_ns() - start);
 }
 
 void replica_stub::on_disk_stat()
@@ -2048,11 +1658,11 @@ void replica_stub::on_disk_stat()
     _fs_manager.update_disk_stat();
     update_disk_holding_replicas();
 
-    _counter_replicas_error_replica_dir_count->set(report.error_replica_count);
-    _counter_replicas_garbage_replica_dir_count->set(report.garbage_replica_count);
-    _counter_replicas_tmp_replica_dir_count->set(report.disk_migrate_tmp_count);
-    _counter_replicas_origin_replica_dir_count->set(report.disk_migrate_origin_count);
-    _counter_replicas_recent_replica_remove_dir_count->add(report.remove_dir_count);
+    METRIC_VAR_SET(replica_error_dirs, report.error_replica_count);
+    METRIC_VAR_SET(replica_garbage_dirs, report.garbage_replica_count);
+    METRIC_VAR_SET(replica_tmp_dirs, report.disk_migrate_tmp_count);
+    METRIC_VAR_SET(replica_origin_dirs, report.disk_migrate_origin_count);
+    METRIC_VAR_INCREMENT_BY(replica_removed_dirs, report.remove_dir_count);
 
     LOG_INFO("finish to update disk stat, time_used_ns = {}", dsn_now_ns() - start);
 }
@@ -2084,10 +1694,10 @@ task_ptr replica_stub::begin_open_replica(
         if (rep->status() == partition_status::PS_INACTIVE && tsk->cancel(false)) {
             // reopen it
             _closing_replicas.erase(it);
-            _counter_replicas_closing_count->decrement();
+            METRIC_VAR_DECREMENT(closing_replicas);
 
             _replicas.emplace(id, rep);
-            _counter_replicas_count->increment();
+            METRIC_VAR_INCREMENT(total_replicas);
 
             _closed_replicas.erase(id);
 
@@ -2113,7 +1723,7 @@ task_ptr replica_stub::begin_open_replica(
         std::bind(&replica_stub::open_replica, this, app, id, group_check, configuration_update));
 
     _opening_replicas[id] = task;
-    _counter_replicas_opening_count->increment();
+    METRIC_VAR_INCREMENT(opening_replicas);
     _closed_replicas.erase(id);
 
     _replicas_lock.unlock_write();
@@ -2137,7 +1747,7 @@ void replica_stub::open_replica(
         // process below
         LOG_INFO("{}@{}: start to load replica {} group check, dir = {}",
                  id,
-                 _primary_address_str,
+                 _primary_host_port_cache,
                  group_check ? "with" : "without",
                  dir);
         rep = load_replica(dn, dir.c_str());
@@ -2167,7 +1777,7 @@ void replica_stub::open_replica(
                 dsn::utils::filesystem::rename_path(origin_tmp_dir, origin_dir);
                 rep = load_replica(origin_dn, origin_dir.c_str());
 
-                FAIL_POINT_INJECT_F("mock_replica_load", [&](string_view) -> void {});
+                FAIL_POINT_INJECT_F("mock_replica_load", [&](absl::string_view) -> void {});
             }
         }
     }
@@ -2180,9 +1790,9 @@ void replica_stub::open_replica(
                       configuration_update->config.last_committed_decree == 0,
                   "{}@{}: cannot load replica({}.{}), ballot = {}, "
                   "last_committed_decree = {}, but it does not existed!",
-                  id.to_string(),
-                  _primary_address_str,
-                  id.to_string(),
+                  id,
+                  _primary_host_port_cache,
+                  id,
                   app.app_type.c_str(),
                   configuration_update->config.ballot,
                   configuration_update->config.last_committed_decree);
@@ -2219,41 +1829,34 @@ void replica_stub::open_replica(
     }
 
     if (rep == nullptr) {
-        LOG_WARNING(
-            "{}@{}: open replica failed, erase from opening replicas", id, _primary_address_str);
+        LOG_WARNING("{}@{}: open replica failed, erase from opening replicas",
+                    id,
+                    _primary_host_port_cache);
         zauto_write_lock l(_replicas_lock);
-        CHECK_GT_MSG(_opening_replicas.erase(id),
-                     0,
-                     "replica {} is not in _opening_replicas",
-                     id.to_string());
-        _counter_replicas_opening_count->decrement();
+        CHECK_GT_MSG(_opening_replicas.erase(id), 0, "replica {} is not in _opening_replicas", id);
+        METRIC_VAR_DECREMENT(opening_replicas);
         return;
     }
 
     {
         zauto_write_lock l(_replicas_lock);
-        CHECK_GT_MSG(_opening_replicas.erase(id),
-                     0,
-                     "replica {} is not in _opening_replicas",
-                     id.to_string());
-        _counter_replicas_opening_count->decrement();
+        CHECK_GT_MSG(_opening_replicas.erase(id), 0, "replica {} is not in _opening_replicas", id);
+        METRIC_VAR_DECREMENT(opening_replicas);
 
-        CHECK(_replicas.find(id) == _replicas.end(),
-              "replica {} is already in _replicas",
-              id.to_string());
+        CHECK(_replicas.find(id) == _replicas.end(), "replica {} is already in _replicas", id);
         _replicas.insert(replicas::value_type(rep->get_gpid(), rep));
-        _counter_replicas_count->increment();
+        METRIC_VAR_INCREMENT(total_replicas);
 
         _closed_replicas.erase(id);
     }
 
     if (nullptr != group_check) {
-        rpc::call_one_way_typed(_primary_address,
+        rpc::call_one_way_typed(primary_address(),
                                 RPC_LEARN_ADD_LEARNER,
                                 *group_check,
                                 group_check->config.pid.thread_hash());
     } else if (nullptr != configuration_update) {
-        rpc::call_one_way_typed(_primary_address,
+        rpc::call_one_way_typed(primary_address(),
                                 RPC_CONFIG_PROPOSAL,
                                 *configuration_update,
                                 configuration_update->config.pid.thread_hash());
@@ -2307,56 +1910,76 @@ replica *replica_stub::new_replica(gpid gpid,
     return rep;
 }
 
-replica *replica_stub::load_replica(dir_node *dn, const char *dir)
+bool replica_stub::validate_replica_dir(const std::string &dir,
+                                        app_info &ai,
+                                        gpid &pid,
+                                        std::string &hint_message)
 {
-    FAIL_POINT_INJECT_F("mock_replica_load", [&](string_view) -> replica * { return nullptr; });
+    if (!utils::filesystem::directory_exists(dir)) {
+        hint_message = fmt::format("replica dir '{}' not exist", dir);
+        return false;
+    }
 
     char splitters[] = {'\\', '/', 0};
-    std::string name = utils::get_last_component(std::string(dir), splitters);
+    const auto name = utils::get_last_component(dir, splitters);
     if (name.empty()) {
-        LOG_ERROR("invalid replica dir {}", dir);
-        return nullptr;
+        hint_message = fmt::format("invalid replica dir '{}'", dir);
+        return false;
     }
 
-    char app_type[128];
+    char app_type[128] = {0};
     int32_t app_id, pidx;
     if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
-        LOG_ERROR("invalid replica dir {}", dir);
-        return nullptr;
+        hint_message = fmt::format("invalid replica dir '{}'", dir);
+        return false;
     }
 
-    gpid pid(app_id, pidx);
-    if (!utils::filesystem::directory_exists(dir)) {
-        LOG_ERROR("replica dir {} not exist", dir);
-        return nullptr;
-    }
-
-    dsn::app_info info;
-    replica_app_info info2(&info);
-    std::string path = utils::filesystem::path_combine(dir, replica::kAppInfo);
-    auto err = info2.load(path);
+    pid = gpid(app_id, pidx);
+    replica_app_info rai(&ai);
+    const auto ai_path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
+    const auto err = rai.load(ai_path);
     if (ERR_OK != err) {
-        LOG_ERROR("load app-info from {} failed, err = {}", path, err);
+        hint_message = fmt::format("load app-info from '{}' failed, err = {}", ai_path, err);
+        return false;
+    }
+
+    if (ai.app_type != app_type) {
+        hint_message = fmt::format("unmatched app type '{}' for '{}'", ai.app_type, ai_path);
+        return false;
+    }
+
+    // When the online partition split function aborted, the garbage partitions are with pidx in
+    // the range of [ai.partition_count, 2 * ai.partition_count), which means the partitions with
+    // pidx >= ai.partition_count are garbage partitions.
+    if (ai.partition_count <= pidx) {
+        hint_message = fmt::format(
+            "partition[{}], count={}, this replica may be partition split garbage partition, "
+            "ignore it",
+            pid,
+            ai.partition_count);
+        return false;
+    }
+
+    return true;
+}
+
+replica *replica_stub::load_replica(dir_node *dn, const char *dir)
+{
+    FAIL_POINT_INJECT_F("mock_replica_load",
+                        [&](absl::string_view) -> replica * { return nullptr; });
+
+    app_info ai;
+    gpid pid;
+    std::string hint_message;
+    if (!validate_replica_dir(dir, ai, pid, hint_message)) {
+        LOG_ERROR("invalid replica dir '{}', hint: {}", dir, hint_message);
         return nullptr;
     }
 
-    if (info.app_type != app_type) {
-        LOG_ERROR("unmatched app type {} for {}", info.app_type, path);
-        return nullptr;
-    }
-
-    if (info.partition_count < pidx) {
-        LOG_ERROR("partition[{}], count={}, this replica may be partition split garbage partition, "
-                  "ignore it",
-                  pid,
-                  info.partition_count);
-        return nullptr;
-    }
-
-    // The replica's directory must exists when creating a replica.
-    CHECK_EQ(dir, dn->replica_dir(app_type, pid));
-    auto *rep = new replica(this, pid, info, dn, false);
-    err = rep->initialize_on_load();
+    // The replica's directory must exist when creating a replica.
+    CHECK_EQ(dir, dn->replica_dir(ai.app_type, pid));
+    auto *rep = new replica(this, pid, ai, dn, false);
+    const auto err = rep->initialize_on_load();
     if (err != ERR_OK) {
         LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
         rep->close();
@@ -2366,7 +1989,7 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
         // clear work on failure
         if (dsn::utils::filesystem::directory_exists(dir)) {
             move_to_err_path(dir, "load replica");
-            _counter_replicas_recent_replica_move_error_count->increment();
+            METRIC_VAR_INCREMENT(moved_error_replicas);
             _fs_manager.remove_replica(pid);
         }
 
@@ -2409,7 +2032,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
         return nullptr;
     }
 
-    _counter_replicas_count->decrement();
+    METRIC_VAR_DECREMENT(total_replicas);
 
     int delay_ms = 0;
     if (r->status() == partition_status::PS_INACTIVE) {
@@ -2428,7 +2051,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
                                      0,
                                      std::chrono::milliseconds(delay_ms));
     _closing_replicas[id] = std::make_tuple(task, r, std::move(a_info), std::move(r_info));
-    _counter_replicas_closing_count->increment();
+    METRIC_VAR_INCREMENT(closing_replicas);
     return task;
 }
 
@@ -2448,13 +2071,13 @@ void replica_stub::close_replica(replica_ptr r)
         _closed_replicas.emplace(
             id, std::make_pair(std::get<2>(find->second), std::get<3>(find->second)));
         _closing_replicas.erase(find);
-        _counter_replicas_closing_count->decrement();
+        METRIC_VAR_DECREMENT(closing_replicas);
     }
 
     _fs_manager.remove_replica(id);
     if (r->is_data_corrupted()) {
         move_to_err_path(r->dir(), "trash replica");
-        _counter_replicas_recent_replica_move_error_count->increment();
+        METRIC_VAR_INCREMENT(moved_error_replicas);
     }
 
     LOG_INFO("{}: finish to close replica", name);
@@ -2467,9 +2090,9 @@ void replica_stub::notify_replica_state_update(const replica_configuration &conf
             tasking::enqueue(
                 LPC_REPLICA_STATE_CHANGE_NOTIFICATION,
                 &_tracker,
-                std::bind(_replica_state_subscriber, _primary_address, config, is_closing));
+                std::bind(_replica_state_subscriber, _primary_host_port, config, is_closing));
         } else {
-            _replica_state_subscriber(_primary_address, config, is_closing);
+            _replica_state_subscriber(_primary_host_port, config, is_closing);
         }
     }
 }
@@ -2598,32 +2221,18 @@ void replica_stub::register_ctrl_command()
                 return std::string(e.to_string());
             }));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.deny-client"},
-            "replica.deny-client <true|false>",
-            "replica.deny-client - control if deny client read & write request",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(_deny_client, "deny-client", args);
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
+            _deny_client, "replica.deny-client", "control if deny client read & write request"));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.verbose-client-log"},
-            "replica.verbose-client-log <true|false>",
-            "replica.verbose-client-log - control if print verbose error log when reply read & "
-            "write request",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(
-                    _verbose_client_log, "verbose-client-log", args);
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
+            _verbose_client_log,
+            "replica.verbose-client-log",
+            "control if print verbose error log when reply read & write request"));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.verbose-commit-log"},
-            "replica.verbose-commit-log <true|false>",
-            "replica.verbose-commit-log - control if print verbose log when commit mutation",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(
-                    _verbose_commit_log, "verbose-commit-log", args);
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
+            _verbose_commit_log,
+            "replica.verbose-commit-log",
+            "control if print verbose log when commit mutation"));
 
         _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.trigger-checkpoint"},
@@ -2663,14 +2272,10 @@ void replica_stub::register_ctrl_command()
             }));
 
 #ifdef DSN_ENABLE_GPERF
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.release-tcmalloc-memory"},
-            "replica.release-tcmalloc-memory <true|false>",
-            "replica.release-tcmalloc-memory - control if try to release tcmalloc memory",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(
-                    _release_tcmalloc_memory, "release-tcmalloc-memory", args);
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
+            _release_tcmalloc_memory,
+            "replica.release-tcmalloc-memory",
+            "control if try to release tcmalloc memory"));
 
         _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.get-tcmalloc-status"},
@@ -2682,32 +2287,12 @@ void replica_stub::register_ctrl_command()
                 return std::string(buf);
             }));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.mem-release-max-reserved-percentage"},
-            "replica.mem-release-max-reserved-percentage [num | DEFAULT]",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_int_command(
+            _mem_release_max_reserved_mem_percentage,
+            FLAGS_mem_release_max_reserved_mem_percentage,
+            "replica.mem-release-max-reserved-percentage",
             "control tcmalloc max reserved but not-used memory percentage",
-            [this](const std::vector<std::string> &args) {
-                std::string result("OK");
-                if (args.empty()) {
-                    // show current value
-                    result = "mem-release-max-reserved-percentage = " +
-                             std::to_string(_mem_release_max_reserved_mem_percentage);
-                    return result;
-                }
-                if (args[0] == "DEFAULT") {
-                    // set to default value
-                    _mem_release_max_reserved_mem_percentage =
-                        FLAGS_mem_release_max_reserved_mem_percentage;
-                    return result;
-                }
-                int32_t percentage = 0;
-                if (!dsn::buf2int32(args[0], percentage) || percentage <= 0 || percentage > 100) {
-                    result = std::string("ERR: invalid arguments");
-                } else {
-                    _mem_release_max_reserved_mem_percentage = percentage;
-                }
-                return result;
-            }));
+            &check_mem_release_max_reserved_mem_percentage));
 
         _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.release-all-reserved-memory"},
@@ -2720,33 +2305,11 @@ void replica_stub::register_ctrl_command()
 #elif defined(DSN_USE_JEMALLOC)
         register_jemalloc_ctrl_command();
 #endif
-        // TODO(yingchun): use http
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.max-concurrent-bulk-load-downloading-count"},
-            "replica.max-concurrent-bulk-load-downloading-count [num | DEFAULT]",
-            "control stub max_concurrent_bulk_load_downloading_count",
-            [this](const std::vector<std::string> &args) {
-                std::string result("OK");
-                if (args.empty()) {
-                    result = "max_concurrent_bulk_load_downloading_count=" +
-                             std::to_string(_max_concurrent_bulk_load_downloading_count);
-                    return result;
-                }
-
-                if (args[0] == "DEFAULT") {
-                    _max_concurrent_bulk_load_downloading_count =
-                        _options.max_concurrent_bulk_load_downloading_count;
-                    return result;
-                }
-
-                int32_t count = 0;
-                if (!dsn::buf2int32(args[0], count) || count <= 0) {
-                    result = std::string("ERR: invalid arguments");
-                } else {
-                    _max_concurrent_bulk_load_downloading_count = count;
-                }
-                return result;
-            }));
+        _cmds.emplace_back(::dsn::command_manager::instance().register_int_command(
+            FLAGS_max_concurrent_bulk_load_downloading_count,
+            FLAGS_max_concurrent_bulk_load_downloading_count,
+            "replica.max-concurrent-bulk-load-downloading-count",
+            kMaxConcurrentBulkLoadDownloadingCountDesc));
     });
 }
 
@@ -2845,7 +2408,7 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
     std::stringstream query_state;
     query_state << processed << " processed, " << not_found << " not found";
     for (auto &kv : results) {
-        query_state << "\n    " << kv.first.to_string() << "@" << _primary_address_str;
+        query_state << "\n    " << kv.first << "@" << _primary_host_port_cache;
         if (kv.second.first != partition_status::PS_INVALID)
             query_state << "@" << (kv.second.first == partition_status::PS_PRIMARY ? "P" : "S");
         query_state << " : " << kv.second.second;
@@ -2891,9 +2454,9 @@ void replica_stub::close()
         _disk_stat_timer_task = nullptr;
     }
 
-    if (_gc_timer_task != nullptr) {
-        _gc_timer_task->cancel(true);
-        _gc_timer_task = nullptr;
+    if (_replicas_stat_timer_task != nullptr) {
+        _replicas_stat_timer_task->cancel(true);
+        _replicas_stat_timer_task = nullptr;
     }
 
     if (_mem_release_timer_task != nullptr) {
@@ -2912,7 +2475,7 @@ void replica_stub::close()
 
             task->cancel(true);
 
-            _counter_replicas_opening_count->decrement();
+            METRIC_VAR_DECREMENT(opening_replicas);
             _replicas_lock.lock_write();
             _opening_replicas.erase(_opening_replicas.begin());
         }
@@ -2920,7 +2483,7 @@ void replica_stub::close()
         while (!_replicas.empty()) {
             _replicas.begin()->second->close();
 
-            _counter_replicas_count->decrement();
+            METRIC_VAR_DECREMENT(total_replicas);
             _replicas.erase(_replicas.begin());
         }
     }
@@ -2943,50 +2506,55 @@ static int64_t get_tcmalloc_numeric_property(const char *prop)
 
 uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
 {
-    auto tcmalloc_released_bytes = 0;
     if (!_release_tcmalloc_memory) {
         _is_releasing_memory.store(false);
-        _counter_tcmalloc_release_memory_size->set(tcmalloc_released_bytes);
-        return tcmalloc_released_bytes;
+        return 0;
     }
 
     if (_is_releasing_memory.load()) {
         LOG_WARNING("This node is releasing memory...");
-        return tcmalloc_released_bytes;
+        return 0;
     }
 
     _is_releasing_memory.store(true);
+
     int64_t total_allocated_bytes =
         get_tcmalloc_numeric_property("generic.current_allocated_bytes");
     int64_t reserved_bytes = get_tcmalloc_numeric_property("tcmalloc.pageheap_free_bytes");
     if (total_allocated_bytes == -1 || reserved_bytes == -1) {
-        return tcmalloc_released_bytes;
+        return 0;
     }
 
     int64_t max_reserved_bytes =
         release_all ? 0
                     : (total_allocated_bytes * _mem_release_max_reserved_mem_percentage / 100.0);
-    if (reserved_bytes > max_reserved_bytes) {
-        int64_t release_bytes = reserved_bytes - max_reserved_bytes;
-        tcmalloc_released_bytes = release_bytes;
-        LOG_INFO("Memory release started, almost {} bytes will be released", release_bytes);
-        while (release_bytes > 0) {
-            // tcmalloc releasing memory will lock page heap, release 1MB at a time to avoid locking
-            // page heap for long time
-            ::MallocExtension::instance()->ReleaseToSystem(1024 * 1024);
-            release_bytes -= 1024 * 1024;
-        }
+    if (reserved_bytes <= max_reserved_bytes) {
+        return 0;
     }
-    _counter_tcmalloc_release_memory_size->set(tcmalloc_released_bytes);
+
+    const int64_t expected_released_bytes = reserved_bytes - max_reserved_bytes;
+    LOG_INFO("Memory release started, almost {} bytes will be released", expected_released_bytes);
+
+    int64_t unreleased_bytes = expected_released_bytes;
+    while (unreleased_bytes > 0) {
+        // tcmalloc releasing memory will lock page heap, release 1MB at a time to avoid locking
+        // page heap for long time
+        static const int64_t kReleasedBytesEachTime = 1024 * 1024;
+        ::MallocExtension::instance()->ReleaseToSystem(kReleasedBytesEachTime);
+        unreleased_bytes -= kReleasedBytesEachTime;
+    }
+    METRIC_VAR_INCREMENT_BY(tcmalloc_released_bytes, expected_released_bytes);
+
     _is_releasing_memory.store(false);
-    return tcmalloc_released_bytes;
+
+    return expected_released_bytes;
 }
 #endif
 
 //
 // partition split
 //
-void replica_stub::create_child_replica(rpc_address primary_address,
+void replica_stub::create_child_replica(host_port primary_address,
                                         app_info app,
                                         ballot init_ballot,
                                         gpid child_gpid,
@@ -3017,7 +2585,7 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
                                                             const std::string &parent_dir)
 {
     FAIL_POINT_INJECT_F(
-        "replica_stub_create_child_replica_if_not_found", [=](dsn::string_view) -> replica_ptr {
+        "replica_stub_create_child_replica_if_not_found", [=](absl::string_view) -> replica_ptr {
             const auto dn =
                 _fs_manager.create_child_replica_dir(app->app_type, child_pid, parent_dir);
             CHECK_NOTNULL(dn, "");
@@ -3044,7 +2612,7 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
             if (rep != nullptr) {
                 auto pr = _replicas.insert(replicas::value_type(child_pid, rep));
                 CHECK(pr.second, "child replica {} has been existed", rep->name());
-                _counter_replicas_count->increment();
+                METRIC_VAR_INCREMENT(total_replicas);
                 _closed_replicas.erase(child_pid);
             }
             return rep;
@@ -3062,7 +2630,8 @@ void replica_stub::split_replica_error_handler(gpid pid, local_execution handler
 dsn::error_code
 replica_stub::split_replica_exec(dsn::task_code code, gpid pid, local_execution handler)
 {
-    FAIL_POINT_INJECT_F("replica_stub_split_replica_exec", [](dsn::string_view) { return ERR_OK; });
+    FAIL_POINT_INJECT_F("replica_stub_split_replica_exec",
+                        [](absl::string_view) { return ERR_OK; });
     replica_ptr replica = pid.get_app_id() == 0 ? nullptr : get_replica(pid);
     if (replica && handler) {
         tasking::enqueue(code,
@@ -3128,7 +2697,7 @@ void replica_stub::on_bulk_load(bulk_load_rpc rpc)
     const bulk_load_request &request = rpc.request();
     bulk_load_response &response = rpc.response();
 
-    LOG_INFO("[{}@{}]: receive bulk load request", request.pid, _primary_address_str);
+    LOG_INFO("[{}@{}]: receive bulk load request", request.pid, _primary_host_port_cache);
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
         rep->get_bulk_loader()->on_bulk_load(request, response);
@@ -3143,11 +2712,12 @@ void replica_stub::on_group_bulk_load(group_bulk_load_rpc rpc)
     const group_bulk_load_request &request = rpc.request();
     group_bulk_load_response &response = rpc.response();
 
-    LOG_INFO("[{}@{}]: received group bulk load request, primary = {}, ballot = {}, "
+    LOG_INFO("[{}@{}]: received group bulk load request, primary = {}({}), ballot = {}, "
              "meta_bulk_load_status = {}",
              request.config.pid,
-             _primary_address_str,
-             request.config.primary.to_string(),
+             _primary_host_port_cache,
+             request.config.hp_primary,
+             request.config.primary,
              request.config.ballot,
              enum_to_string(request.meta_bulk_load_status));
 
@@ -3167,7 +2737,7 @@ void replica_stub::on_detect_hotkey(detect_hotkey_rpc rpc)
 
     LOG_INFO("[{}@{}]: received detect hotkey request, hotkey_type = {}, detect_action = {}",
              request.pid,
-             _primary_address_str,
+             _primary_host_port_cache,
              enum_to_string(request.type),
              enum_to_string(request.action));
 

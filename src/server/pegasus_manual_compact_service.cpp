@@ -19,6 +19,7 @@
 
 #include "pegasus_manual_compact_service.h"
 
+#include <absl/strings/string_view.h>
 #include <limits.h>
 #include <rocksdb/options.h>
 #include <list>
@@ -26,29 +27,43 @@
 #include <set>
 #include <utility>
 
-#include "base/pegasus_const.h"
 #include "common/replication.codes.h"
+#include "common/replica_envs.h"
 #include "pegasus_server_impl.h"
-#include "perf_counter/perf_counter.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
+#include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
-namespace pegasus {
-namespace server {
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_manual_compact_queued_tasks,
+                          dsn::metric_unit::kTasks,
+                          "The number of current queued tasks of rocksdb manual compaction");
 
-DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_manual_compact_running_tasks,
+                          dsn::metric_unit::kTasks,
+                          "The number of current running tasks of rocksdb manual compaction");
 
 DSN_DEFINE_int32(pegasus.server,
                  manual_compact_min_interval_seconds,
                  0,
                  "minimal interval time in seconds to start a new manual compaction, <= 0 "
                  "means no interval limit");
+namespace pegasus {
+namespace server {
+
+DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
+
+const std::string
+    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
+const std::string
+    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
 
 pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_impl *app)
     : replica_base(*app),
@@ -58,17 +73,10 @@ pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_im
       _manual_compact_enqueue_time_ms(0),
       _manual_compact_start_running_time_ms(0),
       _manual_compact_last_finish_time_ms(0),
-      _manual_compact_last_time_used_ms(0)
+      _manual_compact_last_time_used_ms(0),
+      METRIC_VAR_INIT_replica(rdb_manual_compact_queued_tasks),
+      METRIC_VAR_INIT_replica(rdb_manual_compact_running_tasks)
 {
-    _pfc_manual_compact_enqueue_count.init_app_counter("app.pegasus",
-                                                       "manual.compact.enqueue.count",
-                                                       COUNTER_TYPE_NUMBER,
-                                                       "current manual compact in queue count");
-
-    _pfc_manual_compact_running_count.init_app_counter("app.pegasus",
-                                                       "manual.compact.running.count",
-                                                       COUNTER_TYPE_NUMBER,
-                                                       "current manual compact running count");
 }
 
 void pegasus_manual_compact_service::init_last_finish_time_ms(uint64_t last_finish_time_ms)
@@ -96,11 +104,11 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
 
     std::string compact_rule;
     if (check_once_compact(envs)) {
-        compact_rule = MANUAL_COMPACT_ONCE_KEY_PREFIX;
+        compact_rule = dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX;
     }
 
     if (compact_rule.empty() && check_periodic_compact(envs)) {
-        compact_rule = MANUAL_COMPACT_PERIODIC_KEY_PREFIX;
+        compact_rule = dsn::replica_envs::MANUAL_COMPACT_PERIODIC_PREFIX;
     }
 
     if (compact_rule.empty()) {
@@ -111,9 +119,9 @@ void pegasus_manual_compact_service::start_manual_compact_if_needed(
         rocksdb::CompactRangeOptions options;
         extract_manual_compact_opts(envs, compact_rule, options);
 
-        _pfc_manual_compact_enqueue_count->increment();
+        METRIC_VAR_INCREMENT(rdb_manual_compact_queued_tasks);
         dsn::tasking::enqueue(LPC_MANUAL_COMPACT, &_app->_tracker, [this, options]() {
-            _pfc_manual_compact_enqueue_count->decrement();
+            METRIC_VAR_DECREMENT(rdb_manual_compact_queued_tasks);
             manual_compact(options);
         });
     } else {
@@ -125,7 +133,7 @@ bool pegasus_manual_compact_service::check_compact_disabled(
     const std::map<std::string, std::string> &envs)
 {
     bool new_disabled = false;
-    auto find = envs.find(MANUAL_COMPACT_DISABLED_KEY);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_DISABLED);
     if (find != envs.end() && find->second == "true") {
         new_disabled = true;
     }
@@ -149,7 +157,7 @@ int pegasus_manual_compact_service::check_compact_max_concurrent_running_count(
     const std::map<std::string, std::string> &envs)
 {
     int new_count = INT_MAX;
-    auto find = envs.find(MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT_KEY);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT);
     if (find != envs.end() && !dsn::buf2int32(find->second, new_count)) {
         LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
     }
@@ -167,7 +175,7 @@ int pegasus_manual_compact_service::check_compact_max_concurrent_running_count(
 bool pegasus_manual_compact_service::check_once_compact(
     const std::map<std::string, std::string> &envs)
 {
-    auto find = envs.find(MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME);
     if (find == envs.end()) {
         return false;
     }
@@ -184,7 +192,7 @@ bool pegasus_manual_compact_service::check_once_compact(
 bool pegasus_manual_compact_service::check_periodic_compact(
     const std::map<std::string, std::string> &envs)
 {
-    auto find = envs.find(MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY);
+    auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME);
     if (find == envs.end()) {
         return false;
     }
@@ -237,7 +245,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     options.exclusive_manual_compaction = true;
     options.change_level = true;
     options.target_level = -1;
-    auto find = envs.find(key_prefix + MANUAL_COMPACT_TARGET_LEVEL_KEY);
+    auto find = envs.find(key_prefix + dsn::replica_envs::MANUAL_COMPACT_TARGET_LEVEL);
     if (find != envs.end()) {
         int32_t target_level;
         if (dsn::buf2int32(find->second, target_level) &&
@@ -253,7 +261,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     }
 
     options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
-    find = envs.find(key_prefix + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY);
+    find = envs.find(key_prefix + dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION);
     if (find != envs.end()) {
         const std::string &argv = find->second;
         if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
@@ -300,9 +308,8 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     }
 
     // if current running count exceeds the limit, it would not to be started.
-    _pfc_manual_compact_running_count->increment();
-    if (_pfc_manual_compact_running_count->get_integer_value() > _max_concurrent_running_count) {
-        _pfc_manual_compact_running_count->decrement();
+    METRIC_VAR_AUTO_COUNT(rdb_manual_compact_running_tasks);
+    if (METRIC_VAR_VALUE(rdb_manual_compact_running_tasks) > _max_concurrent_running_count) {
         LOG_INFO_PREFIX("ignored compact because exceed max_concurrent_running_count({})",
                         _max_concurrent_running_count.load());
         _manual_compact_enqueue_time_ms.store(0);
@@ -312,8 +319,6 @@ void pegasus_manual_compact_service::manual_compact(const rocksdb::CompactRangeO
     uint64_t start = begin_manual_compact();
     uint64_t finish = _app->do_manual_compact(options, start);
     end_manual_compact(start, finish);
-
-    _pfc_manual_compact_running_count->decrement();
 }
 
 uint64_t pegasus_manual_compact_service::begin_manual_compact()

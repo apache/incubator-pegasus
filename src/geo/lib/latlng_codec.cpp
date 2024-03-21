@@ -22,7 +22,6 @@
 #include <s2/s1angle.h>
 #include <s2/s2latlng.h>
 #include <stddef.h>
-#include <algorithm>
 
 #include "utils/error_code.h"
 #include "utils/errors.h"

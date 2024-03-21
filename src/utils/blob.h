@@ -29,9 +29,11 @@
 #include <memory>
 #include <cstring>
 
+#include "absl/strings/string_view.h"
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/protocol/TProtocol.h>
 
+#include "utils/fmt_utils.h"
 #include "utils.h"
 
 namespace dsn {
@@ -57,7 +59,7 @@ public:
     {
     }
 
-    /// NOTE: Use dsn::string_view whenever possible.
+    /// NOTE: Use absl::string_view whenever possible.
     /// blob is designed for shared buffer, never use it as constant view.
     /// Maybe we could deprecate this function in the future.
     blob(const char *buffer, int offset, unsigned int length)
@@ -98,7 +100,7 @@ public:
         _length = length;
     }
 
-    /// Deprecated. Use dsn::string_view whenever possible.
+    /// Deprecated. Use absl::string_view whenever possible.
     void assign(const char *buffer, int offset, unsigned int length)
     {
         _holder = nullptr;
@@ -111,6 +113,7 @@ public:
 
     unsigned int length() const noexcept { return _length; }
     unsigned int size() const noexcept { return _length; }
+    bool empty() const noexcept { return _length == 0; }
 
     std::shared_ptr<char> buffer() const { return _holder; }
 
@@ -156,6 +159,13 @@ public:
             return {};
         return std::string(_data, _length);
     }
+
+    friend std::ostream &operator<<(std::ostream &os, const blob &bb)
+    {
+        return os << bb.to_string();
+    }
+
+    absl::string_view to_string_view() const { return absl::string_view(_data, _length); }
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
@@ -211,3 +221,5 @@ inline uint32_t blob::write(apache::thrift::protocol::TProtocol *oprot) const
 }
 
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::blob);

@@ -17,16 +17,13 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
-#include <algorithm>
 #include <fstream>
 #include <string>
 #include <vector>
 
 #include "common/replication_common.h"
+#include "gtest/gtest.h"
 #include "utils/filesystem.h"
 
 namespace dsn {
@@ -64,8 +61,12 @@ TEST(replication_common, get_data_dir_test)
     for (const auto &test : tests) {
         data_dirs.clear();
         data_dir_tags.clear();
-        bool flag = replication_options::get_data_dir_and_tag(
-            test.data_dir_str, "test_dir", "replica", data_dirs, data_dir_tags, err_msg);
+        bool flag = replication_options::get_data_dir_and_tag(test.data_dir_str,
+                                                              "test_dir",
+                                                              replication_options::kReplicaAppType,
+                                                              data_dirs,
+                                                              data_dir_tags,
+                                                              err_msg);
         ASSERT_EQ(flag, test.expected_val);
         ASSERT_EQ(data_dirs.size(), data_dir_tags.size());
         ASSERT_EQ(data_dirs.size(), test.expected_length);

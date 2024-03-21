@@ -18,15 +18,13 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/status.h>
 #include <stdint.h>
 #include <limits>
 #include <memory>
+#include <string>
 
+#include "gtest/gtest.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "rrdb/rrdb_types.h"
@@ -36,7 +34,7 @@
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
 #include "utils/fail_point.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 namespace pegasus {
 namespace server {
@@ -57,7 +55,7 @@ public:
         _rocksdb_wrapper = _write_impl->_rocksdb_wrapper.get();
     }
 
-    int db_get(dsn::string_view raw_key, db_get_context *get_ctx)
+    int db_get(absl::string_view raw_key, db_get_context *get_ctx)
     {
         return _rocksdb_wrapper->get(raw_key, get_ctx);
     }
@@ -81,27 +79,27 @@ public:
     {
         pegasus_write_service_impl_test::SetUp();
         pegasus::pegasus_generate_key(
-            req.key, dsn::string_view("hash_key"), dsn::string_view("sort_key"));
+            req.key, absl::string_view("hash_key"), absl::string_view("sort_key"));
     }
 
     dsn::apps::incr_request req;
     dsn::apps::incr_response resp;
 };
 
-INSTANTIATE_TEST_CASE_P(, incr_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, incr_test, ::testing::Values(false, true));
 
 TEST_P(incr_test, incr_on_absent_record)
 {
     // ensure key is absent
     db_get_context get_ctx;
-    db_get(req.key, &get_ctx);
+    db_get(req.key.to_string_view(), &get_ctx);
     ASSERT_FALSE(get_ctx.found);
 
     req.increment = 100;
     _write_impl->incr(0, req, resp);
     ASSERT_EQ(resp.new_value, 100);
 
-    db_get(req.key, &get_ctx);
+    db_get(req.key.to_string_view(), &get_ctx);
     ASSERT_TRUE(get_ctx.found);
 }
 
@@ -171,7 +169,7 @@ TEST_P(incr_test, incr_on_expire_record)
 
     // check whether the key is expired
     db_get_context get_ctx;
-    db_get(req.key, &get_ctx);
+    db_get(req.key.to_string_view(), &get_ctx);
     ASSERT_TRUE(get_ctx.expired);
 
     // incr the expired key
@@ -180,7 +178,7 @@ TEST_P(incr_test, incr_on_expire_record)
     _write_impl->incr(0, req, resp);
     ASSERT_EQ(resp.new_value, 100);
 
-    db_get(req.key, &get_ctx);
+    db_get(req.key.to_string_view(), &get_ctx);
     ASSERT_TRUE(get_ctx.found);
 }
 } // namespace server

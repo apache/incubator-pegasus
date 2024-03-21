@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <utility>
 
@@ -36,9 +37,9 @@ namespace dsn {
 namespace replication {
 namespace log_utils {
 
-/*extern*/ error_s open_read(string_view path, /*out*/ log_file_ptr &file)
+/*extern*/ error_s open_read(absl::string_view path, /*out*/ log_file_ptr &file)
 {
-    FAIL_POINT_INJECT_F("open_read", [](string_view) -> error_s {
+    FAIL_POINT_INJECT_F("open_read", [](absl::string_view) -> error_s {
         return error_s::make(ERR_FILE_OPERATION_FAILED, "open_read");
     });
 
@@ -52,7 +53,7 @@ namespace log_utils {
 
 /*extern*/ error_s list_all_files(const std::string &dir, /*out*/ std::vector<std::string> &files)
 {
-    FAIL_POINT_INJECT_F("list_all_files", [](string_view) -> error_s {
+    FAIL_POINT_INJECT_F("list_all_files", [](absl::string_view) -> error_s {
         return error_s::make(ERR_FILE_OPERATION_FAILED, "list_all_files");
     });
 

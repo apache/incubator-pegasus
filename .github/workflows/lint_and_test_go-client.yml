@@ -29,36 +29,109 @@ on:
       - ci-test # testing branch for github action
       - '*dev'
     paths:
+      - .github/workflows/lint_and_test_go-client.yml
       - go-client/**
 
   # for manually triggering workflow
   workflow_dispatch:
 
+env:
+  ARTIFACT_NAME: release_for_go_client
+
 # workflow tasks
 jobs:
-  build:
-    name: Test and Lint
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - name: Format
+        working-directory: ./go-client
+        run: |
+          gofmt -d .
+          test -z "$(gofmt -d .)"
+
+  lint:
+    name: Lint
+    needs: format
+    # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
+    # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
     runs-on: ubuntu-20.04
     steps:
-    - name: Install thrift
+      - name: Install thrift
+        run: sudo apt-get install -y thrift-compiler
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - name: Build
+        working-directory: ./go-client
+        run: make build
+      # because some files are generated after building, so lint after the build step
+      - name: Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.56.2
+          working-directory: ./go-client
+
+  build_server:
+    name: Build server
+    needs: lint
+    runs-on: ubuntu-latest
+    env:
+      USE_JEMALLOC: OFF
+      BUILD_OPTIONS: -t release
+    container:
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - uses: "./.github/actions/build_pegasus"
+      - uses: "./.github/actions/upload_artifact"
+
+  test_go_client:
+    name: Test Go client
+    needs: build_server
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+    steps:
       # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
-      # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
-      run: sudo apt-get install -y thrift-compiler
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.14
-    - name: Run Test
-      run: ./test.sh
-      working-directory: ./go-client
-    - uses: codecov/codecov-action@v2
-      with:
+      # to generate code as well. The thrift-compiler version on ubuntu-22.04 is 0.16.0, so
+      # build and install thrift-compiler 0.13.0 manually.
+      - name: Install thrift
+        run: |
+          export THRIFT_VERSION=0.13.0
+          wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/v${THRIFT_VERSION}.tar.gz
+          tar -xzf v${THRIFT_VERSION}.tar.gz
+          cd thrift-${THRIFT_VERSION}
+          ./bootstrap.sh
+          ./configure --enable-libs=no
+          make -j $(nproc)
+          make install
+          cd - && rm -rf thrift-${THRIFT_VERSION} v${THRIFT_VERSION}.tar.gz
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - uses: "./.github/actions/download_artifact"
+      - name: Start Pegasus cluster
+        run: |
+          export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh start_onebox
+      - name: Run Go client tests
         working-directory: ./go-client
-    # because some files are generated after building, so lint after that at last
-    - name: Lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        version: v1.29
-        working-directory: ./go-client
+        run: |
+          GO111MODULE=on make build
+          ./bin/echo > /dev/null 2>&1 &
+          GO111MODULE=on make ci

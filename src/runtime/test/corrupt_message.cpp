@@ -25,35 +25,35 @@
  */
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <chrono>
 #include <string>
 #include <utility>
 
+#include "gtest/gtest.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/task/async_calls.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/error_code.h"
 
 // this only works with the fault injector
 TEST(core, corrupt_message)
 {
     int req = 0;
-    ::dsn::rpc_address server("localhost", 20101);
+    const auto server = dsn::rpc_address::from_host_port("localhost", 20101);
 
     auto result = ::dsn::rpc::call_wait<std::string>(
         server, RPC_TEST_HASH1, req, std::chrono::milliseconds(0), 1);
-    ASSERT_EQ(result.first, ERR_TIMEOUT);
+    ASSERT_EQ(result.first, dsn::ERR_TIMEOUT);
 
     result = ::dsn::rpc::call_wait<std::string>(
         server, RPC_TEST_HASH2, req, std::chrono::milliseconds(0), 1);
-    ASSERT_EQ(result.first, ERR_TIMEOUT);
+    ASSERT_EQ(result.first, dsn::ERR_TIMEOUT);
 
     result = ::dsn::rpc::call_wait<std::string>(
         server, RPC_TEST_HASH3, req, std::chrono::milliseconds(0), 1);
-    ASSERT_EQ(result.first, ERR_TIMEOUT);
+    ASSERT_EQ(result.first, dsn::ERR_TIMEOUT);
 
     result = ::dsn::rpc::call_wait<std::string>(
         server, RPC_TEST_HASH4, req, std::chrono::milliseconds(0), 1);
-    ASSERT_EQ(result.first, ERR_TIMEOUT);
+    ASSERT_EQ(result.first, dsn::ERR_TIMEOUT);
 }

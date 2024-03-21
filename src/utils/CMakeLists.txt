@@ -29,17 +29,25 @@ set(MY_PROJ_NAME dsn_utils)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
-set(MY_PROJ_LIBS dsn_http crypto rocksdb)
+set(MY_PROJ_LIBS
+        dsn_http
+        rocksdb
+        lz4
+        zstd
+        snappy
+        absl::strings)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
 if (APPLE)
     dsn_add_static_library()
+    target_link_libraries(${MY_PROJ_NAME} PRIVATE dsn_http dsn_replication_common absl::strings)
 else()
     dsn_add_shared_library()
+    target_link_libraries(${MY_PROJ_NAME} PRIVATE dsn_replication_common)
 endif()
 
 add_subdirectory(long_adder_bench)

@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <absl/strings/string_view.h>
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
@@ -35,28 +36,83 @@
 #include "meta/meta_state_service.h"
 #include "meta_backup_service.h"
 #include "meta_service.h"
-#include "perf_counter/perf_counter.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/security/access_controller.h"
+#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "server_state.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
+#include "utils/defer.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/time_utils.h"
 
+DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
+DSN_DECLARE_int32(fd_lease_seconds);
+
+METRIC_DEFINE_entity(backup_policy);
+METRIC_DEFINE_gauge_int64(backup_policy,
+                          backup_recent_duration_ms,
+                          dsn::metric_unit::kMilliSeconds,
+                          "The duration of recent backup");
+
 namespace dsn {
 namespace replication {
 
-DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
-DSN_DECLARE_int32(fd_lease_seconds);
+namespace {
+
+metric_entity_ptr instantiate_backup_policy_metric_entity(const std::string &policy_name)
+{
+    auto entity_id = fmt::format("backup_policy@{}", policy_name);
+
+    return METRIC_ENTITY_backup_policy.instantiate(entity_id, {{"policy_name", policy_name}});
+}
+
+bool validate_backup_interval(int64_t backup_interval_seconds, std::string &hint_message)
+{
+    // The backup interval must be larger than checkpoint reserve time.
+    // Or the next cold backup checkpoint may be cleared by the clear operation.
+    if (backup_interval_seconds <= FLAGS_cold_backup_checkpoint_reserve_minutes * 60) {
+        hint_message = fmt::format(
+            "backup interval must be larger than cold_backup_checkpoint_reserve_minutes={}",
+            FLAGS_cold_backup_checkpoint_reserve_minutes);
+        return false;
+    }
+
+    // There is a bug occurred in backup if the backup interval is less than 1 day, this is a
+    // temporary resolution, the long term plan is to remove periodic backup.
+    // See details https://github.com/apache/incubator-pegasus/issues/1081.
+    if (backup_interval_seconds < 86400) {
+        hint_message = fmt::format("backup interval must be >= 86400 (1 day)");
+        return false;
+    }
+
+    return true;
+}
+
+} // anonymous namespace
+
+backup_policy_metrics::backup_policy_metrics(const std::string &policy_name)
+    : _policy_name(policy_name),
+      _backup_policy_metric_entity(instantiate_backup_policy_metric_entity(policy_name)),
+      METRIC_VAR_INIT_backup_policy(backup_recent_duration_ms)
+{
+}
+
+const metric_entity_ptr &backup_policy_metrics::backup_policy_metric_entity() const
+{
+    CHECK_NOTNULL(_backup_policy_metric_entity,
+                  "backup_policy metric entity (policy_name={}) should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate metric",
+                  _policy_name);
+    return _backup_policy_metric_entity;
+}
 
 // TODO: backup_service and policy_context should need two locks, its own _lock and server_state's
 // _lock this maybe lead to deadlock, should refactor this
@@ -99,7 +155,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
         int total_partitions = iter->second;
         for (int32_t pidx = 0; pidx < total_partitions; ++pidx) {
             update_partition_progress_unlocked(
-                gpid(app_id, pidx), cold_backup_constant::PROGRESS_FINISHED, dsn::rpc_address());
+                gpid(app_id, pidx), cold_backup_constant::PROGRESS_FINISHED, dsn::host_port());
         }
         return;
     }
@@ -159,7 +215,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                 _is_backup_failed = true;
                 LOG_ERROR("write {} failed, err = {}, don't try again when got this error.",
                           remote_file->file_name(),
-                          resp.err.to_string());
+                          resp.err);
                 return;
             } else {
                 LOG_WARNING("write {} failed, reason({}), try it later",
@@ -275,7 +331,7 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
                 _is_backup_failed = true;
                 LOG_ERROR("write {} failed, err = {}, don't try again when got this error.",
                           remote_file->file_name(),
-                          resp.err.to_string());
+                          resp.err);
                 return;
             } else {
                 LOG_WARNING("write {} failed, reason({}), try it later",
@@ -382,7 +438,7 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
                 _is_backup_failed = true;
                 LOG_ERROR("write {} failed, err = {}, don't try again when got this error.",
                           remote_file->file_name(),
-                          resp.err.to_string());
+                          resp.err);
                 return;
             } else {
                 LOG_WARNING("write {} failed, reason({}), try it later",
@@ -402,15 +458,15 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
 
 bool policy_context::update_partition_progress_unlocked(gpid pid,
                                                         int32_t progress,
-                                                        const rpc_address &source)
+                                                        const host_port &source)
 {
     int32_t &local_progress = _progress.partition_progress[pid];
     if (local_progress == cold_backup_constant::PROGRESS_FINISHED) {
         LOG_WARNING(
             "{}: backup of partition {} has been finished, ignore the backup response from {} ",
             _backup_sig,
-            pid.to_string(),
-            source.to_string());
+            pid,
+            source);
         return true;
     }
 
@@ -420,18 +476,17 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
                     _backup_sig,
                     local_progress,
                     progress,
-                    source.to_string(),
-                    pid.to_string());
+                    source,
+                    pid);
     }
 
     local_progress = progress;
-    LOG_DEBUG(
-        "{}: update partition {} backup progress to {}.", _backup_sig, pid.to_string(), progress);
+    LOG_DEBUG("{}: update partition {} backup progress to {}.", _backup_sig, pid, progress);
     if (local_progress == cold_backup_constant::PROGRESS_FINISHED) {
         LOG_INFO("{}: finish backup for partition {}, the app has {} unfinished backup "
                  "partition now.",
                  _backup_sig,
-                 pid.to_string(),
+                 pid,
                  _progress.unfinished_partitions_per_app[pid.get_app_id()]);
 
         // update the progress-chain: partition => app => current_backup_instance
@@ -454,7 +509,7 @@ void policy_context::record_partition_checkpoint_size_unlock(const gpid &pid, in
 
 void policy_context::start_backup_partition_unlocked(gpid pid)
 {
-    dsn::rpc_address partition_primary;
+    dsn::host_port partition_primary;
     {
         // check app and partition status
         zauto_read_lock l;
@@ -466,15 +521,15 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
                 "{}: app {} is not available, skip to backup it.", _backup_sig, pid.get_app_id());
             _progress.is_app_skipped[pid.get_app_id()] = true;
             update_partition_progress_unlocked(
-                pid, cold_backup_constant::PROGRESS_FINISHED, dsn::rpc_address());
+                pid, cold_backup_constant::PROGRESS_FINISHED, dsn::host_port());
             return;
         }
-        partition_primary = app->partitions[pid.get_partition_index()].primary;
+        partition_primary = app->partitions[pid.get_partition_index()].hp_primary;
     }
     if (partition_primary.is_invalid()) {
         LOG_WARNING("{}: partition {} doesn't have a primary now, retry to backup it later",
                     _backup_sig,
-                    pid.to_string());
+                    pid);
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this, pid]() {
@@ -502,20 +557,18 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
         });
     LOG_INFO("{}: send backup command to partition {}, target_addr = {}",
              _backup_sig,
-             pid.to_string(),
-             partition_primary.to_string());
+             pid,
+             partition_primary);
     _backup_service->get_meta_service()->send_request(request, partition_primary, rpc_callback);
 }
 
 void policy_context::on_backup_reply(error_code err,
                                      backup_response &&response,
                                      gpid pid,
-                                     const rpc_address &primary)
+                                     const host_port &primary)
 {
-    LOG_INFO("{}: receive backup response for partition {} from server {}.",
-             _backup_sig,
-             pid.to_string(),
-             primary.to_string());
+    LOG_INFO(
+        "{}: receive backup response for partition {} from server {}.", _backup_sig, pid, primary);
     if (err == dsn::ERR_OK && response.err == dsn::ERR_OK) {
         CHECK_EQ_MSG(response.policy_name,
                      _policy.policy_name,
@@ -539,8 +592,8 @@ void policy_context::on_backup_reply(error_code err,
             LOG_WARNING("{}: got a backup response of partition {} from server {}, whose backup id "
                         "{} is smaller than current backup id {},  maybe it is a stale message",
                         _backup_sig,
-                        pid.to_string(),
-                        primary.to_string(),
+                        pid,
+                        primary,
                         response.backup_id,
                         _cur_backup.backup_id);
         } else {
@@ -557,18 +610,18 @@ void policy_context::on_backup_reply(error_code err,
         LOG_ERROR("{}: backup got error {} for partition {} from {}, don't try again when got "
                   "this error.",
                   _backup_sig.c_str(),
-                  response.err.to_string(),
-                  pid.to_string(),
-                  primary.to_string());
+                  response.err,
+                  pid,
+                  primary);
         return;
     } else {
         LOG_WARNING(
             "{}: backup got error for partition {} from {}, rpc error {}, response error {}",
             _backup_sig.c_str(),
-            pid.to_string(),
-            primary.to_string(),
-            err.to_string(),
-            response.err.to_string());
+            pid,
+            primary,
+            err,
+            response.err);
     }
 
     // retry to backup the partition.
@@ -664,10 +717,7 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
                              0,
                              _backup_service->backup_option().meta_retry_delay_ms);
         } else {
-            CHECK(false,
-                  "{}: we can't handle this right now, error({})",
-                  _backup_sig,
-                  err.to_string());
+            CHECK(false, "{}: we can't handle this right now, error({})", _backup_sig, err);
         }
     };
 
@@ -830,12 +880,8 @@ void policy_context::start()
         continue_current_backup_unlocked();
     }
 
-    std::string counter_name = _policy.policy_name + ".recent.backup.duration(ms)";
-    _counter_policy_recent_backup_duration_ms.init_app_counter(
-        "eon.meta.policy",
-        counter_name.c_str(),
-        COUNTER_TYPE_NUMBER,
-        "policy recent backup duration time");
+    CHECK(!_policy.policy_name.empty(), "policy_name should has been initialized");
+    _metrics = std::make_unique<backup_policy_metrics>(_policy.policy_name);
 
     issue_gc_backup_info_task_unlocked();
     LOG_INFO("{}: start gc backup info task succeed", _policy.policy_name);
@@ -1011,7 +1057,7 @@ void policy_context::issue_gc_backup_info_task_unlocked()
             last_backup_duration_time_ms = (_cur_backup.end_time_ms - _cur_backup.start_time_ms);
         }
     }
-    _counter_policy_recent_backup_duration_ms->set(last_backup_duration_time_ms);
+    METRIC_SET(*_metrics, backup_recent_duration_ms, last_backup_duration_time_ms);
 }
 
 void policy_context::sync_remove_backup_info(const backup_info &info, dsn::task_ptr sync_callback)
@@ -1083,7 +1129,7 @@ void backup_service::start_create_policy_meta_root(dsn::task_ptr callback)
                     0,
                     _opt.meta_retry_delay_ms);
             } else {
-                CHECK(false, "we can't handle this error({}) right now", err.to_string());
+                CHECK(false, "we can't handle this error({}) right now", err);
             }
         });
 }
@@ -1199,7 +1245,7 @@ error_code backup_service::sync_policies_from_remote_storage()
                         std::shared_ptr<policy_context> policy_ctx = _factory(this);
                         policy tpolicy;
                         dsn::json::json_forwarder<policy>::decode(value, tpolicy);
-                        policy_ctx->set_policy(std::move(tpolicy));
+                        policy_ctx->set_policy(tpolicy);
 
                         {
                             zauto_lock l(_lock);
@@ -1245,19 +1291,21 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
 {
     configuration_add_backup_policy_request request;
     configuration_add_backup_policy_response response;
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_message.empty()) {
+            LOG_WARNING(response.hint_message);
+        }
+    });
 
     dsn::message_ex *copied_msg = message_ex::copy_message_no_reply(*msg);
     ::dsn::unmarshall(msg, request);
     std::set<int32_t> app_ids;
     std::map<int32_t, std::string> app_names;
 
-    // The backup interval must be greater than checkpoint reserve time.
-    // Or the next cold backup checkpoint may be cleared by the clear operation.
-    if (request.backup_interval_seconds <= FLAGS_cold_backup_checkpoint_reserve_minutes * 60) {
+    std::string hint_message;
+    if (!validate_backup_interval(request.backup_interval_seconds, hint_message)) {
         response.err = ERR_INVALID_PARAMETERS;
-        response.hint_message = fmt::format(
-            "backup interval must be greater than FLAGS_cold_backup_checkpoint_reserve_minutes={}",
-            FLAGS_cold_backup_checkpoint_reserve_minutes);
+        response.hint_message = hint_message;
         _meta_svc->reply_data(msg, response);
         msg->release_ref();
         return;
@@ -1331,7 +1379,7 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     p.start_time.parse_from(request.start_time);
     p.app_ids = app_ids;
     p.app_names = app_names;
-    policy_context_ptr->set_policy(std::move(p));
+    policy_context_ptr->set_policy(p);
     do_add_policy(msg, policy_context_ptr, response.hint_message);
 }
 
@@ -1421,6 +1469,11 @@ void backup_service::query_backup_policy(query_backup_policy_rpc rpc)
 {
     const configuration_query_backup_policy_request &request = rpc.request();
     configuration_query_backup_policy_response &response = rpc.response();
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_msg.empty()) {
+            LOG_WARNING(response.hint_msg);
+        }
+    });
 
     response.err = ERR_OK;
 
@@ -1491,6 +1544,12 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
     const configuration_modify_backup_policy_request &request = rpc.request();
     configuration_modify_backup_policy_response &response = rpc.response();
     response.err = ERR_OK;
+
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_message.empty()) {
+            LOG_WARNING(response.hint_message);
+        }
+    });
 
     std::shared_ptr<policy_context> context_ptr;
     {
@@ -1587,7 +1646,8 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
     }
 
     if (request.__isset.new_backup_interval_sec) {
-        if (request.new_backup_interval_sec > 0) {
+        std::string hint_message;
+        if (validate_backup_interval(request.new_backup_interval_sec, hint_message)) {
             LOG_INFO("{}: policy will change backup interval from {}s to {}s",
                      cur_policy.policy_name,
                      cur_policy.backup_interval_seconds,
@@ -1595,9 +1655,10 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
             cur_policy.backup_interval_seconds = request.new_backup_interval_sec;
             have_modify_policy = true;
         } else {
-            LOG_WARNING("{}: invalid backup_interval_sec({})",
+            LOG_WARNING("{}: invalid backup_interval_sec({}), {}",
                         cur_policy.policy_name,
-                        request.new_backup_interval_sec);
+                        request.new_backup_interval_sec,
+                        hint_message);
         }
     }
 
@@ -1647,9 +1708,14 @@ void backup_service::start_backup_app(start_backup_app_rpc rpc)
 {
     const start_backup_app_request &request = rpc.request();
     start_backup_app_response &response = rpc.response();
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_message.empty()) {
+            LOG_WARNING(response.hint_message);
+        }
+    });
 
     int32_t app_id = request.app_id;
-    std::shared_ptr<backup_engine> engine = std::make_shared<backup_engine>(this);
+    auto engine = std::make_shared<backup_engine>(this);
     error_code err = engine->init_backup(app_id);
     if (err != ERR_OK) {
         response.err = err;
@@ -1712,6 +1778,11 @@ void backup_service::query_backup_status(query_backup_status_rpc rpc)
 {
     const query_backup_status_request &request = rpc.request();
     query_backup_status_response &response = rpc.response();
+    auto log_on_failed = dsn::defer([&response]() {
+        if (!response.hint_message.empty()) {
+            LOG_WARNING(response.hint_message);
+        }
+    });
 
     int32_t app_id = request.app_id;
     {

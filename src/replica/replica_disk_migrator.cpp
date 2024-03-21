@@ -20,6 +20,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <fmt/core.h>
 
+#include "absl/strings/string_view.h"
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
@@ -34,8 +35,8 @@
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 #include "utils/thread_access_checker.h"
+#include "utils/load_dump_object.h"
 
 namespace dsn {
 namespace replication {
@@ -164,7 +165,7 @@ void replica_disk_migrator::migrate_replica(const replica_disk_migrate_request &
 // THREAD_POOL_REPLICATION_LONG
 bool replica_disk_migrator::init_target_dir(const replica_disk_migrate_request &req)
 {
-    FAIL_POINT_INJECT_F("init_target_dir", [this](string_view) -> bool {
+    FAIL_POINT_INJECT_F("init_target_dir", [this](absl::string_view) -> bool {
         reset_status();
         return false;
     });
@@ -210,7 +211,7 @@ bool replica_disk_migrator::init_target_dir(const replica_disk_migrate_request &
 // THREAD_POOL_REPLICATION_LONG
 bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrate_request &req)
 {
-    FAIL_POINT_INJECT_F("migrate_replica_checkpoint", [this](string_view) -> bool {
+    FAIL_POINT_INJECT_F("migrate_replica_checkpoint", [this](absl::string_view) -> bool {
         reset_status();
         return false;
     });
@@ -220,7 +221,7 @@ bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrat
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) sync_checkpoint failed({})",
                          req.origin_disk,
                          req.target_disk,
-                         sync_checkpoint_err.to_string());
+                         sync_checkpoint_err);
         reset_status();
         return false;
     }
@@ -233,7 +234,7 @@ bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrat
                          req.origin_disk,
                          req.target_disk,
                          _target_data_dir,
-                         copy_checkpoint_err.to_string(),
+                         copy_checkpoint_err,
                          _target_replica_dir);
         reset_status();
         utils::filesystem::remove_path(_target_replica_dir);
@@ -246,29 +247,31 @@ bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrat
 // THREAD_POOL_REPLICATION_LONG
 bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_request &req)
 {
-    FAIL_POINT_INJECT_F("migrate_replica_app_info", [this](string_view) -> bool {
+    FAIL_POINT_INJECT_F("migrate_replica_app_info", [this](absl::string_view) -> bool {
         reset_status();
         return false;
     });
     replica_init_info init_info = _replica->get_app()->init_info();
-    const auto &store_init_info_err = init_info.store(_target_replica_dir);
+    const auto &store_init_info_err = utils::dump_rjobj_to_file(
+        init_info,
+        utils::filesystem::path_combine(_target_replica_dir, replica_init_info::kInitInfo));
     if (store_init_info_err != ERR_OK) {
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app init info failed({})",
                          req.origin_disk,
                          req.target_disk,
-                         store_init_info_err.to_string());
+                         store_init_info_err);
         reset_status();
         return false;
     }
 
     const auto &store_info_err = _replica->store_app_info(
         _replica->_app_info,
-        utils::filesystem::path_combine(_target_replica_dir, replica::kAppInfo));
+        utils::filesystem::path_combine(_target_replica_dir, replica_app_info::kAppInfo));
     if (store_info_err != ERR_OK) {
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app info failed({})",
                          req.origin_disk,
                          req.target_disk,
-                         store_info_err.to_string());
+                         store_info_err);
         reset_status();
         return false;
     }

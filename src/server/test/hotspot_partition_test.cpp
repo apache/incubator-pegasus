@@ -15,18 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
@@ -36,11 +32,11 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 
-namespace pegasus {
-namespace server {
-
 DSN_DECLARE_int32(occurrence_threshold);
 DSN_DECLARE_bool(enable_detect_hotkey);
+
+namespace pegasus {
+namespace server {
 
 class hotspot_partition_test : public pegasus_server_test_base
 {
@@ -123,7 +119,7 @@ public:
     void clear_calculator_histories() { calculator._partitions_stat_histories.clear(); }
 };
 
-INSTANTIATE_TEST_CASE_P(, hotspot_partition_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, hotspot_partition_test, ::testing::Values(false, true));
 
 TEST_P(hotspot_partition_test, hotspot_partition_policy)
 {

@@ -35,15 +35,16 @@ import (
 //
 // For example:
 // ```
-//  type tableStruct struct {
-//    PartitionCount int    `json:"partition_count"`
-//    TableName      string `json:"name"`
-//  }
-//  var tables []tableStruct
-//  ...
-//  tabular.Print(tables)
-// ```
 //
+//	type tableStruct struct {
+//	  PartitionCount int    `json:"partition_count"`
+//	  TableName      string `json:"name"`
+//	}
+//	var tables []tableStruct
+//	...
+//	tabular.Print(tables)
+//
+// ```
 func New(writer io.Writer, valueList []interface{}, configurer func(*tablewriter.Table)) *tablewriter.Table {
 	header := getHeaderFromValueList(valueList)
 	tabWriter := NewTabWriter(writer, header)

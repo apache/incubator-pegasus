@@ -39,9 +39,9 @@ DSN_DEFINE_bool(pegasus.server,
                 "Whether the sensitive files should be encrypted on the file system.");
 
 DSN_DEFINE_string(pegasus.server,
-                  server_key_for_testing,
-                  "server_key_for_testing",
-                  "The encrypted server key to use in the filesystem. NOTE: only for testing.");
+                  server_key,
+                  "0123456789ABCDEF0123456789ABCDEF",
+                  "The encrypted server key to use in the filesystem.");
 
 DSN_DEFINE_string(pegasus.server,
                   encryption_method,
@@ -62,9 +62,9 @@ rocksdb::Env *NewEncryptedEnv()
 {
     // Create an encryption provider.
     std::shared_ptr<rocksdb::EncryptionProvider> provider;
-    auto provider_id =
-        fmt::format("AES:{},{}", FLAGS_server_key_for_testing, FLAGS_encryption_method);
-    auto s = rocksdb::EncryptionProvider::CreateFromString(
+    const auto &provider_id = fmt::format(
+        "id=AES;hex_instance_key={};method={}", FLAGS_server_key, FLAGS_encryption_method);
+    const auto &s = rocksdb::EncryptionProvider::CreateFromString(
         rocksdb::ConfigOptions(), provider_id, &provider);
     CHECK(s.ok(), "Failed to create encryption provider: {}", s.ToString());
 

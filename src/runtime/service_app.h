@@ -24,27 +24,17 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     application model atop zion in c++
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
 #include "utils/api_utilities.h"
-
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
 #include "runtime/task/task_code.h"
 #include "common/gpid.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "common/gpid.h"
 #include "utils/factory_store.h"
 #include <vector>
@@ -66,6 +56,7 @@ struct service_app_info
     std::string data_dir;
 };
 
+// The application model atop zion in C++.
 class service_app
 {
 public:
@@ -97,14 +88,14 @@ public:
     }
 
     bool is_started() const { return _started; }
-    rpc_address primary_address() const { return _address; }
-    void set_address(const rpc_address &addr) { _address = addr; }
+    host_port primary_host_port() const { return _host_port; }
+    void set_host_port(const host_port &hp) { _host_port = hp; }
     void set_started(bool start_flag) { _started = start_flag; }
     const service_app_info &info() const;
 
 protected:
     const service_app_info *const _info;
-    rpc_address _address;
+    host_port _host_port;
     bool _started;
 };
 

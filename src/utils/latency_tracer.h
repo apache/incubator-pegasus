@@ -28,6 +28,9 @@
 #include "utils/ports.h"
 #include "utils/synchronize.h"
 
+DSN_DECLARE_bool(enable_latency_tracer);
+DSN_DECLARE_bool(enable_latency_tracer_report);
+
 namespace dsn {
 namespace utils {
 
@@ -87,8 +90,6 @@ namespace utils {
  *
  * "request.tracer" will record the time duration among all trace points.
  **/
-DSN_DECLARE_bool(enable_latency_tracer);
-DSN_DECLARE_bool(enable_latency_tracer_report);
 
 class latency_tracer
 {
@@ -165,9 +166,6 @@ public:
     bool enabled() const { return _enable_trace; }
 
 private:
-    // report the trace point duration to monitor system
-    static void report_trace_point(const std::string &name, uint64_t span);
-
     // dump and print the trace point into log file
     void dump_trace_points(/*out*/ std::string &traces);
 

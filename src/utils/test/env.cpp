@@ -24,28 +24,15 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for rpc_address.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <fmt/core.h>
-#include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/env.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
-#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <string>
 
+#include "gtest/gtest.h"
 #include "test_util/test_util.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
@@ -89,7 +76,7 @@ class env_file_test : public pegasus::encrypt_data_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, env_file_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, env_file_test, ::testing::Values(false, true));
 
 TEST_P(env_file_test, encrypt_file_2_files)
 {

@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Replication testing framework.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <stdint.h>
@@ -46,8 +37,8 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_address.h"
 #include "utils/fmt_utils.h"
+#include "runtime/rpc/rpc_host_port.h"
 
 namespace dsn {
 class partition_configuration;
@@ -66,12 +57,11 @@ partition_status::type partition_status_from_short_string(const std::string &str
 // transfer primary_address to node_name
 // return "-" if addr.is_invalid()
 // return "node@port" if not found
-std::string address_to_node(rpc_address addr);
+std::string address_to_node(host_port addr);
 // transfer node_name to primary_address
 // return invalid addr if not found
-rpc_address node_to_address(const std::string &name);
+host_port node_to_address(const std::string &name);
 
-std::string gpid_to_string(gpid gpid);
 bool gpid_from_string(const std::string &str, gpid &gpid);
 
 struct replica_id
@@ -137,6 +127,10 @@ struct replica_state
     bool operator!=(const replica_state &o) const { return !(*this == o); }
     std::string to_string() const;
     bool from_string(const std::string &str);
+    friend std::ostream &operator<<(std::ostream &os, const replica_state &rs)
+    {
+        return os << rs.to_string();
+    }
 };
 
 struct state_snapshot

@@ -24,16 +24,21 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <fmt/core.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <stdint.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/rpc_address.h"
+#include "utils/errors.h"
 
 namespace dsn {
 
@@ -49,13 +54,46 @@ static inline uint32_t host_ipv4(uint8_t sec1, uint8_t sec2, uint8_t sec3, uint8
 
 TEST(rpc_address_test, rpc_address_ipv4_from_host)
 {
-    // localhost --> 127.0.0.1
-    // on some systems "localhost" could be "127.0.1.1" (debian)
-    ASSERT_TRUE(host_ipv4(127, 0, 0, 1) == rpc_address::ipv4_from_host("localhost") ||
-                host_ipv4(127, 0, 1, 1) == rpc_address::ipv4_from_host("localhost"));
+    struct resolve_test
+    {
+        std::string hostname;
+        bool valid;
+        std::set<uint32_t> expect_ips;
 
-    // 127.0.0.1 --> 127.0.0.1
-    ASSERT_EQ(host_ipv4(127, 0, 0, 1), rpc_address::ipv4_from_host("127.0.0.1"));
+        resolve_test(std::string hn, bool v, std::set<uint32_t> expects)
+            : hostname(std::move(hn)), valid(v), expect_ips(std::move(expects))
+        {
+        }
+    };
+
+    const resolve_test tests[] = {
+        {"127.0.0.1", true, {host_ipv4(127, 0, 0, 1)}},
+        {"0.0.0.0", true, {host_ipv4(0, 0, 0, 0)}},
+        // on some systems "localhost" could be "127.0.1.1" (debian)
+        {"localhost", true, {host_ipv4(127, 0, 0, 1), host_ipv4(127, 0, 1, 1)}},
+        {"whatthefuckyoucanhavesuchahostname", false, {}}};
+
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    for (const auto &test : tests) {
+        // Check ipv4_from_host()
+        uint32_t ip;
+        ASSERT_EQ(test.valid, rpc_address::ipv4_from_host(test.hostname, &ip).is_ok());
+
+        // Check GetAddrInfo()
+        AddrInfo result;
+        ASSERT_EQ(test.valid, rpc_address::GetAddrInfo(test.hostname, hints, &result).is_ok())
+            << test.hostname;
+        if (test.valid) {
+            ASSERT_GT(test.expect_ips.count(ip), 0) << test.hostname;
+
+            ASSERT_EQ(result.get()->ai_family, AF_INET);
+            auto *ipv4 = reinterpret_cast<struct sockaddr_in *>(result.get()->ai_addr);
+            ASSERT_GT(test.expect_ips.count(ntohl(ipv4->sin_addr.s_addr)), 0) << test.hostname;
+        }
+    }
 }
 
 TEST(rpc_address_test, rpc_address_ipv4_from_network_interface)
@@ -88,36 +126,36 @@ TEST(rpc_address_test, is_docker_netcard)
 TEST(rpc_address_test, rpc_address_to_string)
 {
     {
-        rpc_address addr;
-        addr.assign_ipv4(host_ipv4(127, 0, 0, 1), 8080);
-        ASSERT_EQ(std::string("127.0.0.1:8080"), addr.to_std_string());
+        rpc_address addr(host_ipv4(127, 0, 0, 1), 8080);
+        ASSERT_STREQ("127.0.0.1:8080", addr.to_string());
     }
 
     {
         const char *name = "test_group";
         rpc_address addr;
         addr.assign_group(name);
-        ASSERT_EQ(std::string(name), addr.to_std_string());
+        ASSERT_STREQ(name, addr.to_string());
     }
 
     {
         rpc_address addr;
-        ASSERT_EQ(std::string("invalid address"), addr.to_std_string());
+        ASSERT_STREQ("invalid address", addr.to_string());
     }
 }
 
 TEST(rpc_address_test, dsn_address_build)
 {
     {
-        rpc_address addr;
-        addr.assign_ipv4(host_ipv4(127, 0, 0, 1), 8080);
+        rpc_address addr(host_ipv4(127, 0, 0, 1), 8080);
         ASSERT_EQ(HOST_TYPE_IPV4, addr.type());
         ASSERT_EQ(host_ipv4(127, 0, 0, 1), addr.ip());
         ASSERT_EQ(8080, addr.port());
 
-        ASSERT_TRUE(rpc_address("127.0.0.1", 8080) == rpc_address("localhost", 8080) ||
-                    rpc_address("127.0.1.1", 8080) == rpc_address("localhost", 8080));
-        ASSERT_EQ(addr, rpc_address("127.0.0.1", 8080));
+        ASSERT_TRUE(rpc_address::from_ip_port("127.0.0.1", 8080) ==
+                        rpc_address::from_host_port("localhost", 8080) ||
+                    rpc_address::from_ip_port("127.0.1.1", 8080) ==
+                        rpc_address::from_host_port("localhost", 8080));
+        ASSERT_EQ(addr, rpc_address::from_ip_port("127.0.0.1", 8080));
         ASSERT_EQ(addr, rpc_address(host_ipv4(127, 0, 0, 1), 8080));
     }
 
@@ -163,9 +201,9 @@ TEST(rpc_address_test, operators)
 
 TEST(rpc_address_test, rpc_group_address)
 {
-    rpc_address addr("127.0.0.1", 8080);
+    const auto addr = rpc_address::from_ip_port("127.0.0.1", 8080);
     rpc_address invalid_addr;
-    rpc_address addr2("127.0.0.1", 8081);
+    const auto addr2 = rpc_address::from_ip_port("127.0.0.1", 8081);
 
     rpc_address t;
     t.assign_group("test_group");
@@ -247,6 +285,144 @@ TEST(rpc_address_test, rpc_group_address)
     ASSERT_FALSE(g->contains(addr2));
     ASSERT_EQ(0u, g->members().size());
     ASSERT_EQ(invalid_addr, g->leader());
+}
+
+TEST(rpc_address_test, from_host_port)
+{
+    struct resolve_test
+    {
+        std::string host_port;
+        std::set<std::string> expect_ip_ports;
+        bool valid_ip_port;
+        bool valid_host_port;
+
+        resolve_test(std::string test, std::set<std::string> expects, bool v_ip, bool v_hp)
+            : host_port(std::move(test)),
+              expect_ip_ports(std::move(expects)),
+              valid_ip_port(v_ip),
+              valid_host_port(v_hp)
+        {
+        }
+
+        resolve_test(std::string test, bool val)
+            : host_port(std::move(test)),
+              expect_ip_ports({host_port}),
+              valid_ip_port(val),
+              valid_host_port(val)
+        {
+        }
+    };
+
+    const resolve_test tests[] = {
+        {"127.0.0.1:8080", true},
+        {"127.0.0.1:", false},
+        {"172.16.254.1:1234", true},
+        {"0.0.0.0:1234", {"0.0.0.0:1234"}, true, true},
+        {"172.16.254.1:222222", false},
+        {"172.16.254.1", false},
+        {"2222,123,33,1:8080", false},
+        {"123.456.789.1:8080", false},
+        // "001.223.110.002" can be resolved by host, but not by IP.
+        {"001.223.110.002:8080", {"1.223.110.2:8080"}, false, true},
+        {"172.16.254.1.8080", false},
+        {"172.16.254.1:8080.", false},
+        {"127.0.0.11:123!", false},
+        {"127.0.0.11:123", true},
+        {"localhost:34601", {"127.0.0.1:34601", "127.0.1.1:34601"}, false, true},
+        {"localhost:3460100022212312312213", false},
+        {"localhost:-12", false},
+        {"localhost", false},
+        {"localhost:", false},
+        {"whatthefuckyoucanhavesuchahostname", false},
+        {"localhost:1@2", false}};
+
+    for (const auto &test : tests) {
+        // Check from_host_port().
+        const auto host_port_result = dsn::rpc_address::from_host_port(test.host_port);
+        ASSERT_EQ(test.valid_host_port, !host_port_result.is_invalid()) << test.host_port;
+        if (!host_port_result.is_invalid()) {
+            ASSERT_GT(test.expect_ip_ports.count(host_port_result.to_string()), 0);
+        }
+
+        // Check from_ip_port().
+        const auto ip_port_result = dsn::rpc_address::from_ip_port(test.host_port);
+        ASSERT_EQ(test.valid_ip_port, !ip_port_result.is_invalid());
+        if (!ip_port_result.is_invalid()) {
+            ASSERT_GT(test.expect_ip_ports.count(ip_port_result.to_string()), 0);
+        }
+
+        // Check they are equal.
+        if (test.valid_host_port && test.valid_ip_port) {
+            ASSERT_EQ(host_port_result, ip_port_result);
+        }
+    }
+}
+
+TEST(rpc_address_test, from_host_port2)
+{
+    struct resolve_test
+    {
+        std::string host;
+        uint16_t port;
+        std::set<std::string> expect_ip_ports;
+        bool valid_ip_port;
+        bool valid_host_port;
+
+        resolve_test(
+            std::string test, uint16_t p, std::set<std::string> expects, bool v_ip, bool v_hp)
+            : host(std::move(test)),
+              port(p),
+              expect_ip_ports(std::move(expects)),
+              valid_ip_port(v_ip),
+              valid_host_port(v_hp)
+        {
+        }
+
+        resolve_test(std::string test, uint16_t p, bool val)
+            : host(std::move(test)),
+              port(p),
+              expect_ip_ports({fmt::format("{}:{}", host, port)}),
+              valid_ip_port(val),
+              valid_host_port(val)
+        {
+        }
+    };
+
+    const resolve_test tests[] = {
+        {"127.0.0.1", 8080, true},
+        {"172.16.254.1", 1234, true},
+        {"172.16.254.1:", 1234, false},
+        {"2222,123,33,1", 8080, false},
+        {"123.456.789.1", 8080, false},
+        {"0.0.0.0", 1234, {"0.0.0.0:1234"}, true, true},
+        // "001.223.110.002" can be resolved by host, but not by IP.
+        {"001.223.110.002", 8080, {"1.223.110.2:8080"}, false, true},
+        {"127.0.0.11", 123, true},
+        {"localhost", 34601, {"127.0.0.1:34601", "127.0.1.1:34601"}, false, true},
+        {"localhost:", 34601, false},
+        {"whatthefuckyoucanhavesuchahostname", 34601, false}};
+
+    for (const auto &test : tests) {
+        // Check from_host_port().
+        const auto host_port_result = dsn::rpc_address::from_host_port(test.host, test.port);
+        ASSERT_EQ(test.valid_host_port, !host_port_result.is_invalid()) << test.host;
+        if (!host_port_result.is_invalid()) {
+            ASSERT_GT(test.expect_ip_ports.count(host_port_result.to_string()), 0)
+                << test.host << " " << host_port_result.to_string();
+        }
+
+        // Check from_ip_port().
+        const auto ip_port_result = dsn::rpc_address::from_ip_port(test.host, test.port);
+        ASSERT_EQ(test.valid_ip_port, !ip_port_result.is_invalid());
+        if (!ip_port_result.is_invalid()) {
+            ASSERT_GT(test.expect_ip_ports.count(ip_port_result.to_string()), 0);
+        }
+
+        // Check they are equal.
+        if (test.valid_host_port && test.valid_ip_port) {
+            ASSERT_EQ(host_port_result, ip_port_result);
+        }
+    }
 }
 
 } // namespace dsn

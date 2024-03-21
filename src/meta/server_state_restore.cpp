@@ -37,9 +37,10 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
+#include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_service.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/task.h"
@@ -147,6 +148,7 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
 
             _all_apps.emplace(app->app_id, app);
             _exist_apps.emplace(info.app_name, app);
+            _table_metric_entities.create_entity(app->app_id, app->partition_count);
         }
     }
     // TODO: using one single env to replace
@@ -249,7 +251,7 @@ void server_state::on_query_restore_status(configuration_query_restore_rpc rpc)
     for (int32_t i = 0; i < app->partition_count; i++) {
         const auto &r_state = app->helpers->restore_states[i];
         const auto &p = app->partitions[i];
-        if (!p.primary.is_invalid() || !p.secondaries.empty()) {
+        if (!p.hp_primary.is_invalid() || !p.hp_secondaries.empty()) {
             // already have primary, restore succeed
             continue;
         }

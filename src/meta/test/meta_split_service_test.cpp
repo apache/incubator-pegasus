@@ -26,9 +26,6 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string.h>
 #include <algorithm>
 #include <atomic>
@@ -48,6 +45,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_server_failure_detector.h"
@@ -55,12 +53,14 @@
 #include "meta/meta_split_service.h"
 #include "meta/meta_state_service_utils.h"
 #include "meta/server_state.h"
+#include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -149,7 +149,7 @@ public:
         request->app.app_id = app->app_id;
         request->parent_config = parent_config;
         request->child_config = child_config;
-        request->primary_address = NODE;
+        request->hp_primary = NODE;
 
         register_child_rpc rpc(std::move(request), RPC_CM_REGISTER_CHILD_REPLICA);
         split_svc().register_child_on_meta(rpc);
@@ -208,6 +208,7 @@ public:
     {
         app->partition_count = NEW_PARTITION_COUNT;
         app->partitions.resize(app->partition_count);
+        _ss->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->helpers->contexts.resize(app->partition_count);
         app->helpers->split_states.splitting_count = app->partition_count / 2;
         for (int i = 0; i < app->partition_count; ++i) {
@@ -227,6 +228,7 @@ public:
     {
         app->partition_count = PARTITION_COUNT;
         app->partitions.resize(app->partition_count);
+        _ss->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->helpers->contexts.resize(app->partition_count);
         app->helpers->split_states.splitting_count = 0;
         app->helpers->split_states.status.clear();
@@ -236,6 +238,7 @@ public:
     {
         app->partition_count = NEW_PARTITION_COUNT;
         app->partitions.resize(app->partition_count);
+        _ss->get_table_metric_entities().resize_partitions(app->app_id, app->partition_count);
         app->helpers->contexts.resize(app->partition_count);
         for (int i = 0; i < app->partition_count; ++i) {
             app->helpers->contexts[i].config_owner = &app->partitions[i];
@@ -375,7 +378,8 @@ public:
     const int32_t PARENT_BALLOT = 3;
     const int32_t PARENT_INDEX = 0;
     const int32_t CHILD_INDEX = 4;
-    const rpc_address NODE = rpc_address("127.0.0.1", 10086);
+    const host_port NODE = host_port("localhost", 10086);
+    const rpc_address NODE_ADDR = rpc_address::from_host_port("127.0.0.1", 10086);
     std::shared_ptr<app_state> app;
 };
 
@@ -503,7 +507,8 @@ TEST_F(meta_split_service_test, on_config_sync_test)
     info1.pid = pid1;
     info2.pid = pid2;
     configuration_query_by_node_request req;
-    req.node = NODE;
+    req.node = NODE_ADDR;
+    req.__set_hp_node(NODE);
     req.__isset.stored_replicas = true;
     req.stored_replicas.emplace_back(info1);
     req.stored_replicas.emplace_back(info2);

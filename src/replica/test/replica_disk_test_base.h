@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
+#include "utils/math.h"
 
 #include "replica/test/replica_test_base.h"
 
@@ -64,7 +65,6 @@ public:
         generate_mock_app_info();
 
         stub->_fs_manager._dir_nodes.clear();
-        stub->_fs_manager.reset_disk_stat();
         generate_mock_dir_nodes(dir_nodes_count);
         generate_mock_empty_dir_node(empty_dir_nodes_count);
 
@@ -134,14 +134,14 @@ private:
     {
         app_info_1.app_id = 1;
         app_info_1.app_name = "disk_test_1";
-        app_info_1.app_type = "replica";
+        app_info_1.app_type = replication_options::kReplicaAppType;
         app_info_1.is_stateful = true;
         app_info_1.max_replica_count = 3;
         app_info_1.partition_count = 8;
 
         app_info_2.app_id = 2;
         app_info_2.app_name = "disk_test_2";
-        app_info_2.app_type = "replica";
+        app_info_2.app_type = replication_options::kReplicaAppType;
         app_info_2.is_stateful = true;
         app_info_2.max_replica_count = 3;
         app_info_2.partition_count = 16;
@@ -160,12 +160,12 @@ private:
 
     void generate_mock_dir_nodes(int num)
     {
-        int64_t disk_capacity_mb = num * 100;
+        const int64_t disk_capacity_mb = num * 100;
         int count = 0;
         while (count++ < num) {
-            int64_t disk_available_mb = count * 50;
-            int disk_available_ratio =
-                static_cast<int>(std::round((double)100 * disk_available_mb / disk_capacity_mb));
+            const int64_t disk_available_mb = count * 50;
+            const auto disk_available_ratio =
+                dsn::utils::calc_percentage<int>(disk_available_mb, disk_capacity_mb);
             // create one mock dir_node and make sure disk_capacity_mb_ > disk_available_mb_
             dir_node *node_disk = new dir_node("tag_" + std::to_string(count),
                                                "./tag_" + std::to_string(count),

@@ -35,17 +35,15 @@
 
 #include "network.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/crc.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
-#include "utils/singleton.h"
+#include "utils/strings.h"
 #include "utils/utils.h"
 
-using namespace dsn::utils;
-
-namespace dsn {
 // init common for all per-node providers
 DSN_DEFINE_uint32(core,
                   local_hash,
@@ -53,6 +51,10 @@ DSN_DEFINE_uint32(core,
                   "a same hash value from two processes indicate the rpc codes are registered in "
                   "the same order, and therefore the mapping between rpc code string and integer "
                   "is the same, which we leverage for fast rpc handler lookup optimization");
+
+using namespace dsn::utils;
+
+namespace dsn {
 
 std::atomic<uint64_t> message_ex::_id(0);
 
@@ -220,6 +222,7 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
 
     message_ex *msg = new message_ex();
     msg->to_address = to_address;
+    msg->to_host_port = to_host_port;
     msg->local_rpc_code = local_rpc_code;
     msg->hdr_format = hdr_format;
 
@@ -354,6 +357,7 @@ message_ex *message_ex::create_response()
     // the primary address.
     msg->header->from_address = to_address;
     msg->to_address = header->from_address;
+    msg->to_host_port = host_port::from_address(header->from_address);
     msg->io_session = io_session;
     msg->hdr_format = hdr_format;
 

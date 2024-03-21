@@ -15,11 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
-#include <algorithm>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -30,10 +26,11 @@
 
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/app_balance_policy.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/fail_point.h"
 
 namespace dsn {
@@ -49,38 +46,38 @@ TEST(copy_primary_operation, misc)
     app_mapper apps;
     apps[app_id] = app;
 
-    auto addr1 = rpc_address(1, 1);
-    auto addr2 = rpc_address(1, 2);
-    auto addr3 = rpc_address(1, 3);
+    const auto &hp1 = host_port("localhost", 1);
+    const auto &hp2 = host_port("localhost", 2);
+    const auto &hp3 = host_port("localhost", 3);
 
     node_mapper nodes;
     node_state ns1;
     ns1.put_partition(gpid(app_id, 2), true);
     ns1.put_partition(gpid(app_id, 0), false);
-    nodes[addr1] = ns1;
+    nodes[hp1] = ns1;
     node_state ns2;
     ns2.put_partition(gpid(app_id, 0), true);
     ns2.put_partition(gpid(app_id, 1), true);
-    nodes[addr2] = ns2;
+    nodes[hp2] = ns2;
     node_state ns3;
     ns3.put_partition(gpid(app_id, 2), false);
-    nodes[addr3] = ns3;
+    nodes[hp3] = ns3;
 
-    std::vector<dsn::rpc_address> address_vec{addr1, addr2, addr3};
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    address_id[addr1] = 0;
-    address_id[addr2] = 1;
-    address_id[addr3] = 2;
-    copy_primary_operation op(app, apps, nodes, address_vec, address_id, false, 0);
+    std::vector<dsn::host_port> host_port_vec{hp1, hp2, hp3};
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    host_port_id[hp1] = 0;
+    host_port_id[hp2] = 1;
+    host_port_id[hp3] = 2;
+    copy_primary_operation op(app, apps, nodes, host_port_vec, host_port_id, false, 0);
 
     /**
-     * Test init_ordered_address_ids
+     * Test init_ordered_host_port_ids
      */
-    op.init_ordered_address_ids();
-    ASSERT_EQ(op._ordered_address_ids.size(), 3);
-    ASSERT_EQ(*op._ordered_address_ids.begin(), 2);
-    ASSERT_EQ(*(++op._ordered_address_ids.begin()), 0);
-    ASSERT_EQ(*op._ordered_address_ids.rbegin(), 1);
+    op.init_ordered_host_port_ids();
+    ASSERT_EQ(op._ordered_host_port_ids.size(), 3);
+    ASSERT_EQ(*op._ordered_host_port_ids.begin(), 2);
+    ASSERT_EQ(*(++op._ordered_host_port_ids.begin()), 0);
+    ASSERT_EQ(*op._ordered_host_port_ids.rbegin(), 1);
     ASSERT_EQ(op._partition_counts[0], 1);
     ASSERT_EQ(op._partition_counts[1], 2);
     ASSERT_EQ(op._partition_counts[2], 0);
@@ -100,14 +97,14 @@ TEST(copy_primary_operation, misc)
     disk_load load;
     load[disk1] = 2;
     load[disk2] = 6;
-    op._node_loads[addr2] = load;
+    op._node_loads[hp2] = load;
 
     serving_replica serving_partition0;
-    serving_partition0.node = addr2;
+    serving_partition0.node = hp2;
     serving_partition0.disk_tag = disk1;
     app->helpers->contexts[0].serving.push_back(serving_partition0);
     serving_replica serving_partition1;
-    serving_partition1.node = addr2;
+    serving_partition1.node = hp2;
     serving_partition1.disk_tag = disk2;
     app->helpers->contexts[1].serving.push_back(serving_partition1);
 
@@ -129,23 +126,23 @@ TEST(copy_primary_operation, misc)
     ASSERT_TRUE(op.can_continue());
     op._replicas_low = 0;
 
-    nodes[addr2].remove_partition(gpid(app_id, 1), false);
-    op.init_ordered_address_ids();
+    nodes[hp2].remove_partition(gpid(app_id, 1), false);
+    op.init_ordered_host_port_ids();
     ASSERT_FALSE(op.can_continue());
-    nodes[addr2].put_partition(gpid(app_id, 1), true);
+    nodes[hp2].put_partition(gpid(app_id, 1), true);
 
     /**
-     * Test update_ordered_address_ids
+     * Test update_ordered_host_port_ids
      */
-    nodes[addr1].put_partition(gpid(app_id, 3), true);
-    nodes[addr2].put_partition(gpid(app_id, 4), true);
-    nodes[addr2].put_partition(gpid(app_id, 5), true);
-    op.init_ordered_address_ids();
-    op.update_ordered_address_ids();
-    ASSERT_EQ(op._ordered_address_ids.size(), 3);
-    ASSERT_EQ(*op._ordered_address_ids.begin(), 2);
-    ASSERT_EQ(*(++op._ordered_address_ids.begin()), 0);
-    ASSERT_EQ(*op._ordered_address_ids.rbegin(), 1);
+    nodes[hp1].put_partition(gpid(app_id, 3), true);
+    nodes[hp2].put_partition(gpid(app_id, 4), true);
+    nodes[hp2].put_partition(gpid(app_id, 5), true);
+    op.init_ordered_host_port_ids();
+    op.update_ordered_host_port_ids();
+    ASSERT_EQ(op._ordered_host_port_ids.size(), 3);
+    ASSERT_EQ(*op._ordered_host_port_ids.begin(), 2);
+    ASSERT_EQ(*(++op._ordered_host_port_ids.begin()), 0);
+    ASSERT_EQ(*op._ordered_host_port_ids.rbegin(), 1);
     ASSERT_EQ(op._partition_counts[0], 2);
     ASSERT_EQ(op._partition_counts[1], 3);
     ASSERT_EQ(op._partition_counts[2], 1);
@@ -169,9 +166,9 @@ TEST(copy_primary_operation, can_select)
 {
     app_mapper apps;
     node_mapper nodes;
-    std::vector<dsn::rpc_address> address_vec;
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    copy_primary_operation op(nullptr, apps, nodes, address_vec, address_id, false, false);
+    std::vector<dsn::host_port> host_port_vec;
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    copy_primary_operation op(nullptr, apps, nodes, host_port_vec, host_port_id, false, false);
 
     gpid cannot_select_gpid(1, 1);
     gpid can_select_gpid(1, 2);
@@ -186,9 +183,9 @@ TEST(copy_primary_operation, only_copy_primary)
 {
     app_mapper apps;
     node_mapper nodes;
-    std::vector<dsn::rpc_address> address_vec;
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    copy_primary_operation op(nullptr, apps, nodes, address_vec, address_id, false, false);
+    std::vector<dsn::host_port> host_port_vec;
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    copy_primary_operation op(nullptr, apps, nodes, host_port_vec, host_port_id, false, false);
 
     ASSERT_TRUE(op.only_copy_primary());
 }
@@ -203,29 +200,29 @@ TEST(copy_secondary_operation, misc)
     app_mapper apps;
     apps[app_id] = app;
 
-    auto addr1 = rpc_address(1, 1);
-    auto addr2 = rpc_address(1, 2);
-    auto addr3 = rpc_address(1, 3);
+    const auto &hp1 = host_port("localhost", 1);
+    const auto &hp2 = host_port("localhost", 2);
+    const auto &hp3 = host_port("localhost", 3);
 
     node_mapper nodes;
     node_state ns1;
     ns1.put_partition(gpid(app_id, 2), true);
     ns1.put_partition(gpid(app_id, 0), false);
-    nodes[addr1] = ns1;
+    nodes[hp1] = ns1;
     node_state ns2;
     ns2.put_partition(gpid(app_id, 0), true);
     ns2.put_partition(gpid(app_id, 1), true);
-    nodes[addr2] = ns2;
+    nodes[hp2] = ns2;
     node_state ns3;
-    nodes[addr3] = ns3;
+    nodes[hp3] = ns3;
 
-    std::vector<dsn::rpc_address> address_vec{addr1, addr2, addr3};
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    address_id[addr1] = 0;
-    address_id[addr2] = 1;
-    address_id[addr3] = 2;
-    copy_secondary_operation op(app, apps, nodes, address_vec, address_id, 0);
-    op.init_ordered_address_ids();
+    std::vector<dsn::host_port> host_port_vec{hp1, hp2, hp3};
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    host_port_id[hp1] = 0;
+    host_port_id[hp2] = 1;
+    host_port_id[hp3] = 2;
+    copy_secondary_operation op(app, apps, nodes, host_port_vec, host_port_id, 0);
+    op.init_ordered_host_port_ids();
 
     /**
      * Test copy_secondary_operation::get_partition_count
@@ -245,17 +242,17 @@ TEST(copy_secondary_operation, misc)
     ASSERT_FALSE(res);
     op._replicas_low = 0;
 
-    nodes[addr3].put_partition(gpid(app_id, 2), false);
-    op.init_ordered_address_ids();
+    nodes[hp3].put_partition(gpid(app_id, 2), false);
+    op.init_ordered_host_port_ids();
     res = op.can_continue();
     ASSERT_FALSE(res);
-    nodes[addr3].remove_partition(gpid(app_id, 2), false);
+    nodes[hp3].remove_partition(gpid(app_id, 2), false);
 
     /**
      * Test copy_secondary_operation::can_select
      */
-    nodes[addr1].put_partition(gpid(app_id, 3), true);
-    op.init_ordered_address_ids();
+    nodes[hp1].put_partition(gpid(app_id, 3), true);
+    op.init_ordered_host_port_ids();
     migration_list list;
     res = op.can_select(gpid(app_id, 3), &list);
     ASSERT_FALSE(res);
@@ -266,13 +263,13 @@ TEST(copy_secondary_operation, misc)
     ASSERT_FALSE(res);
     list.clear();
 
-    nodes[addr3].put_partition(secondary_gpid, true);
-    op.init_ordered_address_ids();
+    nodes[hp3].put_partition(secondary_gpid, true);
+    op.init_ordered_host_port_ids();
     res = op.can_select(secondary_gpid, &list);
     ASSERT_FALSE(res);
 
-    nodes[addr3].remove_partition(secondary_gpid, false);
-    op.init_ordered_address_ids();
+    nodes[hp3].remove_partition(secondary_gpid, false);
+    op.init_ordered_host_port_ids();
     res = op.can_select(secondary_gpid, &list);
     ASSERT_TRUE(res);
 

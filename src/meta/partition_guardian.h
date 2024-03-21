@@ -29,8 +29,7 @@
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
 #include "meta_data.h"
-#include "perf_counter/perf_counter_wrapper.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/command_manager.h"
 #include "utils/zlocks.h"
 
@@ -75,7 +74,6 @@ private:
     void finish_cure_proposal(meta_view &view,
                               const dsn::gpid &gpid,
                               const configuration_proposal_action &action);
-    std::string ctrl_assign_delay_ms(const std::vector<std::string> &args);
     std::string ctrl_assign_secondary_black_list(const std::vector<std::string> &args);
 
     void set_ddd_partition(ddd_partition_info &&partition)
@@ -84,14 +82,13 @@ private:
         _ddd_partitions[partition.config.pid] = std::move(partition);
     }
 
-    bool in_black_list(dsn::rpc_address addr)
+    bool in_black_list(dsn::host_port addr)
     {
         dsn::zauto_read_lock l(_black_list_lock);
         return _assign_secondary_black_list.count(addr) != 0;
     }
 
     meta_service *_svc;
-    perf_counter_wrapper _recent_choose_primary_fail_count;
 
     mutable zlock _ddd_partitions_lock; // [
     std::map<gpid, ddd_partition_info> _ddd_partitions;
@@ -101,11 +98,11 @@ private:
     // but when adding secondary, the black list is accessed in THREADPOOL_META_STATE
     // so we need a lock to protect it
     dsn::zrwlock_nr _black_list_lock; // [
-    std::set<dsn::rpc_address> _assign_secondary_black_list;
+    std::set<dsn::host_port> _assign_secondary_black_list;
     // ]
 
     std::vector<std::unique_ptr<command_deregister>> _cmds;
-    uint64_t _replica_assign_delay_ms_for_dropouts;
+    int64_t _replica_assign_delay_ms_for_dropouts;
 
     friend class meta_partition_guardian_test;
 };

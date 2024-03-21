@@ -31,11 +31,7 @@
 // IWYU pragma: no_include <boost/asio/ip/tcp.hpp>
 // IWYU pragma: no_include <boost/asio/socket_base.hpp>
 #include <boost/system/error_code.hpp>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <gtest/gtest_prod.h>
-#include <s2/third_party/absl/base/port.h>
 #include <string.h>
 #include <chrono>
 #include <memory>
@@ -46,6 +42,7 @@
 #include <vector>
 
 #include "geo/lib/geo_client.h"
+#include "gtest/gtest.h"
 #include "proxy_layer.h"
 #include "redis_parser.h"
 #include "runtime/app_model.h"
@@ -190,7 +187,7 @@ public:
     {
         dsn::message_ex *msg = dsn::message_ex::create_received_request(
             RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, nullptr, 0);
-        msg->header->from_address = dsn::rpc_address("127.0.0.1", 123);
+        msg->header->from_address = dsn::rpc_address::from_ip_port("127.0.0.1", 123);
         _parser.reset(new redis_test_parser(nullptr, msg));
     }
 
@@ -531,7 +528,7 @@ TEST_F(proxy_test, test_parse_parameters)
 
 TEST(proxy, connection)
 {
-    ::dsn::rpc_address redis_address("127.0.0.1", 12345);
+    const auto redis_address = dsn::rpc_address::from_ip_port("127.0.0.1", 12345);
     ip::tcp::endpoint redis_endpoint(ip::address_v4(redis_address.ip()), redis_address.port());
 
     io_service ios;

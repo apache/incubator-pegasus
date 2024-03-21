@@ -17,6 +17,7 @@
 
 #include "perf_counter/perf_counter_atomic.h"
 
+#include <boost/asio/basic_deadline_timer.hpp>
 #include <stdlib.h>
 #include <functional>
 #include <new>
@@ -29,14 +30,13 @@
 #include "utils/flags.h"
 #include "utils/shared_io_service.h"
 
-namespace dsn {
-
 DSN_DEFINE_int32(components.pegasus_perf_counter_number_percentile_atomic,
                  counter_computation_interval_seconds,
                  10,
                  "The interval seconds of the system to compute the percentiles of the "
                  "pegasus_perf_counter_number_percentile_atomic counters");
 
+namespace dsn {
 perf_counter_number_percentile_atomic::perf_counter_number_percentile_atomic(
     const char *app,
     const char *section,

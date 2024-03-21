@@ -18,19 +18,15 @@
  */
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/status.h>
 #include <stdint.h>
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "replica_admin_types.h"
@@ -43,6 +39,9 @@
 #include "utils/flags.h"
 #include "utils/token_bucket_throttling_controller.h"
 
+DSN_DECLARE_uint64(perf_counter_read_capacity_unit_size);
+DSN_DECLARE_uint64(perf_counter_write_capacity_unit_size);
+
 namespace dsn {
 namespace replication {
 struct replica_base;
@@ -51,9 +50,6 @@ struct replica_base;
 
 namespace pegasus {
 namespace server {
-
-DSN_DECLARE_uint64(perf_counter_read_capacity_unit_size);
-DSN_DECLARE_uint64(perf_counter_write_capacity_unit_size);
 
 class mock_capacity_unit_calculator : public capacity_unit_calculator
 {
@@ -158,7 +154,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, capacity_unit_calculator_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, capacity_unit_calculator_test, ::testing::Values(false, true));
 
 TEST_P(capacity_unit_calculator_test, init) { test_init(); }
 

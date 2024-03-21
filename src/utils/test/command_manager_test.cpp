@@ -19,9 +19,8 @@
 
 #include <boost/algorithm/string/join.hpp>
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+
+#include "gtest/gtest.h"
 
 using std::string;
 using std::vector;

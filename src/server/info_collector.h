@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <s2/third_party/absl/base/port.h>
 #include <stdint.h>
 #include <stdlib.h>
 // IWYU pragma: no_include <bits/std_abs.h>
@@ -30,7 +29,7 @@
 
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "shell/command_helper.h"
@@ -214,7 +213,7 @@ public:
 
 private:
     dsn::task_tracker _tracker;
-    ::dsn::rpc_address _meta_servers;
+    ::dsn::host_port _meta_servers;
     std::string _cluster_name;
     std::shared_ptr<shell_context> _shell_context;
     ::dsn::task_ptr _app_stat_timer_task;
@@ -233,7 +232,7 @@ private:
     ::dsn::task_ptr _storage_size_stat_timer_task;
     ::dsn::utils::ex_lock_nr _capacity_unit_update_info_lock;
     // mapping 'node address' --> 'last updated timestamp'
-    std::map<std::string, string> _capacity_unit_update_info;
+    std::map<std::string, std::string> _capacity_unit_update_info;
     // _hotspot_calculator_store is to save hotspot_partition_calculator for each table, a
     // hotspot_partition_calculator saves historical hotspot data and alert perf_counters of
     // corresponding table

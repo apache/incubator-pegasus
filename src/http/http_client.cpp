@@ -19,20 +19,201 @@
 
 #include <fmt/core.h>
 #include <limits>
-#include <utility>
 
 #include "curl/curl.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
-
 DSN_DEFINE_uint32(http,
                   curl_timeout_ms,
                   10000,
                   "The maximum time in milliseconds that you allow the libcurl transfer operation "
                   "to complete");
+
+namespace dsn {
+
+#define RETURN_IF_CURL_NOT_OK(expr, ok, ...)                                                       \
+    do {                                                                                           \
+        const auto &code = (expr);                                                                 \
+        if (dsn_unlikely(code != (ok))) {                                                          \
+            std::string msg(fmt::format("{}: {}", fmt::format(__VA_ARGS__), to_error_msg(code)));  \
+            return dsn::error_s::make(to_error_code(code), msg);                                   \
+        }                                                                                          \
+    } while (0)
+
+#define CHECK_IF_CURL_OK(expr, ok, ...)                                                            \
+    do {                                                                                           \
+        const auto &code = (expr);                                                                 \
+        CHECK_EXPRESSION(                                                                          \
+            #expr == #ok, code == (ok), "{}: {}", fmt::format(__VA_ARGS__), to_error_msg(code));   \
+    } while (0)
+
+#define CHECK_IF_CURL_URL_OK(url, expr, ...)                                                       \
+    do {                                                                                           \
+        CHECK_NOTNULL(url, "CURLU object has not been allocated");                                 \
+        CHECK_IF_CURL_OK(expr, CURLUE_OK, __VA_ARGS__);                                            \
+    } while (0)
+
+#define CHECK_IF_CURL_URL_SET_OK(url, part, content, ...)                                          \
+    CHECK_IF_CURL_URL_OK(url, curl_url_set(url, CURLUPART_##part, content, 0), __VA_ARGS__)
+
+#define CHECK_IF_CURL_URL_SET_NULL_OK(url, part, ...)                                              \
+    CHECK_IF_CURL_URL_SET_OK(url,                                                                  \
+                             part,                                                                 \
+                             nullptr,                                                              \
+                             "curl_url_set(part = " #part                                          \
+                             ", content = nullptr) should always return CURLUE_OK")
+
+// Set "http" as the default scheme.
+#define SET_DEFAULT_HTTP_SCHEME(url)                                                               \
+    CHECK_IF_CURL_URL_SET_OK(url,                                                                  \
+                             SCHEME,                                                               \
+                             enum_to_val(http_scheme::kHttp, std::string()).c_str(),               \
+                             "failed to set CURLUPART_SCHEME with 'http'")
+
+namespace {
+
+inline dsn::error_code to_error_code(CURLUcode code)
+{
+    switch (code) {
+    case CURLUE_OK:
+        return dsn::ERR_OK;
+    default:
+        return dsn::ERR_CURL_FAILED;
+    }
+}
+
+inline std::string to_error_msg(CURLUcode code)
+{
+    return fmt::format("code={}, desc=\"{}\"", static_cast<int>(code), curl_url_strerror(code));
+}
+
+CURLU *new_curlu()
+{
+    CURLU *url = curl_url();
+    CHECK_NOTNULL(url, "fail to allocate a CURLU object due to out of memory");
+
+    SET_DEFAULT_HTTP_SCHEME(url);
+
+    return url;
+}
+
+CURLU *dup_curlu(const CURLU *url)
+{
+    CURLU *new_url = curl_url_dup(url);
+    CHECK_NOTNULL(new_url, "fail to duplicate a CURLU object due to out of memory");
+
+    return new_url;
+}
+
+} // anonymous namespace
+
+void http_url::curlu_deleter::operator()(CURLU *url) const
+{
+    if (url == nullptr) {
+        return;
+    }
+
+    curl_url_cleanup(url);
+    url = nullptr;
+}
+
+http_url::http_url() noexcept : _url(new_curlu(), curlu_deleter()) {}
+
+http_url::http_url(const http_url &rhs) noexcept : _url(dup_curlu(rhs._url.get()), curlu_deleter())
+{
+}
+
+http_url &http_url::operator=(const http_url &rhs) noexcept
+{
+    if (this == &rhs) {
+        return *this;
+    }
+
+    // The existing deleter will not be cleared.
+    _url.reset(dup_curlu(rhs._url.get()));
+    return *this;
+}
+
+http_url::http_url(http_url &&rhs) noexcept : _url(std::move(rhs._url)) {}
+
+http_url &http_url::operator=(http_url &&rhs) noexcept
+{
+    if (this == &rhs) {
+        return *this;
+    }
+
+    _url = std::move(rhs._url);
+    return *this;
+}
+
+void http_url::clear()
+{
+    // Setting the url with nullptr would lead to the release of memory for each part of the url,
+    // thus clearing the url.
+    CHECK_IF_CURL_URL_SET_NULL_OK(_url.get(), URL);
+
+    SET_DEFAULT_HTTP_SCHEME(_url.get());
+}
+
+#define RETURN_IF_CURL_URL_NOT_OK(expr, ...) RETURN_IF_CURL_NOT_OK(expr, CURLUE_OK, __VA_ARGS__)
+
+#define RETURN_IF_CURL_URL_SET_NOT_OK(part, content, flags)                                        \
+    RETURN_IF_CURL_URL_NOT_OK(                                                                     \
+        curl_url_set(_url.get(), part, content, flags), "failed to set " #part " to {}", content)
+
+#define RETURN_IF_CURL_URL_GET_NOT_OK(part, content_pointer, flags)                                \
+    RETURN_IF_CURL_URL_NOT_OK(curl_url_get(_url.get(), part, content_pointer, flags),              \
+                              "failed to get " #part)
+
+#define DEF_HTTP_URL_SET_FUNC(name, part)                                                          \
+    dsn::error_s http_url::set_##name(const char *content)                                         \
+    {                                                                                              \
+        RETURN_IF_CURL_URL_SET_NOT_OK(CURLUPART_##part, content, 0);                               \
+                                                                                                   \
+        return dsn::error_s::ok();                                                                 \
+    }
+
+DEF_HTTP_URL_SET_FUNC(url, URL)
+
+DEF_HTTP_URL_SET_FUNC(scheme, SCHEME)
+
+dsn::error_s http_url::set_scheme(http_scheme scheme)
+{
+    return set_scheme(enum_to_val(scheme, std::string()).c_str());
+}
+
+DEF_HTTP_URL_SET_FUNC(host, HOST)
+
+DEF_HTTP_URL_SET_FUNC(port, PORT)
+
+dsn::error_s http_url::set_port(uint16_t port) { return set_port(std::to_string(port).c_str()); }
+
+DEF_HTTP_URL_SET_FUNC(path, PATH)
+
+DEF_HTTP_URL_SET_FUNC(query, QUERY)
+
+#undef DEF_HTTP_URL_SET_FUNC
+
+dsn::error_s http_url::to_string(std::string &url) const
+{
+    CHECK_NOTNULL(_url, "CURLU object has not been allocated");
+
+    char *content;
+    RETURN_IF_CURL_URL_GET_NOT_OK(CURLUPART_URL, &content, 0);
+
+    url = content;
+
+    // Free the returned string.
+    curl_free(content);
+
+    return dsn::error_s::ok();
+}
+
+#undef RETURN_IF_CURL_URL_GET_NOT_OK
+#undef RETURN_IF_CURL_URL_SET_NOT_OK
+#undef RETURN_IF_CURL_URL_NOT_OK
 
 http_client::http_client()
     : _curl(nullptr),
@@ -74,35 +255,43 @@ inline dsn::error_code to_error_code(CURLcode code)
 
 } // anonymous namespace
 
-#define RETURN_IF_CURL_NOT_OK(expr, ...)                                                           \
+#define RETURN_IF_CURL_EASY_NOT_OK(expr, ...)                                                      \
     do {                                                                                           \
-        const auto code = (expr);                                                                  \
-        if (dsn_unlikely(code != CURLE_OK)) {                                                      \
-            std::string msg(fmt::format("{}: {}", fmt::format(__VA_ARGS__), to_error_msg(code)));  \
-            return dsn::error_s::make(to_error_code(code), msg);                                   \
-        }                                                                                          \
+        CHECK_NOTNULL(_curl, "CURL object has not been allocated");                                \
+        RETURN_IF_CURL_NOT_OK(expr, CURLE_OK, __VA_ARGS__);                                        \
     } while (0)
 
-#define RETURN_IF_SETOPT_NOT_OK(opt, input)                                                        \
-    RETURN_IF_CURL_NOT_OK(curl_easy_setopt(_curl, opt, input),                                     \
-                          "failed to set " #opt " to"                                              \
-                          " " #input)
+#define RETURN_IF_CURL_EASY_SETOPT_NOT_OK(opt, input)                                              \
+    RETURN_IF_CURL_EASY_NOT_OK(curl_easy_setopt(_curl, CURLOPT_##opt, input),                      \
+                               "failed to set " #opt " with " #input)
 
-#define RETURN_IF_GETINFO_NOT_OK(info, output)                                                     \
-    RETURN_IF_CURL_NOT_OK(curl_easy_getinfo(_curl, info, output), "failed to get from " #info)
+#define RETURN_IF_CURL_EASY_GETINFO_NOT_OK(info, output)                                           \
+    RETURN_IF_CURL_EASY_NOT_OK(curl_easy_getinfo(_curl, CURLINFO_##info, output),                  \
+                               "failed to get from " #info)
 
-#define RETURN_IF_EXEC_METHOD_NOT_OK()                                                             \
-    RETURN_IF_CURL_NOT_OK(curl_easy_perform(_curl),                                                \
-                          "failed to perform http request(method={}, url={})",                     \
-                          enum_to_string(_method),                                                 \
-                          _url)
+#define RETURN_IF_CURL_EASY_PERFORM_NOT_OK()                                                       \
+    RETURN_IF_CURL_EASY_NOT_OK(curl_easy_perform(_curl),                                           \
+                               "failed to perform http request(method={}, url={})",                \
+                               enum_to_string(_method),                                            \
+                               _url)
+
+#define CHECK_IF_CURL_EASY_OK(expr, ...)                                                           \
+    do {                                                                                           \
+        CHECK_NOTNULL(_curl, "CURL object has not been allocated");                                \
+        CHECK_IF_CURL_OK(expr, CURLE_OK, __VA_ARGS__);                                             \
+    } while (0)
+
+#define CHECK_IF_CURL_EASY_SETOPT_OK(opt, input, ...)                                              \
+    CHECK_IF_CURL_EASY_OK(curl_easy_setopt(_curl, CURLOPT_##opt, input),                           \
+                          "failed to set " #opt " with " #input ": {}",                            \
+                          fmt::format(__VA_ARGS__))
 
 dsn::error_s http_client::init()
 {
     if (_curl == nullptr) {
         _curl = curl_easy_init();
         if (_curl == nullptr) {
-            return dsn::error_s::make(dsn::ERR_CURL_FAILED, "fail to initialize curl");
+            return dsn::error_s::make(dsn::ERR_CURL_FAILED, "fail to allocate CURL object");
         }
     } else {
         curl_easy_reset(_curl);
@@ -113,20 +302,20 @@ dsn::error_s http_client::init()
 
     // Additional messages for errors are needed.
     clear_error_buf();
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_ERRORBUFFER, _error_buf);
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(ERRORBUFFER, _error_buf);
 
     // Set with NOSIGNAL since we are multi-threaded.
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_NOSIGNAL, 1L);
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(NOSIGNAL, 1L);
 
     // Redirects are supported.
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_FOLLOWLOCATION, 1L);
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(FOLLOWLOCATION, 1L);
 
     // Before 8.3.0, CURLOPT_MAXREDIRS was unlimited.
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_MAXREDIRS, 20);
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(MAXREDIRS, 20);
 
     // Set common timeout for transfer operation. Users could also change it with their
     // custom values by `set_timeout`.
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_TIMEOUT_MS, static_cast<long>(FLAGS_curl_timeout_ms));
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(TIMEOUT_MS, static_cast<long>(FLAGS_curl_timeout_ms));
 
     // A lambda can only be converted to a function pointer if it does not capture:
     // https://stackoverflow.com/questions/28746744/passing-capturing-lambda-as-function-pointer
@@ -135,10 +324,10 @@ dsn::error_s http_client::init()
         http_client *client = reinterpret_cast<http_client *>(param);
         return client->on_response_data(buffer, size * nmemb);
     };
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_WRITEFUNCTION, callback);
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(WRITEFUNCTION, callback);
 
     // This http_client object itself is passed to the callback function.
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_WRITEDATA, reinterpret_cast<void *>(this));
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(WRITEDATA, reinterpret_cast<void *>(this));
 
     return dsn::error_s::ok();
 }
@@ -182,21 +371,51 @@ size_t http_client::on_response_data(const void *data, size_t length)
     return (*_recv_callback)(data, length) ? length : std::numeric_limits<size_t>::max();
 }
 
-dsn::error_s http_client::set_url(const std::string &url)
-{
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_URL, url.c_str());
+// Once CURLOPT_CURLU is supported, actually curl_easy_setopt would always return CURLE_OK,
+// see https://curl.se/libcurl/c/CURLOPT_CURLU.html"). For the reason why we still return
+// ERR_OK, please see the comments for set_url.
+#define RETURN_IF_CURL_EASY_SETOPT_CURLU_NOT_OK()                                                  \
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(CURLU, _url.curlu())
 
-    _url = url;
+dsn::error_s http_client::set_url(const std::string &new_url)
+{
+    // DO NOT call curl_easy_setopt() on CURLOPT_URL, since the CURLOPT_URL string is ignored
+    // if CURLOPT_CURLU is set. See following docs for details:
+    // * https://curl.se/libcurl/c/CURLOPT_CURLU.html
+    // * https://curl.se/libcurl/c/CURLOPT_URL.html
+    //
+    // Use a temporary object for the reason that once the error occurred, `_url` would not
+    // be dirty.
+    http_url tmp;
+    RETURN_NOT_OK(tmp.set_url(new_url.c_str()));
+
+    RETURN_NOT_OK(set_url(std::move(tmp)));
+    return dsn::error_s::ok();
+}
+
+dsn::error_s http_client::set_url(const http_url &new_url)
+{
+    _url = new_url;
+    RETURN_IF_CURL_EASY_SETOPT_CURLU_NOT_OK();
+    return dsn::error_s::ok();
+}
+
+dsn::error_s http_client::set_url(http_url &&new_url)
+{
+    _url = std::move(new_url);
+    RETURN_IF_CURL_EASY_SETOPT_CURLU_NOT_OK();
     return dsn::error_s::ok();
 }
 
 dsn::error_s http_client::with_post_method(const std::string &data)
 {
-    // No need to enable CURLOPT_POST by `RETURN_IF_SETOPT_NOT_OK(CURLOPT_POST, 1L)`, since using
-    // either of CURLOPT_POSTFIELDS or CURLOPT_COPYPOSTFIELDS implies setting CURLOPT_POST to 1.
+    // No need to enable CURLOPT_POST by `RETURN_IF_CURL_EASY_SETOPT_NOT_OK(POST, 1L)`,
+    // since using either of CURLOPT_POSTFIELDS or CURLOPT_COPYPOSTFIELDS implies setting
+    // CURLOPT_POST to 1.
+    //
     // See https://curl.se/libcurl/c/CURLOPT_POSTFIELDS.html for details.
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_POSTFIELDSIZE, static_cast<long>(data.size()));
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_COPYPOSTFIELDS, data.data());
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(POSTFIELDSIZE, static_cast<long>(data.size()));
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(COPYPOSTFIELDS, data.data());
     _method = http_method::POST;
     return dsn::error_s::ok();
 }
@@ -209,7 +428,7 @@ dsn::error_s http_client::set_method(http_method method)
     // `with_post_method`.
     switch (method) {
     case http_method::GET:
-        RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPGET, 1L);
+        RETURN_IF_CURL_EASY_SETOPT_NOT_OK(HTTPGET, 1L);
         break;
     default:
         LOG_FATAL("Unsupported http_method");
@@ -219,9 +438,31 @@ dsn::error_s http_client::set_method(http_method method)
     return dsn::error_s::ok();
 }
 
+dsn::error_s http_client::set_auth(http_auth_type auth_type)
+{
+    switch (auth_type) {
+    case http_auth_type::SPNEGO:
+        RETURN_IF_CURL_EASY_SETOPT_NOT_OK(HTTPAUTH, CURLAUTH_NEGOTIATE);
+        break;
+    case http_auth_type::DIGEST:
+        RETURN_IF_CURL_EASY_SETOPT_NOT_OK(HTTPAUTH, CURLAUTH_DIGEST);
+        break;
+    case http_auth_type::BASIC:
+        RETURN_IF_CURL_EASY_SETOPT_NOT_OK(HTTPAUTH, CURLAUTH_BASIC);
+        break;
+    case http_auth_type::NONE:
+        break;
+    default:
+        RETURN_IF_CURL_EASY_SETOPT_NOT_OK(HTTPAUTH, CURLAUTH_ANY);
+        break;
+    }
+
+    return dsn::error_s::ok();
+}
+
 dsn::error_s http_client::set_timeout(long timeout_ms)
 {
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_TIMEOUT_MS, timeout_ms);
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(TIMEOUT_MS, timeout_ms);
     return dsn::error_s::ok();
 }
 
@@ -242,15 +483,15 @@ void http_client::free_header_list()
     _header_list = nullptr;
 }
 
-void http_client::set_header_field(dsn::string_view key, dsn::string_view val)
+void http_client::set_header_field(absl::string_view key, absl::string_view val)
 {
     _header_fields[std::string(key)] = std::string(val);
     _header_changed = true;
 }
 
-void http_client::set_accept(dsn::string_view val) { set_header_field("Accept", val); }
+void http_client::set_accept(absl::string_view val) { set_header_field("Accept", val); }
 
-void http_client::set_content_type(dsn::string_view val) { set_header_field("Content-Type", val); }
+void http_client::set_content_type(absl::string_view val) { set_header_field("Content-Type", val); }
 
 dsn::error_s http_client::process_header()
 {
@@ -277,7 +518,7 @@ dsn::error_s http_client::process_header()
 
     // This would work well even if `_header_list` is NULL pointer. Pass a NULL to this option
     // to reset back to no custom headers. (https://curl.se/libcurl/c/CURLOPT_HTTPHEADER.html)
-    RETURN_IF_SETOPT_NOT_OK(CURLOPT_HTTPHEADER, _header_list);
+    RETURN_IF_CURL_EASY_SETOPT_NOT_OK(HTTPHEADER, _header_list);
 
     // New header has been built successfully, thus mark it unchanged.
     _header_changed = false;
@@ -293,7 +534,7 @@ dsn::error_s http_client::exec_method(const http_client::recv_callback &callback
 
     RETURN_NOT_OK(process_header());
 
-    RETURN_IF_EXEC_METHOD_NOT_OK();
+    RETURN_IF_CURL_EASY_PERFORM_NOT_OK();
     return dsn::error_s::ok();
 }
 
@@ -311,14 +552,19 @@ dsn::error_s http_client::exec_method(std::string *response)
     return exec_method(callback);
 }
 
-dsn::error_s http_client::get_http_status(long &http_status) const
+dsn::error_s http_client::get_http_status(http_status_code &status_code) const
 {
-    RETURN_IF_GETINFO_NOT_OK(CURLINFO_RESPONSE_CODE, &http_status);
+    long response_code;
+    RETURN_IF_CURL_EASY_GETINFO_NOT_OK(RESPONSE_CODE, &response_code);
+    status_code = enum_from_val(response_code, http_status_code::kInvalidCode);
     return dsn::error_s::ok();
 }
 
-#undef RETURN_IF_EXEC_METHOD_NOT_OK
-#undef RETURN_IF_SETOPT_NOT_OK
+#undef RETURN_IF_CURL_EASY_PERFORM_NOT_OK
+#undef RETURN_IF_CURL_EASY_GETINFO_NOT_OK
+#undef RETURN_IF_CURL_EASY_SETOPT_NOT_OK
+#undef RETURN_IF_CURL_EASY_NOT_OK
+
 #undef RETURN_IF_CURL_NOT_OK
 
 } // namespace dsn

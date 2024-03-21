@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     rdsn configurations
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 /// Attention: There are some types which are defined in dsn_runtime being used in this file,
 /// so this file is coupled with dsn_runtime. If you want to add some variables/types here or
 /// include this file, please make sure whether you want to couple with dsn_runtime or not.
@@ -186,7 +177,9 @@ struct service_spec
 CONFIG_BEGIN(service_spec)
 CONFIG_FLD_STRING(tool, "", "use what tool to run this process, e.g., native or simulator")
 CONFIG_FLD_STRING_LIST(toollets, "use what toollets, e.g., tracer, profiler, fault_injector")
-CONFIG_FLD_STRING(data_dir, "./data", "where to put the all the data/log/coredump, etc..")
+CONFIG_FLD_STRING(data_dir,
+                  "./data",
+                  "The default directory to place the all the data/log/coredump, etc..")
 CONFIG_FLD(
     bool,
     bool,

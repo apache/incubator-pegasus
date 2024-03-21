@@ -34,7 +34,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <set>
 
 #include "backup_types.h"
 #include "common//duplication_common.h"
@@ -46,9 +45,11 @@
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "fmt/core.h"
+#include "fmt/format.h"
 #include "meta/meta_rpc_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/group_host_port.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
@@ -70,28 +71,63 @@ DSN_DEFINE_uint32(ddl_client,
 namespace dsn {
 namespace replication {
 
-#define VALIDATE_TABLE_NAME(app_name)                                                              \
-    do {                                                                                           \
-        if (app_name.empty() ||                                                                    \
-            !std::all_of(app_name.cbegin(),                                                        \
-                         app_name.cend(),                                                          \
-                         (bool (*)(int))replication_ddl_client::valid_app_char))                   \
-            return FMT_ERR(ERR_INVALID_PARAMETERS, "Invalid name. Only 0-9a-zA-Z.:_ are valid!");  \
-    } while (false)
-
 using tp_output_format = ::dsn::utils::table_printer::output_format;
 
-replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_address> &meta_servers)
+error_s replication_ddl_client::validate_app_name(const std::string &app_name,
+                                                  bool allow_empty_name)
+{
+    if ((app_name.empty() && !allow_empty_name) ||
+        !std::all_of(app_name.cbegin(), app_name.cend(), [](const char c) {
+            return static_cast<bool>(std::isalnum(c)) || c == '_' || c == '.' || c == ':';
+        })) {
+        return FMT_ERR(ERR_INVALID_PARAMETERS, "Invalid name: Only 0-9a-zA-Z.:_ are valid.");
+    }
+
+    return error_s::ok();
+}
+
+replication_ddl_client::replication_ddl_client(const std::vector<dsn::host_port> &meta_servers)
 {
     _meta_server.assign_group("meta-servers");
     for (const auto &m : meta_servers) {
-        if (!_meta_server.group_address()->add(m)) {
+        if (!_meta_server.group_host_port()->add(m)) {
             LOG_WARNING("duplicate adress {}", m);
         }
     }
 }
 
 replication_ddl_client::~replication_ddl_client() { _tracker.cancel_outstanding_tasks(); }
+
+void replication_ddl_client::set_meta_servers_leader()
+{
+    auto req = std::make_shared<configuration_cluster_info_request>();
+
+    auto resp_task = request_meta(RPC_CM_CLUSTER_INFO, req);
+    resp_task->wait();
+    if (resp_task->error() != dsn::ERR_OK) {
+        LOG_ERROR("get cluster_info failed!");
+        return;
+    }
+
+    configuration_cluster_info_response resp;
+    ::dsn::unmarshall(resp_task->get_response(), resp);
+    if (resp.err != dsn::ERR_OK) {
+        LOG_ERROR("get cluster_info failed!");
+        return;
+    }
+
+    for (int i = 0; i < resp.keys.size(); i++) {
+        if (resp.keys[i] == "primary_meta_server") {
+            auto hp = host_port::from_string(resp.values[i]);
+            if (_meta_server.group_host_port()->contains(hp)) {
+                _meta_server.group_host_port()->set_leader(hp);
+            } else {
+                LOG_ERROR("meta_servers not contains {}", hp);
+            }
+            break;
+        }
+    }
+}
 
 dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_name,
                                                        int partition_count,
@@ -114,8 +150,7 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
 
         if (query_task->error() != dsn::ERR_OK) {
             std::cout << "create app " << app_name
-                      << " failed: [query] call server error: " << query_task->error().to_string()
-                      << std::endl;
+                      << " failed: [query] call server error: " << query_task->error() << std::endl;
             return query_task->error();
         }
 
@@ -123,15 +158,15 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
         ::dsn::unmarshall(query_task->get_response(), query_resp);
         if (query_resp.err != dsn::ERR_OK) {
             std::cout << "create app " << app_name
-                      << " failed: [query] received server error: " << query_resp.err.to_string()
-                      << std::endl;
+                      << " failed: [query] received server error: " << query_resp.err << std::endl;
             return query_resp.err;
         }
         CHECK_EQ(partition_count, query_resp.partition_count);
         int ready_count = 0;
         for (int i = 0; i < partition_count; i++) {
             const partition_configuration &pc = query_resp.partitions[i];
-            if (!pc.primary.is_invalid() && (pc.secondaries.size() + 1 >= max_replica_count)) {
+            if (!pc.hp_primary.is_invalid() &&
+                (pc.hp_secondaries.size() + 1 >= max_replica_count)) {
                 ready_count++;
             }
         }
@@ -166,21 +201,8 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
         return ERR_INVALID_PARAMETERS;
     }
 
-    if (app_name.empty() ||
-        !std::all_of(app_name.cbegin(),
-                     app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
-        std::cout << "create app " << app_name << " failed: invalid app_name" << std::endl;
-        return ERR_INVALID_PARAMETERS;
-    }
-
-    if (app_type.empty() ||
-        !std::all_of(app_type.cbegin(),
-                     app_type.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
-        std::cout << "create app " << app_name << " failed: invalid app_type" << std::endl;
-        return ERR_INVALID_PARAMETERS;
-    }
+    RETURN_EC_NOT_OK_MSG(validate_app_name(app_name), "invalid app_name: '{}'", app_name);
+    RETURN_EC_NOT_OK_MSG(validate_app_name(app_type), "invalid app_type: '{}'", app_type);
 
     auto req = std::make_shared<configuration_create_app_request>();
     req->app_name = app_name;
@@ -196,15 +218,13 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
 
     if (resp_task->error() != dsn::ERR_OK) {
         std::cout << "create app " << app_name
-                  << " failed: [create] call server error: " << resp_task->error().to_string()
-                  << std::endl;
+                  << " failed: [create] call server error: " << resp_task->error() << std::endl;
         return resp_task->error();
     }
 
     if (resp.err != dsn::ERR_OK) {
         std::cout << "create app " << app_name
-                  << " failed: [create] received server error: " << resp.err.to_string()
-                  << std::endl;
+                  << " failed: [create] received server error: " << resp.err << std::endl;
         return resp.err;
     }
 
@@ -218,11 +238,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
 
 dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, int reserve_seconds)
 {
-    if (app_name.empty() ||
-        !std::all_of(app_name.cbegin(),
-                     app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char))
-        return ERR_INVALID_PARAMETERS;
+    RETURN_EC_NOT_OK_MSG(validate_app_name(app_name), "invalid app_name: '{}'", app_name);
 
     auto req = std::make_shared<configuration_drop_app_request>();
     req->app_name = app_name;
@@ -245,11 +261,8 @@ dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, in
 
 dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::string &new_app_name)
 {
-    if (!std::all_of(new_app_name.cbegin(),
-                     new_app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char))
-        return ERR_INVALID_PARAMETERS;
-
+    RETURN_EC_NOT_OK_MSG(
+        validate_app_name(new_app_name, true), "invalid new_app_name: '{}'", new_app_name);
     auto req = std::make_shared<configuration_recall_app_request>();
     req->app_id = app_id;
     req->new_app_name = new_app_name;
@@ -422,11 +435,11 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             for (int i = 0; i < partitions.size(); i++) {
                 const dsn::partition_configuration &p = partitions[i];
                 int replica_count = 0;
-                if (!p.primary.is_invalid()) {
+                if (!p.hp_primary.is_invalid()) {
                     replica_count++;
                 }
-                replica_count += p.secondaries.size();
-                if (!p.primary.is_invalid()) {
+                replica_count += p.hp_secondaries.size();
+                if (!p.hp_primary.is_invalid()) {
                     if (replica_count >= p.max_replica_count)
                         fully_healthy++;
                     else if (replica_count < 2)
@@ -474,7 +487,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
 
 dsn::error_code replication_ddl_client::list_nodes(
     const dsn::replication::node_status::type status,
-    std::map<dsn::rpc_address, dsn::replication::node_status::type> &nodes)
+    std::map<dsn::host_port, dsn::replication::node_status::type> &nodes)
 {
     auto req = std::make_shared<configuration_list_nodes_request>();
     req->status = status;
@@ -490,8 +503,10 @@ dsn::error_code replication_ddl_client::list_nodes(
         return resp.err;
     }
 
-    for (const dsn::replication::node_info &n : resp.infos) {
-        nodes[n.address] = n.status;
+    for (const auto &n : resp.infos) {
+        host_port hp;
+        GET_HOST_PORT(n, address, hp);
+        nodes[hp] = n.status;
     }
 
     return dsn::ERR_OK;
@@ -524,13 +539,13 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
                                                    const std::string &file_name,
                                                    bool resolve_ip)
 {
-    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
+    std::map<dsn::host_port, dsn::replication::node_status::type> nodes;
     auto r = list_nodes(status, nodes);
     if (r != dsn::ERR_OK) {
         return r;
     }
 
-    std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
+    std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
     for (auto &kv : nodes) {
         if (kv.second == dsn::replication::node_status::NS_ALIVE)
@@ -539,7 +554,7 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
         status_str = status_str.substr(status_str.find("NS_") + 3);
         tmp_map.emplace(
             kv.first,
-            list_nodes_helper(host_name_resolve(resolve_ip, kv.first.to_std_string()), status_str));
+            list_nodes_helper(host_name_resolve(resolve_ip, kv.first.to_string()), status_str));
     }
 
     if (detailed) {
@@ -560,14 +575,14 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
 
             for (int i = 0; i < partitions.size(); i++) {
                 const dsn::partition_configuration &p = partitions[i];
-                if (!p.primary.is_invalid()) {
-                    auto find = tmp_map.find(p.primary);
+                if (!p.hp_primary.is_invalid()) {
+                    auto find = tmp_map.find(p.hp_primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (int j = 0; j < p.secondaries.size(); j++) {
-                    auto find = tmp_map.find(p.secondaries[j]);
+                for (int j = 0; j < p.hp_secondaries.size(); j++) {
+                    auto find = tmp_map.find(p.hp_secondaries[j]);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;
                     }
@@ -746,7 +761,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
         tp_details.add_column("replica_count");
         tp_details.add_column("primary");
         tp_details.add_column("secondaries");
-        std::map<rpc_address, std::pair<int, int>> node_stat;
+        std::map<host_port, std::pair<int, int>> node_stat;
 
         int total_prim_count = 0;
         int total_sec_count = 0;
@@ -755,14 +770,14 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
         int read_unhealthy = 0;
         for (const auto &p : partitions) {
             int replica_count = 0;
-            if (!p.primary.is_invalid()) {
+            if (!p.hp_primary.is_invalid()) {
                 replica_count++;
-                node_stat[p.primary].first++;
+                node_stat[p.hp_primary].first++;
                 total_prim_count++;
             }
-            replica_count += p.secondaries.size();
-            total_sec_count += p.secondaries.size();
-            if (!p.primary.is_invalid()) {
+            replica_count += p.hp_secondaries.size();
+            total_sec_count += p.hp_secondaries.size();
+            if (!p.hp_primary.is_invalid()) {
                 if (replica_count >= p.max_replica_count)
                     fully_healthy++;
                 else if (replica_count < 2)
@@ -776,17 +791,15 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
             tp_details.append_data(oss.str());
-            tp_details.append_data(
-                (p.primary.is_invalid() ? "-" : host_name_resolve(resolve_ip,
-                                                                  p.primary.to_std_string())));
+            tp_details.append_data((p.hp_primary.is_invalid() ? "-" : p.hp_primary.to_string()));
             oss.str("");
             oss << "[";
             // TODO (yingchun) join
-            for (int j = 0; j < p.secondaries.size(); j++) {
+            for (int j = 0; j < p.hp_secondaries.size(); j++) {
                 if (j != 0)
                     oss << ",";
-                oss << host_name_resolve(resolve_ip, p.secondaries[j].to_std_string());
-                node_stat[p.secondaries[j]].second++;
+                oss << p.hp_secondaries[j];
+                node_stat[p.hp_secondaries[j]].second++;
             }
             oss << "]";
             tp_details.append_data(oss.str());
@@ -800,7 +813,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
         tp_nodes.add_column("secondary");
         tp_nodes.add_column("total");
         for (auto &kv : node_stat) {
-            tp_nodes.add_row(host_name_resolve(resolve_ip, kv.first.to_std_string()));
+            tp_nodes.add_row(host_name_resolve(resolve_ip, kv.first.to_string()));
             tp_nodes.append_data(kv.second.first);
             tp_nodes.append_data(kv.second.second);
             tp_nodes.append_data(kv.second.first + kv.second.second);
@@ -829,11 +842,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
                                                  int32_t &partition_count,
                                                  std::vector<partition_configuration> &partitions)
 {
-    if (app_name.empty() ||
-        !std::all_of(app_name.cbegin(),
-                     app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char))
-        return ERR_INVALID_PARAMETERS;
+    RETURN_EC_NOT_OK_MSG(validate_app_name(app_name), "invalid app_name: '{}'", app_name);
 
     auto req = std::make_shared<query_cfg_request>();
     req->app_name = app_name;
@@ -889,7 +898,7 @@ replication_ddl_client::send_balancer_proposal(const configuration_balancer_requ
     return resp.err;
 }
 
-dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_address> &replica_nodes,
+dsn::error_code replication_ddl_client::do_recovery(const std::vector<host_port> &replica_nodes,
                                                     int wait_seconds,
                                                     bool skip_bad_nodes,
                                                     bool skip_lost_partitions,
@@ -908,15 +917,17 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
 
     auto req = std::make_shared<configuration_recovery_request>();
     req->recovery_set.clear();
-    for (const dsn::rpc_address &node : replica_nodes) {
-        if (std::find(req->recovery_set.begin(), req->recovery_set.end(), node) !=
-            req->recovery_set.end()) {
-            out << "duplicate replica node " << node.to_string() << ", just ingore it" << std::endl;
+    req->__set_hp_recovery_set(std::vector<host_port>());
+    for (const auto &node : replica_nodes) {
+        if (std::find(req->hp_recovery_set.begin(), req->hp_recovery_set.end(), node) !=
+            req->hp_recovery_set.end()) {
+            out << "duplicate replica node " << node << ", just ingore it" << std::endl;
         } else {
-            req->recovery_set.push_back(node);
+            req->hp_recovery_set.push_back(node);
+            req->recovery_set.push_back(dsn::dns_resolver::instance().resolve_address(node));
         }
     }
-    if (req->recovery_set.empty()) {
+    if (req->hp_recovery_set.empty()) {
         out << "node set for recovery it empty" << std::endl;
         return ERR_INVALID_PARAMETERS;
     }
@@ -928,8 +939,8 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
     out << "Skip lost partitions: " << (skip_lost_partitions ? "true" : "false") << std::endl;
     out << "Node list:" << std::endl;
     out << "=============================" << std::endl;
-    for (auto &node : req->recovery_set) {
-        out << node.to_string() << std::endl;
+    for (auto &node : req->hp_recovery_set) {
+        out << node << std::endl;
     }
     out << "=============================" << std::endl;
 
@@ -950,7 +961,7 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<rpc_addres
     } else {
         configuration_recovery_response resp;
         dsn::unmarshall(response_task->get_response(), resp);
-        out << "Recover result: " << resp.err.to_string() << std::endl;
+        out << "Recover result: " << resp.err << std::endl;
         if (!resp.hint_message.empty()) {
             out << "=============================" << std::endl;
             out << resp.hint_message;
@@ -970,21 +981,10 @@ dsn::error_code replication_ddl_client::do_restore(const std::string &backup_pro
                                                    bool skip_bad_partition,
                                                    const std::string &restore_path)
 {
-    if (old_app_name.empty() ||
-        !std::all_of(old_app_name.cbegin(),
-                     old_app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
-        std::cout << "restore app " << old_app_name << " failed: invalid old_app_name" << std::endl;
-        return ERR_INVALID_PARAMETERS;
-    }
-
-    if (new_app_name.empty() ||
-        !std::all_of(new_app_name.cbegin(),
-                     new_app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char)) {
-        std::cout << "restore app " << new_app_name << " failed: invalid new_app_name" << std::endl;
-        return ERR_INVALID_PARAMETERS;
-    }
+    RETURN_EC_NOT_OK_MSG(
+        validate_app_name(old_app_name), "invalid old_app_name: '{}'", old_app_name);
+    RETURN_EC_NOT_OK_MSG(
+        validate_app_name(new_app_name), "invalid new_app_name: '{}'", new_app_name);
 
     auto req = std::make_shared<configuration_restore_request>();
 
@@ -1048,6 +1048,7 @@ dsn::error_code replication_ddl_client::add_backup_policy(const std::string &pol
     ::dsn::unmarshall(resp_task->get_response(), resp);
 
     if (resp.err != ERR_OK) {
+        std::cout << "add backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
         std::cout << "add backup policy succeed, policy_name = " << policy_name << std::endl;
@@ -1058,6 +1059,7 @@ dsn::error_code replication_ddl_client::add_backup_policy(const std::string &pol
 error_with<start_backup_app_response> replication_ddl_client::backup_app(
     int32_t app_id, const std::string &backup_provider_type, const std::string &backup_path)
 {
+    set_meta_servers_leader();
     auto req = std::make_unique<start_backup_app_request>();
     req->app_id = app_id;
     req->backup_provider_type = backup_provider_type;
@@ -1095,9 +1097,10 @@ dsn::error_code replication_ddl_client::disable_backup_policy(const std::string 
     configuration_modify_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
+        std::cout << "disable backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
-        std::cout << "disable policy result: " << resp.err.to_string() << std::endl;
+        std::cout << "disable policy result: " << resp.err << std::endl;
         if (!resp.hint_message.empty()) {
             std::cout << "=============================" << std::endl;
             std::cout << resp.hint_message << std::endl;
@@ -1123,12 +1126,13 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
     configuration_modify_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
+        std::cout << "enable backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else if (resp.err == ERR_BUSY) {
         std::cout << "policy is under backup, please try disable later" << std::endl;
         return ERR_OK;
     } else {
-        std::cout << "enable policy result: " << resp.err.to_string() << std::endl;
+        std::cout << "enable policy result: " << resp.err << std::endl;
         if (!resp.hint_message.empty()) {
             std::cout << "=============================" << std::endl;
             std::cout << resp.hint_message << std::endl;
@@ -1138,34 +1142,13 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
     }
 }
 
-// help functions
-
-// TODO (yingchun) use join
-template <typename T>
-// make sure T support cout << T;
-std::string print_set(const std::set<T> &set)
-{
-    std::stringstream ss;
-    ss << "{";
-    auto begin = set.begin();
-    auto end = set.end();
-    for (auto it = begin; it != end; it++) {
-        if (it != begin) {
-            ss << ", ";
-        }
-        ss << *it;
-    }
-    ss << "}";
-    return ss.str();
-}
-
 static void print_policy_entry(const policy_entry &entry)
 {
     dsn::utils::table_printer tp;
     tp.add_row_name_and_data("    name", entry.policy_name);
     tp.add_row_name_and_data("    backup_provider_type", entry.backup_provider_type);
     tp.add_row_name_and_data("    backup_interval", entry.backup_interval_seconds + "s");
-    tp.add_row_name_and_data("    app_ids", print_set(entry.app_ids));
+    tp.add_row_name_and_data("    app_ids", fmt::format("{{{}}}", fmt::join(entry.app_ids, ", ")));
     tp.add_row_name_and_data("    start_time", entry.start_time);
     tp.add_row_name_and_data("    status", entry.is_disable ? "disabled" : "enabled");
     tp.add_row_name_and_data("    backup_history_count", entry.backup_history_count_to_keep);
@@ -1188,7 +1171,7 @@ static void print_backup_entry(const backup_entry &bentry)
     tp.add_row_name_and_data("    id", bentry.backup_id);
     tp.add_row_name_and_data("    start_time", start_time);
     tp.add_row_name_and_data("    end_time", end_time);
-    tp.add_row_name_and_data("    app_ids", print_set(bentry.app_ids));
+    tp.add_row_name_and_data("    app_ids", fmt::format("{{{}}}", fmt::join(bentry.app_ids, ", ")));
     tp.output(std::cout);
 }
 
@@ -1295,9 +1278,10 @@ replication_ddl_client::update_backup_policy(const std::string &policy_name,
     configuration_modify_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
     if (resp.err != ERR_OK) {
+        std::cout << "modify backup policy failed: " << resp.hint_message << std::endl;
         return resp.err;
     } else {
-        std::cout << "Modify policy result: " << resp.err.to_string() << std::endl;
+        std::cout << "Modify policy result: " << resp.err << std::endl;
         if (!resp.hint_message.empty()) {
             std::cout << "=============================" << std::endl;
             std::cout << resp.hint_message << std::endl;
@@ -1371,6 +1355,8 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
     } else if (response.err == ERR_APP_DROPPED) {
         std::cout << "restore failed, because some partition's data is damaged on cold backup media"
                   << std::endl;
+    } else {
+        return response.err;
     }
     return ERR_OK;
 }
@@ -1416,11 +1402,6 @@ error_with<duplication_query_response> replication_ddl_client::query_dup(std::st
     return call_rpc_sync(duplication_query_rpc(std::move(req), RPC_CM_QUERY_DUPLICATION));
 }
 
-bool replication_ddl_client::valid_app_char(int c)
-{
-    return (bool)std::isalnum(c) || c == '_' || c == '.' || c == ':';
-}
-
 namespace {
 
 bool need_retry(uint32_t attempt_count, const dsn::error_code &err)
@@ -1455,7 +1436,7 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
         return;
     }
 
-    rpc::call(_meta_server,
+    rpc::call(dsn::dns_resolver::instance().resolve_address(_meta_server),
               request,
               &_tracker,
               [this, attempt_count, callback](
@@ -1463,7 +1444,7 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
 
                   FAIL_POINT_INJECT_NOT_RETURN_F(
                       "ddl_client_request_meta",
-                      [&err, this](dsn::string_view str) { err = pop_mock_error(); });
+                      [&err, this](absl::string_view str) { err = pop_mock_error(); });
 
                   end_meta_request(callback, attempt_count + 1, err, request, response);
               });
@@ -1590,14 +1571,15 @@ replication_ddl_client::ddd_diagnose(gpid pid, std::vector<ddd_partition_info> &
 }
 
 void replication_ddl_client::query_disk_info(
-    const std::vector<dsn::rpc_address> &targets,
+    const std::vector<dsn::host_port> &targets,
     const std::string &app_name,
-    /*out*/ std::map<dsn::rpc_address, error_with<query_disk_info_response>> &resps)
+    /*out*/ std::map<dsn::host_port, error_with<query_disk_info_response>> &resps)
 {
-    std::map<dsn::rpc_address, query_disk_info_rpc> query_disk_info_rpcs;
+    std::map<dsn::host_port, query_disk_info_rpc> query_disk_info_rpcs;
     for (const auto &target : targets) {
         auto request = std::make_unique<query_disk_info_request>();
-        request->node = target;
+        request->node = dsn::dns_resolver::instance().resolve_address(target);
+        request->__set_hp_node(target);
         request->app_name = app_name;
         query_disk_info_rpcs.emplace(target,
                                      query_disk_info_rpc(std::move(request), RPC_QUERY_DISK_INFO));
@@ -1648,14 +1630,14 @@ replication_ddl_client::clear_bulk_load(const std::string &app_name)
     return call_rpc_sync(clear_bulk_load_rpc(std::move(req), RPC_CM_CLEAR_BULK_LOAD));
 }
 
-error_code replication_ddl_client::detect_hotkey(const dsn::rpc_address &target,
+error_code replication_ddl_client::detect_hotkey(const dsn::host_port &target,
                                                  detect_hotkey_request &req,
                                                  detect_hotkey_response &resp)
 {
-    std::map<dsn::rpc_address, detect_hotkey_rpc> detect_hotkey_rpcs;
+    std::map<dsn::host_port, detect_hotkey_rpc> detect_hotkey_rpcs;
     auto request = std::make_unique<detect_hotkey_request>(req);
     detect_hotkey_rpcs.emplace(target, detect_hotkey_rpc(std::move(request), RPC_DETECT_HOTKEY));
-    std::map<dsn::rpc_address, error_with<detect_hotkey_response>> resps;
+    std::map<dsn::host_port, error_with<detect_hotkey_response>> resps;
     call_rpcs_sync(detect_hotkey_rpcs, resps);
     resp = resps.begin()->second.get_value();
     return resps.begin()->second.get_error().code();
@@ -1713,16 +1695,16 @@ replication_ddl_client::query_partition_split(const std::string &app_name)
     return call_rpc_sync(query_split_rpc(std::move(req), RPC_CM_QUERY_PARTITION_SPLIT));
 }
 
-error_with<add_new_disk_response>
-replication_ddl_client::add_new_disk(const rpc_address &target_node, const std::string &disk_str)
+error_with<add_new_disk_response> replication_ddl_client::add_new_disk(const host_port &target_node,
+                                                                       const std::string &disk_str)
 {
     auto req = std::make_unique<add_new_disk_request>();
     req->disk_str = disk_str;
 
-    std::map<rpc_address, add_new_disk_rpc> add_new_disk_rpcs;
+    std::map<host_port, add_new_disk_rpc> add_new_disk_rpcs;
     add_new_disk_rpcs.emplace(target_node, add_new_disk_rpc(std::move(req), RPC_ADD_NEW_DISK));
 
-    std::map<rpc_address, error_with<add_new_disk_response>> resps;
+    std::map<host_port, error_with<add_new_disk_response>> resps;
     call_rpcs_sync(add_new_disk_rpcs, resps);
     return resps.begin()->second.get_value();
 }
@@ -1773,8 +1755,10 @@ replication_ddl_client::set_max_replica_count(const std::string &app_name,
 error_with<configuration_rename_app_response>
 replication_ddl_client::rename_app(const std::string &old_app_name, const std::string &new_app_name)
 {
-    VALIDATE_TABLE_NAME(old_app_name);
-    VALIDATE_TABLE_NAME(new_app_name);
+    RETURN_ES_NOT_OK_MSG(
+        validate_app_name(old_app_name), "invalid old_app_name: '{}'", old_app_name);
+    RETURN_ES_NOT_OK_MSG(
+        validate_app_name(new_app_name), "invalid new_app_name: '{}'", new_app_name);
 
     auto req = std::make_unique<configuration_rename_app_request>();
     req->__set_old_app_name(old_app_name);

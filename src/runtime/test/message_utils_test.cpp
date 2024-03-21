@@ -26,14 +26,12 @@
 
 #include "runtime/message_utils.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string>
 #include <utility>
 
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"

@@ -42,8 +42,6 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
@@ -56,9 +54,17 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 #include "utils/time_utils.h"
+
+DSN_DEFINE_uint64(replication,
+                  max_concurrent_uploading_file_count,
+                  10,
+                  "concurrent uploading file count to block service");
+
+DSN_DECLARE_string(cold_backup_root);
 
 namespace dsn {
 namespace dist {
@@ -68,14 +74,6 @@ class block_filesystem;
 } // namespace dist
 
 namespace replication {
-
-DSN_DEFINE_uint64(replication,
-                  max_concurrent_uploading_file_count,
-                  10,
-                  "concurrent uploading file count to block service");
-
-DSN_DECLARE_string(cold_backup_root);
-
 void replica::on_cold_backup(const backup_request &request, /*out*/ backup_response &response)
 {
     _checker.only_one_thread_access();
@@ -176,7 +174,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                 backup_context->start_check();
                 backup_context->complete_check(false);
                 if (backup_context->start_checkpoint()) {
-                    _stub->_counter_cold_backup_recent_start_count->increment();
+                    METRIC_VAR_INCREMENT(backup_started_count);
                     tasking::enqueue(
                         LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, backup_context]() {
                             generate_backup_checkpoint(backup_context);
@@ -197,7 +195,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                      backup_context->progress());
             response.err = ERR_BUSY;
         } else if (backup_status == ColdBackupInvalid && backup_context->start_check()) {
-            _stub->_counter_cold_backup_recent_start_count->increment();
+            METRIC_VAR_INCREMENT(backup_started_count);
             LOG_INFO("{}: start checking backup on remote, response ERR_BUSY",
                      backup_context->name);
             tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, nullptr, [backup_context]() {

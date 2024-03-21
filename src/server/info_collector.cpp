@@ -32,7 +32,7 @@
 #include "hotspot_partition_calculator.h"
 #include "pegasus/client.h"
 #include "result_writer.h"
-#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/group_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "shell/command_executor.h"
@@ -40,17 +40,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
-
-namespace pegasus {
-namespace server {
-
-DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
-                 TASK_PRIORITY_COMMON,
-                 ::dsn::THREAD_POOL_DEFAULT)
-DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
-                 TASK_PRIORITY_COMMON,
-                 ::dsn::THREAD_POOL_DEFAULT)
 
 DSN_DEFINE_uint32(pegasus.collector, app_stat_interval_seconds, 10, "app stat interval seconds");
 DSN_DEFINE_uint32(pegasus.collector,
@@ -69,14 +58,25 @@ DSN_DEFINE_string(pegasus.collector,
 DSN_DEFINE_validator(usage_stat_app,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
 
+namespace pegasus {
+namespace server {
+
+DEFINE_TASK_CODE(LPC_PEGASUS_APP_STAT_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
+                 TASK_PRIORITY_COMMON,
+                 ::dsn::THREAD_POOL_DEFAULT)
+DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
+                 TASK_PRIORITY_COMMON,
+                 ::dsn::THREAD_POOL_DEFAULT)
+
 info_collector::info_collector()
 {
-    std::vector<::dsn::rpc_address> meta_servers;
+    std::vector<::dsn::host_port> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
 
     _meta_servers.assign_group("meta-servers");
     for (auto &ms : meta_servers) {
-        CHECK(_meta_servers.group_address()->add(ms), "");
+        CHECK(_meta_servers.group_host_port()->add(ms), "");
     }
 
     _cluster_name = dsn::get_current_cluster_name();

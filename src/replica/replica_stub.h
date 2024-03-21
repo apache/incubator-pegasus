@@ -26,20 +26,12 @@
 
 #pragma once
 
-//
-// the replica_stub is the *singleton* entry to
-// access all replica managed in the same process
-//   replica_stub(singleton) --> replica --> replication_app_base
-//
-
 #include <gtest/gtest_prod.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -58,28 +50,35 @@
 #include "failure_detector/failure_detector_multimaster.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
+#include "ranger/access_type.h"
 #include "replica.h"
 #include "replica/mutation_log.h"
 #include "replica_admin_types.h"
-#include "runtime/ranger/access_type.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
-#include "runtime/security/access_controller.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
+#include "security/access_controller.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_utils.h"
+#include "utils/metrics.h"
 #include "utils/zlocks.h"
+
+DSN_DECLARE_uint32(max_concurrent_manual_emergency_checkpointing_count);
 
 namespace dsn {
 class command_deregister;
 class message_ex;
 class nfs_node;
+namespace security {
+class kms_key_provider;
+} // namespace security
 
 namespace service {
 class copy_request;
@@ -92,8 +91,6 @@ namespace replication {
 class configuration_query_by_node_response;
 class configuration_update_request;
 class potential_secondary_context;
-
-DSN_DECLARE_uint32(max_concurrent_manual_emergency_checkpointing_count);
 
 typedef rpc_holder<group_check_response, learn_notify_response> learn_completion_notification_rpc;
 typedef rpc_holder<group_check_request, group_check_response> group_check_rpc;
@@ -119,7 +116,7 @@ class replica_split_manager;
 
 typedef std::unordered_map<gpid, replica_ptr> replicas;
 typedef std::function<void(
-    ::dsn::rpc_address /*from*/, const replica_configuration & /*new_config*/, bool /*is_closing*/)>
+    ::dsn::host_port /*from*/, const replica_configuration & /*new_config*/, bool /*is_closing*/)>
     replica_state_subscriber;
 
 class replica_stub;
@@ -129,6 +126,8 @@ typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 class duplication_sync_timer;
 class replica_backup_server;
 
+// The replica_stub is the *singleton* entry to access all replica managed in the same process
+//   replica_stub(singleton) --> replica --> replication_app_base
 class replica_stub : public serverlet<replica_stub>, public ref_counter
 {
 public:
@@ -182,13 +181,12 @@ public:
     //
     void on_meta_server_connected();
     void on_meta_server_disconnected();
-    void on_gc();
+    void on_replicas_stat();
     void on_disk_stat();
 
     //
     //  routines published for test
     //
-    void init_gc_for_test();
     void set_meta_server_disconnected_for_test() { on_meta_server_disconnected(); }
     void set_meta_server_connected_for_test(const configuration_query_by_node_response &config);
     void set_replica_state_subscriber_for_test(replica_state_subscriber subscriber,
@@ -201,8 +199,15 @@ public:
     replication_options &options() { return _options; }
     const replication_options &options() const { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
-    virtual rpc_address get_meta_server_address() const { return _failure_detector->get_servers(); }
-    rpc_address primary_address() const { return _primary_address; }
+    virtual rpc_address get_meta_server_address() const
+    {
+        return dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
+    }
+    rpc_address primary_address() const
+    {
+        return dsn::dns_resolver::instance().resolve_address(_primary_host_port);
+    }
+    const host_port &primary_host_port() const { return _primary_host_port; }
 
     //
     // helper methods
@@ -222,7 +227,7 @@ public:
     //
 
     // called by parent partition, executed by child partition
-    void create_child_replica(dsn::rpc_address primary_address,
+    void create_child_replica(dsn::host_port primary_address,
                               app_info app,
                               ballot init_ballot,
                               gpid child_gpid,
@@ -303,6 +308,11 @@ public:
     void on_nfs_get_file_size(const ::dsn::service::get_file_size_request &request,
                               ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply);
 
+    static bool validate_replica_dir(const std::string &dir,
+                                     app_info &ai,
+                                     gpid &pid,
+                                     std::string &hint_message);
+
 private:
     enum replica_node_state
     {
@@ -354,7 +364,6 @@ private:
     void trigger_checkpoint(replica_ptr r, bool is_emergency);
     void handle_log_failure(error_code err);
 
-    void install_perf_counters();
     dsn::error_code on_kill_replica(gpid id);
 
     void get_replica_info(/*out*/ replica_info &info, /*in*/ replica_ptr r);
@@ -362,29 +371,14 @@ private:
     replica_life_cycle get_replica_life_cycle(gpid id);
     void on_gc_replica(replica_stub_ptr this_, gpid id);
 
-    struct replica_gc_info
+    struct replica_stat_info
     {
         replica_ptr rep;
         partition_status::type status;
         mutation_log_ptr plog;
         decree last_durable_decree;
-        int64_t init_offset_in_shared_log;
     };
-    using replica_gc_info_map = std::unordered_map<gpid, replica_gc_info>;
-
-    // Try to remove obsolete files of shared log for garbage collection according to the provided
-    // states of all replicas. The purpose is to remove all of the files of shared log, since it
-    // has been deprecated, and would not be appended any more.
-    void gc_slog(const replica_gc_info_map &replica_gc_map);
-
-    // The number of flushed replicas for the garbage collection of shared log at a time should be
-    // limited.
-    void limit_flush_replicas_for_slog_gc(size_t prevent_gc_replica_count);
-
-    // Flush rocksdb data to sst files for replicas to facilitate garbage collection of more files
-    // of shared log.
-    void flush_replicas_for_slog_gc(const replica_gc_info_map &replica_gc_map,
-                                    const std::set<gpid> &prevent_gc_replicas);
+    using replica_stat_info_by_gpid = std::unordered_map<gpid, replica_stat_info>;
 
     void response_client(gpid id,
                          bool is_read,
@@ -448,7 +442,6 @@ private:
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
     FRIEND_TEST(replica_test, test_clear_on_failure);
-    FRIEND_TEST(GcSlogFlushFeplicasTest, FlushReplicas);
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
@@ -462,18 +455,9 @@ private:
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
 
-    // The number of replicas that prevent slog files from being removed for gc at the last round.
-    size_t _last_prevent_gc_replica_count;
-
-    // The real limit of flushed replicas for the garbage collection of shared log.
-    size_t _real_log_shared_gc_flush_replicas_limit;
-
-    // The number of flushed replicas, mocked only for test.
-    size_t _mock_flush_replicas_for_test;
-
-    mutation_log_ptr _log;
-    ::dsn::rpc_address _primary_address;
-    char _primary_address_str[64];
+    ::dsn::host_port _primary_host_port;
+    // The stringify of '_primary_host_port', used by logging usually.
+    std::string _primary_host_port_cache;
 
     std::shared_ptr<dsn::dist::slave_failure_detector_with_multimaster> _failure_detector;
     mutable zlock _state_lock;
@@ -487,12 +471,13 @@ private:
     // temproal states
     ::dsn::task_ptr _config_query_task;
     ::dsn::timer_task_ptr _config_sync_timer_task;
-    ::dsn::task_ptr _gc_timer_task;
+    ::dsn::task_ptr _replicas_stat_timer_task;
     ::dsn::task_ptr _disk_stat_timer_task;
     ::dsn::task_ptr _mem_release_timer_task;
 
     std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
     std::unique_ptr<replica_backup_server> _backup_server;
+    std::unique_ptr<dsn::security::kms_key_provider> _key_provider;
 
     // command_handlers
     std::vector<std::unique_ptr<command_deregister>> _cmds;
@@ -502,7 +487,6 @@ private:
     bool _verbose_commit_log;
     bool _release_tcmalloc_memory;
     int32_t _mem_release_max_reserved_mem_percentage;
-    int32_t _max_concurrent_bulk_load_downloading_count;
 
     // we limit LT_APP max concurrent count, because nfs service implementation is
     // too simple, it do not support priority.
@@ -524,6 +508,9 @@ private:
     // replica count executing emergency checkpoint concurrently
     std::atomic_int _manual_emergency_checkpointing_count;
 
+    // replica decrypted key for rocksdb
+    std::string _server_key;
+
     bool _is_running;
 
     std::unique_ptr<dsn::security::access_controller> _access_controller;
@@ -532,94 +519,39 @@ private:
     std::atomic_bool _is_releasing_memory{false};
 #endif
 
-    // performance counters
-    perf_counter_wrapper _counter_replicas_count;
-    perf_counter_wrapper _counter_replicas_opening_count;
-    perf_counter_wrapper _counter_replicas_closing_count;
-    perf_counter_wrapper _counter_replicas_commit_qps;
+    METRIC_VAR_DECLARE_gauge_int64(total_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(opening_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(closing_replicas);
 
-    perf_counter_wrapper _counter_replicas_learning_count;
-    perf_counter_wrapper _counter_replicas_learning_max_duration_time_ms;
-    perf_counter_wrapper _counter_replicas_learning_max_copy_file_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_start_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_round_start_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_file_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_file_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_copy_buffer_size;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_cache_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_app_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_log_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_reset_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_fail_count;
-    perf_counter_wrapper _counter_replicas_learning_recent_learn_succ_count;
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_file_bytes);
 
-    perf_counter_wrapper _counter_replicas_recent_prepare_fail_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_move_error_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_move_garbage_count;
-    perf_counter_wrapper _counter_replicas_recent_replica_remove_dir_count;
-    perf_counter_wrapper _counter_replicas_error_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_garbage_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_tmp_replica_dir_count;
-    perf_counter_wrapper _counter_replicas_origin_replica_dir_count;
-
-    perf_counter_wrapper _counter_replicas_recent_group_check_fail_count;
-
-    perf_counter_wrapper _counter_shared_log_size;
-    perf_counter_wrapper _counter_shared_log_recent_write_size;
-    perf_counter_wrapper _counter_recent_trigger_emergency_checkpoint_count;
-
-    // <- Duplication Metrics ->
-    // TODO(wutao1): calculate the counters independently for each remote cluster
-    //               if we need to duplicate to multiple clusters someday.
-    perf_counter_wrapper _counter_dup_confirmed_rate;
-    perf_counter_wrapper _counter_dup_pending_mutations_count;
-
-    perf_counter_wrapper _counter_cold_backup_running_count;
-    perf_counter_wrapper _counter_cold_backup_recent_start_count;
-    perf_counter_wrapper _counter_cold_backup_recent_succ_count;
-    perf_counter_wrapper _counter_cold_backup_recent_fail_count;
-    perf_counter_wrapper _counter_cold_backup_recent_cancel_count;
-    perf_counter_wrapper _counter_cold_backup_recent_pause_count;
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_succ_count;
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_fail_count;
-    perf_counter_wrapper _counter_cold_backup_recent_upload_file_size;
-    perf_counter_wrapper _counter_cold_backup_max_duration_time_ms;
-    perf_counter_wrapper _counter_cold_backup_max_upload_file_size;
-
-    perf_counter_wrapper _counter_recent_read_fail_count;
-    perf_counter_wrapper _counter_recent_write_fail_count;
-    perf_counter_wrapper _counter_recent_read_busy_count;
-    perf_counter_wrapper _counter_recent_write_busy_count;
-
-    perf_counter_wrapper _counter_recent_write_size_exceed_threshold_count;
+    METRIC_VAR_DECLARE_counter(moved_error_replicas);
+    METRIC_VAR_DECLARE_counter(moved_garbage_replicas);
+    METRIC_VAR_DECLARE_counter(replica_removed_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_error_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_garbage_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_tmp_dirs);
+    METRIC_VAR_DECLARE_gauge_int64(replica_origin_dirs);
 
 #ifdef DSN_ENABLE_GPERF
-    perf_counter_wrapper _counter_tcmalloc_release_memory_size;
+    METRIC_VAR_DECLARE_counter(tcmalloc_released_bytes);
 #endif
 
-    // <- Bulk load Metrics ->
-    perf_counter_wrapper _counter_bulk_load_running_count;
-    perf_counter_wrapper _counter_bulk_load_downloading_count;
-    perf_counter_wrapper _counter_bulk_load_ingestion_count;
-    perf_counter_wrapper _counter_bulk_load_succeed_count;
-    perf_counter_wrapper _counter_bulk_load_failed_count;
-    perf_counter_wrapper _counter_bulk_load_download_file_succ_count;
-    perf_counter_wrapper _counter_bulk_load_download_file_fail_count;
-    perf_counter_wrapper _counter_bulk_load_download_file_size;
-    perf_counter_wrapper _counter_bulk_load_max_ingestion_time_ms;
-    perf_counter_wrapper _counter_bulk_load_max_duration_time_ms;
+    METRIC_VAR_DECLARE_counter(read_failed_requests);
+    METRIC_VAR_DECLARE_counter(write_failed_requests);
+    METRIC_VAR_DECLARE_counter(read_busy_requests);
+    METRIC_VAR_DECLARE_counter(write_busy_requests);
 
-    // <- Partition split Metrics ->
-    perf_counter_wrapper _counter_replicas_splitting_count;
-    perf_counter_wrapper _counter_replicas_splitting_max_duration_time_ms;
-    perf_counter_wrapper _counter_replicas_splitting_max_async_learn_time_ms;
-    perf_counter_wrapper _counter_replicas_splitting_max_copy_file_size;
-    perf_counter_wrapper _counter_replicas_splitting_recent_start_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_size;
-    perf_counter_wrapper _counter_replicas_splitting_recent_copy_mutation_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_split_fail_count;
-    perf_counter_wrapper _counter_replicas_splitting_recent_split_succ_count;
+    METRIC_VAR_DECLARE_gauge_int64(bulk_load_running_count);
+    METRIC_VAR_DECLARE_gauge_int64(bulk_load_ingestion_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(bulk_load_max_duration_ms);
+
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas_async_learn_max_duration_ms);
+    METRIC_VAR_DECLARE_gauge_int64(splitting_replicas_max_copy_file_bytes);
 
     dsn::task_tracker _tracker;
 };

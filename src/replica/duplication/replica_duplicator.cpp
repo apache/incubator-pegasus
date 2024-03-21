@@ -17,6 +17,7 @@
 
 #include "replica_duplicator.h"
 
+#include <absl/strings/string_view.h>
 #include <rapidjson/document.h>
 #include <rapidjson/encodings.h>
 #include <rapidjson/stringbuffer.h>
@@ -32,15 +33,17 @@
 #include "dsn.layer2_types.h"
 #include "duplication_pipeline.h"
 #include "load_from_private_log.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
-#include "replica/replica_stub.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+
+METRIC_DEFINE_counter(replica,
+                      dup_confirmed_mutations,
+                      dsn::metric_unit::kMutations,
+                      "The number of confirmed mutations for dup");
 
 namespace dsn {
 namespace replication {
@@ -50,7 +53,8 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
       _id(ent.dupid),
       _remote_cluster_name(ent.remote),
       _replica(r),
-      _stub(r->get_replica_stub())
+      _stub(r->get_replica_stub()),
+      METRIC_VAR_INIT_replica(dup_confirmed_mutations)
 {
     _status = ent.status;
 
@@ -222,7 +226,8 @@ error_s replica_duplicator::update_progress(const duplication_progress &p)
     }
     if (_progress.confirmed_decree > last_confirmed_decree) {
         // has confirmed_decree updated.
-        _stub->_counter_dup_confirmed_rate->add(_progress.confirmed_decree - last_confirmed_decree);
+        METRIC_VAR_INCREMENT_BY(dup_confirmed_mutations,
+                                _progress.confirmed_decree - last_confirmed_decree);
     }
 
     return error_s::ok();

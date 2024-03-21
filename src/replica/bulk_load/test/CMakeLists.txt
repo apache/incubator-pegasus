@@ -16,25 +16,23 @@
 # under the License.
 
 set(MY_PROJ_NAME dsn_replica_bulk_load_test)
-
 set(MY_PROJ_SRC "")
-
 set(MY_SRC_SEARCH_MODE "GLOB")
-
-set(MY_PROJ_LIBS dsn_meta_server
+set(MY_PROJ_LIBS
+        dsn_meta_server
+        dsn_ranger
         dsn_replica_server
         dsn_replication_common
         dsn_runtime
         hashtable
         gtest
         test_utils
-        rocksdb)
-
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex rocksdb test_utils)
-
+        rocksdb
+        lz4
+        zstd
+        snappy)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 set(MY_BINPLACES
         config-test.ini
-        run.sh
-)
-
+        run.sh)
 dsn_add_test()

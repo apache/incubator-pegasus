@@ -19,43 +19,54 @@ under the License.
 
 # Pegasus Java Client
 
-## Build
+## Development
+
+### 1. Prepare
 
 ```
-cd scripts && sh recompile_thrift.sh && cd -
+cd scripts && bash recompile_thrift.sh
+```
+
+### 2. Format the code
+
+```
 mvn spotless:apply
+```
+
+### 3. Build
+
+```
 mvn clean package -DskipTests
 ```
 
-## Install
+### 4. Test
+
+To run test, you should prepare the test environment:
+1. Start [Pegasus onebox](https://pegasus.apache.org/overview/onebox/)
+2. Install some necessary tools, such as `net-tools`
 
 ```
-cd scripts && sh recompile_thrift.sh && cd -
-mvn spotless:apply
-mvn clean install -DskipTests
-```
-
-## Test
-
-To run test, you should start pegasus onebox firstly, and run test as:
-
-```
-cd scripts && sh recompile_thrift.sh && cd -
-mvn spotless:apply
 mvn clean package
 ```
 
-or specify one test:
+Or specify one test:
 
 ```
-cd scripts && sh recompile_thrift.sh && cd -
-mvn spotless:apply
 mvn clean package -Dtest=TestPing
 ```
 
-## Configuration
+## Using Pegasus Java client
 
-Configure client by "pegasus.properties", for example:
+### Install
+
+```
+cd scripts && bash recompile_thrift.sh && cd -
+mvn clean install -DskipTests
+```
+
+### Configuration
+
+Configure client by `pegasus.properties` file, for example:
 
 ```
 meta_servers = 127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603
@@ -66,14 +77,14 @@ perf_counter_tags = k1=v1,k2=v2,k3=v3
 push_counter_interval_secs = 10
 ```
 
-You can provide a parameter of 'configPath' when creating a client instance.
+You can provide a parameter of `configPath` when creating a client instance.
 
-The format of 'configPath' should be one of these:
+The format of `configPath` should be one of these:
 * zk path: zk://host1:port1,host2:port2,host3:port3/path/to/config
 * local file path: file:///path/to/config
 * resource path: resource:///path/to/config
 
-## PerfCounter(Metrics)
+### PerfCounter (Metrics)
 
 Pegasus Java Client supports QPS and latency statistics of requests.
 
@@ -93,7 +104,7 @@ For each type of request(get, set, multiset, etc.), we collect 8 metrics:
 5. latency-p50: the moving median of request's queries
 6. latency-p99: the moving p99 of request's queries
 7. lantecy-p999: the moving p999 of request's queries
-8: latency-max: the moving max of request's queries
+8. latency-max: the moving max of request's queries
 
 We use io.dropwizard.metrics library to calculate the request count.
 

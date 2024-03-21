@@ -24,18 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for rpc_message.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <string.h>
 #include <memory>
@@ -44,6 +32,7 @@
 
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "runtime/message_utils.cpp"
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_address.h"
@@ -104,8 +93,8 @@ TEST(core, message_ex)
 
     { // create_response
         message_ex *request = message_ex::create_request(RPC_CODE_FOR_TEST, 0, 0);
-        request->header->from_address = rpc_address("127.0.0.1", 8080);
-        request->to_address = rpc_address("127.0.0.1", 9090);
+        request->header->from_address = rpc_address::from_ip_port("127.0.0.1", 8080);
+        request->to_address = rpc_address::from_ip_port("127.0.0.1", 9090);
         request->header->trace_id = 123456;
 
         message_ex *response = request->create_response();

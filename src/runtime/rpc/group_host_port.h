@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "runtime/rpc/group_address.h"
-#include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
@@ -44,7 +43,7 @@ static constexpr int kInvalidIndex = -1;
 //  group.group_host_port()->add(host_port("test_fqdn", 34602));
 //  group.group_host_port()->add(host_port("test_fqdn", 34603));
 //
-class rpc_group_host_port : public ref_counter
+class rpc_group_host_port
 {
 public:
     rpc_group_host_port(const char *name);
@@ -55,7 +54,7 @@ public:
     void add_list(const std::vector<host_port> &hps)
     {
         for (const auto &hp : hps) {
-            LOG_WARNING_IF(!add(hp), "duplicate adress {}", hp);
+            LOG_WARNING_IF(!add(hp), "duplicate host_port {}", hp);
         }
     }
     void set_leader(const host_port &hp);
@@ -128,10 +127,10 @@ inline rpc_group_host_port::rpc_group_host_port(const rpc_group_address *g_addr)
 {
     _name = g_addr->name();
     for (const auto &addr : g_addr->members()) {
-        CHECK_TRUE(add(host_port(addr)));
+        CHECK_TRUE(add(host_port::from_address(addr)));
     }
     _update_leader_automatically = g_addr->is_update_leader_automatically();
-    set_leader(host_port(g_addr->leader()));
+    set_leader(host_port::from_address(g_addr->leader()));
 }
 
 inline rpc_group_host_port &rpc_group_host_port::operator=(const rpc_group_host_port &other)
@@ -170,12 +169,12 @@ inline void rpc_group_host_port::leader_forward()
 
 inline void rpc_group_host_port::set_leader(const host_port &hp)
 {
-    CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
     awl_t l(_lock);
     if (hp.is_invalid()) {
         _leader_index = kInvalidIndex;
         return;
     }
+    CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
     for (int i = 0; i < _members.size(); i++) {
         if (_members[i] == hp) {
             _leader_index = i;

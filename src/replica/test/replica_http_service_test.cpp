@@ -16,33 +16,33 @@
 // under the License.
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
+#include "gtest/gtest.h"
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "replica/replica_http_service.h"
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
 #include "utils/flags.h"
 #include "utils/test_macros.h"
 
+DSN_DECLARE_bool(duplication_enabled);
+DSN_DECLARE_bool(enable_acl);
+DSN_DECLARE_bool(fd_disabled);
+DSN_DECLARE_uint32(config_sync_interval_ms);
+
 using std::map;
 using std::string;
 
 namespace dsn {
 namespace replication {
-DSN_DECLARE_bool(duplication_enabled);
-DSN_DECLARE_bool(fd_disabled);
-DSN_DECLARE_uint32(config_sync_interval_ms);
 
 class replica_http_service_test : public replica_test_base
 {
@@ -52,6 +52,12 @@ public:
         // Disable unnecessary works before starting stub.
         FLAGS_fd_disabled = true;
         FLAGS_duplication_enabled = false;
+        // Set FLAGS_enable_acl to true, ensuring the group validator's
+        // encrypt_data_at_rest_pre_check
+        // is successful when encrypt_data_at_rest is also true.
+        // TODO(jingwei): It's a trick for test, it should set together at class
+        // pegasus::encrypt_data_at_rest.
+        FLAGS_enable_acl = true;
         stub->initialize_start();
 
         http_call_registry::instance().clear_paths();
@@ -76,7 +82,7 @@ public:
 
         http_response resp;
         _http_svc->update_config_handler(req, resp);
-        ASSERT_EQ(resp.status_code, http_status_code::ok);
+        ASSERT_EQ(resp.status_code, http_status_code::kOk);
         ASSERT_EQ(expect_resp, resp.body);
     }
 
@@ -86,7 +92,7 @@ public:
         http_response resp;
         req.query_args["name"] = config;
         get_config(req, resp);
-        ASSERT_EQ(resp.status_code, http_status_code::ok);
+        ASSERT_EQ(resp.status_code, http_status_code::kOk);
         const string unfilled_resp =
             R"({{"name":"config_sync_interval_ms","section":"replication","type":"FV_UINT32","tags":"flag_tag::FT_MUTABLE","description":"The interval milliseconds of replica server to syncs replica configuration with meta server","value":"{}"}})"
             "\n";
@@ -97,7 +103,7 @@ private:
     std::unique_ptr<replica_http_service> _http_svc;
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_http_service_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_http_service_test, ::testing::Values(false, true));
 
 TEST_P(replica_http_service_test, update_config_handler)
 {
@@ -115,7 +121,7 @@ TEST_P(replica_http_service_test, update_config_handler)
 
     // Update config failed and value not changed.
     NO_FATALS(test_update_config(
-        {{"config_sync_interval_ms", "10"}, {"fds_write_limit_rate", "50"}},
+        {{"config_sync_interval_ms", "10"}, {"hdfs_write_limit_rate_mb_per_sec", "50"}},
         R"({"update_status":"ERR_INVALID_PARAMETERS: there should be exactly one config to be updated once"})"
         "\n"));
     NO_FATALS(test_check_config("config_sync_interval_ms", "30000"));

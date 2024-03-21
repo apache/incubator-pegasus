@@ -17,20 +17,16 @@
 
 #include "replica/duplication/duplication_sync_timer.h"
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <cstdint>
 #include <initializer_list>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <utility>
 
 #include "common/duplication_common.h"
 #include "common/replication.codes.h"
 #include "duplication_test_base.h"
+#include "gtest/gtest.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/test/mock_utils.h"
@@ -377,7 +373,7 @@ protected:
     std::unique_ptr<duplication_sync_timer> dup_sync;
 };
 
-INSTANTIATE_TEST_CASE_P(, duplication_sync_timer_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, duplication_sync_timer_test, ::testing::Values(false, true));
 
 TEST_P(duplication_sync_timer_test, duplication_sync) { test_duplication_sync(); }
 

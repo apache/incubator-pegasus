@@ -35,7 +35,7 @@ if [ -n ${TEST_OPTS} ]; then
     fi
 
     OPTS=`echo ${TEST_OPTS} | xargs`
-    config_kvs=(${OPTS//,/ })
+    config_kvs=(${OPTS//;/ })
     for config_kv in ${config_kvs[@]}; do
         config_kv=`echo $config_kv | xargs`
         kv=(${config_kv//=/ })

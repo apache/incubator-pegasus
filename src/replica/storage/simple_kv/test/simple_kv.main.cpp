@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Replication testing framework.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <chrono>
 #include <iostream>
 #include <string>
@@ -53,7 +44,7 @@
 
 void dsn_app_registration_simple_kv()
 {
-    dsn::FLAGS_enable_http_server = false;
+    FLAGS_enable_http_server = false;
     dsn::replication::test::simple_kv_service_impl::register_service();
 
     dsn::service::meta_service_app::register_all();

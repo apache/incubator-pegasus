@@ -22,7 +22,6 @@
 #include <boost/lexical_cast.hpp>
 #include <getopt.h>
 #include <inttypes.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>

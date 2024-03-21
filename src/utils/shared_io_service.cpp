@@ -24,10 +24,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
-namespace tools {
-
-const uint32_t kMinTimerServiceWorkerCount = 3;
+static const uint32_t kMinTimerServiceWorkerCount = 3;
 DSN_DEFINE_uint32(core,
                   timer_service_worker_count,
                   kMinTimerServiceWorkerCount,
@@ -42,6 +39,9 @@ DSN_DEFINE_validator(timer_service_worker_count, [](uint32_t worker_count) -> bo
     }
     return true;
 });
+
+namespace dsn {
+namespace tools {
 
 shared_io_service::shared_io_service()
 {

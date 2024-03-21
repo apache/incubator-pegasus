@@ -33,11 +33,12 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
+DSN_DECLARE_string(cold_backup_root);
+
 namespace dsn {
 class message_ex;
 
 namespace replication {
-DSN_DECLARE_string(cold_backup_root);
 
 replica_backup_server::replica_backup_server(const replica_stub *rs) : _stub(rs)
 {
@@ -95,7 +96,7 @@ void replica_backup_server::on_cold_backup(backup_rpc rpc)
 void replica_backup_server::on_clear_cold_backup(const backup_clear_request &request)
 {
     LOG_INFO("receive clear cold backup request: backup({}.{})",
-             request.pid.to_string(),
+             request.pid,
              request.policy_name.c_str());
 
     replica_ptr rep = _stub->get_replica(request.pid);

@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "runtime/nativerun.h"
 
 #include <map>
@@ -44,10 +35,10 @@
 #include "utils/flags.h"
 #include "utils/threadpool_spec.h"
 
+DSN_DECLARE_bool(enable_udp);
+
 namespace dsn {
 namespace tools {
-
-DSN_DECLARE_bool(enable_udp);
 
 void nativerun::install(service_spec &spec)
 {

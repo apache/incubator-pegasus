@@ -34,8 +34,10 @@
 #include "meta_duplication_service.h"
 #include "metadata_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
@@ -47,7 +49,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -176,7 +178,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         return;
     }
 
-    std::vector<rpc_address> meta_list;
+    std::vector<host_port> meta_list;
     if (!dsn::replication::replica_helper::load_meta_servers(
             meta_list,
             duplication_constants::kClustersSectionName.c_str(),
@@ -214,7 +216,7 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
 {
     const auto err = dup->start(rpc.request().is_duplicating_checkpoint);
     if (dsn_unlikely(err != ERR_OK)) {
-        LOG_ERROR("start dup[{}({})] failed: err = {}", app->app_name, dup->id, err.to_string());
+        LOG_ERROR("start dup[{}({})] failed: err = {}", app->app_name, dup->id, err);
         return;
     }
     blob value = dup->to_json_blob();
@@ -273,9 +275,9 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
     auto &response = rpc.response();
     response.err = ERR_OK;
 
-    node_state *ns = get_node_state(_state->_nodes, request.node, false);
+    node_state *ns = get_node_state(_state->_nodes, host_port::from_address(request.node), false);
     if (ns == nullptr) {
-        LOG_WARNING("node({}) is not found in meta server", request.node.to_string());
+        LOG_WARNING("node({}) is not found in meta server", request.node);
         response.err = ERR_OBJECT_NOT_FOUND;
         return;
     }
@@ -358,30 +360,31 @@ void meta_duplication_service::create_follower_app_for_duplication(
     request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
                                  _meta_svc->get_meta_list_string());
 
-    rpc_address meta_servers;
+    host_port meta_servers;
     meta_servers.assign_group(dup->follower_cluster_name.c_str());
-    meta_servers.group_address()->add_list(dup->follower_cluster_metas);
+    meta_servers.group_host_port()->add_list(dup->follower_cluster_metas);
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_CREATE_APP);
     dsn::marshall(msg, request);
     rpc::call(
-        meta_servers,
+        dsn::dns_resolver::instance().resolve_address(meta_servers),
         msg,
         _meta_svc->tracker(),
         [=](error_code err, configuration_create_app_response &&resp) mutable {
             FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
-                                           [&](string_view s) -> void { err = ERR_OK; });
+                                           [&](absl::string_view s) -> void { err = ERR_OK; });
             error_code create_err = err == ERR_OK ? resp.err : err;
             error_code update_err = ERR_NO_NEED_OPERATE;
 
-            FAIL_POINT_INJECT_NOT_RETURN_F("persist_dup_status_failed",
-                                           [&](string_view s) -> void { create_err = ERR_OK; });
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "persist_dup_status_failed",
+                [&](absl::string_view s) -> void { create_err = ERR_OK; });
             if (create_err == ERR_OK) {
                 update_err = dup->alter_status(duplication_status::DS_APP);
             }
 
             FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                [&](string_view s) -> void { return; });
+                                [&](absl::string_view s) -> void { return; });
             if (update_err == ERR_OK) {
                 blob value = dup->to_json_blob();
                 // Note: this function is `async`, it may not be persisted completed
@@ -396,8 +399,8 @@ void meta_duplication_service::create_follower_app_for_duplication(
                           dup->follower_cluster_name,
                           dup->app_name,
                           duplication_status_to_string(dup->status()),
-                          create_err.to_string(),
-                          update_err.to_string());
+                          create_err,
+                          update_err);
             }
         });
 }
@@ -405,27 +408,31 @@ void meta_duplication_service::create_follower_app_for_duplication(
 void meta_duplication_service::check_follower_app_if_create_completed(
     const std::shared_ptr<duplication_info> &dup)
 {
-    rpc_address meta_servers;
+    host_port meta_servers;
     meta_servers.assign_group(dup->follower_cluster_name.c_str());
-    meta_servers.group_address()->add_list(dup->follower_cluster_metas);
+    meta_servers.group_host_port()->add_list(dup->follower_cluster_metas);
 
     query_cfg_request meta_config_request;
     meta_config_request.app_name = dup->app_name;
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     dsn::marshall(msg, meta_config_request);
-    rpc::call(meta_servers,
+    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
               msg,
               _meta_svc->tracker(),
               [=](error_code err, query_cfg_response &&resp) mutable {
-                  FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](string_view s) -> void {
+                  FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](absl::string_view s) -> void {
                       err = ERR_OK;
                       int count = dup->partition_count;
                       while (count-- > 0) {
                           partition_configuration p;
-                          p.primary = rpc_address("127.0.0.1", 34801);
-                          p.secondaries.emplace_back(rpc_address("127.0.0.2", 34801));
-                          p.secondaries.emplace_back(rpc_address("127.0.0.3", 34801));
+                          p.primary = rpc_address::from_ip_port("127.0.0.1", 34801);
+                          p.secondaries.emplace_back(rpc_address::from_ip_port("127.0.0.2", 34801));
+                          p.secondaries.emplace_back(rpc_address::from_ip_port("127.0.0.3", 34801));
+                          p.__set_hp_primary(host_port("localhost", 34801));
+                          p.__set_hp_secondaries(std::vector<host_port>());
+                          p.hp_secondaries.emplace_back(host_port("localhost", 34802));
+                          p.hp_secondaries.emplace_back(host_port("localhost", 34803));
                           resp.partitions.emplace_back(p);
                       }
                   });
@@ -438,17 +445,17 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                           query_err = ERR_INCONSISTENT_STATE;
                       } else {
                           for (const auto &partition : resp.partitions) {
-                              if (partition.primary.is_invalid()) {
+                              if (partition.hp_primary.is_invalid()) {
                                   query_err = ERR_INACTIVE_STATE;
                                   break;
                               }
 
-                              if (partition.secondaries.empty()) {
+                              if (partition.hp_secondaries.empty()) {
                                   query_err = ERR_NOT_ENOUGH_MEMBER;
                                   break;
                               }
 
-                              for (const auto &secondary : partition.secondaries) {
+                              for (const auto &secondary : partition.hp_secondaries) {
                                   if (secondary.is_invalid()) {
                                       query_err = ERR_INACTIVE_STATE;
                                       break;
@@ -464,7 +471,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                   }
 
                   FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                      [&](string_view s) -> void { return; });
+                                      [&](absl::string_view s) -> void { return; });
                   if (update_err == ERR_OK) {
                       blob value = dup->to_json_blob();
                       // Note: this function is `async`, it may not be persisted completed
@@ -480,7 +487,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                           dup->follower_cluster_name,
                           dup->app_name,
                           duplication_status_to_string(dup->status()),
-                          query_err.to_string(),
+                          query_err,
                           update_err);
                   }
               });
@@ -521,7 +528,7 @@ void meta_duplication_service::do_update_partition_confirmed(
 
 std::shared_ptr<duplication_info>
 meta_duplication_service::new_dup_from_init(const std::string &follower_cluster_name,
-                                            std::vector<rpc_address> &&follower_cluster_metas,
+                                            std::vector<host_port> &&follower_cluster_metas,
                                             std::shared_ptr<app_state> &app) const
 {
     duplication_info_s_ptr dup;
@@ -612,10 +619,10 @@ void meta_duplication_service::do_restore_duplication_progress(
                 }
 
                 int64_t confirmed_decree = invalid_decree;
-                if (!buf2int64(value, confirmed_decree)) {
+                if (!buf2int64(value.to_string_view(), confirmed_decree)) {
                     LOG_ERROR("[{}] invalid confirmed_decree {} on partition_idx {}",
                               dup->log_prefix(),
-                              value.to_string(),
+                              value,
                               partition_idx);
                     return; // fail fast
                 }
@@ -646,7 +653,7 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
             auto dup = duplication_info::decode_from_blob(
                 dup_id, app->app_id, app->app_name, app->partition_count, store_path, json);
             if (nullptr == dup) {
-                LOG_ERROR("failed to decode json \"{}\" on path {}", json.to_string(), store_path);
+                LOG_ERROR("failed to decode json \"{}\" on path {}", json, store_path);
                 return; // fail fast
             }
             if (!dup->is_invalid_status()) {

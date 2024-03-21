@@ -43,8 +43,9 @@
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
 #include "replica_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
@@ -58,7 +59,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
@@ -73,7 +74,7 @@ class start_backup_app_response;
 class replication_ddl_client
 {
 public:
-    replication_ddl_client(const std::vector<dsn::rpc_address> &meta_servers);
+    replication_ddl_client(const std::vector<dsn::host_port> &meta_servers);
     ~replication_ddl_client();
 
     dsn::error_code create_app(const std::string &app_name,
@@ -109,7 +110,7 @@ public:
 
     dsn::error_code
     list_nodes(const dsn::replication::node_status::type status,
-               std::map<dsn::rpc_address, dsn::replication::node_status::type> &nodes);
+               std::map<dsn::host_port, dsn::replication::node_status::type> &nodes);
 
     dsn::error_code cluster_name(int64_t timeout_ms, std::string &cluster_name);
 
@@ -134,7 +135,7 @@ public:
     dsn::error_code
     wait_app_ready(const std::string &app_name, int partition_count, int max_replica_count);
 
-    dsn::error_code do_recovery(const std::vector<dsn::rpc_address> &replica_nodes,
+    dsn::error_code do_recovery(const std::vector<dsn::host_port> &replica_nodes,
                                 int wait_seconds,
                                 bool skip_bad_nodes,
                                 bool skip_lost_partitions,
@@ -206,10 +207,10 @@ public:
 
     dsn::error_code ddd_diagnose(gpid pid, std::vector<ddd_partition_info> &ddd_partitions);
 
-    void query_disk_info(
-        const std::vector<dsn::rpc_address> &targets,
-        const std::string &app_name,
-        /*out*/ std::map<dsn::rpc_address, error_with<query_disk_info_response>> &resps);
+    void
+    query_disk_info(const std::vector<dsn::host_port> &targets,
+                    const std::string &app_name,
+                    /*out*/ std::map<dsn::host_port, error_with<query_disk_info_response>> &resps);
 
     error_with<start_bulk_load_response> start_bulk_load(const std::string &app_name,
                                                          const std::string &cluster_name,
@@ -224,7 +225,7 @@ public:
 
     error_with<clear_bulk_load_state_response> clear_bulk_load(const std::string &app_name);
 
-    error_code detect_hotkey(const dsn::rpc_address &target,
+    error_code detect_hotkey(const dsn::host_port &target,
                              detect_hotkey_request &req,
                              detect_hotkey_response &resp);
 
@@ -245,7 +246,7 @@ public:
 
     error_with<query_split_response> query_partition_split(const std::string &app_name);
 
-    error_with<add_new_disk_response> add_new_disk(const rpc_address &target_node,
+    error_with<add_new_disk_response> add_new_disk(const host_port &target_node,
                                                    const std::string &disk_str);
 
     error_with<start_app_manual_compact_response>
@@ -264,6 +265,9 @@ public:
     set_max_replica_count(const std::string &app_name, int32_t max_replica_count);
 
     void set_max_wait_app_ready_secs(uint32_t max_wait_secs) { _max_wait_secs = max_wait_secs; }
+    void set_meta_servers_leader();
+
+    static error_s validate_app_name(const std::string &app_name, bool allow_empty_name = false);
 
 private:
     bool static valid_app_char(int c);
@@ -285,7 +289,7 @@ private:
 
         auto task =
             dsn::rpc::create_rpc_response_task(msg, nullptr, empty_rpc_handler, reply_thread_hash);
-        rpc::call(_meta_server,
+        rpc::call(dsn::dns_resolver::instance().resolve_address(_meta_server),
                   msg,
                   &_tracker,
                   [this, task](
@@ -293,7 +297,7 @@ private:
 
                       FAIL_POINT_INJECT_NOT_RETURN_F(
                           "ddl_client_request_meta",
-                          [&err, this](dsn::string_view str) { err = pop_mock_error(); });
+                          [&err, this](absl::string_view str) { err = pop_mock_error(); });
 
                       end_meta_request(std::move(task), 1, err, request, response);
                   });
@@ -334,7 +338,7 @@ private:
 
             FAIL_POINT_INJECT_NOT_RETURN_F(
                 "ddl_client_request_meta",
-                [&resp, this](dsn::string_view str) { resp.err = pop_mock_error(); });
+                [&resp, this](absl::string_view str) { resp.err = pop_mock_error(); });
 
             LOG_INFO("received response from meta server: rpc_code={}, err={}, attempt_count={}, "
                      "max_attempt_count={}",
@@ -370,7 +374,7 @@ private:
         static constexpr int MAX_RETRY = 2;
         error_code err = ERR_UNKNOWN;
         for (int retry = 0; retry < MAX_RETRY; retry++) {
-            task_ptr task = rpc.call(_meta_server,
+            task_ptr task = rpc.call(dsn::dns_resolver::instance().resolve_address(_meta_server),
                                      &_tracker,
                                      [&err](error_code code) { err = code; },
                                      reply_thread_hash);
@@ -387,31 +391,32 @@ private:
 
     /// Send request to multi replica server synchronously.
     template <typename TRpcHolder, typename TResponse = typename TRpcHolder::response_type>
-    void call_rpcs_sync(std::map<dsn::rpc_address, TRpcHolder> &rpcs,
-                        std::map<dsn::rpc_address, error_with<TResponse>> &resps,
+    void call_rpcs_sync(std::map<dsn::host_port, TRpcHolder> &rpcs,
+                        std::map<dsn::host_port, error_with<TResponse>> &resps,
                         int reply_thread_hash = 0,
                         bool enable_retry = true)
     {
         dsn::task_tracker tracker;
         error_code err = ERR_UNKNOWN;
         for (auto &rpc : rpcs) {
-            rpc.second.call(
-                rpc.first, &tracker, [&err, &resps, &rpcs, &rpc](error_code code) mutable {
-                    err = code;
-                    if (err == dsn::ERR_OK) {
-                        resps.emplace(rpc.first, std::move(rpc.second.response()));
-                        rpcs.erase(rpc.first);
-                    } else {
-                        resps.emplace(
-                            rpc.first,
-                            std::move(error_s::make(err, "unable to send rpc to server")));
-                    }
-                });
+            rpc.second.call(dsn::dns_resolver::instance().resolve_address(rpc.first),
+                            &tracker,
+                            [&err, &resps, &rpcs, &rpc](error_code code) mutable {
+                                err = code;
+                                if (err == dsn::ERR_OK) {
+                                    resps.emplace(rpc.first, std::move(rpc.second.response()));
+                                    rpcs.erase(rpc.first);
+                                } else {
+                                    resps.emplace(rpc.first,
+                                                  std::move(error_s::make(
+                                                      err, "unable to send rpc to server")));
+                                }
+                            });
         }
         tracker.wait_outstanding_tasks();
 
         if (enable_retry && rpcs.size() > 0) {
-            std::map<dsn::rpc_address, dsn::error_with<TResponse>> retry_resps;
+            std::map<dsn::host_port, dsn::error_with<TResponse>> retry_resps;
             call_rpcs_sync(rpcs, retry_resps, reply_thread_hash, false);
             for (auto &resp : retry_resps) {
                 resps.emplace(resp.first, std::move(resp.second));
@@ -420,7 +425,7 @@ private:
     }
 
 private:
-    dsn::rpc_address _meta_server;
+    dsn::host_port _meta_server;
     dsn::task_tracker _tracker;
     uint32_t _max_wait_secs = 3600; // Wait at most 1 hour by default.
 

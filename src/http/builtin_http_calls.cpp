@@ -22,6 +22,7 @@
 
 #include "builtin_http_calls.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "http_call_registry.h"
 #include "pprof_http_service.h"
 #include "service_version.h"
@@ -41,7 +42,7 @@ namespace dsn {
     }
     tp.output(oss, utils::table_printer::output_format::kJsonCompact);
     resp.body = oss.str();
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 
 /*extern*/ void get_version_handler(const http_request &req, http_response &resp)
@@ -54,7 +55,7 @@ namespace dsn {
     tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
 
     resp.body = out.str();
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 
 /*extern*/ void get_recent_start_time_handler(const http_request &req, http_response &resp)
@@ -67,7 +68,7 @@ namespace dsn {
     tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
 
     resp.body = out.str();
-    resp.status_code = http_status_code::ok;
+    resp.status_code = http_status_code::kOk;
 }
 
 /*extern*/ void register_builtin_http_calls()
@@ -91,12 +92,6 @@ namespace dsn {
             get_recent_start_time_handler(req, resp);
         })
         .with_help("Gets the server start time.");
-
-    register_http_call("perfCounter")
-        .with_callback([](const http_request &req, http_response &resp) {
-            get_perf_counter_handler(req, resp);
-        })
-        .with_help("Gets the value of a perf counter");
 
     register_http_call("config")
         .with_callback([](const http_request &req, http_response &resp) { get_config(req, resp); })

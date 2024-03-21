@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     specification for the labeled tasks (task kinds)
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <stdint.h>
@@ -41,7 +32,6 @@
 #include <vector>
 
 #include "runtime/task/task_code.h"
-#include "utils/api_utilities.h"
 #include "utils/config_api.h"
 #include "utils/config_helper.h"
 #include "utils/customizable_id.h"
@@ -51,14 +41,6 @@
 #include "utils/fmt_utils.h"
 #include "utils/join_point.h"
 #include "utils/threadpool_code.h"
-
-ENUM_BEGIN(dsn_log_level_t, LOG_LEVEL_INVALID)
-ENUM_REG(LOG_LEVEL_DEBUG)
-ENUM_REG(LOG_LEVEL_INFO)
-ENUM_REG(LOG_LEVEL_WARNING)
-ENUM_REG(LOG_LEVEL_ERROR)
-ENUM_REG(LOG_LEVEL_FATAL)
-ENUM_END(dsn_log_level_t)
 
 namespace dsn {
 
@@ -147,6 +129,7 @@ class task;
 
 std::set<dsn::task_code> &get_storage_rpc_req_codes();
 
+// Specification for the labeled tasks (task kinds).
 class task_spec : public extensible_object<task_spec, 4>
 {
 public:

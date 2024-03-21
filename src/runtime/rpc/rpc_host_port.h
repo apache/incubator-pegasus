@@ -24,9 +24,12 @@
 // IWYU pragma: no_include <experimental/string_view>
 #include <functional>
 #include <iosfwd>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <gtest/gtest_prod.h>
 
 #include "runtime/rpc/rpc_address.h"
 #include "utils/errors.h"
@@ -41,6 +44,16 @@ class TProtocol;
 } // namespace thrift
 } // namespace apache
 
+#define GET_HOST_PORT(obj, field, target)                                                          \
+    do {                                                                                           \
+        const auto &_obj = (obj);                                                                  \
+        if (_obj.__isset.hp_##field) {                                                             \
+            target = _obj.hp_##field;                                                              \
+        } else {                                                                                   \
+            target = std::move(dsn::host_port::from_address(_obj.field));                          \
+        }                                                                                          \
+    } while (0)
+
 namespace dsn {
 
 class rpc_group_host_port;
@@ -51,7 +64,6 @@ public:
     static const host_port s_invalid_host_port;
     explicit host_port() = default;
     explicit host_port(std::string host, uint16_t port);
-    explicit host_port(rpc_address addr);
 
     host_port(const host_port &other) { *this = other; }
     host_port &operator=(const host_port &other);
@@ -63,7 +75,9 @@ public:
     const std::string &host() const { return _host; }
     uint16_t port() const { return _port; }
 
-    bool is_invalid() const { return _type == HOST_TYPE_INVALID; }
+    [[nodiscard]] bool is_invalid() const { return _type == HOST_TYPE_INVALID; }
+
+    operator bool() const { return !is_invalid(); }
 
     std::string to_string() const;
 
@@ -72,26 +86,41 @@ public:
         return os << hp.to_string();
     }
 
-    rpc_group_host_port *group_host_port() const
+    std::shared_ptr<rpc_group_host_port> group_host_port() const
     {
         CHECK_NOTNULL(_group_host_port, "group_host_port cannot be null!");
         return _group_host_port;
     }
     void assign_group(const char *name);
 
-    // Resolve host_port to rpc_addresses.
-    // Trere may be multiple rpc_addresses for one host_port.
-    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
+    // Construct a host_port object from 'addr'
+    static host_port from_address(rpc_address addr);
+
+    // Construct a host_port object from 'host_port_str', the latter is in the format of
+    // "localhost:8888".
+    // NOTE: The constructed host_port object maybe invalid, remember to check it by is_invalid()
+    // before using it.
+    static host_port from_string(const std::string &host_port_str);
 
     // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 
+    static void fill_host_ports_from_addresses(const std::vector<rpc_address> &addr_v,
+                                               /*output*/ std::vector<host_port> &hp_v);
+
 private:
+    friend class dns_resolver;
+    FRIEND_TEST(host_port_test, transfer_rpc_address);
+
+    // Resolve host_port to rpc_addresses.
+    // There may be multiple rpc_addresses for one host_port.
+    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
+
     std::string _host;
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;
-    rpc_group_host_port *_group_host_port = nullptr;
+    std::shared_ptr<rpc_group_host_port> _group_host_port;
 };
 
 inline bool operator==(const host_port &hp1, const host_port &hp2)
@@ -116,6 +145,21 @@ inline bool operator==(const host_port &hp1, const host_port &hp2)
 
 inline bool operator!=(const host_port &hp1, const host_port &hp2) { return !(hp1 == hp2); }
 
+inline bool operator<(const host_port &hp1, const host_port &hp2)
+{
+    if (hp1.type() != hp2.type()) {
+        return hp1.type() < hp2.type();
+    }
+
+    switch (hp1.type()) {
+    case HOST_TYPE_IPV4:
+        return hp1.host() < hp2.host() || (hp1.host() == hp2.host() && hp1.port() < hp2.port());
+    case HOST_TYPE_GROUP:
+        return hp1.group_host_port().get() < hp2.group_host_port().get();
+    default:
+        return true;
+    }
+}
 } // namespace dsn
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::host_port);
@@ -130,7 +174,7 @@ struct hash<::dsn::host_port>
         case HOST_TYPE_IPV4:
             return std::hash<std::string>()(hp.host()) ^ std::hash<uint16_t>()(hp.port());
         case HOST_TYPE_GROUP:
-            return std::hash<void *>()(hp.group_host_port());
+            return std::hash<void *>()(hp.group_host_port().get());
         default:
             return 0;
         }

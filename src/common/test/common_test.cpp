@@ -19,10 +19,7 @@
 
 #include "common/common.h"
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <memory>
+#include "gtest/gtest.h"
 
 namespace dsn {
 TEST(duplication_common, get_current_cluster_name)

@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Replication testing framework.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <stddef.h>
@@ -44,7 +35,7 @@
 
 #include "common.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 #include "utils/fmt_utils.h"
 #include "utils/singleton.h"
@@ -83,6 +74,11 @@ public:
     virtual std::string to_string() const = 0;
     virtual bool parse(const std::string &params) = 0;
 
+    friend std::ostream &operator<<(std::ostream &os, const case_line &cl)
+    {
+        return os << cl.to_string();
+    }
+
 private:
     int _line_no;
 };
@@ -93,12 +89,13 @@ public:
     static const char *NAME() { return "set"; }
     virtual ~set_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     void apply_set() const;
 
 private:
+    std::string to_string() const override;
+
     bool _null_loop_set;
     int _null_loop;
     bool _lb_for_test;
@@ -126,14 +123,16 @@ public:
     static const char *NAME() { return "skip"; }
     virtual ~skip_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     int count() const { return _count; }
     int skipped() const { return _skipped; }
     void skip_one() { _skipped++; }
     bool is_skip_done() const { return _skipped >= _count; }
+
 private:
+    std::string to_string() const override;
+
     int _count;
     int _skipped;
 };
@@ -145,8 +144,10 @@ public:
     static const char *NAME() { return "exit"; }
     virtual ~exit_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
+
+private:
+    std::string to_string() const override;
 };
 
 class state_case_line : public case_line
@@ -155,7 +156,6 @@ public:
     static const char *NAME() { return "state"; }
     virtual ~state_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     // return false if check failed
@@ -163,6 +163,8 @@ public:
     bool check_state(const state_snapshot &cur_state, bool &forward);
 
 private:
+    std::string to_string() const override;
+
     state_snapshot _state;
 };
 
@@ -172,7 +174,6 @@ public:
     static const char *NAME() { return "config"; }
     virtual ~config_case_line() {}
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     // return false if check failed
@@ -180,6 +181,8 @@ public:
     bool check_config(const parti_config &cur_config, bool &forward);
 
 private:
+    std::string to_string() const override;
+
     parti_config _config;
 };
 
@@ -212,13 +215,15 @@ public:
     // return true if 'ev' satisfy 'this' condition
     virtual bool check_satisfied(const event *ev) const = 0;
 
-    std::string to_string() const;
     friend std::ostream &operator<<(std::ostream &os, const event &evt)
     {
         return os << evt.to_string();
     }
 
     static event *parse(int line_no, const std::string &params);
+
+private:
+    std::string to_string() const;
 };
 
 class event_on_task : public event
@@ -353,19 +358,19 @@ public:
 class event_case_line : public case_line
 {
 public:
-public:
     virtual ~event_case_line()
     {
         if (_event_cond)
             delete _event_cond;
     }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     bool check_satisfied(const event *ev) const;
 
-public:
     event *_event_cond;
+
+protected:
+    std::string to_string() const override;
 };
 
 class wait_case_line : public event_case_line
@@ -387,12 +392,13 @@ class modify_case_line : public event_case_line
 {
 public:
     static const char *NAME() { return "modify"; }
-    virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
+    virtual std::string name() const { return NAME(); };
     virtual bool parse(const std::string &params);
     virtual void modify(const event *ev);
 
-public:
+private:
+    std::string to_string() const override;
+
     std::string _modify_delay;
 };
 
@@ -411,7 +417,6 @@ public:
 public:
     static const char *NAME() { return "client"; }
     virtual std::string name() const { return NAME(); }
-    virtual std::string to_string() const;
     virtual bool parse(const std::string &params);
 
     client_type type() const { return _type; }
@@ -419,9 +424,9 @@ public:
     bool parse_type_name(const std::string &name);
     void get_write_params(int &id, std::string &key, std::string &value, int &timeout_ms) const;
     void get_read_params(int &id, std::string &key, int &timeout_ms) const;
-    void get_replica_config_params(rpc_address &receiver,
+    void get_replica_config_params(host_port &receiver,
                                    dsn::replication::config_type::type &type,
-                                   rpc_address &node) const;
+                                   host_port &node) const;
     bool check_write_result(int id, ::dsn::error_code err, int32_t resp);
     bool check_read_result(int id, ::dsn::error_code err, const std::string &resp);
 
@@ -429,6 +434,8 @@ public:
     std::string config_command_to_string(dsn::replication::config_type::type cfg_command) const;
 
 private:
+    std::string to_string() const override;
+
     client_type _type;
     int _id;
     std::string _key;
@@ -438,9 +445,9 @@ private:
     int _write_resp;
     std::string _read_resp;
 
-    rpc_address _config_receiver;
+    host_port _config_receiver;
     dsn::replication::config_type::type _config_type;
-    rpc_address _config_node;
+    host_port _config_node;
 };
 USER_DEFINED_ENUM_FORMATTER(client_case_line::client_type)
 
@@ -469,9 +476,9 @@ public:
     void wait_check_client();
     void notify_check_client();
     bool check_client_write(int &id, std::string &key, std::string &value, int &timeout_ms);
-    bool check_replica_config(rpc_address &receiver,
+    bool check_replica_config(host_port &receiver,
                               dsn::replication::config_type::type &type,
-                              rpc_address &node);
+                              host_port &node);
     bool check_client_read(int &id, std::string &key, int &timeout_ms);
     void on_end_write(int id, ::dsn::error_code err, int32_t resp);
     void on_end_read(int id, ::dsn::error_code err, const std::string &resp);
@@ -508,4 +515,5 @@ private:
 }
 }
 
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::case_line);
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::event);

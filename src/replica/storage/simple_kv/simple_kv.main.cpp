@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "http/http_server.h"
 // framework specific tools
 #include "meta/meta_service_app.h"
@@ -45,7 +36,7 @@
 
 static void dsn_app_registration_simple_kv()
 {
-    dsn::FLAGS_enable_http_server = false; // disable http server
+    FLAGS_enable_http_server = false; // disable http server
 
     dsn::replication::application::simple_kv_service_impl::register_service();
 

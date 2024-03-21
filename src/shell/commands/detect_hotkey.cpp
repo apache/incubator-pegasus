@@ -16,7 +16,6 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdio.h>
 #include <memory>
 #include <set>
@@ -25,7 +24,7 @@
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "replica_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "shell/argh.h"
 #include "shell/command_executor.h"
 #include "shell/command_utils.h"
@@ -101,10 +100,10 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    dsn::rpc_address target_address;
+    dsn::host_port target_hp;
     std::string err_info;
     std::string ip_str = cmd({"-d", "--address"}).str();
-    if (!validate_ip(sc, ip_str, target_address, err_info)) {
+    if (!validate_ip(sc, ip_str, target_hp, err_info)) {
         fmt::print(stderr, "{}\n", err_info);
         return false;
     }
@@ -119,7 +118,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     }
 
     detect_hotkey_response resp;
-    auto err = sc->ddl_client->detect_hotkey(dsn::rpc_address(target_address), req, resp);
+    auto err = sc->ddl_client->detect_hotkey(target_hp, req, resp);
     if (err != dsn::ERR_OK) {
         fmt::print(stderr,
                    "Hotkey detection rpc sending failed, in {}.{}, error_hint:{}\n",

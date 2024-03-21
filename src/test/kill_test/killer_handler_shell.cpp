@@ -24,18 +24,19 @@
 #include <cstdlib>
 #include <sstream> // IWYU pragma: keep
 
+#include "common/replication_common.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/strings.h"
 
-namespace pegasus {
-namespace test {
-
 DSN_DEFINE_string(killer.handler.shell, onebox_run_path, "~/pegasus/run.sh", "onebox run path");
 DSN_DEFINE_validator(onebox_run_path,
                      [](const char *value) -> bool { return !dsn::utils::is_empty(value); });
+
+namespace pegasus {
+namespace test {
 
 bool killer_handler_shell::has_meta_dumped_core(int index)
 {
@@ -82,14 +83,15 @@ bool killer_handler_shell::kill_meta(int index)
 
 bool killer_handler_shell::kill_replica(int index)
 {
-    std::string cmd = generate_cmd(index, "replica", "stop");
+    std::string cmd =
+        generate_cmd(index, dsn::replication::replication_options::kReplicaAppType, "stop");
     int res = system(cmd.c_str());
     LOG_INFO("kill replica command: {}", cmd);
     if (res != 0) {
         LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
-    return check("replica", index, "stop");
+    return check(dsn::replication::replication_options::kReplicaAppType, index, "stop");
 }
 
 bool killer_handler_shell::kill_zookeeper(int index)
@@ -112,7 +114,8 @@ bool killer_handler_shell::start_meta(int index)
 
 bool killer_handler_shell::start_replica(int index)
 {
-    std::string cmd = generate_cmd(index, "replica", "start");
+    std::string cmd =
+        generate_cmd(index, dsn::replication::replication_options::kReplicaAppType, "start");
 
     int res = system(cmd.c_str());
     LOG_INFO("start replica command: {}", cmd);
@@ -175,7 +178,7 @@ killer_handler_shell::generate_cmd(int index, const std::string &job, const std:
         res << " stop_onebox_instance ";
     else
         res << " start_onebox_instance ";
-    if (job == "replica")
+    if (job == dsn::replication::replication_options::kReplicaAppType)
         res << "-r " << index;
     else
         res << "-m " << index;

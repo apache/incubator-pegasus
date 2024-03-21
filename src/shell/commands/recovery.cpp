@@ -20,7 +20,6 @@
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <boost/algorithm/string/trim.hpp>
 #include <getopt.h>
-#include <s2/third_party/absl/base/port.h>
 #include <stdio.h>
 #include <algorithm>
 #include <fstream>
@@ -33,7 +32,8 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/commands.h"
@@ -107,7 +107,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<dsn::host_port> node_list;
     if (!node_list_str.empty()) {
         std::vector<std::string> tokens;
         dsn::utils::split_args(node_list_str.c_str(), tokens, ',');
@@ -117,8 +117,8 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
         }
 
         for (std::string &token : tokens) {
-            dsn::rpc_address node;
-            if (!node.from_string_ipv4(token.c_str())) {
+            const auto node = dsn::host_port::from_string(token);
+            if (!node) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
             }
@@ -138,8 +138,8 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
             boost::trim(str);
             if (str.empty() || str[0] == '#' || str[0] == ';')
                 continue;
-            dsn::rpc_address node;
-            if (!node.from_string_ipv4(str.c_str())) {
+            const auto node = dsn::host_port::from_string(str);
+            if (!node) {
                 fprintf(stderr,
                         "parse %s at file %s line %d as ip:port failed\n",
                         str.c_str(),
@@ -159,25 +159,23 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
     dsn::error_code ec = sc->ddl_client->do_recovery(
         node_list, wait_seconds, skip_bad_nodes, skip_lost_partitions, output_file);
     if (!output_file.empty()) {
-        std::cout << "recover complete with err = " << ec.to_string() << std::endl;
+        std::cout << "recover complete with err = " << ec << std::endl;
     }
     return true;
 }
 
-dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo);
-
-dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo)
+dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
 {
-    if (pinfo.config.last_drops.size() < 2)
-        return dsn::rpc_address();
+    if (pinfo.config.hp_last_drops.size() < 2)
+        return dsn::host_port();
 
-    std::vector<dsn::rpc_address> last_two_nodes(pinfo.config.last_drops.end() - 2,
-                                                 pinfo.config.last_drops.end());
+    std::vector<dsn::host_port> last_two_nodes(pinfo.config.hp_last_drops.end() - 2,
+                                               pinfo.config.hp_last_drops.end());
     std::vector<ddd_node_info> last_dropped;
     for (auto &node : last_two_nodes) {
         auto it = std::find_if(pinfo.dropped.begin(),
                                pinfo.dropped.end(),
-                               [&node](const ddd_node_info &r) { return r.node == node; });
+                               [&node](const ddd_node_info &r) { return r.hp_node == node; });
         if (it->is_alive && it->is_collected)
             last_dropped.push_back(*it);
     }
@@ -185,7 +183,7 @@ dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo)
     if (last_dropped.size() == 1) {
         const ddd_node_info &ninfo = last_dropped.back();
         if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree)
-            return ninfo.node;
+            return ninfo.hp_node;
     } else if (last_dropped.size() == 2) {
         const ddd_node_info &secondary = last_dropped.front();
         const ddd_node_info &latest = last_dropped.back();
@@ -196,18 +194,18 @@ dsn::rpc_address diagnose_recommend(const ddd_partition_info &pinfo)
 
         if (latest.last_committed_decree == secondary.last_committed_decree &&
             latest.last_committed_decree >= pinfo.config.last_committed_decree)
-            return latest.ballot >= secondary.ballot ? latest.node : secondary.node;
+            return latest.ballot >= secondary.ballot ? latest.hp_node : secondary.hp_node;
 
         if (latest.last_committed_decree > secondary.last_committed_decree &&
             latest.last_committed_decree >= pinfo.config.last_committed_decree)
-            return latest.node;
+            return latest.hp_node;
 
         if (secondary.last_committed_decree > latest.last_committed_decree &&
             secondary.last_committed_decree >= pinfo.config.last_committed_decree)
-            return secondary.node;
+            return secondary.hp_node;
     }
 
-    return dsn::rpc_address();
+    return dsn::host_port();
 }
 
 bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
@@ -284,41 +282,44 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
     int proposed_count = 0;
     int i = 0;
     for (const ddd_partition_info &pinfo : ddd_partitions) {
-        out << "(" << ++i << ") " << pinfo.config.pid.to_string() << std::endl;
+        out << "(" << ++i << ") " << pinfo.config.pid << std::endl;
         out << "    config: ballot(" << pinfo.config.ballot << "), "
             << "last_committed(" << pinfo.config.last_committed_decree << ")" << std::endl;
         out << "    ----" << std::endl;
-        dsn::rpc_address latest_dropped, secondary_latest_dropped;
-        if (pinfo.config.last_drops.size() > 0)
-            latest_dropped = pinfo.config.last_drops[pinfo.config.last_drops.size() - 1];
-        if (pinfo.config.last_drops.size() > 1)
-            secondary_latest_dropped = pinfo.config.last_drops[pinfo.config.last_drops.size() - 2];
+        dsn::host_port latest_dropped, secondary_latest_dropped;
+        if (pinfo.config.hp_last_drops.size() > 0)
+            latest_dropped = pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 1];
+        if (pinfo.config.hp_last_drops.size() > 1)
+            secondary_latest_dropped =
+                pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 2];
         int j = 0;
         for (const ddd_node_info &n : pinfo.dropped) {
+            dsn::host_port hp_node;
+            GET_HOST_PORT(n, node, hp_node);
             char time_buf[30] = {0};
             ::dsn::utils::time_ms_to_string(n.drop_time_ms, time_buf);
             out << "    dropped[" << j++ << "]: "
-                << "node(" << n.node.to_string() << "), "
+                << "node(" << hp_node << "), "
                 << "drop_time(" << time_buf << "), "
                 << "alive(" << (n.is_alive ? "true" : "false") << "), "
                 << "collected(" << (n.is_collected ? "true" : "false") << "), "
                 << "ballot(" << n.ballot << "), "
                 << "last_committed(" << n.last_committed_decree << "), "
                 << "last_prepared(" << n.last_prepared_decree << ")";
-            if (n.node == latest_dropped)
+            if (hp_node == latest_dropped)
                 out << "  <== the latest";
-            else if (n.node == secondary_latest_dropped)
+            else if (hp_node == secondary_latest_dropped)
                 out << "  <== the secondary latest";
             out << std::endl;
         }
         out << "    ----" << std::endl;
         j = 0;
-        for (const ::dsn::rpc_address &r : pinfo.config.last_drops) {
+        for (const ::dsn::host_port &r : pinfo.config.hp_last_drops) {
             out << "    last_drops[" << j++ << "]: "
                 << "node(" << r.to_string() << ")";
-            if (j == (int)pinfo.config.last_drops.size() - 1)
+            if (j == (int)pinfo.config.hp_last_drops.size() - 1)
                 out << "  <== the secondary latest";
-            else if (j == (int)pinfo.config.last_drops.size())
+            else if (j == (int)pinfo.config.hp_last_drops.size())
                 out << "  <== the latest";
             out << std::endl;
         }
@@ -327,7 +328,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         if (diagnose) {
             out << "    ----" << std::endl;
 
-            dsn::rpc_address primary = diagnose_recommend(pinfo);
+            auto primary = diagnose_recommend(pinfo);
             out << "    recommend_primary: "
                 << (primary.is_invalid() ? "none" : primary.to_string());
             if (primary == latest_dropped)
@@ -345,7 +346,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
                     if (c == 'y') {
                         break;
                     } else if (c == 'n') {
-                        primary.set_invalid();
+                        primary.reset();
                         break;
                     } else if (c == 's') {
                         skip_this = true;
@@ -359,28 +360,28 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             if (primary.is_invalid() && !skip_prompt && !skip_this) {
                 do {
                     std::cout << "    > Please input the primary node: ";
-                    std::string addr;
-                    std::cin >> addr;
-                    if (primary.from_string_ipv4(addr.c_str())) {
+                    std::string node;
+                    std::cin >> node;
+                    primary = dsn::host_port::from_string(node);
+                    if (primary) {
                         break;
-                    } else {
-                        std::cout << "    > Sorry, you have input an invalid node address."
-                                  << std::endl;
                     }
+                    std::cout << "    > Sorry, you have input an invalid node address."
+                              << std::endl;
                 } while (true);
             }
 
             if (!primary.is_invalid() && !skip_this) {
                 dsn::replication::configuration_balancer_request request;
                 request.gpid = pinfo.config.pid;
-                request.action_list = {
-                    new_proposal_action(primary, primary, config_type::CT_ASSIGN_PRIMARY)};
+                const auto &primary_hp = dsn::dns_resolver::instance().resolve_address(primary);
+                request.action_list = {new_proposal_action(
+                    primary_hp, primary_hp, primary, primary, config_type::CT_ASSIGN_PRIMARY)};
                 request.force = false;
                 dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
-                out << "    propose_request: propose -g " << request.gpid.to_string()
-                    << " -p ASSIGN_PRIMARY -t " << primary.to_string() << " -n "
-                    << primary.to_string() << std::endl;
-                out << "    propose_response: " << err.to_string() << std::endl;
+                out << "    propose_request: propose -g " << request.gpid
+                    << " -p ASSIGN_PRIMARY -t " << primary << " -n " << primary << std::endl;
+                out << "    propose_response: " << err << std::endl;
                 proposed_count++;
             } else {
                 out << "    propose_request: none" << std::endl;

@@ -62,12 +62,13 @@ github:
       required_signatures: false
       required_linear_history: true
   collaborators:
-    - GehaFearless
     - padmejin
     - shalk
-    - WHBANG
     - ruojieranyishen
     - ninsmiracle
+    - Samunroyu
+    - limowang
+    - lengyuexuexuan
 
 notifications:
   commits: commits@pegasus.apache.org

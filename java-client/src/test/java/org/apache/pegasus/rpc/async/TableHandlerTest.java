@@ -18,6 +18,12 @@
  */
 package org.apache.pegasus.rpc.async;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.util.ArrayList;
 import org.apache.pegasus.apps.update_request;
 import org.apache.pegasus.base.blob;
@@ -29,10 +35,9 @@ import org.apache.pegasus.operator.client_operator;
 import org.apache.pegasus.rpc.InternalTableOptions;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.tools.Toollet;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 
 public class TableHandlerTest {
@@ -43,12 +48,12 @@ public class TableHandlerTest {
 
   private ClusterManager testManager;
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     testManager = new ClusterManager(ClientOptions.builder().metaServers(addr_list).build());
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {}
 
   private rpc_address getValidWrongServer(final rpc_address right_address) {
@@ -73,9 +78,9 @@ public class TableHandlerTest {
     try {
       table = testManager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
-      Assert.fail();
+      fail();
     }
-    Assert.assertNotNull(table);
+    assertNotNull(table);
 
     update_request request = new update_request();
     request.key = new blob("hello".getBytes());
@@ -99,10 +104,10 @@ public class TableHandlerTest {
 
     try {
       table.operate(op, 0);
-      Assert.fail();
+      fail();
     } catch (ReplicationException ex) {
       logger.info("timeout is set 0, no enough time to process");
-      Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, ex.getErrorType());
+      assertEquals(error_code.error_types.ERR_TIMEOUT, ex.getErrorType());
     }
 
     // we should try to query meta since the session to replica-server is unreachable.
@@ -119,15 +124,15 @@ public class TableHandlerTest {
               }
             },
             10);
-    Assert.assertTrue(ans);
+    assertTrue(ans);
 
     // 2. set an invalid task code, server should not response
     op = new Toollet.test_operator(pid, request);
     try {
       table.operate(op, 0);
-      Assert.fail();
+      fail();
     } catch (ReplicationException ex) {
-      Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, ex.getErrorType());
+      assertEquals(error_code.error_types.ERR_TIMEOUT, ex.getErrorType());
     }
 
     // 3. we should open a onebox cluster with three replica servers. thus every
@@ -136,16 +141,16 @@ public class TableHandlerTest {
     addr = getValidWrongServer(old_addr);
     logger.info("the wrong valid server is {}", addr.toString());
 
-    Assert.assertFalse(addr.equals(old_addr));
+    assertFalse(addr.equals(old_addr));
     handle.ballot--;
     handle.primarySession = testManager.getReplicaSession(addr);
 
     op = new Toollet.test_operator(pid, request);
     try {
       table.operate(op, 0);
-      Assert.fail();
+      fail();
     } catch (ReplicationException ex) {
-      Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, ex.getErrorType());
+      assertEquals(error_code.error_types.ERR_TIMEOUT, ex.getErrorType());
     }
   }
 
@@ -158,16 +163,16 @@ public class TableHandlerTest {
     try {
       table = testManager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
-      Assert.fail();
+      fail();
     }
-    Assert.assertNotNull(table);
-    Assert.assertEquals(8, table.getPartitionCount());
+    assertNotNull(table);
+    assertEquals(8, table.getPartitionCount());
 
     TableHandler.TableConfiguration tableConfig = table.tableConfig_.get();
     for (int i = 0; i < tableConfig.replicas.size(); ++i) {
       TableHandler.ReplicaConfiguration handle = tableConfig.replicas.get(i);
-      Assert.assertNotNull(handle);
-      Assert.assertNotNull(handle.primarySession);
+      assertNotNull(handle);
+      assertNotNull(handle.primarySession);
     }
 
     // mark a handler to inactive
@@ -177,10 +182,10 @@ public class TableHandlerTest {
     handle.primarySession = null;
 
     boolean doTheQuerying = table.tryQueryMeta(tableConfig.updateVersion);
-    Assert.assertTrue(doTheQuerying);
+    assertTrue(doTheQuerying);
 
     final TableHandler finalRef = table;
-    Assert.assertTrue(
+    assertTrue(
         Toollet.waitCondition(
             new Toollet.BoolCallable() {
               @Override
@@ -191,7 +196,7 @@ public class TableHandlerTest {
             10));
 
     handle = table.getReplicaConfig(0);
-    Assert.assertEquals(oldBallot + 1, handle.ballot);
+    assertEquals(oldBallot + 1, handle.ballot);
   }
 
   @Test
@@ -202,14 +207,14 @@ public class TableHandlerTest {
     try {
       table = testManager.openTable("temp", InternalTableOptions.forTest());
     } catch (ReplicationException e) {
-      Assert.fail();
+      fail();
     }
-    Assert.assertNotNull(table);
+    assertNotNull(table);
 
     Thread.sleep(100);
     ArrayList<TableHandler.ReplicaConfiguration> replicas = table.tableConfig_.get().replicas;
     for (TableHandler.ReplicaConfiguration r : replicas) {
-      Assert.assertEquals(r.primarySession.getState(), ReplicaSession.ConnState.CONNECTED);
+      assertEquals(r.primarySession.getState(), ReplicaSession.ConnState.CONNECTED);
     }
   }
 }

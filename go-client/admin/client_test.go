@@ -25,73 +25,93 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAdmin_Table(t *testing.T) {
-	c := NewClient(Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	})
+const (
+	replicaCount   = 3
+	maxWaitSeconds = 600
+	reserveSeconds = 1
+)
 
-	hasTable := func(tables []*TableInfo, tableName string) bool {
+func defaultConfig() Config {
+	return Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+		Timeout:     30 * time.Second,
+	}
+}
+
+func defaultReplicaServerPorts() []int {
+	return []int{34801, 34802, 34803}
+}
+
+func timeoutConfig() Config {
+	return Config{
+		MetaServers: []string{"0.0.0.0:123456"},
+		Timeout:     500 * time.Millisecond,
+	}
+}
+
+func testAdmin_Timeout(t *testing.T, exec func(c Client) error) {
+	c := NewClient(timeoutConfig())
+	assert.Equal(t, context.DeadlineExceeded, exec(c))
+}
+
+func TestAdmin_Table(t *testing.T) {
+	c := NewClient(defaultConfig())
+
+	hasTable := func(tables []*replication.AppInfo, tableName string) bool {
 		for _, tb := range tables {
-			if tb.Name == tableName {
+			if tb.AppName == tableName {
 				return true
 			}
 		}
 		return false
 	}
 
-	err := c.DropTable(context.Background(), "admin_table_test")
+	err := c.DropTable("admin_table_test", reserveSeconds)
 	assert.Nil(t, err)
 
 	// no such table after deletion
-	tables, err := c.ListTables(context.Background())
+	tables, err := c.ListTables()
 	assert.Nil(t, err)
 	assert.False(t, hasTable(tables, "admin_table_test"))
 
-	err = c.CreateTable(context.Background(), "admin_table_test", 16)
+	_, err = c.CreateTable("admin_table_test", 16, replicaCount, make(map[string]string), maxWaitSeconds)
 	assert.Nil(t, err)
 
-	tables, err = c.ListTables(context.Background())
+	tables, err = c.ListTables()
 	assert.Nil(t, err)
 	assert.True(t, hasTable(tables, "admin_table_test"))
 
-	err = c.DropTable(context.Background(), "admin_table_test")
+	err = c.DropTable("admin_table_test", reserveSeconds)
 	assert.Nil(t, err)
 }
 
 func TestAdmin_ListTablesTimeout(t *testing.T) {
-	c := NewClient(Config{
-		MetaServers: []string{"0.0.0.0:123456"},
+	testAdmin_Timeout(t, func(c Client) error {
+		_, err := c.ListTables()
+		return err
 	})
-
-	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-	defer cancel()
-	_, err := c.ListTables(ctx)
-	assert.Equal(t, err, context.DeadlineExceeded)
 }
 
 // Ensures after the call `CreateTable` ends, the table must be right available to access.
 func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	const tableName = "admin_table_test"
 
-	c := NewClient(Config{
-		MetaServers: []string{"0.0.0.0:34601"},
-	})
+	c := NewClient(defaultConfig())
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	err := c.CreateTable(context.Background(), tableName, 1)
+	_, err := c.CreateTable(tableName, 8, replicaCount, make(map[string]string), maxWaitSeconds)
 	if !assert.NoError(t, err) {
 		assert.Fail(t, err.Error())
 	}
 
 	// ensures the created table must be available for read and write
 	rwClient := pegasus.NewClient(pegasus.Config{
-		MetaServers: []string{"0.0.0.0:34601"},
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	})
 	defer func() {
 		err = rwClient.Close()
@@ -115,26 +135,56 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 		}
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	err = tb.Set(ctx, []byte("a"), []byte("a"), []byte("a"))
 	if !assert.NoError(t, err) {
 		assert.Fail(t, err.Error())
 	}
 
 	// cleanup
-	err = c.DropTable(context.Background(), tableName)
+	err = c.DropTable(tableName, reserveSeconds)
 	if !assert.NoError(t, err) {
 		assert.Fail(t, err.Error())
 	}
 }
 
 func TestAdmin_GetAppEnvs(t *testing.T) {
-	c := NewClient(Config{
-		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
-	})
+	c := NewClient(defaultConfig())
 
-	tables, err := c.ListTables(context.Background())
+	tables, err := c.ListTables()
 	assert.Nil(t, err)
 	for _, tb := range tables {
 		assert.Empty(t, tb.Envs)
 	}
+}
+
+func TestAdmin_ListNodes(t *testing.T) {
+	c := NewClient(defaultConfig())
+
+	nodes, err := c.ListNodes()
+	assert.Nil(t, err)
+
+	expectedReplicaServerPorts := defaultReplicaServerPorts()
+
+	// Compare slice length.
+	assert.Equal(t, len(expectedReplicaServerPorts), len(nodes))
+
+	actualReplicaServerPorts := make([]int, len(nodes))
+	for i, node := range nodes {
+		// Each node should be alive.
+		assert.Equal(t, admin.NodeStatus_NS_ALIVE, node.Status)
+		actualReplicaServerPorts[i] = node.Address.GetPort()
+	}
+
+	// Match elements without extra ordering.
+	assert.ElementsMatch(t, expectedReplicaServerPorts, actualReplicaServerPorts)
+}
+
+func TestAdmin_ListNodesTimeout(t *testing.T) {
+	testAdmin_Timeout(t, func(c Client) error {
+		_, err := c.ListNodes()
+		return err
+	})
 }

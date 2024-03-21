@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include <string>
 
 #include "runtime/env_provider.h"
@@ -51,10 +42,10 @@
 #include "utils/lockp.std.h"
 #include "utils/zlock_provider.h"
 
+DSN_DEFINE_bool(network, enable_udp, true, "whether to enable udp rpc engine");
+
 namespace dsn {
 namespace tools {
-
-DSN_DEFINE_bool(network, enable_udp, true, "whether to enable udp rpc engine");
 
 void register_std_lock_providers()
 {

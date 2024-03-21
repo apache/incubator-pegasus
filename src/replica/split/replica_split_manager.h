@@ -32,11 +32,12 @@
 #include "replica/replica_base.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/ports.h"
 
 namespace dsn {
 class partition_configuration;
-class rpc_address;
+class host_port;
 class task_tracker;
 
 namespace replication {
@@ -75,7 +76,7 @@ private:
     void parent_start_split(const group_check_request &request);
 
     // child replica initialize config and state info
-    void child_init_replica(gpid parent_gpid, rpc_address primary_address, ballot init_ballot);
+    void child_init_replica(gpid parent_gpid, const host_port &primary_address, ballot init_ballot);
 
     void parent_prepare_states(const std::string &dir);
 
@@ -93,7 +94,7 @@ private:
                             uint64_t total_file_size,
                             decree last_committed_decree);
 
-    // TODO(heyuchen): total_file_size is used for split perf-counter in further pull request
+    // TODO(heyuchen): total_file_size is used for split-related  metrics in further pull request.
     // Applies mutation logs that were learned from the parent of this child.
     // This stage follows after that child applies the checkpoint of parent, and begins to apply the
     // mutations.
@@ -122,9 +123,9 @@ private:
     void update_child_group_partition_count(int32_t new_partition_count);
 
     void parent_send_update_partition_count_request(
-        const rpc_address &address,
+        const host_port &hp,
         int32_t new_partition_count,
-        std::shared_ptr<std::unordered_set<rpc_address>> &not_replied_addresses);
+        std::shared_ptr<std::unordered_set<host_port>> &not_replied_addresses);
 
     // child update its partition_count
     void
@@ -135,7 +136,7 @@ private:
         error_code ec,
         const update_child_group_partition_count_request &request,
         const update_child_group_partition_count_response &response,
-        std::shared_ptr<std::unordered_set<rpc_address>> &not_replied_addresses);
+        std::shared_ptr<std::unordered_set<host_port>> &not_replied_addresses);
 
     // all replicas update partition_count in memory and disk
     void update_local_partition_count(int32_t new_partition_count);
@@ -251,6 +252,13 @@ private:
     // It will be updated each time when config sync from meta
     // TODO(heyuchen): clear it when primary parent clean up status
     split_status::type _meta_split_status{split_status::NOT_SPLIT};
+
+    METRIC_VAR_DECLARE_counter(splitting_started_count);
+    METRIC_VAR_DECLARE_counter(splitting_copy_file_count);
+    METRIC_VAR_DECLARE_counter(splitting_copy_file_bytes);
+    METRIC_VAR_DECLARE_counter(splitting_copy_mutation_count);
+    METRIC_VAR_DECLARE_counter(splitting_failed_count);
+    METRIC_VAR_DECLARE_counter(splitting_successful_count);
 };
 
 } // namespace replication

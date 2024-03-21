@@ -18,7 +18,7 @@
  */
 package org.apache.pegasus.client;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** Created by weijiesun on 16-11-24. */
 public class TestNoOperate {

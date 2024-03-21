@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdint.h>
 #include <functional>
@@ -38,6 +39,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
@@ -47,13 +50,42 @@ class command_deregister;
 class command_manager : public ::dsn::utils::singleton<command_manager>
 {
 public:
-    typedef std::function<std::string(const std::vector<std::string> &)> command_handler;
+    using command_handler = std::function<std::string(const std::vector<std::string> &)>;
 
     std::unique_ptr<command_deregister>
     register_command(const std::vector<std::string> &commands,
                      const std::string &help_one_line,
                      const std::string &help_long,
                      command_handler handler) WARN_UNUSED_RESULT;
+
+    // Register command which query or update a boolean configuration.
+    // The 'value' will be queried or updated by the command named 'command' with the 'help'
+    // description.
+    std::unique_ptr<command_deregister> register_bool_command(
+        bool &value, const std::string &command, const std::string &help) WARN_UNUSED_RESULT;
+
+    // Register command which query or update an integer configuration.
+    // The 'value' will be queried or updated by the command named 'command' with the 'help'
+    // description.
+    // 'validator' is used to validate the new value.
+    // The value is reset to 'default_value' if passing "DEFAULT" argument.
+    template <typename T>
+    WARN_UNUSED_RESULT std::unique_ptr<command_deregister>
+    register_int_command(T &value,
+                         T default_value,
+                         const std::string &command,
+                         const std::string &help,
+                         std::function<bool(int64_t new_value)> validator =
+                             [](int64_t new_value) -> bool { return new_value >= 0; })
+    {
+        return register_command(
+            {command},
+            fmt::format("{} [num | DEFAULT]", command),
+            help,
+            [&value, default_value, command, validator](const std::vector<std::string> &args) {
+                return set_int(value, default_value, command, args, validator);
+            });
+    }
 
     bool run_command(const std::string &cmd,
                      const std::vector<std::string> &args,
@@ -76,6 +108,46 @@ private:
 
     void deregister_command(uintptr_t handle);
 
+    static std::string
+    set_bool(bool &value, const std::string &name, const std::vector<std::string> &args);
+
+    template <typename T>
+    static std::string set_int(T &value,
+                               T default_value,
+                               const std::string &name,
+                               const std::vector<std::string> &args,
+                               const std::function<bool(int64_t value)> &validator)
+    {
+        // Query.
+        if (args.empty()) {
+            return std::to_string(value);
+        }
+
+        // Invalid arguments size.
+        if (args.size() > 1) {
+            return fmt::format("ERR: invalid arguments, only one integer argument is acceptable");
+        }
+
+        // Reset to the default value.
+        if (dsn::utils::iequals(args[0], "DEFAULT")) {
+            value = default_value;
+            return "OK";
+        }
+
+        // Invalid argument.
+        T new_value = 0;
+        if (!internal::buf2signed(args[0], new_value) ||
+            !validator(static_cast<int64_t>(new_value))) {
+            return {"ERR: invalid arguments"};
+        }
+
+        // Set to a new value.
+        value = new_value;
+        LOG_INFO("set {} to {} by remote command", name, new_value);
+
+        return "OK";
+    }
+
     typedef ref_ptr<command_instance> command_instance_ptr;
     utils::rw_lock_nr _lock;
     std::map<std::string, command_instance_ptr> _handlers;
@@ -86,7 +158,7 @@ private:
 class command_deregister
 {
 public:
-    command_deregister(uintptr_t id) : cmd_id_(id) {}
+    explicit command_deregister(uintptr_t id) : cmd_id_(id) {}
     ~command_deregister()
     {
         if (cmd_id_ != 0) {
@@ -100,26 +172,3 @@ private:
 };
 
 } // namespace dsn
-
-// if args are empty, then return the old flag;
-// otherwise set the proper "flag" according to args
-inline std::string remote_command_set_bool_flag(bool &flag,
-                                                const char *flag_name,
-                                                const std::vector<std::string> &args)
-{
-    std::string ret_msg("OK");
-    if (args.empty()) {
-        ret_msg = flag ? "true" : "false";
-    } else {
-        if (args[0] == "true") {
-            flag = true;
-            LOG_INFO("set {} to true by remote command", flag_name);
-        } else if (args[0] == "false") {
-            flag = false;
-            LOG_INFO("set {} to false by remote command", flag_name);
-        } else {
-            ret_msg = "ERR: invalid arguments";
-        }
-    }
-    return ret_msg;
-}

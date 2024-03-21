@@ -57,27 +57,27 @@ set(MY_PROJ_SRC
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS 
-    dsn_replication_common
-    dsn.failure_detector
-    dsn.block_service
-    dsn.block_service.local
-    dsn.block_service.fds
-    dsn.block_service.hdfs
-    dsn_nfs
-    dsn_dist_cmd
-    dsn_http
-    dsn_runtime
-    dsn_aio
-    dsn_meta_server
-    galaxy-fds-sdk-cpp
-    PocoNet
-    PocoFoundation
-    PocoNetSSL
-    PocoJSON
-    rocksdb)
+set(MY_PROJ_LIBS
+        absl::strings
+        dsn_replication_common
+        dsn.failure_detector
+        dsn.block_service
+        dsn.block_service.local
+        dsn.block_service.hdfs
+        dsn_nfs
+        dsn_dist_cmd
+        dsn_http
+        curl
+        dsn_runtime
+        dsn_aio
+        dsn_meta_server
+        dsn_security
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
-set(MY_BOOST_LIBS Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::filesystem)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")

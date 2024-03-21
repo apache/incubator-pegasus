@@ -31,6 +31,7 @@
 #include "partition_resolver_manager.h"
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/task/task_spec.h"
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
@@ -39,10 +40,15 @@ namespace dsn {
 namespace replication {
 /*static*/
 partition_resolver_ptr partition_resolver::get_resolver(const char *cluster_name,
-                                                        const std::vector<rpc_address> &meta_list,
+                                                        const std::vector<host_port> &meta_list,
                                                         const char *app_name)
 {
     return partition_resolver_manager::instance().find_or_create(cluster_name, meta_list, app_name);
+}
+
+int partition_resolver::get_partition_index(int partition_count, uint64_t partition_hash)
+{
+    return partition_hash % static_cast<uint64_t>(partition_count);
 }
 
 DEFINE_TASK_CODE(LPC_RPC_DELAY_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
@@ -124,7 +130,7 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                     }
                     hdr.gpid = result.pid;
                 }
-                dsn_rpc_call(result.address, t.get());
+                dsn_rpc_call(dns_resolver::instance().resolve_address(result.hp), t.get());
             },
             hdr.client.timeout_ms);
 }

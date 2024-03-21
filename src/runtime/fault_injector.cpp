@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     inject failure through join points to mimic all network/disk/slow execution etc. failures
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "runtime/fault_injector.h"
 
 #include <chrono>
@@ -42,6 +33,7 @@
 #include <vector>
 
 #include "aio/aio_task.h"
+#include "fmt/core.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -59,6 +51,8 @@ namespace dsn {
 struct service_spec;
 
 namespace tools {
+
+// Inject failure through join points to mimic all network/disk/slow execution etc. failures.
 
 struct fj_opt
 {
@@ -329,8 +323,7 @@ void fault_injector::install(service_spec &spec)
         if (i == TASK_CODE_INVALID)
             continue;
 
-        std::string section_name =
-            std::string("task.") + std::string(dsn::task_code(i).to_string());
+        std::string section_name = fmt::format("task.{}", dsn::task_code(i));
         task_spec *spec = task_spec::get(i);
         CHECK_NOTNULL(spec, "");
 

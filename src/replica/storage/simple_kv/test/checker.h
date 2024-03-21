@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Replication testing framework.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <algorithm>
@@ -42,7 +33,7 @@
 
 #include "common.h"
 #include "meta/meta_data.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/simulator.h"
 #include "utils/singleton.h"
 
@@ -82,10 +73,10 @@ public:
 
     bool check_replica_state(int primary_count, int secondary_count, int inactive_count);
 
-    std::string address_to_node_name(rpc_address addr);
-    rpc_address node_name_to_address(const std::string &name);
+    std::string address_to_node_name(host_port addr);
+    host_port node_name_to_address(const std::string &name);
 
-    void on_replica_state_change(::dsn::rpc_address from,
+    void on_replica_state_change(::dsn::host_port from,
                                  const replica_configuration &new_config,
                                  bool is_closing);
     void on_config_change(const app_mapper &new_config);
@@ -101,7 +92,7 @@ private:
     parti_config _last_config;
     state_snapshot _last_states;
 
-    std::map<std::string, dsn::rpc_address> _node_to_address; // address is primary_address()
+    std::map<std::string, dsn::host_port> _node_to_host_port; // host_port is primary_host_port()
     std::map<int, std::string> _address_to_node;              // port is enough for key
 };
 

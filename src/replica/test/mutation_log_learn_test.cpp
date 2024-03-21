@@ -24,12 +24,7 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
-#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -41,6 +36,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
+#include "gtest/gtest.h"
 #include "replica/mutation.h"
 #include "replica/mutation_log.h"
 #include "replica/test/mock_utils.h"
@@ -61,7 +57,7 @@ class mutation_log_learn_test : public replica_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, mutation_log_learn_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, mutation_log_learn_test, ::testing::Values(false, true));
 
 TEST_P(mutation_log_learn_test, learn)
 {

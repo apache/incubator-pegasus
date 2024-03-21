@@ -16,25 +16,21 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/env.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <algorithm>
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
+#include <fmt/printf.h>
 
 #include "block_service/block_service.h"
 #include "block_service/hdfs/hdfs_service.h"
+#include "gtest/gtest.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
@@ -52,9 +48,6 @@
 #include "utils/test_macros.h"
 #include "utils/threadpool_code.h"
 
-using namespace dsn;
-using namespace dsn::dist::block_service;
-
 DSN_DEFINE_string(hdfs_test, test_name_node, "", "hdfs name node");
 DSN_DEFINE_string(hdfs_test, test_backup_path, "", "path for uploading and downloading test files");
 
@@ -63,6 +56,9 @@ DSN_DEFINE_uint32(hdfs_test,
                   num_total_files_for_hdfs_concurrent_test,
                   64,
                   "number of total files for hdfs concurrent test");
+
+using namespace dsn;
+using namespace dsn::dist::block_service;
 
 DEFINE_TASK_CODE(LPC_TEST_HDFS, TASK_PRIORITY_HIGH, dsn::THREAD_POOL_DEFAULT)
 
@@ -129,15 +125,12 @@ void HDFSClientTest::write_test_files_async(const std::string &local_test_path,
     }
 }
 
-INSTANTIATE_TEST_CASE_P(, HDFSClientTest, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, HDFSClientTest, ::testing::Values(false, true));
 
 TEST_P(HDFSClientTest, test_hdfs_read_write)
 {
     if (strlen(FLAGS_test_name_node) == 0 || strlen(FLAGS_test_backup_path) == 0) {
-        // TODO(yingchun): use GTEST_SKIP after upgrading gtest.
-        std::cout << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test."
-                  << std::endl;
-        return;
+        GTEST_SKIP() << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test.";
     }
 
     auto s = std::make_shared<hdfs_service>();
@@ -211,10 +204,7 @@ TEST_P(HDFSClientTest, test_hdfs_read_write)
 TEST_P(HDFSClientTest, test_upload_and_download)
 {
     if (strlen(FLAGS_test_name_node) == 0 || strlen(FLAGS_test_backup_path) == 0) {
-        // TODO(yingchun): use GTEST_SKIP after upgrading gtest.
-        std::cout << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test."
-                  << std::endl;
-        return;
+        GTEST_SKIP() << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test.";
     }
 
     auto s = std::make_shared<hdfs_service>();
@@ -243,7 +233,7 @@ TEST_P(HDFSClientTest, test_upload_and_download)
     ASSERT_TRUE(dsn::ERR_OK == rem_resp.err || dsn::ERR_OBJECT_NOT_FOUND == rem_resp.err);
 
     // 2. create file.
-    printf("create and upload: %s.\n", kRemoteTestFile.c_str());
+    fmt::printf("create and upload: {}.\n", kRemoteTestFile);
     create_file_response cf_resp;
     s->create_file(create_file_request{kRemoteTestFile, true},
                    LPC_TEST_HDFS,
@@ -277,7 +267,7 @@ TEST_P(HDFSClientTest, test_upload_and_download)
 
     // 5. download file.
     download_response d_resp;
-    printf("test download %s.\n", kRemoteTestFile.c_str());
+    fmt::printf("test download {}.\n", kRemoteTestFile);
     s->create_file(create_file_request{kRemoteTestFile, false},
                    LPC_TEST_HDFS,
                    [&cf_resp](const create_file_response &resp) { cf_resp = resp; },
@@ -314,10 +304,7 @@ TEST_P(HDFSClientTest, test_upload_and_download)
 TEST_P(HDFSClientTest, test_concurrent_upload_download)
 {
     if (strlen(FLAGS_test_name_node) == 0 || strlen(FLAGS_test_backup_path) == 0) {
-        // TODO(yingchun): use GTEST_SKIP after upgrading gtest.
-        std::cout << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test."
-                  << std::endl;
-        return;
+        GTEST_SKIP() << "Set hdfs_test.* configs in config-test.ini to enable hdfs_service_test.";
     }
 
     auto s = std::make_shared<hdfs_service>();
@@ -384,7 +371,7 @@ TEST_P(HDFSClientTest, test_concurrent_upload_download)
                 p->upload(upload_request{local_file_names[i]},
                           LPC_TEST_HDFS,
                           [p, &local_file_names, &files_size, i](const upload_response &resp) {
-                              printf("file %s upload finished.\n", local_file_names[i].c_str());
+                              fmt::printf("file {} upload finished.\n", local_file_names[i]);
                               ASSERT_EQ(dsn::ERR_OK, resp.err);
                               ASSERT_EQ(files_size[i], resp.uploaded_size);
                               ASSERT_EQ(files_size[i], p->get_size());
@@ -420,7 +407,7 @@ TEST_P(HDFSClientTest, test_concurrent_upload_download)
                 LPC_TEST_HDFS,
                 [&files_md5sum, &downloaded_file_names, &files_size, i, p](
                     const download_response &dr) {
-                    printf("file %s download finished\n", downloaded_file_names[i].c_str());
+                    fmt::printf("file {} download finished\n", downloaded_file_names[i]);
                     ASSERT_EQ(dsn::ERR_OK, dr.err);
                     ASSERT_EQ(files_size[i], dr.downloaded_size);
                     ASSERT_EQ(files_size[i], p->get_size());

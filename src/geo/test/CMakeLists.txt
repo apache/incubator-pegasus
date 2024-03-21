@@ -28,6 +28,8 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+        absl::flat_hash_set
+        absl::strings
         pegasus_geo_lib
         s2testing
         s2
@@ -35,7 +37,7 @@ set(MY_PROJ_LIBS
         dsn_utils
         gtest)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 add_definitions(-Wno-attributes)
 

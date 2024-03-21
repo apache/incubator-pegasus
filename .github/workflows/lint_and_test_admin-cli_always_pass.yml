@@ -29,6 +29,7 @@ on:
       - ci-test # testing branch for github action
       - '*dev'
     paths-ignore:
+      - .github/workflows/lint_and_test_admin-cli_always_pass.yml
       - admin-cli/**
 
   # for manually triggering workflow

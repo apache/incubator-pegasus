@@ -24,26 +24,15 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <functional>
 #include <string>
 
+#include "gtest/gtest.h"
 #include "runtime/api_task.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_worker.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/autoref_ptr.h"
 
 DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
@@ -57,7 +46,7 @@ void on_lpc_test(void *p)
 TEST(core, lpc)
 {
     std::string result = "heheh";
-    dsn::task_ptr t(new raw_task(LPC_TEST_HASH, std::bind(&on_lpc_test, (void *)&result), 1));
+    dsn::task_ptr t(new dsn::raw_task(LPC_TEST_HASH, std::bind(&on_lpc_test, (void *)&result), 1));
     t->enqueue();
     t->wait();
     EXPECT_TRUE(result.substr(0, result.length() - 2) == "client.THREAD_POOL_TEST_SERVER");

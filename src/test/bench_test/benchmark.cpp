@@ -40,9 +40,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace pegasus {
-namespace test {
-
 DSN_DEFINE_uint64(pegasus.benchmark,
                   benchmark_num,
                   10000,
@@ -94,6 +91,9 @@ DSN_DEFINE_group_validator(multi_count, [](std::string &message) -> bool {
     }
     return true;
 });
+
+namespace pegasus {
+namespace test {
 
 benchmark::benchmark()
 {

@@ -17,10 +17,6 @@
  * under the License.
  */
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/options.h>
 #include <stdint.h>
 #include <atomic>
@@ -28,7 +24,8 @@
 #include <memory>
 #include <string>
 
-#include "pegasus_const.h"
+#include "common/replica_envs.h"
+#include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
 #include "runtime/api_layer1.h"
 #include "server/pegasus_manual_compact_service.h"
@@ -36,10 +33,10 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
+DSN_DECLARE_int32(manual_compact_min_interval_seconds);
+
 namespace pegasus {
 namespace server {
-
-DSN_DECLARE_int32(manual_compact_min_interval_seconds);
 
 class manual_compact_service_test : public pegasus_server_test_base
 {
@@ -111,29 +108,29 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, manual_compact_service_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, manual_compact_service_test, ::testing::Values(false, true));
 
 TEST_P(manual_compact_service_test, check_compact_disabled)
 {
     std::map<std::string, std::string> envs;
     check_compact_disabled(envs, false);
 
-    envs[MANUAL_COMPACT_DISABLED_KEY] = "";
+    envs[dsn::replica_envs::MANUAL_COMPACT_DISABLED] = "";
     check_compact_disabled(envs, false);
 
-    envs[MANUAL_COMPACT_DISABLED_KEY] = "true";
+    envs[dsn::replica_envs::MANUAL_COMPACT_DISABLED] = "true";
     check_compact_disabled(envs, true);
 
-    envs[MANUAL_COMPACT_DISABLED_KEY] = "false";
+    envs[dsn::replica_envs::MANUAL_COMPACT_DISABLED] = "false";
     check_compact_disabled(envs, false);
 
-    envs[MANUAL_COMPACT_DISABLED_KEY] = "1";
+    envs[dsn::replica_envs::MANUAL_COMPACT_DISABLED] = "1";
     check_compact_disabled(envs, false);
 
-    envs[MANUAL_COMPACT_DISABLED_KEY] = "0";
+    envs[dsn::replica_envs::MANUAL_COMPACT_DISABLED] = "0";
     check_compact_disabled(envs, false);
 
-    envs[MANUAL_COMPACT_DISABLED_KEY] = "abc";
+    envs[dsn::replica_envs::MANUAL_COMPACT_DISABLED] = "abc";
     check_compact_disabled(envs, false);
 }
 
@@ -146,27 +143,27 @@ TEST_P(manual_compact_service_test, check_once_compact)
     std::map<std::string, std::string> envs;
     check_once_compact(envs, false);
 
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = "";
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME] = "";
     check_once_compact(envs, false);
 
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = "abc";
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME] = "abc";
     check_once_compact(envs, false);
 
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = "-1";
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME] = "-1";
     check_once_compact(envs, false);
 
     // has been compacted
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts - 1);
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME] = std::to_string(compacted_ts - 1);
     check_once_compact(envs, false);
 
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts);
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME] = std::to_string(compacted_ts);
     check_once_compact(envs, false);
 
     // has not been compacted
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(compacted_ts + 1);
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME] = std::to_string(compacted_ts + 1);
     check_once_compact(envs, true);
 
-    envs[MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY] = std::to_string(dsn_now_ms() / 1000);
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME] = std::to_string(dsn_now_ms() / 1000);
     check_once_compact(envs, true);
 }
 
@@ -177,36 +174,36 @@ TEST_P(manual_compact_service_test, check_periodic_compact)
     // invalid trigger time format
     check_periodic_compact(envs, false);
 
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "";
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = "";
     check_periodic_compact(envs, false);
 
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = ",";
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = ",";
     check_periodic_compact(envs, false);
 
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "12:oo";
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = "12:oo";
     check_periodic_compact(envs, false);
 
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = std::to_string(compacted_ts);
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = std::to_string(compacted_ts);
     check_periodic_compact(envs, false);
 
     // suppose compacted at 10:00
     set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("10:00"));
 
     // has been compacted
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "9:00";
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = "9:00";
     check_periodic_compact(envs, false);
 
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "3:00,9:00";
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = "3:00,9:00";
     check_periodic_compact(envs, false);
 
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00";
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = "10:00";
     check_periodic_compact(envs, false);
 
     // suppose compacted at 09:00
     set_compact_time(dsn::utils::hh_mm_today_to_unix_sec("09:00"));
 
     // single compact time
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00";
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = "10:00";
 
     set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("08:00"));
     check_periodic_compact(envs, false);
@@ -218,7 +215,7 @@ TEST_P(manual_compact_service_test, check_periodic_compact)
     check_periodic_compact(envs, true);
 
     // multiple compact time
-    envs[MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY] = "10:00,21:00";
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = "10:00,21:00";
 
     set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("08:00"));
     check_periodic_compact(envs, false);
@@ -256,33 +253,36 @@ TEST_P(manual_compact_service_test, extract_manual_compact_opts)
     std::map<std::string, std::string> envs;
     rocksdb::CompactRangeOptions out;
 
-    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    extract_manual_compact_opts(envs, dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX, out);
     ASSERT_EQ(out.target_level, -1);
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
 
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_TARGET_LEVEL_KEY] = "2";
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY] =
-        MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
-    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX +
+         dsn::replica_envs::MANUAL_COMPACT_TARGET_LEVEL] = "2";
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION] =
+        pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
+    extract_manual_compact_opts(envs, dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX, out);
     ASSERT_EQ(out.target_level, 2);
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kForce);
 
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-1";
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY] =
-        MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
-    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX +
+         dsn::replica_envs::MANUAL_COMPACT_TARGET_LEVEL] = "-1";
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION] =
+        pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
+    extract_manual_compact_opts(envs, dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX, out);
     ASSERT_EQ(out.target_level, -1);
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
 
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_TARGET_LEVEL_KEY] = "-2";
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_KEY] =
-        "nonono";
-    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX +
+         dsn::replica_envs::MANUAL_COMPACT_TARGET_LEVEL] = "-2";
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION] = "nonono";
+    extract_manual_compact_opts(envs, dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX, out);
     ASSERT_EQ(out.target_level, -1);
     ASSERT_EQ(out.bottommost_level_compaction, rocksdb::BottommostLevelCompaction::kSkip);
 
-    envs[MANUAL_COMPACT_ONCE_KEY_PREFIX + MANUAL_COMPACT_TARGET_LEVEL_KEY] = "8";
-    extract_manual_compact_opts(envs, MANUAL_COMPACT_ONCE_KEY_PREFIX, out);
+    envs[dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX +
+         dsn::replica_envs::MANUAL_COMPACT_TARGET_LEVEL] = "8";
+    extract_manual_compact_opts(envs, dsn::replica_envs::MANUAL_COMPACT_ONCE_PREFIX, out);
     ASSERT_EQ(out.target_level, -1);
 }
 

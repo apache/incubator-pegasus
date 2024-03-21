@@ -17,6 +17,7 @@
 
 #include "app_env_validator.h"
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <stdint.h>
 #include <memory>

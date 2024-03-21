@@ -24,14 +24,6 @@
 * THE SOFTWARE.
 */
 
-/*
-* Description:
-*     message parser for user customed request
-*
-* Revision history:
-*     xxxx-xx-xx, author, fix bug about xxx
-*/
-
 #ifndef RAW_MESSAGE_PARSER_H
 #define RAW_MESSAGE_PARSER_H
 
@@ -46,6 +38,7 @@ DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_RAW)
 
 class rpc_session;
 
+// Message parser for user customed request.
 class raw_message_parser : public message_parser
 {
 private:

@@ -26,7 +26,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "base/pegasus_const.h"
+#include "absl/strings/string_view.h"
+#include "common/common.h"
 #include "common/replication_other_types.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "pegasus/client.h"
@@ -34,16 +35,15 @@
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
 #include "rrdb/rrdb.client.h"
-#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
 #include "utils/synchronize.h"
 #include "utils/threadpool_code.h"
-#include "utils/utils.h"
 
 namespace dsn {
 class message_ex;
@@ -63,12 +63,12 @@ std::unordered_map<int, int> pegasus_client_impl::_server_error_to_client;
 pegasus_client_impl::pegasus_client_impl(const char *cluster_name, const char *app_name)
     : _cluster_name(cluster_name), _app_name(app_name)
 {
-    std::vector<dsn::rpc_address> meta_servers;
+    std::vector<dsn::host_port> meta_servers;
     dsn::replication::replica_helper::load_meta_servers(
-        meta_servers, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name);
+        meta_servers, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name);
     CHECK_GT(meta_servers.size(), 0);
     _meta_server.assign_group("meta-servers");
-    _meta_server.group_address()->add_list(meta_servers);
+    _meta_server.group_host_port()->add_list(meta_servers);
 
     _client = new ::dsn::apps::rrdb_client(cluster_name, meta_servers, app_name);
 }
@@ -1181,12 +1181,12 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
         pegasus_generate_key(prefix_start, hash_key, o.sort_key_filter_pattern);
         pegasus_generate_next_blob(prefix_stop, hash_key, o.sort_key_filter_pattern);
 
-        if (::dsn::string_view(prefix_start).compare(start) > 0) {
+        if (prefix_start.to_string_view() > start.to_string_view()) {
             start = std::move(prefix_start);
             o.start_inclusive = true;
         }
 
-        if (::dsn::string_view(prefix_stop).compare(stop) <= 0) {
+        if (prefix_stop.to_string_view() <= stop.to_string_view()) {
             stop = std::move(prefix_stop);
             o.stop_inclusive = false;
         }
@@ -1194,7 +1194,7 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
 
     // check if range is empty
     std::vector<uint64_t> v;
-    int c = ::dsn::string_view(start).compare(stop);
+    int c = start.to_string_view().compare(stop.to_string_view());
     if (c < 0 || (c == 0 && o.start_inclusive && o.stop_inclusive)) {
         v.push_back(pegasus_key_hash(start));
     }
@@ -1254,7 +1254,7 @@ void pegasus_client_impl::async_get_unordered_scanners(
 
     query_cfg_request req;
     req.app_name = _app_name;
-    ::dsn::rpc::call(_meta_server,
+    ::dsn::rpc::call(dns_resolver::instance().resolve_address(_meta_server),
                      RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
                      req,
                      nullptr,

@@ -17,12 +17,13 @@
 
 #include <iterator>
 #include <map>
+#include <string>
 #include <utility>
 
+#include "absl/strings/string_view.h"
 #include "common/duplication_common.h"
 #include "duplication_types.h"
 #include "load_from_private_log.h"
-#include "perf_counter/perf_counter.h"
 #include "replica/duplication/mutation_batch.h"
 #include "replica/mutation.h"
 #include "replica/mutation_log_utils.h"
@@ -34,7 +35,27 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "utils/string_view.h"
+
+METRIC_DEFINE_counter(replica,
+                      dup_log_file_load_failed_count,
+                      dsn::metric_unit::kFileLoads,
+                      "The number of times private log files have failed to be loaded during dup");
+
+METRIC_DEFINE_counter(replica,
+                      dup_log_file_load_skipped_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The bytes of mutations that have been skipped due to failed loadings of "
+                      "private log files during dup");
+
+METRIC_DEFINE_counter(replica,
+                      dup_log_read_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size read from private log for dup");
+
+METRIC_DEFINE_counter(replica,
+                      dup_log_read_mutations,
+                      dsn::metric_unit::kMutations,
+                      "The number of mutations read from private log for dup");
 
 namespace dsn {
 namespace replication {
@@ -96,13 +117,15 @@ void load_from_private_log::run()
                 _duplicator->progress().confirmed_decree);
             repeat(1_s);
 
-            FAIL_POINT_INJECT_NOT_RETURN_F("duplication_sync_complete", [&](string_view s) -> void {
-                if (_duplicator->progress().confirmed_decree == invalid_decree) {
-                    // set_confirmed_decree(9), the value must be equal (decree_start of
-                    // `test_start_duplication` in `load_from_private_log_test.cpp`) -1
-                    _duplicator->update_progress(_duplicator->progress().set_confirmed_decree(9));
-                }
-            });
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "duplication_sync_complete", [&](absl::string_view s) -> void {
+                    if (_duplicator->progress().confirmed_decree == invalid_decree) {
+                        // set_confirmed_decree(9), the value must be equal (decree_start of
+                        // `test_start_duplication` in `load_from_private_log_test.cpp`) -1
+                        _duplicator->update_progress(
+                            _duplicator->progress().set_confirmed_decree(9));
+                    }
+                });
             return;
         } else {
             _mutation_batch.reset_mutation_buffer(_duplicator->progress().confirmed_decree);
@@ -172,17 +195,17 @@ void load_from_private_log::find_log_file_to_start(
 
 void load_from_private_log::replay_log_block()
 {
-    error_s err =
-        mutation_log::replay_block(_current,
-                                   [this](int log_bytes_length, mutation_ptr &mu) -> bool {
-                                       auto es = _mutation_batch.add(std::move(mu));
-                                       CHECK_PREFIX_MSG(es.is_ok(), es.description());
-                                       _counter_dup_log_read_bytes_rate->add(log_bytes_length);
-                                       _counter_dup_log_read_mutations_rate->increment();
-                                       return true;
-                                   },
-                                   _start_offset,
-                                   _current_global_end_offset);
+    error_s err = mutation_log::replay_block(
+        _current,
+        [this](int log_bytes_length, mutation_ptr &mu) -> bool {
+            auto es = _mutation_batch.add(std::move(mu));
+            CHECK_PREFIX_MSG(es.is_ok(), es.description());
+            METRIC_VAR_INCREMENT_BY(dup_log_read_bytes, log_bytes_length);
+            METRIC_VAR_INCREMENT(dup_log_read_mutations);
+            return true;
+        },
+        _start_offset,
+        _current_global_end_offset);
     if (!err.is_ok() && err.code() != ERR_HANDLE_EOF) {
         // Error handling on loading failure:
         // - If block loading failed for `MAX_ALLOWED_REPEATS` times, it restarts reading the file.
@@ -199,7 +222,7 @@ void load_from_private_log::replay_log_block()
                 err,
                 _current->path(),
                 _start_offset);
-            _counter_dup_load_file_failed_count->increment();
+            METRIC_VAR_INCREMENT(dup_log_file_load_failed_count);
             _err_file_repeats_num++;
             if (dsn_unlikely(will_fail_skip())) {
                 // skip this file
@@ -212,7 +235,7 @@ void load_from_private_log::replay_log_block()
                 if (switch_to_next_log_file()) {
                     // successfully skip to next file
                     auto skipped_bytes = _current_global_end_offset - prev_offset;
-                    _counter_dup_load_skipped_bytes_count->add(skipped_bytes);
+                    METRIC_VAR_INCREMENT_BY(dup_log_file_load_skipped_bytes, skipped_bytes);
                     repeat(_repeat_delay);
                     return;
                 }
@@ -254,27 +277,12 @@ load_from_private_log::load_from_private_log(replica *r, replica_duplicator *dup
       _private_log(r->private_log()),
       _duplicator(dup),
       _stub(r->get_replica_stub()),
-      _mutation_batch(dup)
+      _mutation_batch(dup),
+      METRIC_VAR_INIT_replica(dup_log_file_load_failed_count),
+      METRIC_VAR_INIT_replica(dup_log_file_load_skipped_bytes),
+      METRIC_VAR_INIT_replica(dup_log_read_bytes),
+      METRIC_VAR_INIT_replica(dup_log_read_mutations)
 {
-    _counter_dup_log_read_bytes_rate.init_app_counter("eon.replica_stub",
-                                                      "dup.log_read_bytes_rate",
-                                                      COUNTER_TYPE_RATE,
-                                                      "reading rate of private log in bytes");
-    _counter_dup_log_read_mutations_rate.init_app_counter(
-        "eon.replica_stub",
-        "dup.log_read_mutations_rate",
-        COUNTER_TYPE_RATE,
-        "reading rate of mutations from private log");
-    _counter_dup_load_file_failed_count.init_app_counter(
-        "eon.replica_stub",
-        "dup.load_file_failed_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "the number of failures loading a private log file during duplication");
-    _counter_dup_load_skipped_bytes_count.init_app_counter(
-        "eon.replica_stub",
-        "dup.load_skipped_bytes_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "bytes of mutations that were skipped because of failure during duplication");
 }
 
 void load_from_private_log::set_start_decree(decree start_decree)

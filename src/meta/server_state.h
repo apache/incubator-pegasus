@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     the meta server's server_state, definition file
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor
- */
-
 #pragma once
 
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
@@ -52,9 +43,9 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
+#include "table_metrics.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
@@ -62,7 +53,7 @@ namespace dsn {
 class blob;
 class command_deregister;
 class message_ex;
-class rpc_address;
+class host_port;
 
 namespace replication {
 class configuration_balancer_request;
@@ -191,7 +182,7 @@ public:
     error_code dump_from_remote_storage(const char *local_path, bool sync_immediately);
     error_code restore_from_local_storage(const char *local_path);
 
-    void on_change_node_state(rpc_address node, bool is_alive);
+    void on_change_node_state(host_port node, bool is_alive);
     void on_propose_balancer(const configuration_balancer_request &request,
                              configuration_balancer_response &response);
     void on_start_recovery(const configuration_recovery_request &request,
@@ -222,6 +213,8 @@ public:
     task_tracker *tracker() { return &_tracker; }
     void wait_all_task() { _tracker.wait_outstanding_tasks(); }
 
+    table_metric_entities &get_table_metric_entities() { return _table_metric_entities; }
+
 private:
     FRIEND_TEST(backup_service_test, test_invalid_backup_request);
 
@@ -230,7 +223,7 @@ private:
     bool can_run_balancer();
 
     // user should lock it first
-    void update_partition_perf_counter();
+    void update_partition_metrics();
 
     error_code dump_app_states(const char *local_path,
                                const std::function<app_state *()> &iterator);
@@ -240,7 +233,7 @@ private:
     // else indicate error that remote storage responses
     error_code sync_apps_to_remote_storage();
 
-    error_code sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &node_list,
+    error_code sync_apps_from_replica_nodes(const std::vector<dsn::host_port> &node_list,
                                             bool skip_bad_nodes,
                                             bool skip_lost_partitions,
                                             std::string &hint_message);
@@ -256,11 +249,11 @@ private:
     void check_consistency(const dsn::gpid &gpid);
 
     error_code construct_apps(const std::vector<query_app_info_response> &query_app_responses,
-                              const std::vector<dsn::rpc_address> &replica_nodes,
+                              const std::vector<dsn::host_port> &replica_nodes,
                               std::string &hint_message);
     error_code construct_partitions(
         const std::vector<query_replica_info_response> &query_replica_info_responses,
-        const std::vector<dsn::rpc_address> &replica_nodes,
+        const std::vector<dsn::host_port> &replica_nodes,
         bool skip_lost_partitions,
         std::string &hint_message);
 
@@ -289,15 +282,14 @@ private:
     void downgrade_primary_to_inactive(std::shared_ptr<app_state> &app, int pidx);
     void downgrade_secondary_to_inactive(std::shared_ptr<app_state> &app,
                                          int pidx,
-                                         const rpc_address &node);
-    void downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
-                                   int pidx,
-                                   const rpc_address &address);
+                                         const host_port &node);
+    void
+    downgrade_stateless_nodes(std::shared_ptr<app_state> &app, int pidx, const host_port &address);
 
     void on_partition_node_dead(std::shared_ptr<app_state> &app,
                                 int pidx,
-                                const dsn::rpc_address &address);
-    void send_proposal(rpc_address target, const configuration_update_request &proposal);
+                                const dsn::host_port &address);
+    void send_proposal(host_port target, const configuration_update_request &proposal);
     void send_proposal(const configuration_proposal_action &action,
                        const partition_configuration &pc,
                        const app_state &app);
@@ -437,14 +429,7 @@ private:
     int32_t _add_secondary_max_count_for_one_node;
     std::vector<std::unique_ptr<command_deregister>> _cmds;
 
-    perf_counter_wrapper _dead_partition_count;
-    perf_counter_wrapper _unreadable_partition_count;
-    perf_counter_wrapper _unwritable_partition_count;
-    perf_counter_wrapper _writable_ill_partition_count;
-    perf_counter_wrapper _healthy_partition_count;
-    perf_counter_wrapper _recent_update_config_count;
-    perf_counter_wrapper _recent_partition_change_unwritable_count;
-    perf_counter_wrapper _recent_partition_change_writable_count;
+    table_metric_entities _table_metric_entities;
 };
 
 } // namespace replication

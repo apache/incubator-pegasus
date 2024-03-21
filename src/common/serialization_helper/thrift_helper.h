@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_stream.h"
 
@@ -38,7 +37,7 @@
 #include <thrift/TApplicationException.h>
 #include <type_traits>
 
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
 
 using namespace ::apache::thrift::transport;
 namespace dsn {
@@ -238,7 +237,7 @@ inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
         xfer += iprot->readStructEnd();
 
         // currently only support ipv4 format
-        this->assign_ipv4(host.c_str(), port);
+        *this = from_host_port(host, static_cast<uint16_t>(port));
 
         return xfer;
     }
@@ -499,7 +498,7 @@ inline uint32_t task_code::write(apache::thrift::protocol::TProtocol *oprot) con
         dynamic_cast<apache::thrift::protocol::TBinaryProtocol *>(oprot);
     if (binary_proto != nullptr) {
         // the protocol is binary protocol
-        return binary_proto->writeString(string_view(name));
+        return binary_proto->writeString(absl::string_view(name));
     } else {
         // the protocol is json protocol
         uint32_t xfer = 0;
@@ -567,7 +566,7 @@ inline uint32_t error_code::write(apache::thrift::protocol::TProtocol *oprot) co
         dynamic_cast<apache::thrift::protocol::TBinaryProtocol *>(oprot);
     if (binary_proto != nullptr) {
         // the protocol is binary protocol
-        return binary_proto->writeString(string_view(name));
+        return binary_proto->writeString(absl::string_view(name));
     } else {
         // the protocol is json protocol
         uint32_t xfer = 0;

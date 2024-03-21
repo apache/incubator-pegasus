@@ -24,18 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for net provider.
- *
- * Revision history:
- *     Nov., 2015, @shengofsun (Weijie Sun), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <string.h>
 #include <chrono>
 #include <functional>
@@ -43,6 +31,7 @@
 #include <string>
 #include <thread>
 
+#include "gtest/gtest.h"
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
 #include "runtime/global_config.h"
@@ -57,14 +46,15 @@
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
-#include "test_utils.h"
+#include "runtime/test_utils.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
 DSN_DECLARE_uint32(conn_threshold_per_ip);
+
+namespace dsn {
 
 class asio_network_provider_test : public tools::asio_network_provider
 {
@@ -180,7 +170,7 @@ TEST(tools_common, asio_net_provider)
     LOG_INFO("result: {}", start_result);
 
     rpc_session_ptr client_session =
-        asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
+        asio_network->create_client_session(rpc_address::from_host_port("localhost", TEST_PORT));
     client_session->connect();
 
     rpc_client_session_send(client_session);
@@ -253,7 +243,7 @@ TEST(tools_common, sim_net_provider)
     ASSERT_TRUE(ans == ERR_ADDRESS_ALREADY_USED);
 
     rpc_session_ptr client_session =
-        sim_net->create_client_session(rpc_address("localhost", TEST_PORT));
+        sim_net->create_client_session(rpc_address::from_host_port("localhost", TEST_PORT));
     client_session->connect();
 
     rpc_client_session_send(client_session);
@@ -288,8 +278,8 @@ TEST(tools_common, asio_network_provider_connection_threshold)
     // not exceed threshold
     for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
         LOG_INFO("client # {}", count);
-        rpc_session_ptr client_session =
-            asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
+        rpc_session_ptr client_session = asio_network->create_client_session(
+            rpc_address::from_host_port("localhost", TEST_PORT));
         client_session->connect();
 
         rpc_client_session_send(client_session);
@@ -302,8 +292,8 @@ TEST(tools_common, asio_network_provider_connection_threshold)
     bool reject = false;
     for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
         LOG_INFO("client # {}", count);
-        rpc_session_ptr client_session =
-            asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
+        rpc_session_ptr client_session = asio_network->create_client_session(
+            rpc_address::from_host_port("localhost", TEST_PORT));
         client_session->connect();
 
         if (count >= CONN_THRESHOLD)

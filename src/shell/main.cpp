@@ -19,7 +19,6 @@
 
 #include <ctype.h>
 #include <pegasus/version.h>
-#include <s2/third_party/absl/base/port.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,10 +31,10 @@
 #include <vector>
 
 #include "args.h"
-#include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
 #include "command_executor.h"
 #include "commands.h"
+#include "common/common.h"
 #include "common/replication_other_types.h"
 #include "pegasus/client.h"
 #include "runtime/app_model.h"
@@ -87,15 +86,16 @@ static command_executor commands[] = {
     {
         "ls",
         "list all apps",
-        "[-a|-all] [-d|--detailed] [-j|--json] [-o|--output file_name]"
+        "[-a|-all] [-d|--detailed] [-j|--json] [-o|--output file_name] "
         "[-s|--status all|available|creating|dropping|dropped]",
         ls_apps,
     },
     {
         "nodes",
         "get the node status for this cluster",
-        "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage]"
-        "[-o|--output file_name] [-s|--status all|alive|unalive] [-q|--qps]",
+        "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage] "
+        "[-o|--output file_name] [-s|--status all|alive|unalive] [-q|--qps] "
+        "[-t|--sample_interval_ms num]",
         ls_nodes,
     },
     {
@@ -353,7 +353,7 @@ static command_executor commands[] = {
         "app_stat",
         "get stat of apps",
         "[-a|--app_name str] [-q|--only_qps] [-u|--only_usage] [-j|--json] "
-        "[-o|--output file_name]",
+        "[-o|--output file_name] [-t|--sample_interval_ms num]",
         app_stat,
     },
     {
@@ -393,7 +393,8 @@ static command_executor commands[] = {
     {
         "mlog_dump",
         "dump mutation log dir",
-        "<-i|--input log_dir> [-o|--output file_name] [-d|--detailed]",
+        "<-i|--input log_dir(e.g. '/path/to/replica/reps/2.1.pegasus/plog/')> [-o|--output "
+        "file_name] [-d|--detailed]",
         mlog_dump,
     },
     {
@@ -658,15 +659,14 @@ static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
 {
     s_global_context.current_cluster_name = cluster_name;
     std::string server_list =
-        dsn_config_get_value_string(pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
+        dsn_config_get_value_string(dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
                                     s_global_context.current_cluster_name.c_str(),
                                     "",
                                     "");
 
-    dsn::replication::replica_helper::load_meta_servers(
-        s_global_context.meta_list,
-        pegasus::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
-        cluster_name.c_str());
+    dsn::replication::replica_helper::load_meta_servers(s_global_context.meta_list,
+                                                        dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
+                                                        cluster_name.c_str());
     s_global_context.ddl_client =
         std::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
 

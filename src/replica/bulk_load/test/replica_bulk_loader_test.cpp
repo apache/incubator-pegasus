@@ -17,31 +17,23 @@
 
 #include "replica/bulk_load/replica_bulk_loader.h"
 
-#include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <rocksdb/env.h>
-#include <rocksdb/slice.h>
-#include <rocksdb/status.h>
 #include <fstream> // IWYU pragma: keep
 #include <memory>
 #include <vector>
 
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
-#include "common/json_helper.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task_tracker.h"
 #include "test_util/test_util.h"
-#include "utils/blob.h"
-#include "utils/env.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
+#include "utils/load_dump_object.h"
 #include "utils/test_macros.h"
 
 namespace dsn {
@@ -174,8 +166,8 @@ public:
         mock_group_progress(status, 10, 50, 50);
         partition_bulk_load_state state;
         state.__set_is_paused(true);
-        _replica->set_secondary_bulk_load_state(SECONDARY, state);
-        _replica->set_secondary_bulk_load_state(SECONDARY2, state);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP, state);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP2, state);
 
         bulk_load_response response;
         _bulk_loader->report_group_is_paused(response);
@@ -228,7 +220,8 @@ public:
         _group_req.meta_bulk_load_status = status;
         _group_req.config.status = partition_status::PS_SECONDARY;
         _group_req.config.ballot = b;
-        _group_req.target_address = SECONDARY;
+        _group_req.target = SECONDARY;
+        _group_req.__set_hp_target(SECONDARY_HP);
     }
 
     void mock_replica_config(partition_status::type status)
@@ -237,6 +230,7 @@ public:
         rconfig.ballot = BALLOT;
         rconfig.pid = PID;
         rconfig.primary = PRIMARY;
+        rconfig.__set_hp_primary(PRIMARY_HP);
         rconfig.status = status;
         _replica->set_replica_config(rconfig);
     }
@@ -251,6 +245,10 @@ public:
         config.primary = PRIMARY;
         config.secondaries.emplace_back(SECONDARY);
         config.secondaries.emplace_back(SECONDARY2);
+        config.__set_hp_primary(PRIMARY_HP);
+        config.__set_hp_secondaries({});
+        config.hp_secondaries.emplace_back(SECONDARY_HP);
+        config.hp_secondaries.emplace_back(SECONDARY_HP2);
         _replica->set_primary_partition_configuration(config);
     }
 
@@ -261,14 +259,7 @@ public:
         _metadata.files.emplace_back(_file_meta);
         _metadata.file_total_size = _file_meta.size;
         std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
-        blob bb = json::json_forwarder<bulk_load_metadata>::encode(_metadata);
-        auto s =
-            rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                       rocksdb::Slice(bb.data(), bb.length()),
-                                       whole_name,
-                                       /* should_sync */ true);
-        ASSERT_TRUE(s.ok()) << fmt::format(
-            "write file {} failed, err = {}", whole_name, s.ToString());
+        ASSERT_EQ(ERR_OK, utils::dump_rjobj_to_file(_metadata, whole_name));
     }
 
     bool validate_metadata()
@@ -325,8 +316,8 @@ public:
         state1.__set_download_progress(secondary_progress1);
         state2.__set_download_status(ERR_OK);
         state2.__set_download_progress(secondary_progress2);
-        _replica->set_secondary_bulk_load_state(SECONDARY, state1);
-        _replica->set_secondary_bulk_load_state(SECONDARY2, state2);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP, state1);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP2, state2);
     }
 
     void mock_group_progress(bulk_load_status::type p_status,
@@ -362,8 +353,8 @@ public:
         partition_bulk_load_state state1, state2;
         state1.__set_ingest_status(status1);
         state2.__set_ingest_status(status2);
-        _replica->set_secondary_bulk_load_state(SECONDARY, state1);
-        _replica->set_secondary_bulk_load_state(SECONDARY2, state2);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP, state1);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP2, state2);
     }
 
     void mock_group_ingestion_states(ingestion_status::type s1_status,
@@ -388,8 +379,8 @@ public:
         partition_bulk_load_state state1, state2;
         state1.__set_is_cleaned_up(s1_cleaned_up);
         state2.__set_is_cleaned_up(s2_cleaned_up);
-        _replica->set_secondary_bulk_load_state(SECONDARY, state1);
-        _replica->set_secondary_bulk_load_state(SECONDARY2, state2);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP, state1);
+        _replica->set_secondary_bulk_load_state(SECONDARY_HP2, state2);
     }
 
     // helper functions
@@ -398,7 +389,8 @@ public:
     int32_t get_download_progress() { return _bulk_loader->_download_progress.load(); }
     bool is_secondary_bulk_load_state_reset()
     {
-        const partition_bulk_load_state &state = _replica->get_secondary_bulk_load_state(SECONDARY);
+        const partition_bulk_load_state &state =
+            _replica->get_secondary_bulk_load_state(SECONDARY_HP);
         bool is_download_state_reset =
             (state.__isset.download_progress && state.__isset.download_status &&
              state.download_progress == 0 && state.download_status == ERR_OK);
@@ -420,22 +412,25 @@ public:
     file_meta _file_meta;
     bulk_load_metadata _metadata;
 
-    std::string APP_NAME = "replica";
+    std::string APP_NAME = "replica_bulk_loader_test";
     std::string CLUSTER = "cluster";
     std::string PROVIDER = "local_service";
     std::string ROOT_PATH = "bulk_load_root";
     gpid PID = gpid(1, 0);
     ballot BALLOT = 3;
-    rpc_address PRIMARY = rpc_address("127.0.0.2", 34801);
-    rpc_address SECONDARY = rpc_address("127.0.0.3", 34801);
-    rpc_address SECONDARY2 = rpc_address("127.0.0.4", 34801);
+    rpc_address PRIMARY = rpc_address::from_ip_port("127.0.0.2", 34801);
+    rpc_address SECONDARY = rpc_address::from_ip_port("127.0.0.3", 34801);
+    rpc_address SECONDARY2 = rpc_address::from_ip_port("127.0.0.4", 34801);
+    const host_port PRIMARY_HP = host_port("localhost", 34801);
+    const host_port SECONDARY_HP = host_port("localhost", 34801);
+    const host_port SECONDARY_HP2 = host_port("localhost", 34801);
     int32_t MAX_DOWNLOADING_COUNT = 5;
     std::string LOCAL_DIR = bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR;
     std::string METADATA = bulk_load_constant::BULK_LOAD_METADATA;
     std::string FILE_NAME = "test_sst_file";
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_bulk_loader_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_bulk_loader_test, ::testing::Values(false, true));
 
 // on_bulk_load unit tests
 TEST_P(replica_bulk_loader_test, on_bulk_load_not_primary)
@@ -528,7 +523,7 @@ TEST_P(replica_bulk_loader_test, rollback_to_downloading_test)
 // parse_bulk_load_metadata unit tests
 TEST_P(replica_bulk_loader_test, bulk_load_metadata_not_exist)
 {
-    ASSERT_EQ(test_parse_bulk_load_metadata("path_not_exist"), ERR_FILE_OPERATION_FAILED);
+    ASSERT_EQ(ERR_PATH_NOT_FOUND, test_parse_bulk_load_metadata("path_not_exist"));
 }
 
 TEST_P(replica_bulk_loader_test, bulk_load_metadata_corrupt)
@@ -538,8 +533,7 @@ TEST_P(replica_bulk_loader_test, bulk_load_metadata_corrupt)
     NO_FATALS(pegasus::create_local_test_file(utils::filesystem::path_combine(LOCAL_DIR, METADATA),
                                               &_file_meta));
     std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
-    error_code ec = test_parse_bulk_load_metadata(metadata_file_name);
-    ASSERT_EQ(ERR_CORRUPTION, ec);
+    ASSERT_EQ(ERR_CORRUPTION, test_parse_bulk_load_metadata(metadata_file_name));
     utils::filesystem::remove_path(LOCAL_DIR);
 }
 
@@ -549,8 +543,7 @@ TEST_P(replica_bulk_loader_test, bulk_load_metadata_parse_succeed)
     NO_FATALS(create_local_metadata_file());
 
     std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
-    auto ec = test_parse_bulk_load_metadata(metadata_file_name);
-    ASSERT_EQ(ec, ERR_OK);
+    ASSERT_EQ(ERR_OK, test_parse_bulk_load_metadata(metadata_file_name));
     ASSERT_TRUE(validate_metadata());
     utils::filesystem::remove_path(LOCAL_DIR);
 }

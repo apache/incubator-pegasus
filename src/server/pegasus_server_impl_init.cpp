@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <rocksdb/cache.h>
 #include <rocksdb/filter_policy.h>
@@ -26,45 +27,222 @@
 #include <rocksdb/table.h>
 #include <rocksdb/write_buffer_manager.h>
 #include <stdio.h>
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "base/meta_store.h" // IWYU pragma: keep
 #include "common/gpid.h"
 #include "hashkey_transform.h"
 #include "hotkey_collector.h"
 #include "pegasus_event_listener.h"
 #include "pegasus_server_impl.h"
 #include "pegasus_value_schema.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "server/capacity_unit_calculator.h" // IWYU pragma: keep
 #include "server/key_ttl_compaction_filter.h"
-#include "server/meta_store.h" // IWYU pragma: keep
 #include "server/pegasus_read_service.h"
 #include "server/pegasus_server_write.h" // IWYU pragma: keep
 #include "server/range_read_limiter.h"
 #include "utils/env.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
 
-namespace dsn {
-namespace replication {
-class replica;
-} // namespace replication
-} // namespace dsn
+METRIC_DEFINE_counter(replica,
+                      get_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of GET requests");
 
-namespace pegasus {
-namespace server {
+METRIC_DEFINE_counter(replica,
+                      multi_get_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of MULTI_GET requests");
+
+METRIC_DEFINE_counter(replica,
+                      batch_get_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of BATCH_GET requests");
+
+METRIC_DEFINE_counter(replica,
+                      scan_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of SCAN requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               get_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of GET requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               multi_get_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of MULTI_GET requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               batch_get_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of BATCH_GET requests");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               scan_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The latency of SCAN requests");
+
+METRIC_DEFINE_counter(replica,
+                      read_expired_values,
+                      dsn::metric_unit::kValues,
+                      "The number of expired values read");
+
+METRIC_DEFINE_counter(replica,
+                      read_filtered_values,
+                      dsn::metric_unit::kValues,
+                      "The number of filtered values read");
+
+METRIC_DEFINE_counter(replica,
+                      abnormal_read_requests,
+                      dsn::metric_unit::kRequests,
+                      "The number of abnormal read requests");
+
+METRIC_DECLARE_counter(throttling_rejected_read_requests);
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_total_sst_files,
+                          dsn::metric_unit::kFiles,
+                          "The total number of rocksdb sst files");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_total_sst_size_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The total size of rocksdb sst files");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_estimated_keys,
+                          dsn::metric_unit::kKeys,
+                          "The estimated number of rocksdb keys");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_index_and_filter_blocks_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of rocksdb index and filter blocks");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_memtable_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of rocksdb memtables");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_block_cache_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The hit number of lookups on rocksdb block cache");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_block_cache_total_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The total number of lookups on rocksdb block cache");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_memtable_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The hit number of lookups on rocksdb memtable");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_memtable_total_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The total number of lookups on rocksdb memtable");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_l0_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of lookups served by rocksdb L0");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_l1_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of lookups served by rocksdb L1");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_l2_and_up_hit_count,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of lookups served by rocksdb L2 and up");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_write_amplification,
+                          dsn::metric_unit::kAmplification,
+                          "The write amplification of rocksdb");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_read_amplification,
+                          dsn::metric_unit::kAmplification,
+                          "The read amplification of rocksdb");
+
+// Following metrics are rocksdb statistics that are related to bloom filters.
+//
+// To measure prefix bloom filters, these metrics are updated after each ::Seek and ::SeekForPrev if
+// prefix is enabled and check_filter is set:
+// * rdb_bloom_filter_seek_negatives: seek_negatives
+// * rdb_bloom_filter_seek_total: seek_negatives + seek_positives
+//
+// To measure full bloom filters, these metrics are updated after each point lookup. If
+// whole_key_filtering is set, this is the result of checking the bloom of the whole key, otherwise
+// this is the result of checking the bloom of the prefix:
+// * rdb_bloom_filter_point_lookup_negatives: [true] negatives
+// * rdb_bloom_filter_point_lookup_positives: positives
+// * rdb_bloom_filter_point_lookup_true_positives: true positives
+//
+// For details please see https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter#statistic.
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bloom_filter_seek_negatives,
+                          dsn::metric_unit::kSeeks,
+                          "The number of times the check for prefix bloom filter was useful in "
+                          "avoiding iterator creation (and thus likely IOPs), used by rocksdb for "
+                          "each replica");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bloom_filter_seek_total,
+                          dsn::metric_unit::kSeeks,
+                          "The number of times prefix bloom filter was checked before creating "
+                          "iterator on a file, used by rocksdb");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bloom_filter_point_lookup_negatives,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of times full bloom filter has avoided file reads (i.e., "
+                          "negatives), used by rocksdb");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bloom_filter_point_lookup_positives,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of times full bloom filter has not avoided the reads, used "
+                          "by rocksdb");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_bloom_filter_point_lookup_true_positives,
+                          dsn::metric_unit::kPointLookups,
+                          "The number of times full bloom filter has not avoided the reads and "
+                          "data actually exist, used by rocksdb");
+
+METRIC_DEFINE_gauge_int64(server,
+                          rdb_block_cache_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of rocksdb block cache");
+
+METRIC_DEFINE_gauge_int64(server,
+                          rdb_write_rate_limiter_through_bytes_per_sec,
+                          dsn::metric_unit::kBytesPerSec,
+                          "The through bytes per second that go through the rate limiter which "
+                          "takes control of the write rate of flush and compaction of rocksdb");
 
 DSN_DEFINE_int64(
     pegasus.server,
@@ -74,39 +252,42 @@ DSN_DEFINE_int64(
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_max_background_flushes,
                  4,
-                 "rocksdb options.max_background_flushes, flush threads are shared among all "
-                 "rocksdb instances in one process");
+                 "Corresponding to RocksDB's options.max_background_flushes, the flush threads are "
+                 "shared among all RocksDB's instances in the process");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_max_background_compactions,
                  12,
-                 "rocksdb options.max_background_compactions, compaction threads are shared among "
-                 "all rocksdb instances in one process");
+                 "Corresponding to RocksDB's options.max_background_compactions, compaction "
+                 "threads are shared among all rocksdb instances in the process");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_max_write_buffer_number,
                  3,
-                 "rocksdb options.max_write_buffer_number");
-DSN_DEFINE_int32(pegasus.server, rocksdb_num_levels, 6, "rocksdb options.num_levels");
+                 "Corresponding to RocksDB's options.max_write_buffer_number");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_num_levels,
+                 6,
+                 "Corresponding to RocksDB's options.num_levels");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_target_file_size_multiplier,
                  1,
-                 "rocksdb options.target_file_size_multiplier");
+                 "Corresponding to RocksDB's options.target_file_size_multiplier");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_level0_file_num_compaction_trigger,
                  4,
-                 "rocksdb options.level0_file_num_compaction_trigger");
+                 "Corresponding to RocksDB's options.level0_file_num_compaction_trigger");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_level0_slowdown_writes_trigger,
                  30,
-                 "rocksdb options.level0_slowdown_writes_trigger, default 30");
+                 "Corresponding to RocksDB's options.level0_slowdown_writes_trigger");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_level0_stop_writes_trigger,
                  60,
-                 "rocksdb options.level0_stop_writes_trigger");
-DSN_DEFINE_int32(
-    pegasus.server,
-    rocksdb_block_cache_num_shard_bits,
-    -1,
-    "block cache will be sharded into 2^num_shard_bits shards, default value is -1(auto)");
+                 "Corresponding to RocksDB's options.level0_stop_writes_trigger");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_block_cache_num_shard_bits,
+                 -1,
+                 "The number of shard bits of the block cache, it means the block cache is sharded "
+                 "into 2^n shards to reduce lock contention. -1 means automatically determined");
 
 // COMPATIBILITY ATTENTION:
 // Although old releases would see the new structure as corrupt filter data and read the
@@ -130,15 +311,15 @@ DSN_DEFINE_bool(pegasus.server,
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_use_direct_reads,
                 false,
-                "rocksdb options.use_direct_reads");
+                "Corresponding to RocksDB's options.use_direct_reads");
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_use_direct_io_for_flush_and_compaction,
                 false,
-                "rocksdb options.use_direct_io_for_flush_and_compaction");
+                "Corresponding to RocksDB's options.use_direct_io_for_flush_and_compaction");
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_disable_table_block_cache,
                 false,
-                "rocksdb _tbl_opts.no_block_cache");
+                "Whether to disable RocksDB's block cache");
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_enable_write_buffer_manager,
                 false,
@@ -180,7 +361,7 @@ DSN_DEFINE_bool(pegasus.server,
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_disable_bloom_filter,
                 false,
-                "Whether to disable bloom filter");
+                "Whether to disable RocksDB bloom filter");
 // If used, For every data block we load into memory, we will create a bitmap
 // of size ((block_size / `read_amp_bytes_per_bit`) / 8) bytes. This bitmap
 // will be used to figure out the percentage we actually read of the blocks.
@@ -202,7 +383,7 @@ DSN_DEFINE_bool(pegasus.server,
 // treated as 4, a value of 19 will be treated as 16.
 //
 // Default: 0 (disabled)
-// see https://github.com/XiaoMi/pegasus-rocksdb/blob/v6.6.4-compatible/include/rocksdb/table.h#L247
+// see https://github.com/facebook/rocksdb/blob/v6.6.4/include/rocksdb/table.h#L247
 DSN_DEFINE_int32(pegasus.server,
                  read_amp_bytes_per_bit,
                  0,
@@ -275,10 +456,12 @@ DSN_DEFINE_uint32(pegasus.server,
                   checkpoint_reserve_min_count,
                   2,
                   "Minimum count of checkpoint to reserve.");
+DSN_TAG_VARIABLE(checkpoint_reserve_min_count, FT_MUTABLE);
 DSN_DEFINE_uint32(pegasus.server,
                   checkpoint_reserve_time_seconds,
                   1800,
                   "Minimum seconds of checkpoint to reserve, 0 means no check.");
+DSN_TAG_VARIABLE(checkpoint_reserve_time_seconds, FT_MUTABLE);
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_max_open_files,
                  -1,
@@ -290,21 +473,21 @@ DSN_DEFINE_uint64(pegasus.server,
                   "get/multi-get operation duration exceed this threshold will be logged");
 DSN_DEFINE_validator(rocksdb_slow_query_threshold_ns,
                      [](uint64_t value) -> bool { return value > 0; });
-DSN_DEFINE_uint64(
-    pegasus.server,
-    rocksdb_abnormal_get_size_threshold,
-    1000000,
-    "get operation value size exceed this threshold will be logged, 0 means no check");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_abnormal_get_size_threshold,
+                  1000000,
+                  "A warning log will be print if the key-value size of Get operation is larger "
+                  "than this config, 0 means never print");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_abnormal_multi_get_size_threshold,
                   10000000,
-                  "multi-get operation total key-value size exceed this threshold will be logged, "
-                  "0 means no check");
+                  "A warning log will be print if the total key-value size of Multi-Get operation "
+                  "is larger than this config, 0 means never print");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_abnormal_multi_get_iterate_count_threshold,
                   1000,
-                  "multi-get operation iterate count exceed this threshold will be logged, 0 means "
-                  "no check");
+                  "A warning log will be print if the scan iteration count of Multi-Get operation "
+                  "is larger than this config, 0 means never print");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_multi_get_max_iteration_size,
                   30 << 20,
@@ -318,27 +501,28 @@ DSN_DEFINE_uint64(pegasus.server,
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_compaction_readahead_size,
                   2 * 1024 * 1024,
-                  "rocksdb options.compaction_readahead_size");
+                  "Corresponding to RocksDB's options.compaction_readahead_size");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_writable_file_max_buffer_size,
                   1024 * 1024,
-                  "rocksdb options.writable_file_max_buffer_size");
+                  "Corresponding to RocksDB's options.writable_file_max_buffer_size");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_write_buffer_size,
                   64 * 1024 * 1024,
-                  "rocksdb options.write_buffer_size");
+                  "Corresponding to RocksDB's options.write_buffer_size");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_target_file_size_base,
                   64 * 1024 * 1024,
-                  "rocksdb options.target_file_size_base");
+                  "Corresponding to RocksDB's options.target_file_size_base");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_max_bytes_for_level_base,
                   10 * 64 * 1024 * 1024,
-                  "rocksdb options.max_bytes_for_level_base");
-DSN_DEFINE_uint64(pegasus.server,
-                  rocksdb_block_cache_capacity,
-                  10 * 1024 * 1024 * 1024ULL,
-                  "block cache capacity for one pegasus server, shared by all rocksdb instances");
+                  "Corresponding to RocksDB's options.max_bytes_for_level_base");
+DSN_DEFINE_uint64(
+    pegasus.server,
+    rocksdb_block_cache_capacity,
+    10 * 1024 * 1024 * 1024ULL,
+    "The Block Cache capacity shared by all RocksDB instances in the process, in bytes");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_total_size_across_write_buffer,
                   0,
@@ -360,7 +544,7 @@ DSN_DEFINE_uint64(pegasus.server,
 DSN_DEFINE_double(pegasus.server,
                   rocksdb_max_bytes_for_level_multiplier,
                   10,
-                  "rocksdb options.rocksdb_max_bytes_for_level_multiplier");
+                  "Corresponding to RocksDB's options.rocksdb_max_bytes_for_level_multiplier");
 DSN_DEFINE_double(pegasus.server,
                   rocksdb_bloom_filter_bits_per_key,
                   10,
@@ -368,8 +552,9 @@ DSN_DEFINE_double(pegasus.server,
 DSN_DEFINE_string(pegasus.server,
                   rocksdb_compression_type,
                   "lz4",
-                  "rocksdb options.compression. Available config: '[none|snappy|zstd|lz4]' for all "
-                  "level 2 and higher levels, and "
+                  "Corresponding to RocksDB's options.compression. Available config: "
+                  "'[none|snappy|zstd|lz4]' for all "
+                  "level 1 and higher levels, and "
                   "'per_level:[none|snappy|zstd|lz4],[none|snappy|zstd|lz4],...' for each level "
                   "0,1,..., the last compression type will be used for levels not specified in the "
                   "list.");
@@ -385,6 +570,13 @@ DSN_DEFINE_validator(rocksdb_filter_type, [](const char *value) -> bool {
     return dsn::utils::equals(value, "common") || dsn::utils::equals(value, "prefix");
 });
 
+namespace dsn {
+namespace replication {
+class replica;
+} // namespace replication
+} // namespace dsn
+namespace pegasus {
+namespace server {
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
         {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
@@ -404,9 +596,40 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _last_durable_decree(0),
       _is_checkpointing(false),
       _manual_compact_svc(this),
-      _partition_version(0)
+      _partition_version(0),
+      METRIC_VAR_INIT_replica(get_requests),
+      METRIC_VAR_INIT_replica(multi_get_requests),
+      METRIC_VAR_INIT_replica(batch_get_requests),
+      METRIC_VAR_INIT_replica(scan_requests),
+      METRIC_VAR_INIT_replica(get_latency_ns),
+      METRIC_VAR_INIT_replica(multi_get_latency_ns),
+      METRIC_VAR_INIT_replica(batch_get_latency_ns),
+      METRIC_VAR_INIT_replica(scan_latency_ns),
+      METRIC_VAR_INIT_replica(read_expired_values),
+      METRIC_VAR_INIT_replica(read_filtered_values),
+      METRIC_VAR_INIT_replica(abnormal_read_requests),
+      METRIC_VAR_INIT_replica(throttling_rejected_read_requests),
+      METRIC_VAR_INIT_replica(rdb_total_sst_files),
+      METRIC_VAR_INIT_replica(rdb_total_sst_size_mb),
+      METRIC_VAR_INIT_replica(rdb_estimated_keys),
+      METRIC_VAR_INIT_replica(rdb_index_and_filter_blocks_mem_usage_bytes),
+      METRIC_VAR_INIT_replica(rdb_memtable_mem_usage_bytes),
+      METRIC_VAR_INIT_replica(rdb_block_cache_hit_count),
+      METRIC_VAR_INIT_replica(rdb_block_cache_total_count),
+      METRIC_VAR_INIT_replica(rdb_memtable_hit_count),
+      METRIC_VAR_INIT_replica(rdb_memtable_total_count),
+      METRIC_VAR_INIT_replica(rdb_l0_hit_count),
+      METRIC_VAR_INIT_replica(rdb_l1_hit_count),
+      METRIC_VAR_INIT_replica(rdb_l2_and_up_hit_count),
+      METRIC_VAR_INIT_replica(rdb_write_amplification),
+      METRIC_VAR_INIT_replica(rdb_read_amplification),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_seek_negatives),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_seek_total),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_negatives),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_positives),
+      METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_true_positives)
 {
-    _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
+    _primary_address = dsn_primary_host_port().to_string();
     _gpid = get_gpid();
 
     _read_hotkey_collector =
@@ -610,190 +833,14 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     std::string str_gpid = _gpid.to_string();
     char name[256];
 
-    // register the perf counters
-    snprintf(name, 255, "get_qps@%s", str_gpid.c_str());
-    _pfc_get_qps.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of GET request");
-
-    snprintf(name, 255, "multi_get_qps@%s", str_gpid.c_str());
-    _pfc_multi_get_qps.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of MULTI_GET request");
-
-    snprintf(name, 255, "batch_get_qps@%s", str_gpid.c_str());
-    _pfc_batch_get_qps.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of BATCH_GET request");
-
-    snprintf(name, 255, "scan_qps@%s", str_gpid.c_str());
-    _pfc_scan_qps.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of SCAN request");
-
-    snprintf(name, 255, "get_latency@%s", str_gpid.c_str());
-    _pfc_get_latency.init_app_counter("app.pegasus",
-                                      name,
-                                      COUNTER_TYPE_NUMBER_PERCENTILES,
-                                      "statistic the latency of GET request");
-
-    snprintf(name, 255, "multi_get_latency@%s", str_gpid.c_str());
-    _pfc_multi_get_latency.init_app_counter("app.pegasus",
-                                            name,
-                                            COUNTER_TYPE_NUMBER_PERCENTILES,
-                                            "statistic the latency of MULTI_GET request");
-
-    snprintf(name, 255, "batch_get_latency@%s", str_gpid.c_str());
-    _pfc_batch_get_latency.init_app_counter("app.pegasus",
-                                            name,
-                                            COUNTER_TYPE_NUMBER_PERCENTILES,
-                                            "statistic the latency of BATCH_GET request");
-
-    snprintf(name, 255, "scan_latency@%s", str_gpid.c_str());
-    _pfc_scan_latency.init_app_counter("app.pegasus",
-                                       name,
-                                       COUNTER_TYPE_NUMBER_PERCENTILES,
-                                       "statistic the latency of SCAN request");
-
-    snprintf(name, 255, "recent.expire.count@%s", str_gpid.c_str());
-    _pfc_recent_expire_count.init_app_counter("app.pegasus",
-                                              name,
-                                              COUNTER_TYPE_VOLATILE_NUMBER,
-                                              "statistic the recent expired value read count");
-
-    snprintf(name, 255, "recent.filter.count@%s", str_gpid.c_str());
-    _pfc_recent_filter_count.init_app_counter("app.pegasus",
-                                              name,
-                                              COUNTER_TYPE_VOLATILE_NUMBER,
-                                              "statistic the recent filtered value read count");
-
-    snprintf(name, 255, "recent.abnormal.count@%s", str_gpid.c_str());
-    _pfc_recent_abnormal_count.init_app_counter("app.pegasus",
-                                                name,
-                                                COUNTER_TYPE_VOLATILE_NUMBER,
-                                                "statistic the recent abnormal read count");
-
-    snprintf(name, 255, "disk.storage.sst.count@%s", str_gpid.c_str());
-    _pfc_rdb_sst_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the count of sstable files");
-
-    snprintf(name, 255, "disk.storage.sst(MB)@%s", str_gpid.c_str());
-    _pfc_rdb_sst_size.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the size of sstable files");
-
-    snprintf(name, 255, "rdb.block_cache.hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_block_cache_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the hit count of rocksdb block cache");
-
-    snprintf(name, 255, "rdb.block_cache.total_count@%s", str_gpid.c_str());
-    _pfc_rdb_block_cache_total_count.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistic the total count of rocksdb block cache");
-
-    snprintf(name, 255, "rdb.write_amplification@%s", str_gpid.c_str());
-    _pfc_rdb_write_amplification.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the write amplification of rocksdb");
-
-    snprintf(name, 255, "rdb.read_amplification@%s", str_gpid.c_str());
-    _pfc_rdb_read_amplification.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read amplification of rocksdb");
-
-    snprintf(name, 255, "rdb.read_memtable_hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_memtable_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read memtable hit count");
-
-    snprintf(name, 255, "rdb.read_memtable_total_count@%s", str_gpid.c_str());
-    _pfc_rdb_memtable_total_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read memtable total count");
-
-    snprintf(name, 255, "rdb.read_l0_hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_l0_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l0 hit count");
-
-    snprintf(name, 255, "rdb.read_l1_hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_l1_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l1 hit count");
-
-    snprintf(name, 255, "rdb.read_l2andup_hit_count@%s", str_gpid.c_str());
-    _pfc_rdb_l2andup_hit_count.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l2andup hit count");
-
     // These counters are singletons on this server shared by all replicas, so we initialize
     // them only once.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _pfc_rdb_block_cache_mem_usage.init_global_counter(
-            "replica",
-            "app.pegasus",
-            "rdb.block_cache.memory_usage",
-            COUNTER_TYPE_NUMBER,
-            "statistic the memory usage of rocksdb block cache");
-
-        _pfc_rdb_write_limiter_rate_bytes.init_global_counter(
-            "replica",
-            "app.pegasus",
-            "rdb.write_limiter_rate_bytes",
-            COUNTER_TYPE_NUMBER,
-            "statistic the through bytes of rocksdb write rate limiter");
+        METRIC_VAR_ASSIGN_server(rdb_block_cache_mem_usage_bytes);
+        METRIC_VAR_ASSIGN_server(rdb_write_rate_limiter_through_bytes_per_sec);
     });
-
-    snprintf(name, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid.c_str());
-    _pfc_rdb_index_and_filter_blocks_mem_usage.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistic the memory usage of rocksdb index and filter blocks");
-
-    snprintf(name, 255, "rdb.memtable.memory_usage@%s", str_gpid.c_str());
-    _pfc_rdb_memtable_mem_usage.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistic the memory usage of rocksdb memtable");
-
-    snprintf(name, 255, "rdb.estimate_num_keys@%s", str_gpid.c_str());
-    _pfc_rdb_estimate_num_keys.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistics the estimated number of keys inside the rocksdb");
-
-    snprintf(name, 255, "rdb.bf_seek_negatives@%s", str_gpid.c_str());
-    _pfc_rdb_bf_seek_negatives.init_app_counter("app.pegasus",
-                                                name,
-                                                COUNTER_TYPE_NUMBER,
-                                                "statistics the number of times bloom filter was "
-                                                "checked before creating iterator on a file and "
-                                                "useful in avoiding iterator creation (and thus "
-                                                "likely IOPs)");
-
-    snprintf(name, 255, "rdb.bf_seek_total@%s", str_gpid.c_str());
-    _pfc_rdb_bf_seek_total.init_app_counter("app.pegasus",
-                                            name,
-                                            COUNTER_TYPE_NUMBER,
-                                            "statistics the number of times bloom filter was "
-                                            "checked before creating iterator on a file");
-
-    snprintf(name, 255, "rdb.bf_point_positive_true@%s", str_gpid.c_str());
-    _pfc_rdb_bf_point_positive_true.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistics the number of times bloom filter has avoided file reads, i.e., negatives");
-
-    snprintf(name, 255, "rdb.bf_point_positive_total@%s", str_gpid.c_str());
-    _pfc_rdb_bf_point_positive_total.init_app_counter(
-        "app.pegasus",
-        name,
-        COUNTER_TYPE_NUMBER,
-        "statistics the number of times bloom FullFilter has not avoided the reads");
-
-    snprintf(name, 255, "rdb.bf_point_negatives@%s", str_gpid.c_str());
-    _pfc_rdb_bf_point_negatives.init_app_counter("app.pegasus",
-                                                 name,
-                                                 COUNTER_TYPE_NUMBER,
-                                                 "statistics the number of times bloom FullFilter "
-                                                 "has not avoided the reads and data actually "
-                                                 "exist");
-
-    auto counter_str = fmt::format("recent.read.throttling.reject.count@{}", str_gpid.c_str());
-    _counter_recent_read_throttling_reject_count.init_app_counter(
-        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 }
+
 } // namespace server
 } // namespace pegasus

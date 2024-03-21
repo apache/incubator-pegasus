@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "aio/aio_task.h"
+#include "fmt/core.h"
 #include "fmt/format.h"
 #include "runtime/global_config.h"
 #include "runtime/rpc/rpc_message.h"
@@ -48,10 +49,10 @@
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
 
+DSN_DEFINE_bool(task..default, is_trace, false, "whether to trace tasks by default");
+
 namespace dsn {
 namespace tools {
-
-DSN_DEFINE_bool(task..default, is_trace, false, "whether to trace tasks by default");
 
 static void tracer_on_task_create(task *caller, task *callee)
 {
@@ -302,8 +303,7 @@ void tracer::install(service_spec &spec)
         if (i == TASK_CODE_INVALID)
             continue;
 
-        std::string section_name =
-            std::string("task.") + std::string(dsn::task_code(i).to_string());
+        std::string section_name = fmt::format("task.{}", dsn::task_code(i));
         task_spec *spec = task_spec::get(i);
         CHECK_NOTNULL(spec, "");
 

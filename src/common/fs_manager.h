@@ -28,11 +28,15 @@
 
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter_wrapper.h"
+#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
-#include "utils/string_view.h"
+#include "absl/strings/string_view.h"
+#include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/zlocks.h"
+
+DSN_DECLARE_int32(disk_min_available_space_ratio);
 
 namespace dsn {
 class gpid;
@@ -40,9 +44,28 @@ class gpid;
 namespace replication {
 class disk_info;
 
-DSN_DECLARE_int32(disk_min_available_space_ratio);
-
 error_code disk_status_to_error_code(disk_status::type ds);
+
+class disk_capacity_metrics
+{
+public:
+    disk_capacity_metrics(const std::string &tag, const std::string &data_dir);
+    ~disk_capacity_metrics() = default;
+
+    const metric_entity_ptr &disk_metric_entity() const;
+
+    METRIC_DEFINE_SET(disk_capacity_total_mb, int64_t)
+    METRIC_DEFINE_SET(disk_capacity_avail_mb, int64_t)
+
+private:
+    const std::string _tag;
+    const std::string _data_dir;
+    const metric_entity_ptr _disk_metric_entity;
+    METRIC_VAR_DECLARE_gauge_int64(disk_capacity_total_mb);
+    METRIC_VAR_DECLARE_gauge_int64(disk_capacity_avail_mb);
+
+    DISALLOW_COPY_AND_ASSIGN(disk_capacity_metrics);
+};
 
 struct dir_node
 {
@@ -57,6 +80,9 @@ public:
     std::map<app_id, std::set<gpid>> holding_primary_replicas;
     std::map<app_id, std::set<gpid>> holding_secondary_replicas;
 
+private:
+    disk_capacity_metrics disk_capacity;
+
 public:
     dir_node(const std::string &tag_,
              const std::string &dir_,
@@ -69,7 +95,8 @@ public:
           disk_capacity_mb(disk_capacity_mb_),
           disk_available_mb(disk_available_mb_),
           disk_available_ratio(disk_available_ratio_),
-          status(status_)
+          status(status_),
+          disk_capacity(tag_, dir_)
     {
     }
     // All functions are not thread-safe. However, they are only used in fs_manager
@@ -78,16 +105,18 @@ public:
     uint64_t replicas_count() const;
     // Construct the replica dir for the given 'app_type' and 'pid'.
     // NOTE: Just construct the string, the directory will not be created.
-    std::string replica_dir(dsn::string_view app_type, const dsn::gpid &pid) const;
+    std::string replica_dir(absl::string_view app_type, const dsn::gpid &pid) const;
     bool has(const dsn::gpid &pid) const;
     uint64_t remove(const dsn::gpid &pid);
     void update_disk_stat();
 };
 
+// Track the data directories and replicas.
 class fs_manager
 {
 public:
-    fs_manager();
+    fs_manager() = default;
+    ~fs_manager() = default;
 
     // Should be called before open/load any replicas.
     // NOTE: 'data_dirs' and 'data_dir_tags' must have the same size and in the same order.
@@ -104,18 +133,18 @@ public:
     // dir_nodes.
     // NOTE: only used in test.
     void specify_dir_for_new_replica_for_test(dir_node *specified_dn,
-                                              dsn::string_view app_type,
+                                              absl::string_view app_type,
                                               const dsn::gpid &pid) const;
     void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
     // Find the replica instance directory.
-    dir_node *find_replica_dir(dsn::string_view app_type, gpid pid);
+    dir_node *find_replica_dir(absl::string_view app_type, gpid pid);
     // Similar to the above, but it will create a new directory if not found.
-    dir_node *create_replica_dir_if_necessary(dsn::string_view app_type, gpid pid);
+    dir_node *create_replica_dir_if_necessary(absl::string_view app_type, gpid pid);
     // Similar to the above, and will create a directory for the child on the same dir_node
     // of parent.
     // During partition split, we should guarantee child replica and parent replica share the
     // same data dir.
-    dir_node *create_child_replica_dir(dsn::string_view app_type,
+    dir_node *create_child_replica_dir(absl::string_view app_type,
                                        gpid child_pid,
                                        const std::string &parent_dir);
     void remove_replica(const dsn::gpid &pid);
@@ -135,36 +164,21 @@ public:
     std::vector<disk_info> get_disk_infos(int app_id) const;
 
 private:
-    void reset_disk_stat()
-    {
-        _total_capacity_mb = 0;
-        _total_available_mb = 0;
-        _total_available_ratio = 0;
-        _min_available_ratio = 100;
-        _max_available_ratio = 0;
-    }
-
     dir_node *get_dir_node(const std::string &subdir) const;
 
-    // when visit the tag/storage of the _dir_nodes map, there's no need to protect by the lock.
-    // but when visit the holding_replicas, you must take care.
+    // TODO(wangdan): _dir_nodes should be protected by lock since add_new_disk are supported:
+    // it might be updated arbitrarily at any time.
+    //
+    // Especially when visiting the holding_replicas, you must take care.
     mutable zrwlock_nr _lock; // [ lock
-    int64_t _total_capacity_mb = 0;
-    int64_t _total_available_mb = 0;
-    int _total_available_ratio = 0;
-    int _min_available_ratio = 100;
-    int _max_available_ratio = 0;
+
+    std::atomic<int64_t> _total_capacity_mb{0};
+    std::atomic<int64_t> _total_available_mb{0};
 
     // Once dir_node has been added to '_dir_nodes', it will not be removed, it will be marked
     // as non-NORMAL status if it is not available.
     std::vector<std::shared_ptr<dir_node>> _dir_nodes;
     // ] end of lock
-
-    perf_counter_wrapper _counter_total_capacity_mb;
-    perf_counter_wrapper _counter_total_available_mb;
-    perf_counter_wrapper _counter_total_available_ratio;
-    perf_counter_wrapper _counter_min_available_ratio;
-    perf_counter_wrapper _counter_max_available_ratio;
 
     friend class replica_test;
     friend class replica_stub;

@@ -21,6 +21,7 @@
 #include <thread>
 #include <vector>
 
+#include "common/replication_common.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
 #include "utils/error_code.h"
@@ -47,7 +48,8 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
 
-    dsn::service_app::register_factory<gtest_app>("replica");
+    dsn::service_app::register_factory<gtest_app>(
+        dsn::replication::replication_options::kReplicaAppType.c_str());
 
     dsn_run_config("config-test.ini", false);
     while (g_test_count == 0) {

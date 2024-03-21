@@ -17,7 +17,6 @@
 
 #include "math.h"
 
-#include <math.h>
 #include <algorithm>
 #include <numeric>
 

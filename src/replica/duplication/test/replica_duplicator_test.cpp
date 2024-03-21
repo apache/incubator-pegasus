@@ -15,10 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -29,6 +25,7 @@
 #include "common/replication_other_types.h"
 #include "duplication_test_base.h"
 #include "duplication_types.h"
+#include "gtest/gtest.h"
 #include "metadata_types.h"
 #include "replica/duplication/duplication_pipeline.h"
 #include "replica/duplication/mutation_duplicator.h"
@@ -139,7 +136,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_duplicator_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_duplicator_test, ::testing::Values(false, true));
 
 TEST_P(replica_duplicator_test, new_duplicator) { test_new_duplicator(); }
 

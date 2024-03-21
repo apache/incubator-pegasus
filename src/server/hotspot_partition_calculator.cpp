@@ -22,23 +22,17 @@
 #include <algorithm>
 #include <cmath>
 
+#include "absl/strings/string_view.h"
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "perf_counter/perf_counter.h"
-#include "runtime/rpc/rpc_address.h"
 #include "server/hotspot_partition_stat.h"
 #include "shell/command_executor.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_view.h"
-
-struct row_data;
-
-namespace pegasus {
-namespace server {
 
 DSN_DEFINE_int64(pegasus.collector,
                  max_hotspot_store_size,
@@ -68,6 +62,11 @@ DSN_DEFINE_uint32(pegasus.collector,
                   "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
 DSN_TAG_VARIABLE(occurrence_threshold, FT_MUTABLE);
 
+struct row_data;
+
+namespace pegasus {
+namespace server {
+
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
     while (_partitions_stat_histories.size() >= FLAGS_max_hotspot_store_size) {
@@ -84,7 +83,7 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
 {
     for (int data_type = 0; data_type <= 1; data_type++) {
         for (int i = 0; i < partition_count; i++) {
-            string partition_desc =
+            std::string partition_desc =
                 _app_name + '.' +
                 (data_type == partition_qps_type::WRITE_HOTSPOT_DATA ? "write." : "read.") +
                 std::to_string(i);
@@ -95,7 +94,7 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
                 "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
         }
 
-        string total_desc =
+        std::string total_desc =
             _app_name + '.' +
             (data_type == partition_qps_type::WRITE_HOTSPOT_DATA ? "write.total" : "read.total");
         std::string counter_name = fmt::format("app.stat.hotspots.{}", total_desc);
@@ -212,33 +211,33 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
     const dsn::replication::hotkey_type::type hotkey_type,
     const dsn::replication::detect_action::type action)
 {
-    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](absl::string_view) {});
 
     int app_id = -1;
     int partition_count = -1;
     std::vector<dsn::partition_configuration> partitions;
     _shell_context->ddl_client->list_app(app_name, app_id, partition_count, partitions);
 
-    auto target_address = partitions[partition_index].primary;
     dsn::replication::detect_hotkey_response resp;
     dsn::replication::detect_hotkey_request req;
     req.type = hotkey_type;
     req.action = action;
     req.pid = dsn::gpid(app_id, partition_index);
-    auto error = _shell_context->ddl_client->detect_hotkey(target_address, req, resp);
+    auto error = _shell_context->ddl_client->detect_hotkey(
+        partitions[partition_index].hp_primary, req, resp);
 
-    LOG_INFO("{} {} hotkey detection in {}.{}, server address: {}",
+    LOG_INFO("{} {} hotkey detection in {}.{}, server host_port: {}",
              (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
              (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
              app_name,
              partition_index,
-             target_address.to_string());
+             partitions[partition_index].hp_primary);
 
     if (error != dsn::ERR_OK) {
         LOG_ERROR("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
                   app_name,
                   partition_index,
-                  error.to_string());
+                  error);
     }
 
     if (resp.err != dsn::ERR_OK) {

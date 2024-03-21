@@ -27,44 +27,107 @@
 #include "runtime/rpc/rpc_address.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <ifaddrs.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <string>
 
+#include "absl/strings/string_view.h"
 #include "runtime/rpc/group_address.h"
+#include "utils/error_code.h"
 #include "utils/fixed_size_buffer_pool.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
-#include "utils/string_view.h"
 #include "utils/strings.h"
 
 namespace dsn {
+/*static*/
+error_s rpc_address::GetAddrInfo(std::string_view hostname, const addrinfo &hints, AddrInfo *info)
+{
+    addrinfo *res = nullptr;
+    const int rc = ::getaddrinfo(hostname.data(), nullptr, &hints, &res);
+    const int err = errno; // preserving the errno from the getaddrinfo() call
+    AddrInfo result(res, ::freeaddrinfo);
+    if (dsn_unlikely(rc != 0)) {
+        if (rc == EAI_SYSTEM) {
+            const auto &err_msg = utils::safe_strerror(err);
+            LOG_ERROR("getaddrinfo failed, name = {}, err = {}", hostname, err_msg);
+            return error_s::make(ERR_NETWORK_FAILURE, err_msg);
+        }
+        LOG_ERROR("getaddrinfo failed, name = {}, err = {}", hostname, gai_strerror(rc));
+        return error_s::make(ERR_NETWORK_FAILURE, gai_strerror(rc));
+    }
+
+    if (info != nullptr) {
+        info->swap(result);
+    }
+    return error_s::ok();
+}
+
+bool extract_host_port(const std::string_view &host_port, std::string_view &host, uint16_t &port)
+{
+    // Check the port field is present.
+    const auto pos = host_port.find_last_of(':');
+    if (dsn_unlikely(pos == std::string::npos)) {
+        LOG_ERROR("bad format, should be in the form of <ip|host>:port, but got '{}'", host_port);
+        return false;
+    }
+
+    // Check port.
+    const auto port_str = host_port.substr(pos + 1);
+    if (dsn_unlikely(!dsn::buf2uint16(port_str, port))) {
+        LOG_ERROR("bad port, should be an uint16_t integer, but got '{}'", port_str);
+        return false;
+    }
+
+    host = host_port.substr(0, pos);
+    return true;
+}
 
 const rpc_address rpc_address::s_invalid_address;
 
-/*static*/
-uint32_t rpc_address::ipv4_from_host(const char *name)
+rpc_address::rpc_address(uint32_t ip, uint16_t port)
 {
-    sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
+    _addr.v4.type = HOST_TYPE_IPV4;
+    _addr.v4.ip = ip;
+    _addr.v4.port = port;
+    static_assert(sizeof(rpc_address) == sizeof(uint64_t),
+                  "make sure rpc_address does not add new payload to "
+                  "rpc_address to keep it sizeof(uint64_t)");
+}
 
-    addr.sin_family = AF_INET;
-    if ((addr.sin_addr.s_addr = inet_addr(name)) == (unsigned int)(-1)) {
-        // TODO(yingchun): use getaddrinfo instead
-        hostent *hp = ::gethostbyname(name);
-        if (dsn_unlikely(hp == nullptr)) {
-            LOG_ERROR("gethostbyname failed, name = {}, err = {}", name, hstrerror(h_errno));
-            return 0;
-        }
+rpc_address::rpc_address(const struct sockaddr_in &addr)
+{
+    _addr.v4.type = HOST_TYPE_IPV4;
+    _addr.v4.ip = static_cast<uint32_t>(ntohl(addr.sin_addr.s_addr));
+    _addr.v4.port = ntohs(addr.sin_port);
+}
 
-        memcpy((void *)&(addr.sin_addr.s_addr), (const void *)hp->h_addr, (size_t)hp->h_length);
-    }
+rpc_address::rpc_address(const rpc_address &another) { *this = another; }
 
+rpc_address::~rpc_address() { set_invalid(); }
+
+/*static*/
+error_s rpc_address::ipv4_from_host(std::string_view hostname, uint32_t *ip)
+{
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    AddrInfo result;
+    RETURN_NOT_OK(GetAddrInfo(hostname, hints, &result));
+    CHECK_EQ(result.get()->ai_family, AF_INET);
+    auto *ipv4 = reinterpret_cast<struct sockaddr_in *>(result.get()->ai_addr);
     // converts from network byte order to host byte order
-    return (uint32_t)ntohl(addr.sin_addr.s_addr);
+    if (ip != nullptr) {
+        *ip = ntohl(ipv4->sin_addr.s_addr);
+    }
+    return error_s::ok();
 }
 
 /*static*/
@@ -80,7 +143,7 @@ bool rpc_address::is_site_local_address(uint32_t ip_net)
 /*static*/
 bool rpc_address::is_docker_netcard(const char *netcard_interface, uint32_t ip_net)
 {
-    if (string_view(netcard_interface).find("docker") != string_view::npos) {
+    if (absl::string_view(netcard_interface).find("docker") != absl::string_view::npos) {
         return true;
     }
     uint32_t iphost = ntohl(ip_net);
@@ -90,50 +153,50 @@ bool rpc_address::is_docker_netcard(const char *netcard_interface, uint32_t ip_n
 /*static*/
 uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
 {
-    uint32_t ret = 0;
-
+    // Get the network interface list.
     struct ifaddrs *ifa = nullptr;
-    if (getifaddrs(&ifa) == 0) {
-        struct ifaddrs *i = ifa;
-        while (i != nullptr) {
-            if (i->ifa_name != nullptr && i->ifa_addr != nullptr &&
-                i->ifa_addr->sa_family == AF_INET) {
-                uint32_t ip_val = ((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr;
-                if (utils::equals(i->ifa_name, network_interface) ||
-                    (network_interface[0] == '\0' && !is_docker_netcard(i->ifa_name, ip_val) &&
-                     is_site_local_address(ip_val))) {
-                    ret = (uint32_t)ntohl(ip_val);
-                    break;
-                }
-                LOG_DEBUG("skip interface({}), address({})",
-                          i->ifa_name,
-                          rpc_address(ip_val, 0).ipv4_str());
-            }
-            i = i->ifa_next;
+    if (::getifaddrs(&ifa) != 0) {
+        LOG_ERROR("{}: fail to getifaddrs", utils::safe_strerror(errno));
+        return 0;
+    }
+
+    uint32_t ret = 0;
+    struct ifaddrs *i = ifa;
+    for (; i != nullptr; i = i->ifa_next) {
+        // Skip non-IPv4 network interface.
+        if (i->ifa_name == nullptr || i->ifa_addr == nullptr || i->ifa_addr->sa_family != AF_INET) {
+            continue;
         }
 
-        if (i == nullptr) {
-            LOG_ERROR("get local ip from network interfaces failed, network_interface = {}",
-                      network_interface);
-        } else {
-            LOG_INFO("get ip address from network interface({}), addr({}), input interface({})",
-                     i->ifa_name,
-                     rpc_address(ret, 0).ipv4_str(),
-                     network_interface);
+        uint32_t ip_val = ((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr;
+        // Get the specified network interface, or the first internal network interface if not
+        // specified.
+        if (utils::equals(i->ifa_name, network_interface) ||
+            (utils::is_empty(network_interface) && !is_docker_netcard(i->ifa_name, ip_val) &&
+             is_site_local_address(ip_val))) {
+            ret = static_cast<uint32_t>(ntohl(ip_val));
+            break;
         }
 
-        if (ifa != nullptr) {
-            // remember to free it
-            freeifaddrs(ifa);
-        }
+        LOG_DEBUG(
+            "skip interface({}), address({})", i->ifa_name, rpc_address(ip_val, 0).ipv4_str());
+    }
+
+    if (i == nullptr) {
+        LOG_ERROR("get ip address from network interface({}) failed", network_interface);
+    } else {
+        LOG_INFO("get ip address from network interface({}), addr({}), input interface({})",
+                 i->ifa_name,
+                 rpc_address(ret, 0).ipv4_str(),
+                 network_interface);
+    }
+
+    if (ifa != nullptr) {
+        ::freeifaddrs(ifa);
     }
 
     return ret;
 }
-
-rpc_address::~rpc_address() { set_invalid(); }
-
-rpc_address::rpc_address(const rpc_address &another) { *this = another; }
 
 rpc_address &rpc_address::operator=(const rpc_address &another)
 {
@@ -157,7 +220,7 @@ void rpc_address::assign_group(const char *name)
 {
     set_invalid();
     _addr.group.type = HOST_TYPE_GROUP;
-    rpc_group_address *addr = new rpc_group_address(name);
+    auto *addr = new rpc_group_address(name);
     // take the lifetime of rpc_uri_address, release_ref when change value or call destructor
     addr->add_ref();
     _addr.group.group = (uint64_t)addr;
@@ -185,51 +248,86 @@ const char *rpc_address::ipv4_str() const
 
     if (_addr.v4.type == HOST_TYPE_IPV4) {
         net_addr.s_addr = htonl(ip());
-        inet_ntop(AF_INET, &net_addr, p, sz);
+        ::inet_ntop(AF_INET, &net_addr, p, sz);
     } else {
         p = (char *)"invalid_ipv4";
     }
     return p;
 }
 
-bool rpc_address::from_string_ipv4(const char *s)
+rpc_address rpc_address::from_ip_port(std::string_view ip_port)
 {
-    set_invalid();
-    std::string ip_port(s);
-    auto pos = ip_port.find_last_of(':');
-    if (pos == std::string::npos) {
-        return false;
+    std::string_view ip;
+    uint16_t port;
+    if (dsn_unlikely(!extract_host_port(ip_port, ip, port))) {
+        return {};
     }
-    std::string ip = ip_port.substr(0, pos);
-    std::string port = ip_port.substr(pos + 1);
-    // check port
-    unsigned int port_num;
-    if (!internal::buf2unsigned(port, port_num) || port_num > UINT16_MAX) {
-        return false;
+
+    // Use std::string(ip) to add a null terminator.
+    return from_ip_port(std::string(ip), port);
+}
+
+rpc_address rpc_address::from_ip_port(std::string_view ip, uint16_t port)
+{
+    // Check is IPv4 integer.
+    uint32_t ip_num;
+    int ret = ::inet_pton(AF_INET, ip.data(), &ip_num);
+    switch (ret) {
+    case 1:
+        // ::inet_pton() returns 1 on success (network address was successfully converted)
+        return {ntohl(ip_num), port};
+    case -1:
+        LOG_ERROR(
+            "{}: fail to convert '{}:{}' to rpc_address", utils::safe_strerror(errno), ip, port);
+        break;
+    default:
+        LOG_ERROR("'{}' does not contain a character string representing a valid network address",
+                  ip);
+        break;
     }
-    // check localhost & IP
-    uint32_t ip_addr;
-    if (ip == "localhost" || inet_pton(AF_INET, ip.c_str(), &ip_addr)) {
-        assign_ipv4(ip.c_str(), (uint16_t)port_num);
-        return true;
+    return {};
+}
+
+rpc_address rpc_address::from_host_port(std::string_view host_port)
+{
+    std::string_view host;
+    uint16_t port;
+    if (dsn_unlikely(!extract_host_port(host_port, host, port))) {
+        return {};
     }
-    return false;
+
+    // Use std::string(host) to add a null terminator.
+    return from_host_port(std::string(host), port);
+}
+
+rpc_address rpc_address::from_host_port(std::string_view hostname, uint16_t port)
+{
+    uint32_t ip = 0;
+    if (!ipv4_from_host(hostname, &ip)) {
+        return {};
+    }
+
+    rpc_address addr;
+    addr._addr.v4.type = HOST_TYPE_IPV4;
+    addr._addr.v4.ip = ip;
+    addr._addr.v4.port = port;
+    return addr;
 }
 
 const char *rpc_address::to_string() const
 {
-    char *p = bf.next();
-    auto sz = bf.get_chunk_size();
-    struct in_addr net_addr;
-    int ip_len;
-
+    char *p = nullptr;
     switch (_addr.v4.type) {
-    case HOST_TYPE_IPV4:
+    case HOST_TYPE_IPV4: {
+        const auto sz = bf.get_chunk_size();
+        struct in_addr net_addr;
         net_addr.s_addr = htonl(ip());
-        inet_ntop(AF_INET, &net_addr, p, sz);
-        ip_len = strlen(p);
+        p = bf.next();
+        ::inet_ntop(AF_INET, &net_addr, p, sz);
+        const auto ip_len = strlen(p);
         snprintf_p(p + ip_len, sz - ip_len, ":%hu", port());
         break;
+    }
     case HOST_TYPE_GROUP:
         p = (char *)group_address()->name();
         break;
@@ -239,14 +337,6 @@ const char *rpc_address::to_string() const
     }
 
     return (const char *)p;
-}
-
-rpc_address::rpc_address(const struct sockaddr_in &addr)
-{
-    set_invalid();
-    _addr.v4.type = HOST_TYPE_IPV4;
-    _addr.v4.ip = static_cast<uint32_t>(ntohl(addr.sin_addr.s_addr));
-    _addr.v4.port = ntohs(addr.sin_port);
 }
 
 } // namespace dsn

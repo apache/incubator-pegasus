@@ -16,9 +16,6 @@
 // under the License.
 
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <functional>
 #include <iostream>
@@ -34,6 +31,7 @@
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
@@ -43,7 +41,7 @@
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "misc/misc.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/defer.h"
@@ -52,14 +50,14 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
+DSN_DECLARE_int32(max_allowed_replica_count);
+DSN_DECLARE_int32(min_allowed_replica_count);
+DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
+
 namespace dsn {
 class blob;
 
 namespace replication {
-
-DSN_DECLARE_int32(max_allowed_replica_count);
-DSN_DECLARE_int32(min_allowed_replica_count);
-DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
 class meta_app_operation_test : public meta_test_base
 {
@@ -509,7 +507,7 @@ TEST_F(meta_app_operation_test, create_app)
 
     // keep the number of all nodes greater than that of alive nodes
     const int total_node_count = 10;
-    std::vector<rpc_address> nodes = ensure_enough_alive_nodes(total_node_count);
+    auto nodes = ensure_enough_alive_nodes(total_node_count);
 
     // the meta function level will become freezed once
     // alive_nodes * 100 < total_nodes * _node_live_percentage_threshold_for_update

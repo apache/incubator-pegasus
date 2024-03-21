@@ -123,7 +123,6 @@ cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_pressureclient ${pack}/bin/
 
 mkdir -p ${pack}/lib
 copy_file ${BUILD_LATEST_DIR}/output/lib/*.so* ${pack}/lib/
-copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/lib/
 
 if [ "$use_jemalloc" == "on" ]; then
     copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/lib/
@@ -133,18 +132,16 @@ else
 fi
 
 copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/lib/
-copy_file ./thirdparty/output/lib/libhdfs* ${pack}/lib
+copy_file ./thirdparty/output/lib/libhdfs* ${pack}/lib/
+copy_file ./thirdparty/output/lib/librocksdb.so.8 ${pack}/lib/
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/lib/
 
 pack_tools_lib() {
     pack_system_lib "${pack}/lib" shell "$1"
 }
 
-pack_tools_lib snappy
 pack_tools_lib crypto
 pack_tools_lib ssl
-pack_tools_lib zstd
-pack_tools_lib lz4
 
 chmod -x ${pack}/lib/*
 

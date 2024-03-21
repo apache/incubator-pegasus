@@ -26,8 +26,6 @@
 #include "common/replication.codes.h"
 #include "duplication_sync_timer.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
@@ -39,6 +37,7 @@
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/threadpool_code.h"
 
 DSN_DEFINE_uint64(
@@ -72,21 +71,20 @@ void duplication_sync_timer::run()
 
     auto req = std::make_unique<duplication_sync_request>();
     req->node = _stub->primary_address();
+    req->__set_hp_node(_stub->primary_host_port());
 
     // collects confirm points from all primaries on this server
-    uint64_t pending_muts_cnt = 0;
     for (const replica_ptr &r : get_all_primaries()) {
         auto confirmed = r->get_duplication_manager()->get_duplication_confirms_to_update();
         if (!confirmed.empty()) {
             req->confirm_list[r->get_gpid()] = std::move(confirmed);
         }
-        pending_muts_cnt += r->get_duplication_manager()->get_pending_mutations_count();
+        METRIC_SET(*r, dup_pending_mutations);
     }
-    _stub->_counter_dup_pending_mutations_count->set(pending_muts_cnt);
 
     duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC, 3_s);
     rpc_address meta_server_address(_stub->get_meta_server_address());
-    LOG_INFO("duplication_sync to meta({})", meta_server_address.to_string());
+    LOG_INFO("duplication_sync to meta({})", meta_server_address);
 
     zauto_lock l(_lock);
     _rpc_task =
@@ -102,7 +100,7 @@ void duplication_sync_timer::on_duplication_sync_reply(error_code err,
         err = resp.err;
     }
     if (err != ERR_OK) {
-        LOG_ERROR("on_duplication_sync_reply: err({})", err.to_string());
+        LOG_ERROR("on_duplication_sync_reply: err({})", err);
     } else {
         update_duplication_map(resp.dup_map);
     }

@@ -15,16 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stddef.h>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "consensus_types.h"
+#include "gtest/gtest.h"
 #include "replica/log_block.h"
 #include "replica/mutation.h"
 #include "replica_test_base.h"
@@ -40,7 +37,7 @@ class log_block_test : public replica_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, log_block_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, log_block_test, ::testing::Values(false, true));
 
 TEST_P(log_block_test, constructor)
 {
@@ -63,7 +60,7 @@ class log_appender_test : public replica_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, log_appender_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, log_appender_test, ::testing::Values(false, true));
 
 TEST_P(log_appender_test, constructor)
 {

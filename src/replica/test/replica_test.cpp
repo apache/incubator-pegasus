@@ -15,13 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <gmock/gmock-matchers.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <atomic>
 #include <iostream>
 #include <map>
@@ -38,14 +33,16 @@
 #include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
+#include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "metadata_types.h"
-#include "perf_counter/perf_counter.h"
-#include "perf_counter/perf_counter_wrapper.h"
 #include "replica/disk_cleaner.h"
 #include "replica/replica.h"
 #include "replica/replica_http_service.h"
@@ -66,13 +63,15 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/metrics.h"
 #include "utils/string_conv.h"
 #include "utils/test_macros.h"
 
-namespace dsn {
-namespace replication {
 DSN_DECLARE_bool(fd_disabled);
 DSN_DECLARE_string(cold_backup_root);
+
+namespace dsn {
+namespace replication {
 
 class replica_test : public replica_test_base
 {
@@ -88,7 +87,6 @@ public:
     void SetUp() override
     {
         FLAGS_enable_http_server = false;
-        stub->install_perf_counters();
         mock_app_info();
         _mock_replica =
             stub->generate_replica_ptr(_app_info, _pid, partition_status::PS_PRIMARY, 1);
@@ -99,15 +97,7 @@ public:
         FLAGS_cold_backup_root = "test_cluster";
     }
 
-    int get_write_size_exceed_threshold_count()
-    {
-        return stub->_counter_recent_write_size_exceed_threshold_count->get_value();
-    }
-
-    int get_table_level_backup_request_qps()
-    {
-        return _mock_replica->_counter_backup_request_qps->get_integer_value();
-    }
+    int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
 
     bool get_validate_partition_hash() const { return _mock_replica->_validate_partition_hash; }
 
@@ -152,7 +142,7 @@ public:
     {
         _app_info.app_id = 2;
         _app_info.app_name = "replica_test";
-        _app_info.app_type = "replica";
+        _app_info.app_type = replication_options::kReplicaAppType;
         _app_info.is_stateful = true;
         _app_info.max_replica_count = 3;
         _app_info.partition_count = 8;
@@ -237,8 +227,8 @@ public:
         dsn::app_info info;
         replica_app_info replica_info(&info);
 
-        auto path = dsn::utils::filesystem::path_combine(_mock_replica->_dir,
-                                                         dsn::replication::replica::kAppInfo);
+        auto path = dsn::utils::filesystem::path_combine(
+            _mock_replica->_dir, dsn::replication::replica_app_info::kAppInfo);
         std::cout << "the path of .app-info file is " << path << std::endl;
 
         // load new max_replica_count from file
@@ -271,29 +261,34 @@ private:
     const std::string _policy_name;
 };
 
-INSTANTIATE_TEST_CASE_P(, replica_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, replica_test, ::testing::Values(false, true));
 
 TEST_P(replica_test, write_size_limited)
 {
-    int count = 100;
+    const int count = 100;
     struct dsn::message_header header;
     header.body_length = 10000000;
 
     auto write_request = dsn::message_ex::create_request(RPC_TEST);
     auto cleanup = dsn::defer([=]() { delete write_request; });
+    header.context.u.is_forwarded = false;
     write_request->header = &header;
     std::unique_ptr<tools::sim_network_provider> sim_net(
         new tools::sim_network_provider(nullptr, nullptr));
     write_request->io_session = sim_net->create_client_session(rpc_address());
 
+    const auto initial_write_size_exceed_threshold_requests =
+        METRIC_VALUE(*_mock_replica, write_size_exceed_threshold_requests);
+
     for (int i = 0; i < count; i++) {
         stub->on_client_write(_pid, write_request);
     }
 
-    ASSERT_EQ(get_write_size_exceed_threshold_count(), count);
+    ASSERT_EQ(initial_write_size_exceed_threshold_requests + count,
+              METRIC_VALUE(*_mock_replica, write_size_exceed_threshold_requests));
 }
 
-TEST_P(replica_test, backup_request_qps)
+TEST_P(replica_test, backup_request_count)
 {
     // create backup request
     struct dsn::message_header header;
@@ -304,12 +299,9 @@ TEST_P(replica_test, backup_request_qps)
         new tools::sim_network_provider(nullptr, nullptr));
     backup_request->io_session = sim_net->create_client_session(rpc_address());
 
+    const auto initial_backup_request_count = get_backup_request_count();
     _mock_replica->on_client_read(backup_request);
-
-    // We have to sleep >= 0.1s, or the value this perf-counter will be 0, according to the
-    // implementation of perf-counter which type is COUNTER_TYPE_RATE.
-    usleep(1e5);
-    ASSERT_GT(get_table_level_backup_request_qps(), 0);
+    ASSERT_EQ(initial_backup_request_count + 1, get_backup_request_count());
 }
 
 TEST_P(replica_test, query_data_version_test)
@@ -320,12 +312,12 @@ TEST_P(replica_test, query_data_version_test)
         std::string app_id;
         http_status_code expected_code;
         std::string expected_response_json;
-    } tests[] = {{"", http_status_code::bad_request, "app_id should not be empty"},
-                 {"wrong", http_status_code::bad_request, "invalid app_id=wrong"},
+    } tests[] = {{"", http_status_code::kBadRequest, "app_id should not be empty"},
+                 {"wrong", http_status_code::kBadRequest, "invalid app_id=wrong"},
                  {"2",
-                  http_status_code::ok,
+                  http_status_code::kOk,
                   R"({"1":{"data_version":"1"}})"},
-                 {"4", http_status_code::not_found, "app_id=4 not found"}};
+                 {"4", http_status_code::kNotFound, "app_id=4 not found"}};
     for (const auto &test : tests) {
         http_request req;
         http_response resp;
@@ -347,13 +339,13 @@ TEST_P(replica_test, query_compaction_test)
         std::string app_id;
         http_status_code expected_code;
         std::string expected_response_json;
-    } tests[] = {{"", http_status_code::bad_request, "app_id should not be empty"},
-                 {"xxx", http_status_code::bad_request, "invalid app_id=xxx"},
+    } tests[] = {{"", http_status_code::kBadRequest, "app_id should not be empty"},
+                 {"xxx", http_status_code::kBadRequest, "invalid app_id=xxx"},
                  {"2",
-                  http_status_code::ok,
+                  http_status_code::kOk,
                   R"({"status":{"finished":0,"idle":1,"queuing":0,"running":0}})"},
                  {"4",
-                  http_status_code::ok,
+                  http_status_code::kOk,
                   R"({"status":{"finished":0,"idle":0,"queuing":0,"running":0}})"}};
     for (const auto &test : tests) {
         http_request req;

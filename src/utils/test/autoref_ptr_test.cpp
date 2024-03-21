@@ -5,13 +5,10 @@
 // this test is copy from
 // https://github.com/chromium/chromium/blob/07eea964c3f60f501782d8eb51f62ca75ddf3908/base/memory/ref_counted_unittest.cc
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <memory>
-#include <ostream>
+#include <string>
 #include <utility>
 
+#include "gtest/gtest.h"
 #include "utils/autoref_ptr.h"
 
 namespace {

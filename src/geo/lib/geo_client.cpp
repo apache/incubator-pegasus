@@ -50,8 +50,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/synchronize.h"
 
-namespace pegasus {
-namespace geo {
 DSN_DEFINE_int32(geo_client.lib,
                  min_level,
                  12,
@@ -78,6 +76,9 @@ DSN_DEFINE_group_validator(min_max_level, [](std::string &message) -> bool {
 });
 DSN_DEFINE_uint32(geo_client.lib, latitude_index, 5, "latitude index in value");
 DSN_DEFINE_uint32(geo_client.lib, longitude_index, 4, "longitude index in value");
+
+namespace pegasus {
+namespace geo {
 
 struct SearchResultNearer
 {
@@ -116,10 +117,10 @@ geo_client::geo_client(const char *config_file,
 dsn::error_s geo_client::set_max_level(int level)
 {
     if (level <= FLAGS_min_level) {
-        return dsn::FMT_ERR(dsn::ERR_INVALID_PARAMETERS,
-                            "level({}) must be larger than FLAGS_min_level({})",
-                            level,
-                            FLAGS_min_level);
+        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS,
+                       "level({}) must be larger than FLAGS_min_level({})",
+                       level,
+                       FLAGS_min_level);
     }
 
     FLAGS_max_level = level;

@@ -63,7 +63,7 @@ using literals::chrono_literals::operator"" _ms;
 //       request->data = "abc";
 //       request->timestamp = 12;
 //       write_rpc rpc(std::move(request), RPC_WRITE);
-//       rpc.call(rpc_address("10.57.223.31", 12321), nullptr, on_write_rpc_reply);
+//       rpc.call(rpc_address::from_ip_port("10.57.223.31", 12321), nullptr, on_write_rpc_reply);
 //       ...
 //   }
 //

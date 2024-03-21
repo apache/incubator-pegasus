@@ -22,9 +22,9 @@
 #include <gtest/gtest_prod.h>
 
 #include "base/idl_utils.h"
+#include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
 #include "logging_utils.h"
-#include "meta_store.h"
 #include "pegasus_server_impl.h"
 #include "pegasus_write_service.h"
 #include "rocksdb_wrapper.h"
@@ -92,8 +92,7 @@ public:
     explicit impl(pegasus_server_impl *server)
         : replica_base(server),
           _primary_address(server->_primary_address),
-          _pegasus_data_version(server->_pegasus_data_version),
-          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
+          _pegasus_data_version(server->_pegasus_data_version)
     {
         _rocksdb_wrapper = std::make_unique<rocksdb_wrapper>(server);
     }
@@ -101,7 +100,7 @@ public:
     int empty_put(int64_t decree)
     {
         int err =
-            _rocksdb_wrapper->write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+            _rocksdb_wrapper->write_batch_put(decree, absl::string_view(), absl::string_view(), 0);
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         if (err != rocksdb::Status::kOk) {
             return err;
@@ -133,8 +132,9 @@ public:
         for (auto &kv : update.kvs) {
             resp.error = _rocksdb_wrapper->write_batch_put_ctx(
                 ctx,
-                composite_raw_key(update.hash_key, kv.key),
-                kv.value,
+                composite_raw_key(update.hash_key.to_string_view(), kv.key.to_string_view())
+                    .to_string_view(),
+                kv.value.to_string_view(),
                 static_cast<uint32_t>(update.expire_ts_seconds));
             if (resp.error) {
                 return resp.error;
@@ -166,7 +166,9 @@ public:
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         for (auto &sort_key : update.sort_keys) {
             resp.error = _rocksdb_wrapper->write_batch_delete(
-                decree, composite_raw_key(update.hash_key, sort_key));
+                decree,
+                composite_raw_key(update.hash_key.to_string_view(), sort_key.to_string_view())
+                    .to_string_view());
             if (resp.error) {
                 return resp.error;
             }
@@ -186,7 +188,7 @@ public:
         resp.decree = decree;
         resp.server = _primary_address;
 
-        dsn::string_view raw_key(update.key.data(), update.key.length());
+        absl::string_view raw_key = update.key.to_string_view();
         int64_t new_value = 0;
         uint32_t new_expire_ts = 0;
         db_get_context get_ctx;
@@ -212,7 +214,7 @@ public:
                 new_value = update.increment;
             } else {
                 int64_t old_value_int;
-                if (!dsn::buf2int64(old_value, old_value_int)) {
+                if (!dsn::buf2int64(old_value.to_string_view(), old_value_int)) {
                     // invalid old value
                     LOG_ERROR_PREFIX("incr failed: decree = {}, error = "
                                      "old value \"{}\" is not an integer or out of range",
@@ -249,7 +251,7 @@ public:
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         resp.error = _rocksdb_wrapper->write_batch_put(
-            decree, update.key, std::to_string(new_value), new_expire_ts);
+            decree, update.key.to_string_view(), std::to_string(new_value), new_expire_ts);
         if (resp.error) {
             return resp.error;
         }
@@ -283,7 +285,7 @@ public:
         pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
 
         db_get_context get_context;
-        dsn::string_view check_raw_key(check_key.data(), check_key.length());
+        absl::string_view check_raw_key = check_key.to_string_view();
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != rocksdb::Status::kOk) {
             // read check value failed
@@ -329,13 +331,13 @@ public:
             }
             resp.error = _rocksdb_wrapper->write_batch_put(
                 decree,
-                set_key,
-                update.set_value,
+                set_key.to_string_view(),
+                update.set_value.to_string_view(),
                 static_cast<uint32_t>(update.set_expire_ts_seconds));
         } else {
             // check not passed, write empty record to update rocksdb's last flushed decree
             resp.error = _rocksdb_wrapper->write_batch_put(
-                decree, dsn::string_view(), dsn::string_view(), 0);
+                decree, absl::string_view(), absl::string_view(), 0);
         }
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
@@ -403,7 +405,7 @@ public:
         pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
 
         db_get_context get_context;
-        dsn::string_view check_raw_key(check_key.data(), check_key.length());
+        absl::string_view check_raw_key = check_key.to_string_view();
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != rocksdb::Status::kOk) {
             // read check value failed
@@ -445,10 +447,13 @@ public:
                 pegasus_generate_key(key, update.hash_key, m.sort_key);
                 if (m.operation == ::dsn::apps::mutate_operation::MO_PUT) {
                     resp.error = _rocksdb_wrapper->write_batch_put(
-                        decree, key, m.value, static_cast<uint32_t>(m.set_expire_ts_seconds));
+                        decree,
+                        key.to_string_view(),
+                        m.value.to_string_view(),
+                        static_cast<uint32_t>(m.set_expire_ts_seconds));
                 } else {
                     CHECK_EQ(m.operation, ::dsn::apps::mutate_operation::MO_DELETE);
-                    resp.error = _rocksdb_wrapper->write_batch_delete(decree, key);
+                    resp.error = _rocksdb_wrapper->write_batch_delete(decree, key.to_string_view());
                 }
 
                 // in case of failure, cancel mutations
@@ -458,7 +463,7 @@ public:
         } else {
             // check not passed, write empty record to update rocksdb's last flushed decree
             resp.error = _rocksdb_wrapper->write_batch_put(
-                decree, dsn::string_view(), dsn::string_view(), 0);
+                decree, absl::string_view(), absl::string_view(), 0);
         }
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
@@ -521,15 +526,18 @@ public:
                   const dsn::apps::update_request &update,
                   dsn::apps::update_response &resp)
     {
-        resp.error = _rocksdb_wrapper->write_batch_put_ctx(
-            ctx, update.key, update.value, static_cast<uint32_t>(update.expire_ts_seconds));
+        resp.error =
+            _rocksdb_wrapper->write_batch_put_ctx(ctx,
+                                                  update.key.to_string_view(),
+                                                  update.value.to_string_view(),
+                                                  static_cast<uint32_t>(update.expire_ts_seconds));
         _update_responses.emplace_back(&resp);
         return resp.error;
     }
 
     int batch_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp)
     {
-        resp.error = _rocksdb_wrapper->write_batch_delete(decree, key);
+        resp.error = _rocksdb_wrapper->write_batch_delete(decree, key.to_string_view());
         _update_responses.emplace_back(&resp);
         return resp.error;
     }
@@ -564,7 +572,7 @@ private:
         _rocksdb_wrapper->clear_up_write_batch();
     }
 
-    static dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
+    static dsn::blob composite_raw_key(absl::string_view hash_key, absl::string_view sort_key)
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, sort_key);
@@ -610,7 +618,8 @@ private:
             if (value.length() < check_operand.length())
                 return false;
             if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
-                return dsn::string_view(value).find(check_operand) != dsn::string_view::npos;
+                return value.to_string_view().find(check_operand.to_string_view()) !=
+                       absl::string_view::npos;
             } else if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_PREFIX) {
                 return dsn::utils::mequals(
                     value.data(), check_operand.data(), check_operand.length());
@@ -627,7 +636,7 @@ private:
         case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER: {
             if (!value_exist)
                 return false;
-            int c = dsn::string_view(value).compare(dsn::string_view(check_operand));
+            int c = value.to_string_view().compare(check_operand.to_string_view());
             if (c < 0) {
                 return check_type <= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL;
             } else if (c == 0) {
@@ -645,7 +654,7 @@ private:
             if (!value_exist)
                 return false;
             int64_t check_value_int;
-            if (!dsn::buf2int64(value, check_value_int)) {
+            if (!dsn::buf2int64(value.to_string_view(), check_value_int)) {
                 // invalid check value
                 LOG_ERROR_PREFIX("check failed: decree = {}, error = "
                                  "check value \"{}\" is not an integer or out of range",
@@ -655,7 +664,7 @@ private:
                 return false;
             }
             int64_t check_operand_int;
-            if (!dsn::buf2int64(check_operand, check_operand_int)) {
+            if (!dsn::buf2int64(check_operand.to_string_view(), check_operand_int)) {
                 // invalid check operand
                 LOG_ERROR_PREFIX("check failed: decree = {}, error = "
                                  "check operand \"{}\" is not an integer or out of range",
@@ -689,8 +698,6 @@ private:
 
     const std::string _primary_address;
     const uint32_t _pegasus_data_version;
-
-    ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
 
     std::unique_ptr<rocksdb_wrapper> _rocksdb_wrapper;
 

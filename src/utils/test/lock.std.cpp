@@ -24,13 +24,11 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
-#include <memory>
+#include <string>
 #include <thread>
 
-#include "runtime/rpc/rpc_address.h"
+#include "gtest/gtest.h"
+#include "utils/enum_helper.h"
 #include "utils/lockp.std.h"
 
 using namespace dsn;

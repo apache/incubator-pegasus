@@ -24,10 +24,6 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <rocksdb/status.h>
 #include <stddef.h>
 #include <algorithm>
@@ -39,9 +35,10 @@
 
 #include "aio/aio_task.h"
 #include "common/gpid.h"
+#include "gtest/gtest.h"
 #include "nfs/nfs_node.h"
 #include "runtime/app_model.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task_code.h"
 #include "runtime/tool_api.h"
 #include "test_util/test_util.h"
@@ -67,7 +64,7 @@ class nfs_test : public pegasus::encrypt_data_test_base
 {
 };
 
-INSTANTIATE_TEST_CASE_P(, nfs_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, nfs_test, ::testing::Values(false, true));
 
 TEST_P(nfs_test, basic)
 {
@@ -112,22 +109,22 @@ TEST_P(nfs_test, basic)
         ASSERT_TRUE(dst_filenames.empty());
 
         aio_result r;
-        dsn::aio_task_ptr t = nfs->copy_remote_files(dsn::rpc_address("localhost", 20101),
-                                                     "default",
-                                                     ".",
-                                                     kSrcFilenames,
-                                                     "default",
-                                                     kDstDir,
-                                                     fake_pid,
-                                                     false,
-                                                     false,
-                                                     LPC_AIO_TEST_NFS,
-                                                     nullptr,
-                                                     [&r](dsn::error_code err, size_t sz) {
-                                                         r.err = err;
-                                                         r.sz = sz;
-                                                     },
-                                                     0);
+        auto t = nfs->copy_remote_files(dsn::host_port("localhost", 20101),
+                                        "default",
+                                        ".",
+                                        kSrcFilenames,
+                                        "default",
+                                        kDstDir,
+                                        fake_pid,
+                                        false,
+                                        false,
+                                        LPC_AIO_TEST_NFS,
+                                        nullptr,
+                                        [&r](dsn::error_code err, size_t sz) {
+                                            r.err = err;
+                                            r.sz = sz;
+                                        },
+                                        0);
         ASSERT_NE(nullptr, t);
         ASSERT_TRUE(t->wait(20000));
         ASSERT_EQ(r.err, t->error());
@@ -154,22 +151,22 @@ TEST_P(nfs_test, basic)
     // copy files to the destination directory, files will be overwritten.
     {
         aio_result r;
-        dsn::aio_task_ptr t = nfs->copy_remote_files(dsn::rpc_address("localhost", 20101),
-                                                     "default",
-                                                     ".",
-                                                     kSrcFilenames,
-                                                     "default",
-                                                     kDstDir,
-                                                     fake_pid,
-                                                     true,
-                                                     false,
-                                                     LPC_AIO_TEST_NFS,
-                                                     nullptr,
-                                                     [&r](dsn::error_code err, size_t sz) {
-                                                         r.err = err;
-                                                         r.sz = sz;
-                                                     },
-                                                     0);
+        auto t = nfs->copy_remote_files(dsn::host_port("localhost", 20101),
+                                        "default",
+                                        ".",
+                                        kSrcFilenames,
+                                        "default",
+                                        kDstDir,
+                                        fake_pid,
+                                        true,
+                                        false,
+                                        LPC_AIO_TEST_NFS,
+                                        nullptr,
+                                        [&r](dsn::error_code err, size_t sz) {
+                                            r.err = err;
+                                            r.sz = sz;
+                                        },
+                                        0);
         ASSERT_NE(nullptr, t);
         ASSERT_TRUE(t->wait(20000));
         ASSERT_EQ(r.err, t->error());
@@ -206,21 +203,21 @@ TEST_P(nfs_test, basic)
         ASSERT_FALSE(utils::filesystem::directory_exists(kNewDstDir));
 
         aio_result r;
-        dsn::aio_task_ptr t = nfs->copy_remote_directory(dsn::rpc_address("localhost", 20101),
-                                                         "default",
-                                                         kDstDir,
-                                                         "default",
-                                                         kNewDstDir,
-                                                         fake_pid,
-                                                         false,
-                                                         false,
-                                                         LPC_AIO_TEST_NFS,
-                                                         nullptr,
-                                                         [&r](dsn::error_code err, size_t sz) {
-                                                             r.err = err;
-                                                             r.sz = sz;
-                                                         },
-                                                         0);
+        auto t = nfs->copy_remote_directory(dsn::host_port("localhost", 20101),
+                                            "default",
+                                            kDstDir,
+                                            "default",
+                                            kNewDstDir,
+                                            fake_pid,
+                                            false,
+                                            false,
+                                            LPC_AIO_TEST_NFS,
+                                            nullptr,
+                                            [&r](dsn::error_code err, size_t sz) {
+                                                r.err = err;
+                                                r.sz = sz;
+                                            },
+                                            0);
         ASSERT_NE(nullptr, t);
         ASSERT_TRUE(t->wait(20000));
         ASSERT_EQ(r.err, t->error());

@@ -24,15 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     Jun. 2016, Zuoyan Qin, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "dsn_message_parser.h"
 
 #include <stddef.h>
@@ -80,7 +71,7 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
             if (!is_right_body(msg)) {
                 message_header *header = (message_header *)buf_ptr;
                 LOG_ERROR("dsn message body check failed, id = {}, trace_id = {:#018x}, rpc_name "
-                          "= {}, from_addr = {}",
+                          "= {}, from = {}",
                           header->id,
                           header->trace_id,
                           header->rpc_name,

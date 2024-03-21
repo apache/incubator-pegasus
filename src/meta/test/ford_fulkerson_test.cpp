@@ -16,20 +16,18 @@
 // under the License.
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
-#include <algorithm>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 
 namespace dsn {
 namespace replication {
@@ -44,12 +42,12 @@ TEST(ford_fulkerson, build_failure)
     node_mapper nodes;
     node_state ns;
     ns.put_partition(gpid(app_id, 0), true);
-    nodes[rpc_address(1, 1)] = ns;
-    nodes[rpc_address(2, 2)] = ns;
-    nodes[rpc_address(3, 3)] = ns;
+    nodes[host_port("localhost", 1)] = ns;
+    nodes[host_port("localhost", 2)] = ns;
+    nodes[host_port("localhost", 3)] = ns;
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    auto ff = ford_fulkerson::builder(app, nodes, address_id).build();
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    auto ff = ford_fulkerson::builder(app, nodes, host_port_id).build();
     ASSERT_EQ(ff, nullptr);
 }
 
@@ -61,21 +59,21 @@ TEST(ford_fulkerson, add_edge)
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    auto addr1 = rpc_address(1, 1);
-    auto addr2 = rpc_address(1, 2);
-    auto addr3 = rpc_address(1, 3);
-    address_id[addr1] = 1;
-    address_id[addr2] = 2;
-    address_id[addr3] = 3;
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    const auto &hp1 = host_port("localhost", 1);
+    const auto &hp2 = host_port("localhost", 2);
+    const auto &hp3 = host_port("localhost", 3);
+    host_port_id[hp1] = 1;
+    host_port_id[hp2] = 2;
+    host_port_id[hp3] = 3;
 
     node_mapper nodes;
     node_state ns;
-    nodes[addr1] = ns;
-    nodes[addr2] = ns;
-    nodes[addr3] = ns;
+    nodes[hp1] = ns;
+    nodes[hp2] = ns;
+    nodes[hp3] = ns;
 
-    auto ff = ford_fulkerson::builder(app, nodes, address_id).build();
+    auto ff = ford_fulkerson::builder(app, nodes, host_port_id).build();
     ff->add_edge(1, ns);
     ASSERT_EQ(ff->_network[1].back(), 1);
 
@@ -88,9 +86,9 @@ TEST(ford_fulkerson, add_edge)
 
 TEST(ford_fulkerson, update_decree)
 {
-    auto addr1 = rpc_address(1, 1);
-    auto addr2 = rpc_address(2, 2);
-    auto addr3 = rpc_address(3, 3);
+    const auto &hp1 = host_port("localhost", 1);
+    const auto &hp2 = host_port("localhost", 2);
+    const auto &hp3 = host_port("localhost", 3);
 
     int32_t app_id = 1;
     dsn::app_info info;
@@ -98,8 +96,8 @@ TEST(ford_fulkerson, update_decree)
     info.partition_count = 1;
     std::shared_ptr<app_state> app = app_state::create(info);
     partition_configuration pc;
-    pc.secondaries.push_back(addr2);
-    pc.secondaries.push_back(addr3);
+    pc.hp_secondaries.push_back(hp2);
+    pc.hp_secondaries.push_back(hp3);
     app->partitions.push_back(pc);
     app->partitions.push_back(pc);
 
@@ -107,17 +105,17 @@ TEST(ford_fulkerson, update_decree)
     node_state ns;
     ns.put_partition(gpid(app_id, 0), true);
     ns.put_partition(gpid(app_id, 1), true);
-    nodes[addr1] = ns;
-    nodes[addr2] = ns;
-    nodes[addr3] = ns;
+    nodes[hp1] = ns;
+    nodes[hp2] = ns;
+    nodes[hp3] = ns;
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    address_id[addr1] = 1;
-    address_id[addr2] = 2;
-    address_id[addr3] = 3;
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    host_port_id[hp1] = 1;
+    host_port_id[hp2] = 2;
+    host_port_id[hp3] = 3;
 
     auto node_id = 1;
-    auto ff = ford_fulkerson::builder(app, nodes, address_id).build();
+    auto ff = ford_fulkerson::builder(app, nodes, host_port_id).build();
     ff->update_decree(node_id, ns);
     ASSERT_EQ(ff->_network[1][2], 2);
     ASSERT_EQ(ff->_network[1][3], 2);
@@ -125,9 +123,9 @@ TEST(ford_fulkerson, update_decree)
 
 TEST(ford_fulkerson, find_shortest_path)
 {
-    auto addr1 = rpc_address(1, 1);
-    auto addr2 = rpc_address(2, 2);
-    auto addr3 = rpc_address(3, 3);
+    auto hp1 = host_port("localhost", 1);
+    auto hp2 = host_port("localhost", 2);
+    auto hp3 = host_port("localhost", 3);
 
     int32_t app_id = 1;
     dsn::app_info info;
@@ -136,9 +134,9 @@ TEST(ford_fulkerson, find_shortest_path)
     std::shared_ptr<app_state> app = app_state::create(info);
 
     partition_configuration pc;
-    pc.primary = addr1;
-    pc.secondaries.push_back(addr2);
-    pc.secondaries.push_back(addr3);
+    pc.hp_primary = hp1;
+    pc.hp_secondaries.push_back(hp2);
+    pc.hp_secondaries.push_back(hp3);
     app->partitions[0] = pc;
     app->partitions[1] = pc;
 
@@ -146,18 +144,18 @@ TEST(ford_fulkerson, find_shortest_path)
     node_state ns1;
     ns1.put_partition(gpid(app_id, 0), true);
     ns1.put_partition(gpid(app_id, 1), true);
-    nodes[addr1] = ns1;
+    nodes[hp1] = ns1;
 
     node_state ns2;
     ns2.put_partition(gpid(app_id, 0), false);
     ns2.put_partition(gpid(app_id, 1), false);
-    nodes[addr2] = ns2;
-    nodes[addr3] = ns2;
+    nodes[hp2] = ns2;
+    nodes[hp3] = ns2;
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    address_id[addr1] = 1;
-    address_id[addr2] = 2;
-    address_id[addr3] = 3;
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    host_port_id[hp1] = 1;
+    host_port_id[hp2] = 2;
+    host_port_id[hp3] = 3;
 
     /**
      * ford fulkerson graph:
@@ -168,7 +166,7 @@ TEST(ford_fulkerson, find_shortest_path)
      *                 2 --------> 4 (sink)
      *                      1
      */
-    auto ff = ford_fulkerson::builder(app, nodes, address_id).build();
+    auto ff = ford_fulkerson::builder(app, nodes, host_port_id).build();
     ASSERT_EQ(ff->_network[0][0], 0);
     ASSERT_EQ(ff->_network[0][1], 1);
     ASSERT_EQ(ff->_network[0][2], 0);
@@ -222,20 +220,20 @@ TEST(ford_fulkerson, max_value_pos)
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    auto addr1 = rpc_address(1, 1);
-    auto addr2 = rpc_address(1, 2);
-    auto addr3 = rpc_address(1, 3);
-    address_id[addr1] = 1;
-    address_id[addr2] = 2;
-    address_id[addr3] = 3;
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    auto hp1 = host_port("localhost", 1);
+    auto hp2 = host_port("localhost", 2);
+    auto hp3 = host_port("localhost", 3);
+    host_port_id[hp1] = 1;
+    host_port_id[hp2] = 2;
+    host_port_id[hp3] = 3;
 
     node_mapper nodes;
     node_state ns;
-    nodes[addr1] = ns;
-    nodes[addr2] = ns;
-    nodes[addr3] = ns;
-    auto ff = ford_fulkerson::builder(app, nodes, address_id).build();
+    nodes[hp1] = ns;
+    nodes[hp2] = ns;
+    nodes[hp3] = ns;
+    auto ff = ford_fulkerson::builder(app, nodes, host_port_id).build();
 
     std::vector<bool> visit(5, false);
     std::vector<int> flow(5, 0);
@@ -260,20 +258,20 @@ TEST(ford_fulkerson, select_node)
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
 
-    std::unordered_map<dsn::rpc_address, int> address_id;
-    auto addr1 = rpc_address(1, 1);
-    auto addr2 = rpc_address(1, 2);
-    auto addr3 = rpc_address(1, 3);
-    address_id[addr1] = 1;
-    address_id[addr2] = 2;
-    address_id[addr3] = 3;
+    std::unordered_map<dsn::host_port, int> host_port_id;
+    auto hp1 = host_port("localhost", 1);
+    auto hp2 = host_port("localhost", 2);
+    auto hp3 = host_port("localhost", 3);
+    host_port_id[hp1] = 1;
+    host_port_id[hp2] = 2;
+    host_port_id[hp3] = 3;
 
     node_mapper nodes;
     node_state ns;
-    nodes[addr1] = ns;
-    nodes[addr2] = ns;
-    nodes[addr3] = ns;
-    auto ff = ford_fulkerson::builder(app, nodes, address_id).build();
+    nodes[hp1] = ns;
+    nodes[hp2] = ns;
+    nodes[hp3] = ns;
+    auto ff = ford_fulkerson::builder(app, nodes, host_port_id).build();
 
     std::vector<bool> visit(5, false);
     std::vector<int> flow(5, 0);

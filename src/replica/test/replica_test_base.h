@@ -34,7 +34,6 @@
 #include "test_util/test_util.h"
 #include "utils/errors.h"
 #include "utils/filesystem.h"
-#include "utils/smart_pointers.h"
 
 namespace dsn {
 namespace replication {

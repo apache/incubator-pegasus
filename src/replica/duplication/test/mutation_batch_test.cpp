@@ -15,20 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <atomic>
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "duplication_test_base.h"
+#include "gtest/gtest.h"
 #include "replica/duplication/mutation_batch.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "replica/mutation.h"
@@ -56,7 +54,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_CASE_P(, mutation_batch_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, mutation_batch_test, ::testing::Values(false, true));
 
 TEST_P(mutation_batch_test, add_mutation_if_valid)
 {

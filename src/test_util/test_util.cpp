@@ -19,11 +19,8 @@
 
 #include <gtest/gtest-spi.h>
 #include <chrono>
-#include <ostream>
 #include <thread>
 
-#include "gtest/gtest-message.h"
-#include "gtest/gtest-test-part.h"
 #include "gtest/gtest.h"
 #include "metadata_types.h"
 #include "rocksdb/env.h"

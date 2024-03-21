@@ -17,17 +17,15 @@
 
 #include "server/hotkey_collector.h"
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
-// IWYU pragma: no_include <gtest/gtest-param-test.h>
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <chrono>
 #include <thread>
 
 #include "base/pegasus_key_schema.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
+#include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
@@ -42,14 +40,14 @@
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
+DSN_DECLARE_uint32(hotkey_buckets_num);
+
 namespace dsn {
 class message_ex;
 } // namespace dsn
 
 namespace pegasus {
 namespace server {
-
-DSN_DECLARE_uint32(hotkey_buckets_num);
 
 static std::string generate_hash_key_by_random(bool is_hotkey, int probability = 100)
 {
@@ -72,7 +70,7 @@ TEST(hotkey_collector_public_func_test, get_bucket_id_test)
 {
     int bucket_id = -1;
     for (int i = 0; i < 1000000; i++) {
-        bucket_id = get_bucket_id(dsn::blob::create_from_bytes(generate_hash_key_by_random(false)),
+        bucket_id = get_bucket_id(absl::string_view(generate_hash_key_by_random(false)),
                                   FLAGS_hotkey_buckets_num);
         ASSERT_GE(bucket_id, 0);
         ASSERT_LT(bucket_id, FLAGS_hotkey_buckets_num);
@@ -124,7 +122,7 @@ public:
     dsn::task_tracker _tracker;
 };
 
-INSTANTIATE_TEST_CASE_P(, coarse_collector_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, coarse_collector_test, ::testing::Values(false, true));
 
 TEST_P(coarse_collector_test, coarse_collector)
 {
@@ -181,7 +179,7 @@ public:
     dsn::task_tracker _tracker;
 };
 
-INSTANTIATE_TEST_CASE_P(, fine_collector_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, fine_collector_test, ::testing::Values(false, true));
 
 TEST_P(fine_collector_test, fine_collector)
 {
@@ -291,7 +289,7 @@ public:
     dsn::task_tracker _tracker;
 };
 
-INSTANTIATE_TEST_CASE_P(, hotkey_collector_test, ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(, hotkey_collector_test, ::testing::Values(false, true));
 
 TEST_P(hotkey_collector_test, hotkey_type)
 {

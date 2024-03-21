@@ -24,9 +24,6 @@
  * THE SOFTWARE.
  */
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -37,6 +34,7 @@
 
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
@@ -48,10 +46,11 @@
 #include "utils/error_code.h"
 #include "utils/flags.h"
 
-namespace dsn {
-namespace replication {
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
+
+namespace dsn {
+namespace replication {
 
 static const std::vector<std::string> keys = {"manual_compact.once.trigger_time",
                                               "manual_compact.once.target_level",

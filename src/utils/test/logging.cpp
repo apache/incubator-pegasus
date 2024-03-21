@@ -24,69 +24,74 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for logging.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#include <gtest/gtest.h>
 #include <iostream>
 #include <string>
+#include <utility>
 
+#include "gtest/gtest.h"
 #include "utils/api_utilities.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
+#include "utils/timer.h"
 
-TEST(core, logging)
+TEST(LoggingTest, GlobalLog)
 {
-    dsn_log_level_t level = dsn_log_get_start_level();
-    std::cout << "logging start level = " << level << std::endl;
-    dsn_logf(__FILENAME__,
-             __FUNCTION__,
-             __LINE__,
-             dsn_log_level_t::LOG_LEVEL_INFO,
-             "in TEST(core, logging)");
-    dsn_log(__FILENAME__, __FUNCTION__, __LINE__, dsn_log_level_t::LOG_LEVEL_INFO, "");
+    std::cout << "logging start level = " << enum_to_string(get_log_start_level()) << std::endl;
+    global_log(__FILENAME__, __FUNCTION__, __LINE__, LOG_LEVEL_INFO, "in TEST(core, logging)");
 }
 
-TEST(core, logging_big_log)
+TEST(LoggingTest, GlobalLogBig)
 {
     std::string big_str(128000, 'x');
-    dsn_logf(__FILENAME__,
-             __FUNCTION__,
-             __LINE__,
-             dsn_log_level_t::LOG_LEVEL_INFO,
-             "write big str %s",
-             big_str.c_str());
+    global_log(__FILENAME__, __FUNCTION__, __LINE__, LOG_LEVEL_INFO, big_str.c_str());
 }
 
-TEST(core, dlog)
+TEST(LoggingTest, LogMacro)
 {
     struct test_case
     {
-        enum dsn_log_level_t level;
+        log_level_t level;
         std::string str;
-    } tests[] = {{dsn_log_level_t::LOG_LEVEL_DEBUG, "This is a test"},
-                 {dsn_log_level_t::LOG_LEVEL_DEBUG, "\\x00%d\\x00\\x01%n/nm"},
-                 {dsn_log_level_t::LOG_LEVEL_INFO, "\\x00%d\\x00\\x01%n/nm"},
-                 {dsn_log_level_t::LOG_LEVEL_WARNING, "\\x00%d\\x00\\x01%n/nm"},
-                 {dsn_log_level_t::LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
-                 {dsn_log_level_t::LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
+    } tests[] = {{LOG_LEVEL_DEBUG, "This is a test"},
+                 {LOG_LEVEL_DEBUG, "\\x00%d\\x00\\x01%n/nm"},
+                 {LOG_LEVEL_INFO, "\\x00%d\\x00\\x01%n/nm"},
+                 {LOG_LEVEL_WARNING, "\\x00%d\\x00\\x01%n/nm"},
+                 {LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
+                 {LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
 
     dsn::fail::setup();
     dsn::fail::cfg("coredump_for_fatal_log", "void(false)");
 
     for (auto test : tests) {
-        // Test logging_provider::dsn_log
-        dlog_f(test.level, "dlog_f: sortkey = {}", test.str);
-
-        // Test logging_provider::dsn_logv
-        dlog(test.level, "dlog: sortkey = %s", test.str.c_str());
+        // Test logging_provider::log.
+        LOG(test.level, "LOG: sortkey = {}", test.str);
     }
 
     dsn::fail::teardown();
+}
+
+TEST(LoggingTest, TestLogTiming)
+{
+    LOG_TIMING_PREFIX_IF(INFO, true, "prefix", "foo test{}", 0) {}
+    LOG_TIMING_IF(INFO, true, "no_prefix foo test{}", 1) {}
+    LOG_TIMING_PREFIX(INFO, "prefix", "foo test{}", 2) {}
+    LOG_TIMING(INFO, "foo test{}", 3){}
+    {
+        SCOPED_LOG_TIMING(INFO, "bar {}", 0);
+        SCOPED_LOG_SLOW_EXECUTION(INFO, 1, "bar {}", 1);
+        SCOPED_LOG_SLOW_EXECUTION_PREFIX(INFO, 1, "prefix", "bar {}", 1);
+    }
+    LOG_SLOW_EXECUTION(INFO, 1, "baz {}", 0) {}
+
+    // Previous implementations of the above macro confused clang-tidy's use-after-move
+    // check and generated false positives.
+    std::string s1 = "hello";
+    std::string s2;
+    LOG_SLOW_EXECUTION(INFO, 1, "baz")
+    {
+        LOG_INFO(s1);
+        s2 = std::move(s1);
+    }
+
+    ASSERT_EQ("hello", s2);
 }

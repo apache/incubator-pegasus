@@ -15,23 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// IWYU pragma: no_include <gtest/gtest-message.h>
-// IWYU pragma: no_include <gtest/gtest-test-part.h>
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <string.h>
-#include <algorithm>
 #include <memory>
 #include <queue>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "gtest/gtest.h"
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_message_parser.h"
 #include "http/http_method.h"
 #include "http/http_server.h"
+#include "http/http_status_code.h"
 #include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"
@@ -81,10 +79,10 @@ TEST(bultin_http_calls_test, meta_query)
     http_request req;
     http_response resp;
     get_recent_start_time_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
 
     get_version_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
 }
 
 TEST(bultin_http_calls_test, get_help)
@@ -106,7 +104,7 @@ TEST(bultin_http_calls_test, get_help)
     http_request req;
     http_response resp;
     get_help_handler(req, resp);
-    ASSERT_EQ(resp.status_code, http_status_code::ok);
+    ASSERT_EQ(resp.status_code, http_status_code::kOk);
     ASSERT_EQ(resp.body, "{\"/\":\"ip:port/\"}\n");
 
     register_http_call("recentStartTime")

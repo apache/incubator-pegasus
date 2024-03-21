@@ -24,14 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a singleton to manager all zookeeper sessions, so that each zookeeper session
- *     can be shared by all threads in one service-node. The implementation file.
- *
- * Revision history:
- *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
- */
 #include "zookeeper_session_mgr.h"
 
 #include <stdio.h>
@@ -43,10 +35,10 @@
 #include "utils/singleton_store.h"
 #include "zookeeper_session.h"
 
+DSN_DEFINE_string(zookeeper, logfile, "zoo.log", "The Zookeeper logfile");
+
 namespace dsn {
 namespace dist {
-
-DSN_DEFINE_string(zookeeper, logfile, "", "The Zookeeper logfile");
 
 zookeeper_session_mgr::zookeeper_session_mgr()
 {

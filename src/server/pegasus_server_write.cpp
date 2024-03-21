@@ -17,9 +17,9 @@
  * under the License.
  */
 
+#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
-#include <stdio.h>
 #include <thrift/transport/TTransportException.h>
 #include <algorithm>
 #include <utility>
@@ -32,31 +32,31 @@
 #include "pegasus_server_impl.h"
 #include "pegasus_server_write.h"
 #include "pegasus_utils.h"
-#include "perf_counter/perf_counter.h"
 #include "rrdb/rrdb.code.definition.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
 #include "server/pegasus_write_service.h"
+#include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
-namespace pegasus {
-namespace server {
+METRIC_DEFINE_counter(replica,
+                      corrupt_writes,
+                      dsn::metric_unit::kRequests,
+                      "The number of corrupt writes for each replica");
+
 DSN_DECLARE_bool(rocksdb_verbose_log);
 
-pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
-    : replica_base(server), _write_svc(new pegasus_write_service(server))
-{
-    char name[256];
-    snprintf(name, 255, "recent_corrupt_write_count@%s", get_gpid().to_string());
-    _pfc_recent_corrupt_write_count.init_app_counter("app.pegasus",
-                                                     name,
-                                                     COUNTER_TYPE_VOLATILE_NUMBER,
-                                                     "statistic the recent corrupt write count");
+namespace pegasus {
+namespace server {
 
+pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
+    : replica_base(server),
+      _write_svc(new pegasus_write_service(server)),
+      METRIC_VAR_INIT_replica(corrupt_writes)
+{
     init_non_batch_write_handlers();
 }
 
@@ -82,9 +82,9 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
             return iter->second(requests[0]);
         }
     } catch (TTransportException &ex) {
-        _pfc_recent_corrupt_write_count->increment();
+        METRIC_VAR_INCREMENT(corrupt_writes);
         LOG_ERROR_PREFIX("pegasus not batch write handler failed, from = {}, exception = {}",
-                         requests[0]->header->from_address.to_string(),
+                         requests[0]->header->from_address,
                          ex.what());
         return rocksdb::Status::kOk;
     }
@@ -120,15 +120,15 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 } else {
                     if (_non_batch_write_handlers.find(rpc_code) !=
                         _non_batch_write_handlers.end()) {
-                        LOG_FATAL("rpc code not allow batch: {}", rpc_code.to_string());
+                        LOG_FATAL("rpc code not allow batch: {}", rpc_code);
                     } else {
-                        LOG_FATAL("rpc code not handled: {}", rpc_code.to_string());
+                        LOG_FATAL("rpc code not handled: {}", rpc_code);
                     }
                 }
             } catch (TTransportException &ex) {
-                _pfc_recent_corrupt_write_count->increment();
+                METRIC_VAR_INCREMENT(corrupt_writes);
                 LOG_ERROR_PREFIX("pegasus batch writes handler failed, from = {}, exception = {}",
-                                 requests[i]->header->from_address.to_string(),
+                                 requests[i]->header->from_address,
                                  ex.what());
             }
 
@@ -171,7 +171,7 @@ void pegasus_server_write::request_key_check(int64_t decree,
         LOG_INFO_ROCKSDB("Write",
                          "decree: {}, code: {}, hash_key: {}, sort_key: {}",
                          decree,
-                         msg->local_rpc_code.to_string(),
+                         msg->local_rpc_code,
                          utils::c_escape_sensitive_string(hash_key),
                          utils::c_escape_sensitive_string(sort_key));
     }
