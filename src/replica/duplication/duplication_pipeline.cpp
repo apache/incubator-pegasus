@@ -23,7 +23,6 @@
 #include <string>
 #include <utility>
 
-#include "dsn.layer2_types.h"
 #include "load_from_private_log.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/mutation_log.h"

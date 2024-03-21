@@ -412,7 +412,7 @@ public:
 };
 
 const std::string meta_duplication_service_test::kTestAppName = "test_app";
-const std::string meta_duplication_service_test::kTestRemoteClusterName = "follower-cluster";
+const std::string meta_duplication_service_test::kTestRemoteClusterName = "slave-cluster";
 const std::string meta_duplication_service_test::kTestRemoteAppName = "remote_test_app";
 
 // This test ensures that duplication upon an unavailable app will

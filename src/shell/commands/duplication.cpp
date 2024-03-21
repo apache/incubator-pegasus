@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <initializer_list>
 #include <iostream>
 #include <memory>
 #include <set>

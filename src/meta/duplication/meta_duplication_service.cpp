@@ -21,6 +21,7 @@
 #include <queue>
 #include <type_traits>
 
+#include "absl/strings/string_view.h"
 #include "common//duplication_common.h"
 #include "common/common.h"
 #include "common/gpid.h"
@@ -41,6 +42,7 @@
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
+#include "utils/api_utilities.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
@@ -49,7 +51,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
