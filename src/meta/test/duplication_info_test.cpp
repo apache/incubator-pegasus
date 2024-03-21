@@ -37,10 +37,10 @@ namespace replication {
 class duplication_info_test : public testing::Test
 {
 public:
-    static const std::string kTestAppName = "temp";
-    static const std::string kTestRemoteClusterName = "dsn://follower-cluster/temp";
-    static const std::string kTestRemoteAppName = "temp_follower";
-    static const std::string kTestMetaStorePath = "/meta_test/101/duplication/1";
+    static const std::string kTestAppName;
+    static const std::string kTestRemoteClusterName;
+    static const std::string kTestRemoteAppName;
+    static const std::string kTestMetaStorePath;
 
     void force_update_status(duplication_info &dup, duplication_status::type status)
     {
@@ -189,6 +189,11 @@ public:
         ASSERT_EQ(duplication_status::DS_REMOVED, copy.status);
     }
 };
+
+const std::string duplication_info_test::kTestAppName = "temp";
+const std::string duplication_info_test::kTestRemoteClusterName = "follower-cluster";
+const std::string duplication_info_test::kTestRemoteAppName = "remote_temp";
+const std::string duplication_info_test::kTestMetaStorePath = "/meta_test/101/duplication/1";
 
 TEST_F(duplication_info_test, alter_status_when_busy)
 {
