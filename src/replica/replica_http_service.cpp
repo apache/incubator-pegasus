@@ -76,6 +76,7 @@ void replica_http_service::query_duplication_handler(const http_request &req, ht
             {"not_confirmed_mutations_num", s.second.not_confirmed},
             {"not_duplicated_mutations_num", s.second.not_duplicated},
             {"fail_mode", duplication_fail_mode_to_string(s.second.fail_mode)},
+            {"remote_app_name", s.second.remote_app_name},
         };
     }
     resp.status_code = http_status_code::kOk;

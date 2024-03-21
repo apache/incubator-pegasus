@@ -102,6 +102,8 @@ public:
 
     const std::string &remote_cluster_name() const { return _remote_cluster_name; }
 
+    const std::string &remote_app_name() const { return _remote_app_name; }
+
     // Thread-safe
     duplication_progress progress() const
     {

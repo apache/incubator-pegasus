@@ -206,6 +206,7 @@ duplication_sync_timer::get_dup_states(int app_id, /*out*/ bool *app_found)
             state.not_confirmed = std::max(decree(0), last_committed_decree - s.confirmed_decree);
             state.not_duplicated = std::max(decree(0), last_committed_decree - s.last_decree);
             state.fail_mode = s.fail_mode;
+            state.remote_app_name = s.remote_app_name;
             result.emplace(std::make_pair(s.dupid, state));
         }
     }

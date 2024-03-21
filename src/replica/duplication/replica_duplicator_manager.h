@@ -88,6 +88,7 @@ public:
         decree last_decree{invalid_decree};
         decree confirmed_decree{invalid_decree};
         duplication_fail_mode::type fail_mode{duplication_fail_mode::FAIL_SLOW};
+        std::string remote_app_name;
     };
     std::vector<dup_state> get_dup_states() const;
 

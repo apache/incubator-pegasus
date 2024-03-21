@@ -46,8 +46,8 @@ public:
 
     void test_on_duplication_sync_reply()
     {
-        const std::string kTestRemoteClusterName = "slave-cluster";
-        const std::string kTestRemoteAppName = "test_follower";
+        static const std::string kTestRemoteClusterName = "slave-cluster";
+        static const std::string kTestRemoteAppName = "test_follower";
 
         // replica: {app_id:2, partition_id:1, duplications:{}}
         stub->add_primary_replica(2, 1);
