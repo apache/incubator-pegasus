@@ -57,6 +57,7 @@ public:
         duplication_entry ent;
         ent.dupid = 1;
         ent.remote = kTestRemoteClusterName;
+        ent.__set_remote_app_name(kTestRemoteAppName);
         ent.status = duplication_status::DS_PAUSE;
         ent.progress[1] = 1000; // partition 1 => confirmed 1000
         duplication_sync_response resp;

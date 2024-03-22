@@ -84,7 +84,7 @@ public:
         auto req = std::make_unique<duplication_add_request>();
         req->app_name = app_name;
         req->remote_cluster_name = remote_cluster;
-        req->remote_app_name = remote_app_name;
+        req->__set_remote_app_name(remote_app_name);
 
         duplication_add_rpc rpc(std::move(req), RPC_CM_ADD_DUPLICATION);
         dup_svc().add_duplication(rpc);
@@ -482,7 +482,7 @@ TEST_F(meta_duplication_service_test, add_dup_with_remote_app_name)
     ASSERT_EQ(kTestAppName, app->app_name);
 
     create_dup(kTestAppName, kTestRemoteClusterName, kTestRemoteAppName);
-    dupid_t dupid = create_dup(kTestAppName).dupid;
+    const dupid_t dupid = create_dup(kTestAppName).dupid;
 
     const auto &resp = query_dup_info(kTestAppName);
     ASSERT_EQ(ERR_OK, resp.err);
@@ -739,7 +739,6 @@ TEST_F(meta_duplication_service_test, recover_from_corrupted_meta_data)
 TEST_F(meta_duplication_service_test, query_duplication_handler)
 {
     create_app(kTestAppName);
-    create_dup(kTestAppName);
     meta_http_service mhs(_ms.get());
 
     http_request fake_req;
@@ -749,20 +748,20 @@ TEST_F(meta_duplication_service_test, query_duplication_handler)
     ASSERT_EQ(fake_resp.status_code, http_status_code::kNotFound);
 
     const auto &duplications = find_app(kTestAppName)->duplications;
-    ASSERT_EQ(duplications.size(), 1);
+    ASSERT_EQ(1, duplications.size());
     auto dup = duplications.begin()->second;
 
     fake_req.query_args["name"] = kTestAppName;
     mhs.query_duplication_handler(fake_req, fake_resp);
-    ASSERT_EQ(fake_resp.status_code, http_status_code::kOk);
+    ASSERT_EQ(http_status_code::kOk, fake_resp.status_code);
     char ts_buf[32];
     utils::time_ms_to_date_time(
         static_cast<uint64_t>(dup->create_timestamp_ms), ts_buf, sizeof(ts_buf));
     ASSERT_EQ(fake_resp.body,
               std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
                   std::to_string(dup->id) +
-                  R"(,"fail_mode":"FAIL_SLOW")"
-                  R"(,"remote":"slave-cluster","status":"DS_PREPARE"},"appid":2})");
+                  R"(,"fail_mode":"FAIL_SLOW","remote":"slave-cluster")"
+                  R"(,"remote_app_name":"remote_test_app","status":"DS_PREPARE"},"appid":2})");
 }
 
 TEST_F(meta_duplication_service_test, fail_mode)
