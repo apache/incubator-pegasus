@@ -81,7 +81,12 @@ struct duplication_add_response
     3:i32              dupid;
     4:optional string  hint;
 
-    // Only for checking if meta server supports remote_app_name.
+    // If new duplication is created, this would be its remote_app_name;
+    // Otherwise, once the duplication has existed, this would be the
+    // remote_app_name with which the duplication has been created.
+    //
+    // This field could also be used to check if the meta server supports
+    // remote_app_name.
     5:optional string remote_app_name;
 }
 

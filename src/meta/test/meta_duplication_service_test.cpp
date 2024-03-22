@@ -369,9 +369,6 @@ public:
 
     void test_add_duplication()
     {
-        const std::string invalid_remote = "test-invalid-remote";
-        const std::string cluster_without_address = "cluster_without_address_for_test";
-
         create_app(kTestAppName);
 
         struct TestData
@@ -382,11 +379,19 @@ public:
 
             error_code wec;
         } tests[] = {
-            {kTestAppName, kTestRemoteClusterName, kTestAppName, ERR_OK},
             {kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, ERR_OK},
-            {kTestAppName, invalid_remote, kTestAppName, ERR_INVALID_PARAMETERS},
-            {kTestAppName, get_current_cluster_name(), kTestAppName, ERR_INVALID_PARAMETERS},
-            {kTestAppName, cluster_without_address, kTestAppName, ERR_INVALID_PARAMETERS},
+            {kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, ERR_OK},
+            {kTestAppName, "test-invalid-remote", kTestRemoteAppName, ERR_INVALID_PARAMETERS},
+            {kTestAppName, get_current_cluster_name(), kTestRemoteAppName, ERR_INVALID_PARAMETERS},
+            {kTestAppName,
+             "cluster_without_address_for_test",
+             kTestRemoteAppName,
+             ERR_INVALID_PARAMETERS},
+            {kTestAppName + "_another",
+             kTestRemoteClusterName,
+             kTestRemoteAppName,
+             ERR_INVALID_PARAMETERS},
+            {kTestAppName + "_another", kTestRemoteClusterName, kTestAppName, ERR_OK},
         };
 
         for (auto tt : tests) {

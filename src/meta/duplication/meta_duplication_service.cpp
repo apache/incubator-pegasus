@@ -218,21 +218,56 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         return;
     }
 
-    auto app = _state->get_app(request.app_name);
-    if (!app || app->status != app_status::AS_AVAILABLE) {
-        response.err = ERR_APP_NOT_EXIST;
-        LOG_WARNING("app {} was not found", request.app_name);
-        return;
-    }
-
+    std::shared_ptr<app_state> app;
     duplication_info_s_ptr dup;
-    for (const auto &ent : app->duplications) {
-        auto it = ent.second;
-        if (it->remote_cluster_name == request.remote_cluster_name) {
-            dup = ent.second;
-            break;
+    {
+        zauto_read_lock l(app_lock());
+
+        app = _state->get_app(request.app_name);
+        if (!app || app->status != app_status::AS_AVAILABLE) {
+            response.err = ERR_APP_NOT_EXIST;
+            LOG_WARNING("app {} was not found", request.app_name);
+            return;
+        }
+
+        for (const auto &ent : app->duplications) {
+            if (ent.second->remote_cluster_name == request.remote_cluster_name) {
+                dup = ent.second;
+                break;
+            }
+        }
+
+        if (dup) {
+            remote_app_name = dup->remote_app_name;
+        } else {
+            for (const auto &kv : _state->_exist_apps) {
+                if (kv.first == request.app_name) {
+                    continue;
+                }
+
+                for (const auto &ent : kv.second->duplications) {
+                    if (ent.second->remote_cluster_name != request.remote_cluster_name) {
+                        continue;
+                    }
+
+                    if (ent.second->remote_app_name != remote_app_name) {
+                        continue;
+                    }
+
+                    response.err = ERR_INVALID_PARAMETERS;
+                    LOG_WARNING_DUP_HINT_AND_RETURN(response,
+                                                    "illegal operation: another app({}) is also "
+                                                    "duplicated to the same remote app("
+                                                    "cluster={}, app={})",
+                                                    kv.first,
+                                                    request.remote_cluster_name,
+                                                    remote_app_name);
+                    return;
+                }
+            }
         }
     }
+
     if (!dup) {
         dup = new_dup_from_init(
             request.remote_cluster_name, remote_app_name, std::move(meta_list), app);
