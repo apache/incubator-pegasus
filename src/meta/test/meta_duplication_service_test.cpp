@@ -739,11 +739,12 @@ TEST_F(meta_duplication_service_test, recover_from_corrupted_meta_data)
 TEST_F(meta_duplication_service_test, query_duplication_handler)
 {
     create_app(kTestAppName);
+    create_dup(kTestAppName);
     meta_http_service mhs(_ms.get());
 
     http_request fake_req;
     http_response fake_resp;
-    fake_req.query_args["name"] = kTestAppName + "not-found";
+    fake_req.query_args["name"] = kTestAppName + "not_found";
     mhs.query_duplication_handler(fake_req, fake_resp);
     ASSERT_EQ(fake_resp.status_code, http_status_code::kNotFound);
 
