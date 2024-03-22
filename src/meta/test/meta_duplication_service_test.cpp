@@ -376,13 +376,14 @@ public:
 
         struct TestData
         {
-            std::string app;
+            std::string app_name;
             std::string remote;
             std::string remote_app_name;
 
             error_code wec;
         } tests[] = {
             {kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, ERR_OK},
+            // A duplication that has been added would be found with its original remote_app_name.
             {kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, ERR_OK},
             {kTestAppName, "test-invalid-remote", kTestRemoteAppName, ERR_INVALID_PARAMETERS},
             {kTestAppName, get_current_cluster_name(), kTestRemoteAppName, ERR_INVALID_PARAMETERS},
@@ -390,6 +391,7 @@ public:
              "cluster_without_address_for_test",
              kTestRemoteAppName,
              ERR_INVALID_PARAMETERS},
+            // The attempt that duplicates another app to the same remote app would be blocked.
             {kTestAnotherAppName,
              kTestRemoteClusterName,
              kTestRemoteAppName,
@@ -397,22 +399,22 @@ public:
             {kTestAnotherAppName, kTestRemoteClusterName, kTestAppName, ERR_OK},
         };
 
-        for (auto tt : tests) {
-            auto resp = create_dup(tt.app, tt.remote, tt.remote_app_name);
-            ASSERT_EQ(tt.wec, resp.err);
+        for (auto test : tests) {
+            auto resp = create_dup(test.app_name, test.remote, test.remote_app_name);
+            ASSERT_EQ(test.wec, resp.err);
 
-            if (tt.wec != ERR_OK) {
+            if (test.wec != ERR_OK) {
                 continue;
             }
 
-            auto app = find_app(kTestAppName);
+            auto app = find_app(test.app_name);
             auto dup = app->duplications[resp.dupid];
             ASSERT_TRUE(dup != nullptr);
             ASSERT_EQ(app->app_id, dup->app_id);
             ASSERT_EQ(duplication_status::DS_PREPARE, dup->_status);
-            ASSERT_EQ(kTestRemoteClusterName, dup->remote_cluster_name);
-            ASSERT_EQ(tt.remote_app_name, resp.remote_app_name);
-            ASSERT_EQ(tt.remote_app_name, dup->remote_app_name);
+            ASSERT_EQ(test.remote, dup->remote_cluster_name);
+            ASSERT_EQ(test.remote_app_name, resp.remote_app_name);
+            ASSERT_EQ(test.remote_app_name, dup->remote_app_name);
             ASSERT_EQ(resp.dupid, dup->id);
             ASSERT_TRUE(app->duplicating);
         }
@@ -451,10 +453,11 @@ TEST_F(meta_duplication_service_test, dup_op_upon_unavail_app)
         {kTestAppName, ERR_OK},
     };
 
-    for (auto tt : tests) {
-        ASSERT_EQ(query_dup_info(tt.app).err, tt.wec);
-        ASSERT_EQ(create_dup(tt.app).err, tt.wec);
-        ASSERT_EQ(change_dup_status(tt.app, test_dup, duplication_status::DS_REMOVED).err, tt.wec);
+    for (auto test : tests) {
+        ASSERT_EQ(test.wec, query_dup_info(test.app).err);
+        ASSERT_EQ(test.wec, create_dup(test.app).err);
+        ASSERT_EQ(test.wec,
+                  change_dup_status(test.app, test_dup, duplication_status::DS_REMOVED).err);
     }
 }
 
@@ -527,9 +530,9 @@ TEST_F(meta_duplication_service_test, change_duplication_status)
         {kTestAppName, test_dup, duplication_status::DS_LOG, ERR_OK},   // start->start
     };
 
-    for (auto tt : tests) {
-        auto resp = change_dup_status(tt.app, tt.dupid, tt.status);
-        ASSERT_EQ(resp.err, tt.wec);
+    for (auto test : tests) {
+        auto resp = change_dup_status(test.app, test.dupid, test.status);
+        ASSERT_EQ(test.wec, resp.err);
     }
 }
 
