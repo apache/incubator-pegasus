@@ -369,7 +369,10 @@ public:
 
     void test_add_duplication()
     {
+        static const std::string kTestAnotherAppName(kTestAppName + "_another");
+
         create_app(kTestAppName);
+        create_app(kTestAnotherAppName);
 
         struct TestData
         {
@@ -387,11 +390,11 @@ public:
              "cluster_without_address_for_test",
              kTestRemoteAppName,
              ERR_INVALID_PARAMETERS},
-            {kTestAppName + "_another",
+            {kTestAnotherAppName,
              kTestRemoteClusterName,
              kTestRemoteAppName,
              ERR_INVALID_PARAMETERS},
-            {kTestAppName + "_another", kTestRemoteClusterName, kTestAppName, ERR_OK},
+            {kTestAnotherAppName, kTestRemoteClusterName, kTestAppName, ERR_OK},
         };
 
         for (auto tt : tests) {
@@ -744,7 +747,7 @@ TEST_F(meta_duplication_service_test, recover_from_corrupted_meta_data)
 TEST_F(meta_duplication_service_test, query_duplication_handler)
 {
     create_app(kTestAppName);
-    create_dup(kTestAppName);
+    create_dup(kTestAppName, kTestRemoteClusterName, kTestRemoteAppName);
     meta_http_service mhs(_ms.get());
 
     http_request fake_req;
@@ -763,11 +766,11 @@ TEST_F(meta_duplication_service_test, query_duplication_handler)
     char ts_buf[32];
     utils::time_ms_to_date_time(
         static_cast<uint64_t>(dup->create_timestamp_ms), ts_buf, sizeof(ts_buf));
-    ASSERT_EQ(fake_resp.body,
-              std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
+    ASSERT_EQ(std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
                   std::to_string(dup->id) +
                   R"(,"fail_mode":"FAIL_SLOW","remote":"slave-cluster")"
-                  R"(,"remote_app_name":"remote_test_app","status":"DS_PREPARE"},"appid":2})");
+                  R"(,"remote_app_name":"remote_test_app","status":"DS_PREPARE"},"appid":2})",
+              fake_resp.body);
 }
 
 TEST_F(meta_duplication_service_test, fail_mode)
