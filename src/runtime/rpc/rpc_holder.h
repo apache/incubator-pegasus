@@ -92,7 +92,7 @@ public:
         }
     }
 
-    rpc_holder(std::unique_ptr<TRequest> &&req,
+    rpc_holder(std::unique_ptr<TRequest> req,
                task_code code,
                std::chrono::milliseconds timeout = 0_ms,
                uint64_t partition_hash = 0,
@@ -285,7 +285,7 @@ private:
             unmarshall(req, *thrift_request);
         }
 
-        internal(std::unique_ptr<TRequest> &&req,
+        internal(std::unique_ptr<TRequest> req,
                  task_code code,
                  std::chrono::milliseconds timeout,
                  uint64_t partition_hash,

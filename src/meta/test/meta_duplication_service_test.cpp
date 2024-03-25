@@ -369,9 +369,11 @@ public:
 
     void test_add_duplication()
     {
+        static const std::string kTestSameAppName(kTestAppName + "_same");
         static const std::string kTestAnotherAppName(kTestAppName + "_another");
 
         create_app(kTestAppName);
+        create_app(kTestSameAppName);
         create_app(kTestAnotherAppName);
 
         struct TestData
@@ -382,11 +384,18 @@ public:
 
             error_code wec;
         } tests[] = {
+            // The general case that duplicating to remote cluster with specified remote_app_name.
             {kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, ERR_OK},
             // A duplication that has been added would be found with its original remote_app_name.
             {kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, ERR_OK},
+            // The general case that duplicating to remote cluster with same remote_app_name.
+            {kTestSameAppName, kTestRemoteClusterName, kTestSameAppName, ERR_OK},
+            // It is not allowed that remote_cluster_name does not exist in "duplication-group".
             {kTestAppName, "test-invalid-remote", kTestRemoteAppName, ERR_INVALID_PARAMETERS},
+            // Duplicating to local cluster is not allowed.
             {kTestAppName, get_current_cluster_name(), kTestRemoteAppName, ERR_INVALID_PARAMETERS},
+            // It is not allowed that remote_cluster_name exists in "duplication-group" but not
+            // exists in "pegasus.clusters".
             {kTestAppName,
              "cluster_without_address_for_test",
              kTestRemoteAppName,
@@ -396,6 +405,8 @@ public:
              kTestRemoteClusterName,
              kTestRemoteAppName,
              ERR_INVALID_PARAMETERS},
+            // The attempt that duplicates another app to the different remote app would be
+            // ok.
             {kTestAnotherAppName, kTestRemoteClusterName, kTestAppName, ERR_OK},
         };
 

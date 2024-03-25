@@ -173,7 +173,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     const auto &request = rpc.request();
     auto &response = rpc.response();
 
-    std::string remote_app_name(request.remote_app_name);
+    std::string remote_app_name;
     if (request.__isset.remote_app_name) {
         remote_app_name = request.remote_app_name;
     } else {
@@ -192,7 +192,6 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         response.err = ERR_INVALID_PARAMETERS;
         LOG_WARNING_DUP_HINT_AND_RETURN(response,
                                         "illegal operation: adding duplication to itself");
-        return;
     }
 
     auto remote_cluster_id = get_duplication_cluster_id(request.remote_cluster_name);
@@ -202,7 +201,6 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                                         "get_duplication_cluster_id({}) failed, error: {}",
                                         request.remote_cluster_name,
                                         remote_cluster_id.get_error());
-        return;
     }
 
     std::vector<host_port> meta_list;
@@ -215,7 +213,6 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                                         "failed to find cluster[{}] address in config [{}]",
                                         request.remote_cluster_name,
                                         duplication_constants::kClustersSectionName);
-        return;
     }
 
     std::shared_ptr<app_state> app;
@@ -238,10 +235,18 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         }
 
         if (dup) {
+            // The duplication for the same app to the same remote cluster has existed.
             remote_app_name = dup->remote_app_name;
+            LOG_INFO("no need to add duplication, since it has existed: app_name={}, "
+                     "remote_cluster_name={}, remote_app_name={}",
+                     request.app_name,
+                     request.remote_cluster_name,
+                     remote_app_name);
         } else {
+            // Check if other apps of this cluster are duplicated to the same remote app.
             for (const auto &kv : _state->_exist_apps) {
                 if (kv.first == request.app_name) {
+                    // Skip this app since we want ot check other apps.
                     continue;
                 }
 
@@ -262,7 +267,6 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                                                     kv.first,
                                                     request.remote_cluster_name,
                                                     remote_app_name);
-                    return;
                 }
             }
         }
@@ -605,12 +609,12 @@ meta_duplication_service::new_dup_from_init(const std::string &remote_cluster_na
 {
     duplication_info_s_ptr dup;
 
-    // use current time to identify this duplication.
+    // Use current time to identify this duplication.
     auto dupid = static_cast<dupid_t>(dsn_now_s());
     {
         zauto_write_lock l(app_lock());
 
-        // hold write lock here to ensure that dupid is unique
+        // Hold write lock here to ensure that dupid is unique.
         for (; app->duplications.find(dupid) != app->duplications.end(); ++dupid) {
         }
 

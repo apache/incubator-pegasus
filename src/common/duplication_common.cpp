@@ -155,6 +155,7 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
     }
 
     if (ent.__isset.remote_app_name) {
+        // remote_app_name is shown only if it was specified explicitly for new versions.
         json["remote_app_name"] = ent.remote_app_name;
     }
 

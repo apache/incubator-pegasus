@@ -122,6 +122,8 @@ struct duplication_entry
 
     7:optional duplication_fail_mode fail_mode;
 
+    // For new versions, this could be specified by client.
+    // For old versions, this must be the same with source app_name.
     8:optional string remote_app_name;
 }
 
