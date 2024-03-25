@@ -163,11 +163,9 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 
     for (auto &kv : *(t_global_view->nodes)) {
         node_state &ns = kv.second;
-        if (!all_replica_infos_collected(ns)) {
-            _all_replca_infos_collected = false;
+        _all_replca_infos_collected = all_replica_infos_collected(ns);
+        if (!_all_replca_infos_collected) {
             return;
-        } else {
-            _all_replca_infos_collected = true;
         }
     }
 
