@@ -147,6 +147,7 @@ void load_from_private_log::run()
 void load_from_private_log::find_log_file_to_start()
 {
     _duplicator->set_duplication_plog_checking(true);
+    auto cleanup = dsn::defer([this]() { _duplicator->set_duplication_plog_checking(false); });
 
     // `file_map` has already excluded the useless log files during replica init.
     const auto &file_map = _private_log->get_log_file_map();
@@ -159,7 +160,6 @@ void load_from_private_log::find_log_file_to_start()
         error_s es = log_utils::open_read(pr.second->path(), file);
         if (!es.is_ok()) {
             LOG_ERROR_PREFIX("{}", es);
-            _duplicator->set_duplication_plog_checking(false);
             return;
         }
         new_file_map.emplace(pr.first, file);
@@ -171,6 +171,8 @@ void load_from_private_log::find_log_file_to_start()
 void load_from_private_log::find_log_file_to_start(
     const mutation_log::log_file_map_by_index &log_file_map)
 {
+    auto cleanup = dsn::defer([this]() { _duplicator->set_duplication_plog_checking(false); });
+
     _current = nullptr;
     if (dsn_unlikely(log_file_map.empty())) {
         LOG_ERROR_PREFIX("unable to start duplication since no log file is available");
@@ -194,8 +196,6 @@ void load_from_private_log::find_log_file_to_start(
         }
     }
     start_from_log_file(_current);
-
-    _duplicator->set_duplication_plog_checking(false);
 }
 
 void load_from_private_log::replay_log_block()
