@@ -63,6 +63,7 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : server_load_bal
 {
     _app_balance_policy = std::make_unique<app_balance_policy>(_svc);
     _cluster_balance_policy = std::make_unique<cluster_balance_policy>(_svc);
+    _all_replca_infos_collected = false;
 
     ::memset(t_operation_counters, 0, sizeof(t_operation_counters));
 }
@@ -162,7 +163,8 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 
     for (auto &kv : *(t_global_view->nodes)) {
         node_state &ns = kv.second;
-        if (!all_replica_infos_collected(ns)) {
+        _all_replca_infos_collected = all_replica_infos_collected(ns);
+        if (!_all_replca_infos_collected) {
             return;
         }
     }
@@ -233,6 +235,13 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
         default:
             CHECK(false, "");
         }
+    }
+
+    if (!_all_replca_infos_collected) {
+        counters[ALL_COUNT] = -1;
+        LOG_DEBUG(
+            "balance checker operation count = {}, due to meta server hasn't collected all replica",
+            counters[ALL_COUNT]);
     }
 
     ::memcpy(t_operation_counters, counters, sizeof(counters));

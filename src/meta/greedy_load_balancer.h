@@ -74,6 +74,7 @@ private:
     migration_list *t_migration_result;
     int t_alive_nodes;
     int t_operation_counters[MAX_COUNT];
+    bool _all_replca_infos_collected;
 
     std::unique_ptr<load_balance_policy> _app_balance_policy;
     std::unique_ptr<load_balance_policy> _cluster_balance_policy;
