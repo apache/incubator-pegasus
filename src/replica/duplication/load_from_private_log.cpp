@@ -159,6 +159,7 @@ void load_from_private_log::find_log_file_to_start()
         error_s es = log_utils::open_read(pr.second->path(), file);
         if (!es.is_ok()) {
             LOG_ERROR_PREFIX("{}", es);
+            _duplicator->set_duplication_plog_checking(false);
             return;
         }
         new_file_map.emplace(pr.first, file);
