@@ -34,6 +34,9 @@ const std::string meta_store::DATA_VERSION = "pegasus_data_version";
 const std::string meta_store::LAST_FLUSHED_DECREE = "pegasus_last_flushed_decree";
 const std::string meta_store::LAST_MANUAL_COMPACT_FINISH_TIME =
     "pegasus_last_manual_compact_finish_time";
+const std::string meta_store::LAST_MANUAL_COMPACT_USED_TIME =
+    "pegasus_last_manual_compact_used_time";
+
 const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL = "normal";
 const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE = "prefer_write";
 const std::string meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD = "bulk_load";
@@ -45,6 +48,21 @@ meta_store::meta_store(const char *log_prefix,
 {
     // disable write ahead logging as replication handles logging instead now
     _wt_opts.disableWAL = true;
+}
+
+dsn::error_code meta_store::get_last_manual_compact_used_time(uint64_t *ts) const
+{
+    LOG_AND_RETURN_NOT_OK(ERROR_PREFIX,
+                          get_value_from_meta_cf(false, LAST_MANUAL_COMPACT_USED_TIME, ts),
+                          "get_value_from_meta_cf failed");
+    return dsn::ERR_OK;
+}
+
+void meta_store::set_last_manual_compact_used_time(uint64_t last_manual_compact_used_time) const
+{
+    CHECK_EQ_PREFIX(
+        ::dsn::ERR_OK,
+        set_value_to_meta_cf(LAST_MANUAL_COMPACT_USED_TIME, last_manual_compact_used_time));
 }
 
 dsn::error_code meta_store::get_last_flushed_decree(uint64_t *decree) const

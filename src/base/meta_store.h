@@ -52,12 +52,15 @@ public:
                                          rocksdb::ColumnFamilyHandle *meta_cf) const;
     dsn::error_code get_data_version(uint32_t *version) const;
     dsn::error_code get_last_manual_compact_finish_time(uint64_t *ts) const;
+    dsn::error_code get_last_manual_compact_used_time(uint64_t *ts) const;
     std::string get_usage_scenario() const;
 
     void set_last_flushed_decree(uint64_t decree) const;
     void set_data_version(uint32_t version) const;
     void set_last_manual_compact_finish_time(uint64_t last_manual_compact_finish_time) const;
     void set_usage_scenario(const std::string &usage_scenario) const;
+
+    void set_last_manual_compact_used_time(uint64_t last_manual_compact_used_time) const;
 
 private:
     ::dsn::error_code
@@ -92,6 +95,8 @@ private:
     static const std::string DATA_VERSION;
     static const std::string LAST_FLUSHED_DECREE;
     static const std::string LAST_MANUAL_COMPACT_FINISH_TIME;
+    static const std::string LAST_MANUAL_COMPACT_USED_TIME;
+
     static const std::string ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
     static const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE;
     static const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
