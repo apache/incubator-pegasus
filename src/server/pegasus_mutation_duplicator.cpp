@@ -46,6 +46,7 @@
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
@@ -62,6 +63,13 @@ METRIC_DEFINE_counter(replica,
 namespace dsn {
 namespace replication {
 struct replica_base;
+
+DSN_DEFINE_uint64(replication,
+                  dup_max_allowed_write_size,
+                  1 << 20,
+                  "The maximum piece of request can be add to "
+                  "the duplication batch, 0 means no check");
+DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
 
 /// static definition of mutation_duplicator::creator.
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
@@ -234,7 +242,8 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             batch_bytes += raw_message.length();
         }
 
-        if (batch_count == muts.size() || batch_bytes >= FLAGS_duplicate_log_batch_bytes) {
+        if (batch_count == muts.size() || batch_bytes >= FLAGS_duplicate_log_batch_bytes ||
+            batch_bytes >= dsn::replication::FLAGS_dup_max_allowed_write_size) {
             // since all the plog's mutations of replica belong to same gpid though the hash of
             // mutation is different, use the last mutation of one batch to get and represents the
             // current hash value, it will still send to remote correct replica
