@@ -171,8 +171,6 @@ void load_from_private_log::find_log_file_to_start()
 void load_from_private_log::find_log_file_to_start(
     const mutation_log::log_file_map_by_index &log_file_map)
 {
-    auto cleanup = dsn::defer([this]() { _duplicator->set_duplication_plog_checking(false); });
-
     _current = nullptr;
     if (dsn_unlikely(log_file_map.empty())) {
         LOG_ERROR_PREFIX("unable to start duplication since no log file is available");
