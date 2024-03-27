@@ -72,8 +72,8 @@ void replica_follower::init_master_info()
 
     const auto &app_name = envs.find(duplication_constants::kDuplicationEnvMasterAppNameKey);
     if (app_name == envs.end()) {
-        // The version of meta server from master cluster is old, thus app name of the follower
-        // cluster is the same with master cluster.
+        // The version of meta server of master cluster is old(< v2.6.0), thus the app name of
+        // the follower cluster is the same with master cluster.
         _master_app_name = _replica->get_app_info()->app_name;
     } else {
         _master_app_name = app_name->second;

@@ -216,7 +216,7 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
 
     if (info.remote_app_name.empty()) {
         // remote_app_name is missing, which means meta data in remote storage(zk) is
-        // still of old version.
+        // still of old version(< v2.6.0).
         info.remote_app_name = app_name;
     }
 
