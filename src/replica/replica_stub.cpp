@@ -42,7 +42,6 @@
 #include <vector>
 
 #include "absl/strings/string_view.h"
-#include "backup/replica_backup_server.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
 #include "common/duplication_common.h"
@@ -676,8 +675,6 @@ void replica_stub::initialize_start()
         _duplication_sync_timer = std::make_unique<duplication_sync_timer>(this);
         _duplication_sync_timer->start();
     }
-
-    _backup_server = std::make_unique<replica_backup_server>(this);
 
     // init liveness monitor
     CHECK_EQ(NS_Disconnected, _state);

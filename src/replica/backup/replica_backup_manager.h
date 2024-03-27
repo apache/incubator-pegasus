@@ -17,18 +17,14 @@
 
 #pragma once
 
-#include <string>
-
 #include "replica/replica_base.h"
-#include "runtime/task/task.h"
-#include "utils/metrics.h"
 
 namespace dsn {
-class gpid;
 
 namespace replication {
 
-class backup_clear_request;
+// TODO(heyuchen): implement it
+
 class replica;
 
 class replica_backup_manager : replica_base
@@ -37,24 +33,11 @@ public:
     explicit replica_backup_manager(replica *r);
     ~replica_backup_manager();
 
-    void on_clear_cold_backup(const backup_clear_request &request);
-    void start_collect_backup_info();
-
 private:
     friend class replica;
     friend class replica_backup_manager_test;
 
-    void clear_backup_checkpoint(const std::string &policy_name);
-    void send_clear_request_to_secondaries(const gpid &pid, const std::string &policy_name);
-    void background_clear_backup_checkpoint(const std::string &policy_name);
-    void collect_backup_info();
-
     replica *_replica;
-    dsn::task_ptr _collect_info_timer;
-
-    METRIC_VAR_DECLARE_gauge_int64(backup_running_count);
-    METRIC_VAR_DECLARE_gauge_int64(backup_max_duration_ms);
-    METRIC_VAR_DECLARE_gauge_int64(backup_file_upload_max_bytes);
 };
 
 } // namespace replication

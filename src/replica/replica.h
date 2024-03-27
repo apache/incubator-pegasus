@@ -34,7 +34,9 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
@@ -43,7 +45,6 @@
 #include "mutation_log.h"
 #include "prepare_list.h"
 #include "ranger/access_type.h"
-#include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
 #include "runtime/api_layer1.h"
@@ -80,8 +81,6 @@ class access_controller;
 } // namespace security
 namespace replication {
 
-class backup_request;
-class backup_response;
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;
@@ -103,8 +102,6 @@ class replica_stub;
 class replication_app_base;
 class replication_options;
 struct dir_node;
-
-typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
 namespace test {
 class test_checker;
@@ -131,6 +128,16 @@ class test_checker;
 bool get_bool_envs(const std::map<std::string, std::string> &envs,
                    const std::string &name,
                    /*out*/ bool &value);
+
+// TODO(heyuchen): refactor it
+struct cold_backup_metadata
+{
+    int64_t checkpoint_decree;
+    int64_t checkpoint_timestamp;
+    std::vector<file_meta> files;
+    int64_t checkpoint_total_size;
+    DEFINE_JSON_SERIALIZATION(checkpoint_decree, checkpoint_timestamp, files, checkpoint_total_size)
+};
 
 struct deny_client
 {
@@ -188,7 +195,6 @@ public:
     void on_config_sync(const app_info &info,
                         const partition_configuration &config,
                         split_status::type meta_split_status);
-    void on_cold_backup(const backup_request &request, /*out*/ backup_response &response);
 
     //
     //    messages from peers (primary or secondary)
@@ -428,17 +434,6 @@ private:
                                            const std::string &chk_dir);
 
     /////////////////////////////////////////////////////////////////
-    // cold backup
-    virtual void generate_backup_checkpoint(cold_backup_context_ptr backup_context);
-    void trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
-    void wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
-    void local_create_backup_checkpoint(cold_backup_context_ptr backup_context);
-    void send_backup_request_to_secondary(const backup_request &request);
-    // set all cold_backup_state cancel/pause
-    void set_backup_context_cancel();
-    void clear_cold_backup_state();
-
-    /////////////////////////////////////////////////////////////////
     // replica restore from backup
     bool read_cold_backup_metadata(const std::string &fname, cold_backup_metadata &backup_metadata);
     // checkpoint on cold backup media maybe contain useless file,
@@ -591,8 +586,6 @@ private:
     primary_context _primary_states;
     secondary_context _secondary_states;
     potential_secondary_context _potential_secondary_states;
-    // policy_name --> cold_backup_context
-    std::map<std::string, cold_backup_context_ptr> _cold_backup_contexts;
     partition_split_context _split_states;
 
     // record the progress of restore

@@ -15,42 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <memory>
-#include <string>
-
-#include "gtest/gtest.h"
-#include "replica/backup/replica_backup_manager.h"
-#include "replica/replication_app_base.h"
-#include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
-#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {
 
+// TODO(heyuchen): implement it
 class replica_backup_manager_test : public replica_test_base
 {
 public:
-    void clear_backup_checkpoint(const std::string &policy_name)
-    {
-        _replica->get_backup_manager()->clear_backup_checkpoint(policy_name);
-    }
 };
-
-INSTANTIATE_TEST_SUITE_P(, replica_backup_manager_test, ::testing::Values(false, true));
-
-TEST_P(replica_backup_manager_test, clear_cold_backup)
-{
-    std::string policy_name = "test_policy";
-
-    // create policy dir: <backup_dir>/backup.<policy_name>.*
-    std::string policy_dir = _replica->get_app()->backup_dir() + "/backup." + policy_name;
-    utils::filesystem::create_directory(policy_dir);
-
-    // clear policy dir
-    clear_backup_checkpoint(policy_name);
-    ASSERT_FALSE(utils::filesystem::directory_exists(policy_dir));
-}
 
 } // namespace replication
 } // namespace dsn
