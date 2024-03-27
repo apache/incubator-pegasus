@@ -70,6 +70,8 @@ public:
 
     static const std::string kInitInfo;
 
+    blob serialize() const;
+
 private:
     std::string to_string() const;
 };
@@ -78,6 +80,8 @@ class replica_app_info
 {
 public:
     static const std::string kAppInfo;
+
+    blob serialize() const;
 
 private:
     app_info *_app;

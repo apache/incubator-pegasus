@@ -564,6 +564,9 @@ static command_executor commands[] = {
         local_partition_split,
     },
     {
+        "update_info_file", update_info_file_help.c_str(), "<file_path>", update_info_file,
+    },
+    {
         "exit", "exit shell", "", exit_shell,
     },
     {

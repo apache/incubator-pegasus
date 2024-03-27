@@ -72,6 +72,11 @@ const std::string replica_app_info::kAppInfo = ".app-info";
 const std::string replica_init_info::kInitInfo = ".init-info";
 const std::string kms_info::kKmsInfo = ".kms-info";
 
+blob replica_init_info::serialize() const
+{
+    return dsn::json::json_forwarder<replica_init_info>::encode(*this);
+}
+
 std::string replica_init_info::to_string() const
 {
     return fmt::format(
@@ -96,7 +101,7 @@ error_code replica_app_info::load(const std::string &fname)
     return ERR_OK;
 }
 
-error_code replica_app_info::store(const std::string &fname)
+blob replica_app_info::serialize() const
 {
     binary_writer writer;
     int magic = 0xdeadbeef;
@@ -107,6 +112,8 @@ error_code replica_app_info::store(const std::string &fname)
     } else {
         // for most envs, do not persistent them to app info file
         // ROCKSDB_ALLOW_INGEST_BEHIND should be persistent
+        // TODO(yingchun): Add SPLIT_VALIDATE_PARTITION_HASH to avoid data re-appears after backup
+        // and restore.
         app_info tmp = *_app;
         tmp.envs.clear();
         const auto &iter = _app->envs.find(replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND);
@@ -116,8 +123,13 @@ error_code replica_app_info::store(const std::string &fname)
         marshall(writer, tmp, DSF_THRIFT_JSON);
     }
 
-    return dsn::utils::write_data_to_file(
-        fname, writer.get_buffer(), dsn::utils::FileDataType::kSensitive);
+    // TODO(yingchun): Is there data copy?
+    return writer.get_buffer();
+}
+
+error_code replica_app_info::store(const std::string &fname)
+{
+    return dsn::utils::write_data_to_file(fname, serialize(), dsn::utils::FileDataType::kSensitive);
 }
 
 const std::string replication_app_base::kDataDir = "data";

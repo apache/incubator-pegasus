@@ -288,3 +288,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args);
 // == local partition split (see 'commands/local_partition_split.cpp') == //
 extern const std::string local_partition_split_help;
 bool local_partition_split(command_executor *e, shell_context *sc, arguments args);
+
+// == local partition split (see 'commands/files_operations.cpp') == //
+extern const std::string update_info_file_help;
+bool update_info_file(command_executor *e, shell_context *sc, arguments args);
