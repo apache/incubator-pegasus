@@ -52,7 +52,7 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     : replica_base(r),
       _id(ent.dupid),
       _remote_cluster_name(ent.remote),
-      // remote_app_name is missing means meta server is of old version,
+      // remote_app_name is missing means meta server is of old version(< v2.6.0),
       // in which case source app_name would be used as remote_app_name.
       _remote_app_name(ent.__isset.remote_app_name ? ent.remote_app_name
                                                    : r->get_app_info()->app_name),

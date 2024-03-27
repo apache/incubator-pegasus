@@ -126,7 +126,6 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     } else {
         fmt::print("\nWARNING: meta server does NOT support specifying remote_app_name, "
                    "remote_app_name might has been specified with {}\n",
-                   remote_app_name,
                    app_name);
     }
 
@@ -196,9 +195,9 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
     printer.add_column("remote cluster");
     printer.add_column("create time");
 
-    char create_time[25];
     for (auto info : resp.entry_list) {
-        dsn::utils::time_ms_to_date_time(info.create_ts, create_time, sizeof(create_time));
+        std::string create_time;
+        dsn::utils::time_ms_to_string(info.create_ts, create_time);
 
         printer.add_row(info.dupid);
         printer.append_data(duplication_status_to_string(info.status));

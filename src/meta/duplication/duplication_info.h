@@ -52,7 +52,7 @@ class duplication_info
 public:
     /// \see meta_duplication_service::new_dup_from_init
     /// \see duplication_info::decode_from_blob
-    duplication_info(dupid_t dupid,
+    duplication_info(dupid_t dup_id,
                      int32_t app_id,
                      const std::string &app_name,
                      int32_t partition_count,
@@ -61,7 +61,7 @@ public:
                      const std::string &remote_app_name,
                      std::vector<host_port> &&remote_cluster_metas,
                      const std::string &meta_store_path)
-        : id(dupid),
+        : id(dup_id),
           app_id(app_id),
           app_name(app_name),
           partition_count(partition_count),
@@ -241,9 +241,9 @@ private:
         duplication_fail_mode::type fail_mode;
         std::string remote_app_name;
 
-        // Since there is no remote_cluster_name for old versions, remote_app_name is optional.
-        // Following deserialization functions could be compatible with the situations where
-        // remote_app_name is missing.
+        // Since there is no remote_cluster_name for old versions(< v2.6.0), remote_app_name is
+        // optional. Following deserialization functions could be compatible with the situations
+        // where remote_app_name is missing.
         DEFINE_JSON_SERIALIZATION(remote, status, create_timestamp_ms, fail_mode, remote_app_name);
     };
 

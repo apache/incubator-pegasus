@@ -74,8 +74,7 @@ void meta_duplication_service::query_duplication_info(const duplication_query_re
         }
 
         response.appid = app->app_id;
-        for (auto &dup_id_to_info : app->duplications) {
-            const duplication_info_s_ptr &dup = dup_id_to_info.second;
+        for (const auto & [ _, dup ] : app->duplications) {
             dup->append_if_valid_for_query(*app, response.entry_list);
         }
     }
@@ -154,16 +153,28 @@ void meta_duplication_service::do_modify_duplication(std::shared_ptr<app_state> 
 
 #define LOG_DUP_HINT_AND_RETURN(resp, level, ...)                                                  \
     do {                                                                                           \
-        std::string _msg(fmt::format(__VA_ARGS__));                                                \
+        const std::string _msg(fmt::format(__VA_ARGS__));                                          \
         (resp).__set_hint(_msg);                                                                   \
         LOG(level, _msg);                                                                          \
         return;                                                                                    \
     } while (0)
 
-#define LOG_WARNING_DUP_HINT_AND_RETURN(resp, ...)                                                 \
-    LOG_DUP_HINT_AND_RETURN(resp, LOG_LEVEL_WARNING, __VA_ARGS__)
-#define LOG_ERROR_DUP_HINT_AND_RETURN(resp, ...)                                                   \
-    LOG_DUP_HINT_AND_RETURN(resp, LOG_LEVEL_ERROR, __VA_ARGS__)
+#define LOG_DUP_HINT_AND_RETURN_IF_NOT(expr, resp, ec, level, ...)                                 \
+    do {                                                                                           \
+        if (dsn_likely(expr)) {                                                                    \
+            break;                                                                                 \
+        }                                                                                          \
+                                                                                                   \
+        (resp).err = (ec);                                                                         \
+        LOG_DUP_HINT_AND_RETURN(resp, level, __VA_ARGS__);                                         \
+    } while (0)
+
+#define LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(expr, resp, ...)                                    \
+    LOG_DUP_HINT_AND_RETURN_IF_NOT(                                                                \
+        expr, resp, ERR_INVALID_PARAMETERS, LOG_LEVEL_WARNING, __VA_ARGS__)
+
+#define LOG_ERROR_DUP_HINT_AND_RETURN(expr, resp, ec, ...)                                         \
+    LOG_DUP_HINT_AND_RETURN_IF_NOT(expr, resp, ec, LOG_LEVEL_ERROR, __VA_ARGS__)
 
 // This call will not recreate if the duplication
 // with the same app name and remote end point already exists.
@@ -177,8 +188,8 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     if (request.__isset.remote_app_name) {
         remote_app_name = request.remote_app_name;
     } else {
-        // Once remote_app_name is not specified by client, use source app_name
-        // as remote_app_name to be compatible with old versions of client.
+        // Once remote_app_name is not specified by client, use source app_name as
+        // remote_app_name to be compatible with old versions(< v2.6.0) of client.
         remote_app_name = request.app_name;
     }
 
@@ -188,32 +199,27 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
              request.remote_cluster_name,
              remote_app_name);
 
-    if (request.remote_cluster_name == get_current_cluster_name()) {
-        response.err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING_DUP_HINT_AND_RETURN(response,
-                                        "illegal operation: adding duplication to itself");
-    }
+    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(request.remote_cluster_name !=
+                                               get_current_cluster_name(),
+                                           response,
+                                           "illegal operation: adding duplication to itself");
 
     auto remote_cluster_id = get_duplication_cluster_id(request.remote_cluster_name);
-    if (!remote_cluster_id.is_ok()) {
-        response.err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING_DUP_HINT_AND_RETURN(response,
-                                        "get_duplication_cluster_id({}) failed, error: {}",
-                                        request.remote_cluster_name,
-                                        remote_cluster_id.get_error());
-    }
+    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(remote_cluster_id.is_ok(),
+                                           response,
+                                           "get_duplication_cluster_id({}) failed, error: {}",
+                                           request.remote_cluster_name,
+                                           remote_cluster_id.get_error());
 
     std::vector<host_port> meta_list;
-    if (!dsn::replication::replica_helper::load_meta_servers(
-            meta_list,
-            duplication_constants::kClustersSectionName.c_str(),
-            request.remote_cluster_name.c_str())) {
-        response.err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING_DUP_HINT_AND_RETURN(response,
-                                        "failed to find cluster[{}] address in config [{}]",
-                                        request.remote_cluster_name,
-                                        duplication_constants::kClustersSectionName);
-    }
+    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(dsn::replication::replica_helper::load_meta_servers(
+                                               meta_list,
+                                               duplication_constants::kClustersSectionName.c_str(),
+                                               request.remote_cluster_name.c_str()),
+                                           response,
+                                           "failed to find cluster[{}] address in config [{}]",
+                                           request.remote_cluster_name,
+                                           duplication_constants::kClustersSectionName);
 
     std::shared_ptr<app_state> app;
     duplication_info_s_ptr dup;
@@ -244,29 +250,23 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                      remote_app_name);
         } else {
             // Check if other apps of this cluster are duplicated to the same remote app.
-            for (const auto &kv : _state->_exist_apps) {
-                if (kv.first == request.app_name) {
-                    // Skip this app since we want ot check other apps.
+            for (const auto & [ app_name, cur_app_state ] : _state->_exist_apps) {
+                if (app_name == request.app_name) {
+                    // Skip this app since we want to check other apps.
                     continue;
                 }
 
-                for (const auto &ent : kv.second->duplications) {
-                    if (ent.second->remote_cluster_name != request.remote_cluster_name) {
-                        continue;
-                    }
-
-                    if (ent.second->remote_app_name != remote_app_name) {
-                        continue;
-                    }
-
-                    response.err = ERR_INVALID_PARAMETERS;
-                    LOG_WARNING_DUP_HINT_AND_RETURN(response,
-                                                    "illegal operation: another app({}) is also "
-                                                    "duplicated to the same remote app("
-                                                    "cluster={}, app={})",
-                                                    kv.first,
-                                                    request.remote_cluster_name,
-                                                    remote_app_name);
+                for (const auto &ent : cur_app_state->duplications) {
+                    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(
+                        ent.second->remote_cluster_name != request.remote_cluster_name ||
+                            ent.second->remote_app_name != remote_app_name,
+                        response,
+                        "illegal operation: another app({}) is also "
+                        "duplicated to the same remote app("
+                        "cluster={}, app={})",
+                        app_name,
+                        request.remote_cluster_name,
+                        remote_app_name);
                 }
             }
         }
@@ -286,11 +286,14 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
                                                   duplication_add_rpc &rpc,
                                                   const std::string &remote_app_name)
 {
-    const auto &err = dup->start(rpc.request().is_duplicating_checkpoint);
-    if (dsn_unlikely(err != ERR_OK)) {
-        LOG_ERROR_DUP_HINT_AND_RETURN(
-            rpc.response(), "start dup[{}({})] failed: err = {}", app->app_name, dup->id, err);
-    }
+    const auto &ec = dup->start(rpc.request().is_duplicating_checkpoint);
+    LOG_ERROR_DUP_HINT_AND_RETURN(ec == ERR_OK,
+                                  rpc.response(),
+                                  ec,
+                                  "start dup[{}({})] failed: err = {}",
+                                  app->app_name,
+                                  dup->id,
+                                  ec);
 
     auto value = dup->to_json_blob();
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
