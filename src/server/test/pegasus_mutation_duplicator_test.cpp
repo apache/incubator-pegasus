@@ -23,7 +23,6 @@
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
-#include <algorithm>
 #include <memory>
 #include <tuple>
 #include <utility>
@@ -31,7 +30,6 @@
 
 #include "backup_types.h"
 #include "base/pegasus_rpc_types.h"
-#include "common/duplication_common.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "duplication_internal_types.h"
@@ -47,6 +45,9 @@
 #include "server/pegasus_write_service.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/flags.h"
+
+DSN_DECLARE_uint32(duplicate_log_batch_bytes);
 
 namespace pegasus {
 namespace server {

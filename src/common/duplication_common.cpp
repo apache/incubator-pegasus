@@ -27,6 +27,7 @@
 #include "nlohmann/json_fwd.hpp"
 #include "utils/config_api.h"
 #include "utils/error_code.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/singleton.h"
 #include "utils/time_utils.h"
@@ -36,6 +37,15 @@ DSN_DEFINE_uint32(replication,
                   4096,
                   "send mutation log batch bytes size per rpc");
 DSN_TAG_VARIABLE(duplicate_log_batch_bytes, FT_MUTABLE);
+
+DSN_DEFINE_bool(
+    replication,
+    duplication_unsafe_allow_non_idempotent,
+    false,
+    "Turn on the switch so that the cluster can accept non-idempotent writes and forward these "
+    "writes via duplication. Note that this switch may cause data inconsistency between "
+    "clusters. So we say it is unsafe.");
+DSN_TAG_VARIABLE(duplication_unsafe_allow_non_idempotent, FT_MUTABLE);
 
 namespace dsn {
 namespace replication {
