@@ -30,10 +30,10 @@
 #include "utils/flags.h"
 #include "utils/fmt_utils.h"
 
+DSN_DECLARE_uint32(duplicate_log_batch_bytes);
+
 namespace dsn {
 namespace replication {
-
-DSN_DECLARE_uint32(duplicate_log_batch_bytes);
 
 typedef rpc_holder<duplication_modify_request, duplication_modify_response> duplication_modify_rpc;
 typedef rpc_holder<duplication_add_request, duplication_add_response> duplication_add_rpc;
@@ -86,6 +86,7 @@ struct duplication_constants
     // These will fill into app env and mark one app as a "follower app" and record master info
     const static std::string kDuplicationEnvMasterClusterKey;
     const static std::string kDuplicationEnvMasterMetasKey;
+    const static std::string kDuplicationEnvMasterAppNameKey;
 };
 
 USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)

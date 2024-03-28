@@ -37,6 +37,7 @@
 #include <utility>
 #include <vector>
 
+#include "base/meta_store.h" // IWYU pragma: keep
 #include "common/gpid.h"
 #include "hashkey_transform.h"
 #include "hotkey_collector.h"
@@ -45,10 +46,9 @@
 #include "pegasus_value_schema.h"
 #include "replica_admin_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "server/capacity_unit_calculator.h" // IWYU pragma: keep
 #include "server/key_ttl_compaction_filter.h"
-#include "server/meta_store.h" // IWYU pragma: keep
 #include "server/pegasus_read_service.h"
 #include "server/pegasus_server_write.h" // IWYU pragma: keep
 #include "server/range_read_limiter.h"
@@ -58,12 +58,6 @@
 #include "utils/metrics.h"
 #include "utils/strings.h"
 #include "utils/token_bucket_throttling_controller.h"
-
-namespace dsn {
-namespace replication {
-class replica;
-} // namespace replication
-} // namespace dsn
 
 METRIC_DEFINE_counter(replica,
                       get_requests,
@@ -250,9 +244,6 @@ METRIC_DEFINE_gauge_int64(server,
                           "The through bytes per second that go through the rate limiter which "
                           "takes control of the write rate of flush and compaction of rocksdb");
 
-namespace pegasus {
-namespace server {
-
 DSN_DEFINE_int64(
     pegasus.server,
     rocksdb_limiter_max_write_megabytes_per_sec,
@@ -261,39 +252,42 @@ DSN_DEFINE_int64(
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_max_background_flushes,
                  4,
-                 "rocksdb options.max_background_flushes, flush threads are shared among all "
-                 "rocksdb instances in one process");
+                 "Corresponding to RocksDB's options.max_background_flushes, the flush threads are "
+                 "shared among all RocksDB's instances in the process");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_max_background_compactions,
                  12,
-                 "rocksdb options.max_background_compactions, compaction threads are shared among "
-                 "all rocksdb instances in one process");
+                 "Corresponding to RocksDB's options.max_background_compactions, compaction "
+                 "threads are shared among all rocksdb instances in the process");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_max_write_buffer_number,
                  3,
-                 "rocksdb options.max_write_buffer_number");
-DSN_DEFINE_int32(pegasus.server, rocksdb_num_levels, 6, "rocksdb options.num_levels");
+                 "Corresponding to RocksDB's options.max_write_buffer_number");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_num_levels,
+                 6,
+                 "Corresponding to RocksDB's options.num_levels");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_target_file_size_multiplier,
                  1,
-                 "rocksdb options.target_file_size_multiplier");
+                 "Corresponding to RocksDB's options.target_file_size_multiplier");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_level0_file_num_compaction_trigger,
                  4,
-                 "rocksdb options.level0_file_num_compaction_trigger");
+                 "Corresponding to RocksDB's options.level0_file_num_compaction_trigger");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_level0_slowdown_writes_trigger,
                  30,
-                 "rocksdb options.level0_slowdown_writes_trigger, default 30");
+                 "Corresponding to RocksDB's options.level0_slowdown_writes_trigger");
 DSN_DEFINE_int32(pegasus.server,
                  rocksdb_level0_stop_writes_trigger,
                  60,
-                 "rocksdb options.level0_stop_writes_trigger");
-DSN_DEFINE_int32(
-    pegasus.server,
-    rocksdb_block_cache_num_shard_bits,
-    -1,
-    "block cache will be sharded into 2^num_shard_bits shards, default value is -1(auto)");
+                 "Corresponding to RocksDB's options.level0_stop_writes_trigger");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_block_cache_num_shard_bits,
+                 -1,
+                 "The number of shard bits of the block cache, it means the block cache is sharded "
+                 "into 2^n shards to reduce lock contention. -1 means automatically determined");
 
 // COMPATIBILITY ATTENTION:
 // Although old releases would see the new structure as corrupt filter data and read the
@@ -317,15 +311,15 @@ DSN_DEFINE_bool(pegasus.server,
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_use_direct_reads,
                 false,
-                "rocksdb options.use_direct_reads");
+                "Corresponding to RocksDB's options.use_direct_reads");
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_use_direct_io_for_flush_and_compaction,
                 false,
-                "rocksdb options.use_direct_io_for_flush_and_compaction");
+                "Corresponding to RocksDB's options.use_direct_io_for_flush_and_compaction");
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_disable_table_block_cache,
                 false,
-                "rocksdb _tbl_opts.no_block_cache");
+                "Whether to disable RocksDB's block cache");
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_enable_write_buffer_manager,
                 false,
@@ -367,7 +361,7 @@ DSN_DEFINE_bool(pegasus.server,
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_disable_bloom_filter,
                 false,
-                "Whether to disable bloom filter");
+                "Whether to disable RocksDB bloom filter");
 // If used, For every data block we load into memory, we will create a bitmap
 // of size ((block_size / `read_amp_bytes_per_bit`) / 8) bytes. This bitmap
 // will be used to figure out the percentage we actually read of the blocks.
@@ -479,21 +473,21 @@ DSN_DEFINE_uint64(pegasus.server,
                   "get/multi-get operation duration exceed this threshold will be logged");
 DSN_DEFINE_validator(rocksdb_slow_query_threshold_ns,
                      [](uint64_t value) -> bool { return value > 0; });
-DSN_DEFINE_uint64(
-    pegasus.server,
-    rocksdb_abnormal_get_size_threshold,
-    1000000,
-    "get operation value size exceed this threshold will be logged, 0 means no check");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_abnormal_get_size_threshold,
+                  1000000,
+                  "A warning log will be print if the key-value size of Get operation is larger "
+                  "than this config, 0 means never print");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_abnormal_multi_get_size_threshold,
                   10000000,
-                  "multi-get operation total key-value size exceed this threshold will be logged, "
-                  "0 means no check");
+                  "A warning log will be print if the total key-value size of Multi-Get operation "
+                  "is larger than this config, 0 means never print");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_abnormal_multi_get_iterate_count_threshold,
                   1000,
-                  "multi-get operation iterate count exceed this threshold will be logged, 0 means "
-                  "no check");
+                  "A warning log will be print if the scan iteration count of Multi-Get operation "
+                  "is larger than this config, 0 means never print");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_multi_get_max_iteration_size,
                   30 << 20,
@@ -507,27 +501,28 @@ DSN_DEFINE_uint64(pegasus.server,
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_compaction_readahead_size,
                   2 * 1024 * 1024,
-                  "rocksdb options.compaction_readahead_size");
+                  "Corresponding to RocksDB's options.compaction_readahead_size");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_writable_file_max_buffer_size,
                   1024 * 1024,
-                  "rocksdb options.writable_file_max_buffer_size");
+                  "Corresponding to RocksDB's options.writable_file_max_buffer_size");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_write_buffer_size,
                   64 * 1024 * 1024,
-                  "rocksdb options.write_buffer_size");
+                  "Corresponding to RocksDB's options.write_buffer_size");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_target_file_size_base,
                   64 * 1024 * 1024,
-                  "rocksdb options.target_file_size_base");
+                  "Corresponding to RocksDB's options.target_file_size_base");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_max_bytes_for_level_base,
                   10 * 64 * 1024 * 1024,
-                  "rocksdb options.max_bytes_for_level_base");
-DSN_DEFINE_uint64(pegasus.server,
-                  rocksdb_block_cache_capacity,
-                  10 * 1024 * 1024 * 1024ULL,
-                  "block cache capacity for one pegasus server, shared by all rocksdb instances");
+                  "Corresponding to RocksDB's options.max_bytes_for_level_base");
+DSN_DEFINE_uint64(
+    pegasus.server,
+    rocksdb_block_cache_capacity,
+    10 * 1024 * 1024 * 1024ULL,
+    "The Block Cache capacity shared by all RocksDB instances in the process, in bytes");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_total_size_across_write_buffer,
                   0,
@@ -549,7 +544,7 @@ DSN_DEFINE_uint64(pegasus.server,
 DSN_DEFINE_double(pegasus.server,
                   rocksdb_max_bytes_for_level_multiplier,
                   10,
-                  "rocksdb options.rocksdb_max_bytes_for_level_multiplier");
+                  "Corresponding to RocksDB's options.rocksdb_max_bytes_for_level_multiplier");
 DSN_DEFINE_double(pegasus.server,
                   rocksdb_bloom_filter_bits_per_key,
                   10,
@@ -557,8 +552,9 @@ DSN_DEFINE_double(pegasus.server,
 DSN_DEFINE_string(pegasus.server,
                   rocksdb_compression_type,
                   "lz4",
-                  "rocksdb options.compression. Available config: '[none|snappy|zstd|lz4]' for all "
-                  "level 2 and higher levels, and "
+                  "Corresponding to RocksDB's options.compression. Available config: "
+                  "'[none|snappy|zstd|lz4]' for all "
+                  "level 1 and higher levels, and "
                   "'per_level:[none|snappy|zstd|lz4],[none|snappy|zstd|lz4],...' for each level "
                   "0,1,..., the last compression type will be used for levels not specified in the "
                   "list.");
@@ -574,6 +570,13 @@ DSN_DEFINE_validator(rocksdb_filter_type, [](const char *value) -> bool {
     return dsn::utils::equals(value, "common") || dsn::utils::equals(value, "prefix");
 });
 
+namespace dsn {
+namespace replication {
+class replica;
+} // namespace replication
+} // namespace dsn
+namespace pegasus {
+namespace server {
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
         {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
@@ -626,7 +629,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_positives),
       METRIC_VAR_INIT_replica(rdb_bloom_filter_point_lookup_true_positives)
 {
-    _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
+    _primary_address = dsn_primary_host_port().to_string();
     _gpid = get_gpid();
 
     _read_hotkey_collector =

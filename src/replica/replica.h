@@ -42,18 +42,17 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "prepare_list.h"
+#include "ranger/access_type.h"
 #include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
 #include "runtime/api_layer1.h"
-#include "ranger/access_type.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
-#include "utils/flags.h"
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
@@ -68,7 +67,7 @@ class rocksdb_wrapper_test;
 
 namespace dsn {
 class gpid;
-class rpc_address;
+class host_port;
 
 namespace dist {
 namespace block_service {
@@ -127,8 +126,6 @@ class test_checker;
             return;                                                                                \
         }                                                                                          \
     } while (0)
-
-DSN_DECLARE_bool(reject_write_when_disk_insufficient);
 
 // get bool envs[name], return false if value is not bool
 bool get_bool_envs(const std::map<std::string, std::string> &envs,
@@ -252,6 +249,11 @@ public:
     }
     bool is_duplication_master() const { return _is_duplication_master; }
     bool is_duplication_follower() const { return _is_duplication_follower; }
+    bool is_duplication_plog_checking() const { return _is_duplication_plog_checking.load(); }
+    void set_duplication_plog_checking(bool checking)
+    {
+        _is_duplication_plog_checking.store(checking);
+    }
 
     void update_app_duplication_status(bool doing_duplication);
 
@@ -298,8 +300,6 @@ public:
     METRIC_DEFINE_INCREMENT(backup_file_upload_successful_count)
     METRIC_DEFINE_INCREMENT_BY(backup_file_upload_total_bytes)
 
-    static const std::string kAppInfo;
-
 protected:
     // this method is marked protected to enable us to mock it in unit tests.
     virtual decree max_gced_decree_no_lock() const;
@@ -330,7 +330,7 @@ private:
     // See more about it in `replica_bulk_loader.cpp`
     void
     init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations = false);
-    void send_prepare_message(::dsn::rpc_address addr,
+    void send_prepare_message(::dsn::host_port addr,
                               partition_status::type status,
                               const mutation_ptr &mu,
                               int timeout_milliseconds,
@@ -356,7 +356,7 @@ private:
                                         learn_response &&resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err, bool is_local_error);
-    error_code handle_learning_succeeded_on_primary(::dsn::rpc_address node,
+    error_code handle_learning_succeeded_on_primary(::dsn::host_port node,
                                                     uint64_t learn_signature);
     void notify_learn_completion();
     error_code apply_learned_state_from_private_log(learn_state &state);
@@ -385,7 +385,7 @@ private:
     // failure handling
     void handle_local_failure(error_code error);
     void handle_remote_failure(partition_status::type status,
-                               ::dsn::rpc_address node,
+                               ::dsn::host_port node,
                                error_code error,
                                const std::string &caused_by);
 
@@ -393,12 +393,12 @@ private:
     // reconfiguration
     void assign_primary(configuration_update_request &proposal);
     void add_potential_secondary(configuration_update_request &proposal);
-    void upgrade_to_secondary_on_primary(::dsn::rpc_address node);
+    void upgrade_to_secondary_on_primary(::dsn::host_port node);
     void downgrade_to_secondary_on_primary(configuration_update_request &proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request &proposal);
     void remove(configuration_update_request &proposal);
     void update_configuration_on_meta_server(config_type::type type,
-                                             ::dsn::rpc_address node,
+                                             ::dsn::host_port node,
                                              partition_configuration &newConfig);
     void
     on_update_configuration_on_meta_server_reply(error_code err,
@@ -630,6 +630,9 @@ private:
     bool _is_manual_emergency_checkpointing{false};
     bool _is_duplication_master{false};
     bool _is_duplication_follower{false};
+    // Indicate whether the replica is during finding out some private logs to
+    // load for duplication. It useful to prevent plog GCed unexpectedly.
+    std::atomic<bool> _is_duplication_plog_checking{false};
 
     // backup
     std::unique_ptr<replica_backup_manager> _backup_mgr;
@@ -649,7 +652,6 @@ private:
 
     std::unique_ptr<replica_follower> _replica_follower;
 
-    // perf counters
     METRIC_VAR_DECLARE_gauge_int64(private_log_size_mb);
     METRIC_VAR_DECLARE_counter(throttling_delayed_write_requests);
     METRIC_VAR_DECLARE_counter(throttling_rejected_write_requests);

@@ -29,16 +29,22 @@
 #include "http/http_method.h"
 #include "http/http_status_code.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_engine.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/service_app.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
 #include "utils/flags.h"
 #include "utils/rand.h"
 #include "utils/shared_io_service.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
+
+DSN_DEFINE_uint64(metrics,
+                  entity_retirement_delay_ms,
+                  10 * 60 * 1000,
+                  "The retention interval (milliseconds) for an entity after it becomes stale.");
+
+DSN_DECLARE_string(cluster_name);
 
 METRIC_DEFINE_entity(server);
 
@@ -49,11 +55,6 @@ dsn::metric_entity_ptr server_metric_entity()
 }
 
 namespace dsn {
-
-DSN_DEFINE_uint64(metrics,
-                  entity_retirement_delay_ms,
-                  10 * 60 * 1000,
-                  "The retention interval (milliseconds) for an entity after it becomes stale.");
 
 metric_entity::metric_entity(const metric_entity_prototype *prototype,
                              const std::string &id,
@@ -476,8 +477,6 @@ metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_pro
     return entity;
 }
 
-DSN_DECLARE_string(cluster_name);
-
 namespace {
 
 #define ENCODE_OBJ_VAL(cond, val)                                                                  \
@@ -493,7 +492,7 @@ void encode_cluster(dsn::metric_json_writer &writer)
 {
     writer.Key(dsn::kMetricClusterField.c_str());
 
-    ENCODE_OBJ_VAL(!utils::is_empty(dsn::FLAGS_cluster_name), dsn::FLAGS_cluster_name);
+    ENCODE_OBJ_VAL(!utils::is_empty(FLAGS_cluster_name), FLAGS_cluster_name);
 }
 
 void encode_role(dsn::metric_json_writer &writer)
@@ -517,7 +516,7 @@ void encode_port(dsn::metric_json_writer &writer)
     writer.Key(dsn::kMetricPortField.c_str());
 
     const auto *const rpc = dsn::task::get_current_rpc2();
-    ENCODE_OBJ_VAL(rpc != nullptr, rpc->primary_address().port());
+    ENCODE_OBJ_VAL(rpc != nullptr, rpc->primary_host_port().port());
 }
 
 void encode_timestamp_ns(dsn::metric_json_writer &writer)

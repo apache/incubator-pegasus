@@ -34,7 +34,7 @@
 #include "utils/threadpool_code.h"
 #include "runtime/task/task_code.h"
 #include "common/gpid.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "common/gpid.h"
 #include "utils/factory_store.h"
 #include <vector>
@@ -88,14 +88,14 @@ public:
     }
 
     bool is_started() const { return _started; }
-    rpc_address primary_address() const { return _address; }
-    void set_address(const rpc_address &addr) { _address = addr; }
+    host_port primary_host_port() const { return _host_port; }
+    void set_host_port(const host_port &hp) { _host_port = hp; }
     void set_started(bool start_flag) { _started = start_flag; }
     const service_app_info &info() const;
 
 protected:
     const service_app_info *const _info;
-    rpc_address _address;
+    host_port _host_port;
     bool _started;
 };
 

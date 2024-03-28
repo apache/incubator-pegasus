@@ -32,11 +32,11 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 
-namespace pegasus {
-namespace server {
-
 DSN_DECLARE_int32(occurrence_threshold);
 DSN_DECLARE_bool(enable_detect_hotkey);
+
+namespace pegasus {
+namespace server {
 
 class hotspot_partition_test : public pegasus_server_test_base
 {

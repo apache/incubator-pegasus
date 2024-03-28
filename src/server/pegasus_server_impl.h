@@ -54,6 +54,12 @@
 #include "utils/rand.h"
 #include "utils/synchronize.h"
 
+DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_bytes_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_count_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_get_size_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_multi_get_iterate_count_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_multi_get_size_threshold);
+
 namespace pegasus {
 namespace server {
 class KeyWithTTLCompactionFilterFactory;
@@ -88,12 +94,6 @@ typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
 
 namespace pegasus {
 namespace server {
-
-DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_bytes_threshold);
-DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_count_threshold);
-DSN_DECLARE_uint64(rocksdb_abnormal_get_size_threshold);
-DSN_DECLARE_uint64(rocksdb_abnormal_multi_get_iterate_count_threshold);
-DSN_DECLARE_uint64(rocksdb_abnormal_multi_get_size_threshold);
 
 class capacity_unit_calculator;
 class hotkey_collector;
@@ -476,9 +476,6 @@ private:
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
-    // Column family names.
-    static const std::string DATA_COLUMN_FAMILY_NAME;
-    static const std::string META_COLUMN_FAMILY_NAME;
 
     dsn::gpid _gpid;
     std::string _primary_address;

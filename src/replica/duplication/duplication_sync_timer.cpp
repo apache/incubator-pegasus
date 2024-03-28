@@ -75,6 +75,7 @@ void duplication_sync_timer::run()
 
     auto req = std::make_unique<duplication_sync_request>();
     req->node = _stub->primary_address();
+    req->__set_hp_node(_stub->primary_host_port());
 
     // collects confirm points from all primaries on this server
     for (const replica_ptr &r : get_all_primaries()) {
@@ -222,6 +223,7 @@ duplication_sync_timer::get_dup_states(int app_id, /*out*/ bool *app_found)
             state.not_confirmed = std::max(decree(0), last_committed_decree - s.confirmed_decree);
             state.not_duplicated = std::max(decree(0), last_committed_decree - s.last_decree);
             state.fail_mode = s.fail_mode;
+            state.remote_app_name = s.remote_app_name;
             result.emplace(std::make_pair(s.dupid, state));
         }
     }

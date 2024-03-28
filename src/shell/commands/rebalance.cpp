@@ -31,7 +31,9 @@
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "meta_admin_types.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
@@ -49,9 +51,9 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
     l = type_from_string(_meta_function_level_VALUES_TO_NAMES,
                          std::string("fl_") + args.argv[1],
                          meta_function_level::fl_invalid);
-    verify_logged(l != meta_function_level::fl_invalid,
-                  "parse %s as meta function level failed\n",
-                  args.argv[1]);
+    PRINT_AND_RETURN_FALSE_IF_NOT(l != meta_function_level::fl_invalid,
+                                  "parse {} as meta function level failed\n",
+                                  args.argv[1]);
 
     configuration_meta_control_response resp = sc->ddl_client->control_meta_function_level(l);
     if (resp.err == dsn::ERR_OK) {
@@ -88,7 +90,7 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
     dverify(args.argc >= 9);
     dsn::replication::configuration_balancer_request request;
     request.gpid.set_app_id(-1);
-    dsn::rpc_address target, node;
+    dsn::host_port target, node;
     std::string proposal_type = "CT_";
     request.force = false;
     bool ans;
@@ -106,32 +108,38 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'g':
             ans = request.gpid.parse_from(optarg);
-            verify_logged(ans, "parse %s as gpid failed\n", optarg);
+            PRINT_AND_RETURN_FALSE_IF_NOT(ans, "parse {} as gpid failed\n", optarg);
             break;
         case 'p':
             proposal_type += optarg;
             break;
         case 't':
-            verify_logged(
-                target.from_string_ipv4(optarg), "parse %s as target_address failed\n", optarg);
+            target = dsn::host_port::from_string(optarg);
+            PRINT_AND_RETURN_FALSE_IF_NOT(target, "parse {} as target_host_port failed\n", optarg);
             break;
         case 'n':
-            verify_logged(node.from_string_ipv4(optarg), "parse %s as node failed\n", optarg);
+            node = dsn::host_port::from_string(optarg);
+            PRINT_AND_RETURN_FALSE_IF_NOT(target, "parse {}  as node failed\n", optarg);
             break;
         default:
             return false;
         }
     }
 
-    verify_logged(!target.is_invalid(), "need set target by -t\n");
-    verify_logged(!node.is_invalid(), "need set node by -n\n");
-    verify_logged(request.gpid.get_app_id() != -1, "need set gpid by -g\n");
+    PRINT_AND_RETURN_FALSE_IF_NOT(!target.is_invalid(), "need set target by -t\n");
+    PRINT_AND_RETURN_FALSE_IF_NOT(!node.is_invalid(), "need set node by -n\n");
+    PRINT_AND_RETURN_FALSE_IF_NOT(request.gpid.get_app_id() != -1, "need set gpid by -g\n");
 
     config_type::type tp =
         type_from_string(_config_type_VALUES_TO_NAMES, proposal_type, config_type::CT_INVALID);
-    verify_logged(
-        tp != config_type::CT_INVALID, "parse %s as config_type failed.\n", proposal_type.c_str());
-    request.action_list = {new_proposal_action(target, node, tp)};
+    PRINT_AND_RETURN_FALSE_IF_NOT(
+        tp != config_type::CT_INVALID, "parse {} as config_type failed.\n", proposal_type);
+    request.action_list = {
+        new_proposal_action(dsn::dns_resolver::instance().resolve_address(target),
+                            dsn::dns_resolver::instance().resolve_address(node),
+                            target,
+                            node,
+                            tp)};
     dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
     std::cout << "send proposal response: " << err << std::endl;
     return true;
@@ -151,7 +159,7 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
     dsn::replication::configuration_balancer_request request;
     request.gpid.set_app_id(-1);
     std::string balance_type;
-    dsn::rpc_address from, to;
+    dsn::host_port from, to;
     bool ans;
 
     optind = 0;
@@ -173,13 +181,15 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
             balance_type = optarg;
             break;
         case 'f':
-            if (!from.from_string_ipv4(optarg)) {
-                fprintf(stderr, "parse %s as from_address failed\n", optarg);
+            from = dsn::host_port::from_string(optarg);
+            if (!from) {
+                fprintf(stderr, "parse %s as from_host_port failed\n", optarg);
                 return false;
             }
             break;
         case 't':
-            if (!to.from_string_ipv4(optarg)) {
+            to = dsn::host_port::from_string(optarg);
+            if (!to) {
                 fprintf(stderr, "parse %s as target_address failed\n", optarg);
                 return false;
             }
@@ -191,20 +201,31 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<configuration_proposal_action> &actions = request.action_list;
     actions.reserve(4);
+    const auto &from_addr = dsn::dns_resolver::instance().resolve_address(from);
+    const auto &to_addr = dsn::dns_resolver::instance().resolve_address(to);
     if (balance_type == "move_pri") {
+        actions.emplace_back(new_proposal_action(
+            from_addr, from_addr, from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         actions.emplace_back(
-            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
-        actions.emplace_back(new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(to_addr, to_addr, to, to, config_type::CT_UPGRADE_TO_PRIMARY));
     } else if (balance_type == "copy_pri") {
-        actions.emplace_back(new_proposal_action(from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
+        actions.emplace_back(new_proposal_action(
+            from_addr, to_addr, from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
+        actions.emplace_back(new_proposal_action(
+            from_addr, from_addr, from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         actions.emplace_back(
-            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
-        actions.emplace_back(new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(to_addr, to_addr, to, to, config_type::CT_UPGRADE_TO_PRIMARY));
     } else if (balance_type == "copy_sec") {
-        actions.emplace_back(
-            new_proposal_action(dsn::rpc_address(), to, config_type::CT_ADD_SECONDARY_FOR_LB));
-        actions.emplace_back(
-            new_proposal_action(dsn::rpc_address(), from, config_type::CT_DOWNGRADE_TO_INACTIVE));
+        actions.emplace_back(new_proposal_action(dsn::rpc_address(),
+                                                 to_addr,
+                                                 dsn::host_port(),
+                                                 to,
+                                                 config_type::CT_ADD_SECONDARY_FOR_LB));
+        actions.emplace_back(new_proposal_action(dsn::rpc_address(),
+                                                 from_addr,
+                                                 dsn::host_port(),
+                                                 from,
+                                                 config_type::CT_DOWNGRADE_TO_INACTIVE));
     } else {
         fprintf(stderr, "parse %s as a balance type failed\n", balance_type.c_str());
         return false;

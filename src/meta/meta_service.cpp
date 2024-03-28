@@ -55,8 +55,9 @@
 #include "meta_service.h"
 #include "meta_split_service.h"
 #include "partition_split_types.h"
-#include "remote_cmd/remote_command.h"
 #include "ranger/ranger_resource_policy_manager.h"
+#include "remote_cmd/remote_command.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/task/async_calls.h"
 #include "server_load_balancer.h"
@@ -67,8 +68,69 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
+
+DSN_DECLARE_string(hosts_list);
+DSN_DEFINE_bool(meta_server,
+                recover_from_replica_server,
+                false,
+                "Whether to recover tables from replica servers when there is no "
+                "data of the tables in remote storage");
+DSN_DEFINE_bool(meta_server, cold_backup_disabled, true, "whether to disable cold backup");
+DSN_DEFINE_bool(meta_server,
+                enable_white_list,
+                false,
+                "whether to enable white list of replica servers");
+DSN_DEFINE_uint64(meta_server,
+                  min_live_node_count_for_unfreeze,
+                  3,
+                  "If the number of ALIVE nodes is less than this threshold, MetaServer will "
+                  "also enter the 'freezed' protection state");
+DSN_TAG_VARIABLE(min_live_node_count_for_unfreeze, FT_MUTABLE);
+DSN_DEFINE_validator(min_live_node_count_for_unfreeze,
+                     [](uint64_t min_live_node_count) -> bool { return min_live_node_count > 0; });
+
+DSN_DEFINE_int32(replication,
+                 lb_interval_ms,
+                 10000,
+                 "The interval milliseconds of meta server to execute load balance");
+DSN_DEFINE_int32(meta_server,
+                 node_live_percentage_threshold_for_update,
+                 65,
+                 "If the proportion of ALIVE nodes is less than this threshold, MetaServer will "
+                 "enter the 'freezed' protection state");
+DSN_DEFINE_validator(node_live_percentage_threshold_for_update,
+                     [](int32_t value) -> bool { return value >= 0 && value <= 100; });
+DSN_DEFINE_string(meta_server,
+                  meta_state_service_type,
+#ifdef MOCK_TEST
+                  "meta_state_service_simple",
+#else
+                  "meta_state_service_zookeeper",
+#endif
+                  "The implementation class of metadata storage service");
+DSN_DEFINE_string(meta_server,
+                  cluster_root,
+                  "/",
+                  "The root of the cluster meta state service to be stored on remote storage. "
+                  "Different meta servers in the same cluster need to be configured with the "
+                  "same value, while different clusters using different values if they share "
+                  "the same remote storage");
+DSN_DEFINE_string(meta_server,
+                  server_load_balancer_type,
+                  "greedy_load_balancer",
+                  "The implementation class of load balancer");
+DSN_DEFINE_string(meta_server,
+                  partition_guardian_type,
+                  "partition_guardian",
+                  "partition guardian provider");
+
+DSN_DECLARE_bool(duplication_enabled);
+DSN_DECLARE_int32(fd_beacon_interval_seconds);
+DSN_DECLARE_int32(fd_check_interval_seconds);
+DSN_DECLARE_int32(fd_grace_seconds);
+DSN_DECLARE_int32(fd_lease_seconds);
+DSN_DECLARE_string(cold_backup_root);
 
 METRIC_DEFINE_counter(server,
                       replica_server_disconnections,
@@ -86,60 +148,7 @@ METRIC_DEFINE_gauge_int64(server,
                           "The number of alive replica servers");
 
 namespace dsn {
-namespace dist {
-DSN_DECLARE_string(hosts_list);
-} // namespace dist
-
 namespace replication {
-DSN_DEFINE_bool(meta_server,
-                recover_from_replica_server,
-                false,
-                "whether to recover from replica server when no apps in remote storage");
-DSN_DEFINE_bool(meta_server, cold_backup_disabled, true, "whether to disable cold backup");
-DSN_DEFINE_bool(meta_server,
-                enable_white_list,
-                false,
-                "whether to enable white list of replica servers");
-DSN_DEFINE_uint64(meta_server,
-                  min_live_node_count_for_unfreeze,
-                  3,
-                  "minimum live node count without which the state is freezed");
-DSN_TAG_VARIABLE(min_live_node_count_for_unfreeze, FT_MUTABLE);
-DSN_DEFINE_validator(min_live_node_count_for_unfreeze,
-                     [](uint64_t min_live_node_count) -> bool { return min_live_node_count > 0; });
-
-DSN_DEFINE_int32(replication,
-                 lb_interval_ms,
-                 10000,
-                 "every this period(ms) the meta server will do load balance");
-DSN_DEFINE_uint64(meta_server,
-                  node_live_percentage_threshold_for_update,
-                  65,
-                  "If live_node_count * 100 < total_node_count * "
-                  "node_live_percentage_threshold_for_update, then freeze the cluster.");
-DSN_DEFINE_string(meta_server,
-                  meta_state_service_type,
-                  "meta_state_service_simple",
-                  "meta_state_service provider type");
-DSN_DEFINE_string(meta_server,
-                  cluster_root,
-                  "/",
-                  "The root of the cluster meta state service to be stored on remote storage");
-DSN_DEFINE_string(meta_server,
-                  server_load_balancer_type,
-                  "greedy_load_balancer",
-                  "server load balancer provider");
-DSN_DEFINE_string(meta_server,
-                  partition_guardian_type,
-                  "partition_guardian",
-                  "partition guardian provider");
-
-DSN_DECLARE_bool(duplication_enabled);
-DSN_DECLARE_int32(fd_beacon_interval_seconds);
-DSN_DECLARE_int32(fd_check_interval_seconds);
-DSN_DECLARE_int32(fd_grace_seconds);
-DSN_DECLARE_int32(fd_lease_seconds);
-DSN_DECLARE_string(cold_backup_root);
 
 #define CHECK_APP_ID_STATUS_AND_AUTHZ(app_id)                                                      \
     do {                                                                                           \
@@ -241,7 +250,7 @@ error_code meta_service::remote_storage_initialize()
 }
 
 // visited in protection of failure_detector::_lock
-void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is_alive)
+void meta_service::set_node_state(const std::vector<host_port> &nodes, bool is_alive)
 {
     for (auto &node : nodes) {
         if (is_alive) {
@@ -260,16 +269,15 @@ void meta_service::set_node_state(const std::vector<rpc_address> &nodes, bool is
     if (!_started) {
         return;
     }
-    for (const rpc_address &address : nodes) {
-        tasking::enqueue(
-            LPC_META_STATE_HIGH,
-            nullptr,
-            std::bind(&server_state::on_change_node_state, _state.get(), address, is_alive),
-            server_state::sStateHash);
+    for (const auto &hp : nodes) {
+        tasking::enqueue(LPC_META_STATE_HIGH,
+                         nullptr,
+                         std::bind(&server_state::on_change_node_state, _state.get(), hp, is_alive),
+                         server_state::sStateHash);
     }
 }
 
-void meta_service::get_node_state(/*out*/ std::map<rpc_address, bool> &all_nodes)
+void meta_service::get_node_state(/*out*/ std::map<host_port, bool> &all_nodes)
 {
     zauto_lock l(_failure_detector->_lock);
     for (auto &node : _alive_set)
@@ -303,29 +311,12 @@ void meta_service::unlock_meta_op_status()
 void meta_service::register_ctrl_commands()
 {
     _ctrl_node_live_percentage_threshold_for_update =
-        dsn::command_manager::instance().register_command(
-            {"meta.live_percentage"},
-            "meta.live_percentage [num | DEFAULT]",
+        dsn::command_manager::instance().register_int_command(
+            _node_live_percentage_threshold_for_update,
+            FLAGS_node_live_percentage_threshold_for_update,
+            "meta.live_percentage",
             "node live percentage threshold for update",
-            [this](const std::vector<std::string> &args) {
-                std::string result("OK");
-                if (args.empty()) {
-                    result = std::to_string(_node_live_percentage_threshold_for_update);
-                } else {
-                    if (args[0] == "DEFAULT") {
-                        _node_live_percentage_threshold_for_update =
-                            FLAGS_node_live_percentage_threshold_for_update;
-                    } else {
-                        int32_t v = 0;
-                        if (!dsn::buf2int32(args[0], v) || v < 0) {
-                            result = std::string("ERR: invalid arguments");
-                        } else {
-                            _node_live_percentage_threshold_for_update = v;
-                        }
-                    }
-                }
-                return result;
-            });
+            [](int32_t new_value) -> bool { return new_value >= 0 && new_value <= 100; });
 }
 
 void meta_service::start_service()
@@ -340,7 +331,7 @@ void meta_service::start_service()
 
     METRIC_VAR_SET(alive_replica_servers, _alive_set.size());
 
-    for (const dsn::rpc_address &node : _alive_set) {
+    for (const auto &node : _alive_set) {
         // sync alive set and the failure_detector
         _failure_detector->unregister_worker(node);
         _failure_detector->register_worker(node, true);
@@ -352,13 +343,13 @@ void meta_service::start_service()
     _access_controller = security::create_meta_access_controller(_ranger_resource_policy_manager);
 
     _started = true;
-    for (const dsn::rpc_address &node : _alive_set) {
+    for (const auto &node : _alive_set) {
         tasking::enqueue(LPC_META_STATE_HIGH,
                          nullptr,
                          std::bind(&server_state::on_change_node_state, _state.get(), node, true),
                          server_state::sStateHash);
     }
-    for (const dsn::rpc_address &node : _dead_set) {
+    for (const auto &node : _dead_set) {
         tasking::enqueue(LPC_META_STATE_HIGH,
                          nullptr,
                          std::bind(&server_state::on_change_node_state, _state.get(), node, false),
@@ -405,6 +396,7 @@ error_code meta_service::start()
         _failure_detector->set_allow_list(_meta_opts.replica_white_list);
     _failure_detector->register_ctrl_commands();
 
+    CHECK_GT_MSG(FLAGS_fd_grace_seconds, FLAGS_fd_lease_seconds, "");
     err = _failure_detector->start(FLAGS_fd_check_interval_seconds,
                                    FLAGS_fd_beacon_interval_seconds,
                                    FLAGS_fd_lease_seconds,
@@ -425,7 +417,8 @@ error_code meta_service::start()
 
     _failure_detector->acquire_leader_lock();
     CHECK(_failure_detector->get_leader(nullptr), "must be primary at this point");
-    LOG_INFO("{} got the primary lock, start to recover server state from remote storage",
+    LOG_INFO("{}({}) got the primary lock, start to recover server state from remote storage",
+             dsn_primary_host_port(),
              dsn_primary_address());
 
     // initialize the load balancer
@@ -571,10 +564,9 @@ void meta_service::register_rpc_handlers()
                                          &meta_service::on_set_max_replica_count);
 }
 
-meta_leader_state meta_service::check_leader(dsn::message_ex *req,
-                                             dsn::rpc_address *forward_address)
+meta_leader_state meta_service::check_leader(dsn::message_ex *req, dsn::host_port *forward_address)
 {
-    dsn::rpc_address leader;
+    host_port leader;
     if (!_failure_detector->get_leader(&leader)) {
         if (!req->header->context.u.is_forward_supported) {
             if (forward_address != nullptr)
@@ -584,11 +576,11 @@ meta_leader_state meta_service::check_leader(dsn::message_ex *req,
 
         LOG_DEBUG("leader address: {}", leader);
         if (!leader.is_invalid()) {
-            dsn_rpc_forward(req, leader);
+            dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
             return meta_leader_state::kNotLeaderAndCanForwardRpc;
         } else {
             if (forward_address != nullptr)
-                forward_address->set_invalid();
+                forward_address->reset();
             return meta_leader_state::kNotLeaderAndCannotForwardRpc;
         }
     }
@@ -701,7 +693,8 @@ void meta_service::on_list_nodes(configuration_list_nodes_rpc rpc)
         if (request.status == node_status::NS_INVALID || request.status == node_status::NS_ALIVE) {
             info.status = node_status::NS_ALIVE;
             for (auto &node : _alive_set) {
-                info.address = node;
+                info.address = dsn::dns_resolver::instance().resolve_address(node);
+                info.__set_hp_address(node);
                 response.infos.push_back(info);
             }
         }
@@ -709,7 +702,8 @@ void meta_service::on_list_nodes(configuration_list_nodes_rpc rpc)
             request.status == node_status::NS_UNALIVE) {
             info.status = node_status::NS_UNALIVE;
             for (auto &node : _dead_set) {
-                info.address = node;
+                info.address = dsn::dns_resolver::instance().resolve_address(node);
+                info.__set_hp_address(node);
                 response.infos.push_back(info);
             }
         }
@@ -734,9 +728,9 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
 
     response.values.push_back(oss.str());
     response.keys.push_back("primary_meta_server");
-    response.values.push_back(dsn_primary_address().to_std_string());
+    response.values.push_back(dsn_primary_host_port().to_string());
     response.keys.push_back("zookeeper_hosts");
-    response.values.push_back(dsn::dist::FLAGS_hosts_list);
+    response.values.push_back(FLAGS_hosts_list);
     response.keys.push_back("zookeeper_root");
     response.values.push_back(_cluster_root);
     response.keys.push_back("meta_function_level");
@@ -761,11 +755,12 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
 void meta_service::on_query_configuration_by_index(configuration_query_by_index_rpc rpc)
 {
     query_cfg_response &response = rpc.response();
-    rpc_address forward_address;
-    if (!check_status_and_authz(rpc, &forward_address)) {
-        if (!forward_address.is_invalid()) {
+    host_port forward_hp;
+    if (!check_status_and_authz(rpc, &forward_hp)) {
+        if (!forward_hp.is_invalid()) {
             partition_configuration config;
-            config.primary = forward_address;
+            config.primary = dsn::dns_resolver::instance().resolve_address(forward_hp);
+            config.__set_hp_primary(forward_hp);
             response.partitions.push_back(std::move(config));
         }
         return;
@@ -881,7 +876,8 @@ void meta_service::on_start_recovery(configuration_recovery_rpc rpc)
     } else {
         zauto_write_lock l(_meta_lock);
         if (_started.load()) {
-            LOG_INFO("service({}) is already started, ignore the recovery request",
+            LOG_INFO("service({}({})) is already started, ignore the recovery request",
+                     dsn_primary_host_port(),
                      dsn_primary_address());
             response.err = ERR_SERVICE_ALREADY_RUNNING;
         } else {

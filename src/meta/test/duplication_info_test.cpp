@@ -37,6 +37,11 @@ namespace replication {
 class duplication_info_test : public testing::Test
 {
 public:
+    static const std::string kTestAppName;
+    static const std::string kTestRemoteClusterName;
+    static const std::string kTestRemoteAppName;
+    static const std::string kTestMetaStorePath;
+
     void force_update_status(duplication_info &dup, duplication_status::type status)
     {
         dup._status = status;
@@ -47,12 +52,13 @@ public:
 
         duplication_info dup(1,
                              1,
-                             "temp",
+                             kTestAppName,
                              2,
                              0,
-                             "dsn://slave-cluster/temp",
-                             std::vector<rpc_address>(),
-                             "/meta_test/101/duplication/1");
+                             kTestRemoteClusterName,
+                             kTestRemoteAppName,
+                             std::vector<host_port>(),
+                             kTestMetaStorePath);
         duplication_confirm_entry entry;
         ASSERT_FALSE(dup.alter_progress(0, entry));
 
@@ -100,18 +106,20 @@ public:
     {
         duplication_info dup(1,
                              1,
-                             "temp",
+                             kTestAppName,
                              4,
                              0,
-                             "dsn://slave-cluster/temp",
-                             std::vector<rpc_address>(),
-                             "/meta_test/101/duplication/1");
+                             kTestRemoteClusterName,
+                             kTestRemoteAppName,
+                             std::vector<host_port>(),
+                             kTestMetaStorePath);
         ASSERT_FALSE(dup.is_altering());
-        ASSERT_EQ(dup._status, duplication_status::DS_INIT);
-        ASSERT_EQ(dup._next_status, duplication_status::DS_INIT);
+        ASSERT_EQ(duplication_status::DS_INIT, dup._status);
+        ASSERT_EQ(duplication_status::DS_INIT, dup._next_status);
 
         auto dup_ent = dup.to_duplication_entry();
-        ASSERT_EQ(dup_ent.progress.size(), 0);
+        ASSERT_EQ(0, dup_ent.progress.size());
+        ASSERT_EQ(kTestRemoteAppName, dup_ent.remote_app_name);
 
         for (int i = 0; i < 4; i++) {
             dup.init_progress(i, invalid_decree);
@@ -122,20 +130,21 @@ public:
 
         dup.start();
         ASSERT_TRUE(dup.is_altering());
-        ASSERT_EQ(dup._status, duplication_status::DS_INIT);
-        ASSERT_EQ(dup._next_status, duplication_status::DS_PREPARE);
+        ASSERT_EQ(duplication_status::DS_INIT, dup._status);
+        ASSERT_EQ(duplication_status::DS_PREPARE, dup._next_status);
     }
 
     static void test_persist_status()
     {
         duplication_info dup(1,
                              1,
-                             "temp",
+                             kTestAppName,
                              4,
                              0,
-                             "dsn://slave-cluster/temp",
-                             std::vector<rpc_address>(),
-                             "/meta_test/101/duplication/1");
+                             kTestRemoteClusterName,
+                             kTestRemoteAppName,
+                             std::vector<host_port>(),
+                             kTestMetaStorePath);
         dup.start();
 
         dup.persist_status();
@@ -149,12 +158,13 @@ public:
         dsn_run_config("config-test.ini", false);
         duplication_info dup(1,
                              1,
-                             "temp",
+                             kTestAppName,
                              4,
                              0,
-                             "slave-cluster",
-                             std::vector<rpc_address>(),
-                             "/meta_test/101/duplication/1");
+                             kTestRemoteClusterName,
+                             kTestRemoteAppName,
+                             std::vector<host_port>(),
+                             kTestMetaStorePath);
         dup.start();
         dup.persist_status();
 
@@ -164,31 +174,38 @@ public:
 
         duplication_info::json_helper copy;
         ASSERT_TRUE(json::json_forwarder<duplication_info::json_helper>::decode(json, copy));
-        ASSERT_EQ(copy.status, duplication_status::DS_APP);
-        ASSERT_EQ(copy.create_timestamp_ms, dup.create_timestamp_ms);
-        ASSERT_EQ(copy.remote, dup.follower_cluster_name);
+        ASSERT_EQ(duplication_status::DS_APP, copy.status);
+        ASSERT_EQ(dup.create_timestamp_ms, copy.create_timestamp_ms);
+        ASSERT_EQ(dup.remote_cluster_name, copy.remote);
+        ASSERT_EQ(dup.remote_app_name, copy.remote_app_name);
 
-        auto dup_sptr = duplication_info::decode_from_blob(
-            1, 1, "temp", 4, "/meta_test/101/duplication/1", json);
+        auto dup_sptr =
+            duplication_info::decode_from_blob(1, 1, kTestAppName, 4, kTestMetaStorePath, json);
         ASSERT_TRUE(dup_sptr->equals_to(dup)) << *dup_sptr << " " << dup;
 
         blob new_json =
             blob::create_from_bytes(boost::replace_all_copy(json.to_string(), "DS_APP", "DS_FOO"));
         ASSERT_FALSE(json::json_forwarder<duplication_info::json_helper>::decode(new_json, copy));
-        ASSERT_EQ(copy.status, duplication_status::DS_REMOVED);
+        ASSERT_EQ(duplication_status::DS_REMOVED, copy.status);
     }
 };
+
+const std::string duplication_info_test::kTestAppName = "temp";
+const std::string duplication_info_test::kTestRemoteClusterName = "slave-cluster";
+const std::string duplication_info_test::kTestRemoteAppName = "remote_temp";
+const std::string duplication_info_test::kTestMetaStorePath = "/meta_test/101/duplication/1";
 
 TEST_F(duplication_info_test, alter_status_when_busy)
 {
     duplication_info dup(1,
                          1,
-                         "temp",
+                         kTestAppName,
                          4,
                          0,
-                         "dsn://slave-cluster/temp",
-                         std::vector<rpc_address>(),
-                         "/meta_test/101/duplication/1");
+                         kTestRemoteClusterName,
+                         kTestRemoteAppName,
+                         std::vector<host_port>(),
+                         kTestMetaStorePath);
     dup.start();
 
     ASSERT_EQ(dup.alter_status(duplication_status::DS_PAUSE), ERR_BUSY);
@@ -255,12 +272,13 @@ TEST_F(duplication_info_test, alter_status)
     for (auto tt : tests) {
         duplication_info dup(1,
                              1,
-                             "temp",
+                             kTestAppName,
                              4,
                              0,
-                             "dsn://slave-cluster/temp",
-                             std::vector<rpc_address>(),
-                             "/meta_test/101/duplication/1");
+                             kTestRemoteClusterName,
+                             kTestRemoteAppName,
+                             std::vector<host_port>(),
+                             kTestMetaStorePath);
         for (const auto from : tt.from_list) {
             force_update_status(dup, from);
             for (const auto to : tt.to_list) {
@@ -285,12 +303,13 @@ TEST_F(duplication_info_test, is_valid)
 {
     duplication_info dup(1,
                          1,
-                         "temp",
+                         kTestAppName,
                          4,
                          0,
-                         "dsn://slave-cluster/temp",
-                         std::vector<rpc_address>(),
-                         "/meta_test/101/duplication/1");
+                         kTestRemoteClusterName,
+                         kTestRemoteAppName,
+                         std::vector<host_port>(),
+                         kTestMetaStorePath);
     ASSERT_TRUE(dup.is_invalid_status());
 
     dup.start();

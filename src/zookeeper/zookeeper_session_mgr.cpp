@@ -35,10 +35,10 @@
 #include "utils/singleton_store.h"
 #include "zookeeper_session.h"
 
+DSN_DEFINE_string(zookeeper, logfile, "zoo.log", "The Zookeeper logfile");
+
 namespace dsn {
 namespace dist {
-
-DSN_DEFINE_string(zookeeper, logfile, "", "The Zookeeper logfile");
 
 zookeeper_session_mgr::zookeeper_session_mgr()
 {

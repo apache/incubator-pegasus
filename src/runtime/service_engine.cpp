@@ -76,7 +76,7 @@ error_code service_node::init_rpc_engine()
 dsn::error_code service_node::start_app()
 {
     CHECK(_entity, "entity hasn't initialized");
-    _entity->set_address(rpc()->primary_address());
+    _entity->set_host_port(rpc()->primary_host_port());
 
     std::vector<std::string> args;
     utils::split_args(spec().arguments.c_str(), args);

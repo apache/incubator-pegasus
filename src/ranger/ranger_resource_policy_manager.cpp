@@ -56,9 +56,6 @@
 #include "utils/process_utils.h"
 #include "utils/strings.h"
 
-namespace dsn {
-namespace ranger {
-
 DSN_DEFINE_uint32(security,
                   update_ranger_policy_interval_sec,
                   5,
@@ -76,6 +73,9 @@ DSN_DEFINE_string(ranger,
                   "__default__",
                   "The name of the Ranger database policy matched by the legacy table(The table "
                   "name does not follow the naming rules of {database_name}.{table_name})");
+
+namespace dsn {
+namespace ranger {
 
 #define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
     do {                                                                                           \

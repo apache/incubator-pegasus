@@ -48,9 +48,6 @@
 #include "utils/test_macros.h"
 #include "utils/threadpool_code.h"
 
-using namespace dsn;
-using namespace dsn::dist::block_service;
-
 DSN_DEFINE_string(hdfs_test, test_name_node, "", "hdfs name node");
 DSN_DEFINE_string(hdfs_test, test_backup_path, "", "path for uploading and downloading test files");
 
@@ -59,6 +56,9 @@ DSN_DEFINE_uint32(hdfs_test,
                   num_total_files_for_hdfs_concurrent_test,
                   64,
                   "number of total files for hdfs concurrent test");
+
+using namespace dsn;
+using namespace dsn::dist::block_service;
 
 DEFINE_TASK_CODE(LPC_TEST_HDFS, TASK_PRIORITY_HIGH, dsn::THREAD_POOL_DEFAULT)
 

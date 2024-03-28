@@ -24,12 +24,12 @@
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
 
+#include "base/meta_store.h"
 #include "base/pegasus_value_schema.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
 #include "pegasus_write_service_impl.h"
 #include "server/logging_utils.h"
-#include "server/meta_store.h"
 #include "server/pegasus_server_impl.h"
 #include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"
@@ -38,11 +38,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-
-METRIC_DECLARE_counter(read_expired_values);
-
-namespace pegasus {
-namespace server {
 
 DSN_DEFINE_int32(pegasus.server,
                  inject_write_error_for_test,
@@ -55,6 +50,11 @@ DSN_DEFINE_bool(pegasus.server,
                 "If write_global_seqno is true, rocksdb will modify "
                 "'rocksdb.external_sst_file.global_seqno' of ssttable file during ingest process. "
                 "If false, it will not be modified.");
+
+METRIC_DECLARE_counter(read_expired_values);
+
+namespace pegasus {
+namespace server {
 
 rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
     : replica_base(server),

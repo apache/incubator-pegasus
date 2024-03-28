@@ -51,11 +51,6 @@
 #include "utils/threadpool_code.h"
 #include "utils/time_utils.h"
 
-namespace pegasus {
-namespace server {
-
-DEFINE_TASK_CODE(LPC_DETECT_AVAILABLE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-
 DSN_DEFINE_int32(pegasus.collector,
                  available_detect_alert_fail_count,
                  30,
@@ -81,6 +76,11 @@ DSN_DEFINE_string(pegasus.collector,
                   available_detect_alert_email_address,
                   "",
                   "available detect alert email address, empty means not send email");
+
+namespace pegasus {
+namespace server {
+
+DEFINE_TASK_CODE(LPC_DETECT_AVAILABLE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
 available_detector::available_detector()
     : _client(nullptr),

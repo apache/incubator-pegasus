@@ -38,6 +38,7 @@
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
+#include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "consensus_types.h"
 #include "duplication/replica_duplicator_manager.h"
@@ -54,10 +55,36 @@
 #include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 #include "utils/rand.h"
+
+DSN_DEFINE_bool(replication,
+                batch_write_disabled,
+                false,
+                "Whether to disable auto-batch of replicated write requests");
+DSN_DEFINE_int32(replication,
+                 staleness_for_commit,
+                 20,
+                 "The maximum number of two-phase commit rounds are allowed");
+DSN_DEFINE_int32(replication,
+                 max_mutation_count_in_prepare_list,
+                 110,
+                 "The maximum number of mutations allowed in prepare list");
+DSN_DEFINE_group_validator(max_mutation_count_in_prepare_list, [](std::string &message) -> bool {
+    if (FLAGS_max_mutation_count_in_prepare_list < FLAGS_staleness_for_commit) {
+        message = fmt::format("replication.max_mutation_count_in_prepare_list({}) should be >= "
+                              "replication.staleness_for_commit({})",
+                              FLAGS_max_mutation_count_in_prepare_list,
+                              FLAGS_staleness_for_commit);
+        return false;
+    }
+    return true;
+});
+
+DSN_DECLARE_int32(checkpoint_max_interval_hours);
 
 METRIC_DEFINE_gauge_int64(replica,
                           private_log_size_mb,
@@ -239,41 +266,14 @@ METRIC_DEFINE_counter(replica,
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_bool(replication,
-                batch_write_disabled,
-                false,
-                "whether to disable auto-batch of replicated write requests");
-DSN_DEFINE_int32(replication,
-                 staleness_for_commit,
-                 10,
-                 "how many concurrent two phase commit rounds are allowed");
-DSN_DEFINE_int32(replication,
-                 max_mutation_count_in_prepare_list,
-                 110,
-                 "maximum number of mutations in prepare list");
-DSN_DEFINE_group_validator(max_mutation_count_in_prepare_list, [](std::string &message) -> bool {
-    if (FLAGS_max_mutation_count_in_prepare_list < FLAGS_staleness_for_commit) {
-        message = fmt::format("replication.max_mutation_count_in_prepare_list({}) should be >= "
-                              "replication.staleness_for_commit({})",
-                              FLAGS_max_mutation_count_in_prepare_list,
-                              FLAGS_staleness_for_commit);
-        return false;
-    }
-    return true;
-});
-
-DSN_DECLARE_int32(checkpoint_max_interval_hours);
-
-const std::string replica::kAppInfo = ".app-info";
-
 replica::replica(replica_stub *stub,
                  gpid gpid,
                  const app_info &app,
                  dir_node *dn,
                  bool need_restore,
                  bool is_duplication_follower)
-    : serverlet<replica>("replica"),
-      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str), app.app_name),
+    : serverlet<replica>(replication_options::kReplicaAppType.c_str()),
+      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_host_port_cache), app.app_name),
       _app_info(app),
       _primary_states(gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
       _potential_secondary_states(this),
@@ -692,7 +692,8 @@ uint32_t replica::query_data_version() const
 error_code replica::store_app_info(app_info &info, const std::string &path)
 {
     replica_app_info new_info((app_info *)&info);
-    const auto &info_path = path.empty() ? utils::filesystem::path_combine(_dir, kAppInfo) : path;
+    const auto &info_path =
+        path.empty() ? utils::filesystem::path_combine(_dir, replica_app_info::kAppInfo) : path;
     auto err = new_info.store(info_path);
     if (dsn_unlikely(err != ERR_OK)) {
         LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", info_path, err);

@@ -23,7 +23,6 @@
 #include <string>
 #include <utility>
 
-#include "dsn.layer2_types.h"
 #include "load_from_private_log.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/mutation_log.h"
@@ -122,7 +121,7 @@ ship_mutation::ship_mutation(replica_duplicator *duplicator)
       METRIC_VAR_INIT_replica(dup_shipped_bytes)
 {
     _mutation_duplicator = new_mutation_duplicator(
-        duplicator, _duplicator->remote_cluster_name(), _replica->get_app_info()->app_name);
+        duplicator, duplicator->remote_cluster_name(), duplicator->remote_app_name());
     _mutation_duplicator->set_task_environment(duplicator);
 }
 

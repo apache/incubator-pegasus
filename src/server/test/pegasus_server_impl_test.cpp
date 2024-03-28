@@ -28,6 +28,7 @@
 #include <string>
 #include <utility>
 
+#include "base/meta_store.h"
 #include "common/replica_envs.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -35,7 +36,6 @@
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/serverlet.h"
-#include "server/meta_store.h"
 #include "server/pegasus_read_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
@@ -53,13 +53,13 @@ public:
 
     void test_table_level_slow_query()
     {
-        // the on_get function will sleep 10ms for unit test,
-        // so when we set slow_query_threshold <= 10ms, the perf counter will be incr by 1
+        // The function `on_get` will sleep 10ms for the unit test. Thus when we set
+        // slow_query_threshold <= 10ms, the metric `abnormal_read_requests` will increment by 1.
         struct test_case
         {
             bool is_multi_get; // false-on_get, true-on_multi_get
             uint64_t slow_query_threshold_ms;
-            uint8_t expect_perf_counter_incr;
+            uint8_t expected_incr;
         } tests[] = {{false, 10, 1}, {false, 300, 0}, {true, 10, 1}, {true, 300, 0}};
 
         // test key
@@ -93,7 +93,7 @@ public:
             }
             auto after_count = _server->METRIC_VAR_VALUE(abnormal_read_requests);
 
-            ASSERT_EQ(before_count + test.expect_perf_counter_incr, after_count);
+            ASSERT_EQ(before_count + test.expected_incr, after_count);
         }
     }
 

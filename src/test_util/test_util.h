@@ -36,13 +36,13 @@
 #include "utils/flags.h"
 #include "utils/test_macros.h"
 
+DSN_DECLARE_bool(encrypt_data_at_rest);
+
 namespace dsn {
 namespace replication {
 class file_meta;
 } // namespace replication
 } // namespace dsn
-
-DSN_DECLARE_bool(encrypt_data_at_rest);
 
 // Save the current value of a flag and restore it at the end of the function.
 #define PRESERVE_FLAG(name)                                                                        \

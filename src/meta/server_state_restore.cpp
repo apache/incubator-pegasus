@@ -40,7 +40,7 @@
 #include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_service.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/task.h"
@@ -251,7 +251,7 @@ void server_state::on_query_restore_status(configuration_query_restore_rpc rpc)
     for (int32_t i = 0; i < app->partition_count; i++) {
         const auto &r_state = app->helpers->restore_states[i];
         const auto &p = app->partitions[i];
-        if (!p.primary.is_invalid() || !p.secondaries.empty()) {
+        if (!p.hp_primary.is_invalid() || !p.hp_secondaries.empty()) {
             // already have primary, restore succeed
             continue;
         }

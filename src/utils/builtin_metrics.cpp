@@ -36,12 +36,12 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kMegaBytes,
                           "The total amount of physical memory usage in MB");
 
-namespace dsn {
-
 DSN_DEFINE_uint64(metrics,
                   builtin_metrics_update_interval_ms,
                   10 * 1000,
                   "The interval (milliseconds) at which builtin metrics are updated.");
+
+namespace dsn {
 
 builtin_metrics::builtin_metrics()
     : METRIC_VAR_INIT_server(virtual_mem_usage_mb), METRIC_VAR_INIT_server(resident_mem_usage_mb)

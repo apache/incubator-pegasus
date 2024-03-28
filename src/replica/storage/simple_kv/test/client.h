@@ -31,12 +31,13 @@
 #include <vector>
 
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/service_app.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
 
 namespace dsn {
+
 namespace replication {
 namespace application {
 class simple_kv_client;
@@ -57,14 +58,14 @@ public:
 
     void begin_read(int id, const std::string &key, int timeout_ms);
     void begin_write(int id, const std::string &key, const std::string &value, int timeout_ms);
-    void send_config_to_meta(const rpc_address &receiver,
+    void send_config_to_meta(const host_port &receiver,
                              dsn::replication::config_type::type type,
-                             const rpc_address &node);
+                             const host_port &node);
 
 private:
     std::unique_ptr<application::simple_kv_client> _simple_kv_client;
-    rpc_address _meta_server_group;
-    rpc_address _service_addr;
+    host_port _meta_server_group;
+    host_port _service_addr;
     dsn::task_tracker _tracker;
 };
 }

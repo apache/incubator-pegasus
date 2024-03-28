@@ -41,6 +41,7 @@
 #include "runtime/task/task_code.h"
 #include "utils/blob.h"
 #include "utils/customizable_id.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -58,11 +59,10 @@ METRIC_DEFINE_gauge_int64(server,
                           dsn::metric_unit::kSessions,
                           "The number of sessions from server side");
 
-namespace dsn {
 DSN_DEFINE_uint32(network,
                   conn_threshold_per_ip,
                   0,
-                  "max connection count to each server per ip, 0 means no limit");
+                  "The maximum connection count to each server per ip, 0 means no limit");
 DSN_DEFINE_string(network, unknown_message_header_format, "", "format for unknown message headers");
 DSN_DEFINE_string(network,
                   explicit_host_address,
@@ -75,6 +75,7 @@ DSN_DEFINE_string(network,
                   "network interface name used to init primary ipv4 address, "
                   "if empty, means using a site local address");
 
+namespace dsn {
 /*static*/ join_point<void, rpc_session *>
     rpc_session::on_rpc_session_connected("rpc.session.connected");
 /*static*/ join_point<void, rpc_session *>
@@ -387,10 +388,10 @@ rpc_session::rpc_session(connection_oriented_network &net,
       _message_sent(0),
       _net(net),
       _remote_addr(remote_addr),
+      _remote_host_port(host_port::from_address(remote_addr)),
       _max_buffer_block_count_per_send(net.max_buffer_block_count_per_send()),
       _reader(net.message_buffer_block_size()),
       _parser(parser),
-
       _is_client(is_client),
       _matcher(_net.engine()->matcher()),
       _delay_server_receive_ms(0)
@@ -432,9 +433,12 @@ void rpc_session::on_failure(bool is_write)
 
 bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
 {
-    if (msg->header->from_address.is_invalid())
+    if (msg->header->from_address.is_invalid()) {
         msg->header->from_address = _remote_addr;
+    }
+
     msg->to_address = _net.address();
+    msg->to_host_port = _net.host_port();
     msg->io_session = this;
 
     // ignore msg if join point return false
@@ -579,21 +583,22 @@ message_parser *network::new_message_parser(network_header_format hdr_format)
 uint32_t network::get_local_ipv4()
 {
     uint32_t ip = 0;
+    error_s s;
     if (!utils::is_empty(FLAGS_explicit_host_address)) {
-        ip = rpc_address::ipv4_from_host(FLAGS_explicit_host_address);
+        s = rpc_address::ipv4_from_host(FLAGS_explicit_host_address, &ip);
     }
 
-    if (0 == ip) {
+    if (!s || 0 == ip) {
         ip = rpc_address::ipv4_from_network_interface(FLAGS_primary_interface);
     }
 
     if (0 == ip) {
-        char name[128];
-        CHECK_EQ_MSG(gethostname(name, sizeof(name)),
+        char name[128] = {0};
+        CHECK_EQ_MSG(::gethostname(name, sizeof(name)),
                      0,
                      "gethostname failed, err = {}",
                      utils::safe_strerror(errno));
-        ip = rpc_address::ipv4_from_host(name);
+        CHECK_OK(rpc_address::ipv4_from_host(name, &ip), "ipv4_from_host for '{}' failed", name);
     }
 
     return ip;

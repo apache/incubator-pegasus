@@ -52,6 +52,10 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     : replica_base(r),
       _id(ent.dupid),
       _remote_cluster_name(ent.remote),
+      // remote_app_name is missing means meta server is of old version(< v2.6.0),
+      // in which case source app_name would be used as remote_app_name.
+      _remote_app_name(ent.__isset.remote_app_name ? ent.remote_app_name
+                                                   : r->get_app_info()->app_name),
       _replica(r),
       _stub(r->get_replica_stub()),
       METRIC_VAR_INIT_replica(dup_confirmed_mutations)
@@ -260,6 +264,11 @@ uint64_t replica_duplicator::get_pending_mutations_count() const
     int64_t cnt = _replica->last_committed_decree() - progress().last_decree;
     // since last_committed_decree() is not atomic, `cnt` could probably be negative.
     return cnt > 0 ? static_cast<uint64_t>(cnt) : 0;
+}
+
+void replica_duplicator::set_duplication_plog_checking(bool checking)
+{
+    _replica->set_duplication_plog_checking(checking);
 }
 
 } // namespace replication

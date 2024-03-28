@@ -336,7 +336,7 @@ aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
                                  hash);
     }
 
-    if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
+    if (dsn_unlikely(FLAGS_enable_latency_tracer)) {
         tsk->_tracer->set_parent_point_name("commit_pending_mutations");
         tsk->_tracer->set_description("log");
         for (const auto &mutation : pending.mutations()) {

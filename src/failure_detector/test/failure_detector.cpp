@@ -48,9 +48,11 @@
 #include "meta/meta_server_failure_detector.h"
 #include "replica/replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
@@ -65,11 +67,10 @@
 #include "utils/zlocks.h"
 
 DSN_DECLARE_int32(max_succssive_unstable_restart);
+DSN_DECLARE_uint64(stable_rs_min_running_seconds);
 
 using namespace dsn;
 using namespace dsn::fd;
-
-DSN_DECLARE_uint64(stable_rs_min_running_seconds);
 
 #define MPORT_START 30001
 #define WPORT 40001
@@ -83,11 +84,11 @@ class worker_fd_test : public ::dsn::dist::slave_failure_detector_with_multimast
 private:
     volatile bool _send_ping_switch;
     /* this function only triggerd once*/
-    std::function<void(rpc_address addr)> _connected_cb;
-    std::function<void(const std::vector<rpc_address> &)> _disconnected_cb;
+    std::function<void(host_port addr)> _connected_cb;
+    std::function<void(const std::vector<host_port> &)> _disconnected_cb;
 
 protected:
-    virtual void send_beacon(::dsn::rpc_address node, uint64_t time) override
+    virtual void send_beacon(::dsn::host_port node, uint64_t time) override
     {
         if (_send_ping_switch)
             failure_detector::send_beacon(node, time);
@@ -96,20 +97,20 @@ protected:
         }
     }
 
-    virtual void on_master_disconnected(const std::vector<rpc_address> &nodes) override
+    virtual void on_master_disconnected(const std::vector<host_port> &nodes) override
     {
         if (_disconnected_cb)
             _disconnected_cb(nodes);
     }
 
-    virtual void on_master_connected(rpc_address node) override
+    virtual void on_master_connected(host_port node) override
     {
         if (_connected_cb)
             _connected_cb(node);
     }
 
 public:
-    worker_fd_test(replication::replica_stub *stub, std::vector<dsn::rpc_address> &meta_servers)
+    worker_fd_test(replication::replica_stub *stub, std::vector<dsn::host_port> &meta_servers)
         : slave_failure_detector_with_multimaster(meta_servers,
                                                   [=]() { stub->on_meta_server_disconnected(); },
                                                   [=]() { stub->on_meta_server_connected(); })
@@ -117,8 +118,8 @@ public:
         _send_ping_switch = false;
     }
     void toggle_send_ping(bool toggle) { _send_ping_switch = toggle; }
-    void when_connected(const std::function<void(rpc_address addr)> &func) { _connected_cb = func; }
-    void when_disconnected(const std::function<void(const std::vector<rpc_address> &nodes)> &func)
+    void when_connected(const std::function<void(host_port addr)> &func) { _connected_cb = func; }
+    void when_disconnected(const std::function<void(const std::vector<host_port> &nodes)> &func)
     {
         _disconnected_cb = func;
     }
@@ -132,8 +133,8 @@ public:
 class master_fd_test : public replication::meta_server_failure_detector
 {
 private:
-    std::function<void(rpc_address addr)> _connected_cb;
-    std::function<void(const std::vector<rpc_address> &)> _disconnected_cb;
+    std::function<void(host_port addr)> _connected_cb;
+    std::function<void(const std::vector<host_port> &)> _disconnected_cb;
     volatile bool _response_ping_switch;
 
 public:
@@ -144,32 +145,32 @@ public:
         else {
             LOG_DEBUG("ignore on ping, beacon msg, time[{}], from[{}], to[{}]",
                       beacon.time,
-                      beacon.from_addr,
-                      beacon.to_addr);
+                      beacon.from_node,
+                      beacon.to_node);
         }
     }
 
-    virtual void on_worker_disconnected(const std::vector<rpc_address> &worker_list) override
+    virtual void on_worker_disconnected(const std::vector<host_port> &worker_list) override
     {
         if (_disconnected_cb)
             _disconnected_cb(worker_list);
     }
-    virtual void on_worker_connected(rpc_address node) override
+    virtual void on_worker_connected(host_port node) override
     {
         if (_connected_cb)
             _connected_cb(node);
     }
-    master_fd_test() : meta_server_failure_detector(rpc_address(), false)
+    master_fd_test() : meta_server_failure_detector(host_port(), false)
     {
         _response_ping_switch = true;
     }
     void toggle_response_ping(bool toggle) { _response_ping_switch = toggle; }
-    void when_connected(const std::function<void(rpc_address addr)> &func) { _connected_cb = func; }
-    void when_disconnected(const std::function<void(const std::vector<rpc_address> &nodes)> &func)
+    void when_connected(const std::function<void(host_port addr)> &func) { _connected_cb = func; }
+    void when_disconnected(const std::function<void(const std::vector<host_port> &nodes)> &func)
     {
         _disconnected_cb = func;
     }
-    void test_register_worker(rpc_address node)
+    void test_register_worker(host_port node)
     {
         zauto_lock l(failure_detector::_lock);
         register_worker(node);
@@ -188,9 +189,9 @@ public:
 
     error_code start(const std::vector<std::string> &args) override
     {
-        std::vector<rpc_address> master_group;
+        std::vector<host_port> master_group;
         for (int i = 0; i < 3; ++i)
-            master_group.push_back(rpc_address("localhost", MPORT_START + i));
+            master_group.push_back(host_port("localhost", MPORT_START + i));
         _worker_fd = new worker_fd_test(nullptr, master_group);
         _worker_fd->start(1, 1, 9, 10);
         ++started_apps;
@@ -207,10 +208,14 @@ public:
         LOG_DEBUG("master config, request: {}, type: {}",
                   request.master,
                   request.is_register ? "reg" : "unreg");
+
+        host_port hp_master;
+        GET_HOST_PORT(request, master, hp_master);
+
         if (request.is_register)
-            _worker_fd->register_master(request.master);
+            _worker_fd->register_master(hp_master);
         else
-            _worker_fd->unregister_master(request.master);
+            _worker_fd->unregister_master(hp_master);
         response = true;
     }
 
@@ -228,7 +233,6 @@ public:
     {
         FLAGS_stable_rs_min_running_seconds = 10;
         FLAGS_max_succssive_unstable_restart = 10;
-
         _master_fd = new master_fd_test();
         _master_fd->set_options(&_opts);
         bool use_allow_list = false;
@@ -236,9 +240,9 @@ public:
             std::vector<std::string> ports;
             utils::split_args(args[2].c_str(), ports, ',');
             for (auto &port : ports) {
-                rpc_address addr;
-                addr.assign_ipv4(network::get_local_ipv4(), std::stoi(port));
-                _master_fd->add_allow_list(addr);
+                rpc_address addr(network::get_local_ipv4(), std::stoi(port));
+                const auto hp = ::dsn::host_port::from_address(addr);
+                _master_fd->add_allow_list(hp);
             }
             use_allow_list = true;
         }
@@ -307,39 +311,42 @@ bool get_worker_and_master(test_worker *&worker, std::vector<test_master *> &mas
 
 void master_group_set_leader(std::vector<test_master *> &master_group, int leader_index)
 {
-    rpc_address leader_addr("localhost", MPORT_START + leader_index);
+    const auto hp_leader = host_port("localhost", MPORT_START + leader_index);
     int i = 0;
     for (test_master *&master : master_group) {
-        master->fd()->set_leader_for_test(leader_addr, leader_index == i);
+        master->fd()->set_leader_for_test(hp_leader, leader_index == i);
         i++;
     }
 }
 
 void worker_set_leader(test_worker *worker, int leader_contact)
 {
-    worker->fd()->set_leader_for_test(rpc_address("localhost", MPORT_START + leader_contact));
+    worker->fd()->set_leader_for_test(host_port("localhost", MPORT_START + leader_contact));
 
     config_master_message msg;
-    msg.master = rpc_address("localhost", MPORT_START + leader_contact);
+    msg.master = rpc_address::from_host_port("localhost", MPORT_START + leader_contact);
     msg.is_register = true;
+    msg.__set_hp_master(host_port::from_address(msg.master));
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(
-        rpc_address("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
+        rpc_address::from_host_port("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
     ASSERT_EQ(err, ERR_OK);
 }
 
 void clear(test_worker *worker, std::vector<test_master *> masters)
 {
-    rpc_address leader = worker->fd()->get_servers().group_address()->leader();
+    const auto &hp_leader = worker->fd()->get_servers().group_host_port()->leader();
+    const auto &leader = dsn::dns_resolver::instance().resolve_address(hp_leader);
 
     config_master_message msg;
     msg.master = leader;
     msg.is_register = false;
+    msg.__set_hp_master(hp_leader);
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(
-        rpc_address("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
+        rpc_address::from_host_port("localhost", WPORT), dsn::task_code(RPC_MASTER_CONFIG), msg);
     ASSERT_EQ(err, ERR_OK);
 
     worker->fd()->toggle_send_ping(false);
@@ -356,18 +363,17 @@ void finish(test_worker *worker, test_master *master, int master_index)
     std::atomic_int wait_count;
     wait_count.store(2);
     worker->fd()->when_disconnected(
-        [&wait_count, master_index](const std::vector<rpc_address> &addr_list) mutable {
+        [&wait_count, master_index](const std::vector<host_port> &addr_list) mutable {
             ASSERT_EQ(addr_list.size(), 1);
             ASSERT_EQ(addr_list[0].port(), MPORT_START + master_index);
             --wait_count;
         });
 
-    master->fd()->when_disconnected(
-        [&wait_count](const std::vector<rpc_address> &addr_list) mutable {
-            ASSERT_EQ(addr_list.size(), 1);
-            ASSERT_EQ(addr_list[0].port(), WPORT);
-            --wait_count;
-        });
+    master->fd()->when_disconnected([&wait_count](const std::vector<host_port> &addr_list) mutable {
+        ASSERT_EQ(addr_list.size(), 1);
+        ASSERT_EQ(addr_list[0].port(), WPORT);
+        --wait_count;
+    });
 
     // we don't send any ping message now
     worker->fd()->toggle_send_ping(false);
@@ -392,11 +398,11 @@ TEST(fd, dummy_connect_disconnect)
     // simply wait for two connected
     std::atomic_int wait_count;
     wait_count.store(2);
-    worker->fd()->when_connected([&wait_count](rpc_address leader) mutable {
+    worker->fd()->when_connected([&wait_count](host_port leader) mutable {
         ASSERT_EQ(leader.port(), MPORT_START);
         --wait_count;
     });
-    leader->fd()->when_connected([&wait_count](rpc_address worker_addr) mutable {
+    leader->fd()->when_connected([&wait_count](host_port worker_addr) mutable {
         ASSERT_EQ(worker_addr.port(), WPORT);
         --wait_count;
     });
@@ -426,8 +432,8 @@ TEST(fd, master_redirect)
     wait_count.store(2);
     /* although we contact to the first master, but in the end we must connect to the right leader
      */
-    worker->fd()->when_connected([&wait_count](rpc_address leader) mutable { --wait_count; });
-    leader->fd()->when_connected([&wait_count](rpc_address worker_addr) mutable {
+    worker->fd()->when_connected([&wait_count](host_port leader) mutable { --wait_count; });
+    leader->fd()->when_connected([&wait_count](host_port worker_addr) mutable {
         ASSERT_EQ(worker_addr.port(), WPORT);
         --wait_count;
     });
@@ -463,7 +469,7 @@ TEST(fd, switch_new_master_suddenly)
     std::atomic_int wait_count;
     wait_count.store(2);
 
-    auto cb = [&wait_count](rpc_address) mutable { --wait_count; };
+    auto cb = [&wait_count](host_port) mutable { --wait_count; };
     worker->fd()->when_connected(cb);
     tst_master->fd()->when_connected(cb);
 
@@ -482,7 +488,7 @@ TEST(fd, switch_new_master_suddenly)
      */
     tst_master->fd()->clear_workers();
     wait_count.store(1);
-    tst_master->fd()->when_connected([&wait_count](rpc_address addr) mutable {
+    tst_master->fd()->when_connected([&wait_count](host_port addr) mutable {
         ASSERT_EQ(addr.port(), WPORT);
         --wait_count;
     });
@@ -518,7 +524,7 @@ TEST(fd, old_master_died)
     std::atomic_int wait_count;
     wait_count.store(2);
 
-    auto cb = [&wait_count](rpc_address) mutable { --wait_count; };
+    auto cb = [&wait_count](host_port) mutable { --wait_count; };
     worker->fd()->when_connected(cb);
     tst_master->fd()->when_connected(cb);
 
@@ -529,7 +535,7 @@ TEST(fd, old_master_died)
     worker->fd()->when_connected(nullptr);
     tst_master->fd()->when_connected(nullptr);
 
-    worker->fd()->when_disconnected([](const std::vector<rpc_address> &masters_list) {
+    worker->fd()->when_disconnected([](const std::vector<host_port> &masters_list) {
         ASSERT_EQ(masters_list.size(), 1);
         LOG_DEBUG("disconnect from master: {}", masters_list[0]);
     });
@@ -544,7 +550,7 @@ TEST(fd, old_master_died)
     tst_master->fd()->clear_workers();
     wait_count.store(1);
 
-    tst_master->fd()->when_connected([&wait_count](rpc_address addr) mutable {
+    tst_master->fd()->when_connected([&wait_count](host_port addr) mutable {
         EXPECT_EQ(addr.port(), WPORT);
         --wait_count;
     });
@@ -580,7 +586,7 @@ TEST(fd, worker_died_when_switch_master)
     std::atomic_int wait_count;
     wait_count.store(2);
 
-    auto cb = [&wait_count](rpc_address) mutable { --wait_count; };
+    auto cb = [&wait_count](host_port) mutable { --wait_count; };
     worker->fd()->when_connected(cb);
     tst_master->fd()->when_connected(cb);
 
@@ -600,19 +606,19 @@ TEST(fd, worker_died_when_switch_master)
 
     wait_count.store(2);
     tst_master->fd()->when_disconnected(
-        [&wait_count](const std::vector<rpc_address> &worker_list) mutable {
+        [&wait_count](const std::vector<host_port> &worker_list) mutable {
             ASSERT_EQ(worker_list.size(), 1);
             ASSERT_EQ(worker_list[0].port(), WPORT);
             wait_count--;
         });
     worker->fd()->when_disconnected(
-        [&wait_count](const std::vector<rpc_address> &master_list) mutable {
+        [&wait_count](const std::vector<host_port> &master_list) mutable {
             ASSERT_EQ(master_list.size(), 1);
             wait_count--;
         });
 
     /* we assume the worker is alive */
-    tst_master->fd()->test_register_worker(rpc_address("localhost", WPORT));
+    tst_master->fd()->test_register_worker(host_port("localhost", WPORT));
     master_group_set_leader(masters, index);
 
     /* then stop the worker*/
@@ -652,8 +658,10 @@ TEST(fd, update_stability)
 
     dsn::rpc_replier<beacon_ack> r(create_fake_rpc_response());
     beacon_msg msg;
-    msg.from_addr = rpc_address("localhost", 123);
-    msg.to_addr = rpc_address("localhost", MPORT_START);
+    msg.from_node = rpc_address::from_host_port("localhost", 123);
+    msg.__set_hp_from_node(host_port("localhost", 123));
+    msg.to_node = rpc_address::from_host_port("localhost", MPORT_START);
+    msg.__set_hp_to_node(host_port("localhost", MPORT_START));
     msg.time = dsn_now_ms();
     msg.__isset.start_time = true;
     msg.start_time = 1000;
@@ -661,10 +669,10 @@ TEST(fd, update_stability)
     // first on ping
     fd->on_ping(msg, r);
     ASSERT_EQ(1, smap->size());
-    ASSERT_NE(smap->end(), smap->find(msg.from_addr));
+    ASSERT_NE(smap->end(), smap->find(msg.hp_from_node));
 
     replication::meta_server_failure_detector::worker_stability &ws =
-        smap->find(msg.from_addr)->second;
+        smap->find(msg.hp_from_node)->second;
     ASSERT_EQ(0, ws.unstable_restart_count);
     ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
     ASSERT_TRUE(r.is_empty());
@@ -732,7 +740,7 @@ TEST(fd, update_stability)
     ASSERT_FALSE(r.is_empty());
 
     // reset stat
-    fd->reset_stability_stat(msg.from_addr);
+    fd->reset_stability_stat(msg.hp_from_node);
     ASSERT_EQ(msg.start_time, ws.last_start_time_ms);
     ASSERT_EQ(0, ws.unstable_restart_count);
 }
@@ -751,7 +759,7 @@ TEST(fd, not_in_whitelist)
 
     std::atomic_int wait_count;
     wait_count.store(1);
-    auto cb = [&wait_count](rpc_address) mutable { --wait_count; };
+    auto cb = [&wait_count](host_port) mutable { --wait_count; };
     worker->fd()->when_connected(cb);
     worker->fd()->toggle_send_ping(true);
 

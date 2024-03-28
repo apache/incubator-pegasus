@@ -42,27 +42,28 @@
 #include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_data.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/command_manager.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/math.h"
 #include "utils/metrics.h"
 
-namespace dsn {
-class gpid;
-
-namespace replication {
-
 DSN_DEFINE_bool(meta_server, balance_cluster, false, "whether to enable cluster balancer");
 DSN_TAG_VARIABLE(balance_cluster, FT_MUTABLE);
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
+namespace dsn {
+class gpid;
+
+namespace replication {
+
 greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : server_load_balancer(_svc)
 {
     _app_balance_policy = std::make_unique<app_balance_policy>(_svc);
     _cluster_balance_policy = std::make_unique<cluster_balance_policy>(_svc);
+    _all_replca_infos_collected = false;
 
     ::memset(t_operation_counters, 0, sizeof(t_operation_counters));
 }
@@ -144,7 +145,7 @@ void greedy_load_balancer::score(meta_view view, double &primary_stddev, double 
 
 bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
 {
-    dsn::rpc_address n = ns.addr();
+    const auto &n = ns.host_port();
     return ns.for_each_partition([this, n](const dsn::gpid &pid) {
         config_context &cc = *get_config_context(*(t_global_view->apps), pid);
         if (cc.find_from_serving(n) == cc.serving.end()) {
@@ -162,7 +163,8 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 
     for (auto &kv : *(t_global_view->nodes)) {
         node_state &ns = kv.second;
-        if (!all_replica_infos_collected(ns)) {
+        _all_replca_infos_collected = all_replica_infos_collected(ns);
+        if (!_all_replca_infos_collected) {
             return;
         }
     }
@@ -233,6 +235,13 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
         default:
             CHECK(false, "");
         }
+    }
+
+    if (!_all_replca_infos_collected) {
+        counters[ALL_COUNT] = -1;
+        LOG_DEBUG(
+            "balance checker operation count = {}, due to meta server hasn't collected all replica",
+            counters[ALL_COUNT]);
     }
 
     ::memcpy(t_operation_counters, counters, sizeof(counters));

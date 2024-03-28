@@ -37,6 +37,7 @@
 #include "runtime/rpc/message_parser.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_spec.h"
 #include "utils/error_code.h"
@@ -79,6 +80,7 @@ public:
 
     virtual error_code start(rpc_channel channel, int port, bool client_only) override;
     virtual ::dsn::rpc_address address() override { return _address; }
+    virtual ::dsn::host_port host_port() override { return _hp; }
     virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override;
 
 private:
@@ -93,6 +95,7 @@ private:
     std::vector<std::unique_ptr<boost::asio::io_service>> _io_services;
     std::vector<std::shared_ptr<std::thread>> _workers;
     ::dsn::rpc_address _address;
+    ::dsn::host_port _hp;
 };
 
 // TODO(Tangyanzhao): change the network model like asio_network_provider
@@ -108,6 +111,8 @@ public:
     virtual error_code start(rpc_channel channel, int port, bool client_only) override;
 
     virtual ::dsn::rpc_address address() override { return _address; }
+
+    virtual ::dsn::host_port host_port() override { return _hp; }
 
     virtual void inject_drop_message(message_ex *msg, bool is_send) override
     {
@@ -125,6 +130,7 @@ private:
     std::shared_ptr<boost::asio::ip::udp::socket> _socket;
     std::vector<std::shared_ptr<std::thread>> _workers;
     ::dsn::rpc_address _address;
+    ::dsn::host_port _hp;
     message_reader _recv_reader;
 
     ::dsn::utils::ex_lock_nr _lock; // [

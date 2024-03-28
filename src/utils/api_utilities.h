@@ -24,10 +24,7 @@
  * THE SOFTWARE.
  */
 
-// some useful utility functions provided by rDSN,
-// such as logging, performance counter, checksum,
-// command line interface registration and invocation,
-// etc.
+// Some useful utility functions for logging and mocking provided by rDSN.
 
 #pragma once
 

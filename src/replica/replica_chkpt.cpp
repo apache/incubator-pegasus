@@ -62,29 +62,28 @@
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
-namespace replication {
-
-// The checkpoint of the replicated app part of replica.
+/// The checkpoint of the replicated app part of replica.
 
 DSN_DEFINE_int32(replication,
                  checkpoint_max_interval_hours,
                  2,
-                 "maximum time interval (hours) where a new checkpoint must be created");
+                 "The maximum time interval in hours of replica checkpoints must be generated");
 DSN_DEFINE_int32(replication,
                  log_private_reserve_max_size_mb,
-                 0,
-                 "max size of useless private log to be reserved. NOTE: only when "
-                 "FLAGS_log_private_reserve_max_size_mb and "
-                 "FLAGS_log_private_reserve_max_time_seconds are both satisfied, the useless logs "
-                 "can be reserved.");
+                 1000,
+                 "The maximum size of useless private log to be reserved. NOTE: only when "
+                 "'log_private_reserve_max_size_mb' and 'log_private_reserve_max_time_seconds' are "
+                 "both satisfied, the useless logs can be reserved");
 DSN_DEFINE_int32(replication,
                  log_private_reserve_max_time_seconds,
-                 0,
-                 "max time in seconds of useless private log to be reserved. NOTE: only when "
-                 "FLAGS_log_private_reserve_max_size_mb and "
-                 "FLAGS_log_private_reserve_max_time_seconds are both satisfied, the useless logs "
-                 "can be reserved.");
+                 36000,
+                 "The maximum time in seconds of useless private log to be reserved. NOTE: only "
+                 "when 'log_private_reserve_max_size_mb' and "
+                 "'log_private_reserve_max_time_seconds' are both satisfied, the useless logs can "
+                 "be reserved");
+
+namespace dsn {
+namespace replication {
 
 const std::string kCheckpointFolderPrefix /*NOLINT*/ = "checkpoint";
 
@@ -143,6 +142,12 @@ void replica::on_checkpoint_timer()
             LOG_INFO_PREFIX(
                 "gc_private {}: skip gc because confirmed duplication progress is unknown",
                 enum_to_string(status()));
+            return;
+        }
+
+        if (is_duplication_plog_checking()) {
+            LOG_DEBUG_PREFIX("gc_private {}: skip gc because duplication is checking plog files",
+                             enum_to_string(status()));
             return;
         }
 
@@ -256,7 +261,8 @@ void replica::on_query_last_checkpoint(/*out*/ learn_response &response)
         // for example: base_local_dir = "./data" + "checkpoint.1024" = "./data/checkpoint.1024"
         response.base_local_dir = utils::filesystem::path_combine(
             _app->data_dir(), checkpoint_folder(response.state.to_decree_included));
-        response.address = _stub->_primary_address;
+        response.learnee = _stub->primary_address();
+        response.__set_hp_learnee(_stub->primary_host_port());
         for (auto &file : response.state.files) {
             // response.state.files contain file absolute path， for example:
             // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst

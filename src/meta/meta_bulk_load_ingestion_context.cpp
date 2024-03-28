@@ -28,9 +28,6 @@
 #include "utils/string_conv.h"
 #include "absl/strings/string_view.h"
 
-namespace dsn {
-namespace replication {
-
 DSN_DEFINE_uint32(meta_server,
                   bulk_load_node_max_ingesting_count,
                   4,
@@ -40,6 +37,9 @@ DSN_TAG_VARIABLE(bulk_load_node_max_ingesting_count, FT_MUTABLE);
 DSN_DEFINE_uint32(meta_server, bulk_load_node_min_disk_count, 1, "min disk count of one node");
 DSN_TAG_VARIABLE(bulk_load_node_min_disk_count, FT_MUTABLE);
 
+namespace dsn {
+namespace replication {
+
 ingestion_context::ingestion_context() { reset_all(); }
 
 ingestion_context::~ingestion_context() { reset_all(); }
@@ -48,9 +48,9 @@ void ingestion_context::partition_node_info::create(const partition_configuratio
                                                     const config_context &cc)
 {
     pid = config.pid;
-    std::unordered_set<rpc_address> current_nodes;
-    current_nodes.insert(config.primary);
-    for (const auto &secondary : config.secondaries) {
+    std::unordered_set<host_port> current_nodes;
+    current_nodes.insert(config.hp_primary);
+    for (const auto &secondary : config.hp_secondaries) {
         current_nodes.insert(secondary);
     }
     for (const auto &node : current_nodes) {
@@ -139,7 +139,7 @@ bool ingestion_context::try_partition_ingestion(const partition_configuration &c
     return true;
 }
 
-bool ingestion_context::check_node_ingestion(const rpc_address &node, const std::string &disk_tag)
+bool ingestion_context::check_node_ingestion(const host_port &node, const std::string &disk_tag)
 {
     if (_nodes_context.find(node) == _nodes_context.end()) {
         _nodes_context[node] = node_context(node, disk_tag);

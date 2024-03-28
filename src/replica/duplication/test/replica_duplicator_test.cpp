@@ -69,25 +69,29 @@ public:
         return dup->_start_point_decree;
     }
 
-    void test_new_duplicator()
+    void test_new_duplicator(const std::string &remote_app_name, bool specify_remote_app_name)
     {
-        dupid_t dupid = 1;
-        std::string remote = "remote_address";
-        duplication_status::type status = duplication_status::DS_PAUSE;
-        int64_t confirmed_decree = 100;
+        const dupid_t dupid = 1;
+        const std::string remote = "remote_address";
+        const duplication_status::type status = duplication_status::DS_PAUSE;
+        const int64_t confirmed_decree = 100;
 
         duplication_entry dup_ent;
         dup_ent.dupid = dupid;
         dup_ent.remote = remote;
         dup_ent.status = status;
         dup_ent.progress[_replica->get_gpid().get_partition_index()] = confirmed_decree;
+        if (specify_remote_app_name) {
+            dup_ent.__set_remote_app_name(remote_app_name);
+        }
 
         auto duplicator = std::make_unique<replica_duplicator>(dup_ent, _replica.get());
-        ASSERT_EQ(duplicator->id(), dupid);
-        ASSERT_EQ(duplicator->remote_cluster_name(), remote);
-        ASSERT_EQ(duplicator->_status, status);
-        ASSERT_EQ(duplicator->progress().confirmed_decree, confirmed_decree);
-        ASSERT_EQ(duplicator->progress().last_decree, confirmed_decree);
+        ASSERT_EQ(dupid, duplicator->id());
+        ASSERT_EQ(remote, duplicator->remote_cluster_name());
+        ASSERT_EQ(remote_app_name, duplicator->remote_app_name());
+        ASSERT_EQ(status, duplicator->_status);
+        ASSERT_EQ(confirmed_decree, duplicator->progress().confirmed_decree);
+        ASSERT_EQ(confirmed_decree, duplicator->progress().last_decree);
 
         auto &expected_env = *duplicator;
         ASSERT_EQ(duplicator->tracker(), expected_env.__conf.tracker);
@@ -138,7 +142,15 @@ public:
 
 INSTANTIATE_TEST_SUITE_P(, replica_duplicator_test, ::testing::Values(false, true));
 
-TEST_P(replica_duplicator_test, new_duplicator) { test_new_duplicator(); }
+TEST_P(replica_duplicator_test, new_duplicator_without_remote_app_name)
+{
+    test_new_duplicator("temp", false);
+}
+
+TEST_P(replica_duplicator_test, new_duplicator_with_remote_app_name)
+{
+    test_new_duplicator("another_test_app", true);
+}
 
 TEST_P(replica_duplicator_test, pause_start_duplication) { test_pause_start_duplication(); }
 

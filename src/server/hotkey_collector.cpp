@@ -35,9 +35,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-namespace pegasus {
-namespace server {
-
 DSN_DEFINE_uint32(
     pegasus.server,
     hot_bucket_variance_threshold,
@@ -76,6 +73,9 @@ DSN_DEFINE_uint32(
     150,
     "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
 DSN_TAG_VARIABLE(max_seconds_to_detect_hotkey, FT_MUTABLE);
+
+namespace pegasus {
+namespace server {
 
 // 68–95–99.7 rule, same algorithm as hotspot_partition_calculator::stat_histories_analyse
 /*extern*/ bool

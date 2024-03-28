@@ -26,19 +26,20 @@
 
 #include "dsn.layer2_types.h"
 #include "meta/load_balance_policy.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
-
-namespace dsn {
-namespace replication {
-class meta_service;
 
 DSN_DEFINE_uint32(meta_server,
                   balance_op_count_per_round,
                   10,
                   "balance operation count per round for cluster balancer");
 DSN_TAG_VARIABLE(balance_op_count_per_round, FT_MUTABLE);
+
+namespace dsn {
+namespace replication {
+class meta_service;
 
 uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t app_id)
 {
@@ -64,7 +65,7 @@ uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t ap
     return (uint32_t)count;
 }
 
-uint32_t get_skew(const std::map<rpc_address, uint32_t> &count_map)
+uint32_t get_skew(const std::map<host_port, uint32_t> &count_map)
 {
     uint32_t min = UINT_MAX, max = 0;
     for (const auto &kv : count_map) {
@@ -78,11 +79,11 @@ uint32_t get_skew(const std::map<rpc_address, uint32_t> &count_map)
     return max - min;
 }
 
-void get_min_max_set(const std::map<rpc_address, uint32_t> &node_count_map,
-                     /*out*/ std::set<rpc_address> &min_set,
-                     /*out*/ std::set<rpc_address> &max_set)
+void get_min_max_set(const std::map<host_port, uint32_t> &node_count_map,
+                     /*out*/ std::set<host_port> &min_set,
+                     /*out*/ std::set<host_port> &max_set)
 {
-    std::multimap<uint32_t, rpc_address> count_multimap = utils::flip_map(node_count_map);
+    std::multimap<uint32_t, host_port> count_multimap = utils::flip_map(node_count_map);
 
     auto range = count_multimap.equal_range(count_multimap.begin()->first);
     for (auto iter = range.first; iter != range.second; ++iter) {
@@ -222,14 +223,14 @@ bool cluster_balance_policy::get_app_migration_info(std::shared_ptr<app_state> a
     info.app_name = app->app_name;
     info.partitions.resize(app->partitions.size());
     for (auto i = 0; i < app->partitions.size(); ++i) {
-        std::map<rpc_address, partition_status::type> pstatus_map;
-        pstatus_map[app->partitions[i].primary] = partition_status::PS_PRIMARY;
-        if (app->partitions[i].secondaries.size() != app->partitions[i].max_replica_count - 1) {
+        std::map<host_port, partition_status::type> pstatus_map;
+        pstatus_map[app->partitions[i].hp_primary] = partition_status::PS_PRIMARY;
+        if (app->partitions[i].hp_secondaries.size() != app->partitions[i].max_replica_count - 1) {
             // partition is unhealthy
             return false;
         }
-        for (const auto &addr : app->partitions[i].secondaries) {
-            pstatus_map[addr] = partition_status::PS_SECONDARY;
+        for (const auto &hp : app->partitions[i].hp_secondaries) {
+            pstatus_map[hp] = partition_status::PS_SECONDARY;
         }
         info.partitions[i] = pstatus_map;
     }
@@ -237,7 +238,7 @@ bool cluster_balance_policy::get_app_migration_info(std::shared_ptr<app_state> a
     for (const auto &it : nodes) {
         const node_state &ns = it.second;
         auto count = get_partition_count(ns, type, app->app_id);
-        info.replicas_count[ns.addr()] = count;
+        info.replicas_count[ns.host_port()] = count;
     }
 
     return true;
@@ -247,12 +248,12 @@ void cluster_balance_policy::get_node_migration_info(const node_state &ns,
                                                      const app_mapper &apps,
                                                      /*out*/ node_migration_info &info)
 {
-    info.address = ns.addr();
+    info.hp = ns.host_port();
     for (const auto &iter : apps) {
         std::shared_ptr<app_state> app = iter.second;
         for (const auto &context : app->helpers->contexts) {
             std::string disk_tag;
-            if (!context.get_disk_tag(ns.addr(), disk_tag)) {
+            if (!context.get_disk_tag(ns.host_port(), disk_tag)) {
                 continue;
             }
             auto pid = context.config_owner->pid;
@@ -290,8 +291,8 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
      * a move that improves the app skew and the cluster skew, if possible. If
      * not, attempt to pick a move that improves the app skew.
      **/
-    std::set<rpc_address> cluster_min_count_nodes;
-    std::set<rpc_address> cluster_max_count_nodes;
+    std::set<host_port> cluster_min_count_nodes;
+    std::set<host_port> cluster_max_count_nodes;
     get_min_max_set(cluster_info.replicas_count, cluster_min_count_nodes, cluster_max_count_nodes);
 
     bool found = false;
@@ -303,8 +304,8 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
             continue;
         }
         auto app_map = it->second.replicas_count;
-        std::set<rpc_address> app_min_count_nodes;
-        std::set<rpc_address> app_max_count_nodes;
+        std::set<host_port> app_min_count_nodes;
+        std::set<host_port> app_max_count_nodes;
         get_min_max_set(app_map, app_min_count_nodes, app_max_count_nodes);
 
         /**
@@ -312,9 +313,9 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
          * with the replica servers most loaded overall, and likewise for least loaded.
          * These are our ideal candidates for moving from and to, respectively.
          **/
-        std::set<rpc_address> app_cluster_min_set =
+        std::set<host_port> app_cluster_min_set =
             utils::get_intersection(app_min_count_nodes, cluster_min_count_nodes);
-        std::set<rpc_address> app_cluster_max_set =
+        std::set<host_port> app_cluster_max_set =
             utils::get_intersection(app_max_count_nodes, cluster_max_count_nodes);
 
         /**
@@ -323,7 +324,7 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
          * replicas of the app. Moving a replica in that case might keep the
          * cluster skew the same or make it worse while keeping the app balanced.
          **/
-        std::multimap<uint32_t, rpc_address> app_count_multimap = utils::flip_map(app_map);
+        std::multimap<uint32_t, host_port> app_count_multimap = utils::flip_map(app_map);
         if (app_count_multimap.rbegin()->first <= app_count_multimap.begin()->first + 1 &&
             (app_cluster_min_set.empty() || app_cluster_max_set.empty())) {
             LOG_INFO("do not move replicas of a balanced app({}) if the least (most) loaded "
@@ -356,8 +357,8 @@ auto select_random(const S &s, size_t n)
 }
 
 bool cluster_balance_policy::pick_up_move(const cluster_migration_info &cluster_info,
-                                          const std::set<rpc_address> &max_nodes,
-                                          const std::set<rpc_address> &min_nodes,
+                                          const std::set<host_port> &max_nodes,
+                                          const std::set<host_port> &min_nodes,
                                           const int32_t app_id,
                                           const partition_set &selected_pid,
                                           /*out*/ move_info &move_info)
@@ -373,19 +374,19 @@ bool cluster_balance_policy::pick_up_move(const cluster_migration_info &cluster_
              max_load_disk.node,
              max_load_disk.disk_tag,
              max_load_disk.partitions.size());
-    for (const auto &node_addr : min_nodes) {
+    for (const auto &node_hp : min_nodes) {
         gpid picked_pid;
         if (pick_up_partition(
-                cluster_info, node_addr, max_load_disk.partitions, selected_pid, picked_pid)) {
+                cluster_info, node_hp, max_load_disk.partitions, selected_pid, picked_pid)) {
             move_info.pid = picked_pid;
             move_info.source_node = max_load_disk.node;
             move_info.source_disk_tag = max_load_disk.disk_tag;
-            move_info.target_node = node_addr;
+            move_info.target_node = node_hp;
             move_info.type = cluster_info.type;
             LOG_INFO("partition[{}] will migrate from {} to {}",
                      picked_pid,
                      max_load_disk.node,
-                     node_addr);
+                     node_hp);
             return true;
         }
     }
@@ -398,22 +399,22 @@ bool cluster_balance_policy::pick_up_move(const cluster_migration_info &cluster_
 
 void cluster_balance_policy::get_max_load_disk_set(
     const cluster_migration_info &cluster_info,
-    const std::set<rpc_address> &max_nodes,
+    const std::set<host_port> &max_nodes,
     const int32_t app_id,
     /*out*/ std::set<app_disk_info> &max_load_disk_set)
 {
     // key: partition count (app_disk_info.partitions.size())
     // value: app_disk_info structure
     std::multimap<uint32_t, app_disk_info> app_disk_info_multimap;
-    for (const auto &node_addr : max_nodes) {
+    for (const auto &node_hp : max_nodes) {
         // key: disk_tag
-        // value: partition set for app(app id=app_id) in node(addr=node_addr)
+        // value: partition set for app(app id=app_id) in node(hp=node_hp)
         std::map<std::string, partition_set> disk_partitions =
-            get_disk_partitions_map(cluster_info, node_addr, app_id);
+            get_disk_partitions_map(cluster_info, node_hp, app_id);
         for (const auto &kv : disk_partitions) {
             app_disk_info info;
             info.app_id = app_id;
-            info.node = node_addr;
+            info.node = node_hp;
             info.disk_tag = kv.first;
             info.partitions = kv.second;
             app_disk_info_multimap.insert(
@@ -427,11 +428,11 @@ void cluster_balance_policy::get_max_load_disk_set(
 }
 
 std::map<std::string, partition_set> cluster_balance_policy::get_disk_partitions_map(
-    const cluster_migration_info &cluster_info, const rpc_address &addr, const int32_t app_id)
+    const cluster_migration_info &cluster_info, const host_port &hp, const int32_t app_id)
 {
     std::map<std::string, partition_set> disk_partitions;
     auto app_iter = cluster_info.apps_info.find(app_id);
-    auto node_iter = cluster_info.nodes_info.find(addr);
+    auto node_iter = cluster_info.nodes_info.find(hp);
     if (app_iter == cluster_info.apps_info.end() || node_iter == cluster_info.nodes_info.end()) {
         return disk_partitions;
     }
@@ -447,7 +448,7 @@ std::map<std::string, partition_set> cluster_balance_policy::get_disk_partitions
                 continue;
             }
             auto status_map = app_partition[pid.get_partition_index()];
-            auto iter = status_map.find(addr);
+            auto iter = status_map.find(hp);
             if (iter != status_map.end() && iter->second == status) {
                 disk_partitions[disk_tag].insert(pid);
             }
@@ -457,7 +458,7 @@ std::map<std::string, partition_set> cluster_balance_policy::get_disk_partitions
 }
 
 bool cluster_balance_policy::pick_up_partition(const cluster_migration_info &cluster_info,
-                                               const rpc_address &min_node_addr,
+                                               const host_port &min_node_hp,
                                                const partition_set &max_load_partitions,
                                                const partition_set &selected_pid,
                                                /*out*/ gpid &picked_pid)
@@ -476,7 +477,7 @@ bool cluster_balance_policy::pick_up_partition(const cluster_migration_info &clu
 
         // partition has already been primary or secondary on min_node
         app_migration_info info = iter->second;
-        if (info.get_partition_status(pid.get_partition_index(), min_node_addr) !=
+        if (info.get_partition_status(pid.get_partition_index(), min_node_hp) !=
             partition_status::PS_INACTIVE) {
             continue;
         }
@@ -494,7 +495,7 @@ bool cluster_balance_policy::apply_move(const move_info &move,
                                         /*out*/ cluster_migration_info &cluster_info)
 {
     int32_t app_id = move.pid.get_app_id();
-    rpc_address source = move.source_node, target = move.target_node;
+    host_port source = move.source_node, target = move.target_node;
     if (cluster_info.apps_skew.find(app_id) == cluster_info.apps_skew.end() ||
         cluster_info.replicas_count.find(source) == cluster_info.replicas_count.end() ||
         cluster_info.replicas_count.find(target) == cluster_info.replicas_count.end() ||
@@ -512,10 +513,10 @@ bool cluster_balance_policy::apply_move(const move_info &move,
     app_info.replicas_count[target]++;
 
     auto &pmap = app_info.partitions[move.pid.get_partition_index()];
-    rpc_address primary_addr;
+    host_port primary_hp;
     for (const auto &kv : pmap) {
         if (kv.second == partition_status::PS_PRIMARY) {
-            primary_addr = kv.first;
+            primary_hp = kv.first;
         }
     }
     auto status = cluster_info.type == balance_type::COPY_SECONDARY ? partition_status::PS_SECONDARY
@@ -544,10 +545,15 @@ bool cluster_balance_policy::apply_move(const move_info &move,
     // add into migration list and selected_pid
     partition_configuration pc;
     pc.pid = move.pid;
-    pc.primary = primary_addr;
-    list[move.pid] = generate_balancer_request(*_global_view->apps, pc, move.type, source, target);
+    pc.hp_primary = primary_hp;
+    const auto &source_addr = dsn::dns_resolver::instance().resolve_address(source);
+    const auto &target_addr = dsn::dns_resolver::instance().resolve_address(target);
+    list[move.pid] = generate_balancer_request(
+        *_global_view->apps, pc, move.type, source_addr, target_addr, source, target);
     _migration_result->emplace(
-        move.pid, generate_balancer_request(*_global_view->apps, pc, move.type, source, target));
+        move.pid,
+        generate_balancer_request(
+            *_global_view->apps, pc, move.type, source_addr, target_addr, source, target));
     selected_pids.insert(move.pid);
 
     cluster_info.apps_skew[app_id] = get_skew(app_info.replicas_count);

@@ -21,8 +21,9 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace dsn {
 DSN_DEFINE_string(replication, cluster_name, "", "name of this cluster");
+
+namespace dsn {
 
 /*extern*/ const char *get_current_cluster_name()
 {

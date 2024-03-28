@@ -18,6 +18,7 @@
 #pragma once
 
 #include <map>
+#include <string>
 #include <vector>
 
 #include "common//duplication_common.h"
@@ -53,6 +54,7 @@ public:
         decree not_duplicated{0};
         decree not_confirmed{0};
         duplication_fail_mode::type fail_mode{duplication_fail_mode::FAIL_SLOW};
+        std::string remote_app_name;
     };
     std::multimap<dupid_t, replica_dup_state> get_dup_states(int app_id, /*out*/ bool *app_found);
 

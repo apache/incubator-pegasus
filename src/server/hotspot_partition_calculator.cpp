@@ -34,11 +34,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-struct row_data;
-
-namespace pegasus {
-namespace server {
-
 DSN_DEFINE_int64(pegasus.collector,
                  max_hotspot_store_size,
                  100,
@@ -66,6 +61,11 @@ DSN_DEFINE_uint32(pegasus.collector,
                   3,
                   "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
 DSN_TAG_VARIABLE(occurrence_threshold, FT_MUTABLE);
+
+struct row_data;
+
+namespace pegasus {
+namespace server {
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
@@ -218,20 +218,20 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
     std::vector<dsn::partition_configuration> partitions;
     _shell_context->ddl_client->list_app(app_name, app_id, partition_count, partitions);
 
-    auto target_address = partitions[partition_index].primary;
     dsn::replication::detect_hotkey_response resp;
     dsn::replication::detect_hotkey_request req;
     req.type = hotkey_type;
     req.action = action;
     req.pid = dsn::gpid(app_id, partition_index);
-    auto error = _shell_context->ddl_client->detect_hotkey(target_address, req, resp);
+    auto error = _shell_context->ddl_client->detect_hotkey(
+        partitions[partition_index].hp_primary, req, resp);
 
-    LOG_INFO("{} {} hotkey detection in {}.{}, server address: {}",
+    LOG_INFO("{} {} hotkey detection in {}.{}, server host_port: {}",
              (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
              (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
              app_name,
              partition_index,
-             target_address);
+             partitions[partition_index].hp_primary);
 
     if (error != dsn::ERR_OK) {
         LOG_ERROR("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",

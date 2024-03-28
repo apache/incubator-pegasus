@@ -40,17 +40,17 @@
 #include "geo/lib/geo_client.h"
 #include "gtest/gtest.h"
 #include "pegasus/client.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 
+DSN_DECLARE_int32(min_level);
+
 namespace pegasus {
 namespace geo {
-
-DSN_DECLARE_int32(min_level);
 
 // TODO(yingchun): it doesn't make sense to derive from pegasus::encrypt_data_test_base to test
 //  encryption or non-encryption senarios, because the Pegasus cluster has been started with a
@@ -61,7 +61,7 @@ class geo_client_test : public ::testing::Test
 public:
     geo_client_test()
     {
-        std::vector<dsn::rpc_address> meta_list;
+        std::vector<dsn::host_port> meta_list;
         bool ok = dsn::replication::replica_helper::load_meta_servers(
             meta_list, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), "onebox");
         CHECK(ok, "load_meta_servers failed");

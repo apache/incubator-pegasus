@@ -17,7 +17,7 @@
 # under the License.
 ##############################################################################
 
-cmake_minimum_required(VERSION 3.11.0)
+cmake_minimum_required(VERSION 3.24.0)
 project(pegasus_thirdparties)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")

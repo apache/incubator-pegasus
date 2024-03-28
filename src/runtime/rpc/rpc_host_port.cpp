@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -42,8 +43,11 @@ const host_port host_port::s_invalid_host_port;
 host_port::host_port(std::string host, uint16_t port)
     : _host(std::move(host)), _port(port), _type(HOST_TYPE_IPV4)
 {
-    // ipv4_from_host may be slow, just call it in DEBUG version.
-    DCHECK_NE_MSG(rpc_address::ipv4_from_host(_host.c_str()), 0, "invalid hostname: {}", _host);
+    // Solve the problem of not translating "0.0.0.0"
+    if (_host != "0.0.0.0") {
+        // ipv4_from_host may be slow, just call it in DEBUG version.
+        DCHECK_OK(rpc_address::ipv4_from_host(_host, nullptr), "invalid hostname: {}", _host);
+    }
 }
 
 host_port host_port::from_address(rpc_address addr)
@@ -86,7 +90,8 @@ host_port host_port::from_string(const std::string &host_port_str)
         return hp;
     }
 
-    if (dsn_unlikely(rpc_address::ipv4_from_host(hp._host.c_str()) == 0)) {
+    // Validate the hostname.
+    if (dsn_unlikely(!rpc_address::ipv4_from_host(hp._host, nullptr))) {
         return hp;
     }
 
@@ -168,13 +173,17 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
         __builtin_unreachable();
     }
 
-    rpc_address rpc_addr;
-    // Resolve hostname like "localhost:80" or "192.168.0.1:8080".
-    if (rpc_addr.from_string_ipv4(this->to_string().c_str())) {
-        addresses.emplace_back(rpc_addr);
-        return error_s::ok();
+    // 1. Try to resolve hostname in the form of "192.168.0.1:8080".
+    uint32_t ip_addr;
+    if (inet_pton(AF_INET, this->_host.c_str(), &ip_addr)) {
+        const auto rpc_addr = rpc_address::from_ip_port(this->to_string());
+        if (rpc_addr) {
+            addresses.emplace_back(rpc_addr);
+            return error_s::ok();
+        }
     }
 
+    // 2. Try to resolve hostname in the form of "host1:80".
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -205,6 +214,15 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
 
     addresses = std::move(result_addresses);
     return error_s::ok();
+}
+
+void host_port::fill_host_ports_from_addresses(const std::vector<rpc_address> &addr_v,
+                                               std::vector<host_port> &hp_v)
+{
+    CHECK(hp_v.empty(), "optional host_port should be empty!");
+    for (const auto &addr : addr_v) {
+        hp_v.emplace_back(host_port::from_address(addr));
+    }
 }
 
 } // namespace dsn

@@ -27,7 +27,7 @@
 #   new primary will not accept old primary as a learner until it's commit decree reach A
 #
 # NOTICE: 
-#   run this case, should disable group check through set replication.group_check_disable = true
+#   run this case, should disable group check through set replication.group_check_disabled = true
 
 set:load_balance_for_test=1,not_exit_on_log_failure=1
 
