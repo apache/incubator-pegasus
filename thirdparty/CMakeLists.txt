@@ -280,6 +280,7 @@ ExternalProject_Add(prometheus-cpp
         URL ${OSS_URL_PREFIX}/prometheus-cpp-with-submodules-1.2.4.tar.gz
         https://github.com/jupp0r/prometheus-cpp/releases/download/v1.2.4/prometheus-cpp-with-submodules.tar.gz
         URL_MD5 cdb515e802aa9aaaf1f6dde1271a20a2
+        DEPENDS curl
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DENABLE_TESTING=OFF
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
