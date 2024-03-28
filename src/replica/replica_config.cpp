@@ -1176,5 +1176,24 @@ error_code replica::update_init_info_ballot_and_decree()
     return _app->update_init_info_ballot_and_decree(this);
 }
 
+void replica::update_app_duplication_status(bool doing_duplication)
+{
+    if (doing_duplication == _app_info.duplicating) {
+        return;
+    }
+
+    auto old_doing_duplication_status = _app_info.duplicating;
+    _app_info.__set_duplicating(doing_duplication);
+
+    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
+                        ERR_OK,
+                        "store_app_info for duplicating failed: app_name={}, "
+                        "app_id={}, duplicating_status={}, new_duplicating_status={}",
+                        _app_info.app_name,
+                        _app_info.app_id,
+                        old_doing_duplication_status,
+                        _app_info.duplicating);
+}
+
 } // namespace replication
 } // namespace dsn

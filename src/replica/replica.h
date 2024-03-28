@@ -162,6 +162,10 @@ class replica : public serverlet<replica>, public ref_counter, public replica_ba
 public:
     ~replica(void);
 
+    // store `info` into a file under `path` directory
+    // path = "" means using the default directory (`_dir`/.app_info)
+    error_code store_app_info(app_info &info, const std::string &path = "");
+
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
     void reset_prepare_list_after_replay();
@@ -239,7 +243,10 @@ public:
     //
     error_code trigger_manual_emergency_checkpoint(decree old_decree);
     void on_query_last_checkpoint(learn_response &response);
-    replica_duplicator_manager *get_duplication_manager() const { return _duplication_mgr.get(); }
+    std::unique_ptr<replica_duplicator_manager> &get_duplication_manager()
+    {
+        return _duplication_mgr;
+    }
     bool is_duplication_master() const { return _is_duplication_master; }
     bool is_duplication_follower() const { return _is_duplication_follower; }
     bool is_duplication_plog_checking() const { return _is_duplication_plog_checking.load(); }
@@ -247,6 +254,8 @@ public:
     {
         _is_duplication_plog_checking.store(checking);
     }
+
+    void update_app_duplication_status(bool doing_duplication);
 
     //
     // Backup
@@ -512,10 +521,6 @@ private:
 
     // update envs to deny client request
     void update_deny_client(const std::map<std::string, std::string> &envs);
-
-    // store `info` into a file under `path` directory
-    // path = "" means using the default directory (`_dir`/.app_info)
-    error_code store_app_info(app_info &info, const std::string &path = "");
 
     void update_app_max_replica_count(int32_t max_replica_count);
     void update_app_name(const std::string &app_name);
