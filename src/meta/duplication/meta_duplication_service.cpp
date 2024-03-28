@@ -193,8 +193,8 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         remote_app_name = request.app_name;
     }
 
-    LOG_INFO("add duplication for app({}), remote cluster name is {}"
-             ", remote app name is {}",
+    LOG_INFO("add duplication for app({}), remote cluster name is {}, "
+             "remote app name is {}",
              request.app_name,
              request.remote_cluster_name,
              remote_app_name);
@@ -230,10 +230,16 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         zauto_read_lock l(app_lock());
 
         app = _state->get_app(request.app_name);
-        LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(app && app->status == app_status::AS_AVAILABLE,
+        // The reason why using !!app rather than just app is that passing std::shared_ptr into
+        // dsn_likely(i.e. __builtin_expect) would lead to compilation error "cannot convert
+        // 'std::shared_ptr<dsn::replication::app_state>' to 'long int'".
+        LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(
+            !!app, response, ERR_APP_NOT_EXIST, "app {} was not found", request.app_name);
+        LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(app->status == app_status::AS_AVAILABLE,
                                                response,
                                                ERR_APP_NOT_EXIST,
-                                               "app {} was not found: status={}",
+                                               "app status was not AS_AVAILABLE: name={}, "
+                                               "status={}",
                                                request.app_name,
                                                enum_to_string(app->status));
 
