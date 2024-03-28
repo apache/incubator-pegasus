@@ -30,6 +30,7 @@
 #include "replica/replica.h"
 #include "replica_duplicator.h"
 #include "utils/autoref_ptr.h"
+#include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fail_point.h"
