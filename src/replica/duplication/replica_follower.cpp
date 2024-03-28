@@ -60,21 +60,29 @@ void replica_follower::init_master_info()
 {
     const auto &envs = _replica->get_app_info()->envs;
 
-    if (envs.find(duplication_constants::kDuplicationEnvMasterClusterKey) == envs.end() ||
-        envs.find(duplication_constants::kDuplicationEnvMasterMetasKey) == envs.end()) {
+    const auto &cluster_name = envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
+    const auto &metas = envs.find(duplication_constants::kDuplicationEnvMasterMetasKey);
+    if (cluster_name == envs.end() || metas == envs.end()) {
         return;
     }
 
     need_duplicate = true;
 
-    _master_cluster_name = envs.at(duplication_constants::kDuplicationEnvMasterClusterKey);
-    _master_app_name = _replica->get_app_info()->app_name;
+    _master_cluster_name = cluster_name->second;
 
-    const auto &meta_list_str = envs.at(duplication_constants::kDuplicationEnvMasterMetasKey);
-    std::vector<std::string> metas;
-    dsn::utils::split_args(meta_list_str.c_str(), metas, ',');
-    CHECK(!metas.empty(), "master cluster meta list is invalid!");
-    for (const auto &meta : metas) {
+    const auto &app_name = envs.find(duplication_constants::kDuplicationEnvMasterAppNameKey);
+    if (app_name == envs.end()) {
+        // The version of meta server of master cluster is old(< v2.6.0), thus the app name of
+        // the follower cluster is the same with master cluster.
+        _master_app_name = _replica->get_app_info()->app_name;
+    } else {
+        _master_app_name = app_name->second;
+    }
+
+    std::vector<std::string> master_metas;
+    dsn::utils::split_args(metas->second.c_str(), master_metas, ',');
+    CHECK(!master_metas.empty(), "master cluster meta list is invalid!");
+    for (const auto &meta : master_metas) {
         const auto node = host_port::from_string(meta);
         CHECK(!node.is_invalid(), "{} is invalid meta host_port", meta);
         _master_meta_list.emplace_back(std::move(node));

@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <initializer_list>
 #include <iostream>
 #include <memory>
 #include <set>
@@ -47,10 +48,10 @@ using dsn::replication::duplication_status;
 
 bool add_dup(command_executor *e, shell_context *sc, arguments args)
 {
-    // add_dup <app_name> <remote_cluster_name> [-f|--freeze]
+    // add_dup <app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str]
 
     argh::parser cmd(args.argc, args.argv);
-    if (cmd.pos_args().size() > 3) {
+    if (cmd.pos_args().size() > 4) {
         fmt::print(stderr, "too many params\n");
         return false;
     }
@@ -80,35 +81,54 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
+    // Check if the boolean option is specified.
     bool is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
-    auto err_resp =
-        sc->ddl_client->add_dup(app_name, remote_cluster_name, is_duplicating_checkpoint);
-    dsn::error_s err = err_resp.get_error();
+
+    // Read the app name of the remote cluster, if any.
+    // Otherwise, use app_name as the remote_app_name.
+    std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
+
+    auto err_resp = sc->ddl_client->add_dup(
+        app_name, remote_cluster_name, is_duplicating_checkpoint, remote_app_name);
+    auto err = err_resp.get_error();
     std::string hint;
-    if (err.is_ok()) {
+    if (err) {
         err = dsn::error_s::make(err_resp.get_value().err);
         hint = err_resp.get_value().hint;
     }
-    if (!err.is_ok()) {
+
+    if (!err) {
         fmt::print(stderr,
                    "adding duplication failed [app: {}, remote: {}, checkpoint: {}, error: {}]\n",
                    app_name,
                    remote_cluster_name,
                    is_duplicating_checkpoint,
-                   err.description());
+                   err);
+
         if (!hint.empty()) {
             fmt::print(stderr, "detail:\n  {}\n", hint);
         }
-    } else {
-        const auto &resp = err_resp.get_value();
-        fmt::print("adding duplication succeed [app: {}, remote: {}, appid: {}, dupid: "
-                   "{}], checkpoint: {}\n",
-                   app_name,
-                   remote_cluster_name,
-                   resp.appid,
-                   resp.dupid,
-                   is_duplicating_checkpoint);
+
+        return true;
     }
+
+    const auto &resp = err_resp.get_value();
+    fmt::print("adding duplication succeed [app: {}, remote: {}, appid: {}, dupid: "
+               "{}], checkpoint: {}",
+               app_name,
+               remote_cluster_name,
+               resp.appid,
+               resp.dupid,
+               is_duplicating_checkpoint);
+
+    if (resp.__isset.remote_app_name) {
+        fmt::print(", remote_app_name: {}\n", remote_app_name);
+    } else {
+        fmt::print("\nWARNING: meta server does NOT support specifying remote_app_name, "
+                   "remote_app_name might has been specified with {}\n",
+                   app_name);
+    }
+
     return true;
 }
 
@@ -145,44 +165,49 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
     }
     std::string app_name = cmd(1).str();
 
+    // Check if the boolean option is specified.
     bool detail = cmd[{"-d", "--detail"}];
 
     auto err_resp = sc->ddl_client->query_dup(app_name);
     dsn::error_s err = err_resp.get_error();
-    if (err.is_ok()) {
+    if (err) {
         err = dsn::error_s::make(err_resp.get_value().err);
     }
-    if (!err.is_ok()) {
-        fmt::print(stderr,
-                   "querying duplications of app [{}] failed, error={}\n",
-                   app_name,
-                   err.description());
-    } else if (detail) {
+    if (!err) {
+        fmt::print(stderr, "querying duplications of app [{}] failed, error={}\n", app_name, err);
+
+        return true;
+    }
+
+    if (detail) {
         fmt::print("duplications of app [{}] in detail:\n", app_name);
         fmt::print("{}\n\n", duplication_query_response_to_string(err_resp.get_value()));
-    } else {
-        const auto &resp = err_resp.get_value();
-        fmt::print("duplications of app [{}] are listed as below:\n", app_name);
 
-        dsn::utils::table_printer printer;
-        printer.add_title("dup_id");
-        printer.add_column("status");
-        printer.add_column("remote cluster");
-        printer.add_column("create time");
-
-        char create_time[25];
-        for (auto info : resp.entry_list) {
-            dsn::utils::time_ms_to_date_time(info.create_ts, create_time, sizeof(create_time));
-
-            printer.add_row(info.dupid);
-            printer.append_data(duplication_status_to_string(info.status));
-            printer.append_data(info.remote);
-            printer.append_data(create_time);
-
-            printer.output(std::cout);
-            std::cout << std::endl;
-        }
+        return true;
     }
+
+    const auto &resp = err_resp.get_value();
+    fmt::print("duplications of app [{}] are listed as below:\n", app_name);
+
+    dsn::utils::table_printer printer;
+    printer.add_title("dup_id");
+    printer.add_column("status");
+    printer.add_column("remote cluster");
+    printer.add_column("create time");
+
+    for (auto info : resp.entry_list) {
+        std::string create_time;
+        dsn::utils::time_ms_to_string(info.create_ts, create_time);
+
+        printer.add_row(info.dupid);
+        printer.append_data(duplication_status_to_string(info.status));
+        printer.append_data(info.remote);
+        printer.append_data(create_time);
+
+        printer.output(std::cout);
+        std::cout << std::endl;
+    }
+
     return true;
 }
 

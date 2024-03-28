@@ -80,7 +80,8 @@ public:
 private:
     void do_add_duplication(std::shared_ptr<app_state> &app,
                             duplication_info_s_ptr &dup,
-                            duplication_add_rpc &rpc);
+                            duplication_add_rpc &rpc,
+                            const std::string &remote_app_name);
 
     void do_modify_duplication(std::shared_ptr<app_state> &app,
                                duplication_info_s_ptr &dup,
@@ -121,8 +122,9 @@ private:
     // Create a new duplication from INIT state.
     // Thread-Safe
     std::shared_ptr<duplication_info>
-    new_dup_from_init(const std::string &follower_cluster_name,
-                      std::vector<host_port> &&follower_cluster_metas,
+    new_dup_from_init(const std::string &remote_cluster_name,
+                      const std::string &remote_app_name,
+                      std::vector<host_port> &&remote_cluster_metas,
                       std::shared_ptr<app_state> &app) const;
 
     // get lock to protect access of app table

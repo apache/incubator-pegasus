@@ -102,6 +102,8 @@ public:
 
     const std::string &remote_cluster_name() const { return _remote_cluster_name; }
 
+    const std::string &remote_app_name() const { return _remote_app_name; }
+
     // Thread-safe
     duplication_progress progress() const
     {
@@ -155,6 +157,7 @@ private:
 
     const dupid_t _id;
     const std::string _remote_cluster_name;
+    const std::string _remote_app_name;
 
     replica *_replica;
     replica_stub *_stub;

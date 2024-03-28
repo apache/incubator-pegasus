@@ -46,10 +46,13 @@ namespace replication {
 class replica_follower_test : public duplication_test_base
 {
 public:
+    static const std::string kTestMasterClusterName;
+    static const std::string kTestMasterAppName;
+
     replica_follower_test()
     {
         _app_info.app_id = 2;
-        _app_info.app_name = "follower";
+        _app_info.app_name = kTestMasterAppName;
         _app_info.app_type = replication_options::kReplicaAppType;
         _app_info.is_stateful = true;
         _app_info.max_replica_count = 3;
@@ -110,40 +113,58 @@ public:
         stub->_nfs->start();
     }
 
+    void test_init_master_info(const std::string &expected_master_app_name)
+    {
+        _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
+                               kTestMasterClusterName);
+        _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+                               "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
+        update_mock_replica(_app_info);
+
+        auto follower = _mock_replica->get_replica_follower();
+        ASSERT_EQ(expected_master_app_name, follower->get_master_app_name());
+        ASSERT_EQ(follower->get_master_cluster_name(), kTestMasterClusterName);
+        ASSERT_TRUE(follower->is_need_duplicate());
+        ASSERT_TRUE(_mock_replica->is_duplication_follower());
+        std::vector<std::string> test_ip{"127.0.0.1:34801", "127.0.0.1:34802", "127.0.0.1:34803"};
+        for (int i = 0; i < follower->get_master_meta_list().size(); i++) {
+            ASSERT_EQ(test_ip[i], std::string(follower->get_master_meta_list()[i].to_string()));
+        }
+
+        _app_info.envs.clear();
+        update_mock_replica(_app_info);
+        follower = _mock_replica->get_replica_follower();
+        ASSERT_FALSE(follower->is_need_duplicate());
+        ASSERT_FALSE(_mock_replica->is_duplication_follower());
+    }
+
 public:
     dsn::app_info _app_info;
     mock_replica_ptr _mock_replica;
 };
 
+const std::string replica_follower_test::kTestMasterClusterName = "master";
+const std::string replica_follower_test::kTestMasterAppName = "follower";
+
 INSTANTIATE_TEST_SUITE_P(, replica_follower_test, ::testing::Values(false, true));
 
-TEST_P(replica_follower_test, test_init_master_info)
+TEST_P(replica_follower_test, test_init_master_info_without_master_app_env)
 {
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
-                           "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
-    update_mock_replica(_app_info);
+    test_init_master_info(kTestMasterAppName);
+}
 
-    auto follower = _mock_replica->get_replica_follower();
-    ASSERT_EQ(follower->get_master_app_name(), "follower");
-    ASSERT_EQ(follower->get_master_cluster_name(), "master");
-    ASSERT_TRUE(follower->is_need_duplicate());
-    ASSERT_TRUE(_mock_replica->is_duplication_follower());
-    std::vector<std::string> test_ip{"127.0.0.1:34801", "127.0.0.1:34802", "127.0.0.1:34803"};
-    for (int i = 0; i < follower->get_master_meta_list().size(); i++) {
-        ASSERT_EQ(std::string(follower->get_master_meta_list()[i].to_string()), test_ip[i]);
-    }
-
-    _app_info.envs.clear();
-    update_mock_replica(_app_info);
-    follower = _mock_replica->get_replica_follower();
-    ASSERT_FALSE(follower->is_need_duplicate());
-    ASSERT_FALSE(_mock_replica->is_duplication_follower());
+TEST_P(replica_follower_test, test_init_master_info_with_master_app_env)
+{
+    static const std::string kTestAnotherMasterAppName("another_follower");
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterAppNameKey,
+                           kTestAnotherMasterAppName);
+    test_init_master_info(kTestAnotherMasterAppName);
 }
 
 TEST_P(replica_follower_test, test_duplicate_checkpoint)
 {
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
+                           kTestMasterClusterName);
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
                            "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
     update_mock_replica(_app_info);
@@ -163,7 +184,8 @@ TEST_P(replica_follower_test, test_duplicate_checkpoint)
 
 TEST_P(replica_follower_test, test_async_duplicate_checkpoint_from_master_replica)
 {
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
+                           kTestMasterClusterName);
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
                            "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
     update_mock_replica(_app_info);
@@ -185,7 +207,8 @@ TEST_P(replica_follower_test, test_async_duplicate_checkpoint_from_master_replic
 
 TEST_P(replica_follower_test, test_update_master_replica_config)
 {
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
+                           kTestMasterClusterName);
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
                            "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
     update_mock_replica(_app_info);
@@ -243,7 +266,8 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
 
 TEST_P(replica_follower_test, test_nfs_copy_checkpoint)
 {
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
+                           kTestMasterClusterName);
     _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
                            "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
     update_mock_replica(_app_info);

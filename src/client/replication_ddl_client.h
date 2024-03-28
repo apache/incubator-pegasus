@@ -141,15 +141,17 @@ public:
                                 bool skip_lost_partitions,
                                 const std::string &outfile);
 
-    error_with<duplication_add_response>
-    add_dup(std::string app_name, std::string remote_address, bool is_duplicating_checkpoint);
+    error_with<duplication_add_response> add_dup(const std::string &app_name,
+                                                 const std::string &remote_address,
+                                                 bool is_duplicating_checkpoint,
+                                                 const std::string &remote_app_name);
 
     error_with<duplication_modify_response>
-    change_dup_status(std::string app_name, int dupid, duplication_status::type status);
+    change_dup_status(const std::string &app_name, int dupid, duplication_status::type status);
     error_with<duplication_modify_response>
-    update_dup_fail_mode(std::string app_name, int dupid, duplication_fail_mode::type fmode);
+    update_dup_fail_mode(const std::string &app_name, int dupid, duplication_fail_mode::type fmode);
 
-    error_with<duplication_query_response> query_dup(std::string app_name);
+    error_with<duplication_query_response> query_dup(const std::string &app_name);
 
     dsn::error_code do_restore(const std::string &backup_provider_name,
                                const std::string &cluster_name,
@@ -270,8 +272,6 @@ public:
     static error_s validate_app_name(const std::string &app_name, bool allow_empty_name = false);
 
 private:
-    bool static valid_app_char(int c);
-
     void end_meta_request(const rpc_response_task_ptr &callback,
                           uint32_t attempt_count,
                           const error_code &err,

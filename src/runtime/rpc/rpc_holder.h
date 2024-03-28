@@ -97,7 +97,7 @@ public:
                std::chrono::milliseconds timeout = 0_ms,
                uint64_t partition_hash = 0,
                int thread_hash = 0)
-        : _i(new internal(req, code, timeout, partition_hash, thread_hash))
+        : _i(new internal(std::move(req), code, timeout, partition_hash, thread_hash))
     {
     }
 
@@ -285,7 +285,7 @@ private:
             unmarshall(req, *thrift_request);
         }
 
-        internal(std::unique_ptr<TRequest> &req,
+        internal(std::unique_ptr<TRequest> req,
                  task_code code,
                  std::chrono::milliseconds timeout,
                  uint64_t partition_hash,

@@ -46,6 +46,8 @@ const std::string duplication_constants::kDuplicationEnvMasterClusterKey /*NOLIN
     "duplication.master_cluster";
 const std::string duplication_constants::kDuplicationEnvMasterMetasKey /*NOLINT*/ =
     "duplication.master_metas";
+const std::string duplication_constants::kDuplicationEnvMasterAppNameKey /*NOLINT*/ =
+    "duplication.master_app_name";
 
 /*extern*/ const char *duplication_status_to_string(duplication_status::type status)
 {
@@ -143,6 +145,7 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
         {"status", duplication_status_to_string(ent.status)},
         {"fail_mode", duplication_fail_mode_to_string(ent.fail_mode)},
     };
+
     if (ent.__isset.progress) {
         nlohmann::json sub_json;
         for (const auto &p : ent.progress) {
@@ -150,6 +153,12 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
         }
         json["progress"] = sub_json;
     }
+
+    if (ent.__isset.remote_app_name) {
+        // remote_app_name is supported since v2.6.0, thus it won't be shown before v2.6.0.
+        json["remote_app_name"] = ent.remote_app_name;
+    }
+
     return json;
 }
 

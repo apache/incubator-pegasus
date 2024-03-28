@@ -185,6 +185,7 @@ replica_duplicator_manager::get_dup_states() const
         state.last_decree = progress.last_decree;
         state.confirmed_decree = progress.confirmed_decree;
         state.fail_mode = dup.second->fail_mode();
+        state.remote_app_name = dup.second->remote_app_name();
         ret.emplace_back(state);
     }
     return ret;
