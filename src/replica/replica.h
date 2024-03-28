@@ -242,6 +242,11 @@ public:
     replica_duplicator_manager *get_duplication_manager() const { return _duplication_mgr.get(); }
     bool is_duplication_master() const { return _is_duplication_master; }
     bool is_duplication_follower() const { return _is_duplication_follower; }
+    bool is_duplication_plog_checking() const { return _is_duplication_plog_checking.load(); }
+    void set_duplication_plog_checking(bool checking)
+    {
+        _is_duplication_plog_checking.store(checking);
+    }
 
     //
     // Backup
@@ -620,6 +625,9 @@ private:
     bool _is_manual_emergency_checkpointing{false};
     bool _is_duplication_master{false};
     bool _is_duplication_follower{false};
+    // Indicate whether the replica is during finding out some private logs to
+    // load for duplication. It useful to prevent plog GCed unexpectedly.
+    std::atomic<bool> _is_duplication_plog_checking{false};
 
     // backup
     std::unique_ptr<replica_backup_manager> _backup_mgr;

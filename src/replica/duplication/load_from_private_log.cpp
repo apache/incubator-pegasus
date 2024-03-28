@@ -30,6 +30,7 @@
 #include "replica/replica.h"
 #include "replica_duplicator.h"
 #include "utils/autoref_ptr.h"
+#include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fail_point.h"
@@ -146,6 +147,9 @@ void load_from_private_log::run()
 
 void load_from_private_log::find_log_file_to_start()
 {
+    _duplicator->set_duplication_plog_checking(true);
+    auto cleanup = dsn::defer([this]() { _duplicator->set_duplication_plog_checking(false); });
+
     // `file_map` has already excluded the useless log files during replica init.
     const auto &file_map = _private_log->get_log_file_map();
 

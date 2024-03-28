@@ -262,5 +262,10 @@ uint64_t replica_duplicator::get_pending_mutations_count() const
     return cnt > 0 ? static_cast<uint64_t>(cnt) : 0;
 }
 
+void replica_duplicator::set_duplication_plog_checking(bool checking)
+{
+    _replica->set_duplication_plog_checking(checking);
+}
+
 } // namespace replication
 } // namespace dsn
