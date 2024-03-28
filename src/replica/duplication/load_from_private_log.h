@@ -60,7 +60,6 @@ public:
 
     /// Find the log file that contains `_start_decree`.
     void find_log_file_to_start();
-    void find_log_file_to_start(const mutation_log::log_file_map_by_index &log_files);
 
     void replay_log_block();
 
@@ -77,6 +76,9 @@ public:
 
     static constexpr int MAX_ALLOWED_BLOCK_REPEATS{3};
     static constexpr int MAX_ALLOWED_FILE_REPEATS{10};
+
+private:
+    void find_log_file_to_start(const mutation_log::log_file_map_by_index &log_files);
 
 private:
     friend class load_from_private_log_test;
