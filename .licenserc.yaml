@@ -69,7 +69,6 @@ header:
     # Used for patches for thirdparties.
     - 'thirdparty/fix_jemalloc_for_m1_on_macos.patch'
     - 'thirdparty/fix_libevent_for_macos.patch'
-    - 'thirdparty/fix_prometheus-cpp_limits.patch'
     - 'thirdparty/fix_rocksdb-cmake-PORTABLE-option.patch'
     - 'thirdparty/fix_snappy-Wsign-compare-warning.patch'
     - 'thirdparty/fix_s2_build_with_absl_and_gtest.patch'

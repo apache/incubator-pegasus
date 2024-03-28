@@ -233,20 +233,6 @@ ExternalProject_Add(fmt
         DOWNLOAD_NO_PROGRESS true
 )
 
-# civetweb is one of the dependencies of promemetheus-cpp, do not build & install
-ExternalProject_Add(civetweb
-        URL ${OSS_URL_PREFIX}/civetweb-1.11.tar.gz
-        https://codeload.github.com/civetweb/civetweb/tar.gz/v1.11
-        URL_MD5 b6d2175650a27924bccb747cbe084cd4
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-        INSTALL_COMMAND ""
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-        DOWNLOAD_NO_PROGRESS true
-)
-ExternalProject_Get_property(civetweb SOURCE_DIR)
-set(civetweb_SRC ${SOURCE_DIR})
-
 set(CURL_OPTIONS
         --disable-dict
         --disable-file
@@ -291,12 +277,10 @@ ExternalProject_Add(curl
 )
 
 ExternalProject_Add(prometheus-cpp
-        URL ${OSS_URL_PREFIX}/prometheus-cpp-0.7.0.tar.gz
-        https://codeload.github.com/jupp0r/prometheus-cpp/tar.gz/v0.7.0
-        URL_MD5 dc75c31ceaefd160e978365bdca8eb01
-        DEPENDS civetweb curl
-        # TODO(yingchun): replace the submodule
-        PATCH_COMMAND rm -rf 3rdparty/civetweb && cp -R ${civetweb_SRC} 3rdparty/civetweb && patch -p0 < ${TP_DIR}/fix_prometheus-cpp_limits.patch
+        URL ${OSS_URL_PREFIX}/prometheus-cpp-with-submodules-1.2.4.tar.gz
+        https://github.com/jupp0r/prometheus-cpp/releases/download/v1.2.4/prometheus-cpp-with-submodules.tar.gz
+        URL_MD5 cdb515e802aa9aaaf1f6dde1271a20a2
+        DEPENDS curl
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DENABLE_TESTING=OFF
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
