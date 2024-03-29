@@ -71,10 +71,6 @@ private:
 
     void on_duplication_sync_reply(error_code err, const duplication_sync_response &resp);
 
-    std::vector<replica_ptr> get_all_primaries();
-
-    std::vector<replica_ptr> get_all_replicas();
-
 private:
     friend class duplication_sync_timer_test;
 

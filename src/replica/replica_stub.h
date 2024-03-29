@@ -195,6 +195,8 @@ public:
     //
     // common routines for inquiry
     //
+    std::vector<replica_ptr> get_all_replicas() const;
+    std::vector<replica_ptr> get_all_primaries() const;
     replica_ptr get_replica(gpid id) const;
     replication_options &options() { return _options; }
     const replication_options &options() const { return _options; }
