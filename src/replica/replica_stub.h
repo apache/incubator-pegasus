@@ -308,9 +308,6 @@ public:
     void on_nfs_get_file_size(const ::dsn::service::get_file_size_request &request,
                               ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply);
 
-    // check replica is releasing or not , to avoid dup conflit with replica closing
-    bool replica_is_cloing_or_closed(gpid id);
-
     static bool validate_replica_dir(const std::string &dir,
                                      app_info &ai,
                                      gpid &pid,

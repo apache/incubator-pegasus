@@ -79,13 +79,9 @@ void duplication_sync_timer::run()
 
     // collects confirm points from all primaries on this server
     for (const replica_ptr &r : get_all_primaries()) {
-        gpid id = r->get_gpid();
-        if (_stub->replica_is_cloing_or_closed(id)) {
-            continue;
-        }
         auto confirmed = r->get_duplication_manager()->get_duplication_confirms_to_update();
         if (!confirmed.empty()) {
-            req->confirm_list[id] = std::move(confirmed);
+            req->confirm_list[r->get_gpid()] = std::move(confirmed);
         }
         METRIC_SET(*r, dup_pending_mutations);
     }
@@ -121,22 +117,31 @@ void duplication_sync_timer::update_duplication_map(
     const std::map<int32_t, std::map<int32_t, duplication_entry>> &dup_map)
 {
     for (replica_ptr &r : get_all_replicas()) {
-        auto it = dup_map.find(r->get_gpid().get_app_id());
-        app_info *info = const_cast<app_info *>(r->get_app_info());
-        gpid id = r->get_gpid();
-        bool doing_duplication;
-        if (_stub->replica_is_cloing_or_closed(id)) {
+        const auto &it = dup_map.find(r->get_gpid().get_app_id());
+
+        // TODO(wangdan): at meta server side, an app is considered duplicating
+        // as long as any duplication of this app has valid status(i.e.
+        // duplication_info::is_invalid_status() returned false, see
+        // meta_duplication_service::refresh_duplicating_no_lock()). And duplications
+        // in duplication_sync_response returned by meta server could also be
+        // considered duplicating according to meta_duplication_service::duplication_sync().
+        // Thus we could update `duplicating` in both memory and file(.app-info).
+        //
+        // However, most of properties of an app(struct `app_info`) are written to .app-info
+        // file in replica::on_config_sync(), such as max_replica_count; on the other hand,
+        // in-memory `duplicating` is also updated in replica::on_config_proposal(). Thus we'd
+        // better think about a unique entrance to update `duplicating`(in both memory and disk),
+        // rather than update them at anywhere.
+        const auto duplicating = it != dup_map.end();
+        r->update_app_duplication_status(duplicating);
+
+        if (!duplicating) {
+            // no duplication is assigned to this app
+            r->get_duplication_manager()->update_duplication_map({});
             continue;
         }
 
-        if (it == dup_map.end()) {
-            // no duplication is assigned to this app
-            r->get_duplication_manager()->update_duplication_map({});
-            r->update_app_duplication_status(false);
-        } else {
-            r->get_duplication_manager()->update_duplication_map(it->second);
-            r->update_app_duplication_status(true);
-        }
+        r->get_duplication_manager()->update_duplication_map(it->second);
     }
 }
 
@@ -209,8 +214,8 @@ duplication_sync_timer::get_dup_states(int app_id, /*out*/ bool *app_found)
     *app_found = false;
     std::multimap<dupid_t, replica_dup_state> result;
     for (const replica_ptr &r : get_all_primaries()) {
-        gpid rid = r->get_gpid();
-        if (rid.get_app_id() != app_id || _stub->replica_is_cloing_or_closed(rid)) {
+        const gpid rid = r->get_gpid();
+        if (rid.get_app_id() != app_id) {
             continue;
         }
         *app_found = true;
