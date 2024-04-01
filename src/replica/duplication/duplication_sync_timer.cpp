@@ -19,13 +19,12 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
-#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "common/duplication_common.h"
 #include "common/replication.codes.h"
 #include "duplication_sync_timer.h"
-#include "metadata_types.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
@@ -39,10 +38,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 #include "utils/threadpool_code.h"
-
-namespace dsn {
-class app_info;
-} // namespace dsn
 
 DSN_DEFINE_uint64(
     replication,
