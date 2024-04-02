@@ -40,10 +40,6 @@
 #include "utils/metrics.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
-class app_info;
-} // namespace dsn
-
 DSN_DEFINE_uint64(
     replication,
     duplication_sync_period_second,
