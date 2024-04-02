@@ -1762,7 +1762,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
         LOG_AND_RETURN_NOT_OK(
             ERROR_PREFIX,
             _meta_store->get_last_manual_compact_used_time(&last_manual_compact_used_time),
-            "last_manual_compact_used_time failed");
+            "get_last_manual_compact_used_time failed");
 
         // update last manual compact finish & used timestamp
         _manual_compact_svc.init_last_finish_time_ms(last_manual_compact_finish_time);
