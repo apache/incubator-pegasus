@@ -281,7 +281,7 @@ replica::replica(replica_stub *stub,
       _cur_download_size(0),
       _restore_progress(0),
       _restore_status(ERR_OK),
-      _duplication_mgr(new replica_duplicator_manager(this)),
+      _duplication_mgr(std::make_shared<replica_duplicator_manager>(this)),
       // todo(jiashuo1): app.duplicating need rename
       _is_duplication_master(app.duplicating),
       _is_duplication_follower(is_duplication_follower),

@@ -74,7 +74,12 @@ void duplication_sync_timer::run()
 
     // collects confirm points from all primaries on this server
     for (const replica_ptr &r : _stub->get_all_primaries()) {
-        auto confirmed = r->get_duplication_manager()->get_duplication_confirms_to_update();
+        const auto dup_mgr = r->get_duplication_manager();
+        if (!dup_mgr) {
+            continue;
+        }
+
+        auto confirmed = dup_mgr->get_duplication_confirms_to_update();
         if (!confirmed.empty()) {
             req->confirm_list[r->get_gpid()] = std::move(confirmed);
         }
@@ -111,13 +116,18 @@ void duplication_sync_timer::on_duplication_sync_reply(error_code err,
 void duplication_sync_timer::update_duplication_map(
     const std::map<int32_t, std::map<int32_t, duplication_entry>> &dup_map)
 {
-    for (replica_ptr &r : _stub->get_all_replicas()) {
+    for (const replica_ptr &r : _stub->get_all_replicas()) {
+        auto dup_mgr = r->get_duplication_manager();
+        if (!dup_mgr) {
+            continue;
+        }
+
         const auto &it = dup_map.find(r->get_gpid().get_app_id());
         if (it == dup_map.end()) {
             // no duplication is assigned to this app
-            r->get_duplication_manager()->update_duplication_map({});
+            dup_mgr->update_duplication_map({});
         } else {
-            r->get_duplication_manager()->update_duplication_map(it->second);
+            dup_mgr->update_duplication_map(it->second);
         }
     }
 }
@@ -166,10 +176,16 @@ duplication_sync_timer::get_dup_states(int app_id, /*out*/ bool *app_found)
         if (rid.get_app_id() != app_id) {
             continue;
         }
+
+        const auto dup_mgr = r->get_duplication_manager();
+        if (!dup_mgr) {
+            continue;
+        }
+
         *app_found = true;
         replica_dup_state state;
         state.id = rid;
-        auto states = r->get_duplication_manager()->get_dup_states();
+        const auto &states = dup_mgr->get_dup_states();
         decree last_committed_decree = r->last_committed_decree();
         for (const auto &s : states) {
             state.duplicating = s.duplicating;
