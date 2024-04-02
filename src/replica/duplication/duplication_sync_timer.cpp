@@ -19,13 +19,12 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
-#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "common/duplication_common.h"
 #include "common/replication.codes.h"
 #include "duplication_sync_timer.h"
-#include "metadata_types.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
@@ -74,7 +73,7 @@ void duplication_sync_timer::run()
     req->__set_hp_node(_stub->primary_host_port());
 
     // collects confirm points from all primaries on this server
-    for (const replica_ptr &r : get_all_primaries()) {
+    for (const replica_ptr &r : _stub->get_all_primaries()) {
         auto confirmed = r->get_duplication_manager()->get_duplication_confirms_to_update();
         if (!confirmed.empty()) {
             req->confirm_list[r->get_gpid()] = std::move(confirmed);
@@ -112,8 +111,8 @@ void duplication_sync_timer::on_duplication_sync_reply(error_code err,
 void duplication_sync_timer::update_duplication_map(
     const std::map<int32_t, std::map<int32_t, duplication_entry>> &dup_map)
 {
-    for (replica_ptr &r : get_all_replicas()) {
-        auto it = dup_map.find(r->get_gpid().get_app_id());
+    for (replica_ptr &r : _stub->get_all_replicas()) {
+        const auto &it = dup_map.find(r->get_gpid().get_app_id());
         if (it == dup_map.end()) {
             // no duplication is assigned to this app
             r->get_duplication_manager()->update_duplication_map({});
@@ -126,35 +125,6 @@ void duplication_sync_timer::update_duplication_map(
 duplication_sync_timer::duplication_sync_timer(replica_stub *stub) : _stub(stub) {}
 
 duplication_sync_timer::~duplication_sync_timer() {}
-
-std::vector<replica_ptr> duplication_sync_timer::get_all_primaries()
-{
-    std::vector<replica_ptr> replica_vec;
-    {
-        zauto_read_lock l(_stub->_replicas_lock);
-        for (auto &kv : _stub->_replicas) {
-            replica_ptr r = kv.second;
-            if (r->status() != partition_status::PS_PRIMARY) {
-                continue;
-            }
-            replica_vec.emplace_back(std::move(r));
-        }
-    }
-    return replica_vec;
-}
-
-std::vector<replica_ptr> duplication_sync_timer::get_all_replicas()
-{
-    std::vector<replica_ptr> replica_vec;
-    {
-        zauto_read_lock l(_stub->_replicas_lock);
-        for (auto &kv : _stub->_replicas) {
-            replica_ptr r = kv.second;
-            replica_vec.emplace_back(std::move(r));
-        }
-    }
-    return replica_vec;
-}
 
 void duplication_sync_timer::close()
 {
@@ -191,8 +161,8 @@ duplication_sync_timer::get_dup_states(int app_id, /*out*/ bool *app_found)
 {
     *app_found = false;
     std::multimap<dupid_t, replica_dup_state> result;
-    for (const replica_ptr &r : get_all_primaries()) {
-        gpid rid = r->get_gpid();
+    for (const replica_ptr &r : _stub->get_all_primaries()) {
+        const gpid rid = r->get_gpid();
         if (rid.get_app_id() != app_id) {
             continue;
         }
