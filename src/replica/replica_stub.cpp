@@ -35,6 +35,7 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <iterator>
 #include <mutex>
 #include <ostream>
 #include <set>
@@ -729,6 +730,34 @@ dsn::error_code replica_stub::on_kill_replica(gpid id)
         }
         return err;
     }
+}
+
+std::vector<replica_ptr> replica_stub::get_all_replicas() const
+{
+    std::vector<replica_ptr> result;
+    {
+        zauto_read_lock l(_replicas_lock);
+        std::transform(_replicas.begin(),
+                       _replicas.end(),
+                       std::back_inserter(result),
+                       [](const std::pair<gpid, replica_ptr> &r) { return r.second; });
+    }
+    return result;
+}
+
+std::vector<replica_ptr> replica_stub::get_all_primaries() const
+{
+    std::vector<replica_ptr> result;
+    {
+        zauto_read_lock l(_replicas_lock);
+        for (const auto & [ _, r ] : _replicas) {
+            if (r->status() != partition_status::PS_PRIMARY) {
+                continue;
+            }
+            result.push_back(r);
+        }
+    }
+    return result;
 }
 
 replica_ptr replica_stub::get_replica(gpid id) const

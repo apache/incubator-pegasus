@@ -239,7 +239,10 @@ public:
     //
     error_code trigger_manual_emergency_checkpoint(decree old_decree);
     void on_query_last_checkpoint(learn_response &response);
-    replica_duplicator_manager *get_duplication_manager() const { return _duplication_mgr.get(); }
+    std::shared_ptr<replica_duplicator_manager> get_duplication_manager() const
+    {
+        return _duplication_mgr;
+    }
     bool is_duplication_master() const { return _is_duplication_master; }
     bool is_duplication_follower() const { return _is_duplication_follower; }
     bool is_duplication_plog_checking() const { return _is_duplication_plog_checking.load(); }
@@ -623,7 +626,7 @@ private:
     throttling_controller _backup_request_qps_throttling_controller;
 
     // duplication
-    std::unique_ptr<replica_duplicator_manager> _duplication_mgr;
+    std::shared_ptr<replica_duplicator_manager> _duplication_mgr;
     bool _is_manual_emergency_checkpointing{false};
     bool _is_duplication_master{false};
     bool _is_duplication_follower{false};
