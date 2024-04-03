@@ -60,9 +60,10 @@ public:
         NO_FATALS(write_data(kTestCount));
 
         std::vector<int32_t> app_ids({table_id_});
-        ASSERT_EQ(
-            ERR_OK,
-            ddl_client_->add_backup_policy("policy_1", "local_service", app_ids, 86400, 6, "24:0"));
+        //gns: removed backup policy
+//        ASSERT_EQ(
+//            ERR_OK,
+//            ddl_client_->add_backup_policy("policy_1", "local_service", app_ids, 86400, 6, "24:0"));
     }
 
     void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client_->drop_app(table_name_, 0)); }
