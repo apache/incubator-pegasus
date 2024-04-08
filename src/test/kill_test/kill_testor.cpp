@@ -23,7 +23,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <algorithm>
-#include <string>
 #include <unordered_set>
 #include <utility>
 
@@ -53,8 +52,8 @@ kill_testor::kill_testor(const char *config_file)
     }
 
     // load meta_list
-    dsn::replication::replica_helper::load_meta_servers(
-        meta_list, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), FLAGS_pegasus_cluster_name);
+    dsn::replication::replica_helper::load_servers_from_config(
+        dsn::PEGASUS_CLUSTER_SECTION_NAME, FLAGS_pegasus_cluster_name, meta_list);
     if (meta_list.empty()) {
         LOG_ERROR("Should config the meta address for killer");
         exit(-1);

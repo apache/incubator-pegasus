@@ -46,8 +46,11 @@
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "simple_kv_types.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
+
+DSN_DECLARE_string(server_list);
 
 namespace dsn {
 namespace replication {
@@ -69,7 +72,7 @@ simple_kv_client_app::~simple_kv_client_app() { stop(); }
         return ::dsn::ERR_INVALID_PARAMETERS;
 
     std::vector<host_port> meta_servers;
-    replica_helper::load_meta_servers(meta_servers);
+    replica_helper::parse_server_list(FLAGS_server_list, meta_servers);
     _meta_server_group.assign_group("meta_servers");
     for (const auto &hp : meta_servers) {
         LOG_WARNING_IF(!_meta_server_group.group_host_port()->add(hp), "duplicate adress {}", hp);

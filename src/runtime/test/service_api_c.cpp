@@ -143,11 +143,11 @@ TEST(core, dsn_config)
     ASSERT_EQ(1.0, dsn_config_get_value_double("apps.client", "count", 100.0, "client count"));
     ASSERT_EQ(1.0, dsn_config_get_value_double("apps.client", "count", 100.0, "client count"));
 
-    std::vector<const char *> buffers;
+    std::vector<std::string> buffers;
     dsn_config_get_all_keys("core.test", buffers);
     ASSERT_EQ(2, buffers.size());
-    ASSERT_STREQ("count", buffers[0]);
-    ASSERT_STREQ("run", buffers[1]);
+    ASSERT_EQ("count", buffers[0]);
+    ASSERT_EQ("run", buffers[1]);
 }
 
 TEST(core, dsn_exlock)
