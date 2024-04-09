@@ -105,7 +105,7 @@ class KerberosProtocol implements AuthProtocol {
               logger.info("Thread name = {}",Thread.currentThread().getName());
               logger.info("kerberos active thread count = {}", Thread.activeCount());
               checkTGTAndRelogin();
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
               logger.warn(
                   "check TGT and ReLogin kerberos failed, will retry after {} seconds",
                   CHECK_TGT_INTEVAL_SECONDS);
