@@ -101,6 +101,9 @@ class KerberosProtocol implements AuthProtocol {
           @Override
           public void run() {
             try {
+              logger.info("start to check TGT and try to relogin kerberos");
+              logger.info("Thread name = {}",Thread.currentThread().getName());
+              logger.info("kerberos active thread count = {}", Thread.activeCount());
               checkTGTAndRelogin();
             } catch (InterruptedException e) {
               logger.warn(
