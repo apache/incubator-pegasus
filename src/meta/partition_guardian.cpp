@@ -18,8 +18,11 @@
 #include "meta/partition_guardian.h"
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <inttypes.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <stdio.h>
 #include <algorithm>
 #include <cstdint>
@@ -720,10 +723,10 @@ void partition_guardian::register_ctrl_commands()
         "meta.lb.assign_delay_ms",
         "control the replica_assign_delay_ms_for_dropouts config"));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"meta.lb.assign_secondary_black_list"},
-        "lb.assign_secondary_black_list [<ip:port,ip:port,ip:port>|clear]",
-        "control the assign secondary black list",
+    _cmds.emplace_back(dsn::command_manager::instance().register_single_command(
+        "meta.lb.assign_secondary_black_list",
+        "Control the assign secondary black list",
+        "[host1:port,host2:port,...|clear]",
         [this](const std::vector<std::string> &args) {
             return ctrl_assign_secondary_black_list(args);
         }));
@@ -732,47 +735,56 @@ void partition_guardian::register_ctrl_commands()
 std::string
 partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::string> &args)
 {
-    std::string invalid_arguments("invalid arguments");
-    std::stringstream oss;
+    nlohmann::json msg;
+    msg["error"] = "ok";
+    // Query.
     if (args.empty()) {
-        dsn::zauto_read_lock l(_black_list_lock);
-        oss << "get ok: ";
-        for (auto iter = _assign_secondary_black_list.begin();
-             iter != _assign_secondary_black_list.end();
-             ++iter) {
-            if (iter != _assign_secondary_black_list.begin())
-                oss << ",";
-            oss << *iter;
+        {
+            dsn::zauto_read_lock l(_black_list_lock);
+            msg["assign_secondary_black_list"] =
+                fmt::format("{}", fmt::join(_assign_secondary_black_list, ","));
         }
-        return oss.str();
+        return msg.dump(2);
     }
 
+    // Invalid argument.
     if (args.size() != 1) {
-        return invalid_arguments;
+        msg["error"] = "invalid argument, 0 or 1 argument is acceptable";
+        return msg.dump(2);
     }
 
-    dsn::zauto_write_lock l(_black_list_lock);
+    // Clear.
     if (args[0] == "clear") {
-        _assign_secondary_black_list.clear();
-        return "clear ok";
+        {
+            dsn::zauto_write_lock l(_black_list_lock);
+            _assign_secondary_black_list.clear();
+        }
+        return msg.dump(2);
     }
 
-    std::vector<std::string> ip_ports;
-    dsn::utils::split_args(args[0].c_str(), ip_ports, ',');
-    if (args.size() == 0) {
-        return invalid_arguments;
+    // Set to new value.
+    std::vector<std::string> host_ports;
+    dsn::utils::split_args(args[0].c_str(), host_ports, ',');
+    if (host_ports.empty()) {
+        msg["error"] =
+            "invalid argument, the argument should be in form of '<host:port,host:port,host:port>'";
+        return msg.dump(2);
     }
 
     std::set<dsn::host_port> hp_list;
-    for (const std::string &s : ip_ports) {
-        const auto hp = host_port::from_string(s);
+    for (const auto &host_port : host_ports) {
+        const auto hp = host_port::from_string(host_port);
         if (!hp) {
-            return invalid_arguments;
+            msg["error"] = fmt::format("invalid argument, bad host:port '{}'", host_port);
+            return msg.dump(2);
         }
         hp_list.insert(hp);
     }
-    _assign_secondary_black_list = std::move(hp_list);
-    return "set ok";
+    {
+        dsn::zauto_write_lock l(_black_list_lock);
+        _assign_secondary_black_list = std::move(hp_list);
+    }
+    return msg.dump(2);
 }
 
 void partition_guardian::get_ddd_partitions(const gpid &pid,

@@ -144,27 +144,16 @@ server_state::~server_state() { _tracker.cancel_outstanding_tasks(); }
 
 void server_state::register_cli_commands()
 {
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"meta.dump"},
-        "meta.dump - dump app_states of meta server to local file",
-        "meta.dump -t|--target target_file",
+    _cmds.emplace_back(dsn::command_manager::instance().register_single_command(
+        "meta.dump",
+        "Dump app_states of meta server to a local file",
+        "<target_file>",
         [this](const std::vector<std::string> &args) {
-            dsn::error_code err;
-            if (args.size() != 2) {
-                err = ERR_INVALID_PARAMETERS;
-            } else {
-                const char *target_file = nullptr;
-                for (int i = 0; i < args.size(); i += 2) {
-                    if (args[i] == "-t" || args[i] == "--target")
-                        target_file = args[i + 1].c_str();
-                }
-                if (target_file == nullptr) {
-                    err = ERR_INVALID_PARAMETERS;
-                } else {
-                    err = this->dump_from_remote_storage(target_file, false);
-                }
+            if (args.size() != 1) {
+                return ERR_INVALID_PARAMETERS.to_string();
             }
-            return std::string(err.to_string());
+
+            return dump_from_remote_storage(args[0].c_str(), false).to_string();
         }));
 
     _cmds.emplace_back(dsn::command_manager::instance().register_bool_command(

@@ -82,10 +82,10 @@ private:
         _ddd_partitions[partition.config.pid] = std::move(partition);
     }
 
-    bool in_black_list(dsn::host_port addr)
+    bool in_black_list(dsn::host_port hp)
     {
         dsn::zauto_read_lock l(_black_list_lock);
-        return _assign_secondary_black_list.count(addr) != 0;
+        return _assign_secondary_black_list.count(hp) != 0;
     }
 
     meta_service *_svc;
