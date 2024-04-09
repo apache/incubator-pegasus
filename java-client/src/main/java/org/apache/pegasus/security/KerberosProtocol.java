@@ -50,10 +50,10 @@ class KerberosProtocol implements AuthProtocol {
   // request. The JAAS framework defines the term "subject" to represent the source of a request. A
   // subject may be any entity, such as a person or a service.
   private Subject subject;
-  final private String serviceName;
-  final private String serviceFqdn;
-  final private String keyTab;
-  final private String principal;
+  private final String serviceName;
+  private final String serviceFqdn;
+  private final String keyTab;
+  private final String principal;
   final int CHECK_TGT_INTEVAL_SECONDS = 10;
   final ScheduledExecutorService service =
       Executors.newSingleThreadScheduledExecutor(
@@ -96,18 +96,22 @@ class KerberosProtocol implements AuthProtocol {
   }
 
   private void scheduleCheckTGTAndRelogin() {
-    Runnable checkTGTAndReLogin = new Runnable() {
-      @Override
-      public void run() {
-        try {
-          checkTGTAndRelogin();
-        } catch (InterruptedException e) {
-          logger.warn("check TGT and ReLogin kerberos failed, will retry after {} seconds", CHECK_TGT_INTEVAL_SECONDS);
-        }
-      }
-    };
+    Runnable checkTGTAndReLogin =
+        new Runnable() {
+          @Override
+          public void run() {
+            try {
+              checkTGTAndRelogin();
+            } catch (InterruptedException e) {
+              logger.warn(
+                  "check TGT and ReLogin kerberos failed, will retry after {} seconds",
+                  CHECK_TGT_INTEVAL_SECONDS);
+            }
+          }
+        };
 
-    service.scheduleAtFixedRate(checkTGTAndReLogin, CHECK_TGT_INTEVAL_SECONDS, CHECK_TGT_INTEVAL_SECONDS, TimeUnit.SECONDS);
+    service.scheduleAtFixedRate(
+        checkTGTAndReLogin, CHECK_TGT_INTEVAL_SECONDS, CHECK_TGT_INTEVAL_SECONDS, TimeUnit.SECONDS);
   }
 
   private void checkTGTAndRelogin() throws InterruptedException {
