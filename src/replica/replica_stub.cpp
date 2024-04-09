@@ -530,7 +530,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                                          LOG_INFO("{}@{}: load replica '{}' success, <durable, "
                                                   "commit> = <{}, {}>, last_prepared_decree = {}",
                                                   r->get_gpid(),
-                                                  dsn_primary_address(),
+                                                  dsn_primary_host_port(),
                                                   dir,
                                                   r->last_durable_decree(),
                                                   r->last_committed_decree(),
