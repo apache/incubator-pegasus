@@ -154,25 +154,6 @@ public:
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
 
-    void test_trigger_manual_emergency_checkpoint(const decree min_checkpoint_decree,
-                                                  const error_code expected_err,
-                                                  std::function<void()> callback = {})
-    {
-        dsn::utils::notify_event op_completed;
-        _mock_replica->async_trigger_manual_emergency_checkpoint(
-            min_checkpoint_decree, 0, [&](error_code actual_err) {
-                ASSERT_EQ(expected_err, actual_err);
-
-                if (callback) {
-                    callback();
-                }
-
-                op_completed.notify();
-            });
-
-        op_completed.wait();
-    }
-
     bool has_gpid(gpid &pid) const
     {
         for (const auto &node : stub->_fs_manager.get_dir_nodes()) {
@@ -367,28 +348,10 @@ TEST_P(replica_test, update_allow_ingest_behind_test)
     }
 }
 
-TEST_P(replica_test, test_trigger_manual_emergency_checkpoint)
+TEST_F(replica_test, test_trigger_manual_emergency_checkpoint)
 {
-    // There is only one replica for the unit test.
-    PRESERVE_FLAG(mutation_2pc_min_replica_count);
-    FLAGS_mutation_2pc_min_replica_count = 1;
-
-    // Initially the mutation log is empty.
-    ASSERT_EQ(0, _mock_replica->last_applied_decree());
-    ASSERT_EQ(0, _mock_replica->last_durable_decree());
-
-    // Commit at least an empty write to make the replica become non-empty.
-    _mock_replica->update_expect_last_durable_decree(1);
-    test_trigger_manual_emergency_checkpoint(1, ERR_OK);
-    _mock_replica->tracker()->wait_outstanding_tasks();
-
-    // Committing multiple empty writes (retry multiple times) might make the last
-    // applied decree greater than 1.
-    ASSERT_LE(1, _mock_replica->last_applied_decree());
-    ASSERT_EQ(1, _mock_replica->last_durable_decree());
-
-    test_trigger_manual_emergency_checkpoint(
-        100, ERR_OK, [this]() { ASSERT_TRUE(is_checkpointing()); });
+    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(100), ERR_OK);
+    ASSERT_TRUE(is_checkpointing());
     _mock_replica->update_last_durable_decree(100);
 
     // There's no need to trigger checkpoint since min_checkpoint_decree <= last_durable_decree.
