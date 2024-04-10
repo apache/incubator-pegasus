@@ -37,7 +37,6 @@ import org.apache.pegasus.rpc.Cluster;
 import org.apache.pegasus.rpc.InternalTableOptions;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.rpc.interceptor.ReplicaSessionInterceptorManager;
-import org.apache.pegasus.security.KerberosProtocol;
 import org.slf4j.Logger;
 
 public class ClusterManager extends Cluster {
@@ -189,8 +188,6 @@ public class ClusterManager extends Cluster {
 
   @Override
   public void close() {
-    KerberosProtocol.stopExecutor();
-
     if (enableCounter) {
       MetricsManager.finish();
     }

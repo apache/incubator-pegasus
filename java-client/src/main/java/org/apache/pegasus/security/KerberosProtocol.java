@@ -40,7 +40,7 @@ import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class KerberosProtocol implements AuthProtocol {
+class KerberosProtocol implements AuthProtocol {
   private static final Logger logger = LoggerFactory.getLogger(KerberosProtocol.class);
 
   // Subject is a JAAS internal class, Ref:
@@ -114,6 +114,7 @@ public class KerberosProtocol implements AuthProtocol {
 
     service.scheduleAtFixedRate(
         checkTGTAndReLogin, CHECK_TGT_INTEVAL_SECONDS, CHECK_TGT_INTEVAL_SECONDS, TimeUnit.SECONDS);
+    service.schedule(service::shutdown, 10,TimeUnit.SECONDS);
   }
 
   private void checkTGTAndRelogin() {
@@ -211,9 +212,5 @@ public class KerberosProtocol implements AuthProtocol {
         };
       }
     };
-  }
-
-  public static void stopExecutor(){
-    service.shutdown();
   }
 }
