@@ -40,7 +40,7 @@ import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class KerberosProtocol implements AuthProtocol {
+public class KerberosProtocol implements AuthProtocol {
   private static final Logger logger = LoggerFactory.getLogger(KerberosProtocol.class);
 
   // Subject is a JAAS internal class, Ref:
@@ -55,12 +55,13 @@ class KerberosProtocol implements AuthProtocol {
   private final String keyTab;
   private final String principal;
   final int CHECK_TGT_INTEVAL_SECONDS = 10;
-  final ScheduledExecutorService service =
+  final static ScheduledExecutorService service =
       Executors.newSingleThreadScheduledExecutor(
           new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
               Thread t = new Thread(r, "TGT renew for pegasus");
+              t.setDaemon(true);
               t.setUncaughtExceptionHandler(
                   (thread, error) -> logger.error("Uncaught exception", error));
               return t;
@@ -101,14 +102,12 @@ class KerberosProtocol implements AuthProtocol {
           @Override
           public void run() {
             try {
-              logger.info("start to check TGT and try to relogin kerberos");
-              logger.info("Thread name = {}",Thread.currentThread().getName());
-              logger.info("kerberos active thread count = {}", Thread.activeCount());
               checkTGTAndRelogin();
             } catch (Exception e) {
               logger.warn(
-                  "check TGT and ReLogin kerberos failed, will retry after {} seconds",
-                  CHECK_TGT_INTEVAL_SECONDS);
+                  "check TGT and ReLogin kerberos failed , will retry after {} seconds.",
+                  CHECK_TGT_INTEVAL_SECONDS,
+                  e);
             }
           }
         };
@@ -117,7 +116,7 @@ class KerberosProtocol implements AuthProtocol {
         checkTGTAndReLogin, CHECK_TGT_INTEVAL_SECONDS, CHECK_TGT_INTEVAL_SECONDS, TimeUnit.SECONDS);
   }
 
-  private void checkTGTAndRelogin() throws InterruptedException {
+  private void checkTGTAndRelogin() {
     KerberosTicket tgt = getTGT();
     if (tgt != null && System.currentTimeMillis() < getRefreshTime(tgt)) {
       return;
@@ -212,5 +211,9 @@ class KerberosProtocol implements AuthProtocol {
         };
       }
     };
+  }
+
+  public static void stopExecutor(){
+    service.shutdown();
   }
 }
