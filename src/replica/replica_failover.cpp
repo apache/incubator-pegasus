@@ -38,11 +38,12 @@
 #include "replica_stub.h"
 #include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
+class host_port;
+
 namespace replication {
 
 // The failure handling part of replica.

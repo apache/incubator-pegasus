@@ -34,7 +34,6 @@
 #include "nfs/nfs_code_definition.h"
 #include "nfs/nfs_node.h"
 #include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/command_manager.h"
 #include "utils/filesystem.h"
