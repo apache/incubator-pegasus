@@ -30,7 +30,6 @@
 #include <memory>
 #include <string>
 
-#include "backup/replica_backup_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
@@ -241,8 +240,6 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                                            std::chrono::seconds(FLAGS_checkpoint_interval_seconds),
                                            get_gpid().thread_hash());
             }
-
-            _backup_mgr->start_collect_backup_info();
         }
     }
 
