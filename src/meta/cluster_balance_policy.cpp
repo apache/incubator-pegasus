@@ -495,7 +495,8 @@ bool cluster_balance_policy::apply_move(const move_info &move,
                                         /*out*/ cluster_migration_info &cluster_info)
 {
     int32_t app_id = move.pid.get_app_id();
-    host_port source = move.source_node, target = move.target_node;
+    const auto &source = move.source_node;
+    const auto &target = move.target_node;
     if (cluster_info.apps_skew.find(app_id) == cluster_info.apps_skew.end() ||
         cluster_info.replicas_count.find(source) == cluster_info.replicas_count.end() ||
         cluster_info.replicas_count.find(target) == cluster_info.replicas_count.end() ||

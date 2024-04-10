@@ -314,7 +314,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         }
         out << "    ----" << std::endl;
         j = 0;
-        for (const ::dsn::host_port &r : pinfo.config.hp_last_drops) {
+        for (const auto &r : pinfo.config.hp_last_drops) {
             out << "    last_drops[" << j++ << "]: "
                 << "node(" << r.to_string() << ")";
             if (j == (int)pinfo.config.hp_last_drops.size() - 1)

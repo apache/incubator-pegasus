@@ -131,7 +131,7 @@ void primary_context::get_replica_config(partition_status::type st,
     config.learner_signature = learner_signature;
 }
 
-bool primary_context::check_exist(::dsn::host_port node, partition_status::type st)
+bool primary_context::check_exist(const ::dsn::host_port &node, partition_status::type st)
 {
     switch (st) {
     case partition_status::PS_PRIMARY:

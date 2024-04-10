@@ -44,7 +44,7 @@ namespace dsn {
 TEST(host_port_test, host_port_to_string)
 {
     {
-        host_port hp = host_port("localhost", 8080);
+        host_port hp("localhost", 8080);
         ASSERT_EQ("localhost:8080", hp.to_string());
     }
 
@@ -56,7 +56,7 @@ TEST(host_port_test, host_port_to_string)
 
 TEST(host_port_test, host_port_build)
 {
-    host_port hp = host_port("localhost", 8080);
+    host_port hp("localhost", 8080);
     ASSERT_EQ(HOST_TYPE_IPV4, hp.type());
     ASSERT_EQ(8080, hp.port());
     ASSERT_EQ("localhost", hp.host());
@@ -276,11 +276,11 @@ void send_and_check_host_port_by_serialize(const host_port &hp, dsn_msg_serializ
 
 TEST(host_port_test, thrift_parser)
 {
-    host_port hp1 = host_port("localhost", 8080);
+    host_port hp1("localhost", 8080);
     send_and_check_host_port_by_serialize(hp1, DSF_THRIFT_BINARY);
     send_and_check_host_port_by_serialize(hp1, DSF_THRIFT_JSON);
 
-    host_port hp2 = host_port("localhost", 1010);
+    host_port hp2("localhost", 1010);
     send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_BINARY);
     send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_JSON);
 }

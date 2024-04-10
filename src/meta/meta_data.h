@@ -437,7 +437,7 @@ struct meta_view
     node_mapper *nodes;
 };
 
-inline node_state *get_node_state(node_mapper &nodes, host_port hp, bool create_new)
+inline node_state *get_node_state(node_mapper &nodes, const host_port &hp, bool create_new)
 {
     node_state *ns;
     if (nodes.find(hp) == nodes.end()) {
@@ -450,7 +450,7 @@ inline node_state *get_node_state(node_mapper &nodes, host_port hp, bool create_
     return ns;
 }
 
-inline bool is_node_alive(const node_mapper &nodes, host_port hp)
+inline bool is_node_alive(const node_mapper &nodes, const host_port &hp)
 {
     auto iter = nodes.find(hp);
     if (iter == nodes.end())

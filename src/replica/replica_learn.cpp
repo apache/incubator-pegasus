@@ -1298,7 +1298,7 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
         is_local_error ? partition_status::PS_ERROR : partition_status::PS_INACTIVE);
 }
 
-error_code replica::handle_learning_succeeded_on_primary(::dsn::host_port node,
+error_code replica::handle_learning_succeeded_on_primary(const host_port &node,
                                                          uint64_t learn_signature)
 {
     auto it = _primary_states.learners.find(node);

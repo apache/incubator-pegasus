@@ -1431,7 +1431,8 @@ void server_state::list_apps(const configuration_list_apps_request &request,
     response.err = dsn::ERR_OK;
 }
 
-void server_state::send_proposal(host_port target, const configuration_update_request &proposal)
+void server_state::send_proposal(const host_port &target,
+                                 const configuration_update_request &proposal)
 {
     host_port hp_node;
     GET_HOST_PORT(proposal, node, hp_node);
@@ -2093,7 +2094,7 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
     }
 }
 
-void server_state::on_change_node_state(host_port node, bool is_alive)
+void server_state::on_change_node_state(const host_port &node, bool is_alive)
 {
     LOG_DEBUG("change node({}) state to {}", node, is_alive ? "alive" : "dead");
     zauto_write_lock l(_lock);

@@ -69,9 +69,11 @@ inline bool is_partition_config_equal(const partition_configuration &pc1,
                                       const partition_configuration &pc2)
 {
     // secondaries no need to be same order
-    for (const host_port &addr : pc1.hp_secondaries)
-        if (!is_secondary(pc2, addr))
+    for (const auto &hp : pc1.hp_secondaries) {
+        if (!is_secondary(pc2, hp)) {
             return false;
+        }
+    }
     // last_drops is not considered into equality check
     return pc1.ballot == pc2.ballot && pc1.pid == pc2.pid &&
            pc1.max_replica_count == pc2.max_replica_count && pc1.primary == pc2.primary &&
@@ -95,7 +97,7 @@ public:
         return false;
     }
     static bool get_replica_config(const partition_configuration &partition_config,
-                                   ::dsn::host_port node,
+                                   const ::dsn::host_port &node,
                                    /*out*/ replica_configuration &replica_config);
 
     // Return true if 'server_list' is a valid comma-separated list of servers, otherwise return

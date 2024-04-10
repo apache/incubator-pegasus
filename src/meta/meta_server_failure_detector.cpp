@@ -101,7 +101,7 @@ void meta_server_failure_detector::on_worker_disconnected(const std::vector<host
     _svc->set_node_state(nodes, false);
 }
 
-void meta_server_failure_detector::on_worker_connected(host_port node)
+void meta_server_failure_detector::on_worker_connected(const host_port &node)
 {
     _svc->set_node_state({node}, true);
 }
@@ -338,7 +338,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
 }
 
 /*the following functions are only for test*/
-meta_server_failure_detector::meta_server_failure_detector(host_port leader_host_port,
+meta_server_failure_detector::meta_server_failure_detector(const host_port &leader_host_port,
                                                            bool is_myself_leader)
 {
     LOG_INFO("set {} as leader", leader_host_port);
@@ -346,7 +346,7 @@ meta_server_failure_detector::meta_server_failure_detector(host_port leader_host
     _is_leader.store(is_myself_leader);
 }
 
-void meta_server_failure_detector::set_leader_for_test(host_port leader_host_port,
+void meta_server_failure_detector::set_leader_for_test(const host_port &leader_host_port,
                                                        bool is_myself_leader)
 {
     LOG_INFO("set {} as leader", leader_host_port);

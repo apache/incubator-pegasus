@@ -350,8 +350,8 @@ std::list<dsn::gpid> load_balance_policy::calc_potential_moving(
 dsn::gpid load_balance_policy::select_moving(std::list<dsn::gpid> &potential_moving,
                                              disk_load *prev_load,
                                              disk_load *current_load,
-                                             host_port from,
-                                             host_port to)
+                                             const host_port &from,
+                                             const host_port &to)
 {
     std::list<dsn::gpid>::iterator selected = potential_moving.end();
     int max = std::numeric_limits<int>::min();

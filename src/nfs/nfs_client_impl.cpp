@@ -34,7 +34,6 @@
 #include "nfs/nfs_code_definition.h"
 #include "nfs/nfs_node.h"
 #include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/command_manager.h"
 #include "utils/filesystem.h"
@@ -355,7 +354,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
         METRIC_VAR_INCREMENT(nfs_client_copy_failed_requests);
 
         if (!fc->user_req->is_finished) {
-            host_port hp = fc->user_req->file_size_req.hp_source;
+            const auto &hp = fc->user_req->file_size_req.hp_source;
             if (reqc->retry_count > 0) {
                 LOG_WARNING(
                     "[nfs_service] remote copy failed, source = {}({}), dir = {}, file = {}, "

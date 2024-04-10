@@ -115,8 +115,9 @@ class cold_backup_context;
 class replica_split_manager;
 
 typedef std::unordered_map<gpid, replica_ptr> replicas;
-typedef std::function<void(
-    ::dsn::host_port /*from*/, const replica_configuration & /*new_config*/, bool /*is_closing*/)>
+typedef std::function<void(const ::dsn::host_port & /*from*/,
+                           const replica_configuration & /*new_config*/,
+                           bool /*is_closing*/)>
     replica_state_subscriber;
 
 class replica_stub;
@@ -229,7 +230,7 @@ public:
     //
 
     // called by parent partition, executed by child partition
-    void create_child_replica(dsn::host_port primary_address,
+    void create_child_replica(const dsn::host_port &primary_address,
                               app_info app,
                               ballot init_ballot,
                               gpid child_gpid,

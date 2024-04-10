@@ -125,7 +125,7 @@ void failure_detector::stop()
     _workers.clear();
 }
 
-void failure_detector::register_master(::dsn::host_port target)
+void failure_detector::register_master(const ::dsn::host_port &target)
 {
     bool setup_timer = false;
 
@@ -159,8 +159,8 @@ void failure_detector::register_master(::dsn::host_port target)
     }
 }
 
-bool failure_detector::switch_master(::dsn::host_port from,
-                                     ::dsn::host_port to,
+bool failure_detector::switch_master(const ::dsn::host_port &from,
+                                     const ::dsn::host_port &to,
                                      uint32_t delay_milliseconds)
 {
     /* the caller of switch master shoud lock necessarily to protect _masters */
@@ -198,7 +198,7 @@ bool failure_detector::switch_master(::dsn::host_port from,
 
 bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base) { return ts > base; }
 
-void failure_detector::report(::dsn::host_port node, bool is_master, bool is_connected)
+void failure_detector::report(const ::dsn::host_port &node, bool is_master, bool is_connected)
 {
     LOG_INFO(
         "{} {}connected: {}", is_master ? "master" : "worker", is_connected ? "" : "dis", node);
@@ -308,13 +308,13 @@ void failure_detector::check_all_records()
     }
 }
 
-void failure_detector::add_allow_list(::dsn::host_port node)
+void failure_detector::add_allow_list(const ::dsn::host_port &node)
 {
     zauto_lock l(_lock);
     _allow_list.insert(node);
 }
 
-bool failure_detector::remove_from_allow_list(::dsn::host_port node)
+bool failure_detector::remove_from_allow_list(const ::dsn::host_port &node)
 {
     zauto_lock l(_lock);
     return _allow_list.erase(node) > 0;
@@ -325,7 +325,7 @@ void failure_detector::set_allow_list(const std::vector<std::string> &replica_hp
     CHECK(!_is_started, "FD is already started, the allow list should really not be modified");
 
     std::vector<host_port> nodes;
-    for (auto &hp : replica_hps) {
+    for (const auto &hp : replica_hps) {
         const auto node = dsn::host_port::from_string(hp);
         if (!node) {
             LOG_WARNING("replica_white_list has invalid ip {}, the allow list won't be modified",
@@ -507,7 +507,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     return true;
 }
 
-bool failure_detector::unregister_master(::dsn::host_port node)
+bool failure_detector::unregister_master(const host_port &node)
 {
     zauto_lock l(_lock);
     auto it = _masters.find(node);
@@ -523,7 +523,7 @@ bool failure_detector::unregister_master(::dsn::host_port node)
     }
 }
 
-bool failure_detector::is_master_connected(::dsn::host_port node) const
+bool failure_detector::is_master_connected(const host_port &node) const
 {
     zauto_lock l(_lock);
     auto it = _masters.find(node);
@@ -533,7 +533,7 @@ bool failure_detector::is_master_connected(::dsn::host_port node) const
         return false;
 }
 
-void failure_detector::register_worker(::dsn::host_port target, bool is_connected)
+void failure_detector::register_worker(const host_port &target, bool is_connected)
 {
     /*
      * callers should use the fd::_lock necessarily
@@ -549,7 +549,7 @@ void failure_detector::register_worker(::dsn::host_port target, bool is_connecte
     }
 }
 
-bool failure_detector::unregister_worker(::dsn::host_port node)
+bool failure_detector::unregister_worker(const host_port &node)
 {
     /*
      * callers should use the fd::_lock necessarily
@@ -575,7 +575,7 @@ void failure_detector::clear_workers()
     _workers.clear();
 }
 
-bool failure_detector::is_worker_connected(::dsn::host_port node) const
+bool failure_detector::is_worker_connected(const ::dsn::host_port &node) const
 {
     zauto_lock l(_lock);
     auto it = _workers.find(node);
@@ -585,7 +585,7 @@ bool failure_detector::is_worker_connected(::dsn::host_port node) const
         return false;
 }
 
-void failure_detector::send_beacon(::dsn::host_port target, uint64_t time)
+void failure_detector::send_beacon(const host_port &target, uint64_t time)
 {
     const auto &addr_target = dsn::dns_resolver::instance().resolve_address(target);
     beacon_msg beacon;

@@ -167,7 +167,7 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
 }
 
 /*static*/ bool replica_helper::get_replica_config(const partition_configuration &partition_config,
-                                                   ::dsn::host_port node,
+                                                   const ::dsn::host_port &node,
                                                    /*out*/ replica_configuration &replica_config)
 {
     replica_config.pid = partition_config.pid;

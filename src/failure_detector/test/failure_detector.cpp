@@ -88,7 +88,7 @@ private:
     std::function<void(const std::vector<host_port> &)> _disconnected_cb;
 
 protected:
-    virtual void send_beacon(::dsn::host_port node, uint64_t time) override
+    virtual void send_beacon(const host_port &node, uint64_t time) override
     {
         if (_send_ping_switch)
             failure_detector::send_beacon(node, time);
@@ -103,7 +103,7 @@ protected:
             _disconnected_cb(nodes);
     }
 
-    virtual void on_master_connected(host_port node) override
+    virtual void on_master_connected(const host_port &node) override
     {
         if (_connected_cb)
             _connected_cb(node);
@@ -155,7 +155,7 @@ public:
         if (_disconnected_cb)
             _disconnected_cb(worker_list);
     }
-    virtual void on_worker_connected(host_port node) override
+    virtual void on_worker_connected(const host_port &node) override
     {
         if (_connected_cb)
             _connected_cb(node);
