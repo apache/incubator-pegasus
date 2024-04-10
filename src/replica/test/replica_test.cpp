@@ -155,80 +155,12 @@ public:
         _app_info.partition_count = 8;
     }
 
-    void test_on_cold_backup(const std::string user_specified_path = "")
-    {
-        backup_request req;
-        req.pid = _pid;
-        policy_info backup_policy_info;
-        backup_policy_info.__set_backup_provider_type(_provider_name);
-        backup_policy_info.__set_policy_name(_policy_name);
-        req.policy = backup_policy_info;
-        req.app_name = _app_info.app_name;
-        req.backup_id = _backup_id;
-        if (!user_specified_path.empty()) {
-            req.__set_backup_path(user_specified_path);
-        }
-
-        // test cold backup could complete.
-        backup_response resp;
-        do {
-            _mock_replica->on_cold_backup(req, resp);
-        } while (resp.err == ERR_BUSY);
-        ASSERT_EQ(ERR_OK, resp.err);
-
-        // test checkpoint files have been uploaded successfully.
-        std::string backup_root =
-            dsn::utils::filesystem::path_combine(user_specified_path, FLAGS_cold_backup_root);
-        std::string current_chkpt_file =
-            cold_backup::get_current_chkpt_file(backup_root, req.app_name, req.pid, req.backup_id);
-        ASSERT_TRUE(dsn::utils::filesystem::file_exists(current_chkpt_file));
-        int64_t size = 0;
-        dsn::utils::filesystem::file_size(
-            current_chkpt_file, dsn::utils::FileDataType::kSensitive, size);
-        ASSERT_LT(0, size);
-    }
-
-    error_code test_find_valid_checkpoint(const std::string user_specified_path = "")
-    {
-        configuration_restore_request req;
-        req.app_id = _app_info.app_id;
-        req.app_name = _app_info.app_name;
-        req.backup_provider_name = _provider_name;
-        req.cluster_name = FLAGS_cold_backup_root;
-        req.time_stamp = _backup_id;
-        if (!user_specified_path.empty()) {
-            req.__set_restore_path(user_specified_path);
-        }
-
-        std::string remote_chkpt_dir;
-        return _mock_replica->find_valid_checkpoint(req, remote_chkpt_dir);
-    }
-
     void force_update_checkpointing(bool running)
     {
         _mock_replica->_is_manual_emergency_checkpointing = running;
     }
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
-
-    void test_trigger_manual_emergency_checkpoint(const decree min_checkpoint_decree,
-                                                  const error_code expected_err,
-                                                  std::function<void()> callback = {})
-    {
-        dsn::utils::notify_event op_completed;
-        _mock_replica->async_trigger_manual_emergency_checkpoint(
-            min_checkpoint_decree, 0, [&](error_code actual_err) {
-                ASSERT_EQ(expected_err, actual_err);
-
-                if (callback) {
-                    callback();
-                }
-
-                op_completed.notify();
-            });
-
-        op_completed.wait();
-    }
 
     bool has_gpid(gpid &pid) const
     {
@@ -280,11 +212,6 @@ public:
     dsn::app_info _app_info;
     dsn::gpid _pid;
     mock_replica_ptr _mock_replica;
-
-private:
-    const int64_t _backup_id;
-    const std::string _provider_name;
-    const std::string _policy_name;
 };
 
 INSTANTIATE_TEST_SUITE_P(, replica_test, ::testing::Values(false, true));

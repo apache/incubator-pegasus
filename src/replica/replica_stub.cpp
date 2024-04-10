@@ -688,8 +688,6 @@ void replica_stub::initialize_start()
         _duplication_sync_timer->start();
     }
 
-    _backup_server = std::make_unique<replica_backup_server>(this);
-
     // init liveness monitor
     CHECK_EQ(NS_Disconnected, _state);
     if (!FLAGS_fd_disabled) {

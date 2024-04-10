@@ -42,15 +42,15 @@
 #include "meta/test/misc/misc.h"
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
-#include "rpc/rpc_address.h"
-#include "rpc/rpc_holder.h"
-#include "rpc/rpc_host_port.h"
-#include "rpc/rpc_message.h"
-#include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "task/async_calls.h"
-#include "task/task.h"
-#include "task/task_code.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
@@ -499,14 +499,16 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
         int64_t cur_start_time_ms = static_cast<int64_t>(dsn_now_ms());
         {
             zauto_lock l(_mp._lock);
-            std::vector<dsn::host_port> node_list;
+            std::vector<std::pair<dsn::host_port, dsn::rpc_address>> node_list;
             generate_node_list(node_list, 3, 3);
 
             app_state *app = state->_all_apps[3].get();
             app->status = dsn::app_status::AS_AVAILABLE;
-            for (auto &pc : app->pcs) {
-                SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, node_list[0]);
-                SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, node_list[1], node_list[2]);
+            for (partition_configuration &pc : app->partitions) {
+                pc.primary = node_list[0].second;
+                pc.secondaries = {node_list[1].second, node_list[2].second};
+                pc.__set_hp_primary(node_list[0].first);
+                pc.__set_hp_secondaries({node_list[1].first, node_list[2].first});
             }
 
             _mp._backup_history.clear();
