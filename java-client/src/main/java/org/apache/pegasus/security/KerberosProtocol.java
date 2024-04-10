@@ -55,7 +55,7 @@ class KerberosProtocol implements AuthProtocol {
   private final String keyTab;
   private final String principal;
   final int CHECK_TGT_INTEVAL_SECONDS = 10;
-  final static ScheduledExecutorService service =
+  final ScheduledExecutorService service =
       Executors.newSingleThreadScheduledExecutor(
           new ThreadFactory() {
             @Override
@@ -114,7 +114,8 @@ class KerberosProtocol implements AuthProtocol {
 
     service.scheduleAtFixedRate(
         checkTGTAndReLogin, CHECK_TGT_INTEVAL_SECONDS, CHECK_TGT_INTEVAL_SECONDS, TimeUnit.SECONDS);
-    service.schedule(service::shutdown, 10,TimeUnit.SECONDS);
+
+    Runtime.getRuntime().addShutdownHook(new Thread(service::shutdown));
   }
 
   private void checkTGTAndRelogin() {
