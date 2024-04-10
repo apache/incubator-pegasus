@@ -22,6 +22,7 @@
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/duplication/duplication_sync_timer.h"
+#include "common/replication.codes.h"
 
 namespace dsn {
 namespace replication {
