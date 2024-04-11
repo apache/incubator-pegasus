@@ -27,4 +27,6 @@ public interface ReplicaSessionInterceptor {
   // The behavior when rpc session is sending a message.
   // @returns false if this message shouldn't be sent.
   boolean onSendMessage(ReplicaSession session, final ReplicaSession.RequestEntry entry);
+
+  void close();
 }

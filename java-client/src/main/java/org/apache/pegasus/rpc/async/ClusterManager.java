@@ -188,6 +188,8 @@ public class ClusterManager extends Cluster {
 
   @Override
   public void close() {
+    sessionInterceptorManager.close();
+
     if (enableCounter) {
       MetricsManager.finish();
     }

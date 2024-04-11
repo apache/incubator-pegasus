@@ -114,8 +114,6 @@ class KerberosProtocol implements AuthProtocol {
 
     service.scheduleAtFixedRate(
         checkTGTAndReLogin, CHECK_TGT_INTEVAL_SECONDS, CHECK_TGT_INTEVAL_SECONDS, TimeUnit.SECONDS);
-
-    Runtime.getRuntime().addShutdownHook(new Thread(service::shutdown));
   }
 
   private void checkTGTAndRelogin() {
@@ -213,5 +211,9 @@ class KerberosProtocol implements AuthProtocol {
         };
       }
     };
+  }
+
+  public void close(){
+    service.shutdown();
   }
 }

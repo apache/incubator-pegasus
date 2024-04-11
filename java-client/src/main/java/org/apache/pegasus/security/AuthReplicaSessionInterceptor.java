@@ -39,4 +39,8 @@ public class AuthReplicaSessionInterceptor implements ReplicaSessionInterceptor 
     // tryPendRequest returns false means that the negotiation is succeed now
     return protocol.isAuthRequest(entry) || !session.tryPendRequest(entry);
   }
+
+  public void close(){
+    protocol.close();
+  }
 }

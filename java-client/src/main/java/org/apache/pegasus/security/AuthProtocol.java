@@ -27,4 +27,6 @@ public interface AuthProtocol {
   void authenticate(ReplicaSession session);
 
   boolean isAuthRequest(final ReplicaSession.RequestEntry entry);
+
+  void close();
 }
