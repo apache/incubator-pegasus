@@ -79,8 +79,8 @@ public:
     ~asio_network_provider() override;
 
     virtual error_code start(rpc_channel channel, int port, bool client_only) override;
-    virtual ::dsn::rpc_address address() override { return _address; }
-    virtual ::dsn::host_port host_port() override { return _hp; }
+    const ::dsn::rpc_address &address() const override { return _address; }
+    const ::dsn::host_port &host_port() const override { return _hp; }
     virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override;
 
 private:
@@ -110,9 +110,9 @@ public:
 
     virtual error_code start(rpc_channel channel, int port, bool client_only) override;
 
-    virtual ::dsn::rpc_address address() override { return _address; }
+    const ::dsn::rpc_address &address() const override { return _address; }
 
-    virtual ::dsn::host_port host_port() override { return _hp; }
+    const ::dsn::host_port &host_port() const override { return _hp; }
 
     virtual void inject_drop_message(message_ex *msg, bool is_send) override
     {

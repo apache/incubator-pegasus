@@ -91,8 +91,8 @@ public:
     //
     // the named address
     //
-    virtual ::dsn::rpc_address address() = 0;
-    virtual ::dsn::host_port host_port() = 0;
+    virtual const ::dsn::rpc_address &address() const = 0;
+    virtual const ::dsn::host_port &host_port() const = 0;
 
     //
     // this is where the upper rpc engine calls down for a RPC call
