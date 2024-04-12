@@ -59,6 +59,7 @@
 #include "meta_test_base.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
@@ -379,7 +380,7 @@ public:
     const int32_t PARENT_INDEX = 0;
     const int32_t CHILD_INDEX = 4;
     const host_port NODE = host_port("localhost", 10086);
-    const rpc_address NODE_ADDR = rpc_address::from_host_port("127.0.0.1", 10086);
+    const rpc_address NODE_ADDR = dsn::dns_resolver::instance().resolve_address(NODE);
     std::shared_ptr<app_state> app;
 };
 

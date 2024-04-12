@@ -32,6 +32,7 @@
 #include "nfs/nfs_node.h"
 #include "replica/duplication/replica_follower.h"
 #include "replica/test/mock_utils.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task_tracker.h"
@@ -250,13 +251,18 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
 
     resp.partitions.clear();
     p.pid = gpid(2, 1);
-    p.primary = rpc_address::from_ip_port("127.0.0.1", 34801);
-    p.__set_hp_primary(host_port("localhost", 34801));
-    p.secondaries.emplace_back(rpc_address::from_ip_port("127.0.0.1", 34802));
-    p.secondaries.emplace_back(rpc_address::from_ip_port("127.0.0.1", 34803));
+
+    const host_port primary("localhost", 34801);
+    const host_port secondary1("localhost", 34802);
+    const host_port secondary2("localhost", 34803);
+
+    p.primary = dsn::dns_resolver::instance().resolve_address(primary);
+    p.secondaries.emplace_back(dsn::dns_resolver::instance().resolve_address(secondary1));
+    p.secondaries.emplace_back(dsn::dns_resolver::instance().resolve_address(secondary2));
+    p.__set_hp_primary(primary);
     p.__set_hp_secondaries({});
-    p.hp_secondaries.emplace_back(host_port("localhost", 34802));
-    p.hp_secondaries.emplace_back(host_port("localhost", 34803));
+    p.hp_secondaries.emplace_back(secondary1);
+    p.hp_secondaries.emplace_back(secondary2);
     resp.partitions.emplace_back(p);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_OK);
     ASSERT_EQ(master_replica_config(follower).primary, p.primary);
@@ -277,8 +283,9 @@ TEST_P(replica_follower_test, test_nfs_copy_checkpoint)
     ASSERT_EQ(nfs_copy_checkpoint(follower, ERR_CORRUPTION, learn_response()), ERR_CORRUPTION);
 
     auto resp = learn_response();
-    resp.learnee = rpc_address::from_ip_port("127.0.0.1", 34801);
-    resp.__set_hp_learnee(host_port("localhost", 34801));
+    const host_port learnee("localhost", 34801);
+    resp.learnee = dsn::dns_resolver::instance().resolve_address(learnee);
+    resp.__set_hp_learnee(learnee);
 
     std::string dest = utils::filesystem::path_combine(
         _mock_replica->dir(), duplication_constants::kDuplicationCheckpointRootDir);
