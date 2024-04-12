@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
@@ -225,35 +224,6 @@ TEST(host_port_test, transfer_rpc_address)
         hp.assign_group("test_group");
         ASSERT_EQ(hp.resolve_addresses(addresses),
                   error_s::make(dsn::ERR_INVALID_STATE, "invalid host_port type: HOST_TYPE_GROUP"));
-    }
-}
-
-TEST(host_port_test, dns_resolver)
-{
-    {
-        host_port hp("localhost", 8080);
-        const auto &addr = dns_resolver::instance().resolve_address(hp);
-        ASSERT_TRUE(rpc_address::from_ip_port("127.0.0.1", 8080) == addr ||
-                    rpc_address::from_ip_port("127.0.1.1", 8080) == addr);
-    }
-
-    {
-        host_port hp_grp;
-        hp_grp.assign_group("test_group");
-        auto g_hp = hp_grp.group_host_port();
-
-        host_port hp1("localhost", 8080);
-        ASSERT_TRUE(g_hp->add(hp1));
-        host_port hp2("localhost", 8081);
-        g_hp->set_leader(hp2);
-
-        const auto &addr_grp = dns_resolver::instance().resolve_address(hp_grp);
-        const auto *const g_addr = addr_grp.group_address();
-
-        ASSERT_EQ(g_addr->is_update_leader_automatically(), g_hp->is_update_leader_automatically());
-        ASSERT_STREQ(g_addr->name(), g_hp->name());
-        ASSERT_EQ(g_addr->count(), g_hp->count());
-        ASSERT_EQ(host_port::from_address(g_addr->leader()), g_hp->leader());
     }
 }
 

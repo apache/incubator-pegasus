@@ -52,7 +52,6 @@
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
-#include "utils/utils.h"
 
 DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
 DSN_DEFINE_validator(tables_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
@@ -376,13 +375,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
             }
             std::stringstream oss;
-            std::string hostname;
-            const auto &ip = p.hp_primary.to_string();
-            if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
-                oss << hostname << "(";
-            } else {
-                oss << p.hp_primary << "(";
-            };
+            oss << replication_ddl_client::node_name(p.hp_primary, resolve_ip) << "(";
             if (disk_found)
                 oss << disk_value;
             else
@@ -427,13 +420,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                     }
                 }
 
-                std::string hostname;
-                const auto &ip = p.hp_secondaries[j].to_string();
-                if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
-                    oss << hostname << "(";
-                } else {
-                    oss << p.hp_secondaries[j] << "(";
-                };
+                oss << replication_ddl_client::node_name(p.hp_secondaries[j], resolve_ip) << "(";
                 if (found)
                     oss << value;
                 else
