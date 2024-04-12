@@ -104,7 +104,4 @@ inline void unmarshall(dsn::message_ex *msg, /*out*/ T &val)
     unmarshall(reader, val, (dsn_msg_serialize_format)msg->header->context.u.serialize_format);
 }
 
-template <>
-inline void unmarshall(dsn::message_ex *msg, /*out*/ partition_configuration &val);
-
 } // namespace dsn
