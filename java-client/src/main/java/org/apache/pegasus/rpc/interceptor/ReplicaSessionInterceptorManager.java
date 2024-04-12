@@ -50,7 +50,7 @@ public class ReplicaSessionInterceptorManager {
     return true;
   }
 
-  public void close(){
+  public void close() {
     for (ReplicaSessionInterceptor interceptor : interceptors) {
       interceptor.close();
     }

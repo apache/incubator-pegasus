@@ -213,7 +213,7 @@ class KerberosProtocol implements AuthProtocol {
     };
   }
 
-  public void close(){
+  public void close() {
     service.shutdown();
   }
 }
