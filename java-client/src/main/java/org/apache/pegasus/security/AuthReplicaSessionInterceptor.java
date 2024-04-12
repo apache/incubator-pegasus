@@ -18,11 +18,12 @@
  */
 package org.apache.pegasus.security;
 
+import java.io.Closeable;
 import org.apache.pegasus.client.ClientOptions;
 import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.apache.pegasus.rpc.interceptor.ReplicaSessionInterceptor;
 
-public class AuthReplicaSessionInterceptor implements ReplicaSessionInterceptor {
+public class AuthReplicaSessionInterceptor implements ReplicaSessionInterceptor, Closeable {
   private AuthProtocol protocol;
 
   public AuthReplicaSessionInterceptor(ClientOptions options) throws IllegalArgumentException {
