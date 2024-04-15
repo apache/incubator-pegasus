@@ -42,6 +42,12 @@ public class host_port
   private static final org.apache.thrift.scheme.SchemeFactory TUPLE_SCHEME_FACTORY =
       new host_portTupleSchemeFactory();
 
+  public String host;
+
+  public short port;
+
+  public int hyType;
+
   /**
    * The set of fields this struct contains, along with convenience methods for finding and
    * manipulating them.
@@ -105,17 +111,53 @@ public class host_port
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(host_port.class, metaDataMap);
   }
 
-  public host_port() {}
+  public host_port() {
+    this.host = null;
+    this.port = 0;
+    this.hyType = 0;
+  }
 
   /** Performs a deep copy on <i>other</i>. */
-  public host_port(host_port other) {}
+  public host_port(host_port other) {
+    this.host = other.host;
+    this.port = other.port;
+    this.hyType = other.hyType;
+  }
 
   public host_port deepCopy() {
     return new host_port(this);
   }
 
+  public String getHost() {
+    return this.host;
+  }
+
+  public short getPort() {
+    return this.port;
+  }
+
+  public int getHyType() {
+    return this.hyType;
+  }
+
+  public void setHost(String host) {
+    this.host = host;
+  }
+
+  public void setPort(short port) {
+    this.port = port;
+  }
+
+  public void setHyType(int hyType) {
+    this.hyType = hyType;
+  }
+
   @Override
-  public void clear() {}
+  public void clear() {
+    this.host = null;
+    this.port = 0;
+    this.hyType = 0;
+  }
 
   public void setFieldValue(_Fields field, java.lang.Object value) {
     switch (field) {
@@ -179,12 +221,19 @@ public class host_port
   }
 
   public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
-    scheme(iprot).read(iprot, this);
+    host = iprot.readString();
+    port = iprot.readI16();
+    hyType = iprot.readI32();
+
+    validate();
   }
 
   public void write(org.apache.thrift.protocol.TProtocol oprot)
       throws org.apache.thrift.TException {
     scheme(oprot).write(oprot, this);
+    oprot.writeString(host);
+    oprot.writeI16(port);
+    oprot.writeI32(hyType);
   }
 
   @Override
