@@ -223,7 +223,7 @@ public class host_port
   public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
     host = iprot.readString();
     port = iprot.readI16();
-    hyType = iprot.readI32();
+    hyType = iprot.readByte();
 
     validate();
   }
@@ -233,7 +233,8 @@ public class host_port
     scheme(oprot).write(oprot, this);
     oprot.writeString(host);
     oprot.writeI16(port);
-    oprot.writeI32(hyType);
+    byte byte_hyType = (byte) (hyType);
+    oprot.writeByte(byte_hyType);
   }
 
   @Override
