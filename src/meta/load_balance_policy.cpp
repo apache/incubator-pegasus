@@ -189,10 +189,9 @@ generate_balancer_request(const app_mapper &apps,
     default:
         CHECK(false, "");
     }
-    LOG_INFO("generate balancer: {} {} from {}({}) of disk_tag({}) to {}",
+    LOG_INFO("generate balancer: {} {} from {} of disk_tag({}) to {}",
              pc.pid,
              ans,
-             from,
              from,
              get_disk_tag(apps, from, pc.pid),
              to);
