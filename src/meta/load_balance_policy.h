@@ -306,9 +306,8 @@ private:
     FRIEND_TEST(copy_primary_operation, only_copy_primary);
 };
 
-configuration_proposal_action new_proposal_action(const host_port &target,
-                                                  const host_port &node,
-                                                  config_type::type type);
+configuration_proposal_action
+new_proposal_action(const host_port &target, const host_port &node, config_type::type type);
 
 } // namespace replication
 } // namespace dsn

@@ -547,12 +547,9 @@ bool cluster_balance_policy::apply_move(const move_info &move,
     partition_configuration pc;
     pc.pid = move.pid;
     pc.hp_primary = primary_hp;
-    list[move.pid] = generate_balancer_request(
-        *_global_view->apps, pc, move.type, source, target);
+    list[move.pid] = generate_balancer_request(*_global_view->apps, pc, move.type, source, target);
     _migration_result->emplace(
-        move.pid,
-        generate_balancer_request(
-            *_global_view->apps, pc, move.type, source, target));
+        move.pid, generate_balancer_request(*_global_view->apps, pc, move.type, source, target));
     selected_pids.insert(move.pid);
 
     cluster_info.apps_skew[app_id] = get_skew(app_info.replicas_count);

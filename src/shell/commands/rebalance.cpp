@@ -30,6 +30,7 @@
 
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
+#include "meta/load_balance_policy.h"
 #include "meta_admin_types.h"
 #include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
@@ -134,10 +135,7 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
         type_from_string(_config_type_VALUES_TO_NAMES, proposal_type, config_type::CT_INVALID);
     PRINT_AND_RETURN_FALSE_IF_NOT(
         tp != config_type::CT_INVALID, "parse {} as config_type failed.\n", proposal_type);
-    request.action_list = {
-        new_proposal_action(target,
-                            node,
-                            tp)};
+    request.action_list = {new_proposal_action(target, node, tp)};
     dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
     std::cout << "send proposal response: " << err << std::endl;
     return true;
@@ -200,24 +198,19 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
     std::vector<configuration_proposal_action> &actions = request.action_list;
     actions.reserve(4);
     if (balance_type == "move_pri") {
-        actions.emplace_back(new_proposal_action(
-            from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         actions.emplace_back(
-            new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
+        actions.emplace_back(new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
     } else if (balance_type == "copy_pri") {
-        actions.emplace_back(new_proposal_action(
-            from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
-        actions.emplace_back(new_proposal_action(
-            from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
+        actions.emplace_back(new_proposal_action(from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
         actions.emplace_back(
-            new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
+        actions.emplace_back(new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
     } else if (balance_type == "copy_sec") {
-        actions.emplace_back(new_proposal_action(dsn::host_port(),
-                                                 to,
-                                                 config_type::CT_ADD_SECONDARY_FOR_LB));
-        actions.emplace_back(new_proposal_action(dsn::host_port(),
-                                                 from,
-                                                 config_type::CT_DOWNGRADE_TO_INACTIVE));
+        actions.emplace_back(
+            new_proposal_action(dsn::host_port(), to, config_type::CT_ADD_SECONDARY_FOR_LB));
+        actions.emplace_back(
+            new_proposal_action(dsn::host_port(), from, config_type::CT_DOWNGRADE_TO_INACTIVE));
     } else {
         fprintf(stderr, "parse %s as a balance type failed\n", balance_type.c_str());
         return false;

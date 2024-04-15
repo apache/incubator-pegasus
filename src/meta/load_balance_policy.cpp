@@ -49,9 +49,8 @@ class rpc_address;
 
 namespace replication {
 
-configuration_proposal_action new_proposal_action(const host_port &target,
-                                                  const host_port &node,
-                                                  config_type::type type)
+configuration_proposal_action
+new_proposal_action(const host_port &target, const host_port &node, config_type::type type)
 {
     const auto &target_addr = dsn::dns_resolver::instance().resolve_address(target);
     const auto &node_addr = dsn::dns_resolver::instance().resolve_address(node);
@@ -163,8 +162,8 @@ generate_balancer_request(const app_mapper &apps,
     case balance_type::MOVE_PRIMARY:
         ans = "move_primary";
         result.balance_type = balancer_request_type::move_primary;
-        result.action_list.emplace_back(new_proposal_action(
-            from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
+        result.action_list.emplace_back(
+            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         result.action_list.emplace_back(
             new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
         break;
@@ -173,18 +172,17 @@ generate_balancer_request(const app_mapper &apps,
         result.balance_type = balancer_request_type::copy_primary;
         result.action_list.emplace_back(
             new_proposal_action(from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
-        result.action_list.emplace_back(new_proposal_action(
-            from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
+        result.action_list.emplace_back(
+            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         result.action_list.emplace_back(
             new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
-        result.action_list.emplace_back(
-            new_proposal_action(to, from, config_type::CT_REMOVE));
+        result.action_list.emplace_back(new_proposal_action(to, from, config_type::CT_REMOVE));
         break;
     case balance_type::COPY_SECONDARY:
         ans = "copy_secondary";
         result.balance_type = balancer_request_type::copy_secondary;
-        result.action_list.emplace_back(new_proposal_action(
-            pc.hp_primary, to, config_type::CT_ADD_SECONDARY_FOR_LB));
+        result.action_list.emplace_back(
+            new_proposal_action(pc.hp_primary, to, config_type::CT_ADD_SECONDARY_FOR_LB));
         result.action_list.emplace_back(
             new_proposal_action(pc.hp_primary, from, config_type::CT_REMOVE));
         break;
@@ -331,11 +329,8 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
         const partition_configuration &pc = app->partitions[selected.get_partition_index()];
         auto balancer_result = _migration_result->emplace(
             selected,
-            generate_balancer_request(*_global_view->apps,
-                                      pc,
-                                      balance_type::MOVE_PRIMARY,
-                                      from,
-                                      to));
+            generate_balancer_request(
+                *_global_view->apps, pc, balance_type::MOVE_PRIMARY, from, to));
         CHECK(balancer_result.second, "gpid({}) already inserted as an action", selected);
 
         --(*prev_load)[get_disk_tag(*_global_view->apps, from, selected)];
@@ -722,11 +717,7 @@ void copy_replica_operation::copy_once(gpid selected_pid, migration_list *result
     const auto &to = _host_port_vec[*_ordered_host_port_ids.begin()];
 
     auto pc = _app->partitions[selected_pid.get_partition_index()];
-    auto request = generate_balancer_request(_apps,
-                                             pc,
-                                             get_balance_type(),
-                                             from,
-                                             to);
+    auto request = generate_balancer_request(_apps, pc, get_balance_type(), from, to);
     result->emplace(selected_pid, request);
 }
 
