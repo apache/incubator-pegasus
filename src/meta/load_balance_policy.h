@@ -32,6 +32,7 @@
 
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
+#include "meta_admin_types.h"
 #include "meta_data.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/enum_helper.h"
@@ -40,10 +41,8 @@
 namespace dsn {
 class command_deregister;
 class partition_configuration;
-class rpc_address;
 
 namespace replication {
-class configuration_balancer_request;
 class meta_service;
 
 // disk_tag->primary_count/total_count_on_this_disk

@@ -31,7 +31,6 @@
 
 #include "absl/strings/string_view.h"
 #include "dsn.layer2_types.h"
-#include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
 #include "runtime/rpc/dns_resolver.h"
@@ -45,7 +44,6 @@
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
 namespace dsn {
-class rpc_address;
 
 namespace replication {
 

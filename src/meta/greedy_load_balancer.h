@@ -31,16 +31,14 @@
 #include <vector>
 
 #include "meta/meta_data.h"
-#include "meta_admin_types.h"
 #include "server_load_balancer.h"
 #include "utils/fmt_utils.h"
 
 namespace dsn {
 class command_deregister;
-class host_port;
-class rpc_address;
 
 namespace replication {
+class configuration_proposal_action;
 class load_balance_policy;
 class meta_service;
 

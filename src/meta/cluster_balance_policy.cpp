@@ -26,7 +26,6 @@
 
 #include "dsn.layer2_types.h"
 #include "meta/load_balance_policy.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"

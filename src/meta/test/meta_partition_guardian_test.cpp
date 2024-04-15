@@ -43,7 +43,6 @@
 #include "dsn.layer2_types.h"
 #include "dummy_balancer.h"
 #include "gtest/gtest.h"
-#include "meta/greedy_load_balancer.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
 #include "meta/meta_server_failure_detector.h"
