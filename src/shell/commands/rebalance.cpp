@@ -135,9 +135,7 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
     PRINT_AND_RETURN_FALSE_IF_NOT(
         tp != config_type::CT_INVALID, "parse {} as config_type failed.\n", proposal_type);
     request.action_list = {
-        new_proposal_action(dsn::dns_resolver::instance().resolve_address(target),
-                            dsn::dns_resolver::instance().resolve_address(node),
-                            target,
+        new_proposal_action(target,
                             node,
                             tp)};
     dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
@@ -201,29 +199,23 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<configuration_proposal_action> &actions = request.action_list;
     actions.reserve(4);
-    const auto &from_addr = dsn::dns_resolver::instance().resolve_address(from);
-    const auto &to_addr = dsn::dns_resolver::instance().resolve_address(to);
     if (balance_type == "move_pri") {
         actions.emplace_back(new_proposal_action(
-            from_addr, from_addr, from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
+            from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         actions.emplace_back(
-            new_proposal_action(to_addr, to_addr, to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
     } else if (balance_type == "copy_pri") {
         actions.emplace_back(new_proposal_action(
-            from_addr, to_addr, from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
+            from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
         actions.emplace_back(new_proposal_action(
-            from_addr, from_addr, from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
+            from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         actions.emplace_back(
-            new_proposal_action(to_addr, to_addr, to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
     } else if (balance_type == "copy_sec") {
-        actions.emplace_back(new_proposal_action(dsn::rpc_address(),
-                                                 to_addr,
-                                                 dsn::host_port(),
+        actions.emplace_back(new_proposal_action(dsn::host_port(),
                                                  to,
                                                  config_type::CT_ADD_SECONDARY_FOR_LB));
-        actions.emplace_back(new_proposal_action(dsn::rpc_address(),
-                                                 from_addr,
-                                                 dsn::host_port(),
+        actions.emplace_back(new_proposal_action(dsn::host_port(),
                                                  from,
                                                  config_type::CT_DOWNGRADE_TO_INACTIVE));
     } else {

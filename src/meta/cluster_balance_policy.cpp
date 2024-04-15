@@ -547,14 +547,12 @@ bool cluster_balance_policy::apply_move(const move_info &move,
     partition_configuration pc;
     pc.pid = move.pid;
     pc.hp_primary = primary_hp;
-    const auto &source_addr = dsn::dns_resolver::instance().resolve_address(source);
-    const auto &target_addr = dsn::dns_resolver::instance().resolve_address(target);
     list[move.pid] = generate_balancer_request(
-        *_global_view->apps, pc, move.type, source_addr, target_addr, source, target);
+        *_global_view->apps, pc, move.type, source, target);
     _migration_result->emplace(
         move.pid,
         generate_balancer_request(
-            *_global_view->apps, pc, move.type, source_addr, target_addr, source, target));
+            *_global_view->apps, pc, move.type, source, target));
     selected_pids.insert(move.pid);
 
     cluster_info.apps_skew[app_id] = get_skew(app_info.replicas_count);

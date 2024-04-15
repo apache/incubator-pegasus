@@ -374,9 +374,8 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             if (!primary.is_invalid() && !skip_this) {
                 dsn::replication::configuration_balancer_request request;
                 request.gpid = pinfo.config.pid;
-                const auto &primary_hp = dsn::dns_resolver::instance().resolve_address(primary);
                 request.action_list = {new_proposal_action(
-                    primary_hp, primary_hp, primary, primary, config_type::CT_ASSIGN_PRIMARY)};
+                    primary, primary, config_type::CT_ASSIGN_PRIMARY)};
                 request.force = false;
                 dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
                 out << "    propose_request: propose -g " << request.gpid

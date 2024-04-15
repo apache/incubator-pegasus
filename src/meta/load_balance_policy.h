@@ -73,10 +73,8 @@ std::shared_ptr<configuration_balancer_request>
 generate_balancer_request(const app_mapper &apps,
                           const partition_configuration &pc,
                           const balance_type &type,
-                          const rpc_address &from,
-                          const rpc_address &to,
-                          const host_port &hp_from,
-                          const host_port &hp_to);
+                          const host_port &from,
+                          const host_port &to);
 
 struct flow_path;
 
@@ -307,6 +305,10 @@ private:
     FRIEND_TEST(copy_primary_operation, can_select);
     FRIEND_TEST(copy_primary_operation, only_copy_primary);
 };
+
+configuration_proposal_action new_proposal_action(const host_port &target,
+                                                  const host_port &node,
+                                                  config_type::type type);
 
 } // namespace replication
 } // namespace dsn
