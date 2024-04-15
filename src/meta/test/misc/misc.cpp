@@ -61,15 +61,12 @@ uint32_t random32(uint32_t min, uint32_t max)
     return res + min;
 }
 
-void generate_node_list(std::vector<std::pair<dsn::host_port, dsn::rpc_address>> &output_list,
-                        int min_count,
-                        int max_count)
+void generate_node_list(std::vector<dsn::host_port> &output_list, int min_count, int max_count)
 {
     const auto count = random32(min_count, max_count);
-    output_list.resize(count);
+    output_list.reserve(count);
     for (int i = 0; i < count; ++i) {
-        const dsn::host_port hp("localhost", i + 1);
-        output_list[i] = std::make_pair(hp, dsn::dns_resolver::instance().resolve_address(hp));
+        output_list.emplace_back(dsn::host_port("localhost", i + 1));
     }
 }
 
