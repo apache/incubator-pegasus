@@ -761,8 +761,11 @@ void meta_http_service::start_compaction_handler(const http_request &req, http_r
         resp.status_code = http_status_code::kBadRequest;
         return;
     }
-    if (info.bottommost_level_compaction.empty() || (info.bottommost_level_compaction != "skip" &&
-                                                     info.bottommost_level_compaction != "force")) {
+    if (info.bottommost_level_compaction.empty() ||
+        (info.bottommost_level_compaction !=
+             replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP &&
+         info.bottommost_level_compaction !=
+             replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE)) {
         resp.body = "bottommost_level_compaction should ony be 'skip' or 'force'";
         resp.status_code = http_status_code::kBadRequest;
         return;

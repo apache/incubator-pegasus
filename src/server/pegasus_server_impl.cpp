@@ -3342,11 +3342,12 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
                     dsn_now_ms() - start_time);
 
     // do compact
-    LOG_INFO_PREFIX(
-        "start CompactRange, target_level = {}, bottommost_level_compaction = {}",
-        options.target_level,
-        options.bottommost_level_compaction == rocksdb::BottommostLevelCompaction::kForce ? "force"
-                                                                                          : "skip");
+    LOG_INFO_PREFIX("start CompactRange, target_level = {}, bottommost_level_compaction = {}",
+                    options.target_level,
+                    options.bottommost_level_compaction ==
+                            rocksdb::BottommostLevelCompaction::kForce
+                        ? dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE
+                        : dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP);
     start_time = dsn_now_ms();
     auto status = _db->CompactRange(options, _data_cf, nullptr, nullptr);
     auto end_time = dsn_now_ms();

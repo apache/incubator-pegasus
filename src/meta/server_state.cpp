@@ -3174,9 +3174,9 @@ bool server_state::parse_compaction_envs(start_manual_compact_rpc rpc,
         }
     }
 
-    std::string bottommost = "skip";
+    std::string bottommost = replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
     if (request.__isset.bottommost && request.bottommost) {
-        bottommost = "force";
+        bottommost = replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
     }
     keys.emplace_back(replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION);
     values.emplace_back(bottommost);
