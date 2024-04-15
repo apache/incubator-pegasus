@@ -51,6 +51,7 @@ public class ReplicaSessionInterceptorManager implements Closeable {
     return true;
   }
 
+  @Override
   public void close() {
     for (ReplicaSessionInterceptor interceptor : interceptors) {
       interceptor.close();

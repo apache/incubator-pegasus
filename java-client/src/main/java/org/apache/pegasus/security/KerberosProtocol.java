@@ -19,6 +19,8 @@
 package org.apache.pegasus.security;
 
 import com.sun.security.auth.callback.TextCallbackHandler;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -60,7 +62,8 @@ class KerberosProtocol implements AuthProtocol {
           new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
-              Thread t = new Thread(r, "TGT renew for pegasus");
+              String timestamp = new SimpleDateFormat("HHmmss").format(new Date());
+              Thread t = new Thread(r, "TGT renew for pegasus - " + timestamp);
               t.setDaemon(true);
               t.setUncaughtExceptionHandler(
                   (thread, error) -> logger.error("Uncaught exception", error));
@@ -97,23 +100,20 @@ class KerberosProtocol implements AuthProtocol {
   }
 
   private void scheduleCheckTGTAndRelogin() {
-    Runnable checkTGTAndReLogin =
-        new Runnable() {
-          @Override
-          public void run() {
-            try {
-              checkTGTAndRelogin();
-            } catch (Exception e) {
-              logger.warn(
-                  "check TGT and ReLogin kerberos failed , will retry after {} seconds.",
-                  CHECK_TGT_INTEVAL_SECONDS,
-                  e);
-            }
-          }
-        };
-
     service.scheduleAtFixedRate(
-        checkTGTAndReLogin, CHECK_TGT_INTEVAL_SECONDS, CHECK_TGT_INTEVAL_SECONDS, TimeUnit.SECONDS);
+        () -> {
+          try {
+            checkTGTAndRelogin();
+          } catch (Exception e) {
+            logger.warn(
+                "check TGT and ReLogin kerberos failed , will retry after {} seconds.",
+                CHECK_TGT_INTEVAL_SECONDS,
+                e);
+          }
+        },
+        CHECK_TGT_INTEVAL_SECONDS,
+        CHECK_TGT_INTEVAL_SECONDS,
+        TimeUnit.SECONDS);
   }
 
   private void checkTGTAndRelogin() {
@@ -213,6 +213,7 @@ class KerberosProtocol implements AuthProtocol {
     };
   }
 
+  @Override
   public void close() {
     service.shutdown();
   }

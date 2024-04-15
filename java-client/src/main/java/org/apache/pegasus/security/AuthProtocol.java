@@ -29,5 +29,6 @@ public interface AuthProtocol extends Closeable {
 
   boolean isAuthRequest(final ReplicaSession.RequestEntry entry);
 
+  @Override
   void close();
 }

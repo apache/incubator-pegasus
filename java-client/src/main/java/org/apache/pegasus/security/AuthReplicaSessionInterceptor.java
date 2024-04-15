@@ -41,6 +41,7 @@ public class AuthReplicaSessionInterceptor implements ReplicaSessionInterceptor,
     return protocol.isAuthRequest(entry) || !session.tryPendRequest(entry);
   }
 
+  @Override
   public void close() {
     protocol.close();
   }
