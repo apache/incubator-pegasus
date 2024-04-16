@@ -54,6 +54,7 @@
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "metadata_types.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_host_port.h"
