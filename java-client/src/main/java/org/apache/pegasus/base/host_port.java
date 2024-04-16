@@ -221,7 +221,7 @@ public class host_port
 
   public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
     host = iprot.readString();
-    port = iprot.readI32();
+    port = iprot.readI16();
     hostPortType = iprot.readByte();
     validate();
   }
@@ -230,7 +230,7 @@ public class host_port
       throws org.apache.thrift.TException {
     validate();
     oprot.writeString(host);
-    oprot.writeI32(port);
+    oprot.writeI32((short) port & 0xFFFF);
     oprot.writeByte(hostPortType);
   }
 
