@@ -30,9 +30,9 @@ public class host_port
 
   public String host;
 
-  public short port;
+  public int port;
 
-  public int hpTye;
+  public byte hostPortType;
 
   /**
    * The set of fields this struct contains, along with convenience methods for finding and
@@ -100,14 +100,14 @@ public class host_port
   public host_port() {
     this.host = null;
     this.port = 0;
-    this.hpTye = 0;
+    this.hostPortType = 0;
   }
 
   /** Performs a deep copy on <i>other</i>. */
   public host_port(host_port other) {
     this.host = other.host;
     this.port = other.port;
-    this.hpTye = other.hpTye;
+    this.hostPortType = other.hostPortType;
   }
 
   public host_port deepCopy() {
@@ -118,31 +118,31 @@ public class host_port
     return this.host;
   }
 
-  public short getPort() {
+  public int getPort() {
     return this.port;
   }
 
-  public int getHyType() {
-    return this.hpTye;
+  public byte getHostPortType() {
+    return this.hostPortType;
   }
 
   public void setHost(String host) {
     this.host = host;
   }
 
-  public void setPort(short port) {
+  public void setPort(int port) {
     this.port = port;
   }
 
-  public void setHyType(int hpTye) {
-    this.hpTye = hpTye;
+  public void setHostPortType(byte hostPortType) {
+    this.hostPortType = hostPortType;
   }
 
   @Override
   public void clear() {
     this.host = null;
     this.port = 0;
-    this.hpTye = 0;
+    this.hostPortType = 0;
   }
 
   public void setFieldValue(_Fields field, java.lang.Object value) {
@@ -179,27 +179,40 @@ public class host_port
 
   public boolean equals(host_port that) {
     if (that == null) return false;
-    if (this == that) return true;
 
-    return true;
+    return this.host.equals(that.host)
+        && this.port == that.port
+        && this.hostPortType == that.hostPortType;
   }
 
   @Override
   public int hashCode() {
-    int hashCode = 1;
-
-    return hashCode;
+    int result = 17;
+    result = 31 * result + (host != null ? host.hashCode() : 0);
+    result = 31 * result + port;
+    result = 31 * result + hostPortType;
+    return result;
   }
 
   @Override
   public int compareTo(host_port other) {
-    if (!getClass().equals(other.getClass())) {
-      return getClass().getName().compareTo(other.getClass().getName());
+    if (other == null) {
+      throw new NullPointerException();
     }
 
     int lastComparison = 0;
 
-    return 0;
+    lastComparison = this.host.compareTo(other.host);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+
+    lastComparison = Integer.compare(this.port, other.port);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+
+    return Byte.compare(this.hostPortType, other.hostPortType);
   }
 
   public _Fields fieldForId(int fieldId) {
@@ -207,26 +220,28 @@ public class host_port
   }
 
   public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
-    validate();
     host = iprot.readString();
-    port = iprot.readI16();
-    hpTye = iprot.readByte();
+    port = iprot.readI32();
+    hostPortType = iprot.readByte();
+    validate();
   }
 
   public void write(org.apache.thrift.protocol.TProtocol oprot)
       throws org.apache.thrift.TException {
     validate();
     oprot.writeString(host);
-    oprot.writeI16(port);
-    byte byte_hpTye = (byte) (hpTye);
-    oprot.writeByte(byte_hpTye);
+    oprot.writeI32(port);
+    oprot.writeByte(hostPortType);
   }
 
   @Override
   public java.lang.String toString() {
     java.lang.StringBuilder sb = new java.lang.StringBuilder("host_port(");
-    boolean first = true;
-
+    sb.append(getHost());
+    sb.append(":");
+    sb.append(getPort());
+    sb.append(", HostPortType = ");
+    sb.append(getHostPortType());
     sb.append(")");
     return sb.toString();
   }
