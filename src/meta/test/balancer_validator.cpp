@@ -120,12 +120,8 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
 
 void meta_service_test_app::balancer_validator()
 {
-    std::vector<std::pair<dsn::host_port, dsn::rpc_address>> node_pairs;
     std::vector<dsn::host_port> node_list;
-    generate_node_list(node_pairs, 20, 100);
-    for (const auto &p : node_pairs) {
-        node_list.emplace_back(p.first);
-    }
+    generate_node_list(node_list, 20, 100);
 
     app_mapper apps;
     node_mapper nodes;

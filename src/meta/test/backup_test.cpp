@@ -43,6 +43,7 @@
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "runtime/api_layer1.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_host_port.h"
@@ -499,16 +500,17 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
         int64_t cur_start_time_ms = static_cast<int64_t>(dsn_now_ms());
         {
             zauto_lock l(_mp._lock);
-            std::vector<std::pair<dsn::host_port, dsn::rpc_address>> node_list;
+            std::vector<dsn::host_port> node_list;
             generate_node_list(node_list, 3, 3);
 
             app_state *app = state->_all_apps[3].get();
             app->status = dsn::app_status::AS_AVAILABLE;
             for (partition_configuration &pc : app->partitions) {
-                pc.primary = node_list[0].second;
-                pc.secondaries = {node_list[1].second, node_list[2].second};
-                pc.__set_hp_primary(node_list[0].first);
-                pc.__set_hp_secondaries({node_list[1].first, node_list[2].first});
+                pc.primary = dsn::dns_resolver::instance().resolve_address(node_list[0]);
+                pc.secondaries = {dsn::dns_resolver::instance().resolve_address(node_list[1]),
+                                  dsn::dns_resolver::instance().resolve_address(node_list[2])};
+                pc.__set_hp_primary(node_list[0]);
+                pc.__set_hp_secondaries({node_list[1], node_list[2]});
             }
 
             _mp._backup_history.clear();

@@ -817,13 +817,14 @@ TEST_F(meta_duplication_service_test, fail_mode)
     ASSERT_EQ(dup->status(), duplication_status::DS_PAUSE);
 
     // ensure dup_sync will synchronize fail_mode
-    auto node = generate_node_list(3)[0];
+    const auto hp = generate_node_list(3)[0];
+    const auto addr = dsn::dns_resolver::instance().resolve_address(hp);
     for (partition_configuration &pc : app->partitions) {
-        pc.primary = node.second;
-        pc.__set_hp_primary(node.first);
+        pc.primary = addr;
+        pc.__set_hp_primary(hp);
     }
     initialize_node_state();
-    auto sync_resp = duplication_sync(node.second, node.first, {});
+    auto sync_resp = duplication_sync(addr, hp, {});
     ASSERT_TRUE(sync_resp.dup_map[app->app_id][dup->id].__isset.fail_mode);
     ASSERT_EQ(sync_resp.dup_map[app->app_id][dup->id].fail_mode, duplication_fail_mode::FAIL_SKIP);
 
