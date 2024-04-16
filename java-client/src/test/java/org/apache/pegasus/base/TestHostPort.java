@@ -50,8 +50,6 @@ public class TestHostPort {
     decodeHostPort.read(protocol);
 
     assertEquals(hostPort.getHost(), decodeHostPort.getHost());
-    System.out.println(hostPort.getPort());
-    System.out.println(decodeHostPort.getPort());
     assertEquals(hostPort.getPort(), decodeHostPort.getPort());
     assertEquals(hostPort.getHostPortType(), decodeHostPort.getHostPortType());
   }
