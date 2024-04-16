@@ -114,10 +114,12 @@ public class ClusterSwitcher {
       throws PegasusSparkException {
     String tankUrl;
     ZkRegionInfo.Region enumRegion = ZkRegionInfo.Region.valueOf(region);
+    // tankUrl maintain all pegasus online config
+    // If you do not want to validate via it, you can implement this function in other ways
     if (ZkRegionInfo.minos1.containsKey(enumRegion)) {
-      tankUrl = "http://tank.d.xiaomi.net/api/get_cluster_info/";
+      tankUrl = "http://pegasus.net/api/get_cluster_info/";
     } else if (ZkRegionInfo.minos2.containsKey(enumRegion)) {
-      tankUrl = "http://fusion-tank2.api.xiaomi.net/api/get_cluster_info/";
+      tankUrl = "http://api.pegasus.net/api/get_cluster_info/";
     } else {
       throw new PegasusSparkException(
           String.format("can't find cluster(%s) region in all regions", cluster));
