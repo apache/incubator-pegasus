@@ -31,11 +31,10 @@
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
+#include "meta/load_balance_policy.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
-#include "shell/command_helper.h"
 #include "shell/commands.h"
 #include "utils/error_code.h"
 #include "utils/string_conv.h"
@@ -374,9 +373,8 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             if (!primary.is_invalid() && !skip_this) {
                 dsn::replication::configuration_balancer_request request;
                 request.gpid = pinfo.config.pid;
-                const auto &primary_hp = dsn::dns_resolver::instance().resolve_address(primary);
-                request.action_list = {new_proposal_action(
-                    primary_hp, primary_hp, primary, primary, config_type::CT_ASSIGN_PRIMARY)};
+                request.action_list = {
+                    new_proposal_action(primary, primary, config_type::CT_ASSIGN_PRIMARY)};
                 request.force = false;
                 dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
                 out << "    propose_request: propose -g " << request.gpid

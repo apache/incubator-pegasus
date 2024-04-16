@@ -31,7 +31,6 @@
 
 #include "absl/strings/string_view.h"
 #include "dsn.layer2_types.h"
-#include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
 #include "runtime/rpc/dns_resolver.h"
@@ -45,9 +44,22 @@
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
 namespace dsn {
-class rpc_address;
 
 namespace replication {
+
+configuration_proposal_action
+new_proposal_action(const host_port &target, const host_port &node, config_type::type type)
+{
+    const auto &target_addr = dsn::dns_resolver::instance().resolve_address(target);
+    const auto &node_addr = dsn::dns_resolver::instance().resolve_address(node);
+    configuration_proposal_action act;
+    act.__set_target(target_addr);
+    act.__set_node(node_addr);
+    act.__set_hp_target(target);
+    act.__set_hp_node(node);
+    act.__set_type(type);
+    return act;
+}
 
 void dump_disk_load(app_id id, const host_port &node, bool only_primary, const disk_load &load)
 {
@@ -134,10 +146,8 @@ std::shared_ptr<configuration_balancer_request>
 generate_balancer_request(const app_mapper &apps,
                           const partition_configuration &pc,
                           const balance_type &type,
-                          const rpc_address &from,
-                          const rpc_address &to,
-                          const host_port &hp_from,
-                          const host_port &hp_to)
+                          const host_port &from,
+                          const host_port &to)
 {
     FAIL_POINT_INJECT_F("generate_balancer_request",
                         [](absl::string_view name) { return nullptr; });
@@ -150,40 +160,38 @@ generate_balancer_request(const app_mapper &apps,
     case balance_type::MOVE_PRIMARY:
         ans = "move_primary";
         result.balance_type = balancer_request_type::move_primary;
-        result.action_list.emplace_back(new_proposal_action(
-            from, from, hp_from, hp_from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         result.action_list.emplace_back(
-            new_proposal_action(to, to, hp_to, hp_to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
+        result.action_list.emplace_back(
+            new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
         break;
     case balance_type::COPY_PRIMARY:
         ans = "copy_primary";
         result.balance_type = balancer_request_type::copy_primary;
         result.action_list.emplace_back(
-            new_proposal_action(from, to, hp_from, hp_to, config_type::CT_ADD_SECONDARY_FOR_LB));
-        result.action_list.emplace_back(new_proposal_action(
-            from, from, hp_from, hp_from, config_type::CT_DOWNGRADE_TO_SECONDARY));
+            new_proposal_action(from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
         result.action_list.emplace_back(
-            new_proposal_action(to, to, hp_to, hp_to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         result.action_list.emplace_back(
-            new_proposal_action(to, from, hp_to, hp_from, config_type::CT_REMOVE));
+            new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+        result.action_list.emplace_back(new_proposal_action(to, from, config_type::CT_REMOVE));
         break;
     case balance_type::COPY_SECONDARY:
         ans = "copy_secondary";
         result.balance_type = balancer_request_type::copy_secondary;
-        result.action_list.emplace_back(new_proposal_action(
-            pc.primary, to, pc.hp_primary, hp_to, config_type::CT_ADD_SECONDARY_FOR_LB));
         result.action_list.emplace_back(
-            new_proposal_action(pc.primary, from, pc.hp_primary, hp_from, config_type::CT_REMOVE));
+            new_proposal_action(pc.hp_primary, to, config_type::CT_ADD_SECONDARY_FOR_LB));
+        result.action_list.emplace_back(
+            new_proposal_action(pc.hp_primary, from, config_type::CT_REMOVE));
         break;
     default:
         CHECK(false, "");
     }
-    LOG_INFO("generate balancer: {} {} from {}({}) of disk_tag({}) to {}",
+    LOG_INFO("generate balancer: {} {} from {} of disk_tag({}) to {}",
              pc.pid,
              ans,
-             hp_from,
              from,
-             get_disk_tag(apps, hp_from, pc.pid),
+             get_disk_tag(apps, from, pc.pid),
              to);
     return std::make_shared<configuration_balancer_request>(std::move(result));
 }
@@ -318,13 +326,8 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
         const partition_configuration &pc = app->partitions[selected.get_partition_index()];
         auto balancer_result = _migration_result->emplace(
             selected,
-            generate_balancer_request(*_global_view->apps,
-                                      pc,
-                                      balance_type::MOVE_PRIMARY,
-                                      dsn::dns_resolver::instance().resolve_address(from),
-                                      dsn::dns_resolver::instance().resolve_address(to),
-                                      from,
-                                      to));
+            generate_balancer_request(
+                *_global_view->apps, pc, balance_type::MOVE_PRIMARY, from, to));
         CHECK(balancer_result.second, "gpid({}) already inserted as an action", selected);
 
         --(*prev_load)[get_disk_tag(*_global_view->apps, from, selected)];
@@ -711,13 +714,7 @@ void copy_replica_operation::copy_once(gpid selected_pid, migration_list *result
     const auto &to = _host_port_vec[*_ordered_host_port_ids.begin()];
 
     auto pc = _app->partitions[selected_pid.get_partition_index()];
-    auto request = generate_balancer_request(_apps,
-                                             pc,
-                                             get_balance_type(),
-                                             dsn::dns_resolver::instance().resolve_address(from),
-                                             dsn::dns_resolver::instance().resolve_address(to),
-                                             from,
-                                             to);
+    auto request = generate_balancer_request(_apps, pc, get_balance_type(), from, to);
     result->emplace(selected_pid, request);
 }
 

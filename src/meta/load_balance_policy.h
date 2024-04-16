@@ -32,6 +32,7 @@
 
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
+#include "meta_admin_types.h"
 #include "meta_data.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/enum_helper.h"
@@ -40,10 +41,8 @@
 namespace dsn {
 class command_deregister;
 class partition_configuration;
-class rpc_address;
 
 namespace replication {
-class configuration_balancer_request;
 class meta_service;
 
 // disk_tag->primary_count/total_count_on_this_disk
@@ -73,10 +72,8 @@ std::shared_ptr<configuration_balancer_request>
 generate_balancer_request(const app_mapper &apps,
                           const partition_configuration &pc,
                           const balance_type &type,
-                          const rpc_address &from,
-                          const rpc_address &to,
-                          const host_port &hp_from,
-                          const host_port &hp_to);
+                          const host_port &from,
+                          const host_port &to);
 
 struct flow_path;
 
@@ -307,6 +304,9 @@ private:
     FRIEND_TEST(copy_primary_operation, can_select);
     FRIEND_TEST(copy_primary_operation, only_copy_primary);
 };
+
+configuration_proposal_action
+new_proposal_action(const host_port &target, const host_port &node, config_type::type type);
 
 } // namespace replication
 } // namespace dsn
