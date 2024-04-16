@@ -30,7 +30,7 @@ public class host_port
 
   public String host;
 
-  public int port;
+  public short port;
 
   public byte hostPortType;
 
@@ -119,7 +119,7 @@ public class host_port
   }
 
   public int getPort() {
-    return this.port;
+    return (int) (this.port & 0xffff);
   }
 
   public byte getHostPortType() {
@@ -131,7 +131,7 @@ public class host_port
   }
 
   public void setPort(int port) {
-    this.port = port;
+    this.port = (short) port;
   }
 
   public void setHostPortType(byte hostPortType) {
@@ -230,7 +230,7 @@ public class host_port
       throws org.apache.thrift.TException {
     validate();
     oprot.writeString(host);
-    oprot.writeI32((short) port & 0xFFFF);
+    oprot.writeI16(port);
     oprot.writeByte(hostPortType);
   }
 
