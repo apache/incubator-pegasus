@@ -68,7 +68,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
             break;
         switch (act.type) {
         case config_type::CT_ASSIGN_PRIMARY:
-            CHECK(pc.hp_primary.is_invalid(), "");
+            CHECK(!pc.hp_primary, "");
             CHECK(pc.hp_secondaries.empty(), "");
             CHECK_EQ(act.hp_node, act.hp_target);
             CHECK(nodes.find(act.hp_node) != nodes.end(), "");
@@ -103,7 +103,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
 
     ps = guardian.cure({&apps, &nodes}, pc.pid, act);
     CHECK_EQ(act.type, config_type::CT_UPGRADE_TO_PRIMARY);
-    CHECK(pc.hp_primary.is_invalid(), "");
+    CHECK(!pc.hp_primary, "");
     CHECK_EQ(act.hp_node, act.hp_target);
     CHECK(is_secondary(pc, act.hp_node), "");
     CHECK(nodes.find(act.hp_node) != nodes.end(), "");
@@ -161,7 +161,7 @@ void meta_service_test_app::balancer_validator()
 
     std::shared_ptr<app_state> &the_app = apps[1];
     for (::dsn::partition_configuration &pc : the_app->partitions) {
-        CHECK(!pc.hp_primary.is_invalid(), "");
+        CHECK(pc.hp_primary, "");
         CHECK_GE(pc.secondaries.size(), pc.max_replica_count - 1);
     }
 

@@ -328,8 +328,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             out << "    ----" << std::endl;
 
             auto primary = diagnose_recommend(pinfo);
-            out << "    recommend_primary: "
-                << (primary.is_invalid() ? "none" : primary.to_string());
+            out << "    recommend_primary: " << (!primary ? "none" : primary.to_string());
             if (primary == latest_dropped)
                 out << "  <== the latest";
             else if (primary == secondary_latest_dropped)
@@ -337,7 +336,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             out << std::endl;
 
             bool skip_this = false;
-            if (!primary.is_invalid() && !auto_diagnose && !skip_prompt) {
+            if (primary && !auto_diagnose && !skip_prompt) {
                 do {
                     std::cout << "    > Are you sure to use the recommend primary? [y/n/s(skip)]: ";
                     char c;
@@ -356,7 +355,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
                 } while (true);
             }
 
-            if (primary.is_invalid() && !skip_prompt && !skip_this) {
+            if (!primary && !skip_prompt && !skip_this) {
                 do {
                     std::cout << "    > Please input the primary node: ";
                     std::string node;
@@ -370,7 +369,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
                 } while (true);
             }
 
-            if (!primary.is_invalid() && !skip_this) {
+            if (primary && !skip_this) {
                 dsn::replication::configuration_balancer_request request;
                 request.gpid = pinfo.config.pid;
                 request.action_list = {

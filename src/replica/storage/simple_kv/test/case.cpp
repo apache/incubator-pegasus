@@ -815,8 +815,7 @@ bool client_case_line::parse(const std::string &params)
         _config_receiver = node_to_address(kv_map["receiver"]);
         _config_type = parse_config_command(kv_map["type"]);
         _config_node = node_to_address(kv_map["node"]);
-        if (_config_receiver.is_invalid() || _config_type == config_type::CT_INVALID ||
-            _config_node.is_invalid())
+        if (!_config_receiver || _config_type == config_type::CT_INVALID || !_config_node)
             parse_ok = false;
         break;
     }

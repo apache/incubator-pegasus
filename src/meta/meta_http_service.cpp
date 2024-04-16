@@ -143,14 +143,14 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         int read_unhealthy = 0;
         for (const auto &p : response.partitions) {
             int replica_count = 0;
-            if (!p.hp_primary.is_invalid()) {
+            if (p.hp_primary) {
                 replica_count++;
                 node_stat[p.hp_primary].first++;
                 total_prim_count++;
             }
             replica_count += p.hp_secondaries.size();
             total_sec_count += p.hp_secondaries.size();
-            if (!p.hp_primary.is_invalid()) {
+            if (p.hp_primary) {
                 if (replica_count >= p.max_replica_count)
                     fully_healthy++;
                 else if (replica_count < 2)
@@ -164,7 +164,7 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
             tp_details.append_data(oss.str());
-            tp_details.append_data((p.hp_primary.is_invalid() ? "-" : p.hp_primary.to_string()));
+            tp_details.append_data(p.hp_primary ? p.hp_primary.to_string() : "-");
             oss.str("");
             oss << "[";
             for (int j = 0; j < p.hp_secondaries.size(); j++) {
@@ -325,11 +325,11 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             for (int i = 0; i < response.partitions.size(); i++) {
                 const dsn::partition_configuration &p = response.partitions[i];
                 int replica_count = 0;
-                if (!p.hp_primary.is_invalid()) {
+                if (p.hp_primary) {
                     replica_count++;
                 }
                 replica_count += p.hp_secondaries.size();
-                if (!p.hp_primary.is_invalid()) {
+                if (p.hp_primary) {
                     if (replica_count >= p.max_replica_count)
                         fully_healthy++;
                     else if (replica_count < 2)
@@ -415,7 +415,7 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
 
             for (int i = 0; i < response_app.partitions.size(); i++) {
                 const dsn::partition_configuration &p = response_app.partitions[i];
-                if (!p.hp_primary.is_invalid()) {
+                if (p.hp_primary) {
                     auto find = tmp_map.find(p.hp_primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;

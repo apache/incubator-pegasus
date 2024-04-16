@@ -541,7 +541,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                           query_err = ERR_INCONSISTENT_STATE;
                       } else {
                           for (const auto &partition : resp.partitions) {
-                              if (partition.hp_primary.is_invalid()) {
+                              if (!partition.hp_primary) {
                                   query_err = ERR_INACTIVE_STATE;
                                   break;
                               }
@@ -552,7 +552,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                               }
 
                               for (const auto &secondary : partition.hp_secondaries) {
-                                  if (secondary.is_invalid()) {
+                                  if (!secondary) {
                                       query_err = ERR_INACTIVE_STATE;
                                       break;
                                   }

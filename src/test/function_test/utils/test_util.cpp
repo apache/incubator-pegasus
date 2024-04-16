@@ -172,7 +172,7 @@ void test_util::wait_table_healthy(const std::string &table_name) const
             std::vector<partition_configuration> pcs;
             ASSERT_EQ(dsn::ERR_OK, ddl_client_->list_app(table_name, table_id, pcount, pcs));
             for (const auto &pc : pcs) {
-                ASSERT_FALSE(pc.primary.is_invalid());
+                ASSERT_TRUE(pc.primary);
                 ASSERT_EQ(1 + pc.secondaries.size(), pc.max_replica_count);
             }
         },

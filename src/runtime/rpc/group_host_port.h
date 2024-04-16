@@ -170,7 +170,7 @@ inline void rpc_group_host_port::leader_forward()
 inline void rpc_group_host_port::set_leader(const host_port &hp)
 {
     awl_t l(_lock);
-    if (hp.is_invalid()) {
+    if (!hp) {
         _leader_index = kInvalidIndex;
         return;
     }
@@ -240,7 +240,7 @@ inline host_port rpc_group_host_port::next(const host_port &current) const
         return host_port::s_invalid_host_port;
     }
 
-    if (current.is_invalid()) {
+    if (!current) {
         return _members[random_index_unlocked()];
     }
 

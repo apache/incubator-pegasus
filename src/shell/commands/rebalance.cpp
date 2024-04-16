@@ -124,8 +124,8 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    PRINT_AND_RETURN_FALSE_IF_NOT(!target.is_invalid(), "need set target by -t\n");
-    PRINT_AND_RETURN_FALSE_IF_NOT(!node.is_invalid(), "need set node by -n\n");
+    PRINT_AND_RETURN_FALSE_IF_NOT(target, "need set target by -t\n");
+    PRINT_AND_RETURN_FALSE_IF_NOT(node, "need set node by -n\n");
     PRINT_AND_RETURN_FALSE_IF_NOT(request.gpid.get_app_id() != -1, "need set gpid by -g\n");
 
     config_type::type tp =
@@ -213,11 +213,11 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    if (from.is_invalid()) {
+    if (!from) {
         fprintf(stderr, "need set from address by -f\n");
         return false;
     }
-    if (to.is_invalid()) {
+    if (!to) {
         fprintf(stderr, "need set target address by -t\n");
         return false;
     }

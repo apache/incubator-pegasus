@@ -111,7 +111,7 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
         for (int i = 0; i < partitions.size(); i++) {
             const dsn::partition_configuration &p = partitions[i];
             int replica_count = 0;
-            if (!p.hp_primary.is_invalid()) {
+            if (p.hp_primary) {
                 replica_count++;
             }
             replica_count += p.hp_secondaries.size();

@@ -1094,8 +1094,7 @@ void replica::on_config_sync(const app_info &info,
         if (status() == partition_status::PS_INACTIVE && !_inactive_is_transient) {
             if (config.hp_primary == _stub->primary_host_port() // dead primary
                 ||
-                config.hp_primary
-                    .is_invalid() // primary is dead (otherwise let primary remove this)
+                !config.hp_primary // primary is dead (otherwise let primary remove this)
                 ) {
                 LOG_INFO_PREFIX("downgrade myself as inactive is not transient, remote_config({})",
                                 boost::lexical_cast<std::string>(config));

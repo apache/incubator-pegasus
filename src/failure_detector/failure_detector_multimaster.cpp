@@ -100,7 +100,7 @@ void slave_failure_detector_with_multimaster::end_ping(::dsn::error_code err,
     } else {
         if (ack.is_master) {
             // do nothing
-        } else if (hp_primary_node.is_invalid()) {
+        } else if (!hp_primary_node) {
             auto next = _meta_servers.group_host_port()->next(hp_this_node);
             if (next != hp_this_node) {
                 _meta_servers.group_host_port()->set_leader(next);

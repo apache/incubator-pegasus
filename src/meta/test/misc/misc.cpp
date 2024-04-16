@@ -101,12 +101,12 @@ void generate_node_mapper(
         const std::shared_ptr<app_state> &app = kv.second;
         for (const dsn::partition_configuration &pc : app->partitions) {
             node_state *ns;
-            if (!pc.hp_primary.is_invalid()) {
+            if (pc.hp_primary) {
                 ns = get_node_state(output_nodes, pc.hp_primary, true);
                 ns->put_partition(pc.pid, true);
             }
             for (const auto &sec : pc.hp_secondaries) {
-                CHECK(!sec.is_invalid(), "");
+                CHECK(sec, "");
                 ns = get_node_state(output_nodes, sec, true);
                 ns->put_partition(pc.pid, false);
             }
@@ -136,7 +136,7 @@ void generate_app(/*out*/ std::shared_ptr<app_state> &app,
             }
         }
 
-        CHECK(!pc.hp_primary.is_invalid(), "");
+        CHECK(pc.hp_primary, "");
         CHECK(!is_secondary(pc, pc.hp_primary), "");
         CHECK_EQ(pc.hp_secondaries.size(), 2);
         CHECK_NE(pc.hp_secondaries[0], pc.hp_secondaries[1]);
@@ -295,8 +295,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
 
     ++pc.ballot;
     CHECK_NE(act.type, config_type::CT_INVALID);
-    CHECK(!act.target.is_invalid(), "");
-    CHECK(!act.node.is_invalid(), "");
+    CHECK(act.target, "");
+    CHECK(act.node, "");
 
     if (manager) {
         track_disk_info_check_and_apply(act, pid, apps, nodes, *manager);
@@ -309,8 +309,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     switch (act.type) {
     case config_type::CT_ASSIGN_PRIMARY:
         CHECK_EQ(act.node, act.target);
-        CHECK(pc.hp_primary.is_invalid(), "");
-        CHECK(pc.primary.is_invalid(), "");
+        CHECK(!pc.hp_primary, "");
+        CHECK(!pc.primary, "");
         CHECK(pc.hp_secondaries.empty(), "");
         CHECK(pc.secondaries.empty(), "");
 
@@ -349,8 +349,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         break;
 
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        CHECK(pc.hp_primary.is_invalid(), "");
-        CHECK(pc.primary.is_invalid(), "");
+        CHECK(!pc.hp_primary, "");
+        CHECK(!pc.primary, "");
         CHECK_EQ(hp_node, hp_target);
         CHECK_EQ(act.node, act.target);
         CHECK(is_secondary(pc, hp_node), "");
@@ -368,8 +368,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK_EQ(hp_target, pc.hp_primary);
         CHECK_EQ(act.target, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
-        CHECK(!act.hp_node.is_invalid(), "");
-        CHECK(!act.node.is_invalid(), "");
+        CHECK(act.hp_node, "");
+        CHECK(act.node, "");
         if (!pc.__isset.hp_secondaries) {
             pc.__set_hp_secondaries({});
         }
@@ -384,8 +384,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     // in balancer, remove primary is not allowed
     case config_type::CT_REMOVE:
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
-        CHECK(!pc.hp_primary.is_invalid(), "");
-        CHECK(!pc.primary.is_invalid(), "");
+        CHECK(pc.hp_primary, "");
+        CHECK(pc.primary, "");
         CHECK_EQ(pc.hp_primary, hp_target);
         CHECK_EQ(pc.primary, act.target);
         CHECK(is_secondary(pc, hp_node), "");
@@ -420,7 +420,7 @@ void migration_check_and_apply(app_mapper &apps,
         dsn::partition_configuration &pc =
             the_app->partitions[proposal->gpid.get_partition_index()];
 
-        CHECK(!pc.hp_primary.is_invalid(), "");
+        CHECK(pc.hp_primary, "");
         CHECK_EQ(pc.hp_secondaries.size(), 2);
         for (const auto &hp : pc.hp_secondaries) {
             CHECK(hp, "");

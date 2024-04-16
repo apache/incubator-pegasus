@@ -402,7 +402,7 @@ meta_leader_state meta_service::check_leader(TRpcHolder rpc, host_port *forward_
             return meta_leader_state::kNotLeaderAndCannotForwardRpc;
         }
 
-        if (!leader.is_invalid()) {
+        if (leader) {
             rpc.forward(dsn::dns_resolver::instance().resolve_address(leader));
             return meta_leader_state::kNotLeaderAndCanForwardRpc;
         } else {

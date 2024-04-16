@@ -50,7 +50,6 @@ struct linux_fd_t
     int fd;
 
     explicit linux_fd_t(int f) : fd(f) {}
-    inline bool is_invalid() const { return fd == DSN_INVALID_FILE_HANDLE; }
 };
 
 class aio_provider

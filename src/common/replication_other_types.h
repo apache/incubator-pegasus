@@ -53,11 +53,11 @@ typedef int64_t decree;
 
 inline bool is_primary(const partition_configuration &pc, const host_port &node)
 {
-    return !node.is_invalid() && pc.hp_primary == node;
+    return node && pc.hp_primary == node;
 }
 inline bool is_secondary(const partition_configuration &pc, const host_port &node)
 {
-    return !node.is_invalid() &&
+    return node &&
            std::find(pc.hp_secondaries.begin(), pc.hp_secondaries.end(), node) !=
                pc.hp_secondaries.end();
 }

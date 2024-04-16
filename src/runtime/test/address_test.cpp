@@ -339,15 +339,15 @@ TEST(rpc_address_test, from_host_port)
     for (const auto &test : tests) {
         // Check from_host_port().
         const auto host_port_result = dsn::rpc_address::from_host_port(test.host_port);
-        ASSERT_EQ(test.valid_host_port, !host_port_result.is_invalid()) << test.host_port;
-        if (!host_port_result.is_invalid()) {
+        ASSERT_EQ(test.valid_host_port, static_cast<bool>(host_port_result)) << test.host_port;
+        if (host_port_result) {
             ASSERT_GT(test.expect_ip_ports.count(host_port_result.to_string()), 0);
         }
 
         // Check from_ip_port().
         const auto ip_port_result = dsn::rpc_address::from_ip_port(test.host_port);
-        ASSERT_EQ(test.valid_ip_port, !ip_port_result.is_invalid());
-        if (!ip_port_result.is_invalid()) {
+        ASSERT_EQ(test.valid_ip_port, static_cast<bool>(ip_port_result));
+        if (ip_port_result) {
             ASSERT_GT(test.expect_ip_ports.count(ip_port_result.to_string()), 0);
         }
 
@@ -405,16 +405,16 @@ TEST(rpc_address_test, from_host_port2)
     for (const auto &test : tests) {
         // Check from_host_port().
         const auto host_port_result = dsn::rpc_address::from_host_port(test.host, test.port);
-        ASSERT_EQ(test.valid_host_port, !host_port_result.is_invalid()) << test.host;
-        if (!host_port_result.is_invalid()) {
+        ASSERT_EQ(test.valid_host_port, static_cast<bool>(host_port_result)) << test.host;
+        if (host_port_result) {
             ASSERT_GT(test.expect_ip_ports.count(host_port_result.to_string()), 0)
                 << test.host << " " << host_port_result.to_string();
         }
 
         // Check from_ip_port().
         const auto ip_port_result = dsn::rpc_address::from_ip_port(test.host, test.port);
-        ASSERT_EQ(test.valid_ip_port, !ip_port_result.is_invalid());
-        if (!ip_port_result.is_invalid()) {
+        ASSERT_EQ(test.valid_ip_port, static_cast<bool>(ip_port_result));
+        if (ip_port_result) {
             ASSERT_GT(test.expect_ip_ports.count(ip_port_result.to_string()), 0);
         }
 

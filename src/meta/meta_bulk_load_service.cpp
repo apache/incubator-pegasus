@@ -369,7 +369,7 @@ bool bulk_load_service::check_partition_status(
     }
 
     pconfig = app->partitions[pid.get_partition_index()];
-    if (pconfig.hp_primary.is_invalid()) {
+    if (!pconfig.hp_primary) {
         LOG_WARNING("app({}) partition({}) primary is invalid, try it later", app_name, pid);
         tasking::enqueue(LPC_META_STATE_NORMAL,
                          _meta_svc->tracker(),

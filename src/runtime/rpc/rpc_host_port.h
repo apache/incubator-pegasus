@@ -61,7 +61,6 @@ class rpc_group_host_port;
 class host_port
 {
 public:
-    static const host_port s_invalid_host_port;
     explicit host_port() = default;
     explicit host_port(std::string host, uint16_t port);
 
@@ -74,10 +73,7 @@ public:
     dsn_host_type_t type() const { return _type; }
     const std::string &host() const { return _host; }
     uint16_t port() const { return _port; }
-
-    [[nodiscard]] bool is_invalid() const { return _type == HOST_TYPE_INVALID; }
-
-    operator bool() const { return !is_invalid(); }
+    operator bool() const { return _type != HOST_TYPE_INVALID; }
 
     std::string to_string() const;
 
@@ -98,7 +94,7 @@ public:
 
     // Construct a host_port object from 'host_port_str', the latter is in the format of
     // "localhost:8888".
-    // NOTE: The constructed host_port object maybe invalid, remember to check it by is_invalid()
+    // NOTE: The constructed host_port object maybe invalid, remember to check if it's valid
     // before using it.
     static host_port from_string(const std::string &host_port_str);
 
@@ -111,7 +107,10 @@ public:
 
 private:
     friend class dns_resolver;
+    friend class rpc_group_host_port;
     FRIEND_TEST(host_port_test, transfer_rpc_address);
+
+    static const host_port s_invalid_host_port;
 
     // Resolve host_port to rpc_addresses.
     // There may be multiple rpc_addresses for one host_port.

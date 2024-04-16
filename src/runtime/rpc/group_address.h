@@ -140,7 +140,7 @@ inline void rpc_group_address::leader_forward()
 inline void rpc_group_address::set_leader(rpc_address addr)
 {
     alw_t l(_lock);
-    if (addr.is_invalid()) {
+    if (!addr) {
         _leader_index = -1;
         return;
     }
@@ -205,7 +205,7 @@ inline rpc_address rpc_group_address::next(rpc_address current) const
         return rpc_address::s_invalid_address;
     }
 
-    if (current.is_invalid()) {
+    if (!current) {
         return _members[rand::next_u32(0, (uint32_t)_members.size() - 1)];
     }
 

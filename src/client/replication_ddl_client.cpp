@@ -165,8 +165,7 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
         int ready_count = 0;
         for (int i = 0; i < partition_count; i++) {
             const partition_configuration &pc = query_resp.partitions[i];
-            if (!pc.hp_primary.is_invalid() &&
-                (pc.hp_secondaries.size() + 1 >= max_replica_count)) {
+            if (pc.hp_primary && (pc.hp_secondaries.size() + 1 >= max_replica_count)) {
                 ready_count++;
             }
         }
@@ -435,11 +434,11 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             for (int i = 0; i < partitions.size(); i++) {
                 const dsn::partition_configuration &p = partitions[i];
                 int replica_count = 0;
-                if (!p.hp_primary.is_invalid()) {
+                if (p.hp_primary) {
                     replica_count++;
                 }
                 replica_count += p.hp_secondaries.size();
-                if (!p.hp_primary.is_invalid()) {
+                if (p.hp_primary) {
                     if (replica_count >= p.max_replica_count)
                         fully_healthy++;
                     else if (replica_count < 2)
@@ -573,7 +572,7 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
 
             for (int i = 0; i < partitions.size(); i++) {
                 const dsn::partition_configuration &p = partitions[i];
-                if (!p.hp_primary.is_invalid()) {
+                if (p.hp_primary) {
                     auto find = tmp_map.find(p.hp_primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
@@ -766,14 +765,14 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
         int read_unhealthy = 0;
         for (const auto &p : partitions) {
             int replica_count = 0;
-            if (!p.hp_primary.is_invalid()) {
+            if (p.hp_primary) {
                 replica_count++;
                 node_stat[p.hp_primary].first++;
                 total_prim_count++;
             }
             replica_count += p.hp_secondaries.size();
             total_sec_count += p.hp_secondaries.size();
-            if (!p.hp_primary.is_invalid()) {
+            if (p.hp_primary) {
                 if (replica_count >= p.max_replica_count)
                     fully_healthy++;
                 else if (replica_count < 2)
@@ -787,7 +786,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
             std::stringstream oss;
             oss << replica_count << "/" << p.max_replica_count;
             tp_details.append_data(oss.str());
-            tp_details.append_data((p.hp_primary.is_invalid() ? "-" : p.hp_primary.to_string()));
+            tp_details.append_data(p.hp_primary ? p.hp_primary.to_string() : "-");
             oss.str("");
             oss << "[";
             // TODO (yingchun) join

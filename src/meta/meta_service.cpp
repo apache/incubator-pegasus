@@ -575,7 +575,7 @@ meta_leader_state meta_service::check_leader(dsn::message_ex *req, dsn::host_por
         }
 
         LOG_DEBUG("leader address: {}", leader);
-        if (!leader.is_invalid()) {
+        if (leader) {
             dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
             return meta_leader_state::kNotLeaderAndCanForwardRpc;
         } else {
@@ -757,7 +757,7 @@ void meta_service::on_query_configuration_by_index(configuration_query_by_index_
     query_cfg_response &response = rpc.response();
     host_port forward_hp;
     if (!check_status_and_authz(rpc, &forward_hp)) {
-        if (!forward_hp.is_invalid()) {
+        if (forward_hp) {
             partition_configuration config;
             config.primary = dsn::dns_resolver::instance().resolve_address(forward_hp);
             config.__set_hp_primary(forward_hp);

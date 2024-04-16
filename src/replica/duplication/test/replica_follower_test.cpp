@@ -217,37 +217,37 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
 
     query_cfg_response resp;
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INCONSISTENT_STATE);
-    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
-    ASSERT_EQ(master_replica_config(follower).hp_primary, host_port::s_invalid_host_port);
+    ASSERT_FALSE(master_replica_config(follower).primary);
+    ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partition_count = 100;
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INCONSISTENT_STATE);
-    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
-    ASSERT_EQ(master_replica_config(follower).hp_primary, host_port::s_invalid_host_port);
+    ASSERT_FALSE(master_replica_config(follower).primary);
+    ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partition_count = _app_info.partition_count;
     partition_configuration p;
     resp.partitions.emplace_back(p);
     resp.partitions.emplace_back(p);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INVALID_DATA);
-    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
-    ASSERT_EQ(master_replica_config(follower).hp_primary, host_port::s_invalid_host_port);
+    ASSERT_FALSE(master_replica_config(follower).primary);
+    ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partitions.clear();
     p.pid = gpid(2, 100);
     resp.partitions.emplace_back(p);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INCONSISTENT_STATE);
-    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
-    ASSERT_EQ(master_replica_config(follower).hp_primary, host_port::s_invalid_host_port);
+    ASSERT_FALSE(master_replica_config(follower).primary);
+    ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partitions.clear();
-    p.primary = rpc_address::s_invalid_address;
-    p.__set_hp_primary(host_port::s_invalid_host_port);
+    p.primary = {};
+    p.__set_hp_primary(host_port());
     p.pid = gpid(2, 1);
     resp.partitions.emplace_back(p);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INVALID_STATE);
-    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
-    ASSERT_EQ(master_replica_config(follower).hp_primary, host_port::s_invalid_host_port);
+    ASSERT_FALSE(master_replica_config(follower).primary);
+    ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partitions.clear();
     p.pid = gpid(2, 1);

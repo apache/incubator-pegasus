@@ -526,7 +526,7 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
         }
         partition_primary = app->partitions[pid.get_partition_index()].hp_primary;
     }
-    if (partition_primary.is_invalid()) {
+    if (!partition_primary) {
         LOG_WARNING("{}: partition {} doesn't have a primary now, retry to backup it later",
                     _backup_sig,
                     pid);
