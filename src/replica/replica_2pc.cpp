@@ -109,7 +109,7 @@ DSN_DECLARE_int32(staleness_for_commit);
 
 namespace dsn {
 namespace replication {
-void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
+void replica::on_client_write(dsn::message_ex *request)
 {
     _checker.only_one_thread_access();
 
@@ -215,7 +215,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    if (!ignore_throttling && throttle_write_request(request)) {
+    if (throttle_write_request(request)) {
         return;
     }
 

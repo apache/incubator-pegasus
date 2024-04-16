@@ -178,7 +178,7 @@ public:
     //
     //    requests from clients
     //
-    void on_client_write(message_ex *request, bool ignore_throttling = false);
+    void on_client_write(message_ex *request);
     void on_client_read(message_ex *request, bool ignore_throttling = false);
 
     //
