@@ -19,8 +19,8 @@
 package org.apache.pegasus.security;
 
 import com.sun.security.auth.callback.TextCallbackHandler;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -62,7 +62,7 @@ class KerberosProtocol implements AuthProtocol {
           new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
-              String timestamp = new SimpleDateFormat("HHmmss").format(new Date());
+              String timestamp = LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
               Thread t = new Thread(r, "TGT renew for pegasus - " + timestamp);
               t.setDaemon(true);
               t.setUncaughtExceptionHandler(
