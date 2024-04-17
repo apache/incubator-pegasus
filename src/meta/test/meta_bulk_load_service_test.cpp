@@ -178,13 +178,8 @@ public:
         config.pid = gpid(app->app_id, 0);
         config.max_replica_count = 3;
         config.ballot = BALLOT;
-        config.primary = PRIMARY;
-        config.secondaries.emplace_back(SECONDARY1);
-        config.secondaries.emplace_back(SECONDARY2);
-        config.hp_primary = PRIMARY_HP;
-        config.__set_hp_secondaries(std::vector<host_port>());
-        config.hp_secondaries.emplace_back(SECONDARY1_HP);
-        config.hp_secondaries.emplace_back(SECONDARY2_HP);
+        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, PRIMARY_HP);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(config, secondaries, SECONDARY1_HP, SECONDARY2_HP);
         app->partitions.clear();
         app->partitions.emplace_back(config);
         mock_meta_bulk_load_context(app->app_id, app->partition_count, status);
@@ -199,12 +194,10 @@ public:
     {
         std::shared_ptr<app_state> app = find_app(name);
         if (mock_primary_invalid) {
-            app->partitions[pid.get_partition_index()].primary.set_invalid();
-            app->partitions[pid.get_partition_index()].hp_primary.reset();
+            RESET_IP_AND_HOST_PORT(app->partitions[pid.get_partition_index()], primary);
         }
         if (mock_lack_secondary) {
-            app->partitions[pid.get_partition_index()].secondaries.clear();
-            app->partitions[pid.get_partition_index()].hp_secondaries.clear();
+            CLEAR_IP_AND_HOST_PORT(app->partitions[pid.get_partition_index()], secondaries);
         }
         partition_configuration pconfig;
         bool flag = bulk_svc().check_partition_status(
@@ -242,25 +235,17 @@ public:
         set_partition_bulk_load_info(pid, ever_ingest_succeed);
         partition_configuration config;
         config.pid = pid;
-        config.primary = PRIMARY;
-        config.__set_hp_primary(PRIMARY_HP);
-        config.__set_hp_secondaries(std::vector<host_port>());
+        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, PRIMARY_HP);
         if (same) {
-            config.secondaries.emplace_back(SECONDARY1);
-            config.secondaries.emplace_back(SECONDARY2);
-            config.hp_secondaries.emplace_back(SECONDARY1_HP);
-            config.hp_secondaries.emplace_back(SECONDARY2_HP);
+            ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY1_HP);
+            ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY2_HP);
         } else {
-            config.secondaries.emplace_back(SECONDARY1);
-            config.hp_secondaries.emplace_back(SECONDARY1_HP);
+            ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY1_HP);
             if (secondary_count == 2) {
-                config.secondaries.emplace_back(SECONDARY3);
-                config.hp_secondaries.emplace_back(SECONDARY3_HP);
+                ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY3_HP);
             } else if (secondary_count >= 3) {
-                config.secondaries.emplace_back(SECONDARY2);
-                config.secondaries.emplace_back(SECONDARY3);
-                config.hp_secondaries.emplace_back(SECONDARY2_HP);
-                config.hp_secondaries.emplace_back(SECONDARY3_HP);
+                ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY2_HP);
+                ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY3_HP);
             }
         }
         auto flag = bulk_svc().check_ever_ingestion_succeed(config, APP_NAME, pid);

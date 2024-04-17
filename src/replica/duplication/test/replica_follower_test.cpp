@@ -241,8 +241,7 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
     ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partitions.clear();
-    p.primary = {};
-    p.__set_hp_primary(host_port());
+    RESET_IP_AND_HOST_PORT(p, primary);
     p.pid = gpid(2, 1);
     resp.partitions.emplace_back(p);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INVALID_STATE);
@@ -256,13 +255,9 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
     const host_port secondary1("localhost", 34802);
     const host_port secondary2("localhost", 34803);
 
-    p.primary = dsn::dns_resolver::instance().resolve_address(primary);
-    p.secondaries.emplace_back(dsn::dns_resolver::instance().resolve_address(secondary1));
-    p.secondaries.emplace_back(dsn::dns_resolver::instance().resolve_address(secondary2));
-    p.__set_hp_primary(primary);
-    p.__set_hp_secondaries({});
-    p.hp_secondaries.emplace_back(secondary1);
-    p.hp_secondaries.emplace_back(secondary2);
+    SET_IP_AND_HOST_PORT_BY_DNS(p, primary, primary);
+    ADD_IP_AND_HOST_PORT_BY_DNS(p, secondaries, secondary1);
+    ADD_IP_AND_HOST_PORT_BY_DNS(p, secondaries, secondary2);
     resp.partitions.emplace_back(p);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_OK);
     ASSERT_EQ(master_replica_config(follower).primary, p.primary);

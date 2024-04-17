@@ -241,13 +241,9 @@ public:
         config.max_replica_count = 3;
         config.pid = PID;
         config.ballot = BALLOT;
-        config.primary = PRIMARY;
-        config.secondaries.emplace_back(SECONDARY);
-        config.secondaries.emplace_back(SECONDARY2);
-        config.__set_hp_primary(PRIMARY_HP);
-        config.__set_hp_secondaries({});
-        config.hp_secondaries.emplace_back(SECONDARY_HP);
-        config.hp_secondaries.emplace_back(SECONDARY_HP2);
+        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, PRIMARY_HP);
+        ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY_HP);
+        ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY_HP2);
         _replica->set_primary_partition_configuration(config);
     }
 

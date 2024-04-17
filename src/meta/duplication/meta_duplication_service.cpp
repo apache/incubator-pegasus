@@ -518,17 +518,8 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                           const host_port secondary2("localhost", 34803);
 
                           partition_configuration p;
-                          p.primary = dsn::dns_resolver::instance().resolve_address(primary);
-                          p.secondaries.emplace_back(
-                              dsn::dns_resolver::instance().resolve_address(secondary1));
-                          p.secondaries.emplace_back(
-                              dsn::dns_resolver::instance().resolve_address(secondary2));
-
-                          p.__set_hp_primary(primary);
-                          p.__set_hp_secondaries({});
-                          p.hp_secondaries.emplace_back(secondary1);
-                          p.hp_secondaries.emplace_back(secondary2);
-
+                          SET_IP_AND_HOST_PORT_BY_DNS(p, primary, primary);
+                          SET_IPS_AND_HOST_PORTS_BY_DNS(p, secondaries, secondary1, secondary2);
                           resp.partitions.emplace_back(p);
                       }
                   });

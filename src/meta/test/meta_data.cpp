@@ -35,7 +35,6 @@
 #include "meta/meta_data.h"
 #include "metadata_types.h"
 #include "misc/misc.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 
@@ -136,12 +135,9 @@ TEST(meta_data, collect_replica)
 
 #define CLEAR_REPLICA                                                                              \
     do {                                                                                           \
-        pc.__set_hp_primary(dsn::host_port());                                                     \
-        pc.__set_hp_secondaries({});                                                               \
-        pc.__set_hp_last_drops({});                                                                \
-        pc.primary.set_invalid();                                                                  \
-        pc.secondaries.clear();                                                                    \
-        pc.last_drops.clear();                                                                     \
+        RESET_IP_AND_HOST_PORT(pc, primary);                                                       \
+        CLEAR_IP_AND_HOST_PORT(pc, secondaries);                                                   \
+        CLEAR_IP_AND_HOST_PORT(pc, last_drops);                                                    \
     } while (false)
 
 #define CLEAR_DROP_LIST                                                                            \
@@ -153,22 +149,19 @@ TEST(meta_data, collect_replica)
     CLEAR_REPLICA;                                                                                 \
     CLEAR_DROP_LIST
 
-    const auto addr = dsn::dns_resolver::instance().resolve_address(node_list[0]);
     {
         // replica is primary of partition
         CLEAR_ALL;
         rep.ballot = 10;
         pc.ballot = 9;
-        pc.primary = addr;
-        pc.__set_hp_primary(node_list[0]);
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, node_list[0]);
         ASSERT_TRUE(collect_replica(view, node_list[0], rep));
     }
 
     {
         // replica is secondary of partition
         CLEAR_ALL;
-        pc.secondaries.push_back(addr);
-        pc.hp_secondaries.push_back(node_list[0]);
+        ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, node_list[0]);
         ASSERT_TRUE(collect_replica(view, node_list[0], rep));
     }
 
@@ -385,12 +378,9 @@ TEST(meta_data, construct_replica)
 
 #define CLEAR_REPLICA                                                                              \
     do {                                                                                           \
-        pc.hp_primary.reset();                                                                     \
-        pc.hp_secondaries.clear();                                                                 \
-        pc.hp_last_drops.clear();                                                                  \
-        pc.__set_hp_primary(dsn::host_port());                                                     \
-        pc.__set_hp_secondaries({});                                                               \
-        pc.__set_hp_last_drops({});                                                                \
+        RESET_IP_AND_HOST_PORT(pc, primary);                                                       \
+        CLEAR_IP_AND_HOST_PORT(pc, secondaries);                                                   \
+        CLEAR_IP_AND_HOST_PORT(pc, last_drops);                                                    \
     } while (false)
 
 #define CLEAR_DROP_LIST                                                                            \

@@ -186,10 +186,9 @@ error_code replica_follower::update_master_replica_config(error_code err, query_
     // since the request just specify one partition, the result size is single
     _master_replica_config = resp.partitions[0];
     LOG_INFO_PREFIX(
-        "query master[{}]({}) config successfully and update local config: remote={}, gpid={}",
+        "query master[{}] config successfully and update local config: remote={}, gpid={}",
         master_replica_name(),
-        _master_replica_config.hp_primary,
-        _master_replica_config.primary,
+        FMT_HOST_PORT_AND_IP(_master_replica_config, primary),
         _master_replica_config.pid);
     return ERR_OK;
 }

@@ -31,7 +31,6 @@
 #include "common/replication_enums.h"
 #include "meta_data.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/flags.h"
@@ -114,8 +113,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
                  invalid_ballot,
                  "the ballot of server must not be invalid_ballot, node = {}",
                  server.node);
-    pc.primary = dsn::dns_resolver::instance().resolve_address(server.node);
-    pc.__set_hp_primary(server.node);
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, server.node);
     pc.ballot = server.ballot;
     pc.partition_flags = 0;
     pc.max_replica_count = max_replica_count;
@@ -138,9 +136,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
         if (pc.hp_last_drops.size() + 1 >= max_replica_count)
             break;
         // similar to cc.drop_list, pc.last_drop is also a stack structure
-        pc.last_drops.insert(pc.last_drops.begin(),
-                             dsn::dns_resolver::instance().resolve_address(iter->node));
-        pc.hp_last_drops.insert(pc.hp_last_drops.begin(), iter->node);
+        HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(pc, last_drops, iter->node);
         LOG_INFO("construct for ({}), select {} into last_drops, ballot({}), "
                  "committed_decree({}), prepare_decree({})",
                  pid,
@@ -529,14 +525,11 @@ app_state::app_state(const app_info &info) : app_info(info), helpers(new app_sta
     config.ballot = 0;
     config.pid.set_app_id(app_id);
     config.last_committed_decree = 0;
-    config.last_drops.clear();
     config.max_replica_count = app_info::max_replica_count;
-    config.primary.set_invalid();
-    config.secondaries.clear();
 
-    config.__set_hp_primary(host_port());
-    config.__set_hp_secondaries({});
-    config.__set_hp_last_drops({});
+    RESET_IP_AND_HOST_PORT(config, primary);
+    CLEAR_IP_AND_HOST_PORT(config, secondaries);
+    CLEAR_IP_AND_HOST_PORT(config, last_drops);
 
     partitions.assign(app_info::partition_count, config);
     for (int i = 0; i != app_info::partition_count; ++i)

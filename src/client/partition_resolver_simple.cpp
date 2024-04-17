@@ -304,11 +304,10 @@ void partition_resolver_simple::query_config_reply(error_code err,
             for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it) {
                 auto &new_config = *it;
 
-                LOG_DEBUG_PREFIX("query config reply, gpid = {}, ballot = {}, primary = {}({})",
+                LOG_DEBUG_PREFIX("query config reply, gpid = {}, ballot = {}, primary = {}",
                                  new_config.pid,
                                  new_config.ballot,
-                                 new_config.hp_primary,
-                                 new_config.primary);
+                                 FMT_HOST_PORT_AND_IP(new_config, primary));
 
                 auto it2 = _config_cache.find(new_config.pid.get_partition_index());
                 if (it2 == _config_cache.end()) {

@@ -759,8 +759,7 @@ void meta_service::on_query_configuration_by_index(configuration_query_by_index_
     if (!check_status_and_authz(rpc, &forward_hp)) {
         if (forward_hp) {
             partition_configuration config;
-            config.primary = dsn::dns_resolver::instance().resolve_address(forward_hp);
-            config.__set_hp_primary(forward_hp);
+            SET_IP_AND_HOST_PORT_BY_DNS(config, primary, forward_hp);
             response.partitions.push_back(std::move(config));
         }
         return;

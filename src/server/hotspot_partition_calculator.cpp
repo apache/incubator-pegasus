@@ -27,6 +27,7 @@
 #include "common/gpid.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "perf_counter/perf_counter.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "server/hotspot_partition_stat.h"
 #include "shell/command_executor.h"
 #include "utils/error_code.h"
@@ -226,12 +227,12 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
     auto error = _shell_context->ddl_client->detect_hotkey(
         partitions[partition_index].hp_primary, req, resp);
 
-    LOG_INFO("{} {} hotkey detection in {}.{}, server host_port: {}",
+    LOG_INFO("{} {} hotkey detection in {}.{}, server: {}",
              (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
              (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
              app_name,
              partition_index,
-             partitions[partition_index].hp_primary);
+             FMT_HOST_PORT_AND_IP(partitions[partition_index], primary));
 
     if (error != dsn::ERR_OK) {
         LOG_ERROR("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",

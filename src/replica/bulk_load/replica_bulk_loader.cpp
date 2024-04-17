@@ -246,10 +246,9 @@ void replica_bulk_loader::on_group_bulk_load(const group_bulk_load_request &requ
         return;
     }
 
-    LOG_INFO_PREFIX("receive group_bulk_load request, primary address = {}({}), ballot = {}, "
+    LOG_INFO_PREFIX("receive group_bulk_load request, primary address = {}, ballot = {}, "
                     "meta bulk_load_status = {}, local bulk_load_status = {}",
-                    request.config.hp_primary,
-                    request.config.primary,
+                    FMT_HOST_PORT_AND_IP(request.config, primary),
                     request.config.ballot,
                     enum_to_string(request.meta_bulk_load_status),
                     enum_to_string(_status));
@@ -933,9 +932,8 @@ void replica_bulk_loader::report_group_download_progress(/*out*/ bulk_load_respo
                                     _replica->_primary_states.membership.primary,
                                     _replica->_primary_states.membership.hp_primary,
                                     primary_state);
-    LOG_INFO_PREFIX("primary = {}({}), download progress = {}%, status = {}",
-                    _replica->_primary_states.membership.hp_primary,
-                    _replica->_primary_states.membership.primary,
+    LOG_INFO_PREFIX("primary = {}, download progress = {}%, status = {}",
+                    FMT_HOST_PORT_AND_IP(_replica->_primary_states.membership, primary),
                     primary_state.download_progress,
                     primary_state.download_status);
 
@@ -976,9 +974,8 @@ void replica_bulk_loader::report_group_ingestion_status(/*out*/ bulk_load_respon
                                     _replica->_primary_states.membership.primary,
                                     _replica->_primary_states.membership.hp_primary,
                                     primary_state);
-    LOG_INFO_PREFIX("primary = {}({}), ingestion status = {}",
-                    _replica->_primary_states.membership.hp_primary,
-                    _replica->_primary_states.membership.primary,
+    LOG_INFO_PREFIX("primary = {}, ingestion status = {}",
+                    FMT_HOST_PORT_AND_IP(_replica->_primary_states.membership, primary),
                     enum_to_string(primary_state.ingest_status));
 
     bool is_group_ingestion_finish =
@@ -1025,7 +1022,7 @@ void replica_bulk_loader::report_group_cleaned_up(bulk_load_response &response)
                                     _replica->_primary_states.membership.hp_primary,
                                     primary_state);
     LOG_INFO_PREFIX("primary = {}, bulk load states cleaned_up = {}",
-                    _replica->_primary_states.membership.primary,
+                    FMT_HOST_PORT_AND_IP(_replica->_primary_states.membership, primary),
                     primary_state.is_cleaned_up);
 
     bool group_flag = (primary_state.is_cleaned_up) &&
@@ -1063,9 +1060,8 @@ void replica_bulk_loader::report_group_is_paused(bulk_load_response &response)
                                     _replica->_primary_states.membership.primary,
                                     _replica->_primary_states.membership.hp_primary,
                                     primary_state);
-    LOG_INFO_PREFIX("primary = {}({}), bulk_load is_paused = {}",
-                    _replica->_primary_states.membership.hp_primary,
-                    _replica->_primary_states.membership.primary,
+    LOG_INFO_PREFIX("primary = {}, bulk_load is_paused = {}",
+                    FMT_HOST_PORT_AND_IP(_replica->_primary_states.membership, primary),
                     primary_state.is_paused);
 
     bool group_is_paused = primary_state.is_paused &&

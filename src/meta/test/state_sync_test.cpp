@@ -46,7 +46,6 @@
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
@@ -83,22 +82,14 @@ static void random_assign_partition_config(std::shared_ptr<app_state> &app,
             start = indices.back() + 1;
         }
         const auto &primary = get_server(indices[0]);
-        pc.primary = dsn::dns_resolver::instance().resolve_address(primary);
-        pc.__set_hp_primary(primary);
-        if (!pc.__isset.hp_secondaries) {
-            pc.__set_hp_secondaries({});
-        }
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
         for (int i = 1; i < indices.size(); ++i) {
             const auto &secondary = get_server(indices[i]);
             if (secondary) {
-                pc.secondaries.push_back(dsn::dns_resolver::instance().resolve_address(secondary));
-                pc.hp_secondaries.push_back(secondary);
+                ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, secondary);
             }
         }
-        const auto hp = server_list.back();
-        const auto addr = dsn::dns_resolver::instance().resolve_address(hp);
-        pc.__set_hp_last_drops({hp});
-        pc.last_drops = {addr};
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, last_drops, server_list.back());
     }
 }
 
