@@ -249,16 +249,16 @@ void replica::upgrade_to_secondary_on_primary(const ::dsn::host_port &node)
 {
     LOG_INFO_PREFIX("upgrade potential secondary {} to secondary", node);
 
-    partition_configuration newConfig = _primary_states.membership;
+    partition_configuration new_config = _primary_states.membership;
 
     // add secondary
-    if (!newConfig.__isset.hp_secondaries) {
-        newConfig.__set_hp_secondaries({});
+    if (!new_config.__isset.hp_secondaries) {
+        new_config.__set_hp_secondaries({});
     }
-    newConfig.hp_secondaries.push_back(node);
-    newConfig.secondaries.push_back(dsn::dns_resolver::instance().resolve_address(node));
+    new_config.hp_secondaries.push_back(node);
+    new_config.secondaries.push_back(dsn::dns_resolver::instance().resolve_address(node));
 
-    update_configuration_on_meta_server(config_type::CT_UPGRADE_TO_SECONDARY, node, newConfig);
+    update_configuration_on_meta_server(config_type::CT_UPGRADE_TO_SECONDARY, node, new_config);
 }
 
 void replica::downgrade_to_secondary_on_primary(configuration_update_request &proposal)
@@ -368,24 +368,24 @@ void replica::on_remove(const replica_configuration &request)
 
 void replica::update_configuration_on_meta_server(config_type::type type,
                                                   const host_port &node,
-                                                  partition_configuration &newConfig)
+                                                  partition_configuration &new_config)
 {
     // type should never be `CT_REGISTER_CHILD`
     // if this happens, it means serious mistake happened during partition split
     // assert here to stop split and avoid splitting wrong
     CHECK_NE_PREFIX(type, config_type::CT_REGISTER_CHILD);
 
-    newConfig.last_committed_decree = last_committed_decree();
+    new_config.last_committed_decree = last_committed_decree();
 
     if (type == config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT) {
         CHECK(status() == partition_status::PS_INACTIVE && _inactive_is_transient &&
                   _is_initializing,
               "");
-        CHECK_EQ(newConfig.hp_primary, node);
+        CHECK_EQ(new_config.hp_primary, node);
     } else if (type != config_type::CT_ASSIGN_PRIMARY &&
                type != config_type::CT_UPGRADE_TO_PRIMARY) {
         CHECK_EQ(status(), partition_status::PS_PRIMARY);
-        CHECK_EQ(newConfig.ballot, _primary_states.membership.ballot);
+        CHECK_EQ(new_config.ballot, _primary_states.membership.ballot);
     }
 
     // disable 2pc during reconfiguration
@@ -399,7 +399,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->info = _app_info;
-    request->config = newConfig;
+    request->config = new_config;
     request->config.ballot++;
     request->type = type;
     request->node = dsn::dns_resolver::instance().resolve_address(node);

@@ -311,8 +311,8 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                                       status);
     }
 
-    std::map<dsn::host_port, dsn::replication::node_status::type> nodes;
-    auto r = sc->ddl_client->list_nodes(s, nodes);
+    std::map<dsn::host_port, dsn::replication::node_status::type> status_by_hp;
+    auto r = sc->ddl_client->list_nodes(s, status_by_hp);
     if (r != dsn::ERR_OK) {
         std::cout << "list nodes failed, error=" << r << std::endl;
         return true;
@@ -320,7 +320,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
     std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
-    for (auto &kv : nodes) {
+    for (auto &kv : status_by_hp) {
         if (kv.second == dsn::replication::node_status::NS_ALIVE)
             alive_node_count++;
         std::string status_str = dsn::enum_to_string(kv.second);
@@ -532,9 +532,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     mtp.add(std::move(tp));
 
     dsn::utils::table_printer tp_count("summary");
-    tp_count.add_row_name_and_data("total_node_count", nodes.size());
+    tp_count.add_row_name_and_data("total_node_count", status_by_hp.size());
     tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
-    tp_count.add_row_name_and_data("unalive_node_count", nodes.size() - alive_node_count);
+    tp_count.add_row_name_and_data("unalive_node_count", status_by_hp.size() - alive_node_count);
     mtp.add(std::move(tp_count));
 
     mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);

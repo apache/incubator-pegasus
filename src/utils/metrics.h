@@ -58,6 +58,7 @@
 #include "utils/string_conv.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
+#include "utils/utils.h"
 
 namespace boost {
 namespace system {
@@ -469,7 +470,7 @@ struct metric_filters
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
         // Will use `bool operator==(const string &lhs, const char *rhs);` to compare each element
         // in `white_list` with `candidate`.
-        return std::find(white_list.begin(), white_list.end(), candidate) != white_list.end();
+        return utils::contains(white_list, candidate);
     }
 
     static inline bool match(const std::string &candidate,

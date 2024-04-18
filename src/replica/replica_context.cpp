@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <algorithm>
 #include <atomic>
 #include <vector>
 
@@ -36,6 +35,7 @@
 #include "replica_stub.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
+#include "utils/utils.h"
 
 namespace dsn {
 namespace replication {
@@ -137,9 +137,7 @@ bool primary_context::check_exist(const ::dsn::host_port &node, partition_status
     case partition_status::PS_PRIMARY:
         return membership.hp_primary == node;
     case partition_status::PS_SECONDARY:
-        return std::find(membership.hp_secondaries.begin(),
-                         membership.hp_secondaries.end(),
-                         node) != membership.hp_secondaries.end();
+        return utils::contains(membership.hp_secondaries, node);
     case partition_status::PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
     default:

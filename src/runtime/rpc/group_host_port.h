@@ -150,7 +150,7 @@ inline bool rpc_group_host_port::add(const host_port &hp)
     CHECK_EQ_MSG(hp.type(), HOST_TYPE_IPV4, "rpc group host_port member must be ipv4");
 
     awl_t l(_lock);
-    if (_members.end() == std::find(_members.begin(), _members.end(), hp)) {
+    if (!utils::contains(_members, hp)) {
         _members.push_back(hp);
         return true;
     } else {
@@ -224,7 +224,7 @@ inline bool rpc_group_host_port::remove(const host_port &hp)
 inline bool rpc_group_host_port::contains(const host_port &hp) const
 {
     arl_t l(_lock);
-    return _members.end() != std::find(_members.begin(), _members.end(), hp);
+    return utils::contains(_members, hp);
 }
 
 inline int rpc_group_host_port::count() const

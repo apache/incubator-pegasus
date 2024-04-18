@@ -1275,17 +1275,17 @@ bool hash_scan(command_executor *e, shell_context *sc, arguments args)
                 stderr, "ERROR: get scanner failed: %s\n", sc->pg_client->get_error_string(ret));
         }
     } else {
-        std::string hash_key;
+        std::string got_hash_key;
         std::string sort_key;
         std::string value;
         pegasus::pegasus_client::internal_info info;
         while ((max_count <= 0 || count < max_count) &&
-               !(ret = scanner->next(hash_key, sort_key, value, &info))) {
+               !(ret = scanner->next(got_hash_key, sort_key, value, &info))) {
             if (!validate_filter(value_filter_type, value_filter_pattern, value))
                 continue;
             fprintf(file,
                     "\"%s\" : \"%s\"",
-                    pegasus::utils::c_escape_string(hash_key, sc->escape_all).c_str(),
+                    pegasus::utils::c_escape_string(got_hash_key, sc->escape_all).c_str(),
                     pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str());
             if (!options.no_value) {
                 fprintf(file,
@@ -1512,13 +1512,13 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
         for (int i = 0; i < scanners.size(); i++) {
             if (partition >= 0 && partition != i)
                 continue;
-            std::string hash_key;
+            std::string got_hash_key;
             std::string sort_key;
             std::string value;
             pegasus::pegasus_client::internal_info info;
             pegasus::pegasus_client::pegasus_scanner *scanner = scanners[i];
             while ((max_count <= 0 || count < max_count) &&
-                   !(ret = scanner->next(hash_key, sort_key, value, &info))) {
+                   !(ret = scanner->next(got_hash_key, sort_key, value, &info))) {
                 if (sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT &&
                     sort_key.length() > sort_key_filter_pattern.length())
                     continue;
@@ -1526,7 +1526,7 @@ bool full_scan(command_executor *e, shell_context *sc, arguments args)
                     continue;
                 fprintf(file,
                         "\"%s\" : \"%s\"",
-                        pegasus::utils::c_escape_string(hash_key, sc->escape_all).c_str(),
+                        pegasus::utils::c_escape_string(got_hash_key, sc->escape_all).c_str(),
                         pegasus::utils::c_escape_string(sort_key, sc->escape_all).c_str());
                 if (!options.no_value) {
                     fprintf(file,

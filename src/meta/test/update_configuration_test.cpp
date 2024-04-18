@@ -67,6 +67,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/utils.h"
 #include "utils/zlocks.h"
 
 DSN_DECLARE_int32(node_live_percentage_threshold_for_update);
@@ -277,8 +278,7 @@ void meta_service_test_app::update_configuration_test()
     state_validator validator1 = [pc0](const app_mapper &apps) {
         const dsn::partition_configuration *pc = get_config(apps, pc0.pid);
         return pc->ballot == pc0.ballot + 2 && pc->hp_secondaries.size() == 1 &&
-               std::find(pc0.hp_secondaries.begin(), pc0.hp_secondaries.end(), pc->hp_primary) !=
-                   pc0.hp_secondaries.end();
+               utils::contains(pc0.hp_secondaries, pc->hp_primary);
     };
 
     // test kickoff secondary

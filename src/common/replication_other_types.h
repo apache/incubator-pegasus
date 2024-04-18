@@ -57,9 +57,7 @@ inline bool is_primary(const partition_configuration &pc, const host_port &node)
 }
 inline bool is_secondary(const partition_configuration &pc, const host_port &node)
 {
-    return node &&
-           std::find(pc.hp_secondaries.begin(), pc.hp_secondaries.end(), node) !=
-               pc.hp_secondaries.end();
+    return node && utils::contains(pc.hp_secondaries, node);
 }
 inline bool is_member(const partition_configuration &pc, const host_port &node)
 {

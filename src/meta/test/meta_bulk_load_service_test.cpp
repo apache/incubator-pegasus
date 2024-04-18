@@ -17,7 +17,6 @@
 
 #include <boost/lexical_cast.hpp>
 #include <string.h>
-#include <type_traits>
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
@@ -25,6 +24,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -58,6 +58,7 @@
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/utils.h"
 
 namespace dsn {
 namespace replication {
@@ -1033,8 +1034,7 @@ TEST_F(bulk_load_process_test, ingestion_one_succeed_update)
     ASSERT_EQ(pinfo.status, bulk_load_status::BLS_SUCCEED);
     ASSERT_TRUE(pinfo.ever_ingest_succeed);
     ASSERT_EQ(pinfo.host_ports.size(), 3);
-    ASSERT_EQ(std::find(pinfo.host_ports.begin(), pinfo.host_ports.end(), SECONDARY3_HP),
-              pinfo.host_ports.end());
+    ASSERT_FALSE(utils::contains(pinfo.host_ports, SECONDARY3_HP));
 }
 
 TEST_F(bulk_load_process_test, normal_succeed)

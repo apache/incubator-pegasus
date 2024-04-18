@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <algorithm>
 #include <memory>
 
 #include "client/partition_resolver.h"
@@ -34,6 +33,7 @@
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
+#include "utils/utils.h"
 
 namespace dsn {
 
@@ -45,12 +45,14 @@ bool vector_equal(const std::vector<T> &a, const std::vector<T> &b)
     if (a.size() != b.size())
         return false;
     for (const T &item : a) {
-        if (std::find(b.begin(), b.end(), item) == b.end())
+        if (!utils::contains(b, item)) {
             return false;
+        }
     }
     for (const T &item : b) {
-        if (std::find(a.begin(), a.end(), item) == a.end())
+        if (!utils::contains(a, item)) {
             return false;
+        }
     }
     return true;
 }

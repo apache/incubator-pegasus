@@ -238,8 +238,8 @@ void meta_service_test_app::balance_config_file()
         migration_list ml;
 
         // iterate 1000 times
-        for (int i = 0; i < 1000 && lb->balance({&apps, &nodes}, ml); ++i) {
-            LOG_DEBUG("the {}th round of balancer", i);
+        for (int j = 0; j < 1000 && lb->balance({&apps, &nodes}, ml); ++j) {
+            LOG_DEBUG("the {}th round of balancer", j);
             migration_check_and_apply(apps, nodes, ml, nullptr);
             lb->check({&apps, &nodes}, ml);
             LOG_DEBUG("balance checker operation count = {}", ml.size());
