@@ -87,9 +87,6 @@ private:
 private:
     FRIEND_TEST(manual_compact_service_test, extract_manual_compact_opts);
 
-    static const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
-    static const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
-
     pegasus_server_impl *_app;
 #ifdef PEGASUS_UNIT_TEST
     uint64_t _mock_now_timestamp = 0;

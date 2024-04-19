@@ -51,7 +51,12 @@ public:
     void add(const std::shared_ptr<http_call> &call)
     {
         std::lock_guard<std::mutex> guard(_mu);
+// Some tests (e.g. policy_context_test) create multiple objects which
+// register duplicate http paths, so disable checking the path when
+// MOCK_TEST enabled.
+#ifndef MOCK_TEST
         CHECK_EQ_MSG(_call_map.count(call->path), 0, "{} has been added", call->path);
+#endif
         _call_map[call->path] = call;
     }
 

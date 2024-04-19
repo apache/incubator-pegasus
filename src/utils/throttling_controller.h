@@ -21,8 +21,7 @@
 #include <string>
 
 namespace dsn {
-
-namespace replication {
+namespace utils {
 
 // Used for replica throttling.
 // Different throttling strategies may use different 'request_units', which is
@@ -51,14 +50,35 @@ public:
     // return true if parse succeed.
     // return false if parse failed for the reason of invalid env_value.
     // if return false, the original value will not be changed.
-    // 'parse_error' is set when return false.
+    // 'hint_message' is set when return false.
     // 'changed' is set when return true.
     // 'old_env_value' is set when 'changed' is set to true.
+    enum class ParseResult
+    {
+        kSuccess = 0,
+        kFail,
+        kIgnore
+    };
     bool parse_from_env(const std::string &env_value,
                         int partition_count,
-                        /*out*/ std::string &parse_error,
+                        /*out*/ std::string &hint_message,
                         /*out*/ bool &changed,
                         /*out*/ std::string &old_env_value);
+    static ParseResult parse_from_env(const std::string &arg,
+                                      const std::string &type,
+                                      /*out*/ uint64_t &units,
+                                      /*out*/ uint64_t &delay_ms,
+                                      /*out*/ std::string &hint_message);
+    static bool parse_from_env(const std::string &env_value,
+                               /*out*/ uint64_t &delay_units,
+                               /*out*/ uint64_t &delay_ms,
+                               /*out*/ uint64_t &reject_units,
+                               /*out*/ uint64_t &reject_delay_ms,
+                               /*out*/ std::string &hint_message);
+
+    // Return true if it's in format of '<unsigned integer>[K|M]'
+    static bool
+    parse_unit(std::string arg, /*out*/ uint64_t &units, /*out*/ std::string &hint_message);
 
     // reset to no throttling.
     void reset(/*out*/ bool &changed, /*out*/ std::string &old_env_value);
@@ -85,5 +105,5 @@ private:
     int64_t _cur_units;
 };
 
-} // namespace replication
+} // namespace utils
 } // namespace dsn

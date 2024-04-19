@@ -61,11 +61,6 @@ namespace server {
 
 DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
 
-const std::string
-    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
-const std::string
-    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
-
 pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_impl *app)
     : replica_base(*app),
       _app(app),
@@ -260,9 +255,9 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     find = envs.find(key_prefix + dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION);
     if (find != envs.end()) {
         const std::string &argv = find->second;
-        if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
+        if (argv == dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
             options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
-        } else if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
+        } else if (argv == dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
             options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
         } else {
             LOG_WARNING_PREFIX(
@@ -270,7 +265,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
                 find->first,
                 find->second,
                 // NOTICE associate with options.bottommost_level_compaction's default value above
-                MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP);
+                dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP);
         }
     }
 }

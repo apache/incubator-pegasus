@@ -103,6 +103,8 @@ public:
                           std::string parameters,
                           std::string help) const;
 
+    void deregister_handler(std::string sub_path) const;
+
 private:
     // If sub_path is 'app/duplication', the built path would be '<root_path>/app/duplication',
     // where path() would be called as root_path.

@@ -38,6 +38,7 @@
 #include <utility>
 #include <vector>
 
+#include "app_env_validator.h"
 #include "common/gpid.h"
 #include "common/manual_compact.h"
 #include "dsn.layer2_types.h"
@@ -428,6 +429,8 @@ private:
     bool _add_secondary_enable_flow_control;
     int32_t _add_secondary_max_count_for_one_node;
     std::vector<std::unique_ptr<command_deregister>> _cmds;
+
+    app_env_validator _app_env_validator;
 
     table_metric_entities _table_metric_entities;
 };
