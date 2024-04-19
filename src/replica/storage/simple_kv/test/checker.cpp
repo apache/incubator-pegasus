@@ -85,7 +85,7 @@ public:
             return pc_status::healthy;
 
         pc_status result;
-        if (pc.hp_primary.is_invalid()) {
+        if (!pc.hp_primary) {
             if (pc.hp_secondaries.size() > 0) {
                 action.node = pc.secondaries[0];
                 action.__set_hp_node(pc.hp_secondaries[0]);
@@ -155,7 +155,7 @@ public:
         sorted_node.clear();
         sorted_node.reserve(nodes.size());
         for (auto &iter : nodes) {
-            if (!iter.first.is_invalid() && iter.second.alive()) {
+            if (iter.first && iter.second.alive()) {
                 sorted_node.push_back(iter.first);
             }
         }

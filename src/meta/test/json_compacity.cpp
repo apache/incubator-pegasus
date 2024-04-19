@@ -93,8 +93,8 @@ void meta_service_test_app::json_compacity()
     dsn::json::json_forwarder<dsn::partition_configuration>::decode(
         dsn::blob(json3, 0, strlen(json3)), pc);
     ASSERT_EQ(234, pc.ballot);
-    ASSERT_TRUE(pc.hp_primary.is_invalid());
-    ASSERT_TRUE(pc.primary.is_invalid());
+    ASSERT_TRUE(!pc.hp_primary);
+    ASSERT_TRUE(!pc.primary);
     ASSERT_EQ(1, pc.hp_secondaries.size());
     ASSERT_EQ(1, pc.secondaries.size());
     ASSERT_STREQ("127.0.0.1:6", pc.secondaries[0].to_string());

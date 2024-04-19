@@ -88,8 +88,9 @@ partition_status::type partition_status_from_short_string(const std::string &str
 
 std::string address_to_node(host_port addr)
 {
-    if (addr.is_invalid())
+    if (!addr) {
         return "-";
+    }
     CHECK(test_checker::s_inited, "");
     return test_checker::instance().address_to_node_name(addr);
 }

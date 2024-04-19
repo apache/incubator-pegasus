@@ -103,7 +103,7 @@ TEST(core, group_address_change_leader)
         if (ERR_OK == err_code) {
             const auto hp_got = host_port::from_string(result);
             LOG_INFO("talk to others callback, result: {}", result);
-            EXPECT_FALSE(hp_got.is_invalid());
+            EXPECT_TRUE(hp_got);
             EXPECT_EQ(TEST_PORT_END, hp_got.port());
         }
     };

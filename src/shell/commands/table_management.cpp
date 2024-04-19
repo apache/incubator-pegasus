@@ -336,7 +336,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     for (int i = 0; i < partitions.size(); i++) {
         const dsn::partition_configuration &p = partitions[i];
         int replica_count = 0;
-        if (!p.hp_primary.is_invalid()) {
+        if (p.hp_primary) {
             replica_count++;
         }
         replica_count += p.hp_secondaries.size();
@@ -347,7 +347,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             replica_count_str = oss.str();
         }
         std::string primary_str("-");
-        if (!p.hp_primary.is_invalid()) {
+        if (p.hp_primary) {
             bool disk_found = false;
             double disk_value = 0;
             auto f1 = disk_map.find(p.hp_primary);

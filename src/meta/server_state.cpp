@@ -725,13 +725,13 @@ void server_state::initialize_node_state()
     for (auto &app_pair : _all_apps) {
         app_state &app = *(app_pair.second);
         for (partition_configuration &pc : app.partitions) {
-            if (!pc.hp_primary.is_invalid()) {
+            if (pc.hp_primary) {
                 node_state *ns = get_node_state(_nodes, pc.hp_primary, true);
                 ns->put_partition(pc.pid, true);
             }
 
             for (auto &ep : pc.hp_secondaries) {
-                CHECK(!ep.is_invalid(), "invalid secondary address, addr = {}", ep);
+                CHECK(ep, "invalid secondary address, addr = {}", ep);
                 node_state *ns = get_node_state(_nodes, ep, true);
                 ns->put_partition(pc.pid, false);
             }
@@ -1844,10 +1844,10 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     for (auto &node : pc.secondaries) {
         maintain_drops(request.config.last_drops, node, request.type);
     }
-    if (!pc.hp_primary.is_invalid()) {
+    if (pc.hp_primary) {
         maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);
     }
-    if (!pc.primary.is_invalid()) {
+    if (pc.primary) {
         maintain_drops(request.config.last_drops, pc.primary, request.type);
     }
     request.config.primary.set_invalid();
@@ -1932,7 +1932,7 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
     partition_configuration &pc = app->partitions[pidx];
     config_context &cc = app->helpers->contexts[pidx];
 
-    CHECK(!pc.hp_primary.is_invalid(), "this shouldn't be called if the primary is invalid");
+    CHECK(pc.hp_primary, "this shouldn't be called if the primary is invalid");
     if (config_status::pending_remote_sync != cc.stage) {
         configuration_update_request request;
         request.info = *app;
@@ -1973,7 +1973,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
             break;
         }
     }
-    CHECK(!req->node.is_invalid(), "invalid node address, address = {}", req->node);
+    CHECK(req->node, "invalid node address, address = {}", req->node);
     // remove host_node & node from secondaries/last_drops, as it will be sync to remote storage
     for (++i; i < pc.hp_secondaries.size(); ++i) {
         pc.secondaries[i - 1] = pc.secondaries[i];
@@ -2078,7 +2078,7 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
         if (is_primary(pc, address))
             downgrade_primary_to_inactive(app, pidx);
         else if (is_secondary(pc, address)) {
-            if (!pc.hp_primary.is_invalid())
+            if (pc.hp_primary)
                 downgrade_secondary_to_inactive(app, pidx, address);
             else if (is_secondary(pc, address)) {
                 LOG_INFO("gpid({}): secondary({}) is down, ignored it due to no primary for this "
@@ -2739,7 +2739,7 @@ void server_state::check_consistency(const dsn::gpid &gpid)
     partition_configuration &config = app.partitions[gpid.get_partition_index()];
 
     if (app.is_stateful) {
-        if (config.hp_primary.is_invalid() == false) {
+        if (config.hp_primary) {
             auto it = _nodes.find(config.hp_primary);
             CHECK(it != _nodes.end(), "invalid primary address, address = {}", config.hp_primary);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_PRIMARY);

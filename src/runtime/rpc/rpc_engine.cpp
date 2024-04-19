@@ -661,8 +661,7 @@ void rpc_engine::call_ip(rpc_address addr,
 {
     DCHECK_EQ_MSG(addr.type(), HOST_TYPE_IPV4, "only IPV4 is now supported");
     DCHECK_GT_MSG(addr.port(), MAX_CLIENT_PORT, "only server address can be called");
-    CHECK(!request->header->from_address.is_invalid(),
-          "from address must be set before call call_ip");
+    CHECK(request->header->from_address, "from address must be set before call call_ip");
 
     while (!request->dl.is_alone()) {
         LOG_WARNING("msg request {} (trace_id = {:#018x}) is in sending queue, try to pick out ...",
@@ -737,7 +736,7 @@ void rpc_engine::reply(message_ex *response, error_code err)
     // when a message doesn't need to reply, we don't do the on_rpc_reply hooks to avoid mistakes
     // for example, the profiler may be mistakenly calculated
     auto s = response->io_session.get();
-    if (s == nullptr && response->to_address.is_invalid()) {
+    if (s == nullptr && !response->to_address) {
         LOG_DEBUG("rpc reply {} is dropped (invalid to-address), trace_id = {:#018x}",
                   response->header->rpc_name,
                   response->header->trace_id);

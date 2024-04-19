@@ -84,7 +84,7 @@ void replica_follower::init_master_info()
     CHECK(!master_metas.empty(), "master cluster meta list is invalid!");
     for (const auto &meta : master_metas) {
         const auto node = host_port::from_string(meta);
-        CHECK(!node.is_invalid(), "{} is invalid meta host_port", meta);
+        CHECK(node, "{} is invalid meta host_port", meta);
         _master_meta_list.emplace_back(std::move(node));
     }
 }
@@ -178,7 +178,7 @@ error_code replica_follower::update_master_replica_config(error_code err, query_
         return ERR_INCONSISTENT_STATE;
     }
 
-    if (dsn_unlikely(resp.partitions[0].hp_primary == host_port::s_invalid_host_port)) {
+    if (dsn_unlikely(!resp.partitions[0].hp_primary)) {
         LOG_ERROR_PREFIX("master[{}] partition address is invalid", master_replica_name());
         return ERR_INVALID_STATE;
     }

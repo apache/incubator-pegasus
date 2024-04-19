@@ -164,7 +164,7 @@ public:
     {
         action.type = config_type::CT_INVALID;
         const dsn::partition_configuration &pc = *get_config(*view.apps, gpid);
-        if (!pc.hp_primary.is_invalid() && pc.hp_secondaries.size() == 2)
+        if (pc.hp_primary && pc.hp_secondaries.size() == 2)
             return pc_status::healthy;
         return pc_status::ill;
     }

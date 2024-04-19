@@ -40,7 +40,6 @@
 #include "nlohmann/detail/iterators/iter_impl.hpp"
 #include "nlohmann/json_fwd.hpp"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"
 #include "test_util/test_util.h"
@@ -50,6 +49,10 @@
 #include "utils/filesystem.h"
 #include "utils/rand.h"
 #include "utils/test_macros.h"
+
+namespace dsn {
+class rpc_address;
+} // namespace dsn
 
 using dsn::partition_configuration;
 using dsn::replication::replica_helper;
@@ -172,7 +175,7 @@ void test_util::wait_table_healthy(const std::string &table_name) const
             std::vector<partition_configuration> pcs;
             ASSERT_EQ(dsn::ERR_OK, ddl_client_->list_app(table_name, table_id, pcount, pcs));
             for (const auto &pc : pcs) {
-                ASSERT_FALSE(pc.primary.is_invalid());
+                ASSERT_TRUE(pc.primary);
                 ASSERT_EQ(1 + pc.secondaries.size(), pc.max_replica_count);
             }
         },

@@ -348,7 +348,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             }
 
             for (const dsn::partition_configuration &p : partitions) {
-                if (!p.hp_primary.is_invalid()) {
+                if (p.hp_primary) {
                     auto find = tmp_map.find(p.hp_primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;

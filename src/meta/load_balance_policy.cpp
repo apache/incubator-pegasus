@@ -497,8 +497,7 @@ void load_balance_policy::number_nodes(const node_mapper &nodes)
     host_port_id.clear();
     host_port_vec.resize(_alive_nodes + 2);
     for (auto iter = nodes.begin(); iter != nodes.end(); ++iter) {
-        CHECK(!iter->first.is_invalid() && !iter->second.host_port().is_invalid(),
-              "invalid address");
+        CHECK(iter->first && iter->second.host_port(), "invalid address");
         CHECK(iter->second.alive(), "dead node");
 
         host_port_id[iter->first] = current_id;

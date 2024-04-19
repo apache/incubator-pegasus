@@ -55,7 +55,7 @@ const char *partition_status_to_short_string(partition_status::type s);
 partition_status::type partition_status_from_short_string(const std::string &str);
 
 // transfer primary_address to node_name
-// return "-" if addr.is_invalid()
+// return "-" if addr is invalid
 // return "node@port" if not found
 std::string address_to_node(host_port addr);
 // transfer node_name to primary_address

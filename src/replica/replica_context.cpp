@@ -105,7 +105,7 @@ void primary_context::reset_membership(const partition_configuration &config, bo
 
     membership = config;
 
-    if (membership.hp_primary.is_invalid() == false) {
+    if (membership.hp_primary) {
         statuses[membership.hp_primary] = partition_status::PS_PRIMARY;
     }
 

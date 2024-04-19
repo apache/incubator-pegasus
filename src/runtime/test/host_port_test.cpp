@@ -84,21 +84,21 @@ TEST(host_port_test, operators)
 
     host_port hp2;
     ASSERT_NE(hp, hp2);
-    ASSERT_FALSE(hp.is_invalid());
-    ASSERT_TRUE(hp2.is_invalid());
+    ASSERT_TRUE(hp);
+    ASSERT_FALSE(hp2);
 
     std::string hp_str = "localhost:8080";
     host_port hp3;
-    ASSERT_TRUE(hp3.is_invalid());
+    ASSERT_FALSE(hp3);
     hp3 = host_port::from_string(hp_str);
     ASSERT_EQ(hp, hp3);
-    ASSERT_FALSE(hp3.is_invalid());
+    ASSERT_TRUE(hp3);
 
     host_port hp4;
-    ASSERT_TRUE(hp4.is_invalid());
+    ASSERT_FALSE(hp4);
     std::string hp_str2 = "pegasus:8080";
     hp4 = host_port::from_string(hp_str2);
-    ASSERT_TRUE(hp4.is_invalid());
+    ASSERT_FALSE(hp4);
 
     host_port hp5("localhost", 8081);
     ASSERT_LT(hp, hp5);

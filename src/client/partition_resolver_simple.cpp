@@ -439,7 +439,7 @@ error_code partition_resolver_simple::get_host_port(int partition_index, /*out*/
                 return ERR_CHILD_NOT_READY;
             }
             hp = get_host_port(it->second->config);
-            if (hp.is_invalid()) {
+            if (!hp) {
                 return ERR_IO_PENDING;
             } else {
                 return ERR_OK;

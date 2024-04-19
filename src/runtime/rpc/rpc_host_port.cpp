@@ -69,7 +69,7 @@ host_port host_port::from_address(rpc_address addr)
         break;
     }
 
-    // Now is_invalid() return false.
+    // Now is valid.
     hp._type = addr.type();
     return hp;
 }
@@ -95,7 +95,7 @@ host_port host_port::from_string(const std::string &host_port_str)
         return hp;
     }
 
-    // Now is_invalid() return false.
+    // Now is valid.
     hp._type = HOST_TYPE_IPV4;
     return hp;
 }

@@ -185,7 +185,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
         partition_primary = app->partitions[pid.get_partition_index()].hp_primary;
     }
 
-    if (partition_primary.is_invalid()) {
+    if (!partition_primary) {
         LOG_WARNING(
             "backup_id({}): partition {} doesn't have a primary now, retry to backup it later.",
             _cur_backup.backup_id,

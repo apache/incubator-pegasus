@@ -341,7 +341,7 @@ void meta_partition_guardian_test::cure_test()
                               server_state::sStateHash);
     t->wait();
     PROPOSAL_FLAG_CHECK;
-    CONDITION_CHECK([&] { return !pc.hp_primary.is_invalid() && pc.hp_primary != last_addr; });
+    CONDITION_CHECK([&] { return pc.hp_primary && pc.hp_primary != last_addr; });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case: add secondary, and the message lost" << std::endl;
@@ -593,7 +593,7 @@ void meta_partition_guardian_test::cure_test()
                               server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK([&] { return pc.hp_primary.is_invalid(); });
+    CONDITION_CHECK([&] { return !pc.hp_primary; });
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     std::cerr << "Case: recover from DDD state, nodes[2] is not in dropped" << std::endl;
@@ -607,7 +607,7 @@ void meta_partition_guardian_test::cure_test()
                               server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK([&] { return pc.hp_primary.is_invalid(); });
+    CONDITION_CHECK([&] { return !pc.hp_primary; });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, haven't collect nodes[2]'s info from replica, and "
@@ -623,7 +623,7 @@ void meta_partition_guardian_test::cure_test()
                               server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK([&] { return pc.hp_primary.is_invalid(); });
+    CONDITION_CHECK([&] { return !pc.hp_primary; });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, haven't collect nodes[2]'s info from replica, and "
@@ -683,7 +683,7 @@ void meta_partition_guardian_test::cure_test()
                               server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK([&] { return pc.hp_primary.is_invalid(); });
+    CONDITION_CHECK([&] { return !pc.hp_primary; });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, larger ballot not match with larger decree"
@@ -700,7 +700,7 @@ void meta_partition_guardian_test::cure_test()
                               server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK([&] { return pc.hp_primary.is_invalid(); });
+    CONDITION_CHECK([&] { return !pc.hp_primary; });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, committed decree less than meta's" << std::endl;
@@ -716,7 +716,7 @@ void meta_partition_guardian_test::cure_test()
                               server_state::sStateHash);
     t->wait();
     ASSERT_FALSE(proposal_sent);
-    CONDITION_CHECK([&] { return pc.hp_primary.is_invalid(); });
+    CONDITION_CHECK([&] { return !pc.hp_primary; });
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cerr << "Case: recover from DDD state, select primary from config_context::dropped"

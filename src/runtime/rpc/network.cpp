@@ -433,7 +433,7 @@ void rpc_session::on_failure(bool is_write)
 
 bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
 {
-    if (msg->header->from_address.is_invalid()) {
+    if (!msg->header->from_address) {
         msg->header->from_address = _remote_addr;
     }
 

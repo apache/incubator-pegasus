@@ -86,7 +86,7 @@ pc_status partition_guardian::cure(meta_view view,
     CHECK(acts.empty(), "");
 
     pc_status status;
-    if (pc.hp_primary.is_invalid())
+    if (!pc.hp_primary)
         status = on_missing_primary(view, gpid);
     else if (static_cast<int>(pc.hp_secondaries.size()) + 1 < pc.max_replica_count)
         status = on_missing_secondary(view, gpid);
@@ -162,11 +162,11 @@ bool partition_guardian::from_proposals(meta_view &view,
     }
     action = *(cc.lb_actions.front());
     std::string reason;
-    if (action.target.is_invalid() || action.hp_target.is_invalid()) {
+    if (!action.target || !action.hp_target) {
         reason = "action target is invalid";
         goto invalid_action;
     }
-    if (action.node.is_invalid() || action.hp_node.is_invalid()) {
+    if (!action.node || !action.hp_node) {
         reason = "action node is invalid";
         goto invalid_action;
     }
@@ -185,12 +185,12 @@ bool partition_guardian::from_proposals(meta_view &view,
 
     switch (action.type) {
     case config_type::CT_ASSIGN_PRIMARY:
-        is_action_valid = (action.hp_node == action.hp_target && pc.primary.is_invalid() &&
+        is_action_valid = (action.hp_node == action.hp_target && !pc.primary &&
                            !is_secondary(pc, action.hp_node));
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        is_action_valid = (action.hp_node == action.hp_target && pc.primary.is_invalid() &&
-                           is_secondary(pc, action.hp_node));
+        is_action_valid =
+            (action.hp_node == action.hp_target && !pc.primary && is_secondary(pc, action.hp_node));
         break;
     case config_type::CT_ADD_SECONDARY:
     case config_type::CT_ADD_SECONDARY_FOR_LB:
@@ -257,7 +257,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
 
             // find a node with minimal primaries
             newly_partitions *np = newly_partitions_ext::get_inited(ns);
-            if (action.hp_node.is_invalid() ||
+            if (!action.hp_node ||
                 np->less_primaries(*get_newly_partitions(*(view.nodes), action.hp_node),
                                    gpid.get_app_id())) {
                 action.node = dsn::dns_resolver::instance().resolve_address(ns->host_port());
@@ -265,7 +265,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             }
         }
 
-        if (action.hp_node.is_invalid()) {
+        if (!action.hp_node) {
             LOG_ERROR(
                 "all nodes for gpid({}) are dead, waiting for some secondary to come back....",
                 gpid_name);
@@ -463,7 +463,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             }
         }
 
-        if (!action.hp_node.is_invalid()) {
+        if (action.hp_node) {
             action.__set_hp_target(action.hp_node);
             action.target = action.node;
             action.type = config_type::CT_ASSIGN_PRIMARY;
@@ -600,8 +600,8 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
             }
         }
 
-        if (action.hp_node.is_invalid() || in_black_list(action.hp_node)) {
-            if (!action.hp_node.is_invalid()) {
+        if (!action.hp_node || in_black_list(action.hp_node)) {
+            if (action.hp_node) {
                 LOG_INFO("gpid({}) refuse to use selected node({}) as it is in black list",
                          gpid,
                          action.hp_node);
@@ -620,7 +620,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
                 }
             }
 
-            if (!action.hp_node.is_invalid()) {
+            if (action.hp_node) {
                 LOG_INFO("gpid({}): can't find valid node in dropped list to add as secondary, "
                          "choose new node({}) with minimal partitions serving",
                          gpid,
@@ -635,12 +635,12 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         // if not emergency, only try to recover last dropped server
         const dropped_replica &server = cc.dropped.back();
         if (is_node_alive(*view.nodes, server.node)) {
-            CHECK(!server.node.is_invalid(), "invalid server address, address = {}", server.node);
+            CHECK(server.node, "invalid server address, address = {}", server.node);
             action.hp_node = server.node;
             action.node = dsn::dns_resolver::instance().resolve_address(server.node);
         }
 
-        if (!action.hp_node.is_invalid()) {
+        if (action.hp_node) {
             LOG_INFO("gpid({}): choose node({}) as secondary coz it is last_dropped_node and is "
                      "alive now",
                      gpid,
@@ -653,7 +653,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         }
     }
 
-    if (!action.hp_node.is_invalid()) {
+    if (action.hp_node) {
         action.type = config_type::CT_ADD_SECONDARY;
         action.target = pc.primary;
         action.__set_hp_target(pc.hp_primary);

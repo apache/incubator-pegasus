@@ -90,7 +90,7 @@ static void random_assign_partition_config(std::shared_ptr<app_state> &app,
         }
         for (int i = 1; i < indices.size(); ++i) {
             const auto &secondary = get_server(indices[i]);
-            if (!secondary.is_invalid()) {
+            if (secondary) {
                 pc.secondaries.push_back(dsn::dns_resolver::instance().resolve_address(secondary));
                 pc.hp_secondaries.push_back(secondary);
             }

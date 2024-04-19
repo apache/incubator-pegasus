@@ -492,7 +492,7 @@ inline config_context *get_config_context(app_mapper &apps, const dsn::gpid &gpi
 
 inline int replica_count(const partition_configuration &pc)
 {
-    int ans = (pc.hp_primary.is_invalid()) ? 0 : 1;
+    int ans = pc.hp_primary ? 1 : 0;
     return ans + pc.hp_secondaries.size();
 }
 
@@ -510,12 +510,12 @@ enum health_status
 inline health_status partition_health_status(const partition_configuration &pc,
                                              int mutation_2pc_min_replica_count)
 {
-    if (pc.hp_primary.is_invalid()) {
+    if (!pc.hp_primary) {
         if (pc.hp_secondaries.empty())
             return HS_DEAD;
         else
             return HS_UNREADABLE;
-    } else { // !pc.primary.is_invalid()
+    } else {
         int n = pc.hp_secondaries.size() + 1;
         if (n < mutation_2pc_min_replica_count)
             return HS_UNWRITABLE;
