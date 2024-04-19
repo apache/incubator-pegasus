@@ -168,6 +168,7 @@ class TProtocol;
         }                                                                                          \
     } while (0)
 
+// TODO(yingchun): the 'hp' can be reduced.
 // Set 'value' to the '<field>' map and optional 'hp_<field>' map of 'obj'. The key of the
 // maps are rpc_address and host_port type and indexed by 'addr' and 'hp', respectively.
 #define SET_VALUE_FROM_IP_AND_HOST_PORT(obj, field, addr, hp, value)                               \
