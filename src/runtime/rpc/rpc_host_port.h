@@ -94,7 +94,7 @@ class TProtocol;
         _obj.__set_hp_##field({});                                                                 \
     } while (0)
 
-// Add 'addr' and 'hp' to the '<field>' and optional vector 'hp_<field>' of 'obj'. The types
+// Add 'addr' and 'hp' to the vector '<field>' and optional vector 'hp_<field>' of 'obj'. The types
 // of the fields are std::vector<rpc_address> and std::vector<host_port>, respectively.
 #define ADD_IP_AND_HOST_PORT(obj, field, addr, hp)                                                 \
     do {                                                                                           \
@@ -107,6 +107,9 @@ class TProtocol;
         }                                                                                          \
     } while (0)
 
+// Add 'hp' and its DNS resolved rpc_address to the optional vector 'hp_<field>' and vector
+// '<field>' of 'obj'. The types of the fields are std::vector<rpc_address> and
+// std::vector<host_port>, respectively.
 #define ADD_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                                \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
@@ -149,6 +152,10 @@ class TProtocol;
 #define SET_IPS_AND_HOST_PORTS_BY_DNS_GET_MACRO(hp1, hp2, hp3, NAME, ...) NAME
 #define SET_IPS_AND_HOST_PORTS_BY_DNS_GET_MACRO_(tuple)                                            \
     SET_IPS_AND_HOST_PORTS_BY_DNS_GET_MACRO tuple
+
+// Set ... and their DNS resolved rpc_addresses to the vector '<field>' and optional vector
+// 'hp_<field>' of 'obj'. The types of the fields are std::vector<rpc_address> and
+// std::vector<host_port>, respectively.
 #define SET_IPS_AND_HOST_PORTS_BY_DNS(obj, field, ...)                                             \
     SET_IPS_AND_HOST_PORTS_BY_DNS_GET_MACRO_((__VA_ARGS__,                                         \
                                               SET_IPS_AND_HOST_PORTS_BY_DNS_3,                     \
@@ -156,6 +163,9 @@ class TProtocol;
                                               SET_IPS_AND_HOST_PORTS_BY_DNS_1))                    \
     (obj, field, __VA_ARGS__);
 
+// Head insert 'hp' and its DNS resolved rpc_address to the optional vector 'hp_<field>' and vector
+// '<field>' of 'obj'. The types of the fields are std::vector<rpc_address> and
+// std::vector<host_port>, respectively.
 #define HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                        \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \

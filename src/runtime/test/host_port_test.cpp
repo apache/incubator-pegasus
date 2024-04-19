@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include <fmt/core.h>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -26,6 +28,7 @@
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "fd_types.h"
 #include "gtest/gtest.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
