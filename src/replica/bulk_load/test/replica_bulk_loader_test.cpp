@@ -242,8 +242,7 @@ public:
         config.pid = PID;
         config.ballot = BALLOT;
         SET_IP_AND_HOST_PORT_BY_DNS(config, primary, PRIMARY_HP);
-        ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY_HP);
-        ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY_HP2);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(config, secondaries, SECONDARY_HP, SECONDARY_HP2);
         _replica->set_primary_partition_configuration(config);
     }
 

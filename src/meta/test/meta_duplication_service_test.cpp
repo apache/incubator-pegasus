@@ -595,8 +595,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
     for (partition_configuration &pc : app->partitions) {
         pc.ballot = random32(1, 10000);
         SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, server_nodes[0]);
-        ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, server_nodes[1]);
-        ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, server_nodes[2]);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, server_nodes[1], server_nodes[2]);
     }
 
     initialize_node_state();

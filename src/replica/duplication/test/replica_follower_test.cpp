@@ -256,8 +256,7 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
     const host_port secondary2("localhost", 34803);
 
     SET_IP_AND_HOST_PORT_BY_DNS(p, primary, primary);
-    ADD_IP_AND_HOST_PORT_BY_DNS(p, secondaries, secondary1);
-    ADD_IP_AND_HOST_PORT_BY_DNS(p, secondaries, secondary2);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(p, secondaries, secondary1, secondary2);
     resp.partitions.emplace_back(p);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_OK);
     ASSERT_EQ(master_replica_config(follower).primary, p.primary);

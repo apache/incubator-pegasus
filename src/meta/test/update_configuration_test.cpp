@@ -249,14 +249,12 @@ void meta_service_test_app::update_configuration_test()
 
     dsn::partition_configuration &pc0 = app->partitions[0];
     SET_IP_AND_HOST_PORT_BY_DNS(pc0, primary, nodes[0]);
-    ADD_IP_AND_HOST_PORT_BY_DNS(pc0, secondaries, nodes[1]);
-    ADD_IP_AND_HOST_PORT_BY_DNS(pc0, secondaries, nodes[2]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc0, secondaries, nodes[1], nodes[2]);
     pc0.ballot = 3;
 
     dsn::partition_configuration &pc1 = app->partitions[1];
     SET_IP_AND_HOST_PORT_BY_DNS(pc0, primary, nodes[1]);
-    ADD_IP_AND_HOST_PORT_BY_DNS(pc0, secondaries, nodes[0]);
-    ADD_IP_AND_HOST_PORT_BY_DNS(pc0, secondaries, nodes[2]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc0, secondaries, nodes[0], nodes[2]);
     pc1.ballot = 3;
 
     ss->sync_apps_to_remote_storage();
@@ -329,8 +327,7 @@ void meta_service_test_app::adjust_dropped_size()
     // first, the replica is healthy, and there are 2 dropped
     dsn::partition_configuration &pc = app->partitions[0];
     SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
-    ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, nodes[1]);
-    ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, nodes[2]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[1], nodes[2]);
     pc.ballot = 10;
 
     config_context &cc = *get_config_context(ss->_all_apps, pc.pid);
@@ -348,7 +345,7 @@ void meta_service_test_app::adjust_dropped_size()
         std::make_shared<configuration_update_request>();
     req->config = pc;
     req->config.ballot++;
-    ADD_IP_AND_HOST_PORT_BY_DNS(req->config, secondaries, nodes[5]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(req->config, secondaries, nodes[5]);
     req->info = info;
     req->node = dsn::dns_resolver::instance().resolve_address(nodes[5]);
     req->__set_hp_node(nodes[5]);
@@ -509,8 +506,7 @@ void meta_service_test_app::cannot_run_balancer_test()
 
     dsn::partition_configuration &pc = the_app->partitions[0];
     SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
-    ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, nodes[1]);
-    ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, nodes[2]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[1], nodes[2]);
 
 #define REGENERATE_NODE_MAPPER                                                                     \
     svc->_state->_nodes.clear();                                                                   \
