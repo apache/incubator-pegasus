@@ -47,6 +47,7 @@
 #include "duplication_types.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/fmt_logging.h"

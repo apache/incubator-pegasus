@@ -27,6 +27,7 @@
 #include "gtest/gtest.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 

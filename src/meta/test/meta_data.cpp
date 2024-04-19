@@ -35,6 +35,7 @@
 #include "meta/meta_data.h"
 #include "metadata_types.h"
 #include "misc/misc.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 

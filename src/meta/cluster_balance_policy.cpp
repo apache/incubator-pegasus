@@ -26,6 +26,7 @@
 
 #include "dsn.layer2_types.h"
 #include "meta/load_balance_policy.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/flags.h"
