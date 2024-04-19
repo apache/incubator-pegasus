@@ -39,6 +39,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
+#include "utils/utils.h"
 
 namespace dsn {
 
@@ -171,7 +172,7 @@ static bool build_server_network_confs(const char *section,
                 return false;
             }
         } else {
-            if (std::find(ports.begin(), ports.end(), port) == ports.end()) {
+            if (!utils::contains(ports, port)) {
                 // TODO(yingchun): return false or continue?
                 continue;
             }
@@ -327,8 +328,7 @@ bool service_spec::init_app_specs()
     service_app::register_factory<service_app>(mimic_app_role_name);
     if (enable_default_app_mimic) {
         std::string mimic_section_name("apps.mimic");
-        if (std::find(all_section_names.begin(), all_section_names.end(), mimic_section_name) ==
-            all_section_names.end()) {
+        if (!utils::contains(all_section_names, mimic_section_name)) {
             dsn_config_set("apps.mimic", "type", mimic_app_role_name, "");
             dsn_config_set("apps.mimic", "pools", "THREAD_POOL_DEFAULT", "");
             all_section_names.push_back("apps.mimic");

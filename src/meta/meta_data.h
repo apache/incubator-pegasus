@@ -55,6 +55,7 @@
 #include "utils/error_code.h"
 #include "utils/extensible_object.h"
 #include "utils/fmt_logging.h"
+#include "utils/utils.h"
 
 namespace dsn {
 class message_ex;
@@ -269,13 +270,11 @@ struct partition_configuration_stateless
     std::vector<dsn::host_port> &hosts() { return config.hp_secondaries; }
     bool is_host(const host_port &node) const
     {
-        return std::find(config.hp_secondaries.begin(), config.hp_secondaries.end(), node) !=
-               config.hp_secondaries.end();
+        return utils::contains(config.hp_secondaries, node);
     }
     bool is_worker(const host_port &node) const
     {
-        return std::find(config.hp_last_drops.begin(), config.hp_last_drops.end(), node) !=
-               config.hp_last_drops.end();
+        return utils::contains(config.hp_last_drops, node);
     }
     bool is_member(const host_port &node) const { return is_host(node) || is_worker(node); }
 };

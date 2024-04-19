@@ -82,6 +82,7 @@
 #include "utils/metrics.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
+#include "utils/utils.h"
 
 DSN_DEFINE_bool(meta_server,
                 add_secondary_enable_flow_control,
@@ -285,9 +286,9 @@ error_code server_state::dump_app_states(const char *local_path,
         dsn::marshall(writer, *app, DSF_THRIFT_BINARY);
         file->append_buffer(writer.get_buffer());
         for (const partition_configuration &pc : app->partitions) {
-            binary_writer writer;
-            dsn::marshall(writer, pc, DSF_THRIFT_BINARY);
-            file->append_buffer(writer.get_buffer());
+            binary_writer pc_writer;
+            dsn::marshall(pc_writer, pc, DSF_THRIFT_BINARY);
+            file->append_buffer(pc_writer.get_buffer());
         }
     }
     return ERR_OK;
@@ -369,9 +370,9 @@ error_code server_state::restore_from_local_storage(const char *local_path)
 
         for (unsigned int i = 0; i != app->partition_count; ++i) {
             ans = file->read_next_buffer(data);
-            binary_reader reader(data);
+            binary_reader pc_reader(data);
             CHECK_EQ_MSG(ans, 1, "unexpect read buffer");
-            unmarshall(reader, app->partitions[i], DSF_THRIFT_BINARY);
+            unmarshall(pc_reader, app->partitions[i], DSF_THRIFT_BINARY);
             CHECK_EQ_MSG(app->partitions[i].pid.get_partition_index(),
                          i,
                          "uncorrect partition data, gpid({}.{}), appname({})",
@@ -1471,72 +1472,48 @@ void server_state::request_check(const partition_configuration &old,
     case config_type::CT_ASSIGN_PRIMARY:
         if (request.__isset.hp_node) {
             CHECK_NE(old.hp_primary, request.hp_node);
-            CHECK(std::find(old.hp_secondaries.begin(),
-                            old.hp_secondaries.end(),
-                            request.hp_node) == old.hp_secondaries.end(),
-                  "");
+            CHECK(!utils::contains(old.hp_secondaries, request.hp_node), "");
         } else {
             CHECK_NE(old.primary, request.node);
-            CHECK(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) ==
-                      old.secondaries.end(),
-                  "");
+            CHECK(!utils::contains(old.secondaries, request.node), "");
         }
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
         if (request.__isset.hp_node) {
             CHECK_NE(old.hp_primary, request.hp_node);
-            CHECK(std::find(old.hp_secondaries.begin(),
-                            old.hp_secondaries.end(),
-                            request.hp_node) != old.hp_secondaries.end(),
-                  "");
+            CHECK(utils::contains(old.hp_secondaries, request.hp_node), "");
         } else {
             CHECK_NE(old.primary, request.node);
-            CHECK(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) !=
-                      old.secondaries.end(),
-                  "");
+            CHECK(utils::contains(old.secondaries, request.node), "");
         }
         break;
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
         if (request.__isset.hp_node) {
             CHECK_EQ(old.hp_primary, request.hp_node);
-            CHECK(std::find(old.hp_secondaries.begin(),
-                            old.hp_secondaries.end(),
-                            request.hp_node) == old.hp_secondaries.end(),
-                  "");
+            CHECK(!utils::contains(old.hp_secondaries, request.hp_node), "");
         } else {
             CHECK_EQ(old.primary, request.node);
-            CHECK(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) ==
-                      old.secondaries.end(),
-                  "");
+            CHECK(!utils::contains(old.secondaries, request.node), "");
         }
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
     case config_type::CT_REMOVE:
         if (request.__isset.hp_node) {
             CHECK(old.hp_primary == request.hp_node ||
-                      std::find(old.hp_secondaries.begin(),
-                                old.hp_secondaries.end(),
-                                request.hp_node) != old.hp_secondaries.end(),
+                      utils::contains(old.hp_secondaries, request.hp_node),
                   "");
         } else {
-            CHECK(old.primary == request.node ||
-                      std::find(old.secondaries.begin(), old.secondaries.end(), request.node) !=
-                          old.secondaries.end(),
+            CHECK(old.primary == request.node || utils::contains(old.secondaries, request.node),
                   "");
         }
         break;
     case config_type::CT_UPGRADE_TO_SECONDARY:
         if (request.__isset.hp_node) {
             CHECK_NE(old.hp_primary, request.hp_node);
-            CHECK(std::find(old.hp_secondaries.begin(),
-                            old.hp_secondaries.end(),
-                            request.hp_node) == old.hp_secondaries.end(),
-                  "");
+            CHECK(!utils::contains(old.hp_secondaries, request.hp_node), "");
         } else {
             CHECK_NE(old.primary, request.node);
-            CHECK(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) ==
-                      old.secondaries.end(),
-                  "");
+            CHECK(!utils::contains(old.secondaries, request.node), "");
         }
         break;
     case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:
@@ -2743,9 +2720,7 @@ void server_state::check_consistency(const dsn::gpid &gpid)
             auto it = _nodes.find(config.hp_primary);
             CHECK(it != _nodes.end(), "invalid primary address, address = {}", config.hp_primary);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_PRIMARY);
-            CHECK(std::find(config.hp_last_drops.begin(),
-                            config.hp_last_drops.end(),
-                            config.hp_primary) == config.hp_last_drops.end(),
+            CHECK(!utils::contains(config.hp_last_drops, config.hp_primary),
                   "primary shouldn't appear in last_drops, address = {}",
                   config.hp_primary);
         }
@@ -2754,8 +2729,7 @@ void server_state::check_consistency(const dsn::gpid &gpid)
             auto it = _nodes.find(ep);
             CHECK(it != _nodes.end(), "invalid secondary address, address = {}", ep);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
-            CHECK(std::find(config.hp_last_drops.begin(), config.hp_last_drops.end(), ep) ==
-                      config.hp_last_drops.end(),
+            CHECK(!utils::contains(config.hp_last_drops, ep),
                   "secondary shouldn't appear in last_drops, address = {}",
                   ep);
         }

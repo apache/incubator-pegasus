@@ -591,8 +591,8 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
 
     // download next file
     if (file_index + 1 < _metadata.files.size()) {
-        const file_meta &f_meta = _metadata.files[file_index + 1];
-        _download_files_task[f_meta.name] =
+        const file_meta &next_f_meta = _metadata.files[file_index + 1];
+        _download_files_task[next_f_meta.name] =
             tasking::enqueue(LPC_BACKGROUND_BULK_LOAD,
                              tracker(),
                              std::bind(&replica_bulk_loader::download_sst_file,

@@ -217,16 +217,16 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
     const auto &nodes = dsn::service_engine::instance().get_all_nodes();
     for (const auto &node : nodes) {
         int id = node.second->id();
-        std::string name = node.second->full_name();
+        std::string addr = node.second->full_name();
         const auto &hp = node.second->rpc()->primary_host_port();
         int port = hp.port();
-        _node_to_host_port[name] = hp;
-        LOG_INFO("=== node_to_address[{}]={}", name, hp);
-        _address_to_node[port] = name;
-        LOG_INFO("=== address_to_node[{}]={}", port, name);
+        _node_to_host_port[addr] = hp;
+        LOG_INFO("=== node_to_address[{}]={}", addr, hp);
+        _address_to_node[port] = addr;
+        LOG_INFO("=== address_to_node[{}]={}", port, addr);
         if (id != port) {
-            _address_to_node[id] = name;
-            LOG_INFO("=== address_to_node[{}]={}", id, name);
+            _address_to_node[id] = addr;
+            LOG_INFO("=== address_to_node[{}]={}", id, addr);
         }
     }
 

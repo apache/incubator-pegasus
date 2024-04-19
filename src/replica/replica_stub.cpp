@@ -1302,7 +1302,7 @@ void replica_stub::on_node_query_reply(error_code err,
 {
     LOG_INFO("query node partitions replied, err = {}", err);
 
-    zauto_lock l(_state_lock);
+    zauto_lock sl(_state_lock);
     _config_query_task = nullptr;
     if (err != ERR_OK) {
         if (_state == NS_Connecting) {
@@ -1347,7 +1347,7 @@ void replica_stub::on_node_query_reply(error_code err,
 
         replicas rs;
         {
-            zauto_read_lock l(_replicas_lock);
+            zauto_read_lock rl(_replicas_lock);
             rs = _replicas;
         }
 
@@ -1490,7 +1490,7 @@ void replica_stub::on_meta_server_disconnected()
 {
     LOG_INFO("meta server disconnected");
 
-    zauto_lock l(_state_lock);
+    zauto_lock sl(_state_lock);
     if (NS_Disconnected == _state)
         return;
 
@@ -1498,7 +1498,7 @@ void replica_stub::on_meta_server_disconnected()
 
     replicas rs;
     {
-        zauto_read_lock l(_replicas_lock);
+        zauto_read_lock rl(_replicas_lock);
         rs = _replicas;
     }
 

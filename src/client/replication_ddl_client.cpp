@@ -55,6 +55,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
 #include "utils/time_utils.h"
+#include "utils/utils.h"
 
 DSN_DEFINE_uint32(ddl_client,
                   ddl_client_max_attempt_count,
@@ -364,10 +365,10 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         status_str = status_str.substr(status_str.find("AS_") + 3);
         std::string create_time = "-";
         if (info.create_second > 0) {
-            char buf[20];
-            dsn::utils::time_ms_to_date_time((uint64_t)info.create_second * 1000, buf, 20);
-            buf[10] = '_';
-            create_time = buf;
+            char ts_buf[20] = {0};
+            dsn::utils::time_ms_to_date_time((uint64_t)info.create_second * 1000, ts_buf, 20);
+            ts_buf[10] = '_';
+            create_time = ts_buf;
         }
         std::string drop_time = "-";
         std::string drop_expire_time = "-";
@@ -375,16 +376,16 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             available_app_count++;
         } else if (info.status == app_status::AS_DROPPED && info.expire_second > 0) {
             if (info.drop_second > 0) {
-                char buf[20];
-                dsn::utils::time_ms_to_date_time((uint64_t)info.drop_second * 1000, buf, 20);
-                buf[10] = '_';
-                drop_time = buf;
+                char ts_buf[20] = {0};
+                dsn::utils::time_ms_to_date_time((uint64_t)info.drop_second * 1000, ts_buf, 20);
+                ts_buf[10] = '_';
+                drop_time = ts_buf;
             }
             if (info.expire_second > 0) {
-                char buf[20];
-                dsn::utils::time_ms_to_date_time((uint64_t)info.expire_second * 1000, buf, 20);
-                buf[10] = '_';
-                drop_expire_time = buf;
+                char ts_buf[20] = {0};
+                dsn::utils::time_ms_to_date_time((uint64_t)info.expire_second * 1000, ts_buf, 20);
+                ts_buf[10] = '_';
+                drop_expire_time = ts_buf;
             }
         }
         tp_general.add_row(info.app_id);
@@ -914,8 +915,7 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<host_port>
     req->recovery_set.clear();
     req->__set_hp_recovery_set(std::vector<host_port>());
     for (const auto &node : replica_nodes) {
-        if (std::find(req->hp_recovery_set.begin(), req->hp_recovery_set.end(), node) !=
-            req->hp_recovery_set.end()) {
+        if (utils::contains(req->hp_recovery_set, node)) {
             out << "duplicate replica node " << node << ", just ingore it" << std::endl;
         } else {
             req->hp_recovery_set.push_back(node);
@@ -1227,9 +1227,9 @@ replication_ddl_client::query_backup_policy(const std::vector<std::string> &poli
             print_policy_entry(pentry);
             std::cout << std::endl << "backup_infos:" << std::endl;
             const std::vector<backup_entry> &backup_infos = resp.backup_infos[idx];
-            for (int idx = 0; idx < backup_infos.size(); idx++) {
-                std::cout << "[" << (idx + 1) << "]" << std::endl;
-                print_backup_entry(backup_infos[idx]);
+            for (int bi_idx = 0; bi_idx < backup_infos.size(); bi_idx++) {
+                std::cout << "[" << (bi_idx + 1) << "]" << std::endl;
+                print_backup_entry(backup_infos[bi_idx]);
             }
         }
     }

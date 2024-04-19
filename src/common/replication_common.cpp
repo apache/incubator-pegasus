@@ -27,8 +27,6 @@
 #include "common/replication_common.h"
 
 #include <string.h>
-// IWYU pragma: no_include <ext/alloc_traits.h>
-#include <algorithm>
 #include <fstream>
 #include <memory>
 
@@ -43,6 +41,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
+#include "utils/utils.h"
 
 DSN_DEFINE_bool(replication, duplication_enabled, true, "is duplication enabled");
 
@@ -179,15 +178,15 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     if (node == partition_config.hp_primary) {
         replica_config.status = partition_status::PS_PRIMARY;
         return true;
-    } else if (std::find(partition_config.hp_secondaries.begin(),
-                         partition_config.hp_secondaries.end(),
-                         node) != partition_config.hp_secondaries.end()) {
+    }
+
+    if (utils::contains(partition_config.hp_secondaries, node)) {
         replica_config.status = partition_status::PS_SECONDARY;
         return true;
-    } else {
-        replica_config.status = partition_status::PS_INACTIVE;
-        return false;
     }
+
+    replica_config.status = partition_status::PS_INACTIVE;
+    return false;
 }
 
 bool replica_helper::load_servers_from_config(const std::string &section,

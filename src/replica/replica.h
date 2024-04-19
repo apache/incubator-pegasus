@@ -395,7 +395,7 @@ private:
     void remove(configuration_update_request &proposal);
     void update_configuration_on_meta_server(config_type::type type,
                                              const host_port &node,
-                                             partition_configuration &newConfig);
+                                             partition_configuration &new_config);
     void
     on_update_configuration_on_meta_server_reply(error_code err,
                                                  dsn::message_ex *request,

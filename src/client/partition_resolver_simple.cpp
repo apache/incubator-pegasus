@@ -417,13 +417,13 @@ host_port partition_resolver_simple::get_host_port(const partition_configuration
 {
     if (_app_is_stateful) {
         return config.hp_primary;
-    } else {
-        if (config.hp_last_drops.size() == 0) {
-            return host_port();
-        } else {
-            return config.hp_last_drops[rand::next_u32(0, config.last_drops.size() - 1)];
-        }
     }
+
+    if (config.hp_last_drops.empty()) {
+        return host_port();
+    }
+
+    return config.hp_last_drops[rand::next_u32(0, config.last_drops.size() - 1)];
 }
 
 error_code partition_resolver_simple::get_host_port(int partition_index, /*out*/ host_port &hp)

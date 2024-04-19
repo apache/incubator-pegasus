@@ -104,5 +104,11 @@ std::set<T> get_intersection(const std::set<T> &set1, const std::set<T> &set2)
                           std::inserter(intersection, intersection.begin()));
     return intersection;
 }
+
+template <typename SeqContainer, typename Elem>
+bool contains(const SeqContainer &container, const Elem &elem)
+{
+    return std::find(container.begin(), container.end(), elem) != container.end();
+}
 } // namespace utils
 } // namespace dsn
