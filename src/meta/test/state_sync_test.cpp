@@ -54,6 +54,7 @@
 #include "utils/flags.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+#include "utils/test_macros.h"
 
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
@@ -245,7 +246,7 @@ void meta_service_test_app::state_sync_test()
         dsn::error_code ec = ss2->initialize_data_structure();
         ASSERT_EQ(ec, dsn::ERR_OK);
 
-        app_mapper_compare(ss1->_all_apps, ss2->_all_apps);
+        NO_FATALS(app_mapper_compare(ss1->_all_apps, ss2->_all_apps));
         ASSERT_EQ(ss1->_exist_apps.size(), ss2->_exist_apps.size());
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());
@@ -266,7 +267,7 @@ void meta_service_test_app::state_sync_test()
         dsn::error_code ec = ss2->restore_from_local_storage("meta_state.dump3");
         ASSERT_EQ(ec, dsn::ERR_OK);
 
-        app_mapper_compare(ss1->_all_apps, ss2->_all_apps);
+        NO_FATALS(app_mapper_compare(ss1->_all_apps, ss2->_all_apps));
         ASSERT_TRUE(ss1->_exist_apps.size() == ss2->_exist_apps.size());
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());

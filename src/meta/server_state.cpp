@@ -571,9 +571,9 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                 if (ec == ERR_OK) {
                     partition_configuration pc;
                     // TODO(yingchun): check if the fields will be set after decoding.
-                    //  pc.__isset.hp_secondaries = true;
-                    //  pc.__isset.hp_last_drops = true;
-                    //  pc.__isset.hp_primary = true;
+                    pc.__isset.hp_secondaries = true;
+                    pc.__isset.hp_last_drops = true;
+                    pc.__isset.hp_primary = true;
                     dsn::json::json_forwarder<partition_configuration>::decode(value, pc);
 
                     CHECK(pc.pid.get_app_id() == app->app_id &&
