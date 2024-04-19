@@ -350,7 +350,9 @@ private:
     std::string compression_type_to_str(rocksdb::CompressionType type);
 
     // return finish time recorded in rocksdb
-    uint64_t do_manual_compact(const rocksdb::CompactRangeOptions &options);
+    uint64_t do_manual_compact(const rocksdb::CompactRangeOptions &options, uint64_t start);
+
+    void after_manual_compact(uint64_t starttime, uint64_t endtime);
 
     // generate new checkpoint and remove old checkpoints, in order to release storage asap
     // return true if release succeed (new checkpointed generated).

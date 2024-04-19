@@ -1758,14 +1758,22 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
                                 dsn::ERR_LOCAL_APP_FAILURE,
                                 "open app failed, unsupported data version {}",
                                 _pegasus_data_version);
-        // update last manual compact finish timestamp
+        uint64_t last_manual_compact_used_time = 0;
+        LOG_AND_RETURN_NOT_OK(
+            ERROR_PREFIX,
+            _meta_store->get_last_manual_compact_used_time(&last_manual_compact_used_time),
+            "get_last_manual_compact_used_time failed");
+
+        // update last manual compact finish & used timestamp
         _manual_compact_svc.init_last_finish_time_ms(last_manual_compact_finish_time);
+        _manual_compact_svc.init_last_used_time_ms(last_manual_compact_used_time);
         cleanup.cancel();
     } else {
         // Write initial meta data to meta CF and flush when create new DB.
         _meta_store->set_data_version(PEGASUS_DATA_VERSION_MAX);
         _meta_store->set_last_flushed_decree(0);
         _meta_store->set_last_manual_compact_finish_time(0);
+        _meta_store->set_last_manual_compact_used_time(0);
         flush_all_family_columns(true);
     }
 
@@ -3334,7 +3342,8 @@ bool pegasus_server_impl::set_options(
     return ::dsn::ERR_OK;
 }
 
-uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options)
+uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options,
+                                                uint64_t start)
 {
     // wait flush before compact to make all data compacted.
     uint64_t start_time = dsn_now_ms();
@@ -3355,6 +3364,11 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
                     status.ToString(),
                     end_time - start_time);
     _meta_store->set_last_manual_compact_finish_time(end_time);
+    uint64_t last_manual_compact_finish_time = 0;
+    CHECK_OK_PREFIX(
+        _meta_store->get_last_manual_compact_finish_time(&last_manual_compact_finish_time));
+    after_manual_compact(start_time, last_manual_compact_finish_time);
+
     // generate new checkpoint and remove old checkpoints, in order to release storage asap
     if (!release_storage_after_manual_compact()) {
         // it is possible that the new checkpoint is not generated, if there was no data
@@ -3375,10 +3389,15 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
     // update rocksdb statistics immediately
     update_replica_rocksdb_statistics();
 
-    uint64_t last_manual_compact_finish_time = 0;
-    CHECK_OK_PREFIX(
-        _meta_store->get_last_manual_compact_finish_time(&last_manual_compact_finish_time));
     return last_manual_compact_finish_time;
+}
+
+void pegasus_server_impl::after_manual_compact(std::uint64_t starttime, uint64_t endtime)
+{
+    // store last manual compact used time to meta store for learn situation
+    uint64_t used_time = endtime - starttime;
+    _meta_store->set_last_manual_compact_used_time(used_time);
+    flush_all_family_columns(true);
 }
 
 bool pegasus_server_impl::release_storage_after_manual_compact()

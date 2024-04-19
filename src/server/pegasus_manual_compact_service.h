@@ -45,6 +45,8 @@ public:
 
     void init_last_finish_time_ms(uint64_t last_finish_time_ms);
 
+    void init_last_used_time_ms(uint64_t last_used_time_ms);
+
     void start_manual_compact_if_needed(const std::map<std::string, std::string> &envs);
 
     // Called by pegasus_manual_compaction.sh
