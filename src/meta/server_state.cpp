@@ -571,9 +571,9 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                 if (ec == ERR_OK) {
                     partition_configuration pc;
                     // TODO(yingchun): check if the fields will be set after decoding.
-                    //                    pc.__isset.hp_secondaries = true;
-                    //                    pc.__isset.hp_last_drops = true;
-                    //                    pc.__isset.hp_primary = true;
+                    //  pc.__isset.hp_secondaries = true;
+                    //  pc.__isset.hp_last_drops = true;
+                    //  pc.__isset.hp_primary = true;
                     dsn::json::json_forwarder<partition_configuration>::decode(value, pc);
 
                     CHECK(pc.pid.get_app_id() == app->app_id &&
@@ -1812,7 +1812,8 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
 
     request.info = *app;
     request.type = config_type::CT_DROP_PARTITION;
-    SET_IP_AND_HOST_PORT(request, node, pc.primary, pc.hp_primary);
+    request.node = pc.primary;
+    request.__set_hp_node(pc.hp_primary);
 
     request.config = pc;
     for (auto &node : pc.hp_secondaries) {
@@ -1884,7 +1885,8 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
     request.info = *app;
     request.config = pc;
     request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
-    SET_IP_AND_HOST_PORT(request, node, pc.primary, pc.hp_primary);
+    request.node = pc.primary;
+    request.__set_hp_node(pc.hp_primary);
     request.config.ballot++;
     RESET_IP_AND_HOST_PORT(request.config, primary);
     maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);

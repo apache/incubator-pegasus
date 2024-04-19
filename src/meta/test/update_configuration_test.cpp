@@ -253,8 +253,8 @@ void meta_service_test_app::update_configuration_test()
     pc0.ballot = 3;
 
     dsn::partition_configuration &pc1 = app->partitions[1];
-    SET_IP_AND_HOST_PORT_BY_DNS(pc0, primary, nodes[1]);
-    SET_IPS_AND_HOST_PORTS_BY_DNS(pc0, secondaries, nodes[0], nodes[2]);
+    SET_IP_AND_HOST_PORT_BY_DNS(pc1, primary, nodes[1]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc1, secondaries, nodes[0], nodes[2]);
     pc1.ballot = 3;
 
     ss->sync_apps_to_remote_storage();
