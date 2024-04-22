@@ -71,8 +71,8 @@ class TProtocol;
 #define ASSERT_IP_AND_HOST_PORT(obj, field, addr, hp)                                              \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
-        ASSERT_EQ(_obj.field, (addr));                                                             \
-        ASSERT_EQ(_obj.hp_##field, (hp));                                                          \
+        ASSERT_EQ((addr), _obj.field);                                                             \
+        ASSERT_EQ((hp), _obj.hp_##field);                                                          \
     } while (0)
 
 // Set 'hp' and its DNS resolved rpc_address to the optional 'hp_<field>' and '<field>' of 'obj'.
