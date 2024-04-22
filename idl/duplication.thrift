@@ -166,10 +166,10 @@ struct duplication_sync_request
 {
     // the address of of the replica server who sends this request
     // TODO(wutao1): remove this field and get the source address by dsn_msg_from_address
-    1:dsn.rpc_address                                   node;
+    1:dsn.rpc_address                                   node1;
 
     2:map<dsn.gpid, list<duplication_confirm_entry>>    confirm_list;
-    3:dsn.host_port                                     hp_node;
+    3:dsn.host_port                                     hp_node1;
 }
 
 struct duplication_sync_response
