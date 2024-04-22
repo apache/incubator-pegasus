@@ -149,7 +149,7 @@ public:
                      std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list)
     {
         auto req = std::make_unique<duplication_sync_request>();
-        SET_IP_AND_HOST_PORT_BY_DNS(*req, node1, hp);
+        SET_IP_AND_HOST_PORT_BY_DNS(*req, node, hp);
         req->confirm_list = confirm_list;
 
         duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC);

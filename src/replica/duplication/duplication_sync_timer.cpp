@@ -69,7 +69,7 @@ void duplication_sync_timer::run()
     }
 
     auto req = std::make_unique<duplication_sync_request>();
-    SET_IP_AND_HOST_PORT(*req, node1, _stub->primary_address(), _stub->primary_host_port());
+    SET_IP_AND_HOST_PORT(*req, node, _stub->primary_address(), _stub->primary_host_port());
 
     // collects confirm points from all primaries on this server
     for (const replica_ptr &r : _stub->get_all_primaries()) {

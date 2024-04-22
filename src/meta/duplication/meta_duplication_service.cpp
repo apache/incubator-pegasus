@@ -362,10 +362,10 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
     response.err = ERR_OK;
 
     host_port remote_host_port;
-    GET_HOST_PORT(request, node1, remote_host_port);
+    GET_HOST_PORT(request, node, remote_host_port);
     const auto *ns = get_node_state(_state->_nodes, remote_host_port, false);
     if (ns == nullptr) {
-        LOG_WARNING("node({}) is not found in meta server", FMT_HOST_PORT_AND_IP(request, node1));
+        LOG_WARNING("node({}) is not found in meta server", FMT_HOST_PORT_AND_IP(request, node));
         response.err = ERR_OBJECT_NOT_FOUND;
         return;
     }
