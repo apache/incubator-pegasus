@@ -47,7 +47,7 @@
 #include "duplication_types.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
-#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/fmt_logging.h"
@@ -125,14 +125,10 @@ void generate_app(/*out*/ std::shared_ptr<app_state> &app,
         indices[2] = random32(indices[1] + 1, node_list.size() - 1);
 
         int p = random32(0, 2);
-        pc.__set_hp_primary(node_list[indices[p]]);
-        pc.__set_hp_secondaries({});
-        pc.primary = dsn::dns_resolver::instance().resolve_address(node_list[indices[p]]);
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, node_list[indices[p]]);
         for (unsigned int i = 0; i != indices.size(); ++i) {
             if (i != p) {
-                pc.secondaries.push_back(
-                    dsn::dns_resolver::instance().resolve_address(node_list[indices[i]]));
-                pc.hp_secondaries.push_back(node_list[indices[i]]);
+                ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, node_list[indices[i]]);
             }
         }
 
@@ -314,8 +310,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(pc.hp_secondaries.empty(), "");
         CHECK(pc.secondaries.empty(), "");
 
-        pc.primary = act.node;
-        pc.__set_hp_primary(hp_node);
+        SET_IP_AND_HOST_PORT(pc, primary, act.node, hp_node);
         ns = &nodes[hp_node];
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
         ns->put_partition(pc.pid, true);
@@ -326,8 +321,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK_EQ(act.target, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
 
-        pc.hp_secondaries.push_back(hp_node);
-        pc.secondaries.push_back(act.node);
+        ADD_IP_AND_HOST_PORT(pc, secondaries, act.node, hp_node);
         ns = &nodes[hp_node];
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
         ns->put_partition(pc.pid, false);
@@ -342,10 +336,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(nodes.find(hp_node) != nodes.end(), "");
         CHECK(!is_secondary(pc, pc.hp_primary), "");
         nodes[hp_node].remove_partition(pc.pid, true);
-        pc.secondaries.push_back(pc.primary);
-        pc.hp_secondaries.push_back(pc.hp_primary);
-        pc.primary.set_invalid();
-        pc.__set_hp_primary(dsn::host_port());
+        ADD_IP_AND_HOST_PORT(pc, secondaries, pc.primary, pc.hp_primary);
+        RESET_IP_AND_HOST_PORT(pc, primary);
         break;
 
     case config_type::CT_UPGRADE_TO_PRIMARY:
@@ -357,8 +349,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(nodes.find(hp_node) != nodes.end(), "");
 
         ns = &nodes[hp_node];
-        pc.hp_primary = hp_node;
-        pc.primary = act.node;
+        SET_IP_AND_HOST_PORT(pc, primary, act.node, hp_node);
         CHECK(replica_helper::remove_node(hp_node, pc.hp_secondaries), "");
         CHECK(replica_helper::remove_node(act.node, pc.secondaries), "");
         ns->put_partition(pc.pid, true);
@@ -370,11 +361,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(!is_member(pc, hp_node), "");
         CHECK(act.hp_node, "");
         CHECK(act.node, "");
-        if (!pc.__isset.hp_secondaries) {
-            pc.__set_hp_secondaries({});
-        }
-        pc.hp_secondaries.push_back(hp_node);
-        pc.secondaries.push_back(act.node);
+        ADD_IP_AND_HOST_PORT(pc, secondaries, act.node, hp_node);
 
         ns = &nodes[hp_node];
         ns->put_partition(pc.pid, false);

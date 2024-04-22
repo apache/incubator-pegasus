@@ -570,6 +570,7 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                                                             const blob &value) mutable {
                 if (ec == ERR_OK) {
                     partition_configuration pc;
+                    // TODO(yingchun): check if the fields will be set after decoding.
                     pc.__isset.hp_secondaries = true;
                     pc.__isset.hp_last_drops = true;
                     pc.__isset.hp_primary = true;
@@ -1827,10 +1828,8 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     if (pc.primary) {
         maintain_drops(request.config.last_drops, pc.primary, request.type);
     }
-    request.config.primary.set_invalid();
-    request.config.secondaries.clear();
-    request.config.hp_primary.reset();
-    request.config.hp_secondaries.clear();
+    RESET_IP_AND_HOST_PORT(request.config, primary);
+    CLEAR_IP_AND_HOST_PORT(request.config, secondaries);
 
     CHECK_EQ((pc.partition_flags & pc_flags::dropped), 0);
     request.config.partition_flags |= pc_flags::dropped;
@@ -1873,10 +1872,9 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
             return;
         } else {
             LOG_WARNING("gpid({}) is syncing another request with remote, cancel it due to the "
-                        "primary({}({})) is down",
+                        "primary({}) is down",
                         pc.pid,
-                        pc.hp_primary,
-                        pc.primary);
+                        FMT_HOST_PORT_AND_IP(pc, primary));
             cc.cancel_sync();
         }
     }
@@ -1890,8 +1888,7 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
     request.node = pc.primary;
     request.__set_hp_node(pc.hp_primary);
     request.config.ballot++;
-    request.config.primary.set_invalid();
-    request.config.__set_hp_primary(host_port());
+    RESET_IP_AND_HOST_PORT(request.config, primary);
     maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);
     maintain_drops(request.config.last_drops, pc.primary, request.type);
 

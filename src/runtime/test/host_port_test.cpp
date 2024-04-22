@@ -17,12 +17,18 @@
  * under the License.
  */
 
+#include <fmt/core.h>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "bulk_load_types.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "fd_types.h"
 #include "gtest/gtest.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/rpc_address.h"
@@ -253,6 +259,166 @@ TEST(host_port_test, thrift_parser)
     host_port hp2("localhost", 1010);
     send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_BINARY);
     send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_JSON);
+}
+
+TEST(host_port_test, test_macros)
+{
+    static const host_port kHp1("localhost", 8081);
+    static const host_port kHp2("localhost", 8082);
+    static const host_port kHp3("localhost", 8083);
+    static const rpc_address kAddr1 = dns_resolver::instance().resolve_address(kHp1);
+    static const rpc_address kAddr2 = dns_resolver::instance().resolve_address(kHp2);
+    static const rpc_address kAddr3 = dns_resolver::instance().resolve_address(kHp3);
+
+    // Test GET_HOST_PORT-1.
+    {
+        fd::beacon_msg beacon;
+        host_port hp_from_node;
+        GET_HOST_PORT(beacon, from_node, hp_from_node);
+        ASSERT_FALSE(hp_from_node);
+    }
+    // Test GET_HOST_PORT-2.
+    {
+        fd::beacon_msg beacon;
+        host_port hp_from_node;
+        beacon.from_node = kAddr1;
+        GET_HOST_PORT(beacon, from_node, hp_from_node);
+        ASSERT_TRUE(hp_from_node);
+        ASSERT_EQ(kHp1, hp_from_node);
+        ASSERT_EQ(kAddr1, dns_resolver::instance().resolve_address(hp_from_node));
+    }
+    // Test GET_HOST_PORT-3.
+    {
+        fd::beacon_msg beacon;
+        host_port hp_from_node;
+        beacon.__set_hp_from_node(kHp1);
+        GET_HOST_PORT(beacon, from_node, hp_from_node);
+        ASSERT_TRUE(hp_from_node);
+        ASSERT_EQ(kHp1, hp_from_node);
+        ASSERT_EQ(kAddr1, dns_resolver::instance().resolve_address(hp_from_node));
+    }
+
+    // Test SET_IP_AND_HOST_PORT.
+    {
+        fd::beacon_msg beacon;
+        SET_IP_AND_HOST_PORT(beacon, from_node, kAddr1, kHp1);
+        ASSERT_EQ(kAddr1, beacon.from_node);
+        ASSERT_EQ(kHp1, beacon.hp_from_node);
+    }
+
+    // Test SET_IP_AND_HOST_PORT_BY_DNS.
+    {
+        fd::beacon_msg beacon;
+        SET_IP_AND_HOST_PORT_BY_DNS(beacon, from_node, kHp1);
+        ASSERT_EQ(kAddr1, beacon.from_node);
+        ASSERT_EQ(kHp1, beacon.hp_from_node);
+    }
+
+    // Test RESET_IP_AND_HOST_PORT.
+    {
+        fd::beacon_msg beacon;
+        SET_IP_AND_HOST_PORT_BY_DNS(beacon, from_node, kHp1);
+        ASSERT_EQ(kAddr1, beacon.from_node);
+        ASSERT_EQ(kHp1, beacon.hp_from_node);
+        RESET_IP_AND_HOST_PORT(beacon, from_node);
+        ASSERT_FALSE(beacon.from_node);
+        ASSERT_FALSE(beacon.hp_from_node);
+    }
+
+    // Test ADD_IP_AND_HOST_PORT.
+    {
+        partition_configuration pc;
+        ADD_IP_AND_HOST_PORT(pc, secondaries, kAddr1, kHp1);
+        ASSERT_EQ(1, pc.secondaries.size());
+        ASSERT_EQ(1, pc.hp_secondaries.size());
+        ASSERT_EQ(kAddr1, pc.secondaries[0]);
+        ASSERT_EQ(kHp1, pc.hp_secondaries[0]);
+        ADD_IP_AND_HOST_PORT(pc, secondaries, kAddr2, kHp2);
+        ASSERT_EQ(2, pc.secondaries.size());
+        ASSERT_EQ(2, pc.hp_secondaries.size());
+        ASSERT_EQ(kAddr2, pc.secondaries[1]);
+        ASSERT_EQ(kHp2, pc.hp_secondaries[1]);
+    }
+
+    // Test ADD_IP_AND_HOST_PORT_BY_DNS.
+    {
+        partition_configuration pc;
+        ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, kHp1);
+        ASSERT_EQ(1, pc.secondaries.size());
+        ASSERT_EQ(1, pc.hp_secondaries.size());
+        ASSERT_EQ(kAddr1, pc.secondaries[0]);
+        ASSERT_EQ(kHp1, pc.hp_secondaries[0]);
+        ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, kHp2);
+        ASSERT_EQ(2, pc.secondaries.size());
+        ASSERT_EQ(2, pc.hp_secondaries.size());
+        ASSERT_EQ(kAddr2, pc.secondaries[1]);
+        ASSERT_EQ(kHp2, pc.hp_secondaries[1]);
+    }
+
+    // Test SET_IPS_AND_HOST_PORTS_BY_DNS.
+    {
+        partition_configuration pc;
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, kHp1);
+        ASSERT_EQ(1, pc.secondaries.size());
+        ASSERT_EQ(1, pc.hp_secondaries.size());
+        ASSERT_EQ(kAddr1, pc.secondaries[0]);
+        ASSERT_EQ(kHp1, pc.hp_secondaries[0]);
+
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, kHp2, kHp3);
+        ASSERT_EQ(2, pc.secondaries.size());
+        ASSERT_EQ(2, pc.hp_secondaries.size());
+        ASSERT_EQ(kAddr2, pc.secondaries[0]);
+        ASSERT_EQ(kHp2, pc.hp_secondaries[0]);
+        ASSERT_EQ(kAddr3, pc.secondaries[1]);
+        ASSERT_EQ(kHp3, pc.hp_secondaries[1]);
+    }
+
+    // Test CLEAR_IP_AND_HOST_PORT.
+    {
+        partition_configuration pc;
+        ADD_IP_AND_HOST_PORT(pc, secondaries, kAddr1, kHp1);
+        CLEAR_IP_AND_HOST_PORT(pc, secondaries);
+        ASSERT_TRUE(pc.secondaries.empty());
+        ASSERT_TRUE(pc.hp_secondaries.empty());
+    }
+
+    // Test SET_VALUE_FROM_IP_AND_HOST_PORT.
+    {
+        static const int kProgress = 88;
+        replication::bulk_load_response response;
+        replication::partition_bulk_load_state primary_state;
+        primary_state.__set_download_progress(kProgress);
+        SET_VALUE_FROM_IP_AND_HOST_PORT(
+            response, group_bulk_load_state, kAddr1, kHp1, primary_state);
+        ASSERT_EQ(1, response.group_bulk_load_state.size());
+        ASSERT_EQ(1, response.hp_group_bulk_load_state.size());
+        ASSERT_EQ(kAddr1, response.group_bulk_load_state.begin()->first);
+        ASSERT_EQ(kHp1, response.hp_group_bulk_load_state.begin()->first);
+        ASSERT_EQ(kProgress, response.group_bulk_load_state.begin()->second.download_progress);
+        ASSERT_EQ(kProgress, response.hp_group_bulk_load_state.begin()->second.download_progress);
+    }
+
+    // Test SET_VALUE_FROM_HOST_PORT.
+    {
+        static const int kProgress = 88;
+        replication::bulk_load_response response;
+        replication::partition_bulk_load_state primary_state;
+        primary_state.__set_download_progress(kProgress);
+        SET_VALUE_FROM_HOST_PORT(response, group_bulk_load_state, kHp1, primary_state);
+        ASSERT_EQ(1, response.group_bulk_load_state.size());
+        ASSERT_EQ(1, response.hp_group_bulk_load_state.size());
+        ASSERT_EQ(kAddr1, response.group_bulk_load_state.begin()->first);
+        ASSERT_EQ(kHp1, response.hp_group_bulk_load_state.begin()->first);
+        ASSERT_EQ(kProgress, response.group_bulk_load_state.begin()->second.download_progress);
+        ASSERT_EQ(kProgress, response.hp_group_bulk_load_state.begin()->second.download_progress);
+    }
+
+    // Test FMT_HOST_PORT_AND_IP.
+    {
+        fd::beacon_msg beacon;
+        SET_IP_AND_HOST_PORT_BY_DNS(beacon, from_node, kHp1);
+        ASSERT_EQ(fmt::format("{}({})", kHp1, kAddr1), FMT_HOST_PORT_AND_IP(beacon, from_node));
+    }
 }
 
 } // namespace dsn

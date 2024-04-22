@@ -164,8 +164,8 @@ void replica::assign_primary(configuration_update_request &proposal)
         return;
     }
 
-    proposal.config.primary = _stub->primary_address();
-    proposal.config.__set_hp_primary(_stub->primary_host_port());
+    SET_IP_AND_HOST_PORT(
+        proposal.config, primary, _stub->primary_address(), _stub->primary_host_port());
     replica_helper::remove_node(_stub->primary_address(), proposal.config.secondaries);
     replica_helper::remove_node(_stub->primary_host_port(), proposal.config.hp_secondaries);
 
@@ -252,11 +252,7 @@ void replica::upgrade_to_secondary_on_primary(const ::dsn::host_port &node)
     partition_configuration new_config = _primary_states.membership;
 
     // add secondary
-    if (!new_config.__isset.hp_secondaries) {
-        new_config.__set_hp_secondaries({});
-    }
-    new_config.hp_secondaries.push_back(node);
-    new_config.secondaries.push_back(dsn::dns_resolver::instance().resolve_address(node));
+    ADD_IP_AND_HOST_PORT_BY_DNS(new_config, secondaries, node);
 
     update_configuration_on_meta_server(config_type::CT_UPGRADE_TO_SECONDARY, node, new_config);
 }
@@ -271,14 +267,8 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request &pr
     CHECK(proposal.config.hp_secondaries == _primary_states.membership.hp_secondaries, "");
     CHECK_EQ(proposal.hp_node, proposal.config.hp_primary);
 
-    proposal.config.primary.set_invalid();
-    proposal.config.__set_hp_primary(host_port());
-    proposal.config.secondaries.push_back(proposal.node);
-    if (!proposal.config.__isset.hp_secondaries) {
-        proposal.config.__set_hp_secondaries({});
-    }
-    proposal.config.hp_secondaries.push_back(proposal.hp_node);
-
+    RESET_IP_AND_HOST_PORT(proposal.config, primary);
+    ADD_IP_AND_HOST_PORT(proposal.config, secondaries, proposal.node, proposal.hp_node);
     update_configuration_on_meta_server(
         config_type::CT_DOWNGRADE_TO_SECONDARY, proposal.hp_node, proposal.config);
 }
@@ -293,8 +283,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request &pro
     CHECK(proposal.config.hp_secondaries == _primary_states.membership.hp_secondaries, "");
 
     if (proposal.hp_node == proposal.config.hp_primary) {
-        proposal.config.primary.set_invalid();
-        proposal.config.hp_primary.reset();
+        RESET_IP_AND_HOST_PORT(proposal.config, primary);
     } else {
         CHECK(replica_helper::remove_node(proposal.node, proposal.config.secondaries) &&
                   replica_helper::remove_node(proposal.hp_node, proposal.config.hp_secondaries),
@@ -320,8 +309,7 @@ void replica::remove(configuration_update_request &proposal)
     switch (st) {
     case partition_status::PS_PRIMARY:
         CHECK_EQ(proposal.config.hp_primary, proposal.hp_node);
-        proposal.config.primary.set_invalid();
-        proposal.config.hp_primary.reset();
+        RESET_IP_AND_HOST_PORT(proposal.config, primary);
         break;
     case partition_status::PS_SECONDARY: {
         CHECK(replica_helper::remove_node(proposal.node, proposal.config.secondaries) &&

@@ -54,7 +54,6 @@
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "metadata_types.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
@@ -79,24 +78,21 @@ static void apply_update_request(/*in-out*/ configuration_update_request &update
     switch (update_req.type) {
     case config_type::CT_ASSIGN_PRIMARY:
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        pc.primary = update_req.node;
-        pc.__set_hp_primary(update_req.hp_node);
+        SET_IP_AND_HOST_PORT(pc, primary, update_req.node, update_req.hp_node);
         replica_helper::remove_node(update_req.node, pc.secondaries);
         replica_helper::remove_node(update_req.hp_node, pc.hp_secondaries);
         break;
 
     case config_type::CT_ADD_SECONDARY:
     case config_type::CT_ADD_SECONDARY_FOR_LB:
-        pc.secondaries.push_back(update_req.node);
-        pc.hp_secondaries.push_back(update_req.hp_node);
+        ADD_IP_AND_HOST_PORT(pc, secondaries, update_req.node, update_req.hp_node);
         update_req.type = config_type::CT_UPGRADE_TO_SECONDARY;
         break;
 
     case config_type::CT_REMOVE:
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
         if (update_req.hp_node == pc.hp_primary) {
-            pc.primary.set_invalid();
-            pc.hp_primary.reset();
+            RESET_IP_AND_HOST_PORT(pc, primary);
         } else {
             replica_helper::remove_node(update_req.node, pc.secondaries);
             replica_helper::remove_node(update_req.hp_node, pc.hp_secondaries);
@@ -104,10 +100,8 @@ static void apply_update_request(/*in-out*/ configuration_update_request &update
         break;
 
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        pc.secondaries.push_back(pc.primary);
-        pc.hp_secondaries.push_back(pc.hp_primary);
-        pc.primary.set_invalid();
-        pc.hp_primary.reset();
+        ADD_IP_AND_HOST_PORT(pc, secondaries, pc.primary, pc.hp_primary);
+        RESET_IP_AND_HOST_PORT(pc, primary);
         break;
     default:
         break;
@@ -220,11 +214,8 @@ void meta_partition_guardian_test::cure_test()
     std::cerr << "Case: upgrade secondary to primary, and message lost" << std::endl;
     // initialize
     state->_nodes.clear();
-    pc.primary.set_invalid();
-    pc.hp_primary.reset();
-    pc.secondaries = {dsn::dns_resolver::instance().resolve_address(nodes[0]),
-                      dsn::dns_resolver::instance().resolve_address(nodes[1])};
-    pc.__set_hp_secondaries({nodes[0], nodes[1]});
+    RESET_IP_AND_HOST_PORT(pc, primary);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[0], nodes[1]);
     pc.ballot = 1;
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
@@ -283,11 +274,8 @@ void meta_partition_guardian_test::cure_test()
     std::cerr << "Case: upgrade secondary to primary, and the candidate died" << std::endl;
     // initialize
     state->_nodes.clear();
-    pc.primary.set_invalid();
-    pc.hp_primary.reset();
-    pc.secondaries = {dsn::dns_resolver::instance().resolve_address(nodes[0]),
-                      dsn::dns_resolver::instance().resolve_address(nodes[1])};
-    pc.__set_hp_secondaries({nodes[0], nodes[1]});
+    RESET_IP_AND_HOST_PORT(pc, primary);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[0], nodes[1]);
     pc.ballot = 1;
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
@@ -347,10 +335,8 @@ void meta_partition_guardian_test::cure_test()
     std::cerr << "Case: add secondary, and the message lost" << std::endl;
     // initialize
     state->_nodes.clear();
-    pc.primary = dsn::dns_resolver::instance().resolve_address(nodes[0]);
-    pc.secondaries = {dsn::dns_resolver::instance().resolve_address(nodes[1])};
-    pc.__set_hp_primary(nodes[0]);
-    pc.__set_hp_secondaries({nodes[1]});
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[1]);
     pc.ballot = 1;
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
@@ -408,10 +394,8 @@ void meta_partition_guardian_test::cure_test()
     std::cerr << "Case: add secondary, but the primary is removing another" << std::endl;
     // initialize
     state->_nodes.clear();
-    pc.primary = dsn::dns_resolver::instance().resolve_address(nodes[0]);
-    pc.secondaries = {dsn::dns_resolver::instance().resolve_address(nodes[1])};
-    pc.__set_hp_primary(nodes[0]);
-    pc.__set_hp_secondaries({nodes[1]});
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[1]);
     pc.ballot = 1;
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
@@ -432,8 +416,7 @@ void meta_partition_guardian_test::cure_test()
         update_req->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
         update_req->node = update_req->config.secondaries[0];
         update_req->hp_node = update_req->config.hp_secondaries[0];
-        update_req->config.secondaries.clear();
-        update_req->config.hp_secondaries.clear();
+        CLEAR_IP_AND_HOST_PORT(update_req->config, secondaries);
 
         proposal_sent = true;
 
@@ -453,10 +436,8 @@ void meta_partition_guardian_test::cure_test()
     std::cerr << "Case: add secondary, and the added secondary is dead" << std::endl;
     // initialize
     state->_nodes.clear();
-    pc.primary = dsn::dns_resolver::instance().resolve_address(nodes[0]);
-    pc.secondaries = {dsn::dns_resolver::instance().resolve_address(nodes[1])};
-    pc.__set_hp_primary(nodes[0]);
-    pc.__set_hp_secondaries({nodes[1]});
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[1]);
     pc.ballot = 1;
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
@@ -517,10 +498,8 @@ void meta_partition_guardian_test::cure_test()
     std::cerr << "Case: add secondary, and the primary is dead" << std::endl;
     // initialize
     state->_nodes.clear();
-    pc.primary = dsn::dns_resolver::instance().resolve_address(nodes[0]);
-    pc.__set_hp_primary(nodes[0]);
-    pc.secondaries = {dsn::dns_resolver::instance().resolve_address(nodes[1])};
-    pc.__set_hp_secondaries({nodes[1]});
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[1]);
     pc.ballot = 1;
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
@@ -553,13 +532,9 @@ void meta_partition_guardian_test::cure_test()
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     state->_nodes.clear();
-    pc.primary.set_invalid();
-    pc.hp_primary.reset();
-    pc.hp_secondaries.clear();
-    pc.last_drops = {dsn::dns_resolver::instance().resolve_address(nodes[0]),
-                     dsn::dns_resolver::instance().resolve_address(nodes[1]),
-                     dsn::dns_resolver::instance().resolve_address(nodes[2])};
-    pc.__set_hp_last_drops({nodes[0], nodes[1], nodes[2]});
+    RESET_IP_AND_HOST_PORT(pc, primary);
+    CLEAR_IP_AND_HOST_PORT(pc, secondaries);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, last_drops, nodes[0], nodes[1], nodes[2]);
     pc.ballot = 4;
     state->initialize_node_state();
     svc->set_node_state(nodes, true);
@@ -669,13 +644,9 @@ void meta_partition_guardian_test::cure_test()
     get_node_state(state->_nodes, nodes[1], false)->set_replicas_collect_flag(true);
     get_node_state(state->_nodes, nodes[2], false)->set_replicas_collect_flag(true);
 
-    pc.primary.set_invalid();
-    pc.hp_primary.reset();
-    pc.hp_secondaries.clear();
-    pc.last_drops = {dsn::dns_resolver::instance().resolve_address(nodes[0]),
-                     dsn::dns_resolver::instance().resolve_address(nodes[1]),
-                     dsn::dns_resolver::instance().resolve_address(nodes[2])};
-    pc.__set_hp_last_drops({nodes[0], nodes[1], nodes[2]});
+    RESET_IP_AND_HOST_PORT(pc, primary);
+    CLEAR_IP_AND_HOST_PORT(pc, secondaries);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, last_drops, nodes[0], nodes[1], nodes[2]);
 
     t = dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
                               nullptr,
@@ -769,11 +740,9 @@ void meta_partition_guardian_test::cure_test()
         return update_req;
     });
 
-    pc.primary.set_invalid();
-    pc.hp_primary.reset();
-    pc.hp_secondaries.clear();
-    pc.last_drops = {dsn::dns_resolver::instance().resolve_address(nodes[0])};
-    pc.__set_hp_last_drops({nodes[0]});
+    RESET_IP_AND_HOST_PORT(pc, primary);
+    CLEAR_IP_AND_HOST_PORT(pc, secondaries);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, last_drops, nodes[0]);
     state->_nodes.clear();
     pc.ballot = 1;
     state->initialize_node_state();
@@ -926,43 +895,37 @@ void meta_partition_guardian_test::from_proposal_test()
     std::cerr << "Case 6: test invalid proposal: already have priamry but assign" << std::endl;
     cpa2 = new_proposal_action(nodes_list[0], nodes_list[0], config_type::CT_ASSIGN_PRIMARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
-    pc.primary = dsn::dns_resolver::instance().resolve_address(nodes_list[1]);
-    pc.__set_hp_primary(nodes_list[1]);
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes_list[1]);
     ASSERT_FALSE(guardian.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 7: test invalid proposal: upgrade non-secondary" << std::endl;
     cpa2 = new_proposal_action(nodes_list[0], nodes_list[0], config_type::CT_UPGRADE_TO_PRIMARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
-    pc.primary.set_invalid();
-    pc.hp_primary.reset();
+    RESET_IP_AND_HOST_PORT(pc, primary);
     ASSERT_FALSE(guardian.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 8: test invalid proposal: add exist secondary" << std::endl;
     cpa2 = new_proposal_action(nodes_list[0], nodes_list[1], config_type::CT_ADD_SECONDARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
-    pc.primary = dsn::dns_resolver::instance().resolve_address(nodes_list[1]);
-    pc.__set_hp_primary(nodes_list[1]);
-    pc.secondaries = {dsn::dns_resolver::instance().resolve_address(nodes_list[1])};
-    pc.__set_hp_secondaries({nodes_list[1]});
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes_list[1]);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes_list[1]);
     ASSERT_FALSE(guardian.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 9: test invalid proposal: downgrade non member" << std::endl;
     cpa2 = new_proposal_action(nodes_list[0], nodes_list[1], config_type::CT_REMOVE);
     cc.lb_actions.assign_balancer_proposals({cpa2});
-    pc.primary = dsn::dns_resolver::instance().resolve_address(nodes_list[0]);
-    pc.__set_hp_primary(nodes_list[0]);
-    pc.hp_secondaries.clear();
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes_list[0]);
+    CLEAR_IP_AND_HOST_PORT(pc, secondaries);
     ASSERT_FALSE(guardian.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 10: test abnormal learning detect" << std::endl;
     cpa2 = new_proposal_action(nodes_list[0], nodes_list[1], config_type::CT_ADD_SECONDARY);
-    pc.primary = dsn::dns_resolver::instance().resolve_address(nodes_list[0]);
-    pc.__set_hp_primary(nodes_list[0]);
-    pc.hp_secondaries.clear();
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes_list[0]);
+    CLEAR_IP_AND_HOST_PORT(pc, secondaries);
     cc.lb_actions.assign_balancer_proposals({cpa2});
 
     replica_info i;

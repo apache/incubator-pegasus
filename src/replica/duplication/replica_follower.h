@@ -26,7 +26,6 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "replica/replica_base.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
@@ -80,10 +79,9 @@ private:
     {
         std::string app_info = fmt::format("{}.{}", _master_cluster_name, _master_app_name);
         if (_master_replica_config.hp_primary) {
-            return fmt::format("{}({}({})|{})",
+            return fmt::format("{}({}|{})",
                                app_info,
-                               _master_replica_config.hp_primary,
-                               _master_replica_config.primary,
+                               FMT_HOST_PORT_AND_IP(_master_replica_config, primary),
                                _master_replica_config.pid);
         }
         return app_info;

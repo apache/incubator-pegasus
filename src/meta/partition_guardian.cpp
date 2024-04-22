@@ -347,19 +347,17 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                     break;
                 }
             }
-            LOG_INFO("{}: config_context.last_drops[{}({})]: node({}), dropped_index({})",
+            LOG_INFO("{}: config_context.last_drops[{}]: node({}), dropped_index({})",
                      gpid_name,
                      i,
-                     pc.hp_last_drops[i],
-                     pc.last_drops[i],
+                     FMT_HOST_PORT_AND_IP(pc, last_drops[i]),
                      dropped_index);
         }
 
         if (pc.hp_last_drops.size() == 1) {
-            LOG_WARNING("{}: the only node({}({})) is dead, waiting it to come back",
+            LOG_WARNING("{}: the only node({}) is dead, waiting it to come back",
                         gpid_name,
-                        pc.hp_last_drops.back(),
-                        pc.last_drops.back());
+                        FMT_HOST_PORT_AND_IP(pc, last_drops.back()));
             action.hp_node = pc.hp_last_drops.back();
             action.node = pc.last_drops.back();
         } else {

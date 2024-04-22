@@ -75,15 +75,14 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
 
             CHECK_EQ(nodes[act.hp_node].served_as(pc.pid), partition_status::PS_INACTIVE);
             nodes[act.hp_node].put_partition(pc.pid, true);
-            pc.primary = act.node;
-            pc.hp_primary = act.hp_node;
+            SET_IP_AND_HOST_PORT(pc, primary, act.node, act.hp_node);
             break;
 
         case config_type::CT_ADD_SECONDARY:
             CHECK(!is_member(pc, act.hp_node), "");
             CHECK_EQ(pc.hp_primary, act.hp_target);
             CHECK(nodes.find(act.hp_node) != nodes.end(), "");
-            pc.hp_secondaries.push_back(act.hp_node);
+            ADD_IP_AND_HOST_PORT(pc, secondaries, act.node, act.hp_node);
             ns = &nodes[act.hp_node];
             CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
             ns->put_partition(pc.pid, false);
@@ -98,8 +97,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
     // test upgrade to primary
     CHECK_EQ(nodes[pc.hp_primary].served_as(pc.pid), partition_status::PS_PRIMARY);
     nodes[pc.hp_primary].remove_partition(pc.pid, true);
-    pc.primary.set_invalid();
-    pc.hp_primary.reset();
+    RESET_IP_AND_HOST_PORT(pc, primary);
 
     ps = guardian.cure({&apps, &nodes}, pc.pid, act);
     CHECK_EQ(act.type, config_type::CT_UPGRADE_TO_PRIMARY);
@@ -109,8 +107,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
     CHECK(nodes.find(act.hp_node) != nodes.end(), "");
 
     ns = &nodes[act.hp_node];
-    pc.primary = act.node;
-    pc.__set_hp_primary(act.hp_node);
+    SET_IP_AND_HOST_PORT(pc, primary, act.node, act.hp_node);
     std::remove(pc.secondaries.begin(), pc.secondaries.end(), pc.primary);
     std::remove(pc.hp_secondaries.begin(), pc.hp_secondaries.end(), pc.hp_primary);
 
@@ -168,12 +165,11 @@ void meta_service_test_app::balancer_validator()
     // now test the cure
     ::dsn::partition_configuration &pc = the_app->partitions[0];
     nodes[pc.hp_primary].remove_partition(pc.pid, false);
-    for (const auto &hp : pc.hp_secondaries)
+    for (const auto &hp : pc.hp_secondaries) {
         nodes[hp].remove_partition(pc.pid, false);
-    pc.primary.set_invalid();
-    pc.secondaries.clear();
-    pc.hp_primary.reset();
-    pc.hp_secondaries.clear();
+    }
+    RESET_IP_AND_HOST_PORT(pc, primary);
+    CLEAR_IP_AND_HOST_PORT(pc, secondaries);
 
     // cure test
     check_cure(apps, nodes, pc);
@@ -212,10 +208,12 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
             int n;
             infile >> n;
             infile >> ip_port;
-            app->partitions[j].hp_primary = host_port::from_string(ip_port);
+            const auto primary = host_port::from_string(ip_port);
+            SET_IP_AND_HOST_PORT_BY_DNS(app->partitions[j], primary, primary);
             for (int k = 1; k < n; ++k) {
                 infile >> ip_port;
-                app->partitions[j].hp_secondaries.push_back(host_port::from_string(ip_port));
+                const auto secondary = host_port::from_string(ip_port);
+                ADD_IP_AND_HOST_PORT_BY_DNS(app->partitions[j], secondaries, secondary);
             }
         }
     }

@@ -191,13 +191,10 @@ public:
         config.max_replica_count = 3;
         config.pid = PARENT_GPID;
         config.ballot = INIT_BALLOT;
-        config.hp_primary = PRIMARY;
-        config.primary = PRIMARY_ADDR;
-        config.__set_hp_secondaries({SECONDARY});
-        config.secondaries.emplace_back(SECONDARY_ADDR);
+        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, PRIMARY);
+        ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY);
         if (!lack_of_secondary) {
-            config.secondaries.emplace_back(SECONDARY_ADDR2);
-            config.hp_secondaries.emplace_back(SECONDARY2);
+            ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY2);
         }
         _parent_replica->set_primary_partition_configuration(config);
     }
@@ -363,8 +360,7 @@ public:
         req.parent_config.pid = PARENT_GPID;
         req.parent_config.ballot = INIT_BALLOT;
         req.parent_config.last_committed_decree = DECREE;
-        req.parent_config.primary = PRIMARY_ADDR;
-        req.parent_config.__set_hp_primary(PRIMARY);
+        SET_IP_AND_HOST_PORT_BY_DNS(req.parent_config, primary, PRIMARY);
         req.child_config.pid = CHILD_GPID;
         req.child_config.ballot = INIT_BALLOT + 1;
         req.child_config.last_committed_decree = 0;

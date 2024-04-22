@@ -46,7 +46,6 @@
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
@@ -55,6 +54,7 @@
 #include "utils/flags.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+#include "utils/test_macros.h"
 
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
@@ -83,22 +83,14 @@ static void random_assign_partition_config(std::shared_ptr<app_state> &app,
             start = indices.back() + 1;
         }
         const auto &primary = get_server(indices[0]);
-        pc.primary = dsn::dns_resolver::instance().resolve_address(primary);
-        pc.__set_hp_primary(primary);
-        if (!pc.__isset.hp_secondaries) {
-            pc.__set_hp_secondaries({});
-        }
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
         for (int i = 1; i < indices.size(); ++i) {
             const auto &secondary = get_server(indices[i]);
             if (secondary) {
-                pc.secondaries.push_back(dsn::dns_resolver::instance().resolve_address(secondary));
-                pc.hp_secondaries.push_back(secondary);
+                ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, secondary);
             }
         }
-        const auto hp = server_list.back();
-        const auto addr = dsn::dns_resolver::instance().resolve_address(hp);
-        pc.__set_hp_last_drops({hp});
-        pc.last_drops = {addr};
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, last_drops, server_list.back());
     }
 }
 
@@ -254,7 +246,7 @@ void meta_service_test_app::state_sync_test()
         dsn::error_code ec = ss2->initialize_data_structure();
         ASSERT_EQ(ec, dsn::ERR_OK);
 
-        app_mapper_compare(ss1->_all_apps, ss2->_all_apps);
+        NO_FATALS(app_mapper_compare(ss1->_all_apps, ss2->_all_apps));
         ASSERT_EQ(ss1->_exist_apps.size(), ss2->_exist_apps.size());
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());
@@ -275,7 +267,7 @@ void meta_service_test_app::state_sync_test()
         dsn::error_code ec = ss2->restore_from_local_storage("meta_state.dump3");
         ASSERT_EQ(ec, dsn::ERR_OK);
 
-        app_mapper_compare(ss1->_all_apps, ss2->_all_apps);
+        NO_FATALS(app_mapper_compare(ss1->_all_apps, ss2->_all_apps));
         ASSERT_TRUE(ss1->_exist_apps.size() == ss2->_exist_apps.size());
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());

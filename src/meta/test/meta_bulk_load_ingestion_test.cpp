@@ -27,6 +27,7 @@
 #include "meta/meta_bulk_load_ingestion_context.h"
 #include "meta/meta_data.h"
 #include "meta_test_base.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/fail_point.h"
 
@@ -229,9 +230,8 @@ public:
                         config_context &cc)
     {
         config.pid = gpid(APP_ID, pidx);
-        config.hp_primary = nodes[0];
-        config.hp_secondaries.emplace_back(nodes[1]);
-        config.hp_secondaries.emplace_back(nodes[2]);
+        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, nodes[0]);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(config, secondaries, nodes[1], nodes[2]);
 
         auto count = nodes.size();
         for (auto i = 0; i < count; i++) {

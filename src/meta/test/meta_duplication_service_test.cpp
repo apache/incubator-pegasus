@@ -587,9 +587,6 @@ TEST_F(meta_duplication_service_test, remove_dup)
 TEST_F(meta_duplication_service_test, duplication_sync)
 {
     const auto &server_nodes = ensure_enough_alive_nodes(3);
-    const auto &node = server_nodes[0];
-    const auto &addr = dsn::dns_resolver::instance().resolve_address(server_nodes[0]);
-
     const std::string test_app = "test_app_0";
     create_app(test_app);
     auto app = find_app(test_app);
@@ -597,14 +594,14 @@ TEST_F(meta_duplication_service_test, duplication_sync)
     // generate all primaries on node[0]
     for (partition_configuration &pc : app->partitions) {
         pc.ballot = random32(1, 10000);
-        pc.primary = addr;
-        pc.__set_hp_primary(server_nodes[0]);
-        pc.hp_secondaries.push_back(server_nodes[1]);
-        pc.hp_secondaries.push_back(server_nodes[2]);
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, server_nodes[0]);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, server_nodes[1], server_nodes[2]);
     }
 
     initialize_node_state();
 
+    const auto &node = server_nodes[0];
+    const auto &addr = dsn::dns_resolver::instance().resolve_address(server_nodes[0]);
     const dupid_t dupid = create_dup(test_app).dupid;
     auto dup = app->duplications[dupid];
     for (int i = 0; i < app->partition_count; i++) {
@@ -818,12 +815,11 @@ TEST_F(meta_duplication_service_test, fail_mode)
 
     // ensure dup_sync will synchronize fail_mode
     const auto hp = generate_node_list(3)[0];
-    const auto addr = dsn::dns_resolver::instance().resolve_address(hp);
     for (partition_configuration &pc : app->partitions) {
-        pc.primary = addr;
-        pc.__set_hp_primary(hp);
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, hp);
     }
     initialize_node_state();
+    const auto addr = dsn::dns_resolver::instance().resolve_address(hp);
     auto sync_resp = duplication_sync(addr, hp, {});
     ASSERT_TRUE(sync_resp.dup_map[app->app_id][dup->id].__isset.fail_mode);
     ASSERT_EQ(sync_resp.dup_map[app->app_id][dup->id].fail_mode, duplication_fail_mode::FAIL_SKIP);

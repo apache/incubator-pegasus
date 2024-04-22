@@ -36,6 +36,7 @@
 #include "meta/meta_service.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/defer.h"
 #include "utils/fail_point.h"
@@ -118,7 +119,7 @@ TEST(cluster_balance_policy, get_app_migration_info)
     info.app_name = appname;
     info.partition_count = 1;
     auto app = std::make_shared<app_state>(info);
-    app->partitions[0].hp_primary = hp;
+    SET_IP_AND_HOST_PORT_BY_DNS(app->partitions[0], primary, hp);
 
     node_state ns;
     ns.set_hp(hp);
@@ -161,7 +162,7 @@ TEST(cluster_balance_policy, get_node_migration_info)
     info.app_name = appname;
     info.partition_count = 1;
     auto app = std::make_shared<app_state>(info);
-    app->partitions[0].hp_primary = hp;
+    SET_IP_AND_HOST_PORT_BY_DNS(app->partitions[0], primary, hp);
     serving_replica sr;
     sr.node = hp;
     std::string disk_tag = "disk1";
@@ -514,9 +515,8 @@ TEST(cluster_balance_policy, calc_potential_moving)
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
     partition_configuration pc;
-    pc.hp_primary = hp1;
-    pc.hp_secondaries.push_back(hp2);
-    pc.hp_secondaries.push_back(hp3);
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, hp1);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, hp2, hp3);
     app->partitions[0] = pc;
     app->partitions[1] = pc;
 

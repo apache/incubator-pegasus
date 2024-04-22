@@ -26,6 +26,9 @@
 
 #include "dsn.layer2_types.h"
 #include "meta/load_balance_policy.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
@@ -542,10 +545,10 @@ bool cluster_balance_policy::apply_move(const move_info &move,
     it->second.erase(move.pid);
     node_target.future_partitions.insert(move.pid);
 
-    // add into migration list and selected_pid
+    // add into the migration list and selected_pid
     partition_configuration pc;
     pc.pid = move.pid;
-    pc.hp_primary = primary_hp;
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary_hp);
     list[move.pid] = generate_balancer_request(*_global_view->apps, pc, move.type, source, target);
     _migration_result->emplace(
         move.pid, generate_balancer_request(*_global_view->apps, pc, move.type, source, target));

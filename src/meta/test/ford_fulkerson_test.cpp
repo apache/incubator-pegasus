@@ -27,6 +27,8 @@
 #include "gtest/gtest.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 
 namespace dsn {
@@ -96,8 +98,7 @@ TEST(ford_fulkerson, update_decree)
     info.partition_count = 1;
     std::shared_ptr<app_state> app = app_state::create(info);
     partition_configuration pc;
-    pc.hp_secondaries.push_back(hp2);
-    pc.hp_secondaries.push_back(hp3);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, hp2, hp3);
     app->partitions.push_back(pc);
     app->partitions.push_back(pc);
 
@@ -134,9 +135,8 @@ TEST(ford_fulkerson, find_shortest_path)
     std::shared_ptr<app_state> app = app_state::create(info);
 
     partition_configuration pc;
-    pc.hp_primary = hp1;
-    pc.hp_secondaries.push_back(hp2);
-    pc.hp_secondaries.push_back(hp3);
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, hp1);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, hp2, hp3);
     app->partitions[0] = pc;
     app->partitions[1] = pc;
 

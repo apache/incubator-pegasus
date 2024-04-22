@@ -991,8 +991,7 @@ void replica_split_manager::register_child_on_meta(ballot b) // on primary paren
     partition_configuration child_config = _replica->_primary_states.membership;
     child_config.ballot++;
     child_config.last_committed_decree = 0;
-    child_config.last_drops.clear();
-    child_config.hp_last_drops.clear();
+    CLEAR_IP_AND_HOST_PORT(child_config, last_drops);
     child_config.pid.set_partition_index(_replica->_app_info.partition_count +
                                          get_gpid().get_partition_index());
 
