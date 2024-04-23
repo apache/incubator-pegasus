@@ -29,6 +29,7 @@
 #include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
