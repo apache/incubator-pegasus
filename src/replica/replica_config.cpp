@@ -176,7 +176,7 @@ void replica::assign_primary(configuration_update_request &proposal)
 }
 
 // run on primary to send ADD_LEARNER request to candidate replica server
-void replica::add_potential_secondary(configuration_update_request &proposal)
+void replica::add_potential_secondary(const configuration_update_request &proposal)
 {
     if (status() != partition_status::PS_PRIMARY) {
         LOG_WARNING_PREFIX("ignore add secondary proposal for invalid state, state = {}",
@@ -287,10 +287,12 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request &pro
     host_port node;
     GET_HOST_PORT(proposal, node1, node);
     if (node == proposal.config.hp_primary) {
+        CHECK_EQ(proposal.node1, proposal.config.primary);
         RESET_IP_AND_HOST_PORT(proposal.config, primary);
     } else {
-        // TODO(yingchun): can be removed?
-        // replica_helper::remove_node(proposal.node, proposal.config.secondaries)
+        CHECK(replica_helper::remove_node(proposal.node1, proposal.config.secondaries),
+              "remove node failed, node = {}",
+              proposal.node1);
         CHECK(replica_helper::remove_node(node, proposal.config.hp_secondaries),
               "remove node failed, node = {}",
               node);
@@ -316,10 +318,13 @@ void replica::remove(configuration_update_request &proposal)
     switch (st) {
     case partition_status::PS_PRIMARY:
         CHECK_EQ(proposal.config.hp_primary, node);
+        CHECK_EQ(proposal.config.primary, proposal.node1);
         RESET_IP_AND_HOST_PORT(proposal.config, primary);
         break;
     case partition_status::PS_SECONDARY: {
-        // TODO(yingchun): replica_helper::remove_node(node, proposal.config.secondaries) &&
+        CHECK(replica_helper::remove_node(proposal.node1, proposal.config.secondaries),
+              "remove node failed, node = {}",
+              proposal.node1);
         CHECK(replica_helper::remove_node(node, proposal.config.hp_secondaries),
               "remove_node failed, node = {}",
               node);

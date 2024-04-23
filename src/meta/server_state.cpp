@@ -796,20 +796,19 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
     bool reject_this_request = false;
     response.__isset.gc_replicas = false;
 
-    host_port query_node;
-    GET_HOST_PORT(request, node1, query_node);
-
+    host_port node;
+    GET_HOST_PORT(request, node1, node);
     LOG_INFO("got config sync request from {}, stored_replicas_count({})",
-             query_node,
+             node,
              request.stored_replicas.size());
 
     {
         zauto_read_lock l(_lock);
 
         // sync the partitions to the replica server
-        node_state *ns = get_node_state(_nodes, query_node, false);
+        node_state *ns = get_node_state(_nodes, node, false);
         if (ns == nullptr) {
-            LOG_INFO("node({}) not found in meta server", query_node);
+            LOG_INFO("node({}) not found in meta server", node);
             response.err = ERR_OBJECT_NOT_FOUND;
         } else {
             response.err = ERR_OK;
@@ -824,17 +823,17 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                 // so if the syncing config is related to the node, we may need to reject this
                 // request
                 if (cc.stage == config_status::pending_remote_sync) {
-                    configuration_update_request *req = cc.pending_sync_request.get();
+                    configuration_update_request *pending_request = cc.pending_sync_request.get();
                     // when register child partition, stage is config_status::pending_remote_sync,
                     // but cc.pending_sync_request is not set, see more in function
                     // 'register_child_on_meta'
-                    if (req == nullptr) {
+                    if (pending_request == nullptr) {
                         return false;
                     }
 
                     host_port target;
-                    GET_HOST_PORT(request, node1, target);
-                    if (target == query_node) {
+                    GET_HOST_PORT(*pending_request, node1, target);
+                    if (target == node) {
                         return false;
                     }
                 }
@@ -870,7 +869,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
             // the app is deleted but not expired, we need to ignore it
             // if the app is deleted and expired, we need to gc it
             for (const replica_info &rep : replicas) {
-                LOG_DEBUG("receive stored replica from {}, pid({})", query_node, rep.pid);
+                LOG_DEBUG("receive stored replica from {}, pid({})", node, rep.pid);
                 std::shared_ptr<app_state> app = get_app(rep.pid.get_app_id());
                 if (app == nullptr || rep.pid.get_partition_index() >= app->partition_count) {
                     // This app has garbage partition after cancel split, the canceled child
@@ -882,7 +881,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                         LOG_WARNING(
                             "notify node({}) to gc replica({}) because it is useless partition "
                             "which is caused by cancel split",
-                            query_node,
+                            node,
                             rep.pid);
                     } else {
                         // app is not recognized or partition is not recognized
@@ -890,14 +889,14 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                               "gpid({}) on node({}) is not exist on meta server, administrator "
                               "should check consistency of meta data",
                               rep.pid,
-                              query_node);
+                              node);
                     }
                 } else if (app->status == app_status::AS_DROPPED) {
                     if (app->expire_second == 0) {
                         LOG_INFO("gpid({}) on node({}) is of dropped table, but expire second is "
                                  "not specified, do not delete it for safety reason",
                                  rep.pid,
-                                 query_node);
+                                 node);
                     } else if (has_seconds_expired(app->expire_second)) {
                         // can delete replica only when expire second is explicitely specified and
                         // expired.
@@ -906,30 +905,29 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                                      "current function level is {}, do not delete it for safety "
                                      "reason",
                                      rep.pid,
-                                     query_node,
+                                     node,
                                      _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         } else {
                             response.gc_replicas.push_back(rep);
                             LOG_WARNING("notify node({}) to gc replica({}) coz the app is "
                                         "dropped and expired",
-                                        query_node,
+                                        node,
                                         rep.pid);
                         }
                     }
                 } else if (app->status == app_status::AS_AVAILABLE) {
-                    bool is_useful_replica =
-                        collect_replica({&_all_apps, &_nodes}, query_node, rep);
+                    bool is_useful_replica = collect_replica({&_all_apps, &_nodes}, node, rep);
                     if (!is_useful_replica) {
                         if (level <= meta_function_level::fl_steady) {
                             LOG_INFO("gpid({}) on node({}) is useless, but current function "
                                      "level is {}, do not delete it for safety reason",
                                      rep.pid,
-                                     query_node,
+                                     node,
                                      _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         } else {
                             response.gc_replicas.push_back(rep);
                             LOG_WARNING("notify node({}) to gc replica({}) coz it is useless",
-                                        query_node,
+                                        node,
                                         rep.pid);
                         }
                     }
@@ -948,7 +946,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
     }
     LOG_INFO("send config sync response to {}, err({}), partitions_count({}), "
              "gc_replicas_count({})",
-             query_node,
+             node,
              response.err,
              response.partitions.size(),
              response.gc_replicas.size());
@@ -1459,64 +1457,49 @@ void server_state::request_check(const partition_configuration &old,
                                  const configuration_update_request &request)
 {
     const partition_configuration &new_config = request.config;
+    host_port node;
+    GET_HOST_PORT(request, node1, node);
 
     switch (request.type) {
     case config_type::CT_ASSIGN_PRIMARY:
-        if (request.__isset.hp_node1) {
-            CHECK_NE(old.hp_primary, request.hp_node1);
-            CHECK(!utils::contains(old.hp_secondaries, request.hp_node1), "");
-        } else {
-            CHECK_NE(old.primary, request.node1);
-            CHECK(!utils::contains(old.secondaries, request.node1), "");
-        }
+        CHECK_NE(old.hp_primary, node);
+        CHECK_NE(old.primary, request.node1);
+        CHECK(!utils::contains(old.hp_secondaries, node), "");
+        CHECK(!utils::contains(old.secondaries, request.node1), "");
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        if (request.__isset.hp_node1) {
-            CHECK_NE(old.hp_primary, request.hp_node1);
-            CHECK(utils::contains(old.hp_secondaries, request.hp_node1), "");
-        } else {
-            CHECK_NE(old.primary, request.node1);
-            CHECK(utils::contains(old.secondaries, request.node1), "");
-        }
+        CHECK_NE(old.hp_primary, node);
+        CHECK(utils::contains(old.hp_secondaries, node), "");
+        CHECK_NE(old.primary, request.node1);
+        CHECK(utils::contains(old.secondaries, request.node1), "");
         break;
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        if (request.__isset.hp_node1) {
-            CHECK_EQ(old.hp_primary, request.hp_node1);
-            CHECK(!utils::contains(old.hp_secondaries, request.hp_node1), "");
-        } else {
-            CHECK_EQ(old.primary, request.node1);
-            CHECK(!utils::contains(old.secondaries, request.node1), "");
-        }
+        CHECK_EQ(old.hp_primary, node);
+        CHECK(!utils::contains(old.hp_secondaries, node), "");
+        CHECK_EQ(old.primary, request.node1);
+        CHECK(!utils::contains(old.secondaries, request.node1), "");
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
     case config_type::CT_REMOVE:
-        if (request.__isset.hp_node1) {
-            CHECK(old.hp_primary == request.hp_node1 ||
-                      utils::contains(old.hp_secondaries, request.hp_node1),
-                  "");
-        } else {
-            CHECK(old.primary == request.node1 || utils::contains(old.secondaries, request.node1),
-                  "");
-        }
+        CHECK(old.hp_primary == node || utils::contains(old.hp_secondaries, node), "");
+        CHECK(old.primary == request.node1 || utils::contains(old.secondaries, request.node1), "");
         break;
     case config_type::CT_UPGRADE_TO_SECONDARY:
-        if (request.__isset.hp_node1) {
-            CHECK_NE(old.hp_primary, request.hp_node1);
-            CHECK(!utils::contains(old.hp_secondaries, request.hp_node1), "");
-        } else {
-            CHECK_NE(old.primary, request.node1);
-            CHECK(!utils::contains(old.secondaries, request.node1), "");
-        }
+        CHECK_NE(old.hp_primary, node);
+        CHECK(!utils::contains(old.hp_secondaries, node), "");
+        CHECK_NE(old.primary, request.node1);
+        CHECK(!utils::contains(old.secondaries, request.node1), "");
         break;
-    case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:
-        if (request.__isset.hp_node1) {
-            CHECK_EQ(old.hp_primary, new_config.hp_primary);
-            CHECK(old.hp_secondaries == new_config.hp_secondaries, "");
-        } else {
-            CHECK_EQ(old.primary, new_config.primary);
-            CHECK(old.secondaries == new_config.secondaries, "");
-        }
+    case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT: {
+        host_port primary;
+        GET_HOST_PORT(new_config, primary, primary);
+        CHECK_EQ(old.hp_primary, primary);
+        CHECK(!new_config.__isset.hp_secondaries || old.hp_secondaries == new_config.hp_secondaries,
+              "");
+        CHECK_EQ(old.primary, new_config.primary);
+        CHECK(old.secondaries == new_config.secondaries, "");
         break;
+    }
     default:
         break;
     }
@@ -1534,8 +1517,8 @@ void server_state::update_configuration_locally(
     health_status old_health_status = partition_health_status(old_cfg, min_2pc_count);
     health_status new_health_status = partition_health_status(new_cfg, min_2pc_count);
 
-    host_port hp_node;
-    GET_HOST_PORT(*config_request, node1, hp_node);
+    host_port node;
+    GET_HOST_PORT(*config_request, node1, node);
 
     if (app.is_stateful) {
         CHECK(old_cfg.ballot == invalid_ballot || old_cfg.ballot + 1 == new_cfg.ballot,
@@ -1545,8 +1528,8 @@ void server_state::update_configuration_locally(
 
         node_state *ns = nullptr;
         if (config_request->type != config_type::CT_DROP_PARTITION) {
-            ns = get_node_state(_nodes, hp_node, false);
-            CHECK_NOTNULL(ns, "invalid node address, address = {}", hp_node);
+            ns = get_node_state(_nodes, node, false);
+            CHECK_NOTNULL(ns, "invalid node: {}", node);
         }
 #ifndef NDEBUG
         request_check(old_cfg, *config_request);
@@ -1587,6 +1570,7 @@ void server_state::update_configuration_locally(
             break;
         case config_type::CT_REGISTER_CHILD: {
             ns->put_partition(gpid, true);
+            // TODO(yingchun): optimize this
             if (config_request->config.__isset.hp_secondaries) {
                 for (const auto &secondary : config_request->config.hp_secondaries) {
                     auto secondary_node = get_node_state(_nodes, secondary, false);
@@ -1623,7 +1607,7 @@ void server_state::update_configuration_locally(
         }
 
         auto it = _nodes.find(hp_node);
-        CHECK(it != _nodes.end(), "invalid node address, address = {}", hp_node);
+        CHECK(it != _nodes.end(), "invalid node: {}", hp_node);
         if (config_type::CT_REMOVE == config_request->type) {
             it->second.remove_partition(gpid, false);
         } else {
@@ -1899,9 +1883,9 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
         request.config = pc;
         request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
         SET_IP_AND_HOST_PORT_BY_DNS(request, node1, node);
-        host_port target;
-        GET_HOST_PORT(pc, primary, target);
-        send_proposal(target, request);
+        host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
+        send_proposal(primary, request);
     } else {
         LOG_INFO("gpid({}.{}) is syncing with remote storage, ignore the remove seconary({})",
                  app->app_id,
@@ -1928,13 +1912,13 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
     unsigned i = 0;
     for (; i < pc.hp_secondaries.size(); ++i) {
         if (pc.hp_secondaries[i] == address) {
-            SET_IP_AND_HOST_PORT(*req, node1, pc.last_drops[i], pc.hp_last_drops[i]);
+            SET_OBJ_IP_AND_HOST_PORT(*req, node1, pc, last_drops[i]);
             break;
         }
     }
-    host_port target;
-    GET_HOST_PORT(*req, node1, target);
-    CHECK(target, "invalid node: {}", target);
+    host_port node;
+    GET_HOST_PORT(*req, node1, node);
+    CHECK(node, "invalid node: {}", node);
     // remove DEPRECATED_node & node from secondaries/last_drops, as it will be sync to remote
     // storage
     for (++i; i < pc.hp_secondaries.size(); ++i) {
@@ -1953,7 +1937,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
                     "removing host({}) worker({})",
                     pc.pid,
                     req->DEPRECATED_node,
-                    target);
+                    node);
         cc.cancel_sync();
     }
     cc.stage = config_status::pending_remote_sync;
@@ -2582,7 +2566,8 @@ bool server_state::check_all_partitions()
         gpid &pid = add_secondary_gpids[i];
         partition_configuration &pc = *get_config(_all_apps, pid);
         if (!add_secondary_proposed[i] && pc.hp_secondaries.empty()) {
-            configuration_proposal_action &action = add_secondary_actions[i];
+            const auto &action = add_secondary_actions[i];
+            CHECK(action.hp_node1, "");
             if (_add_secondary_enable_flow_control &&
                 add_secondary_running_nodes[action.hp_node1] >=
                     _add_secondary_max_count_for_one_node) {
@@ -2600,7 +2585,8 @@ bool server_state::check_all_partitions()
     // assign secondary for all
     for (int i = 0; i < add_secondary_actions.size(); ++i) {
         if (!add_secondary_proposed[i]) {
-            configuration_proposal_action &action = add_secondary_actions[i];
+            const auto &action = add_secondary_actions[i];
+            CHECK(action.hp_node1, "");
             gpid pid = add_secondary_gpids[i];
             partition_configuration &pc = *get_config(_all_apps, pid);
             if (_add_secondary_enable_flow_control &&

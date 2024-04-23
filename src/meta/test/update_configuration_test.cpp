@@ -107,7 +107,7 @@ public:
         switch (update_req->type) {
         case config_type::CT_ASSIGN_PRIMARY:
         case config_type::CT_UPGRADE_TO_PRIMARY:
-            SET_IP_AND_HOST_PORT(pc, primary, update_req->node1, update_req->hp_node1);
+            SET_OBJ_IP_AND_HOST_PORT(pc, primary, *update_req, node1);
             replica_helper::remove_node(update_req->node1, pc.secondaries);
             replica_helper::remove_node(update_req->hp_node1, pc.hp_secondaries);
             break;
@@ -121,8 +121,10 @@ public:
         case config_type::CT_REMOVE:
         case config_type::CT_DOWNGRADE_TO_INACTIVE:
             if (update_req->hp_node1 == pc.hp_primary) {
+                CHECK_EQ(update_req->node1, pc.primary);
                 RESET_IP_AND_HOST_PORT(pc, primary);
             } else {
+                CHECK_NE(update_req->node1, pc.primary);
                 replica_helper::remove_node(update_req->node1, pc.secondaries);
                 replica_helper::remove_node(update_req->hp_node1, pc.hp_secondaries);
             }

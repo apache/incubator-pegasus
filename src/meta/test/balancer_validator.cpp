@@ -59,7 +59,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
     meta_service svc;
     partition_guardian guardian(&svc);
     pc_status ps = pc_status::invalid;
-    node_state *ns;
+    node_state *ns = nullptr;
 
     configuration_proposal_action act;
     while (ps != pc_status::healthy) {
@@ -67,29 +67,33 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
         if (act.type == config_type::CT_INVALID)
             break;
         switch (act.type) {
-        case config_type::CT_ASSIGN_PRIMARY:
+        case config_type::CT_ASSIGN_PRIMARY: {
+            CHECK(!pc.primary, "");
             CHECK(!pc.hp_primary, "");
+            CHECK(pc.secondaries.empty(), "");
             CHECK(pc.hp_secondaries.empty(), "");
-            // TODO(yingchun): ass macro
             CHECK_EQ(act.node1, act.target1);
             CHECK_EQ(act.hp_node1, act.hp_target1);
-            CHECK(nodes.find(act.hp_node1) != nodes.end(), "");
-
-            CHECK_EQ(nodes[act.hp_node1].served_as(pc.pid), partition_status::PS_INACTIVE);
-            nodes[act.hp_node1].put_partition(pc.pid, true);
+            const auto node = nodes.find(act.hp_node1);
+            CHECK(node != nodes.end(), "");
+            ns = &node->second;
+            CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
+            ns->put_partition(pc.pid, true);
             SET_OBJ_IP_AND_HOST_PORT(pc, primary, act, node1);
             break;
-
-        case config_type::CT_ADD_SECONDARY:
+        }
+        case config_type::CT_ADD_SECONDARY: {
             CHECK(!is_member(pc, act.hp_node1), "");
+            CHECK_EQ(pc.primary, act.target1);
             CHECK_EQ(pc.hp_primary, act.hp_target1);
-            CHECK(nodes.find(act.hp_node1) != nodes.end(), "");
+            const auto node = nodes.find(act.hp_node1);
+            CHECK(node != nodes.end(), "");
             ADD_IP_AND_HOST_PORT(pc, secondaries, act.node1, act.hp_node1);
-            ns = &nodes[act.hp_node1];
+            ns = &node->second;
             CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
             ns->put_partition(pc.pid, false);
             break;
-
+        }
         default:
             CHECK(false, "");
             break;
@@ -103,16 +107,17 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
 
     ps = guardian.cure({&apps, &nodes}, pc.pid, act);
     CHECK_EQ(act.type, config_type::CT_UPGRADE_TO_PRIMARY);
+    CHECK(!pc.primary, "");
     CHECK(!pc.hp_primary, "");
+    CHECK_EQ(act.node1, act.target1);
     CHECK_EQ(act.hp_node1, act.hp_target1);
     CHECK(is_secondary(pc, act.hp_node1), "");
-    CHECK(nodes.find(act.hp_node1) != nodes.end(), "");
-
-    ns = &nodes[act.hp_node1];
+    const auto node = nodes.find(act.hp_node1);
+    CHECK(node != nodes.end(), "");
+    ns = &node->second;
     SET_OBJ_IP_AND_HOST_PORT(pc, primary, act, node1);
     std::remove(pc.secondaries.begin(), pc.secondaries.end(), pc.primary);
     std::remove(pc.hp_secondaries.begin(), pc.hp_secondaries.end(), pc.hp_primary);
-
     CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
     ns->put_partition(pc.pid, true);
 }

@@ -304,6 +304,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
 
     switch (act.type) {
     case config_type::CT_ASSIGN_PRIMARY:
+        CHECK_EQ(act.hp_node1, act.hp_target1);
         CHECK_EQ(act.node1, act.target1);
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
@@ -318,6 +319,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
 
     case config_type::CT_ADD_SECONDARY:
         CHECK_EQ(hp_target, pc.hp_primary);
+        CHECK_EQ(act.hp_target1, pc.hp_primary);
         CHECK_EQ(act.target1, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
 
@@ -329,8 +331,10 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         break;
 
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
+        CHECK_EQ(act.hp_node1, act.hp_target1);
         CHECK_EQ(act.node1, act.target1);
         CHECK_EQ(hp_node, hp_target);
+        CHECK_EQ(act.hp_node1, pc.hp_primary);
         CHECK_EQ(act.node1, pc.primary);
         CHECK_EQ(hp_node, pc.hp_primary);
         CHECK(nodes.find(hp_node) != nodes.end(), "");
@@ -344,6 +348,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
         CHECK_EQ(hp_node, hp_target);
+        CHECK_EQ(act.hp_node1, act.hp_target1);
         CHECK_EQ(act.node1, act.target1);
         CHECK(is_secondary(pc, hp_node), "");
         CHECK(nodes.find(hp_node) != nodes.end(), "");
@@ -357,6 +362,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
 
     case config_type::CT_ADD_SECONDARY_FOR_LB:
         CHECK_EQ(hp_target, pc.hp_primary);
+        CHECK_EQ(act.hp_target1, pc.hp_primary);
         CHECK_EQ(act.target1, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
         CHECK(act.hp_node1, "");
@@ -374,6 +380,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(pc.hp_primary, "");
         CHECK(pc.primary, "");
         CHECK_EQ(pc.hp_primary, hp_target);
+        CHECK_EQ(pc.hp_primary, act.hp_target1);
         CHECK_EQ(pc.primary, act.target1);
         CHECK(is_secondary(pc, hp_node), "");
         CHECK(nodes.find(hp_node) != nodes.end(), "");
