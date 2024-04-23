@@ -134,6 +134,7 @@ void generate_app(/*out*/ std::shared_ptr<app_state> &app,
 
         CHECK(pc.hp_primary, "");
         CHECK(!is_secondary(pc, pc.hp_primary), "");
+        CHECK(!is_secondary(pc, pc.primary), "");
         CHECK_EQ(pc.hp_secondaries.size(), 2);
         CHECK_NE(pc.hp_secondaries[0], pc.hp_secondaries[1]);
     }
@@ -339,6 +340,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK_EQ(hp_node, pc.hp_primary);
         CHECK(nodes.find(hp_node) != nodes.end(), "");
         CHECK(!is_secondary(pc, pc.hp_primary), "");
+        CHECK(!is_secondary(pc, pc.primary), "");
         nodes[hp_node].remove_partition(pc.pid, true);
         ADD_IP_AND_HOST_PORT(pc, secondaries, pc.primary, pc.hp_primary);
         RESET_IP_AND_HOST_PORT(pc, primary);
@@ -420,6 +422,7 @@ void migration_check_and_apply(app_mapper &apps,
             CHECK(hp, "");
         }
         CHECK(!is_secondary(pc, pc.hp_primary), "");
+        CHECK(!is_secondary(pc, pc.primary), "");
 
         for (unsigned int j = 0; j < proposal->action_list.size(); ++j) {
             configuration_proposal_action &act = proposal->action_list[j];

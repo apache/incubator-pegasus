@@ -111,6 +111,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
     CHECK(!pc.hp_primary, "");
     CHECK_EQ(act.node1, act.target1);
     CHECK_EQ(act.hp_node1, act.hp_target1);
+    CHECK(is_secondary(pc, act.node1), "");
     CHECK(is_secondary(pc, act.hp_node1), "");
     const auto node = nodes.find(act.hp_node1);
     CHECK(node != nodes.end(), "");
