@@ -70,6 +70,8 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
         case config_type::CT_ASSIGN_PRIMARY:
             CHECK(!pc.hp_primary, "");
             CHECK(pc.hp_secondaries.empty(), "");
+            // TODO(yingchun): ass macro
+            CHECK_EQ(act.node1, act.target1);
             CHECK_EQ(act.hp_node1, act.hp_target1);
             CHECK(nodes.find(act.hp_node1) != nodes.end(), "");
 

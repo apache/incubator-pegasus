@@ -50,11 +50,9 @@ namespace replication {
 configuration_proposal_action
 new_proposal_action(const host_port &target, const host_port &node, config_type::type type)
 {
-    const auto &target_addr = dsn::dns_resolver::instance().resolve_address(target);
-    const auto &node_addr = dsn::dns_resolver::instance().resolve_address(node);
     configuration_proposal_action act;
-    SET_IP_AND_HOST_PORT(act, target1, target_addr, target);
-    SET_IP_AND_HOST_PORT(act, node1, node_addr, node);
+    SET_IP_AND_HOST_PORT_BY_DNS(act, target1, target);
+    SET_IP_AND_HOST_PORT_BY_DNS(act, node1, node);
     act.__set_type(type);
     return act;
 }

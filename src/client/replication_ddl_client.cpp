@@ -920,10 +920,12 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<host_port>
             ADD_IP_AND_HOST_PORT_BY_DNS(*req, recovery_nodes1, node);
         }
     }
-    if (req->recovery_nodes1.empty()) {
+    if (req->hp_recovery_nodes1.empty()) {
+        CHECK(req->recovery_nodes1.empty(), "recovery_nodes1 should be set together with hp_recovery_nodes1");
         out << "node set for recovery it empty" << std::endl;
         return ERR_INVALID_PARAMETERS;
     }
+    CHECK(!req->recovery_nodes1.empty(), "recovery_nodes1 should be set together with hp_recovery_nodes1");
     req->skip_bad_nodes = skip_bad_nodes;
     req->skip_lost_partitions = skip_lost_partitions;
 
@@ -932,7 +934,7 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<host_port>
     out << "Skip lost partitions: " << (skip_lost_partitions ? "true" : "false") << std::endl;
     out << "Node list:" << std::endl;
     out << "=============================" << std::endl;
-    for (auto &node : req->recovery_nodes1) {
+    for (auto &node : req->hp_recovery_nodes1) {
         out << node << std::endl;
     }
     out << "=============================" << std::endl;
