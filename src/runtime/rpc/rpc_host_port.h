@@ -66,6 +66,15 @@ class TProtocol;
         _obj.__set_hp_##field(hp);                                                                 \
     } while (0)
 
+// GTest check whether the '<field>' and 'hp_<field>' of 'obj' equal to 'addr' and 'hp'. The types
+// of the fields are rpc_address and host_port, respectively.
+#define ASSERT_IP_AND_HOST_PORT(obj, field, addr, hp)                                              \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        ASSERT_EQ((addr), _obj.field);                                                             \
+        ASSERT_EQ((hp), _obj.hp_##field);                                                          \
+    } while (0)
+
 // Set 'hp' and its DNS resolved rpc_address to the optional 'hp_<field>' and '<field>' of 'obj'.
 // The types of the fields are host_port and rpc_address, respectively.
 #define SET_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                                \

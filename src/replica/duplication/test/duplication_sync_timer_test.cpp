@@ -32,6 +32,7 @@
 #include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/test/mock_utils.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/error_code.h"
 
@@ -119,7 +120,7 @@ public:
             ASSERT_EQ(duplication_sync_rpc::mail_box().size(), 1);
 
             auto &req = duplication_sync_rpc::mail_box().back().request();
-            ASSERT_EQ(req.node, stub->primary_address());
+            ASSERT_IP_AND_HOST_PORT(req, node, stub->primary_address(), stub->primary_host_port());
 
             // ensure confirm list is empty when no progress
             ASSERT_EQ(0, req.confirm_list.size());
@@ -142,7 +143,7 @@ public:
             ASSERT_EQ(duplication_sync_rpc::mail_box().size(), 1);
 
             auto &req = *duplication_sync_rpc::mail_box().back().mutable_request();
-            ASSERT_EQ(req.node, stub->primary_address());
+            ASSERT_IP_AND_HOST_PORT(req, node, stub->primary_address(), stub->primary_host_port());
             ASSERT_EQ(req.confirm_list.size(), total_app_num);
 
             for (int appid = 1; appid <= total_app_num; appid++) {

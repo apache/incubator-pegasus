@@ -57,7 +57,6 @@
 #include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
 #include "meta_test_base.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
@@ -145,13 +144,11 @@ public:
     }
 
     duplication_sync_response
-    duplication_sync(const rpc_address &addr,
-                     const host_port &hp,
+    duplication_sync(const host_port &hp,
                      std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list)
     {
         auto req = std::make_unique<duplication_sync_request>();
-        req->node = addr;
-        req->__set_hp_node(hp);
+        SET_IP_AND_HOST_PORT_BY_DNS(*req, node, hp);
         req->confirm_list = confirm_list;
 
         duplication_sync_rpc rpc(std::move(req), RPC_CM_DUPLICATION_SYNC);
@@ -601,7 +598,6 @@ TEST_F(meta_duplication_service_test, duplication_sync)
     initialize_node_state();
 
     const auto &node = server_nodes[0];
-    const auto &addr = dsn::dns_resolver::instance().resolve_address(server_nodes[0]);
     const dupid_t dupid = create_dup(test_app).dupid;
     auto dup = app->duplications[dupid];
     for (int i = 0; i < app->partition_count; i++) {
@@ -622,7 +618,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ce.confirmed_decree = 7;
         confirm_list[gpid(app->app_id, 3)].push_back(ce);
 
-        duplication_sync_response resp = duplication_sync(addr, node, confirm_list);
+        duplication_sync_response resp = duplication_sync(node, confirm_list);
         ASSERT_EQ(resp.err, ERR_OK);
         ASSERT_EQ(resp.dup_map.size(), 1);
         ASSERT_EQ(resp.dup_map[app->app_id].size(), 1);
@@ -653,7 +649,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ce.confirmed_decree = 5;
         confirm_list[gpid(app->app_id, 1)].push_back(ce);
 
-        duplication_sync_response resp = duplication_sync(addr, node, confirm_list);
+        duplication_sync_response resp = duplication_sync(node, confirm_list);
         ASSERT_EQ(resp.err, ERR_OK);
         ASSERT_EQ(resp.dup_map.size(), 1);
         ASSERT_TRUE(resp.dup_map[app->app_id].find(dupid + 1) == resp.dup_map[app->app_id].end());
@@ -667,7 +663,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ce.confirmed_decree = 5;
         confirm_list[gpid(app->app_id + 1, 1)].push_back(ce);
 
-        const auto resp = duplication_sync(addr, node, confirm_list);
+        const auto resp = duplication_sync(node, confirm_list);
         ASSERT_EQ(resp.err, ERR_OK);
         ASSERT_EQ(resp.dup_map.size(), 1);
         ASSERT_TRUE(resp.dup_map.find(app->app_id + 1) == resp.dup_map.end());
@@ -683,7 +679,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ce.confirmed_decree = 5;
         confirm_list[gpid(app->app_id, 1)].push_back(ce);
 
-        const auto resp = duplication_sync(addr, node, confirm_list);
+        const auto resp = duplication_sync(node, confirm_list);
         ASSERT_EQ(resp.err, ERR_OK);
         ASSERT_EQ(resp.dup_map.size(), 0);
     }
@@ -819,8 +815,7 @@ TEST_F(meta_duplication_service_test, fail_mode)
         SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, hp);
     }
     initialize_node_state();
-    const auto addr = dsn::dns_resolver::instance().resolve_address(hp);
-    auto sync_resp = duplication_sync(addr, hp, {});
+    auto sync_resp = duplication_sync(hp, {});
     ASSERT_TRUE(sync_resp.dup_map[app->app_id][dup->id].__isset.fail_mode);
     ASSERT_EQ(sync_resp.dup_map[app->app_id][dup->id].fail_mode, duplication_fail_mode::FAIL_SKIP);
 

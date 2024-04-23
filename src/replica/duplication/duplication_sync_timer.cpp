@@ -29,6 +29,7 @@
 #include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
@@ -69,8 +70,7 @@ void duplication_sync_timer::run()
     }
 
     auto req = std::make_unique<duplication_sync_request>();
-    req->node = _stub->primary_address();
-    req->__set_hp_node(_stub->primary_host_port());
+    SET_IP_AND_HOST_PORT(*req, node, _stub->primary_address(), _stub->primary_host_port());
 
     // collects confirm points from all primaries on this server
     for (const replica_ptr &r : _stub->get_all_primaries()) {
