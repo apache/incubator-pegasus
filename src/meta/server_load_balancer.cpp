@@ -174,15 +174,16 @@ void server_load_balancer::register_proposals(meta_view view,
         // to send the proposal to.
         // for these proposals, they should keep the target empty and
         // the meta-server will fill primary as target.
-        if (!act.target) {
-            if (pc.hp_primary) {
-                act.target = pc.primary;
-                act.__set_hp_target(pc.hp_primary);
-            } else {
-                resp.err = ERR_INVALID_PARAMETERS;
-                return;
-            }
+        if (act.target1) {
+            continue;
         }
+
+        if (!pc.hp_primary) {
+            resp.err = ERR_INVALID_PARAMETERS;
+            return;
+        }
+
+        SET_OBJ_IP_AND_HOST_PORT(act, target1, pc, primary);
     }
 
     resp.err = ERR_OK;

@@ -505,7 +505,7 @@ dsn::error_code replication_ddl_client::list_nodes(
 
     for (const auto &n : resp.infos) {
         host_port hp;
-        GET_HOST_PORT(n, address, hp);
+        GET_HOST_PORT(n, node1, hp);
         nodes[hp] = n.status;
     }
 
@@ -912,17 +912,15 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<host_port>
     std::ostream out(buf);
 
     auto req = std::make_shared<configuration_recovery_request>();
-    req->recovery_set.clear();
-    req->__set_hp_recovery_set(std::vector<host_port>());
+    CLEAR_IP_AND_HOST_PORT(*req, recovery_nodes1);
     for (const auto &node : replica_nodes) {
-        if (utils::contains(req->hp_recovery_set, node)) {
+        if (utils::contains(req->hp_recovery_nodes1, node)) {
             out << "duplicate replica node " << node << ", just ingore it" << std::endl;
         } else {
-            req->hp_recovery_set.push_back(node);
-            req->recovery_set.push_back(dsn::dns_resolver::instance().resolve_address(node));
+            ADD_IP_AND_HOST_PORT_BY_DNS(*req, recovery_nodes1, node);
         }
     }
-    if (req->hp_recovery_set.empty()) {
+    if (req->recovery_nodes1.empty()) {
         out << "node set for recovery it empty" << std::endl;
         return ERR_INVALID_PARAMETERS;
     }
@@ -934,7 +932,7 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<host_port>
     out << "Skip lost partitions: " << (skip_lost_partitions ? "true" : "false") << std::endl;
     out << "Node list:" << std::endl;
     out << "=============================" << std::endl;
-    for (auto &node : req->hp_recovery_set) {
+    for (auto &node : req->recovery_nodes1) {
         out << node << std::endl;
     }
     out << "=============================" << std::endl;

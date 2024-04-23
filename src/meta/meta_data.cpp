@@ -187,11 +187,14 @@ void proposal_actions::reset_tracked_current_learner()
 
 void proposal_actions::track_current_learner(const dsn::host_port &node, const replica_info &info)
 {
-    if (empty())
+    if (empty()) {
         return;
-    configuration_proposal_action &act = acts.front();
-    if (act.hp_node != node)
+    }
+    const auto &act = acts.front();
+    CHECK(act.hp_node1, "");
+    if (act.hp_node1 != node) {
         return;
+    }
 
     // currently we only handle add secondary
     // TODO: adjust other proposals according to replica info collected

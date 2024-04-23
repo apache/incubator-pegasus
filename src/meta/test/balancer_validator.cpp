@@ -70,20 +70,20 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
         case config_type::CT_ASSIGN_PRIMARY:
             CHECK(!pc.hp_primary, "");
             CHECK(pc.hp_secondaries.empty(), "");
-            CHECK_EQ(act.hp_node, act.hp_target);
-            CHECK(nodes.find(act.hp_node) != nodes.end(), "");
+            CHECK_EQ(act.hp_node1, act.hp_target1);
+            CHECK(nodes.find(act.hp_node1) != nodes.end(), "");
 
-            CHECK_EQ(nodes[act.hp_node].served_as(pc.pid), partition_status::PS_INACTIVE);
-            nodes[act.hp_node].put_partition(pc.pid, true);
-            SET_IP_AND_HOST_PORT(pc, primary, act.node, act.hp_node);
+            CHECK_EQ(nodes[act.hp_node1].served_as(pc.pid), partition_status::PS_INACTIVE);
+            nodes[act.hp_node1].put_partition(pc.pid, true);
+            SET_OBJ_IP_AND_HOST_PORT(pc, primary, act, node1);
             break;
 
         case config_type::CT_ADD_SECONDARY:
-            CHECK(!is_member(pc, act.hp_node), "");
-            CHECK_EQ(pc.hp_primary, act.hp_target);
-            CHECK(nodes.find(act.hp_node) != nodes.end(), "");
-            ADD_IP_AND_HOST_PORT(pc, secondaries, act.node, act.hp_node);
-            ns = &nodes[act.hp_node];
+            CHECK(!is_member(pc, act.hp_node1), "");
+            CHECK_EQ(pc.hp_primary, act.hp_target1);
+            CHECK(nodes.find(act.hp_node1) != nodes.end(), "");
+            ADD_IP_AND_HOST_PORT(pc, secondaries, act.node1, act.hp_node1);
+            ns = &nodes[act.hp_node1];
             CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
             ns->put_partition(pc.pid, false);
             break;
@@ -102,12 +102,12 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
     ps = guardian.cure({&apps, &nodes}, pc.pid, act);
     CHECK_EQ(act.type, config_type::CT_UPGRADE_TO_PRIMARY);
     CHECK(!pc.hp_primary, "");
-    CHECK_EQ(act.hp_node, act.hp_target);
-    CHECK(is_secondary(pc, act.hp_node), "");
-    CHECK(nodes.find(act.hp_node) != nodes.end(), "");
+    CHECK_EQ(act.hp_node1, act.hp_target1);
+    CHECK(is_secondary(pc, act.hp_node1), "");
+    CHECK(nodes.find(act.hp_node1) != nodes.end(), "");
 
-    ns = &nodes[act.hp_node];
-    SET_IP_AND_HOST_PORT(pc, primary, act.node, act.hp_node);
+    ns = &nodes[act.hp_node1];
+    SET_OBJ_IP_AND_HOST_PORT(pc, primary, act, node1);
     std::remove(pc.secondaries.begin(), pc.secondaries.end(), pc.primary);
     std::remove(pc.hp_secondaries.begin(), pc.hp_secondaries.end(), pc.hp_primary);
 

@@ -174,15 +174,16 @@ dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
     for (auto &node : last_two_nodes) {
         auto it = std::find_if(pinfo.dropped.begin(),
                                pinfo.dropped.end(),
-                               [&node](const ddd_node_info &r) { return r.hp_node == node; });
+                               [&node](const ddd_node_info &r) { return r.hp_node1 == node; });
         if (it->is_alive && it->is_collected)
             last_dropped.push_back(*it);
     }
 
     if (last_dropped.size() == 1) {
         const ddd_node_info &ninfo = last_dropped.back();
-        if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree)
-            return ninfo.hp_node;
+        if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree) {
+            return ninfo.hp_node1;
+        }
     } else if (last_dropped.size() == 2) {
         const ddd_node_info &secondary = last_dropped.front();
         const ddd_node_info &latest = last_dropped.back();
@@ -192,16 +193,19 @@ dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
         //  - if last committed decree is the same, choose node with the largest ballot
 
         if (latest.last_committed_decree == secondary.last_committed_decree &&
-            latest.last_committed_decree >= pinfo.config.last_committed_decree)
-            return latest.ballot >= secondary.ballot ? latest.hp_node : secondary.hp_node;
+            latest.last_committed_decree >= pinfo.config.last_committed_decree) {
+            return latest.ballot >= secondary.ballot ? latest.hp_node1 : secondary.hp_node1;
+        }
 
         if (latest.last_committed_decree > secondary.last_committed_decree &&
-            latest.last_committed_decree >= pinfo.config.last_committed_decree)
-            return latest.hp_node;
+            latest.last_committed_decree >= pinfo.config.last_committed_decree) {
+            return latest.hp_node1;
+        }
 
         if (secondary.last_committed_decree > latest.last_committed_decree &&
-            secondary.last_committed_decree >= pinfo.config.last_committed_decree)
-            return secondary.hp_node;
+            secondary.last_committed_decree >= pinfo.config.last_committed_decree) {
+            return secondary.hp_node1;
+        }
     }
 
     return dsn::host_port();
@@ -294,7 +298,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         int j = 0;
         for (const ddd_node_info &n : pinfo.dropped) {
             dsn::host_port hp_node;
-            GET_HOST_PORT(n, node, hp_node);
+            GET_HOST_PORT(n, node1, hp_node);
             char time_buf[30] = {0};
             ::dsn::utils::time_ms_to_string(n.drop_time_ms, time_buf);
             out << "    dropped[" << j++ << "]: "

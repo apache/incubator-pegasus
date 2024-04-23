@@ -841,16 +841,15 @@ void replica_stub::on_config_proposal(const configuration_update_request &propos
                     proposal.config.pid,
                     _primary_host_port_cache,
                     enum_to_string(proposal.type),
-                    proposal.node);
+                    FMT_HOST_PORT_AND_IP(proposal, node1));
         return;
     }
 
-    LOG_INFO("{}@{}: received config proposal {} for {}({})",
+    LOG_INFO("{}@{}: received config proposal {} for {}",
              proposal.config.pid,
              _primary_host_port_cache,
              enum_to_string(proposal.type),
-             proposal.hp_node,
-             proposal.node);
+             FMT_HOST_PORT_AND_IP(proposal, node1));
 
     replica_ptr rep = get_replica(proposal.config.pid);
     if (rep == nullptr) {
@@ -975,7 +974,7 @@ void replica_stub::on_query_app_info(query_app_info_rpc rpc)
     const query_app_info_request &req = rpc.request();
     query_app_info_response &resp = rpc.response();
 
-    LOG_INFO("got query app info request from ({})", req.meta_server);
+    LOG_INFO("got query app info request from ({})", FMT_HOST_PORT_AND_IP(req, meta_server1));
     resp.err = dsn::ERR_OK;
     std::set<app_id> visited_apps;
     {
@@ -1258,8 +1257,7 @@ void replica_stub::query_configuration_by_node()
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_CONFIG_SYNC);
 
     configuration_query_by_node_request req;
-    req.node = primary_address();
-    req.__set_hp_node(_primary_host_port);
+    SET_IP_AND_HOST_PORT(req, node1, primary_address(), _primary_host_port);
 
     // TODO: send stored replicas may cost network, we shouldn't config the frequency
     get_local_replicas(req.stored_replicas);
@@ -1466,8 +1464,7 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
     request->info = info;
     request->config = config;
     request->config.ballot++;
-    request->node = primary_address();
-    request->__set_hp_node(_primary_host_port);
+    SET_IP_AND_HOST_PORT(*request, node1, primary_address(), _primary_host_port);
     request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
 
     if (_primary_host_port == config.hp_primary) {

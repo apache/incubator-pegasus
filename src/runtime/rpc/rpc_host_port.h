@@ -75,6 +75,16 @@ class TProtocol;
         ASSERT_EQ((hp), _obj.hp_##field);                                                          \
     } while (0)
 
+// Set '<src_field>' and 'hp_<src_field>' to the '<dst_field>' and optional 'hp_<dst_field>' of
+// 'dst_obj'. The types of the fields are rpc_address and host_port, respectively.
+#define SET_OBJ_IP_AND_HOST_PORT(dst_obj, dst_field, src_obj, src_field)                           \
+    do {                                                                                           \
+        auto &_src_obj = (src_obj);                                                                \
+        auto &_dst_obj = (dst_obj);                                                                \
+        _dst_obj.dst_field = _src_obj.src_field;                                                   \
+        _dst_obj.__set_hp_##dst_field(_src_obj.hp_##src_field);                                    \
+    } while (0)
+
 // Set 'hp' and its DNS resolved rpc_address to the optional 'hp_<field>' and '<field>' of 'obj'.
 // The types of the fields are host_port and rpc_address, respectively.
 #define SET_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                                \

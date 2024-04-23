@@ -107,24 +107,24 @@ public:
         switch (update_req->type) {
         case config_type::CT_ASSIGN_PRIMARY:
         case config_type::CT_UPGRADE_TO_PRIMARY:
-            SET_IP_AND_HOST_PORT(pc, primary, update_req->node, update_req->hp_node);
-            replica_helper::remove_node(update_req->node, pc.secondaries);
-            replica_helper::remove_node(update_req->hp_node, pc.hp_secondaries);
+            SET_IP_AND_HOST_PORT(pc, primary, update_req->node1, update_req->hp_node1);
+            replica_helper::remove_node(update_req->node1, pc.secondaries);
+            replica_helper::remove_node(update_req->hp_node1, pc.hp_secondaries);
             break;
 
         case config_type::CT_ADD_SECONDARY:
         case config_type::CT_ADD_SECONDARY_FOR_LB:
-            ADD_IP_AND_HOST_PORT(pc, secondaries, update_req->node, update_req->hp_node);
+            ADD_IP_AND_HOST_PORT(pc, secondaries, update_req->node1, update_req->hp_node1);
             update_req->type = config_type::CT_UPGRADE_TO_SECONDARY;
             break;
 
         case config_type::CT_REMOVE:
         case config_type::CT_DOWNGRADE_TO_INACTIVE:
-            if (update_req->hp_node == pc.hp_primary) {
+            if (update_req->hp_node1 == pc.hp_primary) {
                 RESET_IP_AND_HOST_PORT(pc, primary);
             } else {
-                replica_helper::remove_node(update_req->node, pc.secondaries);
-                replica_helper::remove_node(update_req->hp_node, pc.hp_secondaries);
+                replica_helper::remove_node(update_req->node1, pc.secondaries);
+                replica_helper::remove_node(update_req->hp_node1, pc.hp_secondaries);
             }
             break;
 
@@ -347,8 +347,7 @@ void meta_service_test_app::adjust_dropped_size()
     req->config.ballot++;
     SET_IPS_AND_HOST_PORTS_BY_DNS(req->config, secondaries, nodes[5]);
     req->info = info;
-    req->node = dsn::dns_resolver::instance().resolve_address(nodes[5]);
-    req->__set_hp_node(nodes[5]);
+    SET_IP_AND_HOST_PORT_BY_DNS(*req, node1, nodes[5]);
     req->type = config_type::CT_UPGRADE_TO_SECONDARY;
     call_update_configuration(svc.get(), req);
 
@@ -357,8 +356,7 @@ void meta_service_test_app::adjust_dropped_size()
     // then receive a config_sync request fro nodes[4], which has less data than node[3]
     std::shared_ptr<configuration_query_by_node_request> req2 =
         std::make_shared<configuration_query_by_node_request>();
-    req2->node = dsn::dns_resolver::instance().resolve_address(nodes[4]);
-    req2->__set_hp_node(nodes[4]);
+    SET_IP_AND_HOST_PORT_BY_DNS(*req2, node1, nodes[4]);
 
     replica_info rep_info;
     rep_info.pid = pc.pid;

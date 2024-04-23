@@ -53,10 +53,8 @@ new_proposal_action(const host_port &target, const host_port &node, config_type:
     const auto &target_addr = dsn::dns_resolver::instance().resolve_address(target);
     const auto &node_addr = dsn::dns_resolver::instance().resolve_address(node);
     configuration_proposal_action act;
-    act.__set_target(target_addr);
-    act.__set_node(node_addr);
-    act.__set_hp_target(target);
-    act.__set_hp_node(node);
+    SET_IP_AND_HOST_PORT(act, target1, target_addr, target);
+    SET_IP_AND_HOST_PORT(act, node1, node_addr, node);
     act.__set_type(type);
     return act;
 }

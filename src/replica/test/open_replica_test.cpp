@@ -66,7 +66,7 @@ TEST_P(open_replica_test, open_replica_add_decree_and_ballot_check)
         gpid pid(ai.app_id, i);
         stub->_opening_replicas[pid] = task_ptr(nullptr);
 
-        const auto node = rpc_address::from_ip_port("127.0.0.11", 12321 + i + 1);
+        const host_port node = host_port::from_string(fmt::format("127.0.0.11:{}", 12321 + i + 1));
 
         _replica->register_service();
 
@@ -80,7 +80,7 @@ TEST_P(open_replica_test, open_replica_add_decree_and_ballot_check)
         req->info = *as;
         req->config = config;
         req->type = config_type::CT_ASSIGN_PRIMARY;
-        req->node = node;
+        SET_IP_AND_HOST_PORT_BY_DNS(*req, node1, node);
         if (test.expect_crash) {
             ASSERT_DEATH(stub->open_replica(ai, pid, nullptr, req), "");
         } else {
