@@ -340,10 +340,10 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK_EQ(act.hp_node1, pc.hp_primary);
         CHECK_EQ(act.node1, pc.primary);
         CHECK_EQ(hp_node, pc.hp_primary);
-        const auto node = nodes.find(hp_node);
-        CHECK(node != nodes.end(), "");
         CHECK(!is_secondary(pc, pc.hp_primary), "");
         CHECK(!is_secondary(pc, pc.primary), "");
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
         ns = &node->second;
         ns->remove_partition(pc.pid, true);
         ADD_IP_AND_HOST_PORT(pc, secondaries, pc.primary, pc.hp_primary);
@@ -357,6 +357,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK_EQ(act.hp_node1, act.hp_target1);
         CHECK_EQ(act.node1, act.target1);
         CHECK(is_secondary(pc, hp_node), "");
+        CHECK(is_secondary(pc, act.node1), "");
         const auto node = nodes.find(hp_node);
         CHECK(node != nodes.end(), "");
         ns = &node->second;
@@ -371,6 +372,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK_EQ(act.hp_target1, pc.hp_primary);
         CHECK_EQ(act.target1, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
+        CHECK(!is_member(pc, act.node1), "");
         CHECK(act.hp_node1, "");
         CHECK(act.node1, "");
         ADD_IP_AND_HOST_PORT(pc, secondaries, act.node1, hp_node);

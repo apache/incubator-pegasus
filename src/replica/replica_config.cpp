@@ -261,9 +261,12 @@ void replica::upgrade_to_secondary_on_primary(const ::dsn::host_port &node)
 
 void replica::downgrade_to_secondary_on_primary(configuration_update_request &proposal)
 {
-    if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
+    if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY) {
         return;
+    }
 
+    host_port node;
+    GET_HOST_PORT(proposal, node1, node);
     CHECK_EQ(proposal.config.pid, _primary_states.membership.pid);
     CHECK_EQ(proposal.config.hp_primary, _primary_states.membership.hp_primary);
     CHECK(proposal.config.hp_secondaries == _primary_states.membership.hp_secondaries, "");
