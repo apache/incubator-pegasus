@@ -24,7 +24,6 @@
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <algorithm>
-#include <iterator>
 #include <limits>
 #include <mutex>
 #include <ostream>

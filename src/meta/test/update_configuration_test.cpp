@@ -24,6 +24,8 @@
  * THE SOFTWARE.
  */
 
+#include <stdlib.h>
+#include <time.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <algorithm>
 #include <atomic>
@@ -32,8 +34,10 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -43,9 +47,10 @@
 #include "dsn.layer2_types.h"
 #include "dummy_balancer.h"
 #include "gtest/gtest.h"
-#include "meta/greedy_load_balancer.h"
 #include "meta/app_balance_policy.h"
 #include "meta/cluster_balance_policy.h"
+#include "meta/greedy_load_balancer.h"
+#include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_service.h"

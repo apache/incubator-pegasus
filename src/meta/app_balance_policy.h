@@ -19,16 +19,17 @@
 
 #include <gtest/gtest_prod.h>
 #include <memory>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
 #include "load_balance_policy.h"
 #include "meta/meta_data.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/command_manager.h"
 
 namespace dsn {
 class gpid;
-class host_port;
 
 namespace replication {
 class meta_service;
