@@ -51,6 +51,11 @@ private:
     bool _balancer_in_turn;
     bool _only_primary_balancer;
     bool _only_move_primary;
+
+    std::set<dsn::host_port> ignored_nodes;
+
+    friend class meta_service_test_app;
+    friend class meta_service_test;
 };
 
 class copy_secondary_operation : public copy_replica_operation
@@ -61,6 +66,7 @@ public:
                              node_mapper &nodes,
                              const std::vector<dsn::host_port> &address_vec,
                              const std::unordered_map<dsn::host_port, int> &address_id,
+                             const std::set<dsn::host_port> balancer_ignored_nodes,
                              int replicas_low);
     ~copy_secondary_operation() = default;
 
