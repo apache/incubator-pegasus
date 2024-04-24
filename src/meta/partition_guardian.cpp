@@ -458,7 +458,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             }
         }
 
+        // Use the action.hp_node1 after being updated.
         if (action.hp_node1) {
+            CHECK(action.node1, "");
             SET_OBJ_IP_AND_HOST_PORT(action, target1, action, node1);
             action.type = config_type::CT_ASSIGN_PRIMARY;
 

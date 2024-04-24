@@ -294,6 +294,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request &pro
         CHECK_EQ(proposal.node1, proposal.config.primary);
         RESET_IP_AND_HOST_PORT(proposal.config, primary);
     } else {
+        CHECK_NE(proposal.node1, proposal.config.primary);
         CHECK(replica_helper::remove_node(proposal.node1, proposal.config.secondaries),
               "remove node failed, node = {}",
               proposal.node1);
@@ -517,6 +518,7 @@ void replica::on_update_configuration_on_meta_server_reply(
             host_port node;
             GET_HOST_PORT(*req, node1, node);
             if (node != _stub->primary_host_port()) {
+                CHECK_NE(req->node1, _stub->primary_address());
                 replica_configuration rconfig;
                 replica_helper::get_replica_config(resp.config, node, rconfig);
                 rpc::call_one_way_typed(dsn::dns_resolver::instance().resolve_address(node),
