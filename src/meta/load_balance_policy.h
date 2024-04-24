@@ -84,12 +84,11 @@ public:
     virtual ~load_balance_policy();
 
     virtual void balance(bool checker, const meta_view *global_view, migration_list *list) = 0;
-    bool is_ignored_app(app_id app_id);
-    bool is_ignored_node(dsn::host_port hp);
 
 protected:
     void init(const meta_view *global_view, migration_list *list);
-
+    bool is_ignored_app(app_id app_id);
+    bool is_ignored_node(dsn::host_port hp);
     bool execute_balance(
         const app_mapper &apps,
         bool balance_checker,
