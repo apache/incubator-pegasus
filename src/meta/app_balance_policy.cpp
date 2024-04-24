@@ -67,7 +67,7 @@ void app_balance_policy::balance(bool checker, const meta_view *global_view, mig
 {
     init(global_view, list);
 
-    if (_alive_nodes - _balancer_ignored_nodes.size() < 2){
+    if (_alive_nodes - _balancer_ignored_nodes.size() < 2) {
         LOG_WARNING("the nodes that could balance is less 2");
         return;
     }

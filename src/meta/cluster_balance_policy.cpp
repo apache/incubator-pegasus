@@ -68,16 +68,16 @@ uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t ap
 }
 
 uint32_t get_skew(const std::map<host_port, uint32_t> &count_map,
-                    std::set<dsn::host_port> balancer_ignored_nodes)
+                  std::set<dsn::host_port> balancer_ignored_nodes)
 {
     uint32_t min = UINT_MAX, max = 0;
 
-    for (auto iter : balancer_ignored_nodes){
+    for (auto iter : balancer_ignored_nodes) {
         LOG_INFO("get_skew the ignored node is {}", iter);
     }
 
     for (const auto &kv : count_map) {
-        if (balancer_ignored_nodes.count(kv.first) != 0){
+        if (balancer_ignored_nodes.count(kv.first) != 0) {
             continue;
         }
         LOG_INFO("the  node is {}", kv.first);
@@ -99,7 +99,7 @@ void get_min_max_set(const std::map<host_port, uint32_t> &node_count_map,
     std::multimap<uint32_t, host_port> count_multimap = utils::flip_map(node_count_map);
 
     auto iter = count_multimap.begin();
-    while (iter != count_multimap.end() && balancer_ignored_nodes.count(iter->second) != 0){
+    while (iter != count_multimap.end() && balancer_ignored_nodes.count(iter->second) != 0) {
         ++iter;
     }
     auto min_range = count_multimap.equal_range(iter->first);
@@ -108,13 +108,14 @@ void get_min_max_set(const std::map<host_port, uint32_t> &node_count_map,
             continue;
         min_set.insert(iter->second);
     }
-    
+
     auto iter_max = count_multimap.rbegin();
-    while (iter_max != count_multimap.rend() && balancer_ignored_nodes.count(iter_max->second) != 0){
+    while (iter_max != count_multimap.rend() &&
+           balancer_ignored_nodes.count(iter_max->second) != 0) {
         --iter_max;
     }
     auto max_range = count_multimap.equal_range(iter_max->first);
-    for (auto iter = max_range.first; iter != max_range.second; ++iter){
+    for (auto iter = max_range.first; iter != max_range.second; ++iter) {
         if (balancer_ignored_nodes.count(iter->second) != 0)
             continue;
         max_set.insert(iter->second);
@@ -129,7 +130,7 @@ void cluster_balance_policy::balance(bool checker,
 {
     init(global_view, list);
 
-    if (_alive_nodes - _ignored_nodes.size() < 2){
+    if (_alive_nodes - _ignored_nodes.size() < 2) {
         LOG_WARNING("the nodes that could balance is less 2");
         return;
     }
@@ -323,7 +324,10 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
      **/
     std::set<host_port> cluster_min_count_nodes;
     std::set<host_port> cluster_max_count_nodes;
-    get_min_max_set(cluster_info.replicas_count, cluster_min_count_nodes, cluster_max_count_nodes, _balancer_ignored_nodes);
+    get_min_max_set(cluster_info.replicas_count,
+                    cluster_min_count_nodes,
+                    cluster_max_count_nodes,
+                    _balancer_ignored_nodes);
 
     bool found = false;
     auto app_range = app_skew_multimap.equal_range(max_app_skew);
@@ -357,11 +361,13 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
         std::multimap<uint32_t, host_port> app_count_multimap = utils::flip_map(app_map);
 
         auto app_min_partition = app_count_multimap.begin();
-        while (app_min_partition != app_count_multimap.end() && is_ignored_node(app_min_partition->second)){
+        while (app_min_partition != app_count_multimap.end() &&
+               is_ignored_node(app_min_partition->second)) {
             ++app_min_partition;
         }
         auto app_max_partition = app_count_multimap.rbegin();
-        while (app_max_partition != app_count_multimap.rend() && is_ignored_node(app_max_partition->second)){
+        while (app_max_partition != app_count_multimap.rend() &&
+               is_ignored_node(app_max_partition->second)) {
             --app_max_partition;
         }
 

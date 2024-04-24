@@ -554,7 +554,7 @@ void meta_service_test_app::app_balancer_nodes_blacklist_test()
     app_mapper apps;
     node_mapper nodes;
     nodes_fs_manager manager;
-    srand((unsigned)time(NULL)); 
+    srand((unsigned)time(NULL));
     std::vector<dsn::host_port> node_list;
     generate_node_list(node_list, 5, 10);
 
@@ -568,8 +568,7 @@ void meta_service_test_app::app_balancer_nodes_blacklist_test()
     std::string ignored_nodeslist = "localhost:1,localhost:2";
     std::vector<std::string> args = {"set"};
     args.emplace_back(ignored_nodeslist);
-    
-    
+
     LOG_INFO("the ignored nodes is {}", ignored_nodeslist);
 
     for (const auto &iter : nodes) {
@@ -580,12 +579,12 @@ void meta_service_test_app::app_balancer_nodes_blacklist_test()
     }
     greedy_load_balancer greedy_lb(nullptr);
     greedy_lb._app_balance_policy.reset();
-    
+
     std::unique_ptr<load_balance_policy> _app_balance(new app_balance_policy(nullptr));
     _app_balance->remote_command_balancer_ignored_node_addrs(args);
     //_app_balance->clear_balancer_ignored_node_addrs();
     greedy_lb._app_balance_policy.reset(_app_balance.release());
-    
+
     migration_list ml;
     // iterate 100 times balance
 
@@ -595,12 +594,12 @@ void meta_service_test_app::app_balancer_nodes_blacklist_test()
         for (const auto &ml_pair : ml) {
             // If the migration_list does not contain the ignored app's gpid, it indicates that the
             // app blacklist is effective.
-            for(configuration_proposal_action it : ml_pair.second->action_list){
-                if(it.type == 2 || it.type == 5)
+            for (configuration_proposal_action it : ml_pair.second->action_list) {
+                if (it.type == 2 || it.type == 5)
                     continue;
-                CHECK_TRUE(greedy_lb._app_balance_policy->_balancer_ignored_nodes.count(it.hp_node) == 0);
+                CHECK_TRUE(
+                    greedy_lb._app_balance_policy->_balancer_ignored_nodes.count(it.hp_node) == 0);
             }
-            
         }
         greedy_lb.check({&apps, &nodes}, ml);
         LOG_DEBUG("balance checker operation count = {}", ml.size());
@@ -619,9 +618,9 @@ void meta_service_test_app::cluster_balancer_nodes_blacklist_test()
     app_mapper apps;
     node_mapper nodes;
     nodes_fs_manager manager;
-    srand((unsigned)time(NULL)); 
+    srand((unsigned)time(NULL));
     std::vector<dsn::host_port> node_list;
-    generate_node_list(node_list, 5,10);
+    generate_node_list(node_list, 5, 10);
 
     int disk_on_node = 5;
 
@@ -633,8 +632,7 @@ void meta_service_test_app::cluster_balancer_nodes_blacklist_test()
     std::string ignored_nodeslist = "localhost:2";
     std::vector<std::string> args = {"set"};
     args.emplace_back(ignored_nodeslist);
-    
-    
+
     LOG_INFO("the ignored nodes is {}", ignored_nodeslist);
 
     for (const auto &iter : nodes) {
@@ -650,7 +648,7 @@ void meta_service_test_app::cluster_balancer_nodes_blacklist_test()
     _cluster_balance->remote_command_balancer_ignored_node_addrs(args);
     //_cluster_balance->clear_balancer_ignored_node_addrs();
     greedy_lb._cluster_balance_policy.reset(_cluster_balance.release());
-    
+
     update_flag("balance_cluster", "true");
 
     migration_list ml;
@@ -661,12 +659,12 @@ void meta_service_test_app::cluster_balancer_nodes_blacklist_test()
         for (const auto &ml_pair : ml) {
             // If the migration_list does not contain the ignored app's gpid, it indicates that the
             // app blacklist is effective.
-            for(configuration_proposal_action it : ml_pair.second->action_list){
-                if(it.type == 2 || it.type == 5)
+            for (configuration_proposal_action it : ml_pair.second->action_list) {
+                if (it.type == 2 || it.type == 5)
                     continue;
-                CHECK_TRUE(greedy_lb._cluster_balance_policy->_balancer_ignored_nodes.count(it.hp_node) == 0);
+                CHECK_TRUE(greedy_lb._cluster_balance_policy->_balancer_ignored_nodes.count(
+                               it.hp_node) == 0);
             }
-            
         }
         LOG_DEBUG("balance checker operation count = {}", ml.size());
         greedy_lb.check({&apps, &nodes}, ml);
@@ -679,13 +677,13 @@ void meta_service_test_app::cluster_balancer_nodes_blacklist_test()
                  iter.second.partition_count());
     }
 
-    for (const auto & iter : apps){
+    for (const auto &iter : apps) {
         for (auto node : nodes) {
-             LOG_INFO("app {} node({}) have {} primaries, {} partitions",
-                 iter.first,
-                 node.first,
-                 node.second.primary_count(iter.first),
-                 node.second.partition_count(iter.first));
+            LOG_INFO("app {} node({}) have {} primaries, {} partitions",
+                     iter.first,
+                     node.first,
+                     node.second.primary_count(iter.first),
+                     node.second.partition_count(iter.first));
         }
     }
 }

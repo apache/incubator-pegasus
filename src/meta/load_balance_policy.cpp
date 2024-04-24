@@ -215,9 +215,9 @@ load_balance_policy::load_balance_policy(meta_service *svc)
             "meta.lb.ignored_nodes_list",
             "meta.lb.ignored_nodes_list <get|set|clear> [node_addr1,nodes_addr2..]",
             "get, set and clear balancer ignored_node_list",
-            [this](const std::vector<std::string> &args){
+            [this](const std::vector<std::string> &args) {
                 return remote_command_balancer_ignored_node_addrs(args);
-            }); 
+            });
     });
 }
 
@@ -268,8 +268,14 @@ bool load_balance_policy::copy_primary(const std::shared_ptr<app_state> &app,
     const app_mapper &apps = *_global_view->apps;
     int replicas_low = app->partition_count / _alive_nodes;
 
-    auto operation = std::make_unique<copy_primary_operation>(
-        app, apps, nodes, host_port_vec, host_port_id,_balancer_ignored_nodes,still_have_less_than_average, replicas_low);
+    auto operation = std::make_unique<copy_primary_operation>(app,
+                                                              apps,
+                                                              nodes,
+                                                              host_port_vec,
+                                                              host_port_id,
+                                                              _balancer_ignored_nodes,
+                                                              still_have_less_than_average,
+                                                              replicas_low);
     return operation->start(_migration_result);
 }
 
@@ -500,7 +506,8 @@ bool load_balance_policy::is_ignored_app(app_id app_id)
     return _balancer_ignored_apps.find(app_id) != _balancer_ignored_apps.end();
 }
 
-std::string load_balance_policy::remote_command_balancer_ignored_node_addrs(const std::vector<std::string> &args)
+std::string load_balance_policy::remote_command_balancer_ignored_node_addrs(
+    const std::vector<std::string> &args)
 {
     static const std::string invalid_arguments_message("invalid arguments");
     nlohmann::json info;
@@ -510,9 +517,9 @@ std::string load_balance_policy::remote_command_balancer_ignored_node_addrs(cons
         }
         if (args[0] == "set") {
             return set_balancer_ignored_node_addrs(args);
-        }else if (args[0] == "get") {
+        } else if (args[0] == "get") {
             return get_balancer_ignored_node_addrs();
-        }else if (args[0] == "clear") {
+        } else if (args[0] == "clear") {
             return clear_balancer_ignored_node_addrs();
         }
     } while (false);
@@ -520,7 +527,8 @@ std::string load_balance_policy::remote_command_balancer_ignored_node_addrs(cons
     return info.dump(2);
 }
 
-std::string load_balance_policy::set_balancer_ignored_node_addrs(const std::vector<std::string> &args)
+std::string
+load_balance_policy::set_balancer_ignored_node_addrs(const std::vector<std::string> &args)
 {
     nlohmann::json info;
     info["error"] = "invalid argument";
@@ -564,8 +572,8 @@ std::string load_balance_policy::get_balancer_ignored_node_addrs()
 std::string load_balance_policy::clear_balancer_ignored_node_addrs()
 {
     {
-       dsn::zauto_write_lock l(_balancer_ignored_nodes_lock);
-        _balancer_ignored_nodes.clear(); 
+        dsn::zauto_write_lock l(_balancer_ignored_nodes_lock);
+        _balancer_ignored_nodes.clear();
     }
     nlohmann::json info;
     info["error"] = "ok";
@@ -840,7 +848,7 @@ void copy_replica_operation::init_ordered_host_port_ids()
         ordered_queue.insert(id);
     }
     _ordered_host_port_ids.swap(ordered_queue);
-    for (auto iter : _balancer_ignored_nodes){
+    for (auto iter : _balancer_ignored_nodes) {
         if (_host_port_id.count(iter) == 0)
             continue;
         _balancer_ignored_nodes_id.insert(_host_port_id.at(iter));
@@ -848,12 +856,10 @@ void copy_replica_operation::init_ordered_host_port_ids()
     }
 }
 
-
 int copy_replica_operation::find_max_load_nodes_without_blacklist()
 {
     auto iter = --_ordered_host_port_ids.end();
-    while (_balancer_ignored_nodes_id.count(*iter) != 0)
-    {
+    while (_balancer_ignored_nodes_id.count(*iter) != 0) {
         --iter;
     }
     return *iter;
@@ -862,26 +868,25 @@ int copy_replica_operation::find_max_load_nodes_without_blacklist()
 int copy_replica_operation::find_min_load_nodes_without_blacklist()
 {
     auto iter = _ordered_host_port_ids.begin();
-    while (_balancer_ignored_nodes_id.count(*iter) != 0)
-    {
+    while (_balancer_ignored_nodes_id.count(*iter) != 0) {
         iter++;
     }
     return *iter;
 }
 
-void copy_replica_operation::earse_max_node_without_blacknode(){
+void copy_replica_operation::earse_max_node_without_blacknode()
+{
     auto iter = --_ordered_host_port_ids.end();
-    while (_balancer_ignored_nodes_id.count(*iter) != 0)
-    {
+    while (_balancer_ignored_nodes_id.count(*iter) != 0) {
         --iter;
     }
     _ordered_host_port_ids.erase(iter);
 }
 
-void copy_replica_operation::earse_min_node_without_blacknode(){
+void copy_replica_operation::earse_min_node_without_blacknode()
+{
     auto iter = _ordered_host_port_ids.begin();
-    while (_balancer_ignored_nodes_id.count(*iter) != 0)
-    {
+    while (_balancer_ignored_nodes_id.count(*iter) != 0) {
         iter++;
     }
     _ordered_host_port_ids.erase(iter);

@@ -300,5 +300,5 @@ error_code distributed_lock_service_simple::query_cache(const std::string &lock_
     }
     return err;
 }
-}
-}
+} // namespace dist
+} // namespace dsn

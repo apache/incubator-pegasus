@@ -91,7 +91,8 @@ TEST(cluster_balance_policy, get_skew)
     };
     std::set<dsn::host_port> balancer_ignored_nodes;
 
-    ASSERT_EQ(get_skew(count_map, balancer_ignored_nodes), count_map.rbegin()->second - count_map.begin()->second);
+    ASSERT_EQ(get_skew(count_map, balancer_ignored_nodes),
+              count_map.rbegin()->second - count_map.begin()->second);
     balancer_ignored_nodes.insert(host_port("localhost", 10085));
     ASSERT_EQ(get_skew(count_map, balancer_ignored_nodes), 2);
 }

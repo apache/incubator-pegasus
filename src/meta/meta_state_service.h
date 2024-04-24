@@ -177,5 +177,5 @@ public:
                                   const err_stringv_callback &cb_get_children,
                                   dsn::task_tracker *tracker = nullptr) = 0;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

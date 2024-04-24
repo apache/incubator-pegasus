@@ -39,12 +39,12 @@ namespace replication {
 class meta_service;
 
 uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t app_id);
-uint32_t get_skew(const std::map<host_port, uint32_t> &count_map, std::set<dsn::host_port> balancer_ignored_nodes);
+uint32_t get_skew(const std::map<host_port, uint32_t> &count_map,
+                  std::set<dsn::host_port> balancer_ignored_nodes);
 void get_min_max_set(const std::map<host_port, uint32_t> &node_count_map,
                      /*out*/ std::set<host_port> &min_set,
                      /*out*/ std::set<host_port> &max_set,
-                     std::set<dsn::host_port> balancer_ignored_nodes);     
-
+                     std::set<dsn::host_port> balancer_ignored_nodes);
 
 class cluster_balance_policy : public load_balance_policy
 {
