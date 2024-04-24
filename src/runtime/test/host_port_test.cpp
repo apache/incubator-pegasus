@@ -266,9 +266,11 @@ TEST(host_port_test, test_macros)
     static const host_port kHp1("localhost", 8081);
     static const host_port kHp2("localhost", 8082);
     static const host_port kHp3("localhost", 8083);
+    std::vector<host_port> kHps({kHp1, kHp2, kHp3});
     static const rpc_address kAddr1 = dns_resolver::instance().resolve_address(kHp1);
     static const rpc_address kAddr2 = dns_resolver::instance().resolve_address(kHp2);
     static const rpc_address kAddr3 = dns_resolver::instance().resolve_address(kHp3);
+    std::vector<rpc_address> kAddres({kAddr1, kAddr2, kAddr3});
 
     // Test GET_HOST_PORT-1.
     {
@@ -296,6 +298,36 @@ TEST(host_port_test, test_macros)
         ASSERT_TRUE(hp_from_node);
         ASSERT_EQ(kHp1, hp_from_node);
         ASSERT_EQ(kAddr1, dns_resolver::instance().resolve_address(hp_from_node));
+    }
+
+    // Test GET_HOST_PORTS-1.
+    {
+        replication::configuration_recovery_request req;
+        std::vector<host_port> recovery_nodes;
+        GET_HOST_PORTS(req, recovery_nodes1, recovery_nodes);
+        ASSERT_TRUE(req.recovery_nodes1.empty());
+        ASSERT_FALSE(req.__isset.hp_recovery_nodes1);
+    }
+    // Test GET_HOST_PORTS-2.
+    {
+        replication::configuration_recovery_request req;
+        req.__set_recovery_nodes1(kAddres);
+        std::vector<host_port> recovery_nodes;
+        GET_HOST_PORTS(req, recovery_nodes1, recovery_nodes);
+        ASSERT_EQ(kAddres, req.recovery_nodes1);
+        ASSERT_TRUE(req.__isset.hp_recovery_nodes1);
+        ASSERT_EQ(kHps, req.hp_recovery_nodes1);
+    }
+    // Test GET_HOST_PORTS-2.
+    {
+        replication::configuration_recovery_request req;
+        req.__set_recovery_nodes1(kAddres);
+        req.__set_hp_recovery_nodes1(kHps);
+        std::vector<host_port> recovery_nodes;
+        GET_HOST_PORTS(req, recovery_nodes1, recovery_nodes);
+        ASSERT_EQ(kAddres, req.recovery_nodes1);
+        ASSERT_TRUE(req.__isset.hp_recovery_nodes1);
+        ASSERT_EQ(kHps, req.hp_recovery_nodes1);
     }
 
     // Test SET_IP_AND_HOST_PORT.

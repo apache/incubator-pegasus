@@ -32,6 +32,7 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"

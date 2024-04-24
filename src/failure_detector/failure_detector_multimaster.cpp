@@ -29,6 +29,7 @@
 
 #include "failure_detector/failure_detector_multimaster.h"
 #include "fd_types.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 #include "utils/rand.h"
