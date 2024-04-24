@@ -57,6 +57,24 @@ class TProtocol;
         }                                                                                          \
     } while (0)
 
+// Get std::vector<host_port> from 'obj', the result is filled in 'target', the source is from
+// std::vector<host_port> type field 'hp_<field>' if it is set, otherwise, reverse resolve from the
+// std::vector<rpc_address> '<field>'.
+#define GET_HOST_PORTS(obj, field, target)                                                         \
+    do {                                                                                           \
+        const auto &_obj = (obj);                                                                  \
+        auto &_target = (target);                                                                  \
+        CHECK(_target.empty(), "");                                                                \
+        if (_obj.__isset.hp_##field) {                                                             \
+            _target = _obj.hp_##field;                                                             \
+        } else {                                                                                   \
+            _target.reserve(_obj.field.size());                                                    \
+            for (const auto &addr : _obj.field) {                                                  \
+                _target.emplace_back(host_port::from_address(addr));                               \
+            }                                                                                      \
+        }                                                                                          \
+    } while (0)
+
 // Set 'addr' and 'hp' to the '<field>' and optional 'hp_<field>' of 'obj'. The types of the
 // fields are rpc_address and host_port, respectively.
 #define SET_IP_AND_HOST_PORT(obj, field, addr, hp)                                                 \
@@ -270,9 +288,6 @@ public:
     // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-
-    static void fill_host_ports_from_addresses(const std::vector<rpc_address> &addr_v,
-                                               /*output*/ std::vector<host_port> &hp_v);
 
 private:
     friend class dns_resolver;

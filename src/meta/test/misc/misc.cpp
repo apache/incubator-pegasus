@@ -288,7 +288,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
                                      nodes_fs_manager *manager)
 {
     dsn::partition_configuration &pc = *get_config(apps, pid);
-    node_state *ns;
+    node_state *ns = nullptr;
 
     ++pc.ballot;
     CHECK_NE(act.type, config_type::CT_INVALID);
@@ -304,65 +304,69 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     GET_HOST_PORT(act, node1, hp_node);
 
     switch (act.type) {
-    case config_type::CT_ASSIGN_PRIMARY:
+    case config_type::CT_ASSIGN_PRIMARY: {
         CHECK_EQ(act.hp_node1, act.hp_target1);
         CHECK_EQ(act.node1, act.target1);
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
         CHECK(pc.hp_secondaries.empty(), "");
         CHECK(pc.secondaries.empty(), "");
-
         SET_IP_AND_HOST_PORT(pc, primary, act.node1, hp_node);
-        ns = &nodes[hp_node];
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
         ns->put_partition(pc.pid, true);
         break;
-
-    case config_type::CT_ADD_SECONDARY:
+    }
+    case config_type::CT_ADD_SECONDARY: {
         CHECK_EQ(hp_target, pc.hp_primary);
         CHECK_EQ(act.hp_target1, pc.hp_primary);
         CHECK_EQ(act.target1, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
-
+        CHECK(!is_member(pc, act.node1), "");
         ADD_IP_AND_HOST_PORT(pc, secondaries, act.node1, hp_node);
-        ns = &nodes[hp_node];
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
         ns->put_partition(pc.pid, false);
-
         break;
-
-    case config_type::CT_DOWNGRADE_TO_SECONDARY:
+    }
+    case config_type::CT_DOWNGRADE_TO_SECONDARY: {
         CHECK_EQ(act.hp_node1, act.hp_target1);
         CHECK_EQ(act.node1, act.target1);
         CHECK_EQ(hp_node, hp_target);
         CHECK_EQ(act.hp_node1, pc.hp_primary);
         CHECK_EQ(act.node1, pc.primary);
         CHECK_EQ(hp_node, pc.hp_primary);
-        CHECK(nodes.find(hp_node) != nodes.end(), "");
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
         CHECK(!is_secondary(pc, pc.hp_primary), "");
         CHECK(!is_secondary(pc, pc.primary), "");
-        nodes[hp_node].remove_partition(pc.pid, true);
+        ns = &node->second;
+        ns->remove_partition(pc.pid, true);
         ADD_IP_AND_HOST_PORT(pc, secondaries, pc.primary, pc.hp_primary);
         RESET_IP_AND_HOST_PORT(pc, primary);
         break;
-
-    case config_type::CT_UPGRADE_TO_PRIMARY:
+    }
+    case config_type::CT_UPGRADE_TO_PRIMARY: {
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
         CHECK_EQ(hp_node, hp_target);
         CHECK_EQ(act.hp_node1, act.hp_target1);
         CHECK_EQ(act.node1, act.target1);
         CHECK(is_secondary(pc, hp_node), "");
-        CHECK(nodes.find(hp_node) != nodes.end(), "");
-
-        ns = &nodes[hp_node];
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         SET_IP_AND_HOST_PORT(pc, primary, act.node1, hp_node);
         CHECK(replica_helper::remove_node(hp_node, pc.hp_secondaries), "");
         CHECK(replica_helper::remove_node(act.node1, pc.secondaries), "");
         ns->put_partition(pc.pid, true);
         break;
-
-    case config_type::CT_ADD_SECONDARY_FOR_LB:
+    }
+    case config_type::CT_ADD_SECONDARY_FOR_LB: {
         CHECK_EQ(hp_target, pc.hp_primary);
         CHECK_EQ(act.hp_target1, pc.hp_primary);
         CHECK_EQ(act.target1, pc.primary);
@@ -370,30 +374,32 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(act.hp_node1, "");
         CHECK(act.node1, "");
         ADD_IP_AND_HOST_PORT(pc, secondaries, act.node1, hp_node);
-
-        ns = &nodes[hp_node];
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         ns->put_partition(pc.pid, false);
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
         break;
-
+    }
     // in balancer, remove primary is not allowed
     case config_type::CT_REMOVE:
-    case config_type::CT_DOWNGRADE_TO_INACTIVE:
+    case config_type::CT_DOWNGRADE_TO_INACTIVE: {
         CHECK(pc.hp_primary, "");
         CHECK(pc.primary, "");
         CHECK_EQ(pc.hp_primary, hp_target);
         CHECK_EQ(pc.hp_primary, act.hp_target1);
         CHECK_EQ(pc.primary, act.target1);
         CHECK(is_secondary(pc, hp_node), "");
-        CHECK(nodes.find(hp_node) != nodes.end(), "");
+        CHECK(is_secondary(pc, act.node1), "");
         CHECK(replica_helper::remove_node(hp_node, pc.hp_secondaries), "");
         CHECK(replica_helper::remove_node(act.node1, pc.secondaries), "");
-
-        ns = &nodes[hp_node];
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
         ns->remove_partition(pc.pid, false);
         break;
-
+    }
     default:
         CHECK(false, "");
         break;

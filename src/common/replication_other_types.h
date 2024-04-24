@@ -65,7 +65,7 @@ inline bool is_secondary(const partition_configuration &pc, const host_port &nod
 }
 inline bool is_secondary(const partition_configuration &pc, const rpc_address &node)
 {
-    return node && utils::contains(pc.hp_secondaries, node);
+    return node && utils::contains(pc.secondaries, node);
 }
 inline bool is_member(const partition_configuration &pc, const host_port &node)
 {

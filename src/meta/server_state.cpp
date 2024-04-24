@@ -570,6 +570,8 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                                                             const blob &value) mutable {
                 if (ec == ERR_OK) {
                     partition_configuration pc;
+                    // TODO(yingchun): when upgrade from old version, check fif the fields will be
+                    // filled.
                     // TODO(yingchun): check if the fields will be set after decoding.
                     pc.__isset.hp_secondaries = true;
                     pc.__isset.hp_last_drops = true;
@@ -1460,6 +1462,7 @@ void server_state::request_check(const partition_configuration &old,
     host_port node;
     GET_HOST_PORT(request, node1, node);
 
+    // Suppose the host_port fields have been filled.
     switch (request.type) {
     case config_type::CT_ASSIGN_PRIMARY:
         CHECK_NE(old.hp_primary, node);
@@ -1469,14 +1472,14 @@ void server_state::request_check(const partition_configuration &old,
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
         CHECK_NE(old.hp_primary, node);
-        CHECK(utils::contains(old.hp_secondaries, node), "");
         CHECK_NE(old.primary, request.node1);
+        CHECK(utils::contains(old.hp_secondaries, node), "");
         CHECK(utils::contains(old.secondaries, request.node1), "");
         break;
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
         CHECK_EQ(old.hp_primary, node);
-        CHECK(!utils::contains(old.hp_secondaries, node), "");
         CHECK_EQ(old.primary, request.node1);
+        CHECK(!utils::contains(old.hp_secondaries, node), "");
         CHECK(!utils::contains(old.secondaries, request.node1), "");
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
@@ -1486,8 +1489,8 @@ void server_state::request_check(const partition_configuration &old,
         break;
     case config_type::CT_UPGRADE_TO_SECONDARY:
         CHECK_NE(old.hp_primary, node);
-        CHECK(!utils::contains(old.hp_secondaries, node), "");
         CHECK_NE(old.primary, request.node1);
+        CHECK(!utils::contains(old.hp_secondaries, node), "");
         CHECK(!utils::contains(old.secondaries, request.node1), "");
         break;
     case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT: {
@@ -1592,22 +1595,22 @@ void server_state::update_configuration_locally(
     } else {
         CHECK_EQ(old_cfg.ballot, new_cfg.ballot);
 
-        const auto hp_node = host_port::from_address(config_request->DEPRECATED_node);
+        const auto host_node = host_port::from_address(config_request->DEPRECATED_node);
         new_cfg = old_cfg;
         partition_configuration_stateless pcs(new_cfg);
         if (config_request->type == config_type::type::CT_ADD_SECONDARY) {
-            pcs.hosts().emplace_back(hp_node);
-            pcs.workers().emplace_back(hp_node);
+            pcs.hosts().emplace_back(host_node);
+            pcs.workers().emplace_back(host_node);
         } else {
-            auto it = std::remove(pcs.hosts().begin(), pcs.hosts().end(), hp_node);
+            auto it = std::remove(pcs.hosts().begin(), pcs.hosts().end(), host_node);
             pcs.hosts().erase(it);
 
-            it = std::remove(pcs.workers().begin(), pcs.workers().end(), hp_node);
+            it = std::remove(pcs.workers().begin(), pcs.workers().end(), host_node);
             pcs.workers().erase(it);
         }
 
-        auto it = _nodes.find(hp_node);
-        CHECK(it != _nodes.end(), "invalid node: {}", hp_node);
+        auto it = _nodes.find(host_node);
+        CHECK(it != _nodes.end(), "invalid node: {}", host_node);
         if (config_type::CT_REMOVE == config_request->type) {
             it->second.remove_partition(gpid, false);
         } else {
@@ -2404,18 +2407,10 @@ void server_state::on_start_recovery(const configuration_recovery_request &req,
              req.skip_bad_nodes ? "true" : "false",
              req.skip_lost_partitions ? "true" : "false");
 
-    // TODO(yingchun): refactor it
-    if (req.__isset.hp_recovery_nodes1) {
-        resp.err = sync_apps_from_replica_nodes(req.hp_recovery_nodes1,
-                                                req.skip_bad_nodes,
-                                                req.skip_lost_partitions,
-                                                resp.hint_message);
-    } else {
-        std::vector<host_port> recovery_nodes;
-        host_port::fill_host_ports_from_addresses(req.recovery_nodes1, recovery_nodes);
-        resp.err = sync_apps_from_replica_nodes(
-            recovery_nodes, req.skip_bad_nodes, req.skip_lost_partitions, resp.hint_message);
-    }
+    std::vector<host_port> recovery_nodes;
+    GET_HOST_PORTS(req, recovery_nodes1, recovery_nodes);
+    resp.err = sync_apps_from_replica_nodes(
+        recovery_nodes, req.skip_bad_nodes, req.skip_lost_partitions, resp.hint_message);
 
     if (resp.err != dsn::ERR_OK) {
         LOG_ERROR("sync apps from replica nodes failed when do recovery, err = {}", resp.err);

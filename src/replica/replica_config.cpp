@@ -268,6 +268,7 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request &pr
     CHECK_EQ(proposal.config.hp_primary, _primary_states.membership.hp_primary);
     CHECK(proposal.config.hp_secondaries == _primary_states.membership.hp_secondaries, "");
     CHECK_EQ(proposal.hp_node1, proposal.config.hp_primary);
+    CHECK_EQ(proposal.node1, proposal.config.primary);
 
     RESET_IP_AND_HOST_PORT(proposal.config, primary);
     ADD_IP_AND_HOST_PORT(proposal.config, secondaries, proposal.node1, proposal.hp_node1);

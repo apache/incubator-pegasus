@@ -83,6 +83,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
             break;
         }
         case config_type::CT_ADD_SECONDARY: {
+            CHECK(!is_member(pc, act.node1), "");
             CHECK(!is_member(pc, act.hp_node1), "");
             CHECK_EQ(pc.primary, act.target1);
             CHECK_EQ(pc.hp_primary, act.hp_target1);

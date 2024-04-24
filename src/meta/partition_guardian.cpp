@@ -250,7 +250,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
         RESET_IP_AND_HOST_PORT(action, node1);
         for (const auto &hp_secondary : pc.hp_secondaries) {
             const auto ns = get_node_state(*(view.nodes), hp_secondary, false);
-            CHECK_NOTNULL(ns, "invalid secondary address, address = {}", hp_secondary);
+            CHECK_NOTNULL(ns, "invalid secondary: {}", hp_secondary);
             if (dsn_unlikely(!ns->alive())) {
                 continue;
             }
@@ -356,7 +356,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             LOG_WARNING("{}: the only node({}) is dead, waiting it to come back",
                         gpid_name,
                         FMT_HOST_PORT_AND_IP(pc, last_drops.back()));
-            SET_IP_AND_HOST_PORT(action, node1, pc.last_drops.back(), pc.hp_last_drops.back());
+            SET_OBJ_IP_AND_HOST_PORT(action, node1, pc, last_drops.back());
         } else {
             std::vector<dsn::host_port> nodes(pc.hp_last_drops.end() - 2, pc.hp_last_drops.end());
             std::vector<dropped_replica> collected_info(2);
