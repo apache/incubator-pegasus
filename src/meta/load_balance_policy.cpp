@@ -34,6 +34,7 @@
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
 #include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
+#include "runtime/rpc/rpc_address.h"
 #include "utils/command_manager.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
