@@ -41,6 +41,7 @@ public:
     static const std::string kTestRemoteClusterName;
     static const std::string kTestRemoteAppName;
     static const std::string kTestMetaStorePath;
+    static const int32_t kTestRemoteReplicaCount;
 
     void force_update_status(duplication_info &dup, duplication_status::type status)
     {
@@ -180,7 +181,7 @@ public:
         ASSERT_EQ(dup.remote_app_name, copy.remote_app_name);
 
         auto dup_sptr =
-            duplication_info::decode_from_blob(1, 1, kTestAppName, 4, kTestMetaStorePath, json);
+            duplication_info::decode_from_blob(1, 1, kTestAppName, 4, kTestRemoteReplicaCount, kTestMetaStorePath, json);
         ASSERT_TRUE(dup_sptr->equals_to(dup)) << *dup_sptr << " " << dup;
 
         blob new_json =
@@ -194,6 +195,7 @@ const std::string duplication_info_test::kTestAppName = "temp";
 const std::string duplication_info_test::kTestRemoteClusterName = "slave-cluster";
 const std::string duplication_info_test::kTestRemoteAppName = "remote_temp";
 const std::string duplication_info_test::kTestMetaStorePath = "/meta_test/101/duplication/1";
+const int32_t duplication_info_test::kTestRemoteReplicaCount = 3;
 
 TEST_F(duplication_info_test, alter_status_when_busy)
 {

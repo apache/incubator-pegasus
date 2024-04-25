@@ -56,6 +56,7 @@ public:
                      int32_t app_id,
                      const std::string &app_name,
                      int32_t partition_count,
+                     int32_t remote_replica_count,
                      uint64_t create_now_ms,
                      const std::string &remote_cluster_name,
                      const std::string &remote_app_name,
@@ -65,6 +66,7 @@ public:
           app_id(app_id),
           app_name(app_name),
           partition_count(partition_count),
+          remote_replica_count(remote_replica_count),
           remote_cluster_name(remote_cluster_name),
           remote_app_name(remote_app_name),
           remote_cluster_metas(std::move(remote_cluster_metas)),
@@ -139,6 +141,7 @@ public:
                                                    int32_t app_id,
                                                    const std::string &app_name,
                                                    int32_t partition_count,
+                                                   int32_t remote_replica_count,
                                                    const std::string &store_path,
                                                    const blob &json);
 
@@ -156,6 +159,7 @@ public:
         entry.status = _status;
         entry.__set_fail_mode(_fail_mode);
         entry.__set_remote_app_name(remote_app_name);
+        entry.__set_remote_replica_count(remote_replica_count);
         entry.__isset.progress = true;
         for (const auto &kv : _progress) {
             if (!kv.second.is_inited) {
@@ -240,11 +244,13 @@ private:
         int64_t create_timestamp_ms;
         duplication_fail_mode::type fail_mode;
         std::string remote_app_name;
+        int32_t remote_replica_count{0};
 
-        // Since there is no remote_cluster_name for old versions(< v2.6.0), remote_app_name is
-        // optional. Following deserialization functions could be compatible with the situations
-        // where remote_app_name is missing.
-        DEFINE_JSON_SERIALIZATION(remote, status, create_timestamp_ms, fail_mode, remote_app_name);
+        // Since there is no remote_cluster_name for old versions(< v2.6.0), remote_app_name
+        // and remote_replica_count are optional. Following deserialization functions could
+        // be compatible with the situations where remote_app_name and remote_replica_count
+        // are missing.
+        DEFINE_JSON_SERIALIZATION(remote, status, create_timestamp_ms, fail_mode, remote_app_name, remote_replica_count);
     };
 
 public:
@@ -252,6 +258,7 @@ public:
     const int32_t app_id{0};
     const std::string app_name;
     const int32_t partition_count{0};
+    const int32_t remote_replica_count{0};
 
     const std::string remote_cluster_name;
     const std::string remote_app_name;

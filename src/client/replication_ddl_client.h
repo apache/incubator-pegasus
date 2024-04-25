@@ -144,7 +144,8 @@ public:
     error_with<duplication_add_response> add_dup(const std::string &app_name,
                                                  const std::string &remote_address,
                                                  bool is_duplicating_checkpoint,
-                                                 const std::string &remote_app_name);
+                                                 const std::string &remote_app_name,
+                                                 const int32_t remote_replica_count);
 
     error_with<duplication_modify_response>
     change_dup_status(const std::string &app_name, int dupid, duplication_status::type status);

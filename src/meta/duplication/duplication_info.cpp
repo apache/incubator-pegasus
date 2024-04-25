@@ -190,6 +190,7 @@ blob duplication_info::to_json_blob() const
     copy.status = _next_status;
     copy.fail_mode = _next_fail_mode;
     copy.remote_app_name = remote_app_name;
+    copy.remote_replica_count = remote_replica_count;
     return json::json_forwarder<json_helper>::encode(copy);
 }
 
@@ -206,6 +207,7 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
                                                           int32_t app_id,
                                                           const std::string &app_name,
                                                           int32_t partition_count,
+                                                          int32_t remote_replica_count,
                                                           const std::string &store_path,
                                                           const blob &json)
 {
@@ -220,6 +222,12 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
         info.remote_app_name = app_name;
     }
 
+    if (info.remote_replica_count == 0) {
+        // remote_replica_count is missing, which means meta data in remote storage(zk) is
+        // still of old version(< v2.6.0).
+        info.remote_replica_count = remote_replica_count;
+    }
+
     std::vector<host_port> meta_list;
     if (!dsn::replication::replica_helper::load_servers_from_config(
             duplication_constants::kClustersSectionName, info.remote, meta_list)) {
@@ -230,6 +238,7 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
                                                   app_id,
                                                   app_name,
                                                   partition_count,
+                                                  info.remote_replica_count,
                                                   info.create_timestamp_ms,
                                                   info.remote,
                                                   info.remote_app_name,

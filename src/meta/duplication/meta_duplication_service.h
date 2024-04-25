@@ -124,6 +124,7 @@ private:
     std::shared_ptr<duplication_info>
     new_dup_from_init(const std::string &remote_cluster_name,
                       const std::string &remote_app_name,
+                      const int32_t remote_replica_count,
                       std::vector<host_port> &&remote_cluster_metas,
                       std::shared_ptr<app_state> &app) const;
 

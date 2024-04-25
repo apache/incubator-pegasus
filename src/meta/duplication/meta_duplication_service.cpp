@@ -193,11 +193,14 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         remote_app_name = request.app_name;
     }
 
+    int32_t remote_replica_count = request.__isset.remote_replica_count ? request.remote_replica_count : 0;
+
     LOG_INFO("add duplication for app({}), remote cluster name is {}, "
-             "remote app name is {}",
+             "remote app name is {}, remote replica count is {}",
              request.app_name,
              request.remote_cluster_name,
-             remote_app_name);
+             remote_app_name,
+             remote_replica_count);
 
     LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(request.remote_cluster_name !=
                                                get_current_cluster_name(),
@@ -249,9 +252,15 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
             }
         }
 
+        if (remote_replica_count == 0) {
+            // 0 means that the replica count would be set as the source app.
+            remote_replica_count = app->max_replica_count;
+        }
+
         if (dup) {
             // The duplication for the same app to the same remote cluster has existed.
             remote_app_name = dup->remote_app_name;
+            remote_replica_count = dup->remote_replica_count;
             LOG_INFO("no need to add duplication, since it has existed: app_name={}, "
                      "remote_cluster_name={}, remote_app_name={}",
                      request.app_name,
@@ -284,7 +293,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
 
     if (!dup) {
         dup = new_dup_from_init(
-            request.remote_cluster_name, remote_app_name, std::move(meta_list), app);
+            request.remote_cluster_name, remote_app_name, remote_replica_count, std::move(meta_list), app);
     }
 
     do_add_duplication(app, dup, rpc, remote_app_name);
@@ -618,6 +627,7 @@ void meta_duplication_service::do_update_partition_confirmed(
 std::shared_ptr<duplication_info>
 meta_duplication_service::new_dup_from_init(const std::string &remote_cluster_name,
                                             const std::string &remote_app_name,
+                                            const int32_t remote_replica_count,
                                             std::vector<host_port> &&remote_cluster_metas,
                                             std::shared_ptr<app_state> &app) const
 {
@@ -637,6 +647,7 @@ meta_duplication_service::new_dup_from_init(const std::string &remote_cluster_na
                                                  app->app_id,
                                                  app->app_name,
                                                  app->partition_count,
+                                                 remote_replica_count,
                                                  dsn_now_ms(),
                                                  remote_cluster_name,
                                                  remote_app_name,
@@ -742,7 +753,7 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
             zauto_write_lock l(app_lock());
 
             auto dup = duplication_info::decode_from_blob(
-                dup_id, app->app_id, app->app_name, app->partition_count, store_path, json);
+                dup_id, app->app_id, app->app_name, app->partition_count, app->max_replica_count, store_path, json);
             if (nullptr == dup) {
                 LOG_ERROR("failed to decode json \"{}\" on path {}", json, store_path);
                 return; // fail fast

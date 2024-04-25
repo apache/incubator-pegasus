@@ -49,18 +49,12 @@ using dsn::replication::duplication_status;
 bool add_dup(command_executor *e, shell_context *sc, arguments args)
 {
     // add_dup <app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str]
+    // [-r|--remote_replica_count num]
 
     argh::parser cmd(args.argc, args.argv);
-    if (cmd.pos_args().size() > 4) {
+    if (cmd.pos_args().size() > 5) {
         fmt::print(stderr, "too many params\n");
         return false;
-    }
-
-    for (const auto &flag : cmd.flags()) {
-        if (dsn_unlikely(flag != "s" && flag != "sst")) {
-            fmt::print(stderr, "unknown flag {}\n", flag);
-            return false;
-        }
     }
 
     if (!cmd(1)) {
@@ -88,8 +82,25 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     // Otherwise, use app_name as the remote_app_name.
     std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
 
+    // Read the replica count of the remote app, if any.
+    auto remote_replica_count_ss = cmd({"-r", "--remote_replica_count"});
+    bool missing_remote_replica_count = remote_replica_count_ss.fail();
+
+    // 0 represents that remote_replica_count is missing, which means the remote_replica_count
+    // would be set as the replica count of source app.
+    int32_t remote_replica_count = 0; 
+    if (!missing_remote_replica_count) {
+        std::string remote_replica_count_str(remote_replica_count_ss.str());
+        if (!dsn::buf2int32(remote_replica_count_str, remote_replica_count) || remote_replica_count < 1) {
+            fmt::print(stderr,
+                    "invalid remote_replica_count: {}\n",
+                    remote_replica_count_str);
+            return false;
+        }
+    }
+
     auto err_resp = sc->ddl_client->add_dup(
-        app_name, remote_cluster_name, is_duplicating_checkpoint, remote_app_name);
+        app_name, remote_cluster_name, is_duplicating_checkpoint, remote_app_name, remote_replica_count);
     auto err = err_resp.get_error();
     std::string hint;
     if (err) {
