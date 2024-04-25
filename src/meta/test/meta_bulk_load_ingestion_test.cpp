@@ -161,7 +161,7 @@ class ingestion_context_test : public meta_test_base
 {
 public:
     /// mock app and node info context
-    ///  node    node2    node3    node4
+    ///  node1    node2    node3    node4
     /// p0(tag1) s0(tag1) s0(tag2)
     /// s1(tag1) s1(tag2)          p1(tag2)
     /// s2(tag2)          p2(tag1) s2(tag1)

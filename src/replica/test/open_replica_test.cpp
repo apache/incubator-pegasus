@@ -68,7 +68,7 @@ TEST_P(open_replica_test, open_replica_add_decree_and_ballot_check)
         gpid pid(ai.app_id, i);
         stub->_opening_replicas[pid] = task_ptr(nullptr);
 
-        const host_port node = host_port::from_string(fmt::format("127.0.0.11:{}", 12321 + i + 1));
+        const auto node = host_port::from_string(fmt::format("127.0.0.11:{}", 12321 + i + 1));
 
         _replica->register_service();
 

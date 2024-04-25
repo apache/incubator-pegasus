@@ -577,9 +577,9 @@ void ford_fulkerson::update_decree(int node_id, const node_state &ns)
 
 void ford_fulkerson::handle_corner_case()
 {
-    // Suppose you have an 8-shard app in a cluster with 3 nodes(which name are node, node2,
+    // Suppose you have an 8-shard app in a cluster with 3 nodes(which name are node1, node2,
     // node3). The distribution of primaries among these nodes is as follow:
-    // node : [0, 1, 2, 3]
+    // node1 : [0, 1, 2, 3]
     // node2 : [4, 5]
     // node2 : [6, 7]
     // This is obviously unbalanced.
