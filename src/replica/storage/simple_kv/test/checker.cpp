@@ -50,7 +50,6 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_service_app.h"
 #include "replica/storage/simple_kv/test/common.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_engine.h"
 #include "runtime/service_app.h"
@@ -87,12 +86,10 @@ public:
         pc_status result;
         if (!pc.hp_primary) {
             if (pc.hp_secondaries.size() > 0) {
-                action.node = pc.secondaries[0];
-                action.__set_hp_node(pc.hp_secondaries[0]);
+                SET_OBJ_IP_AND_HOST_PORT(action, node, pc, secondaries[0]);
                 for (unsigned int i = 1; i < pc.hp_secondaries.size(); ++i)
                     if (pc.hp_secondaries[i] < action.hp_node) {
-                        action.node = pc.secondaries[i];
-                        action.hp_node = pc.hp_secondaries[i];
+                        SET_OBJ_IP_AND_HOST_PORT(action, node, pc, secondaries[i]);
                     }
                 action.type = config_type::CT_UPGRADE_TO_PRIMARY;
                 result = pc_status::ill;
@@ -103,26 +100,23 @@ public:
                 sort_alive_nodes(*view.nodes,
                                  server_load_balancer::primary_comparator(*view.nodes),
                                  sort_result);
-                action.node = dsn::dns_resolver::instance().resolve_address(sort_result[0]);
-                action.__set_hp_node(sort_result[0]);
+                SET_IP_AND_HOST_PORT_BY_DNS(action, node, sort_result[0]);
                 action.type = config_type::CT_ASSIGN_PRIMARY;
                 result = pc_status::ill;
             }
 
             // DDD
             else {
-                action.node = *pc.last_drops.rbegin();
-                action.__set_hp_node(*pc.hp_last_drops.rbegin());
+                SET_IP_AND_HOST_PORT(
+                    action, node, *pc.last_drops.rbegin(), *pc.hp_last_drops.rbegin());
                 action.type = config_type::CT_ASSIGN_PRIMARY;
-                LOG_ERROR("{} enters DDD state, we are waiting for its last primary node {}({}) to "
+                LOG_ERROR("{} enters DDD state, we are waiting for its last primary node {} to "
                           "come back ...",
                           pc.pid,
-                          action.hp_node,
-                          action.node);
+                          FMT_HOST_PORT_AND_IP(action, node));
                 result = pc_status::dead;
             }
-            action.target = action.node;
-            action.__set_hp_target(action.hp_node);
+            SET_OBJ_IP_AND_HOST_PORT(action, target, action, node);
         }
 
         else if (static_cast<int>(pc.hp_secondaries.size()) + 1 < pc.max_replica_count) {
@@ -132,13 +126,11 @@ public:
 
             for (auto &node : sort_result) {
                 if (!is_member(pc, node)) {
-                    action.node = dsn::dns_resolver::instance().resolve_address(node);
-                    action.__set_hp_node(node);
+                    SET_IP_AND_HOST_PORT_BY_DNS(action, node, node);
                     break;
                 }
             }
-            action.target = pc.primary;
-            action.__set_hp_target(pc.hp_primary);
+            SET_OBJ_IP_AND_HOST_PORT(action, target, pc, primary);
             action.type = config_type::CT_ADD_SECONDARY;
             result = pc_status::ill;
         } else {

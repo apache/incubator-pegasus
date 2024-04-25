@@ -54,6 +54,7 @@
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "metadata_types.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
@@ -63,6 +64,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -78,7 +80,8 @@ static void apply_update_request(/*in-out*/ configuration_update_request &update
     switch (update_req.type) {
     case config_type::CT_ASSIGN_PRIMARY:
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        SET_IP_AND_HOST_PORT(pc, primary, update_req.node, update_req.hp_node);
+        SET_OBJ_IP_AND_HOST_PORT(pc, primary, update_req, node);
+        // TODO(yingchun): optimize the following code
         replica_helper::remove_node(update_req.node, pc.secondaries);
         replica_helper::remove_node(update_req.hp_node, pc.hp_secondaries);
         break;
@@ -92,8 +95,10 @@ static void apply_update_request(/*in-out*/ configuration_update_request &update
     case config_type::CT_REMOVE:
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
         if (update_req.hp_node == pc.hp_primary) {
+            CHECK_EQ(update_req.node, pc.primary);
             RESET_IP_AND_HOST_PORT(pc, primary);
         } else {
+            CHECK_NE(update_req.node, pc.primary);
             replica_helper::remove_node(update_req.node, pc.secondaries);
             replica_helper::remove_node(update_req.hp_node, pc.hp_secondaries);
         }
@@ -230,7 +235,9 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_UPGRADE_TO_PRIMARY);
         EXPECT_TRUE(is_secondary(pc, update_req->hp_node));
+        EXPECT_TRUE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, update_req->hp_node);
+        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), update_req->node);
 
         last_addr = update_req->hp_node;
         proposal_sent = true;
@@ -253,7 +260,9 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(config_type::CT_UPGRADE_TO_PRIMARY, update_req->type);
         EXPECT_EQ(update_req->hp_node, last_addr);
+        EXPECT_EQ(update_req->node, dsn::dns_resolver::instance().resolve_address(last_addr));
         EXPECT_EQ(target, update_req->hp_node);
+        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), update_req->node);
 
         proposal_sent = true;
         apply_update_request(*update_req);
@@ -290,7 +299,9 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_UPGRADE_TO_PRIMARY);
         EXPECT_TRUE(is_secondary(pc, update_req->hp_node));
+        EXPECT_TRUE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, update_req->hp_node);
+        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), update_req->node);
 
         proposal_sent = true;
         last_addr = update_req->hp_node;
@@ -314,7 +325,9 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_UPGRADE_TO_PRIMARY);
         EXPECT_TRUE(is_secondary(pc, update_req->hp_node));
+        EXPECT_TRUE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, update_req->hp_node);
+        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), update_req->node);
         EXPECT_NE(target, last_addr);
 
         proposal_sent = true;
@@ -351,6 +364,7 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
         EXPECT_FALSE(is_secondary(pc, update_req->hp_node));
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, nodes[0]);
 
         last_addr = update_req->hp_node;
@@ -374,6 +388,7 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
         EXPECT_EQ(update_req->hp_node, last_addr);
+        EXPECT_EQ(update_req->node, dsn::dns_resolver::instance().resolve_address(last_addr));
         EXPECT_EQ(target, nodes[0]);
 
         proposal_sent = true;
@@ -410,12 +425,12 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
         EXPECT_FALSE(is_secondary(pc, update_req->hp_node));
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, nodes[0]);
 
         update_req->config.ballot++;
         update_req->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
-        update_req->node = update_req->config.secondaries[0];
-        update_req->hp_node = update_req->config.hp_secondaries[0];
+        SET_OBJ_IP_AND_HOST_PORT(*update_req, node, update_req->config, secondaries[0]);
         CLEAR_IP_AND_HOST_PORT(update_req->config, secondaries);
 
         proposal_sent = true;
@@ -452,6 +467,7 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
         EXPECT_FALSE(is_secondary(pc, update_req->hp_node));
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, nodes[0]);
 
         last_addr = update_req->hp_node;
@@ -477,6 +493,7 @@ void meta_partition_guardian_test::cure_test()
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
         EXPECT_NE(update_req->hp_node, last_addr);
         EXPECT_FALSE(is_secondary(pc, update_req->hp_node));
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, nodes[0]);
 
         proposal_sent = true;
@@ -514,7 +531,9 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
         EXPECT_FALSE(is_secondary(pc, update_req->hp_node));
+        EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, pc.hp_primary);
+        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), pc.primary);
 
         proposal_sent = true;
         svc->set_node_state({pc.hp_primary}, false);
@@ -815,8 +834,7 @@ void meta_partition_guardian_test::cure()
                 fake_request.info = *the_app;
                 fake_request.config = the_app->partitions[i];
                 fake_request.type = action.type;
-                fake_request.node = action.node;
-                fake_request.__set_hp_node(action.hp_node);
+                SET_OBJ_IP_AND_HOST_PORT(fake_request, node, action, node);
                 fake_request.host_node = action.node;
 
                 guardian.reconfig({&app, &nodes}, fake_request);

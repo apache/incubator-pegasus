@@ -216,13 +216,4 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     return error_s::ok();
 }
 
-void host_port::fill_host_ports_from_addresses(const std::vector<rpc_address> &addr_v,
-                                               std::vector<host_port> &hp_v)
-{
-    CHECK(hp_v.empty(), "optional host_port should be empty!");
-    for (const auto &addr : addr_v) {
-        hp_v.emplace_back(host_port::from_address(addr));
-    }
-}
-
 } // namespace dsn

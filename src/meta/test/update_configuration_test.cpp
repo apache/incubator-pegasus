@@ -54,7 +54,6 @@
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "metadata_types.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_host_port.h"
@@ -107,7 +106,7 @@ public:
         switch (update_req->type) {
         case config_type::CT_ASSIGN_PRIMARY:
         case config_type::CT_UPGRADE_TO_PRIMARY:
-            SET_IP_AND_HOST_PORT(pc, primary, update_req->node, update_req->hp_node);
+            SET_OBJ_IP_AND_HOST_PORT(pc, primary, *update_req, node);
             replica_helper::remove_node(update_req->node, pc.secondaries);
             replica_helper::remove_node(update_req->hp_node, pc.hp_secondaries);
             break;
@@ -121,8 +120,10 @@ public:
         case config_type::CT_REMOVE:
         case config_type::CT_DOWNGRADE_TO_INACTIVE:
             if (update_req->hp_node == pc.hp_primary) {
+                CHECK_EQ(update_req->node, pc.primary);
                 RESET_IP_AND_HOST_PORT(pc, primary);
             } else {
+                CHECK_NE(update_req->node, pc.primary);
                 replica_helper::remove_node(update_req->node, pc.secondaries);
                 replica_helper::remove_node(update_req->hp_node, pc.hp_secondaries);
             }
@@ -347,8 +348,7 @@ void meta_service_test_app::adjust_dropped_size()
     req->config.ballot++;
     SET_IPS_AND_HOST_PORTS_BY_DNS(req->config, secondaries, nodes[5]);
     req->info = info;
-    req->node = dsn::dns_resolver::instance().resolve_address(nodes[5]);
-    req->__set_hp_node(nodes[5]);
+    SET_IP_AND_HOST_PORT_BY_DNS(*req, node, nodes[5]);
     req->type = config_type::CT_UPGRADE_TO_SECONDARY;
     call_update_configuration(svc.get(), req);
 
@@ -357,8 +357,7 @@ void meta_service_test_app::adjust_dropped_size()
     // then receive a config_sync request fro nodes[4], which has less data than node[3]
     std::shared_ptr<configuration_query_by_node_request> req2 =
         std::make_shared<configuration_query_by_node_request>();
-    req2->node = dsn::dns_resolver::instance().resolve_address(nodes[4]);
-    req2->__set_hp_node(nodes[4]);
+    SET_IP_AND_HOST_PORT_BY_DNS(*req2, node, nodes[4]);
 
     replica_info rep_info;
     rep_info.pid = pc.pid;

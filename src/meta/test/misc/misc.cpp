@@ -134,6 +134,7 @@ void generate_app(/*out*/ std::shared_ptr<app_state> &app,
 
         CHECK(pc.hp_primary, "");
         CHECK(!is_secondary(pc, pc.hp_primary), "");
+        CHECK(!is_secondary(pc, pc.primary), "");
         CHECK_EQ(pc.hp_secondaries.size(), 2);
         CHECK_NE(pc.hp_secondaries[0], pc.hp_secondaries[1]);
     }
@@ -287,7 +288,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
                                      nodes_fs_manager *manager)
 {
     dsn::partition_configuration &pc = *get_config(apps, pid);
-    node_state *ns;
+    node_state *ns = nullptr;
 
     ++pc.ballot;
     CHECK_NE(act.type, config_type::CT_INVALID);
@@ -303,88 +304,104 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     GET_HOST_PORT(act, node, hp_node);
 
     switch (act.type) {
-    case config_type::CT_ASSIGN_PRIMARY:
+    case config_type::CT_ASSIGN_PRIMARY: {
+        CHECK_EQ(act.hp_node, act.hp_target);
         CHECK_EQ(act.node, act.target);
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
         CHECK(pc.hp_secondaries.empty(), "");
         CHECK(pc.secondaries.empty(), "");
-
         SET_IP_AND_HOST_PORT(pc, primary, act.node, hp_node);
-        ns = &nodes[hp_node];
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
         ns->put_partition(pc.pid, true);
         break;
-
-    case config_type::CT_ADD_SECONDARY:
+    }
+    case config_type::CT_ADD_SECONDARY: {
         CHECK_EQ(hp_target, pc.hp_primary);
+        CHECK_EQ(act.hp_target, pc.hp_primary);
         CHECK_EQ(act.target, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
-
+        CHECK(!is_member(pc, act.node), "");
         ADD_IP_AND_HOST_PORT(pc, secondaries, act.node, hp_node);
-        ns = &nodes[hp_node];
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
         ns->put_partition(pc.pid, false);
-
         break;
-
-    case config_type::CT_DOWNGRADE_TO_SECONDARY:
+    }
+    case config_type::CT_DOWNGRADE_TO_SECONDARY: {
+        CHECK_EQ(act.hp_node, act.hp_target);
         CHECK_EQ(act.node, act.target);
         CHECK_EQ(hp_node, hp_target);
+        CHECK_EQ(act.hp_node, pc.hp_primary);
         CHECK_EQ(act.node, pc.primary);
         CHECK_EQ(hp_node, pc.hp_primary);
-        CHECK(nodes.find(hp_node) != nodes.end(), "");
         CHECK(!is_secondary(pc, pc.hp_primary), "");
-        nodes[hp_node].remove_partition(pc.pid, true);
+        CHECK(!is_secondary(pc, pc.primary), "");
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
+        ns->remove_partition(pc.pid, true);
         ADD_IP_AND_HOST_PORT(pc, secondaries, pc.primary, pc.hp_primary);
         RESET_IP_AND_HOST_PORT(pc, primary);
         break;
-
-    case config_type::CT_UPGRADE_TO_PRIMARY:
+    }
+    case config_type::CT_UPGRADE_TO_PRIMARY: {
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
         CHECK_EQ(hp_node, hp_target);
+        CHECK_EQ(act.hp_node, act.hp_target);
         CHECK_EQ(act.node, act.target);
         CHECK(is_secondary(pc, hp_node), "");
-        CHECK(nodes.find(hp_node) != nodes.end(), "");
-
-        ns = &nodes[hp_node];
+        CHECK(is_secondary(pc, act.node), "");
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         SET_IP_AND_HOST_PORT(pc, primary, act.node, hp_node);
         CHECK(replica_helper::remove_node(hp_node, pc.hp_secondaries), "");
         CHECK(replica_helper::remove_node(act.node, pc.secondaries), "");
         ns->put_partition(pc.pid, true);
         break;
-
-    case config_type::CT_ADD_SECONDARY_FOR_LB:
+    }
+    case config_type::CT_ADD_SECONDARY_FOR_LB: {
         CHECK_EQ(hp_target, pc.hp_primary);
+        CHECK_EQ(act.hp_target, pc.hp_primary);
         CHECK_EQ(act.target, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
+        CHECK(!is_member(pc, act.node), "");
         CHECK(act.hp_node, "");
         CHECK(act.node, "");
         ADD_IP_AND_HOST_PORT(pc, secondaries, act.node, hp_node);
-
-        ns = &nodes[hp_node];
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         ns->put_partition(pc.pid, false);
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
         break;
-
+    }
     // in balancer, remove primary is not allowed
     case config_type::CT_REMOVE:
-    case config_type::CT_DOWNGRADE_TO_INACTIVE:
+    case config_type::CT_DOWNGRADE_TO_INACTIVE: {
         CHECK(pc.hp_primary, "");
         CHECK(pc.primary, "");
         CHECK_EQ(pc.hp_primary, hp_target);
+        CHECK_EQ(pc.hp_primary, act.hp_target);
         CHECK_EQ(pc.primary, act.target);
         CHECK(is_secondary(pc, hp_node), "");
-        CHECK(nodes.find(hp_node) != nodes.end(), "");
+        CHECK(is_secondary(pc, act.node), "");
         CHECK(replica_helper::remove_node(hp_node, pc.hp_secondaries), "");
         CHECK(replica_helper::remove_node(act.node, pc.secondaries), "");
-
-        ns = &nodes[hp_node];
+        const auto node = nodes.find(hp_node);
+        CHECK(node != nodes.end(), "");
+        ns = &node->second;
         CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
         ns->remove_partition(pc.pid, false);
         break;
-
+    }
     default:
         CHECK(false, "");
         break;
@@ -413,16 +430,15 @@ void migration_check_and_apply(app_mapper &apps,
             CHECK(hp, "");
         }
         CHECK(!is_secondary(pc, pc.hp_primary), "");
+        CHECK(!is_secondary(pc, pc.primary), "");
 
         for (unsigned int j = 0; j < proposal->action_list.size(); ++j) {
             configuration_proposal_action &act = proposal->action_list[j];
-            LOG_DEBUG("the {}th round of action, type: {}, node: {}({}), target: {}({})",
+            LOG_DEBUG("the {}th round of action, type: {}, node: {}, target: {}",
                       j,
                       dsn::enum_to_string(act.type),
-                      act.hp_node,
-                      act.node,
-                      act.hp_target,
-                      act.target);
+                      FMT_HOST_PORT_AND_IP(act, node),
+                      FMT_HOST_PORT_AND_IP(act, target));
             proposal_action_check_and_apply(act, proposal->gpid, apps, nodes, manager);
         }
     }

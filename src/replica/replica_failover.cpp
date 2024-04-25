@@ -36,13 +36,12 @@
 #include "replica.h"
 #include "replica/replica_context.h"
 #include "replica_stub.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
-class host_port;
 
 namespace replication {
 
@@ -87,8 +86,7 @@ void replica::handle_remote_failure(partition_status::type st,
               enum_to_string(st));
         {
             configuration_update_request request;
-            request.node = dsn::dns_resolver::instance().resolve_address(node);
-            request.__set_hp_node(node);
+            SET_IP_AND_HOST_PORT_BY_DNS(request, node, node);
             request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
             request.config = _primary_states.membership;
             downgrade_to_inactive_on_primary(request);

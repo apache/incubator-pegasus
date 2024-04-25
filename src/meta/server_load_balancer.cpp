@@ -32,6 +32,7 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -174,15 +175,16 @@ void server_load_balancer::register_proposals(meta_view view,
         // to send the proposal to.
         // for these proposals, they should keep the target empty and
         // the meta-server will fill primary as target.
-        if (!act.target) {
-            if (pc.hp_primary) {
-                act.target = pc.primary;
-                act.__set_hp_target(pc.hp_primary);
-            } else {
-                resp.err = ERR_INVALID_PARAMETERS;
-                return;
-            }
+        if (act.target) {
+            continue;
         }
+
+        if (!pc.hp_primary) {
+            resp.err = ERR_INVALID_PARAMETERS;
+            return;
+        }
+
+        SET_OBJ_IP_AND_HOST_PORT(act, target, pc, primary);
     }
 
     resp.err = ERR_OK;

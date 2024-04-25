@@ -28,6 +28,7 @@
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "fd_types.h"
 #include "gtest/gtest.h"
+#include "meta_admin_types.h"
 #include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/group_host_port.h"
@@ -266,9 +267,11 @@ TEST(host_port_test, test_macros)
     static const host_port kHp1("localhost", 8081);
     static const host_port kHp2("localhost", 8082);
     static const host_port kHp3("localhost", 8083);
+    static const std::vector<host_port> kHps({kHp1, kHp2, kHp3});
     static const rpc_address kAddr1 = dns_resolver::instance().resolve_address(kHp1);
     static const rpc_address kAddr2 = dns_resolver::instance().resolve_address(kHp2);
     static const rpc_address kAddr3 = dns_resolver::instance().resolve_address(kHp3);
+    static const std::vector<rpc_address> kAddres({kAddr1, kAddr2, kAddr3});
 
     // Test GET_HOST_PORT-1.
     {
@@ -291,11 +294,37 @@ TEST(host_port_test, test_macros)
     {
         fd::beacon_msg beacon;
         host_port hp_from_node;
+        beacon.from_node = kAddr1;
         beacon.__set_hp_from_node(kHp1);
         GET_HOST_PORT(beacon, from_node, hp_from_node);
         ASSERT_TRUE(hp_from_node);
         ASSERT_EQ(kHp1, hp_from_node);
         ASSERT_EQ(kAddr1, dns_resolver::instance().resolve_address(hp_from_node));
+    }
+
+    // Test GET_HOST_PORTS-1.
+    {
+        replication::configuration_recovery_request req;
+        std::vector<host_port> recovery_nodes;
+        GET_HOST_PORTS(req, recovery_nodes, recovery_nodes);
+        ASSERT_TRUE(recovery_nodes.empty());
+    }
+    // Test GET_HOST_PORTS-2.
+    {
+        replication::configuration_recovery_request req;
+        req.__set_recovery_nodes(kAddres);
+        std::vector<host_port> recovery_nodes;
+        GET_HOST_PORTS(req, recovery_nodes, recovery_nodes);
+        ASSERT_EQ(kHps, recovery_nodes);
+    }
+    // Test GET_HOST_PORTS-2.
+    {
+        replication::configuration_recovery_request req;
+        req.__set_recovery_nodes(kAddres);
+        req.__set_hp_recovery_nodes(kHps);
+        std::vector<host_port> recovery_nodes;
+        GET_HOST_PORTS(req, recovery_nodes, recovery_nodes);
+        ASSERT_EQ(kHps, recovery_nodes);
     }
 
     // Test SET_IP_AND_HOST_PORT.

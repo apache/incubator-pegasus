@@ -51,9 +51,30 @@ class TProtocol;
         const auto &_obj = (obj);                                                                  \
         auto &_target = (target);                                                                  \
         if (_obj.__isset.hp_##field) {                                                             \
+            DCHECK(_obj.field, "invalid address: {}", _obj.field);                                 \
+            DCHECK_EQ(_obj.field, dsn::dns_resolver::instance().resolve_address(_obj.hp_##field)); \
             _target = _obj.hp_##field;                                                             \
         } else {                                                                                   \
             _target = std::move(dsn::host_port::from_address(_obj.field));                         \
+        }                                                                                          \
+    } while (0)
+
+// Get std::vector<host_port> from 'obj', the result is filled in 'target', the source is from
+// std::vector<host_port> type field 'hp_<field>' if it is set, otherwise, reverse resolve from the
+// std::vector<rpc_address> '<field>'.
+#define GET_HOST_PORTS(obj, field, target)                                                         \
+    do {                                                                                           \
+        const auto &_obj = (obj);                                                                  \
+        auto &_target = (target);                                                                  \
+        CHECK(_target.empty(), "");                                                                \
+        if (_obj.__isset.hp_##field) {                                                             \
+            DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                  \
+            _target = _obj.hp_##field;                                                             \
+        } else {                                                                                   \
+            _target.reserve(_obj.field.size());                                                    \
+            for (const auto &addr : _obj.field) {                                                  \
+                _target.emplace_back(host_port::from_address(addr));                               \
+            }                                                                                      \
         }                                                                                          \
     } while (0)
 
@@ -62,17 +83,36 @@ class TProtocol;
 #define SET_IP_AND_HOST_PORT(obj, field, addr, hp)                                                 \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
-        _obj.field = (addr);                                                                       \
-        _obj.__set_hp_##field(hp);                                                                 \
+        const auto &_addr = (addr);                                                                \
+        const auto &_hp = (hp);                                                                    \
+        DCHECK_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        _obj.field = _addr;                                                                        \
+        _obj.__set_hp_##field(_hp);                                                                \
     } while (0)
 
 // GTest check whether the '<field>' and 'hp_<field>' of 'obj' equal to 'addr' and 'hp'. The types
 // of the fields are rpc_address and host_port, respectively.
 #define ASSERT_IP_AND_HOST_PORT(obj, field, addr, hp)                                              \
     do {                                                                                           \
-        auto &_obj = (obj);                                                                        \
-        ASSERT_EQ((addr), _obj.field);                                                             \
-        ASSERT_EQ((hp), _obj.hp_##field);                                                          \
+        const auto &_obj = (obj);                                                                  \
+        const auto &_addr = (addr);                                                                \
+        const auto &_hp = (hp);                                                                    \
+        ASSERT_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        ASSERT_EQ(_addr, _obj.field);                                                              \
+        ASSERT_EQ(_hp, _obj.hp_##field);                                                           \
+    } while (0)
+
+// Set '<src_field>' and 'hp_<src_field>' of 'src_obj' to the '<dst_field>' and optional
+// 'hp_<dst_field>' of 'dst_obj'. The types of the fields are rpc_address and host_port,
+// respectively.
+#define SET_OBJ_IP_AND_HOST_PORT(dst_obj, dst_field, src_obj, src_field)                           \
+    do {                                                                                           \
+        const auto &_src_obj = (src_obj);                                                          \
+        auto &_dst_obj = (dst_obj);                                                                \
+        DCHECK_EQ(_src_obj.src_field,                                                              \
+                  dsn::dns_resolver::instance().resolve_address(_src_obj.hp_##src_field));         \
+        _dst_obj.dst_field = _src_obj.src_field;                                                   \
+        _dst_obj.__set_hp_##dst_field(_src_obj.hp_##src_field);                                    \
     } while (0)
 
 // Set 'hp' and its DNS resolved rpc_address to the optional 'hp_<field>' and '<field>' of 'obj'.
@@ -107,12 +147,15 @@ class TProtocol;
 // of the fields are std::vector<rpc_address> and std::vector<host_port>, respectively.
 #define ADD_IP_AND_HOST_PORT(obj, field, addr, hp)                                                 \
     do {                                                                                           \
+        const auto &_addr = (addr);                                                                \
+        const auto &_hp = (hp);                                                                    \
+        DCHECK_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
         auto &_obj = (obj);                                                                        \
-        _obj.field.push_back(addr);                                                                \
+        _obj.field.push_back(_addr);                                                               \
         if (!_obj.__isset.hp_##field) {                                                            \
-            _obj.__set_hp_##field({hp});                                                           \
+            _obj.__set_hp_##field({_hp});                                                          \
         } else {                                                                                   \
-            _obj.hp_##field.push_back(hp);                                                         \
+            _obj.hp_##field.push_back(_hp);                                                        \
         }                                                                                          \
     } while (0)
 
@@ -122,27 +165,28 @@ class TProtocol;
 #define ADD_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                                \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
-        auto &_hp = (hp);                                                                          \
+        const auto &_hp = (hp);                                                                    \
         _obj.field.push_back(dsn::dns_resolver::instance().resolve_address(_hp));                  \
         if (!_obj.__isset.hp_##field) {                                                            \
             _obj.__set_hp_##field({_hp});                                                          \
         } else {                                                                                   \
             _obj.hp_##field.push_back(_hp);                                                        \
         }                                                                                          \
+        DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                      \
     } while (0)
 
 #define SET_IPS_AND_HOST_PORTS_BY_DNS_1(obj, field, hp1)                                           \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
-        auto &_hp1 = (hp1);                                                                        \
+        const auto &_hp1 = (hp1);                                                                  \
         _obj.field = {dsn::dns_resolver::instance().resolve_address(_hp1)};                        \
         _obj.__set_hp_##field({_hp1});                                                             \
     } while (0)
 #define SET_IPS_AND_HOST_PORTS_BY_DNS_2(obj, field, hp1, hp2)                                      \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
-        auto &_hp1 = (hp1);                                                                        \
-        auto &_hp2 = (hp2);                                                                        \
+        const auto &_hp1 = (hp1);                                                                  \
+        const auto &_hp2 = (hp2);                                                                  \
         _obj.field = {dsn::dns_resolver::instance().resolve_address(_hp1),                         \
                       dsn::dns_resolver::instance().resolve_address(_hp2)};                        \
         _obj.__set_hp_##field({_hp1, _hp2});                                                       \
@@ -150,9 +194,9 @@ class TProtocol;
 #define SET_IPS_AND_HOST_PORTS_BY_DNS_3(obj, field, hp1, hp2, hp3)                                 \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
-        auto &_hp1 = (hp1);                                                                        \
-        auto &_hp2 = (hp2);                                                                        \
-        auto &_hp3 = (hp3);                                                                        \
+        const auto &_hp1 = (hp1);                                                                  \
+        const auto &_hp2 = (hp2);                                                                  \
+        const auto &_hp3 = (hp3);                                                                  \
         _obj.field = {dsn::dns_resolver::instance().resolve_address(_hp1),                         \
                       dsn::dns_resolver::instance().resolve_address(_hp2),                         \
                       dsn::dns_resolver::instance().resolve_address(_hp3)};                        \
@@ -178,13 +222,14 @@ class TProtocol;
 #define HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                        \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
-        auto &_hp = (hp);                                                                          \
+        const auto &_hp = (hp);                                                                    \
         _obj.field.insert(_obj.field.begin(), dsn::dns_resolver::instance().resolve_address(_hp)); \
         if (!_obj.__isset.hp_##field) {                                                            \
             _obj.__set_hp_##field({_hp});                                                          \
         } else {                                                                                   \
             _obj.hp_##field.insert(_obj.hp_##field.begin(), _hp);                                  \
         }                                                                                          \
+        DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                      \
     } while (0)
 
 // TODO(yingchun): the 'hp' can be reduced.
@@ -192,13 +237,17 @@ class TProtocol;
 // maps are rpc_address and host_port type and indexed by 'addr' and 'hp', respectively.
 #define SET_VALUE_FROM_IP_AND_HOST_PORT(obj, field, addr, hp, value)                               \
     do {                                                                                           \
+        const auto &_hp = (hp);                                                                    \
+        const auto &_addr = (addr);                                                                \
+        DCHECK_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
         auto &_obj = (obj);                                                                        \
         const auto &_value = (value);                                                              \
-        _obj.field[addr] = _value;                                                                 \
+        _obj.field[_addr] = _value;                                                                \
         if (!_obj.__isset.hp_##field) {                                                            \
             _obj.__set_hp_##field({});                                                             \
         }                                                                                          \
-        _obj.hp_##field[hp] = _value;                                                              \
+        _obj.hp_##field[_hp] = _value;                                                             \
+        DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                      \
     } while (0)
 
 // Set 'value' to the '<field>' map and optional 'hp_<field>' map of 'obj'. The key of the
@@ -206,9 +255,9 @@ class TProtocol;
 // 'addr', respectively.
 #define SET_VALUE_FROM_HOST_PORT(obj, field, hp, value)                                            \
     do {                                                                                           \
-        const auto &_hp = (hp);                                                                    \
-        const auto addr = dsn::dns_resolver::instance().resolve_address(_hp);                      \
-        SET_VALUE_FROM_IP_AND_HOST_PORT(obj, field, addr, _hp, value);                             \
+        const auto &__hp = (hp);                                                                   \
+        const auto addr = dsn::dns_resolver::instance().resolve_address(__hp);                     \
+        SET_VALUE_FROM_IP_AND_HOST_PORT(obj, field, addr, __hp, value);                            \
     } while (0)
 
 #define FMT_HOST_PORT_AND_IP(obj, field) fmt::format("{}({})", (obj).hp_##field, (obj).field)
@@ -260,9 +309,6 @@ public:
     // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-
-    static void fill_host_ports_from_addresses(const std::vector<rpc_address> &addr_v,
-                                               /*output*/ std::vector<host_port> &hp_v);
 
 private:
     friend class dns_resolver;

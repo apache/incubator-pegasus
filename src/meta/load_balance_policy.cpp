@@ -33,7 +33,8 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
+#include "runtime/rpc/rpc_address.h"
 #include "utils/command_manager.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
@@ -50,13 +51,9 @@ namespace replication {
 configuration_proposal_action
 new_proposal_action(const host_port &target, const host_port &node, config_type::type type)
 {
-    const auto &target_addr = dsn::dns_resolver::instance().resolve_address(target);
-    const auto &node_addr = dsn::dns_resolver::instance().resolve_address(node);
     configuration_proposal_action act;
-    act.__set_target(target_addr);
-    act.__set_node(node_addr);
-    act.__set_hp_target(target);
-    act.__set_hp_node(node);
+    SET_IP_AND_HOST_PORT_BY_DNS(act, target, target);
+    SET_IP_AND_HOST_PORT_BY_DNS(act, node, node);
     act.__set_type(type);
     return act;
 }

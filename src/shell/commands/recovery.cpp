@@ -181,8 +181,9 @@ dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
 
     if (last_dropped.size() == 1) {
         const ddd_node_info &ninfo = last_dropped.back();
-        if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree)
+        if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree) {
             return ninfo.hp_node;
+        }
     } else if (last_dropped.size() == 2) {
         const ddd_node_info &secondary = last_dropped.front();
         const ddd_node_info &latest = last_dropped.back();
@@ -192,16 +193,19 @@ dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
         //  - if last committed decree is the same, choose node with the largest ballot
 
         if (latest.last_committed_decree == secondary.last_committed_decree &&
-            latest.last_committed_decree >= pinfo.config.last_committed_decree)
+            latest.last_committed_decree >= pinfo.config.last_committed_decree) {
             return latest.ballot >= secondary.ballot ? latest.hp_node : secondary.hp_node;
+        }
 
         if (latest.last_committed_decree > secondary.last_committed_decree &&
-            latest.last_committed_decree >= pinfo.config.last_committed_decree)
+            latest.last_committed_decree >= pinfo.config.last_committed_decree) {
             return latest.hp_node;
+        }
 
         if (secondary.last_committed_decree > latest.last_committed_decree &&
-            secondary.last_committed_decree >= pinfo.config.last_committed_decree)
+            secondary.last_committed_decree >= pinfo.config.last_committed_decree) {
             return secondary.hp_node;
+        }
     }
 
     return dsn::host_port();

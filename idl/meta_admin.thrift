@@ -116,10 +116,10 @@ struct configuration_query_by_node_response
 
 struct configuration_recovery_request
 {
-    1:list<dsn.rpc_address>        recovery_set;
+    1:list<dsn.rpc_address>        recovery_nodes;
     2:bool                         skip_bad_nodes;
     3:bool                         skip_lost_partitions;
-    4:optional list<dsn.host_port> hp_recovery_set;
+    4:optional list<dsn.host_port> hp_recovery_nodes;
 }
 
 struct configuration_recovery_response
@@ -283,8 +283,8 @@ struct query_app_manual_compact_response
 struct node_info
 {
     1:node_status            status = node_status.NS_INVALID;
-    2:dsn.rpc_address        address;
-    3:optional dsn.host_port hp_address;
+    2:dsn.rpc_address        node;
+    3:optional dsn.host_port hp_node;
 }
 
 struct configuration_list_nodes_request

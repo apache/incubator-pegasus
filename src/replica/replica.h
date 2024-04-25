@@ -388,7 +388,7 @@ private:
     /////////////////////////////////////////////////////////////////
     // reconfiguration
     void assign_primary(configuration_update_request &proposal);
-    void add_potential_secondary(configuration_update_request &proposal);
+    void add_potential_secondary(const configuration_update_request &proposal);
     void upgrade_to_secondary_on_primary(const host_port &node);
     void downgrade_to_secondary_on_primary(configuration_update_request &proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request &proposal);
