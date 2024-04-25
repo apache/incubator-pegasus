@@ -51,7 +51,7 @@ configuration_proposal_action
 new_proposal_action(const host_port &target, const host_port &node, config_type::type type)
 {
     configuration_proposal_action act;
-    SET_IP_AND_HOST_PORT_BY_DNS(act, target1, target);
+    SET_IP_AND_HOST_PORT_BY_DNS(act, target, target);
     SET_IP_AND_HOST_PORT_BY_DNS(act, node, node);
     act.__set_type(type);
     return act;

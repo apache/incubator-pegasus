@@ -1451,7 +1451,7 @@ void server_state::send_proposal(const configuration_proposal_action &action,
     SET_OBJ_IP_AND_HOST_PORT(request, node, action, node);
     request.config = pc;
     host_port target;
-    GET_HOST_PORT(action, target1, target);
+    GET_HOST_PORT(action, target, target);
     send_proposal(target, request);
 }
 
@@ -1752,7 +1752,7 @@ void server_state::on_update_configuration_on_remote_reply(
                     SET_OBJ_IP_AND_HOST_PORT(*config_request, node, action, node);
                     config_request->info = *app;
                     host_port target;
-                    GET_HOST_PORT(action, target1, target);
+                    GET_HOST_PORT(action, target, target);
                     send_proposal(target, *config_request);
                 }
             }
@@ -2605,7 +2605,7 @@ bool server_state::check_all_partitions()
                          "{}, node = {}",
                          ::dsn::enum_to_string(action.type),
                          pc.pid,
-                         FMT_HOST_PORT_AND_IP(action, target1),
+                         FMT_HOST_PORT_AND_IP(action, target),
                          FMT_HOST_PORT_AND_IP(action, node));
                 continue;
             }

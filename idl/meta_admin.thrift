@@ -347,14 +347,14 @@ enum balancer_request_type
 
 struct configuration_proposal_action
 {
-    1:dsn.rpc_address        target1;
+    1:dsn.rpc_address        target;
     2:dsn.rpc_address        node;
     3:config_type            type;
 
     // depricated now
     // new fields of this struct should start with 5
     // 4:i64 period_ts;
-    5:optional dsn.host_port hp_target1;
+    5:optional dsn.host_port hp_target;
     6:optional dsn.host_port hp_node;
 }
 

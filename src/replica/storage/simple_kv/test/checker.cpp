@@ -116,7 +116,7 @@ public:
                           FMT_HOST_PORT_AND_IP(action, node));
                 result = pc_status::dead;
             }
-            SET_OBJ_IP_AND_HOST_PORT(action, target1, action, node);
+            SET_OBJ_IP_AND_HOST_PORT(action, target, action, node);
         }
 
         else if (static_cast<int>(pc.hp_secondaries.size()) + 1 < pc.max_replica_count) {
@@ -130,7 +130,7 @@ public:
                     break;
                 }
             }
-            SET_OBJ_IP_AND_HOST_PORT(action, target1, pc, primary);
+            SET_OBJ_IP_AND_HOST_PORT(action, target, pc, primary);
             action.type = config_type::CT_ADD_SECONDARY;
             result = pc_status::ill;
         } else {

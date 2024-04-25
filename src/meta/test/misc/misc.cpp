@@ -239,7 +239,7 @@ void track_disk_info_check_and_apply(const dsn::replication::configuration_propo
     CHECK_NOTNULL(cc, "");
 
     dsn::host_port hp_target, hp_node;
-    GET_HOST_PORT(act, target1, hp_target);
+    GET_HOST_PORT(act, target, hp_target);
     GET_HOST_PORT(act, node, hp_node);
 
     fs_manager *target_manager = get_fs_manager(manager, hp_target);
@@ -292,7 +292,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
 
     ++pc.ballot;
     CHECK_NE(act.type, config_type::CT_INVALID);
-    CHECK(act.target1, "");
+    CHECK(act.target, "");
     CHECK(act.node, "");
 
     if (manager) {
@@ -300,13 +300,13 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     }
 
     dsn::host_port hp_target, hp_node;
-    GET_HOST_PORT(act, target1, hp_target);
+    GET_HOST_PORT(act, target, hp_target);
     GET_HOST_PORT(act, node, hp_node);
 
     switch (act.type) {
     case config_type::CT_ASSIGN_PRIMARY: {
-        CHECK_EQ(act.hp_node, act.hp_target1);
-        CHECK_EQ(act.node, act.target1);
+        CHECK_EQ(act.hp_node, act.hp_targe);
+        CHECK_EQ(act.node, act.target);
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
         CHECK(pc.hp_secondaries.empty(), "");
@@ -321,8 +321,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     }
     case config_type::CT_ADD_SECONDARY: {
         CHECK_EQ(hp_target, pc.hp_primary);
-        CHECK_EQ(act.hp_target1, pc.hp_primary);
-        CHECK_EQ(act.target1, pc.primary);
+        CHECK_EQ(act.hp_targe, pc.hp_primary);
+        CHECK_EQ(act.target, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
         CHECK(!is_member(pc, act.node), "");
         ADD_IP_AND_HOST_PORT(pc, secondaries, act.node, hp_node);
@@ -334,8 +334,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         break;
     }
     case config_type::CT_DOWNGRADE_TO_SECONDARY: {
-        CHECK_EQ(act.hp_node, act.hp_target1);
-        CHECK_EQ(act.node, act.target1);
+        CHECK_EQ(act.hp_node, act.hp_targe);
+        CHECK_EQ(act.node, act.target);
         CHECK_EQ(hp_node, hp_target);
         CHECK_EQ(act.hp_node, pc.hp_primary);
         CHECK_EQ(act.node, pc.primary);
@@ -354,8 +354,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
         CHECK_EQ(hp_node, hp_target);
-        CHECK_EQ(act.hp_node, act.hp_target1);
-        CHECK_EQ(act.node, act.target1);
+        CHECK_EQ(act.hp_node, act.hp_targe);
+        CHECK_EQ(act.node, act.target);
         CHECK(is_secondary(pc, hp_node), "");
         CHECK(is_secondary(pc, act.node), "");
         const auto node = nodes.find(hp_node);
@@ -369,8 +369,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     }
     case config_type::CT_ADD_SECONDARY_FOR_LB: {
         CHECK_EQ(hp_target, pc.hp_primary);
-        CHECK_EQ(act.hp_target1, pc.hp_primary);
-        CHECK_EQ(act.target1, pc.primary);
+        CHECK_EQ(act.hp_targe, pc.hp_primary);
+        CHECK_EQ(act.target, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
         CHECK(!is_member(pc, act.node), "");
         CHECK(act.hp_node, "");
@@ -389,8 +389,8 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(pc.hp_primary, "");
         CHECK(pc.primary, "");
         CHECK_EQ(pc.hp_primary, hp_target);
-        CHECK_EQ(pc.hp_primary, act.hp_target1);
-        CHECK_EQ(pc.primary, act.target1);
+        CHECK_EQ(pc.hp_primary, act.hp_targe);
+        CHECK_EQ(pc.primary, act.target);
         CHECK(is_secondary(pc, hp_node), "");
         CHECK(is_secondary(pc, act.node), "");
         CHECK(replica_helper::remove_node(hp_node, pc.hp_secondaries), "");
@@ -438,7 +438,7 @@ void migration_check_and_apply(app_mapper &apps,
                       j,
                       dsn::enum_to_string(act.type),
                       FMT_HOST_PORT_AND_IP(act, node),
-                      FMT_HOST_PORT_AND_IP(act, target1));
+                      FMT_HOST_PORT_AND_IP(act, target));
             proposal_action_check_and_apply(act, proposal->gpid, apps, nodes, manager);
         }
     }

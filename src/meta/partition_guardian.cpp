@@ -161,7 +161,7 @@ bool partition_guardian::from_proposals(meta_view &view,
     action = *(cc.lb_actions.front());
     host_port target;
     host_port node;
-    GET_HOST_PORT(action, target1, target);
+    GET_HOST_PORT(action, target, target);
     std::string reason;
     if (!target) {
         reason = "action target is invalid";
@@ -277,7 +277,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             newly_partitions *np = get_newly_partitions(*(view.nodes), node);
             np->newly_add_primary(gpid.get_app_id(), true);
 
-            SET_OBJ_IP_AND_HOST_PORT(action, target1, action, node);
+            SET_OBJ_IP_AND_HOST_PORT(action, target, action, node);
             result = pc_status::ill;
         }
     }
@@ -302,7 +302,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
 
         if (min_primary_server_np != nullptr) {
             SET_IP_AND_HOST_PORT_BY_DNS(action, node, min_primary_server);
-            SET_OBJ_IP_AND_HOST_PORT(action, target1, action, node);
+            SET_OBJ_IP_AND_HOST_PORT(action, target, action, node);
             action.type = config_type::CT_ASSIGN_PRIMARY;
             min_primary_server_np->newly_add_primary(gpid.get_app_id(), false);
         }
@@ -461,7 +461,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
         // Use the action.hp_node after being updated.
         if (action.hp_node) {
             CHECK(action.node, "");
-            SET_OBJ_IP_AND_HOST_PORT(action, target1, action, node);
+            SET_OBJ_IP_AND_HOST_PORT(action, target, action, node);
             action.type = config_type::CT_ASSIGN_PRIMARY;
 
             get_newly_partitions(*view.nodes, action.hp_node)
@@ -650,7 +650,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
     // Use the action.hp_node after being updated.
     if (action.hp_node) {
         action.type = config_type::CT_ADD_SECONDARY;
-        SET_OBJ_IP_AND_HOST_PORT(action, target1, pc, primary);
+        SET_OBJ_IP_AND_HOST_PORT(action, target, pc, primary);
 
         newly_partitions *np = get_newly_partitions(*(view.nodes), action.hp_node);
         CHECK_NOTNULL(np, "");
@@ -679,7 +679,7 @@ pc_status partition_guardian::on_redundant_secondary(meta_view &view, const dsn:
     configuration_proposal_action action;
     action.type = config_type::CT_REMOVE;
     SET_OBJ_IP_AND_HOST_PORT(action, node, pc, secondaries[target]);
-    SET_OBJ_IP_AND_HOST_PORT(action, target1, pc, primary);
+    SET_OBJ_IP_AND_HOST_PORT(action, target, pc, primary);
 
     // TODO: treat remove as cure proposals too
     get_config_context(*view.apps, gpid)->lb_actions.assign_balancer_proposals({action});
