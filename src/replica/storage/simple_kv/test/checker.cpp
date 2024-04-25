@@ -50,7 +50,6 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_service_app.h"
 #include "replica/storage/simple_kv/test/common.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_engine.h"
 #include "runtime/service_app.h"

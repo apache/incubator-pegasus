@@ -99,11 +99,12 @@ class TProtocol;
         const auto &_hp = (hp);                                                                    \
         ASSERT_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
         ASSERT_EQ(_addr, _obj.field);                                                              \
-        ASSERT_EQ((_hp), _obj.hp_##field);                                                         \
+        ASSERT_EQ(_hp, _obj.hp_##field);                                                           \
     } while (0)
 
-// Set '<src_field>' and 'hp_<src_field>' to the '<dst_field>' and optional 'hp_<dst_field>' of
-// 'dst_obj'. The types of the fields are rpc_address and host_port, respectively.
+// Set '<src_field>' and 'hp_<src_field>' of 'src_obj' to the '<dst_field>' and optional
+// 'hp_<dst_field>' of 'dst_obj'. The types of the fields are rpc_address and host_port,
+// respectively.
 #define SET_OBJ_IP_AND_HOST_PORT(dst_obj, dst_field, src_obj, src_field)                           \
     do {                                                                                           \
         const auto &_src_obj = (src_obj);                                                          \

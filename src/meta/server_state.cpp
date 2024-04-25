@@ -570,8 +570,8 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                                                             const blob &value) mutable {
                 if (ec == ERR_OK) {
                     partition_configuration pc;
-                    // TODO(yingchun): when upgrade from old version, check fif the fields will be
-                    // filled.
+                    // TODO(yingchun): when upgrade from old version, check if the fields will be
+                    //  filled.
                     // TODO(yingchun): check if the fields will be set after decoding.
                     pc.__isset.hp_secondaries = true;
                     pc.__isset.hp_last_drops = true;
@@ -1459,48 +1459,62 @@ void server_state::request_check(const partition_configuration &old,
                                  const configuration_update_request &request)
 {
     const partition_configuration &new_config = request.config;
-    host_port node;
-    GET_HOST_PORT(request, node1, node);
-
-    // Suppose the host_port fields have been filled.
     switch (request.type) {
     case config_type::CT_ASSIGN_PRIMARY:
-        CHECK_NE(old.hp_primary, node);
-        CHECK_NE(old.primary, request.node1);
-        CHECK(!utils::contains(old.hp_secondaries, node), "");
-        CHECK(!utils::contains(old.secondaries, request.node1), "");
+        if (request.__isset.hp_node1) {
+            CHECK_NE(old.hp_primary, request.hp_node1);
+            CHECK(!utils::contains(old.hp_secondaries, request.hp_node1), "");
+        } else {
+            CHECK_NE(old.primary, request.node1);
+            CHECK(!utils::contains(old.secondaries, request.node1), "");
+        }
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        CHECK_NE(old.hp_primary, node);
-        CHECK_NE(old.primary, request.node1);
-        CHECK(utils::contains(old.hp_secondaries, node), "");
-        CHECK(utils::contains(old.secondaries, request.node1), "");
+        if (request.__isset.hp_node1) {
+            CHECK_NE(old.hp_primary, request.hp_node1);
+            CHECK(utils::contains(old.hp_secondaries, request.hp_node1), "");
+        } else {
+            CHECK_NE(old.primary, request.node1);
+            CHECK(utils::contains(old.secondaries, request.node1), "");
+        }
         break;
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        CHECK_EQ(old.hp_primary, node);
-        CHECK_EQ(old.primary, request.node1);
-        CHECK(!utils::contains(old.hp_secondaries, node), "");
-        CHECK(!utils::contains(old.secondaries, request.node1), "");
+        if (request.__isset.hp_node1) {
+            CHECK_EQ(old.hp_primary, request.hp_node1);
+            CHECK(!utils::contains(old.hp_secondaries, request.hp_node1), "");
+        } else {
+            CHECK_EQ(old.primary, request.node1);
+            CHECK(!utils::contains(old.secondaries, request.node1), "");
+        }
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
     case config_type::CT_REMOVE:
-        CHECK(old.hp_primary == node || utils::contains(old.hp_secondaries, node), "");
-        CHECK(old.primary == request.node1 || utils::contains(old.secondaries, request.node1), "");
+        if (request.__isset.hp_node1) {
+            CHECK(old.hp_primary == request.hp_node1 ||
+                      utils::contains(old.hp_secondaries, request.hp_node1),
+                  "");
+        } else {
+            CHECK(old.primary == request.node1 || utils::contains(old.secondaries, request.node1),
+                  "");
+        }
         break;
     case config_type::CT_UPGRADE_TO_SECONDARY:
-        CHECK_NE(old.hp_primary, node);
-        CHECK_NE(old.primary, request.node1);
-        CHECK(!utils::contains(old.hp_secondaries, node), "");
-        CHECK(!utils::contains(old.secondaries, request.node1), "");
+        if (request.__isset.hp_node1) {
+            CHECK_NE(old.hp_primary, request.hp_node1);
+            CHECK(!utils::contains(old.hp_secondaries, request.hp_node1), "");
+        } else {
+            CHECK_NE(old.primary, request.node1);
+            CHECK(!utils::contains(old.secondaries, request.node1), "");
+        }
         break;
     case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT: {
-        host_port primary;
-        GET_HOST_PORT(new_config, primary, primary);
-        CHECK_EQ(old.hp_primary, primary);
-        CHECK(!new_config.__isset.hp_secondaries || old.hp_secondaries == new_config.hp_secondaries,
-              "");
-        CHECK_EQ(old.primary, new_config.primary);
-        CHECK(old.secondaries == new_config.secondaries, "");
+        if (request.__isset.hp_node1) {
+            CHECK_EQ(old.hp_primary, new_config.hp_primary);
+            CHECK(old.hp_secondaries == new_config.hp_secondaries, "");
+        } else {
+            CHECK_EQ(old.primary, new_config.primary);
+            CHECK(old.secondaries == new_config.secondaries, "");
+        }
         break;
     }
     default:
@@ -1600,12 +1614,12 @@ void server_state::update_configuration_locally(
         partition_configuration_stateless pcs(new_cfg);
         if (config_request->type == config_type::type::CT_ADD_SECONDARY) {
             pcs.hosts().emplace_back(host_node);
-            pcs.workers().emplace_back(host_node);
+            pcs.workers().emplace_back(node);
         } else {
             auto it = std::remove(pcs.hosts().begin(), pcs.hosts().end(), host_node);
             pcs.hosts().erase(it);
 
-            it = std::remove(pcs.workers().begin(), pcs.workers().end(), host_node);
+            it = std::remove(pcs.workers().begin(), pcs.workers().end(), node);
             pcs.workers().erase(it);
         }
 

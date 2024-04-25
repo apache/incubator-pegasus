@@ -37,11 +37,11 @@
 #include "meta/server_load_balancer.h"
 #include "meta/server_state.h"
 #include "meta/table_metrics.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 

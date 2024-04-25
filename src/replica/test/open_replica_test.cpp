@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
 #include <stdint.h>
 #include <memory>
 #include <string>
@@ -31,6 +32,7 @@
 #include "replica/replica_stub.h"
 #include "replica_test_base.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "utils/filesystem.h"
 

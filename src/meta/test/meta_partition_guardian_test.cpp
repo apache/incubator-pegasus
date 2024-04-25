@@ -54,6 +54,7 @@
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "metadata_types.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
@@ -63,6 +64,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
