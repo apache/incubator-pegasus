@@ -505,7 +505,7 @@ dsn::error_code replication_ddl_client::list_nodes(
 
     for (const auto &n : resp.infos) {
         host_port hp;
-        GET_HOST_PORT(n, node1, hp);
+        GET_HOST_PORT(n, node, hp);
         nodes[hp] = n.status;
     }
 
@@ -912,22 +912,22 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<host_port>
     std::ostream out(buf);
 
     auto req = std::make_shared<configuration_recovery_request>();
-    CLEAR_IP_AND_HOST_PORT(*req, recovery_nodes1);
+    CLEAR_IP_AND_HOST_PORT(*req, recovery_nodes);
     for (const auto &node : replica_nodes) {
-        if (utils::contains(req->hp_recovery_nodes1, node)) {
+        if (utils::contains(req->hp_recovery_nodes, node)) {
             out << "duplicate replica node " << node << ", just ingore it" << std::endl;
         } else {
-            ADD_IP_AND_HOST_PORT_BY_DNS(*req, recovery_nodes1, node);
+            ADD_IP_AND_HOST_PORT_BY_DNS(*req, recovery_nodes, node);
         }
     }
-    if (req->hp_recovery_nodes1.empty()) {
-        CHECK(req->recovery_nodes1.empty(),
-              "recovery_nodes1 should be set together with hp_recovery_nodes1");
+    if (req->hp_recovery_nodes.empty()) {
+        CHECK(req->recovery_nodes.empty(),
+              "recovery_nodes should be set together with hp_recovery_nodes");
         out << "node set for recovery it empty" << std::endl;
         return ERR_INVALID_PARAMETERS;
     }
-    CHECK(!req->recovery_nodes1.empty(),
-          "recovery_nodes1 should be set together with hp_recovery_nodes1");
+    CHECK(!req->recovery_nodes.empty(),
+          "recovery_nodes should be set together with hp_recovery_nodes");
     req->skip_bad_nodes = skip_bad_nodes;
     req->skip_lost_partitions = skip_lost_partitions;
 
@@ -936,7 +936,7 @@ dsn::error_code replication_ddl_client::do_recovery(const std::vector<host_port>
     out << "Skip lost partitions: " << (skip_lost_partitions ? "true" : "false") << std::endl;
     out << "Node list:" << std::endl;
     out << "=============================" << std::endl;
-    for (auto &node : req->hp_recovery_nodes1) {
+    for (auto &node : req->hp_recovery_nodes) {
         out << node << std::endl;
     }
     out << "=============================" << std::endl;

@@ -158,7 +158,7 @@ void simple_kv_client_app::send_config_to_meta(const host_port &receiver,
     request.gpid = g_default_gpid;
 
     configuration_proposal_action act;
-    SET_IP_AND_HOST_PORT_BY_DNS(act, node1, node);
+    SET_IP_AND_HOST_PORT_BY_DNS(act, node, node);
     SET_IP_AND_HOST_PORT_BY_DNS(act, target1, receiver);
     act.__set_type(type);
     request.action_list.emplace_back(std::move(act));

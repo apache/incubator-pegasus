@@ -306,24 +306,24 @@ TEST(host_port_test, test_macros)
     {
         replication::configuration_recovery_request req;
         std::vector<host_port> recovery_nodes;
-        GET_HOST_PORTS(req, recovery_nodes1, recovery_nodes);
+        GET_HOST_PORTS(req, recovery_nodes, recovery_nodes);
         ASSERT_TRUE(recovery_nodes.empty());
     }
     // Test GET_HOST_PORTS-2.
     {
         replication::configuration_recovery_request req;
-        req.__set_recovery_nodes1(kAddres);
+        req.__set_recovery_nodes(kAddres);
         std::vector<host_port> recovery_nodes;
-        GET_HOST_PORTS(req, recovery_nodes1, recovery_nodes);
+        GET_HOST_PORTS(req, recovery_nodes, recovery_nodes);
         ASSERT_EQ(kHps, recovery_nodes);
     }
     // Test GET_HOST_PORTS-2.
     {
         replication::configuration_recovery_request req;
-        req.__set_recovery_nodes1(kAddres);
-        req.__set_hp_recovery_nodes1(kHps);
+        req.__set_recovery_nodes(kAddres);
+        req.__set_hp_recovery_nodes(kHps);
         std::vector<host_port> recovery_nodes;
-        GET_HOST_PORTS(req, recovery_nodes1, recovery_nodes);
+        GET_HOST_PORTS(req, recovery_nodes, recovery_nodes);
         ASSERT_EQ(kHps, recovery_nodes);
     }
 

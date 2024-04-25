@@ -174,7 +174,7 @@ dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
     for (auto &node : last_two_nodes) {
         auto it = std::find_if(pinfo.dropped.begin(),
                                pinfo.dropped.end(),
-                               [&node](const ddd_node_info &r) { return r.hp_node1 == node; });
+                               [&node](const ddd_node_info &r) { return r.hp_node == node; });
         if (it->is_alive && it->is_collected)
             last_dropped.push_back(*it);
     }
@@ -182,7 +182,7 @@ dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
     if (last_dropped.size() == 1) {
         const ddd_node_info &ninfo = last_dropped.back();
         if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree) {
-            return ninfo.hp_node1;
+            return ninfo.hp_node;
         }
     } else if (last_dropped.size() == 2) {
         const ddd_node_info &secondary = last_dropped.front();
@@ -194,17 +194,17 @@ dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
 
         if (latest.last_committed_decree == secondary.last_committed_decree &&
             latest.last_committed_decree >= pinfo.config.last_committed_decree) {
-            return latest.ballot >= secondary.ballot ? latest.hp_node1 : secondary.hp_node1;
+            return latest.ballot >= secondary.ballot ? latest.hp_node : secondary.hp_node;
         }
 
         if (latest.last_committed_decree > secondary.last_committed_decree &&
             latest.last_committed_decree >= pinfo.config.last_committed_decree) {
-            return latest.hp_node1;
+            return latest.hp_node;
         }
 
         if (secondary.last_committed_decree > latest.last_committed_decree &&
             secondary.last_committed_decree >= pinfo.config.last_committed_decree) {
-            return secondary.hp_node1;
+            return secondary.hp_node;
         }
     }
 
@@ -298,7 +298,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         int j = 0;
         for (const ddd_node_info &n : pinfo.dropped) {
             dsn::host_port hp_node;
-            GET_HOST_PORT(n, node1, hp_node);
+            GET_HOST_PORT(n, node, hp_node);
             char time_buf[30] = {0};
             ::dsn::utils::time_ms_to_string(n.drop_time_ms, time_buf);
             out << "    dropped[" << j++ << "]: "

@@ -86,10 +86,10 @@ public:
         pc_status result;
         if (!pc.hp_primary) {
             if (pc.hp_secondaries.size() > 0) {
-                SET_OBJ_IP_AND_HOST_PORT(action, node1, pc, secondaries[0]);
+                SET_OBJ_IP_AND_HOST_PORT(action, node, pc, secondaries[0]);
                 for (unsigned int i = 1; i < pc.hp_secondaries.size(); ++i)
-                    if (pc.hp_secondaries[i] < action.hp_node1) {
-                        SET_OBJ_IP_AND_HOST_PORT(action, node1, pc, secondaries[i]);
+                    if (pc.hp_secondaries[i] < action.hp_node) {
+                        SET_OBJ_IP_AND_HOST_PORT(action, node, pc, secondaries[i]);
                     }
                 action.type = config_type::CT_UPGRADE_TO_PRIMARY;
                 result = pc_status::ill;
@@ -100,7 +100,7 @@ public:
                 sort_alive_nodes(*view.nodes,
                                  server_load_balancer::primary_comparator(*view.nodes),
                                  sort_result);
-                SET_IP_AND_HOST_PORT_BY_DNS(action, node1, sort_result[0]);
+                SET_IP_AND_HOST_PORT_BY_DNS(action, node, sort_result[0]);
                 action.type = config_type::CT_ASSIGN_PRIMARY;
                 result = pc_status::ill;
             }
@@ -108,15 +108,15 @@ public:
             // DDD
             else {
                 SET_IP_AND_HOST_PORT(
-                    action, node1, *pc.last_drops.rbegin(), *pc.hp_last_drops.rbegin());
+                    action, node, *pc.last_drops.rbegin(), *pc.hp_last_drops.rbegin());
                 action.type = config_type::CT_ASSIGN_PRIMARY;
                 LOG_ERROR("{} enters DDD state, we are waiting for its last primary node {} to "
                           "come back ...",
                           pc.pid,
-                          FMT_HOST_PORT_AND_IP(action, node1));
+                          FMT_HOST_PORT_AND_IP(action, node));
                 result = pc_status::dead;
             }
-            SET_OBJ_IP_AND_HOST_PORT(action, target1, action, node1);
+            SET_OBJ_IP_AND_HOST_PORT(action, target1, action, node);
         }
 
         else if (static_cast<int>(pc.hp_secondaries.size()) + 1 < pc.max_replica_count) {
@@ -126,7 +126,7 @@ public:
 
             for (auto &node : sort_result) {
                 if (!is_member(pc, node)) {
-                    SET_IP_AND_HOST_PORT_BY_DNS(action, node1, node);
+                    SET_IP_AND_HOST_PORT_BY_DNS(action, node, node);
                     break;
                 }
             }

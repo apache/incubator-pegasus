@@ -506,7 +506,7 @@ TEST_F(meta_split_service_test, on_config_sync_test)
     info1.pid = pid1;
     info2.pid = pid2;
     configuration_query_by_node_request req;
-    SET_IP_AND_HOST_PORT_BY_DNS(req, node1, NODE);
+    SET_IP_AND_HOST_PORT_BY_DNS(req, node, NODE);
     req.__isset.stored_replicas = true;
     req.stored_replicas.emplace_back(info1);
     req.stored_replicas.emplace_back(info2);

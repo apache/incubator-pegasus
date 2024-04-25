@@ -191,8 +191,8 @@ void proposal_actions::track_current_learner(const dsn::host_port &node, const r
         return;
     }
     const auto &act = acts.front();
-    CHECK(act.hp_node1, "");
-    if (act.hp_node1 != node) {
+    CHECK(act.hp_node, "");
+    if (act.hp_node != node) {
         return;
     }
 
