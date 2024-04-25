@@ -305,7 +305,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
 
     switch (act.type) {
     case config_type::CT_ASSIGN_PRIMARY: {
-        CHECK_EQ(act.hp_node, act.hp_targe);
+        CHECK_EQ(act.hp_node, act.hp_target);
         CHECK_EQ(act.node, act.target);
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
@@ -321,7 +321,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     }
     case config_type::CT_ADD_SECONDARY: {
         CHECK_EQ(hp_target, pc.hp_primary);
-        CHECK_EQ(act.hp_targe, pc.hp_primary);
+        CHECK_EQ(act.hp_target, pc.hp_primary);
         CHECK_EQ(act.target, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
         CHECK(!is_member(pc, act.node), "");
@@ -334,7 +334,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         break;
     }
     case config_type::CT_DOWNGRADE_TO_SECONDARY: {
-        CHECK_EQ(act.hp_node, act.hp_targe);
+        CHECK_EQ(act.hp_node, act.hp_target);
         CHECK_EQ(act.node, act.target);
         CHECK_EQ(hp_node, hp_target);
         CHECK_EQ(act.hp_node, pc.hp_primary);
@@ -354,7 +354,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(!pc.hp_primary, "");
         CHECK(!pc.primary, "");
         CHECK_EQ(hp_node, hp_target);
-        CHECK_EQ(act.hp_node, act.hp_targe);
+        CHECK_EQ(act.hp_node, act.hp_target);
         CHECK_EQ(act.node, act.target);
         CHECK(is_secondary(pc, hp_node), "");
         CHECK(is_secondary(pc, act.node), "");
@@ -369,7 +369,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     }
     case config_type::CT_ADD_SECONDARY_FOR_LB: {
         CHECK_EQ(hp_target, pc.hp_primary);
-        CHECK_EQ(act.hp_targe, pc.hp_primary);
+        CHECK_EQ(act.hp_target, pc.hp_primary);
         CHECK_EQ(act.target, pc.primary);
         CHECK(!is_member(pc, hp_node), "");
         CHECK(!is_member(pc, act.node), "");
@@ -389,7 +389,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(pc.hp_primary, "");
         CHECK(pc.primary, "");
         CHECK_EQ(pc.hp_primary, hp_target);
-        CHECK_EQ(pc.hp_primary, act.hp_targe);
+        CHECK_EQ(pc.hp_primary, act.hp_target);
         CHECK_EQ(pc.primary, act.target);
         CHECK(is_secondary(pc, hp_node), "");
         CHECK(is_secondary(pc, act.node), "");

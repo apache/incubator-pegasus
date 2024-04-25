@@ -73,7 +73,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
             CHECK(pc.secondaries.empty(), "");
             CHECK(pc.hp_secondaries.empty(), "");
             CHECK_EQ(act.node, act.target);
-            CHECK_EQ(act.hp_node, act.hp_targe);
+            CHECK_EQ(act.hp_node, act.hp_target);
             const auto node = nodes.find(act.hp_node);
             CHECK(node != nodes.end(), "");
             ns = &node->second;
@@ -86,7 +86,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
             CHECK(!is_member(pc, act.node), "");
             CHECK(!is_member(pc, act.hp_node), "");
             CHECK_EQ(pc.primary, act.target);
-            CHECK_EQ(pc.hp_primary, act.hp_targe);
+            CHECK_EQ(pc.hp_primary, act.hp_target);
             const auto node = nodes.find(act.hp_node);
             CHECK(node != nodes.end(), "");
             ADD_IP_AND_HOST_PORT(pc, secondaries, act.node, act.hp_node);
@@ -111,7 +111,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
     CHECK(!pc.primary, "");
     CHECK(!pc.hp_primary, "");
     CHECK_EQ(act.node, act.target);
-    CHECK_EQ(act.hp_node, act.hp_targe);
+    CHECK_EQ(act.hp_node, act.hp_target);
     CHECK(is_secondary(pc, act.node), "");
     CHECK(is_secondary(pc, act.hp_node), "");
     const auto node = nodes.find(act.hp_node);
