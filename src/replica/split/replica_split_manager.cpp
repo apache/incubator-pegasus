@@ -146,18 +146,19 @@ void replica_split_manager::parent_start_split(
     _child_gpid = child_gpid;
     _child_init_ballot = get_ballot();
 
-    LOG_INFO_PREFIX("start to add child({}), init_ballot={}, status={}, primary={}({})",
+    LOG_INFO_PREFIX("start to add child({}), init_ballot={}, status={}, primary={}",
                     _child_gpid,
                     _child_init_ballot,
                     enum_to_string(status()),
-                    request.config.hp_primary,
-                    request.config.primary);
+                    FMT_HOST_PORT_AND_IP(request.config, primary1));
 
+    host_port primary;
+    GET_HOST_PORT(_replica->_config, primary1, primary);
     tasking::enqueue(LPC_CREATE_CHILD,
                      tracker(),
                      std::bind(&replica_stub::create_child_replica,
                                _stub,
-                               _replica->_config.hp_primary,
+                               primary,
                                _replica->_app_info,
                                _child_init_ballot,
                                _child_gpid,
@@ -184,8 +185,7 @@ void replica_split_manager::child_init_replica(gpid parent_gpid,
 
     // update replica config
     _replica->_config.ballot = init_ballot;
-    _replica->_config.primary = dsn::dns_resolver::instance().resolve_address(primary_host_port);
-    _replica->_config.__set_hp_primary(primary_host_port);
+    SET_IP_AND_HOST_PORT_BY_DNS(_replica->_config, primary1, primary_host_port);
     _replica->_config.status = partition_status::PS_PARTITION_SPLIT;
 
     // initialize split context
@@ -621,10 +621,9 @@ void replica_split_manager::child_notify_catch_up() // on child partition
     request->child = _stub->primary_address();
     request->__set_hp_child(_stub->primary_host_port());
 
-    LOG_INFO_PREFIX("send notification to primary parent[{}@{}({})], ballot={}",
+    LOG_INFO_PREFIX("send notification to primary parent[{}@{}], ballot={}",
                     _replica->_split_states.parent_gpid,
-                    _replica->_config.hp_primary,
-                    _replica->_config.primary,
+                    FMT_HOST_PORT_AND_IP(_replica->_config, primary1),
                     get_ballot());
 
     notify_catch_up_rpc rpc(std::move(request),
@@ -632,32 +631,36 @@ void replica_split_manager::child_notify_catch_up() // on child partition
                             /*never timeout*/ 0_ms,
                             /*partition_hash*/ 0,
                             _replica->_split_states.parent_gpid.thread_hash());
-    rpc.call(_replica->_config.primary, tracker(), [this, rpc](error_code ec) mutable {
-        auto response = rpc.response();
-        if (ec == ERR_TIMEOUT) {
-            LOG_WARNING_PREFIX("notify primary catch up timeout, please wait and retry");
-            tasking::enqueue(LPC_PARTITION_SPLIT,
-                             tracker(),
-                             std::bind(&replica_split_manager::child_notify_catch_up, this),
-                             get_gpid().thread_hash(),
-                             std::chrono::seconds(1));
-            return;
-        }
-        if (ec != ERR_OK || response.err != ERR_OK) {
-            error_code err = (ec == ERR_OK) ? response.err : ec;
-            LOG_ERROR_PREFIX("failed to notify primary catch up, error={}", err);
-            _stub->split_replica_error_handler(
-                _replica->_split_states.parent_gpid,
-                std::bind(&replica_split_manager::parent_cleanup_split_context,
-                          std::placeholders::_1));
-            child_handle_split_error("notify_primary_split_catch_up failed");
-            return;
-        }
-        LOG_INFO_PREFIX("notify primary parent[{}@{}({})] catch up succeed",
-                        _replica->_split_states.parent_gpid,
-                        _replica->_config.hp_primary,
-                        _replica->_config.primary);
-    });
+    host_port primary;
+    GET_HOST_PORT(_replica->_config, primary1, primary);
+    rpc.call(dsn::dns_resolver::instance().resolve_address(primary),
+             tracker(),
+             [this, rpc](error_code ec) mutable {
+                 auto response = rpc.response();
+                 if (ec == ERR_TIMEOUT) {
+                     LOG_WARNING_PREFIX("notify primary catch up timeout, please wait and retry");
+                     tasking::enqueue(
+                         LPC_PARTITION_SPLIT,
+                         tracker(),
+                         std::bind(&replica_split_manager::child_notify_catch_up, this),
+                         get_gpid().thread_hash(),
+                         std::chrono::seconds(1));
+                     return;
+                 }
+                 if (ec != ERR_OK || response.err != ERR_OK) {
+                     error_code err = (ec == ERR_OK) ? response.err : ec;
+                     LOG_ERROR_PREFIX("failed to notify primary catch up, error={}", err);
+                     _stub->split_replica_error_handler(
+                         _replica->_split_states.parent_gpid,
+                         std::bind(&replica_split_manager::parent_cleanup_split_context,
+                                   std::placeholders::_1));
+                     child_handle_split_error("notify_primary_split_catch_up failed");
+                     return;
+                 }
+                 LOG_INFO_PREFIX("notify primary parent[{}@{}] catch up succeed",
+                                 _replica->_split_states.parent_gpid,
+                                 FMT_HOST_PORT_AND_IP(_replica->_config, primary1));
+             });
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION

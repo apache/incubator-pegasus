@@ -86,7 +86,7 @@ struct replica_configuration
 {
     1:dsn.gpid               pid;
     2:i64                    ballot;
-    3:dsn.rpc_address        primary;
+    3:dsn.rpc_address        primary1;
     4:partition_status       status = partition_status.PS_INVALID;
     5:i64                    learner_signature;
     // Used for bulk load
@@ -98,7 +98,7 @@ struct replica_configuration
     // 2. false - secondary copy mutation in this prepare message asynchronously
     // NOTICE: it should always be false when update_local_configuration
     7:optional bool          split_sync_to_child = false;
-    8:optional dsn.host_port hp_primary;
+    8:optional dsn.host_port hp_primary1;
 }
 
 struct replica_info
