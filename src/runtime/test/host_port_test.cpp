@@ -294,6 +294,7 @@ TEST(host_port_test, test_macros)
     {
         fd::beacon_msg beacon;
         host_port hp_from_node;
+        beacon.from_node = kAddr1;
         beacon.__set_hp_from_node(kHp1);
         GET_HOST_PORT(beacon, from_node, hp_from_node);
         ASSERT_TRUE(hp_from_node);
