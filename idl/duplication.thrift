@@ -104,7 +104,7 @@ struct duplication_add_response
     //
     // This field could also be used to check if the meta server supports
     // remote_replica_count(i.e. the version of meta server must be >= v2.6.0).
-    6:optional string remote_replica_count;
+    6:optional i32 remote_replica_count;
 }
 
 // This request is sent from client to meta.
@@ -147,7 +147,7 @@ struct duplication_entry
     // Since v2.6.0.
     // For versions >= v2.6.0, this could be specified by client.
     // For versions < v2.6.0, this must be the same with source replica_count.
-    9:optional string remote_replica_count;
+    9:optional i32 remote_replica_count;
 }
 
 // This request is sent from client to meta.

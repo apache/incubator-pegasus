@@ -300,14 +300,15 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                                 app);
     }
 
-    do_add_duplication(app, dup, rpc, remote_app_name);
+    do_add_duplication(app, dup, rpc, remote_app_name, remote_replica_count);
 }
 
 // ThreadPool(WRITE): THREAD_POOL_META_STATE
 void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &app,
                                                   duplication_info_s_ptr &dup,
                                                   duplication_add_rpc &rpc,
-                                                  const std::string &remote_app_name)
+                                                  const std::string &remote_app_name,
+                                                  const int32_t remote_replica_count)
 {
     const auto &ec = dup->start(rpc.request().is_duplicating_checkpoint);
     LOG_ERROR_DUP_HINT_AND_RETURN_IF_NOT(ec == ERR_OK,
@@ -321,7 +322,9 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
     auto value = dup->to_json_blob();
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
     _meta_svc->get_meta_storage()->create_node_recursively(
-        std::move(nodes), std::move(value), [app, this, dup, rpc, remote_app_name]() mutable {
+        std::move(nodes),
+        std::move(value),
+        [app, this, dup, rpc, remote_app_name, remote_replica_count]() mutable {
             LOG_INFO("[{}] add duplication successfully [app_name: {}, follower: {}]",
                      dup->log_prefix(),
                      app->app_name,
@@ -335,6 +338,7 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
             resp.appid = app->app_id;
             resp.dupid = dup->id;
             resp.__set_remote_app_name(remote_app_name);
+            resp.__set_remote_replica_count(remote_replica_count);
 
             zauto_write_lock l(app_lock());
             refresh_duplicating_no_lock(app);
