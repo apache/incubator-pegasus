@@ -2309,8 +2309,7 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::host_port> &re
         SET_IP_AND_HOST_PORT(
             *app_query_req, meta_server, dsn_primary_address(), dsn_primary_host_port());
         query_app_info_rpc app_rpc(std::move(app_query_req), RPC_QUERY_APP_INFO);
-        const auto &addr = dsn::dns_resolver::instance().resolve_address(replica_nodes[i]);
-        app_rpc.call(addr,
+        app_rpc.call(dsn::dns_resolver::instance().resolve_address(replica_nodes[i]),
                      &tracker,
                      [app_rpc, i, &replica_nodes, &query_app_errors, &query_app_responses](
                          error_code err) mutable {
@@ -2327,10 +2326,10 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::host_port> &re
                      });
 
         auto replica_query_req = std::make_unique<query_replica_info_request>();
-        replica_query_req->node = addr;
+        SET_IP_AND_HOST_PORT_BY_DNS(*replica_query_req, node1, replica_nodes[i]);
         query_replica_info_rpc replica_rpc(std::move(replica_query_req), RPC_QUERY_REPLICA_INFO);
         replica_rpc.call(
-            addr,
+            replica_query_req->node1,
             &tracker,
             [replica_rpc, i, &replica_nodes, &query_replica_errors, &query_replica_responses](
                 error_code err) mutable {
