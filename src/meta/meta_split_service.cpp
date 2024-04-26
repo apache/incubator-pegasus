@@ -305,7 +305,7 @@ void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
     update_child_request->config = request.child_config;
     update_child_request->info = *app;
     update_child_request->type = config_type::CT_REGISTER_CHILD;
-    SET_OBJ_IP_AND_HOST_PORT(*update_child_request, node, request, primary);
+    SET_OBJ_IP_AND_HOST_PORT(*update_child_request, node, request, primary1);
 
     partition_configuration child_config = app->partitions[child_gpid.get_partition_index()];
     child_config.secondaries = request.child_config.secondaries;

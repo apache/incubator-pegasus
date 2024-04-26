@@ -204,8 +204,7 @@ public:
     {
         req.child_pid = CHILD_GPID;
         req.ballot = b;
-        req.target = PRIMARY_ADDR;
-        req.__set_hp_target(PRIMARY);
+        SET_IP_AND_HOST_PORT_BY_DNS(req, target1, PRIMARY);
         req.new_partition_count = NEW_PARTITION_COUNT;
     }
 
@@ -296,8 +295,7 @@ public:
         req.child_gpid = CHILD_GPID;
         req.parent_gpid = PARENT_GPID;
         req.child_ballot = child_ballot;
-        req.child = PRIMARY_ADDR;
-        req.__set_hp_child(PRIMARY);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(req, child1, PRIMARY);
 
         notify_cacth_up_response resp;
         _parent_split_mgr->parent_handle_child_catch_up(req, resp);
@@ -364,8 +362,7 @@ public:
         req.child_config.pid = CHILD_GPID;
         req.child_config.ballot = INIT_BALLOT + 1;
         req.child_config.last_committed_decree = 0;
-        req.primary = PRIMARY_ADDR;
-        req.__set_hp_primary(PRIMARY);
+        SET_IP_AND_HOST_PORT_BY_DNS(req, primary1, PRIMARY);
 
         register_child_response resp;
         resp.err = resp_err;
@@ -534,7 +531,6 @@ public:
     const int32_t NEW_PARTITION_COUNT = 16;
 
     const host_port PRIMARY = host_port("localhost", 18230);
-    const rpc_address PRIMARY_ADDR = dsn::dns_resolver::instance().resolve_address(PRIMARY);
     const host_port SECONDARY = host_port("localhost", 10058);
     const rpc_address SECONDARY_ADDR = dsn::dns_resolver::instance().resolve_address(SECONDARY);
     const host_port SECONDARY2 = host_port("localhost", 10805);
