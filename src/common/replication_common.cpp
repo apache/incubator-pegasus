@@ -34,6 +34,7 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "fmt/core.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/service_app.h"
 #include "utils/config_api.h"
@@ -170,10 +171,9 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
                                                    /*out*/ replica_configuration &replica_config)
 {
     replica_config.pid = partition_config.pid;
-    replica_config.primary = partition_config.primary;
     replica_config.ballot = partition_config.ballot;
     replica_config.learner_signature = invalid_signature;
-    replica_config.__set_hp_primary(partition_config.hp_primary);
+    SET_OBJ_IP_AND_HOST_PORT(replica_config, primary, partition_config, primary);
 
     if (node == partition_config.hp_primary) {
         replica_config.status = partition_status::PS_PRIMARY;

@@ -220,7 +220,7 @@ public:
         _group_req.meta_bulk_load_status = status;
         _group_req.config.status = partition_status::PS_SECONDARY;
         _group_req.config.ballot = b;
-        SET_IP_AND_HOST_PORT(_group_req, target, PRIMARY, PRIMARY_HP);
+        SET_IP_AND_HOST_PORT_BY_DNS(_group_req, target, PRIMARY_HP);
     }
 
     void mock_replica_config(partition_status::type status)
@@ -228,8 +228,7 @@ public:
         replica_configuration rconfig;
         rconfig.ballot = BALLOT;
         rconfig.pid = PID;
-        rconfig.primary = PRIMARY;
-        rconfig.__set_hp_primary(PRIMARY_HP);
+        SET_IP_AND_HOST_PORT_BY_DNS(rconfig, primary, PRIMARY_HP);
         rconfig.status = status;
         _replica->set_replica_config(rconfig);
     }
@@ -412,9 +411,6 @@ public:
     std::string ROOT_PATH = "bulk_load_root";
     gpid PID = gpid(1, 0);
     ballot BALLOT = 3;
-    rpc_address PRIMARY = rpc_address::from_ip_port("127.0.0.2", 34801);
-    rpc_address SECONDARY = rpc_address::from_ip_port("127.0.0.3", 34801);
-    rpc_address SECONDARY2 = rpc_address::from_ip_port("127.0.0.4", 34801);
     const host_port PRIMARY_HP = host_port("localhost", 34801);
     const host_port SECONDARY_HP = host_port("localhost", 34801);
     const host_port SECONDARY_HP2 = host_port("localhost", 34801);
