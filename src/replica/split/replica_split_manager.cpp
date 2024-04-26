@@ -819,6 +819,8 @@ void replica_split_manager::parent_send_update_partition_count_request(
                                                0_ms,
                                                0,
                                                get_gpid().thread_hash());
+    DCHECK(request->hp_target1, "");
+    DCHECK_EQ(request->target1, dsn::dns_resolver::instance().resolve_address(request->hp_target1));
     rpc.call(
         request->target1, tracker(), [this, rpc, not_replied_addresses](error_code ec) mutable {
             on_update_child_group_partition_count_reply(
@@ -915,6 +917,9 @@ void replica_split_manager::on_update_child_group_partition_count_reply(
             "failed to update child node({}) partition_count, error = {}, wait and retry",
             FMT_HOST_PORT_AND_IP(request, target1),
             error);
+        DCHECK(request.hp_target1, "");
+        DCHECK_EQ(request.target1,
+                  dsn::dns_resolver::instance().resolve_address(request.hp_target1));
         tasking::enqueue(
             LPC_PARTITION_SPLIT,
             tracker(),
