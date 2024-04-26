@@ -149,7 +149,7 @@ public:
         request->app.app_id = app->app_id;
         request->parent_config = parent_config;
         request->child_config = child_config;
-        request->hp_primary = NODE;
+        SET_IP_AND_HOST_PORT_BY_DNS(*request, primary, NODE);
 
         register_child_rpc rpc(std::move(request), RPC_CM_REGISTER_CHILD_REPLICA);
         split_svc().register_child_on_meta(rpc);
