@@ -250,7 +250,8 @@ private:
         // and remote_replica_count are optional. Following deserialization functions could
         // be compatible with the situations where remote_app_name and remote_replica_count
         // are missing.
-        DEFINE_JSON_SERIALIZATION(remote, status, create_timestamp_ms, fail_mode, remote_app_name, remote_replica_count);
+        DEFINE_JSON_SERIALIZATION(
+            remote, status, create_timestamp_ms, fail_mode, remote_app_name, remote_replica_count);
     };
 
 public:

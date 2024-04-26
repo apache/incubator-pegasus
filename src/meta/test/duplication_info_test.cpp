@@ -187,8 +187,8 @@ public:
         ASSERT_EQ(dup.remote_replica_count, copy.remote_replica_count);
         ASSERT_EQ(kTestRemoteReplicaCount, copy.remote_replica_count);
 
-        auto dup_sptr =
-            duplication_info::decode_from_blob(1, 1, kTestAppName, 4, kTestRemoteReplicaCount, kTestMetaStorePath, json);
+        auto dup_sptr = duplication_info::decode_from_blob(
+            1, 1, kTestAppName, 4, kTestRemoteReplicaCount, kTestMetaStorePath, json);
         ASSERT_TRUE(dup_sptr->equals_to(dup)) << *dup_sptr << " " << dup;
 
         blob new_json =

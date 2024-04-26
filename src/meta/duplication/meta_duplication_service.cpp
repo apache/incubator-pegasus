@@ -193,7 +193,8 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         remote_app_name = request.app_name;
     }
 
-    int32_t remote_replica_count = request.__isset.remote_replica_count ? request.remote_replica_count : 0;
+    int32_t remote_replica_count =
+        request.__isset.remote_replica_count ? request.remote_replica_count : 0;
 
     LOG_INFO("add duplication for app({}), remote cluster name is {}, "
              "remote app name is {}, remote replica count is {}",
@@ -292,8 +293,11 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     }
 
     if (!dup) {
-        dup = new_dup_from_init(
-            request.remote_cluster_name, remote_app_name, remote_replica_count, std::move(meta_list), app);
+        dup = new_dup_from_init(request.remote_cluster_name,
+                                remote_app_name,
+                                remote_replica_count,
+                                std::move(meta_list),
+                                app);
     }
 
     do_add_duplication(app, dup, rpc, remote_app_name);
@@ -752,8 +756,13 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
         [ dup_id, this, app = std::move(app), store_path ](const blob &json) {
             zauto_write_lock l(app_lock());
 
-            auto dup = duplication_info::decode_from_blob(
-                dup_id, app->app_id, app->app_name, app->partition_count, app->max_replica_count, store_path, json);
+            auto dup = duplication_info::decode_from_blob(dup_id,
+                                                          app->app_id,
+                                                          app->app_name,
+                                                          app->partition_count,
+                                                          app->max_replica_count,
+                                                          store_path,
+                                                          json);
             if (nullptr == dup) {
                 LOG_ERROR("failed to decode json \"{}\" on path {}", json, store_path);
                 return; // fail fast

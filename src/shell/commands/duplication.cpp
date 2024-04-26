@@ -88,19 +88,21 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
 
     // 0 represents that remote_replica_count is missing, which means the remote_replica_count
     // would be set as the replica count of source app.
-    int32_t remote_replica_count = 0; 
+    int32_t remote_replica_count = 0;
     if (!missing_remote_replica_count) {
         std::string remote_replica_count_str(remote_replica_count_ss.str());
-        if (!dsn::buf2int32(remote_replica_count_str, remote_replica_count) || remote_replica_count < 1) {
-            fmt::print(stderr,
-                    "invalid remote_replica_count: {}\n",
-                    remote_replica_count_str);
+        if (!dsn::buf2int32(remote_replica_count_str, remote_replica_count) ||
+            remote_replica_count < 1) {
+            fmt::print(stderr, "invalid remote_replica_count: {}\n", remote_replica_count_str);
             return false;
         }
     }
 
-    auto err_resp = sc->ddl_client->add_dup(
-        app_name, remote_cluster_name, is_duplicating_checkpoint, remote_app_name, remote_replica_count);
+    auto err_resp = sc->ddl_client->add_dup(app_name,
+                                            remote_cluster_name,
+                                            is_duplicating_checkpoint,
+                                            remote_app_name,
+                                            remote_replica_count);
     auto err = err_resp.get_error();
     std::string hint;
     if (err) {
