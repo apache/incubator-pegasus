@@ -55,6 +55,7 @@ public:
                              1,
                              kTestAppName,
                              2,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -109,6 +110,7 @@ public:
                              1,
                              kTestAppName,
                              4,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -141,6 +143,7 @@ public:
                              1,
                              kTestAppName,
                              4,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -161,6 +164,7 @@ public:
                              1,
                              kTestAppName,
                              4,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -179,6 +183,9 @@ public:
         ASSERT_EQ(dup.create_timestamp_ms, copy.create_timestamp_ms);
         ASSERT_EQ(dup.remote_cluster_name, copy.remote);
         ASSERT_EQ(dup.remote_app_name, copy.remote_app_name);
+        ASSERT_EQ(kTestRemoteAppName, copy.remote_app_name);
+        ASSERT_EQ(dup.remote_replica_count, copy.remote_replica_count);
+        ASSERT_EQ(kTestRemoteReplicaCount, copy.remote_replica_count);
 
         auto dup_sptr =
             duplication_info::decode_from_blob(1, 1, kTestAppName, 4, kTestRemoteReplicaCount, kTestMetaStorePath, json);
@@ -203,6 +210,7 @@ TEST_F(duplication_info_test, alter_status_when_busy)
                          1,
                          kTestAppName,
                          4,
+                         kTestRemoteReplicaCount,
                          0,
                          kTestRemoteClusterName,
                          kTestRemoteAppName,
@@ -276,6 +284,7 @@ TEST_F(duplication_info_test, alter_status)
                              1,
                              kTestAppName,
                              4,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -307,6 +316,7 @@ TEST_F(duplication_info_test, is_valid)
                          1,
                          kTestAppName,
                          4,
+                         kTestRemoteReplicaCount,
                          0,
                          kTestRemoteClusterName,
                          kTestRemoteAppName,
