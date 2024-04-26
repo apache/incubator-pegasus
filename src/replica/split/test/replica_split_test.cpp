@@ -204,7 +204,7 @@ public:
     {
         req.child_pid = CHILD_GPID;
         req.ballot = b;
-        SET_IP_AND_HOST_PORT_BY_DNS(req, target1, PRIMARY);
+        SET_IP_AND_HOST_PORT_BY_DNS(req, target, PRIMARY);
         req.new_partition_count = NEW_PARTITION_COUNT;
     }
 
@@ -295,7 +295,7 @@ public:
         req.child_gpid = CHILD_GPID;
         req.parent_gpid = PARENT_GPID;
         req.child_ballot = child_ballot;
-        SET_IPS_AND_HOST_PORTS_BY_DNS(req, child1, PRIMARY);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(req, child, PRIMARY);
 
         notify_cacth_up_response resp;
         _parent_split_mgr->parent_handle_child_catch_up(req, resp);
@@ -362,7 +362,7 @@ public:
         req.child_config.pid = CHILD_GPID;
         req.child_config.ballot = INIT_BALLOT + 1;
         req.child_config.last_committed_decree = 0;
-        SET_IP_AND_HOST_PORT_BY_DNS(req, primary1, PRIMARY);
+        SET_IP_AND_HOST_PORT_BY_DNS(req, primary, PRIMARY);
 
         register_child_response resp;
         resp.err = resp_err;
