@@ -150,10 +150,10 @@ void replica_split_manager::parent_start_split(
                     _child_gpid,
                     _child_init_ballot,
                     enum_to_string(status()),
-                    FMT_HOST_PORT_AND_IP(request.config, primary1));
+                    FMT_HOST_PORT_AND_IP(request.config, primary));
 
     host_port primary;
-    GET_HOST_PORT(_replica->_config, primary1, primary);
+    GET_HOST_PORT(_replica->_config, primary, primary);
     tasking::enqueue(LPC_CREATE_CHILD,
                      tracker(),
                      std::bind(&replica_stub::create_child_replica,
@@ -185,7 +185,7 @@ void replica_split_manager::child_init_replica(gpid parent_gpid,
 
     // update replica config
     _replica->_config.ballot = init_ballot;
-    SET_IP_AND_HOST_PORT_BY_DNS(_replica->_config, primary1, primary_host_port);
+    SET_IP_AND_HOST_PORT_BY_DNS(_replica->_config, primary, primary_host_port);
     _replica->_config.status = partition_status::PS_PARTITION_SPLIT;
 
     // initialize split context
@@ -623,7 +623,7 @@ void replica_split_manager::child_notify_catch_up() // on child partition
 
     LOG_INFO_PREFIX("send notification to primary parent[{}@{}], ballot={}",
                     _replica->_split_states.parent_gpid,
-                    FMT_HOST_PORT_AND_IP(_replica->_config, primary1),
+                    FMT_HOST_PORT_AND_IP(_replica->_config, primary),
                     get_ballot());
 
     notify_catch_up_rpc rpc(std::move(request),
@@ -632,7 +632,7 @@ void replica_split_manager::child_notify_catch_up() // on child partition
                             /*partition_hash*/ 0,
                             _replica->_split_states.parent_gpid.thread_hash());
     host_port primary;
-    GET_HOST_PORT(_replica->_config, primary1, primary);
+    GET_HOST_PORT(_replica->_config, primary, primary);
     rpc.call(dsn::dns_resolver::instance().resolve_address(primary),
              tracker(),
              [this, rpc](error_code ec) mutable {
@@ -659,7 +659,7 @@ void replica_split_manager::child_notify_catch_up() // on child partition
                  }
                  LOG_INFO_PREFIX("notify primary parent[{}@{}] catch up succeed",
                                  _replica->_split_states.parent_gpid,
-                                 FMT_HOST_PORT_AND_IP(_replica->_config, primary1));
+                                 FMT_HOST_PORT_AND_IP(_replica->_config, primary));
              });
 }
 

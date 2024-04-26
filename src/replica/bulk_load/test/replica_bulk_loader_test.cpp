@@ -228,7 +228,7 @@ public:
         replica_configuration rconfig;
         rconfig.ballot = BALLOT;
         rconfig.pid = PID;
-        SET_IP_AND_HOST_PORT_BY_DNS(rconfig, primary1, PRIMARY_HP);
+        SET_IP_AND_HOST_PORT_BY_DNS(rconfig, primary, PRIMARY_HP);
         rconfig.status = status;
         _replica->set_replica_config(rconfig);
     }

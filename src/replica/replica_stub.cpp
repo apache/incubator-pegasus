@@ -1105,7 +1105,7 @@ void replica_stub::on_group_check(group_check_rpc rpc)
              "last_committed_decree = {}",
              request.config.pid,
              _primary_host_port_cache,
-             FMT_HOST_PORT_AND_IP(request.config, primary1),
+             FMT_HOST_PORT_AND_IP(request.config, primary),
              request.config.ballot,
              enum_to_string(request.config.status),
              request.last_committed_decree);
@@ -1167,7 +1167,7 @@ void replica_stub::on_add_learner(const group_check_request &request)
         LOG_WARNING("{}@{}: received add learner, primary = {}, not connected, ignore",
                     request.config.pid,
                     _primary_host_port_cache,
-                    FMT_HOST_PORT_AND_IP(request.config, primary1));
+                    FMT_HOST_PORT_AND_IP(request.config, primary));
         return;
     }
 
@@ -1175,7 +1175,7 @@ void replica_stub::on_add_learner(const group_check_request &request)
              "last_committed_decree = {}",
              request.config.pid,
              _primary_host_port_cache,
-             FMT_HOST_PORT_AND_IP(request.config, primary1),
+             FMT_HOST_PORT_AND_IP(request.config, primary),
              request.config.ballot,
              enum_to_string(request.config.status),
              request.last_committed_decree);
@@ -2744,7 +2744,7 @@ void replica_stub::on_group_bulk_load(group_bulk_load_rpc rpc)
              "meta_bulk_load_status = {}",
              request.config.pid,
              _primary_host_port_cache,
-             FMT_HOST_PORT_AND_IP(request.config, primary1),
+             FMT_HOST_PORT_AND_IP(request.config, primary),
              request.config.ballot,
              enum_to_string(request.meta_bulk_load_status));
 

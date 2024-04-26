@@ -124,7 +124,7 @@ void primary_context::get_replica_config(partition_status::type st,
                                          uint64_t learner_signature /*= invalid_signature*/)
 {
     config.pid = membership.pid;
-    SET_OBJ_IP_AND_HOST_PORT(config, primary1, membership, primary);
+    SET_OBJ_IP_AND_HOST_PORT(config, primary, membership, primary);
     config.ballot = membership.ballot;
     config.status = st;
     config.learner_signature = learner_signature;

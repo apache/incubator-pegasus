@@ -248,7 +248,7 @@ void replica_bulk_loader::on_group_bulk_load(const group_bulk_load_request &requ
 
     LOG_INFO_PREFIX("receive group_bulk_load request, primary address = {}, ballot = {}, "
                     "meta bulk_load_status = {}, local bulk_load_status = {}",
-                    FMT_HOST_PORT_AND_IP(request.config, primary1),
+                    FMT_HOST_PORT_AND_IP(request.config, primary),
                     request.config.ballot,
                     enum_to_string(request.meta_bulk_load_status),
                     enum_to_string(_status));

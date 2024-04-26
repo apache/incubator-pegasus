@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <fmt/std.h> // IWYU pragma: keep
 #include <inttypes.h>
 #include <stdio.h>
 #include <algorithm>
@@ -36,8 +37,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include <fmt/std.h> // IWYU pragma: keep
 
 #include "common/fs_manager.h"
 #include "common/gpid.h"
@@ -57,6 +56,7 @@
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
 #include "runtime/api_layer1.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
@@ -218,7 +218,7 @@ void replica::init_learn(uint64_t signature)
             "because app_committed_decree = 0, but learn_app_concurrent_count({}) >= "
             "FLAGS_learn_app_max_concurrent_count({}), skip",
             _potential_secondary_states.learning_version,
-            FMT_HOST_PORT_AND_IP(_config, primary1),
+            FMT_HOST_PORT_AND_IP(_config, primary),
             _potential_secondary_states.duration_ms(),
             _stub->_learn_app_concurrent_count,
             FLAGS_learn_app_max_concurrent_count);
@@ -243,7 +243,7 @@ void replica::init_learn(uint64_t signature)
                     "app_durable_decree = {}, current_learning_status = {}, total_copy_file_count "
                     "= {}, total_copy_file_size = {}, total_copy_buffer_size = {}",
                     request.signature,
-                    FMT_HOST_PORT_AND_IP(_config, primary1),
+                    FMT_HOST_PORT_AND_IP(_config, primary),
                     _potential_secondary_states.duration_ms(),
                     request.max_gced_decree,
                     last_committed_decree(),
@@ -257,7 +257,7 @@ void replica::init_learn(uint64_t signature)
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_LEARN, 0, get_gpid().thread_hash());
     dsn::marshall(msg, request);
     host_port primary;
-    GET_HOST_PORT(_config, primary1, primary);
+    GET_HOST_PORT(_config, primary, primary);
     _potential_secondary_states.learning_task = rpc::call(
         dsn::dns_resolver::instance().resolve_address(primary),
         msg,
@@ -604,7 +604,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         "{}, learn_start_decree = {}, last_commit_decree = {}, current_learning_status = "
         "{} ",
         req.signature,
-        FMT_HOST_PORT_AND_IP(resp.config, primary1),
+        FMT_HOST_PORT_AND_IP(resp.config, primary),
         _potential_secondary_states.duration_ms(),
         resp.err,
         resp.last_committed_decree,
@@ -626,7 +626,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                                "ballot(inactive state) or reconciliation(inconsistent state), "
                                "delay to start another round of learning",
                                req.signature,
-                               FMT_HOST_PORT_AND_IP(resp.config, primary1));
+                               FMT_HOST_PORT_AND_IP(resp.config, primary));
             _potential_secondary_states.learning_round_is_running = false;
             _potential_secondary_states.delay_learning_task =
                 tasking::create_task(LPC_DELAY_LEARN,
@@ -644,7 +644,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         LOG_INFO_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, update configuration because "
                         "ballot have changed",
                         req.signature,
-                        FMT_HOST_PORT_AND_IP(resp.config, primary1));
+                        FMT_HOST_PORT_AND_IP(resp.config, primary));
         CHECK(update_local_configuration(resp.config), "");
     }
 
@@ -652,7 +652,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         LOG_ERROR_PREFIX(
             "on_learn_reply[{:#018x}]: learnee = {}, current_status = {}, stop learning",
             req.signature,
-            FMT_HOST_PORT_AND_IP(resp.config, primary1),
+            FMT_HOST_PORT_AND_IP(resp.config, primary),
             enum_to_string(status()));
         return;
     }
@@ -662,7 +662,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         LOG_WARNING_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, learner state is newer than "
                            "learnee (primary): {} vs {}, create new app",
                            req.signature,
-                           FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                           FMT_HOST_PORT_AND_IP(resp.config, primary),
                            _app->last_committed_decree(),
                            resp.last_committed_decree);
 
@@ -675,7 +675,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                 "on_learn_reply[{:#018x}]: learnee = {}), close app (with clear_state=true) "
                 "failed, err = {}",
                 req.signature,
-                FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                FMT_HOST_PORT_AND_IP(resp.config, primary),
                 err);
         }
 
@@ -703,7 +703,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                 LOG_ERROR_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, open app (with "
                                  "create_new=true) failed, err = {}",
                                  req.signature,
-                                 FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                                 FMT_HOST_PORT_AND_IP(resp.config, primary),
                                  err);
             }
         }
@@ -740,7 +740,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                 "on_learn_reply[{:#018x}]: learnee = {}, learn_app_concurrent_count({}) >= "
                 "FLAGS_learn_app_max_concurrent_count({}), skip this round",
                 _potential_secondary_states.learning_version,
-                FMT_HOST_PORT_AND_IP(_config, primary1),
+                FMT_HOST_PORT_AND_IP(_config, primary),
                 _stub->_learn_app_concurrent_count,
                 FLAGS_learn_app_max_concurrent_count);
             _potential_secondary_states.learning_round_is_running = false;
@@ -750,7 +750,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             LOG_INFO_PREFIX(
                 "on_learn_reply[{:#018x}]: learnee = {}, ++learn_app_concurrent_count = {}",
                 _potential_secondary_states.learning_version,
-                FMT_HOST_PORT_AND_IP(_config, primary1),
+                FMT_HOST_PORT_AND_IP(_config, primary),
                 _stub->_learn_app_concurrent_count.load());
         }
     }
@@ -797,7 +797,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         LOG_INFO_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, truncate prepare list, "
                         "local_committed_decree = {}, current_learning_status = {}",
                         req.signature,
-                        FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                        FMT_HOST_PORT_AND_IP(resp.config, primary),
                         _app->last_committed_decree(),
                         enum_to_string(_potential_secondary_states.learning_status));
 
@@ -828,7 +828,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                     LOG_INFO_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, mutation({}) exist on "
                                     "the learner with larger ballot {}",
                                     req.signature,
-                                    FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                                    FMT_HOST_PORT_AND_IP(resp.config, primary),
                                     mu->name(),
                                     existing_mutation->data.header.ballot);
                 } else {
@@ -846,7 +846,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                         "cache done, prepare_cache_range = <{}, {}>, local_committed_decree = {}, "
                         "app_committed_decree = {}, current_learning_status = {}",
                         req.signature,
-                        FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                        FMT_HOST_PORT_AND_IP(resp.config, primary),
                         _potential_secondary_states.duration_ms(),
                         cache_range.first,
                         cache_range.second,
@@ -890,7 +890,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             LOG_ERROR_PREFIX(
                 "on_learn_reply[{:#018x}]: learnee = {}, create replica learn dir {} failed",
                 req.signature,
-                FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                FMT_HOST_PORT_AND_IP(resp.config, primary),
                 learn_dir);
 
             _potential_secondary_states.learn_remote_files_task =
@@ -914,13 +914,13 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         LOG_INFO_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, learn_duration = {} ms, start to "
                         "copy remote files, copy_file_count = {}, priority = {}",
                         req.signature,
-                        FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                        FMT_HOST_PORT_AND_IP(resp.config, primary),
                         _potential_secondary_states.duration_ms(),
                         resp.state.files.size(),
                         high_priority ? "high" : "low");
 
         host_port primary;
-        GET_HOST_PORT(resp.config, primary1, primary);
+        GET_HOST_PORT(resp.config, primary, primary);
         _potential_secondary_states.learn_remote_files_task = _stub->_nfs->copy_remote_files(
             primary,
             resp.replica_disk_tag,
@@ -1034,7 +1034,7 @@ void replica::on_copy_remote_state_completed(error_code err,
                     "= {}, app_durable_decree = {}, prepare_start_decree = {}, "
                     "current_learning_status = {}",
                     req.signature,
-                    FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                    FMT_HOST_PORT_AND_IP(resp.config, primary),
                     _potential_secondary_states.duration_ms(),
                     err,
                     resp.state.files.size(),
@@ -1052,7 +1052,7 @@ void replica::on_copy_remote_state_completed(error_code err,
         LOG_INFO_PREFIX("on_copy_remote_state_completed[{:#018x}]: learnee = {}, "
                         "--learn_app_concurrent_count = {}",
                         _potential_secondary_states.learning_version,
-                        FMT_HOST_PORT_AND_IP(_config, primary1),
+                        FMT_HOST_PORT_AND_IP(_config, primary),
                         _stub->_learn_app_concurrent_count.load());
     }
 
@@ -1100,7 +1100,7 @@ void replica::on_copy_remote_state_completed(error_code err,
                                 "learn_duration = {} ms, checkpoint duration = {} ns, apply "
                                 "checkpoint succeed, app_committed_decree = {}",
                                 req.signature,
-                                FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                                FMT_HOST_PORT_AND_IP(resp.config, primary),
                                 _potential_secondary_states.duration_ms(),
                                 dsn_now_ns() - start_ts,
                                 _app->last_committed_decree());
@@ -1109,7 +1109,7 @@ void replica::on_copy_remote_state_completed(error_code err,
                                  "learn_duration = {} ms, checkpoint duration = {} ns, apply "
                                  "checkpoint failed, err = {}",
                                  req.signature,
-                                 FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                                 FMT_HOST_PORT_AND_IP(resp.config, primary),
                                  _potential_secondary_states.duration_ms(),
                                  dsn_now_ns() - start_ts,
                                  err);
@@ -1125,7 +1125,7 @@ void replica::on_copy_remote_state_completed(error_code err,
                                 "learn_duration = {} ms, apply_log_duration = {} ns, apply learned "
                                 "state from private log succeed, app_committed_decree = {}",
                                 req.signature,
-                                FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                                FMT_HOST_PORT_AND_IP(resp.config, primary),
                                 _potential_secondary_states.duration_ms(),
                                 dsn_now_ns() - start_ts,
                                 _app->last_committed_decree());
@@ -1134,7 +1134,7 @@ void replica::on_copy_remote_state_completed(error_code err,
                                  "learn_duration = {} ms, apply_log_duration = {} ns, apply "
                                  "learned state from private log failed, err = {}",
                                  req.signature,
-                                 FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                                 FMT_HOST_PORT_AND_IP(resp.config, primary),
                                  _potential_secondary_states.duration_ms(),
                                  dsn_now_ns() - start_ts,
                                  err);
@@ -1150,7 +1150,7 @@ void replica::on_copy_remote_state_completed(error_code err,
                         "{}), app_durable_decree = ({} => {}), remote_committed_decree = {}, "
                         "prepare_start_decree = {}, current_learning_status = {}",
                         req.signature,
-                        FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                        FMT_HOST_PORT_AND_IP(resp.config, primary),
                         _potential_secondary_states.duration_ms(),
                         err,
                         old_prepared,
@@ -1177,7 +1177,7 @@ void replica::on_copy_remote_state_completed(error_code err,
                         "{} ms, flush done, err = {}, app_committed_decree = {}, "
                         "app_durable_decree = {}",
                         req.signature,
-                        FMT_HOST_PORT_AND_IP(resp.config, primary1),
+                        FMT_HOST_PORT_AND_IP(resp.config, primary),
                         _potential_secondary_states.duration_ms(),
                         err,
                         _app->last_committed_decree(),
@@ -1212,7 +1212,7 @@ void replica::on_learn_remote_state_completed(error_code err)
                            "learn_duration = {} ms, err = {}, the learner status is not "
                            "PS_POTENTIAL_SECONDARY, but {}, ignore",
                            _potential_secondary_states.learning_version,
-                           FMT_HOST_PORT_AND_IP(_config, primary1),
+                           FMT_HOST_PORT_AND_IP(_config, primary),
                            _potential_secondary_states.duration_ms(),
                            err,
                            enum_to_string(status()));
@@ -1223,7 +1223,7 @@ void replica::on_learn_remote_state_completed(error_code err)
                     "ms, err = {}, local_committed_decree = {}, app_committed_decree = {}, "
                     "app_durable_decree = {}, current_learning_status = {}",
                     _potential_secondary_states.learning_version,
-                    FMT_HOST_PORT_AND_IP(_config, primary1),
+                    FMT_HOST_PORT_AND_IP(_config, primary),
                     _potential_secondary_states.duration_ms(),
                     err,
                     last_committed_decree(),
@@ -1248,7 +1248,7 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
     LOG_ERROR_PREFIX(
         "handle_learning_error[{:#018x}]: learnee = {}, learn_duration = {} ms, err = {}, {}",
         _potential_secondary_states.learning_version,
-        FMT_HOST_PORT_AND_IP(_config, primary1),
+        FMT_HOST_PORT_AND_IP(_config, primary),
         _potential_secondary_states.duration_ms(),
         err,
         is_local_error ? "local_error" : "remote error");
@@ -1309,7 +1309,7 @@ void replica::notify_learn_completion()
                     "local_committed_decree = {}, app_committed_decree = {}, app_durable_decree = "
                     "{}, current_learning_status = {}",
                     _potential_secondary_states.learning_version,
-                    FMT_HOST_PORT_AND_IP(_config, primary1),
+                    FMT_HOST_PORT_AND_IP(_config, primary),
                     _potential_secondary_states.duration_ms(),
                     last_committed_decree(),
                     _app->last_committed_decree(),
@@ -1325,7 +1325,7 @@ void replica::notify_learn_completion()
     dsn::marshall(msg, report);
 
     host_port primary;
-    GET_HOST_PORT(_config, primary1, primary);
+    GET_HOST_PORT(_config, primary, primary);
     _potential_secondary_states.completion_notify_task =
         rpc::call(dsn::dns_resolver::instance().resolve_address(primary), msg, &_tracker, [
             this,
@@ -1404,7 +1404,7 @@ void replica::on_learn_completion_notification_reply(error_code err,
                          "learn_duration = {} ms, signature not matched, current signature on "
                          "primary is [{:#018x}]",
                          report.learner_signature,
-                         FMT_HOST_PORT_AND_IP(_config, primary1),
+                         FMT_HOST_PORT_AND_IP(_config, primary),
                          _potential_secondary_states.duration_ms(),
                          resp.signature);
         handle_learning_error(ERR_INVALID_STATE, false);
@@ -1414,7 +1414,7 @@ void replica::on_learn_completion_notification_reply(error_code err,
     LOG_INFO_PREFIX("on_learn_completion_notification_reply[{:#018x}]: learnee = {}, "
                     "learn_duration = {} ms, response_err = {}",
                     report.learner_signature,
-                    FMT_HOST_PORT_AND_IP(_config, primary1),
+                    FMT_HOST_PORT_AND_IP(_config, primary),
                     _potential_secondary_states.duration_ms(),
                     resp.err);
 
@@ -1424,7 +1424,7 @@ void replica::on_learn_completion_notification_reply(error_code err,
                                "learn_duration = {} ms, learnee is updating ballot, delay to start "
                                "another round of learning",
                                report.learner_signature,
-                               FMT_HOST_PORT_AND_IP(_config, primary1),
+                               FMT_HOST_PORT_AND_IP(_config, primary),
                                _potential_secondary_states.duration_ms());
             _potential_secondary_states.learning_round_is_running = false;
             _potential_secondary_states.delay_learning_task = tasking::create_task(
@@ -1445,7 +1445,7 @@ void replica::on_add_learner(const group_check_request &request)
 {
     LOG_INFO_PREFIX("process add learner, primary = {}, ballot ={}, status ={}, "
                     "last_committed_decree = {}, duplicating = {}",
-                    FMT_HOST_PORT_AND_IP(request.config, primary1),
+                    FMT_HOST_PORT_AND_IP(request.config, primary),
                     request.config.ballot,
                     enum_to_string(request.config.status),
                     request.last_committed_decree,
@@ -1591,7 +1591,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
         _potential_secondary_states.learning_version,
         duplicating,
         step_back,
-        FMT_HOST_PORT_AND_IP(_config, primary1),
+        FMT_HOST_PORT_AND_IP(_config, primary),
         _potential_secondary_states.duration_ms(),
         state.files.size(),
         _potential_secondary_states.first_learn_start_decree,
@@ -1622,7 +1622,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                             "learned_to_decree_included({}) > last_committed_decree({}), commit to "
                             "to_decree_included",
                             _potential_secondary_states.learning_version,
-                            FMT_HOST_PORT_AND_IP(_config, primary1),
+                            FMT_HOST_PORT_AND_IP(_config, primary),
                             state.to_decree_included,
                             last_committed_decree());
             plist.commit(state.to_decree_included, COMMIT_TO_DECREE_SOFT);
@@ -1632,7 +1632,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                         "learn_duration ={} ms, apply in-buffer private logs done, "
                         "replay_count ={}, app_committed_decree = {}",
                         _potential_secondary_states.learning_version,
-                        FMT_HOST_PORT_AND_IP(_config, primary1),
+                        FMT_HOST_PORT_AND_IP(_config, primary),
                         _potential_secondary_states.duration_ms(),
                         replay_count,
                         _app->last_committed_decree());
