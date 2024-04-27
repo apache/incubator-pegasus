@@ -525,7 +525,6 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
                             "learned_meta_size = {}, learned_file_count = {}, to_decree_included = "
                             "{}",
                             request.signature,
-                            hp_learner,
                             FMT_HOST_PORT_AND_IP(request, learner1),
                             response.state.meta.length(),
                             response.state.files.size(),

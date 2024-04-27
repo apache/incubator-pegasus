@@ -428,7 +428,7 @@ public:
 
         std::shared_ptr<group_check_request> req = std::make_shared<group_check_request>();
         std::shared_ptr<group_check_response> resp = std::make_shared<group_check_response>();
-        SET_IPS_AND_HOST_PORTS_BY_DNS(*req, node1, PRIMARY);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(*req, node1, SECONDARY);
         if (meta_split_status != split_status::NOT_SPLIT) {
             req->__set_meta_split_status(meta_split_status);
         }
