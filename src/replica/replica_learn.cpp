@@ -398,14 +398,13 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
     // TODO: learner machine has been down for a long time, and DDD MUST happened before
     // which leads to state lost. Now the lost state is back, what shall we do?
     if (request.last_committed_decree_in_app > last_prepared_decree()) {
-        LOG_ERROR_PREFIX(
-            "on_learn[{:#018x}]: learner = {}, learner state is newer than learnee, "
-            "learner_app_committed_decree = {}, local_committed_decree = {}, learn "
-            "from scratch",
-            request.signature,
-            FMT_HOST_PORT_AND_IP(request, learner1),
-            request.last_committed_decree_in_app,
-            local_committed_decree);
+        LOG_ERROR_PREFIX("on_learn[{:#018x}]: learner = {}, learner state is newer than learnee, "
+                         "learner_app_committed_decree = {}, local_committed_decree = {}, learn "
+                         "from scratch",
+                         request.signature,
+                         FMT_HOST_PORT_AND_IP(request, learner1),
+                         request.last_committed_decree_in_app,
+                         local_committed_decree);
 
         *(decree *)&request.last_committed_decree_in_app = 0;
     }
@@ -414,27 +413,25 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
     // this happens when the new primary does not commit the previously prepared mutations
     // yet, which it should do, so let's help it now.
     else if (request.last_committed_decree_in_app > local_committed_decree) {
-        LOG_ERROR_PREFIX(
-            "on_learn[{:#018x}]: learner = {}, learner's last_committed_decree_in_app "
-            "is newer than learnee, learner_app_committed_decree = {}, "
-            "local_committed_decree = {}, commit local soft",
-            request.signature,
-            FMT_HOST_PORT_AND_IP(request, learner1),
-            request.last_committed_decree_in_app,
-            local_committed_decree);
+        LOG_ERROR_PREFIX("on_learn[{:#018x}]: learner = {}, learner's last_committed_decree_in_app "
+                         "is newer than learnee, learner_app_committed_decree = {}, "
+                         "local_committed_decree = {}, commit local soft",
+                         request.signature,
+                         FMT_HOST_PORT_AND_IP(request, learner1),
+                         request.last_committed_decree_in_app,
+                         local_committed_decree);
 
         // we shouldn't commit mutations hard coz these mutations may preparing on another learner
         _prepare_list->commit(request.last_committed_decree_in_app, COMMIT_TO_DECREE_SOFT);
         local_committed_decree = last_committed_decree();
 
         if (request.last_committed_decree_in_app > local_committed_decree) {
-            LOG_ERROR_PREFIX(
-                "on_learn[{:#018x}]: try to commit primary to {}, still less than "
-                "learner({})'s committed decree({}), wait mutations to be commitable",
-                request.signature,
-                local_committed_decree,
-                FMT_HOST_PORT_AND_IP(request, learner1),
-                request.last_committed_decree_in_app);
+            LOG_ERROR_PREFIX("on_learn[{:#018x}]: try to commit primary to {}, still less than "
+                             "learner({})'s committed decree({}), wait mutations to be commitable",
+                             request.signature,
+                             local_committed_decree,
+                             FMT_HOST_PORT_AND_IP(request, learner1),
+                             request.last_committed_decree_in_app);
             response.err = ERR_INCONSISTENT_STATE;
             reply(msg, response);
             return;
@@ -1338,21 +1335,19 @@ void replica::on_learn_completion_notification(const group_check_response &repor
         response.err = (partition_status::PS_INACTIVE == status() && _inactive_is_transient)
                            ? ERR_INACTIVE_STATE
                            : ERR_INVALID_STATE;
-        LOG_ERROR_PREFIX(
-            "on_learn_completion_notification[{:#018x}]: learner = {}, this replica "
-            "is not primary, but {}, reply {}",
-            report.learner_signature,
-            FMT_HOST_PORT_AND_IP(report, node1),
-            enum_to_string(status()),
-            response.err);
+        LOG_ERROR_PREFIX("on_learn_completion_notification[{:#018x}]: learner = {}, this replica "
+                         "is not primary, but {}, reply {}",
+                         report.learner_signature,
+                         FMT_HOST_PORT_AND_IP(report, node1),
+                         enum_to_string(status()),
+                         response.err);
     } else if (report.learner_status_ != learner_status::LearningSucceeded) {
         response.err = ERR_INVALID_STATE;
-        LOG_ERROR_PREFIX(
-            "on_learn_completion_notification[{:#018x}]: learner = {}, learner_status "
-            "is not LearningSucceeded, but {}, reply ERR_INVALID_STATE",
-            report.learner_signature,
-            FMT_HOST_PORT_AND_IP(report, node1),
-            enum_to_string(report.learner_status_));
+        LOG_ERROR_PREFIX("on_learn_completion_notification[{:#018x}]: learner = {}, learner_status "
+                         "is not LearningSucceeded, but {}, reply ERR_INVALID_STATE",
+                         report.learner_signature,
+                         FMT_HOST_PORT_AND_IP(report, node1),
+                         enum_to_string(report.learner_status_));
     } else {
         response.err = handle_learning_succeeded_on_primary(hp_node, report.learner_signature);
         if (response.err != ERR_OK) {

@@ -278,8 +278,7 @@ TEST_P(replica_follower_test, test_nfs_copy_checkpoint)
 
     auto resp = learn_response();
     const host_port learnee("localhost", 34801);
-    resp.learnee = dsn::dns_resolver::instance().resolve_address(learnee);
-    resp.__set_hp_learnee(learnee);
+    SET_IP_AND_HOST_PORT_BY_DNS(resp, learnee1, learnee);
 
     std::string dest = utils::filesystem::path_combine(
         _mock_replica->dir(), duplication_constants::kDuplicationCheckpointRootDir);

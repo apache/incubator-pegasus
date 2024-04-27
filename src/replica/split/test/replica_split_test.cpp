@@ -396,8 +396,7 @@ public:
         req.app = _parent_replica->_app_info;
         req.config.ballot = INIT_BALLOT;
         req.config.status = partition_status::PS_SECONDARY;
-        req.node = SECONDARY_ADDR;
-        req.__set_hp_node(SECONDARY);
+        SET_IP_AND_HOST_PORT_BY_DNS(req, node1, SECONDARY);
         if (meta_split_status == split_status::PAUSING ||
             meta_split_status == split_status::CANCELING) {
             req.__set_meta_split_status(meta_split_status);
@@ -429,8 +428,7 @@ public:
 
         std::shared_ptr<group_check_request> req = std::make_shared<group_check_request>();
         std::shared_ptr<group_check_response> resp = std::make_shared<group_check_response>();
-        req->node = SECONDARY_ADDR;
-        req->__set_hp_node(SECONDARY);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(*req, node1, PRIMARY);
         if (meta_split_status != split_status::NOT_SPLIT) {
             req->__set_meta_split_status(meta_split_status);
         }
@@ -532,9 +530,7 @@ public:
 
     const host_port PRIMARY = host_port("localhost", 18230);
     const host_port SECONDARY = host_port("localhost", 10058);
-    const rpc_address SECONDARY_ADDR = dsn::dns_resolver::instance().resolve_address(SECONDARY);
     const host_port SECONDARY2 = host_port("localhost", 10805);
-    const rpc_address SECONDARY_ADDR2 = dsn::dns_resolver::instance().resolve_address(SECONDARY2);
     const gpid PARENT_GPID = gpid(APP_ID, 1);
     const gpid CHILD_GPID = gpid(APP_ID, 9);
     const ballot INIT_BALLOT = 3;
