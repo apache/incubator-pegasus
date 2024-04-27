@@ -262,7 +262,7 @@ void replica::on_query_last_checkpoint(/*out*/ learn_response &response)
         response.base_local_dir = utils::filesystem::path_combine(
             _app->data_dir(), checkpoint_folder(response.state.to_decree_included));
         SET_IP_AND_HOST_PORT(
-            response, learnee1, _stub->primary_address(), _stub->primary_host_port());
+            response, learnee, _stub->primary_address(), _stub->primary_host_port());
         for (auto &file : response.state.files) {
             // response.state.files contain file absolute path， for example:
             // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst

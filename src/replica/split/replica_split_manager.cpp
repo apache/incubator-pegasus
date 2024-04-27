@@ -1497,7 +1497,7 @@ void replica_split_manager::primary_parent_handle_stop_split(
     }
 
     host_port secondary;
-    GET_HOST_PORT(*req, node1, secondary);
+    GET_HOST_PORT(*req, node, secondary);
     _replica->_primary_states.split_stopped_secondary.emplace(std::move(secondary));
     auto count = 0;
     for (auto &iter : _replica->_primary_states.statuses) {

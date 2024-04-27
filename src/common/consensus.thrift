@@ -133,7 +133,7 @@ enum learner_status
 struct learn_request
 {
     1:dsn.gpid                   pid;
-    2:dsn.rpc_address            learner1; // learner's address
+    2:dsn.rpc_address            learner; // learner's address
     3:i64                        signature; // learning signature
     4:i64                        last_committed_decree_in_app; // last committed decree of learner's app
     5:i64                        last_committed_decree_in_prepare_list; // last committed decree of learner's prepare list
@@ -143,7 +143,7 @@ struct learn_request
     // be duplicated (ie. max_gced_decree < confirmed_decree), if not,
     // learnee will copy the missing logs.
     7:optional i64               max_gced_decree;
-    8:optional dsn.host_port     hp_learner1;
+    8:optional dsn.host_port     hp_learner;
 }
 
 struct learn_response
@@ -154,10 +154,10 @@ struct learn_response
     4:i64                            prepare_start_decree; // prepare start decree
     5:learn_type                     type = learn_type.LT_INVALID; // learning type: CACHE, LOG, APP
     6:learn_state                    state; // learning data, including memory data and files
-    7:dsn.rpc_address                learnee1; // learnee's address
+    7:dsn.rpc_address                learnee; // learnee's address
     8:string                         base_local_dir; // base dir of files on learnee
     9:optional string                replica_disk_tag; // the disk tag of learnee located
-    10:optional dsn.host_port        hp_learnee1; // learnee's host_port
+    10:optional dsn.host_port        hp_learnee; // learnee's host_port
 }
 
 struct learn_notify_response
@@ -170,7 +170,7 @@ struct learn_notify_response
 struct group_check_request
 {
     1:dsn.layer2.app_info            app;
-    2:dsn.rpc_address                node1;
+    2:dsn.rpc_address                node;
     3:metadata.replica_configuration config;
     4:i64                            last_committed_decree;
 
@@ -182,7 +182,7 @@ struct group_check_request
     // Used to deliver child gpid and meta_split_status during partition split
     6:optional dsn.gpid              child_gpid;
     7:optional metadata.split_status meta_split_status;
-    8:optional dsn.host_port         hp_node1;
+    8:optional dsn.host_port         hp_node;
 }
 
 struct group_check_response
@@ -193,11 +193,11 @@ struct group_check_response
     4:i64                           last_committed_decree_in_prepare_list;
     5:learner_status                learner_status_ = learner_status.LearningInvalid;
     6:i64                           learner_signature;
-    7:dsn.rpc_address               node1;
+    7:dsn.rpc_address               node;
     // Used for pause or cancel partition split
     // if secondary pause or cancel split succeed, is_split_stopped = true
     8:optional bool                 is_split_stopped;
     9:optional metadata.disk_status disk_status = metadata.disk_status.NORMAL;
-    10:optional dsn.host_port       hp_node1;
+    10:optional dsn.host_port       hp_node;
 }
 

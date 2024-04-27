@@ -231,7 +231,7 @@ error_code replica_follower::nfs_copy_checkpoint(error_code err, learn_response 
     }
 
     host_port hp_learnee;
-    GET_HOST_PORT(resp, learnee1, hp_learnee);
+    GET_HOST_PORT(resp, learnee, hp_learnee);
 
     nfs_copy_remote_files(
         hp_learnee, resp.replica_disk_tag, resp.base_local_dir, resp.state.files, dest);

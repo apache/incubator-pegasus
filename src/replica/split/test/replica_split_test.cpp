@@ -396,7 +396,7 @@ public:
         req.app = _parent_replica->_app_info;
         req.config.ballot = INIT_BALLOT;
         req.config.status = partition_status::PS_SECONDARY;
-        SET_IP_AND_HOST_PORT_BY_DNS(req, node1, SECONDARY);
+        SET_IP_AND_HOST_PORT_BY_DNS(req, node, SECONDARY);
         if (meta_split_status == split_status::PAUSING ||
             meta_split_status == split_status::CANCELING) {
             req.__set_meta_split_status(meta_split_status);
@@ -428,7 +428,7 @@ public:
 
         std::shared_ptr<group_check_request> req = std::make_shared<group_check_request>();
         std::shared_ptr<group_check_response> resp = std::make_shared<group_check_response>();
-        SET_IPS_AND_HOST_PORTS_BY_DNS(*req, node1, SECONDARY);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(*req, node, SECONDARY);
         if (meta_split_status != split_status::NOT_SPLIT) {
             req->__set_meta_split_status(meta_split_status);
         }
