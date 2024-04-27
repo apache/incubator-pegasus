@@ -233,8 +233,7 @@ void replica::init_learn(uint64_t signature)
     request.__set_max_gced_decree(get_max_gced_decree_for_learn());
     request.last_committed_decree_in_app = _app->last_committed_decree();
     request.last_committed_decree_in_prepare_list = _prepare_list->last_committed_decree();
-    request.learner = _stub->primary_address();
-    request.__set_hp_learner(_stub->primary_host_port());
+    SET_IP_AND_HOST_PORT(request, learner1, _stub->primary_address(), _stub->primary_host_port());
     request.signature = _potential_secondary_states.learning_version;
     _app->prepare_get_checkpoint(request.app_specific_learn_request);
 
@@ -375,7 +374,7 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
     _primary_states.get_replica_config(partition_status::PS_POTENTIAL_SECONDARY, response.config);
 
     host_port hp_learner;
-    GET_HOST_PORT(request, learner, hp_learner);
+    GET_HOST_PORT(request, learner1, hp_learner);
 
     auto it = _primary_states.learners.find(hp_learner);
     if (it == _primary_states.learners.end()) {
@@ -400,12 +399,11 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
     // which leads to state lost. Now the lost state is back, what shall we do?
     if (request.last_committed_decree_in_app > last_prepared_decree()) {
         LOG_ERROR_PREFIX(
-            "on_learn[{:#018x}]: learner = {}({}), learner state is newer than learnee, "
+            "on_learn[{:#018x}]: learner = {}, learner state is newer than learnee, "
             "learner_app_committed_decree = {}, local_committed_decree = {}, learn "
             "from scratch",
             request.signature,
-            hp_learner,
-            request.learner,
+            FMT_HOST_PORT_AND_IP(request, learner1),
             request.last_committed_decree_in_app,
             local_committed_decree);
 
@@ -417,12 +415,11 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
     // yet, which it should do, so let's help it now.
     else if (request.last_committed_decree_in_app > local_committed_decree) {
         LOG_ERROR_PREFIX(
-            "on_learn[{:#018x}]: learner = {}({}), learner's last_committed_decree_in_app "
+            "on_learn[{:#018x}]: learner = {}, learner's last_committed_decree_in_app "
             "is newer than learnee, learner_app_committed_decree = {}, "
             "local_committed_decree = {}, commit local soft",
             request.signature,
-            hp_learner,
-            request.learner,
+            FMT_HOST_PORT_AND_IP(request, learner1),
             request.last_committed_decree_in_app,
             local_committed_decree);
 
@@ -433,11 +430,10 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
         if (request.last_committed_decree_in_app > local_committed_decree) {
             LOG_ERROR_PREFIX(
                 "on_learn[{:#018x}]: try to commit primary to {}, still less than "
-                "learner({}({}))'s committed decree({}), wait mutations to be commitable",
+                "learner({})'s committed decree({}), wait mutations to be commitable",
                 request.signature,
                 local_committed_decree,
-                hp_learner,
-                request.learner,
+                FMT_HOST_PORT_AND_IP(request, learner1),
                 request.last_committed_decree_in_app);
             response.err = ERR_INCONSISTENT_STATE;
             reply(msg, response);
@@ -451,13 +447,12 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
     response.state.__set_learn_start_decree(learn_start_decree);
     bool delayed_replay_prepare_list = false;
 
-    LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}({}), remote_committed_decree = {}, "
+    LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, remote_committed_decree = {}, "
                     "remote_app_committed_decree = {}, local_committed_decree = {}, "
                     "app_committed_decree = {}, app_durable_decree = {}, "
                     "prepare_min_decree = {}, prepare_list_count = {}, learn_start_decree = {}",
                     request.signature,
-                    hp_learner,
-                    request.learner,
+                    FMT_HOST_PORT_AND_IP(request, learner1),
                     request.last_committed_decree_in_prepare_list,
                     request.last_committed_decree_in_app,
                     local_committed_decree,
@@ -466,9 +461,7 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
                     _prepare_list->min_decree(),
                     _prepare_list->count(),
                     learn_start_decree);
-
-    response.learnee = _stub->primary_address();
-    response.__set_hp_learnee(_stub->primary_host_port());
+    SET_IP_AND_HOST_PORT(response, learnee1, _stub->primary_address(), _stub->primary_host_port());
     response.prepare_start_decree = invalid_decree;
     response.last_committed_decree = local_committed_decree;
     response.err = ERR_OK;
@@ -482,36 +475,32 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
                                                          delayed_replay_prepare_list);
     if (!should_learn_cache) {
         if (learn_start_decree > _app->last_durable_decree()) {
-            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}({}), choose to learn private logs, "
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, choose to learn private logs, "
                             "because learn_start_decree({}) > _app->last_durable_decree({})",
                             request.signature,
-                            hp_learner,
-                            request.learner,
+                            FMT_HOST_PORT_AND_IP(request, learner1),
                             learn_start_decree,
                             _app->last_durable_decree());
             _private_log->get_learn_state(get_gpid(), learn_start_decree, response.state);
             response.type = learn_type::LT_LOG;
         } else if (_private_log->get_learn_state(get_gpid(), learn_start_decree, response.state)) {
-            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}({}), choose to learn private logs, "
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, choose to learn private logs, "
                             "because mutation_log::get_learn_state() returns true",
                             request.signature,
-                            hp_learner,
-                            request.learner);
+                            FMT_HOST_PORT_AND_IP(request, learner1));
             response.type = learn_type::LT_LOG;
         } else if (learn_start_decree < request.last_committed_decree_in_app + 1) {
-            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}({}), choose to learn private logs, "
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, choose to learn private logs, "
                             "because learn_start_decree steps back for duplication",
                             request.signature,
-                            hp_learner,
-                            request.learner);
+                            FMT_HOST_PORT_AND_IP(request, learner1));
             response.type = learn_type::LT_LOG;
         } else {
-            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}({}), choose to learn app, beacuse "
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, choose to learn app, beacuse "
                             "learn_start_decree({}) <= _app->last_durable_decree({}), and "
                             "mutation_log::get_learn_state() returns false",
                             request.signature,
-                            hp_learner,
-                            request.learner,
+                            FMT_HOST_PORT_AND_IP(request, learner1),
                             learn_start_decree,
                             _app->last_durable_decree());
             response.type = learn_type::LT_APP;
@@ -523,11 +512,10 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
             if (response.state.files.size() > 0) {
                 auto &last_file = response.state.files.back();
                 if (last_file == learner_state.last_learn_log_file) {
-                    LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}({}), learn the same file {} "
+                    LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, learn the same file {} "
                                     "repeatedly, hint to switch file",
                                     request.signature,
-                                    hp_learner,
-                                    request.learner,
+                                    FMT_HOST_PORT_AND_IP(request, learner1),
                                     last_file);
                     _private_log->hint_switch_file();
                 } else {
@@ -536,12 +524,12 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
             }
             // it is safe to commit to last_committed_decree() now
             response.state.to_decree_included = last_committed_decree();
-            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}({}), learn private logs succeed, "
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, learn private logs succeed, "
                             "learned_meta_size = {}, learned_file_count = {}, to_decree_included = "
                             "{}",
                             request.signature,
                             hp_learner,
-                            request.learner,
+                            FMT_HOST_PORT_AND_IP(request, learner1),
                             response.state.meta.length(),
                             response.state.files.size(),
                             response.state.to_decree_included);
@@ -552,20 +540,18 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
             if (err != ERR_OK) {
                 response.err = ERR_GET_LEARN_STATE_FAILED;
                 LOG_ERROR_PREFIX(
-                    "on_learn[{:#018x}]: learner = {}({}), get app checkpoint failed, error = {}",
+                    "on_learn[{:#018x}]: learner = {}, get app checkpoint failed, error = {}",
                     request.signature,
-                    hp_learner,
-                    request.learner,
+                    FMT_HOST_PORT_AND_IP(request, learner1),
                     err);
             } else {
                 response.base_local_dir = _app->data_dir();
                 response.__set_replica_disk_tag(_dir_node->tag);
                 LOG_INFO_PREFIX(
-                    "on_learn[{:#018x}]: learner = {}({}), get app learn state succeed, "
+                    "on_learn[{:#018x}]: learner = {}, get app learn state succeed, "
                     "learned_meta_size = {}, learned_file_count = {}, learned_to_decree = {}",
                     request.signature,
-                    hp_learner,
-                    request.learner,
+                    FMT_HOST_PORT_AND_IP(request, learner1),
                     response.state.meta.length(),
                     response.state.files.size(),
                     response.state.to_decree_included);
@@ -981,7 +967,7 @@ bool replica::prepare_cached_learn_state(const learn_request &request,
 
             LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, set prepare_start_decree = {}",
                             request.signature,
-                            request.learner,
+                            FMT_HOST_PORT_AND_IP(request, learner1),
                             local_committed_decree + 1);
         }
 
@@ -1007,7 +993,7 @@ bool replica::prepare_cached_learn_state(const learn_request &request,
                         "learn_start_decree = {}, prepare_start_decree = {}, learn_mutation_count "
                         "= {}, learn_data_size = {}",
                         request.signature,
-                        request.learner,
+                        FMT_HOST_PORT_AND_IP(request, learner1),
                         learn_start_decree,
                         response.prepare_start_decree,
                         count,
@@ -1302,8 +1288,7 @@ void replica::notify_learn_completion()
     report.last_committed_decree_in_prepare_list = last_committed_decree();
     report.learner_signature = _potential_secondary_states.learning_version;
     report.learner_status_ = _potential_secondary_states.learning_status;
-    report.node = _stub->primary_address();
-    report.__set_hp_node(_stub->primary_host_port());
+    SET_IP_AND_HOST_PORT(report, node1, _stub->primary_address(), _stub->primary_host_port());
 
     LOG_INFO_PREFIX("notify_learn_completion[{:#018x}]: learnee = {}, learn_duration = {} ms, "
                     "local_committed_decree = {}, app_committed_decree = {}, app_durable_decree = "
@@ -1341,13 +1326,12 @@ void replica::on_learn_completion_notification(const group_check_response &repor
     _checker.only_one_thread_access();
 
     host_port hp_node;
-    GET_HOST_PORT(report, node, hp_node);
+    GET_HOST_PORT(report, node1, hp_node);
 
     LOG_INFO_PREFIX(
-        "on_learn_completion_notification[{:#018x}]: learner = {}({}), learning_status = {}",
+        "on_learn_completion_notification[{:#018x}]: learner = {}, learning_status = {}",
         report.learner_signature,
-        hp_node,
-        report.node,
+        FMT_HOST_PORT_AND_IP(report, node1),
         enum_to_string(report.learner_status_));
 
     if (status() != partition_status::PS_PRIMARY) {
@@ -1355,30 +1339,27 @@ void replica::on_learn_completion_notification(const group_check_response &repor
                            ? ERR_INACTIVE_STATE
                            : ERR_INVALID_STATE;
         LOG_ERROR_PREFIX(
-            "on_learn_completion_notification[{:#018x}]: learner = {}({}), this replica "
+            "on_learn_completion_notification[{:#018x}]: learner = {}, this replica "
             "is not primary, but {}, reply {}",
             report.learner_signature,
-            hp_node,
-            report.node,
+            FMT_HOST_PORT_AND_IP(report, node1),
             enum_to_string(status()),
             response.err);
     } else if (report.learner_status_ != learner_status::LearningSucceeded) {
         response.err = ERR_INVALID_STATE;
         LOG_ERROR_PREFIX(
-            "on_learn_completion_notification[{:#018x}]: learner = {}({}), learner_status "
+            "on_learn_completion_notification[{:#018x}]: learner = {}, learner_status "
             "is not LearningSucceeded, but {}, reply ERR_INVALID_STATE",
             report.learner_signature,
-            hp_node,
-            report.node,
+            FMT_HOST_PORT_AND_IP(report, node1),
             enum_to_string(report.learner_status_));
     } else {
         response.err = handle_learning_succeeded_on_primary(hp_node, report.learner_signature);
         if (response.err != ERR_OK) {
-            LOG_ERROR_PREFIX("on_learn_completion_notification[{:#018x}]: learner = {}({}), handle "
+            LOG_ERROR_PREFIX("on_learn_completion_notification[{:#018x}]: learner = {}, handle "
                              "learning succeeded on primary failed, reply {}",
                              report.learner_signature,
-                             hp_node,
-                             report.node,
+                             FMT_HOST_PORT_AND_IP(report, node1),
                              response.err);
         }
     }

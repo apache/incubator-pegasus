@@ -232,7 +232,7 @@ void replica::add_potential_secondary(const configuration_update_request &propos
 
     group_check_request request;
     request.app = _app_info;
-    SET_OBJ_IP_AND_HOST_PORT(request, node, proposal, node);
+    SET_OBJ_IP_AND_HOST_PORT(request, node1, proposal, node);
     _primary_states.get_replica_config(
         partition_status::PS_POTENTIAL_SECONDARY, request.config, state.signature);
     request.last_committed_decree = last_committed_decree();
