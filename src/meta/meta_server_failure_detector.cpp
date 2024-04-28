@@ -289,10 +289,6 @@ bool meta_server_failure_detector::update_stability_stat(const fd::beacon_msg &b
 void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
                                            rpc_replier<fd::beacon_ack> &reply)
 {
-    host_port hp_from_node, hp_to_node;
-    GET_HOST_PORT(beacon, from_node1, hp_from_node);
-    GET_HOST_PORT(beacon, to_node1, hp_to_node);
-
     if (beacon.__isset.start_time && !update_stability_stat(beacon)) {
         LOG_WARNING("{} is unstable, don't response to it's beacon",
                     FMT_HOST_PORT_AND_IP(beacon, from_node1));

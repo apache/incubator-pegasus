@@ -356,9 +356,8 @@ std::string failure_detector::get_allow_list(const std::vector<std::string> &arg
 
 void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon_ack &ack)
 {
-    host_port hp_from_node, hp_to_node;
+    host_port hp_from_node;
     GET_HOST_PORT(beacon, from_node1, hp_from_node);
-    GET_HOST_PORT(beacon, to_node1, hp_to_node);
 
     ack.time = beacon.time;
     SET_OBJ_IP_AND_HOST_PORT(ack, this_node1, beacon, to_node1);
@@ -585,7 +584,7 @@ void failure_detector::send_beacon(const host_port &target, uint64_t time)
     beacon_msg beacon;
     beacon.time = time;
     SET_IP_AND_HOST_PORT(beacon, from_node1, dsn_primary_address(), dsn_primary_host_port());
-    SET_IP_AND_HOST_PORT_BY_DNS(beacon, to_node1, target);
+    SET_IP_AND_HOST_PORT(beacon, to_node1, addr_target, target);
     beacon.__set_start_time(static_cast<int64_t>(dsn::utils::process_start_millis()));
 
     LOG_INFO("send ping message, from[{}], to[{}], time[{}]",
