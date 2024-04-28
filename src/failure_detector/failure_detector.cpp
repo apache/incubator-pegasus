@@ -357,11 +357,11 @@ std::string failure_detector::get_allow_list(const std::vector<std::string> &arg
 void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon_ack &ack)
 {
     host_port hp_from_node;
-    GET_HOST_PORT(beacon, from_node1, hp_from_node);
+    GET_HOST_PORT(beacon, from_node, hp_from_node);
 
     ack.time = beacon.time;
-    SET_OBJ_IP_AND_HOST_PORT(ack, this_node1, beacon, to_node1);
-    SET_IP_AND_HOST_PORT(ack, primary_node1, dsn_primary_address(), dsn_primary_host_port());
+    SET_OBJ_IP_AND_HOST_PORT(ack, this_node, beacon, to_node);
+    SET_IP_AND_HOST_PORT(ack, primary_node, dsn_primary_address(), dsn_primary_host_port());
     ack.is_master = true;
     ack.allowed = true;
 
@@ -422,8 +422,8 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
      * the caller of the end_ping_internal should lock necessarily!!!
      */
     host_port hp_this_node, hp_primary_node;
-    GET_HOST_PORT(ack, this_node1, hp_this_node);
-    GET_HOST_PORT(ack, primary_node1, hp_primary_node);
+    GET_HOST_PORT(ack, this_node, hp_this_node);
+    GET_HOST_PORT(ack, primary_node, hp_primary_node);
 
     uint64_t beacon_send_time = ack.time;
 
@@ -440,7 +440,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     if (itr == _masters.end()) {
         LOG_WARNING("received beacon ack without corresponding master, ignore it, "
                     "remote_master[{}], local_worker[{}({})]",
-                    FMT_HOST_PORT_AND_IP(ack, this_node1),
+                    FMT_HOST_PORT_AND_IP(ack, this_node),
                     dsn_primary_host_port(),
                     dsn_primary_address());
         return false;
@@ -450,7 +450,7 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     if (!ack.allowed) {
         LOG_WARNING("worker rejected, stop sending beacon message, remote_master[{}], "
                     "local_worker[{}({})]",
-                    FMT_HOST_PORT_AND_IP(ack, this_node1),
+                    FMT_HOST_PORT_AND_IP(ack, this_node),
                     dsn_primary_host_port(),
                     dsn_primary_address());
         record.rejected = true;
@@ -474,8 +474,8 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     // if ack is not from master meta, worker should not update its last send time
     if (!ack.is_master) {
         LOG_WARNING("node[{}] is not master, ack.primary_node[{}] is real master",
-                    FMT_HOST_PORT_AND_IP(ack, this_node1),
-                    FMT_HOST_PORT_AND_IP(ack, primary_node1));
+                    FMT_HOST_PORT_AND_IP(ack, this_node),
+                    FMT_HOST_PORT_AND_IP(ack, primary_node));
         return true;
     }
 
@@ -583,13 +583,13 @@ void failure_detector::send_beacon(const host_port &target, uint64_t time)
     const auto &addr_target = dsn::dns_resolver::instance().resolve_address(target);
     beacon_msg beacon;
     beacon.time = time;
-    SET_IP_AND_HOST_PORT(beacon, from_node1, dsn_primary_address(), dsn_primary_host_port());
-    SET_IP_AND_HOST_PORT(beacon, to_node1, addr_target, target);
+    SET_IP_AND_HOST_PORT(beacon, from_node, dsn_primary_address(), dsn_primary_host_port());
+    SET_IP_AND_HOST_PORT(beacon, to_node, addr_target, target);
     beacon.__set_start_time(static_cast<int64_t>(dsn::utils::process_start_millis()));
 
     LOG_INFO("send ping message, from[{}], to[{}], time[{}]",
-             FMT_HOST_PORT_AND_IP(beacon, from_node1),
-             FMT_HOST_PORT_AND_IP(beacon, to_node1),
+             FMT_HOST_PORT_AND_IP(beacon, from_node),
+             FMT_HOST_PORT_AND_IP(beacon, to_node),
              time);
 
     ::dsn::rpc::call(addr_target,
@@ -600,8 +600,8 @@ void failure_detector::send_beacon(const host_port &target, uint64_t time)
                          if (err != ::dsn::ERR_OK) {
                              beacon_ack ack;
                              ack.time = beacon.time;
-                             SET_OBJ_IP_AND_HOST_PORT(ack, this_node1, beacon, to_node1);
-                             RESET_IP_AND_HOST_PORT(ack, primary_node1);
+                             SET_OBJ_IP_AND_HOST_PORT(ack, this_node, beacon, to_node);
+                             RESET_IP_AND_HOST_PORT(ack, primary_node);
                              ack.is_master = false;
                              ack.allowed = true;
                              end_ping(err, ack, nullptr);

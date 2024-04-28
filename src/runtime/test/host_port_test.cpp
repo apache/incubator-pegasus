@@ -277,15 +277,15 @@ TEST(host_port_test, test_macros)
     {
         fd::beacon_msg beacon;
         host_port hp_from_node;
-        GET_HOST_PORT(beacon, from_node1, hp_from_node);
+        GET_HOST_PORT(beacon, from_node, hp_from_node);
         ASSERT_FALSE(hp_from_node);
     }
     // Test GET_HOST_PORT-2.
     {
         fd::beacon_msg beacon;
         host_port hp_from_node;
-        beacon.from_node1 = kAddr1;
-        GET_HOST_PORT(beacon, from_node1, hp_from_node);
+        beacon.from_node = kAddr1;
+        GET_HOST_PORT(beacon, from_node, hp_from_node);
         ASSERT_TRUE(hp_from_node);
         ASSERT_EQ(kHp1, hp_from_node);
         ASSERT_EQ(kAddr1, dns_resolver::instance().resolve_address(hp_from_node));
@@ -294,9 +294,9 @@ TEST(host_port_test, test_macros)
     {
         fd::beacon_msg beacon;
         host_port hp_from_node;
-        beacon.from_node1 = kAddr1;
-        beacon.__set_hp_from_node1(kHp1);
-        GET_HOST_PORT(beacon, from_node1, hp_from_node);
+        beacon.from_node = kAddr1;
+        beacon.__set_hp_from_node(kHp1);
+        GET_HOST_PORT(beacon, from_node, hp_from_node);
         ASSERT_TRUE(hp_from_node);
         ASSERT_EQ(kHp1, hp_from_node);
         ASSERT_EQ(kAddr1, dns_resolver::instance().resolve_address(hp_from_node));
@@ -330,28 +330,28 @@ TEST(host_port_test, test_macros)
     // Test SET_IP_AND_HOST_PORT.
     {
         fd::beacon_msg beacon;
-        SET_IP_AND_HOST_PORT(beacon, from_node1, kAddr1, kHp1);
-        ASSERT_EQ(kAddr1, beacon.from_node1);
-        ASSERT_EQ(kHp1, beacon.hp_from_node1);
+        SET_IP_AND_HOST_PORT(beacon, from_node, kAddr1, kHp1);
+        ASSERT_EQ(kAddr1, beacon.from_node);
+        ASSERT_EQ(kHp1, beacon.hp_from_node);
     }
 
     // Test SET_IP_AND_HOST_PORT_BY_DNS.
     {
         fd::beacon_msg beacon;
-        SET_IP_AND_HOST_PORT_BY_DNS(beacon, from_node1, kHp1);
-        ASSERT_EQ(kAddr1, beacon.from_node1);
-        ASSERT_EQ(kHp1, beacon.hp_from_node1);
+        SET_IP_AND_HOST_PORT_BY_DNS(beacon, from_node, kHp1);
+        ASSERT_EQ(kAddr1, beacon.from_node);
+        ASSERT_EQ(kHp1, beacon.hp_from_node);
     }
 
     // Test RESET_IP_AND_HOST_PORT.
     {
         fd::beacon_msg beacon;
-        SET_IP_AND_HOST_PORT_BY_DNS(beacon, from_node1, kHp1);
-        ASSERT_EQ(kAddr1, beacon.from_node1);
-        ASSERT_EQ(kHp1, beacon.hp_from_node1);
-        RESET_IP_AND_HOST_PORT(beacon, from_node1);
-        ASSERT_FALSE(beacon.from_node1);
-        ASSERT_FALSE(beacon.hp_from_node1);
+        SET_IP_AND_HOST_PORT_BY_DNS(beacon, from_node, kHp1);
+        ASSERT_EQ(kAddr1, beacon.from_node);
+        ASSERT_EQ(kHp1, beacon.hp_from_node);
+        RESET_IP_AND_HOST_PORT(beacon, from_node);
+        ASSERT_FALSE(beacon.from_node);
+        ASSERT_FALSE(beacon.hp_from_node);
     }
 
     // Test ADD_IP_AND_HOST_PORT.
@@ -445,8 +445,8 @@ TEST(host_port_test, test_macros)
     // Test FMT_HOST_PORT_AND_IP.
     {
         fd::beacon_msg beacon;
-        SET_IP_AND_HOST_PORT_BY_DNS(beacon, from_node1, kHp1);
-        ASSERT_EQ(fmt::format("{}({})", kHp1, kAddr1), FMT_HOST_PORT_AND_IP(beacon, from_node1));
+        SET_IP_AND_HOST_PORT_BY_DNS(beacon, from_node, kHp1);
+        ASSERT_EQ(fmt::format("{}({})", kHp1, kAddr1), FMT_HOST_PORT_AND_IP(beacon, from_node));
     }
 }
 
