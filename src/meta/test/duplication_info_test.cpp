@@ -123,6 +123,7 @@ public:
         auto dup_ent = dup.to_duplication_entry();
         ASSERT_EQ(0, dup_ent.progress.size());
         ASSERT_EQ(kTestRemoteAppName, dup_ent.remote_app_name);
+        ASSERT_EQ(kTestRemoteReplicaCount, dup_ent.remote_replica_count);
 
         for (int i = 0; i < 4; i++) {
             dup.init_progress(i, invalid_decree);
@@ -174,7 +175,7 @@ public:
         dup.persist_status();
 
         dup.alter_status(duplication_status::DS_APP);
-        auto json = dup.to_json_blob();
+        const auto &json = dup.to_json_blob();
         dup.persist_status();
 
         duplication_info::json_helper copy;
@@ -195,6 +196,19 @@ public:
             blob::create_from_bytes(boost::replace_all_copy(json.to_string(), "DS_APP", "DS_FOO"));
         ASSERT_FALSE(json::json_forwarder<duplication_info::json_helper>::decode(new_json, copy));
         ASSERT_EQ(duplication_status::DS_REMOVED, copy.status);
+    }
+
+    static void test_encode_and_decode_default()
+    {
+        const duplication_info::json_helper copy;
+        const auto json = json::json_forwarder<json_helper>::encode(copy);
+        ASSERT_TRUE(dup.remote_app_name.empty());
+        ASSERT_EQ(0, dup.remote_replica_count);
+
+        auto dup = duplication_info::decode_from_blob(
+            1, 1, kTestAppName, 4, kTestRemoteReplicaCount, kTestMetaStorePath, json);
+        ASSERT_EQ(kTestAppName, dup->remote_app_name);
+        ASSERT_EQ(kTestRemoteReplicaCount, dup->remote_replica_count);
     }
 };
 
@@ -309,6 +323,8 @@ TEST_F(duplication_info_test, persist_status) { test_persist_status(); }
 TEST_F(duplication_info_test, init_and_start) { test_init_and_start(); }
 
 TEST_F(duplication_info_test, encode_and_decode) { test_encode_and_decode(); }
+
+TEST_F(duplication_info_test, encode_and_decode_default) { test_encode_and_decode_default(); }
 
 TEST_F(duplication_info_test, is_valid)
 {

@@ -73,17 +73,23 @@ public:
     static const std::string kTestAppName;
     static const std::string kTestRemoteClusterName;
     static const std::string kTestRemoteAppName;
+    static const int32_t kTestRemoteReplicaCount;
 
     meta_duplication_service_test() {}
 
     duplication_add_response create_dup(const std::string &app_name,
                                         const std::string &remote_cluster,
-                                        const std::string &remote_app_name)
+                                        const bool specify,
+                                        const std::string &remote_app_name,
+                                        const int32_t remote_replica_count)
     {
         auto req = std::make_unique<duplication_add_request>();
         req->app_name = app_name;
         req->remote_cluster_name = remote_cluster;
-        req->__set_remote_app_name(remote_app_name);
+        if (specify) {
+            req->__set_remote_app_name(remote_app_name);
+            req->__set_remote_replica_count(remote_replica_count);
+        }
 
         duplication_add_rpc rpc(std::move(req), RPC_CM_ADD_DUPLICATION);
         dup_svc().add_duplication(rpc);
@@ -92,14 +98,29 @@ public:
     }
 
     duplication_add_response create_dup(const std::string &app_name,
-                                        const std::string &remote_cluster)
+                                        const std::string &remote_cluster,
+                                        const std::string &remote_app_name,
+                                        const int32_t remote_replica_count)
     {
-        return create_dup(app_name, remote_cluster, app_name);
+        return create_dup(app_name, remote_cluster, true, app_name, remote_replica_count);
+    }
+
+    duplication_add_response create_dup_without_specify(const std::string &app_name,
+                                                        const std::string &remote_cluster)
+    {
+        return create_dup(app_name, remote_cluster, false, "", 0);
+    }
+
+    duplication_add_response create_dup(const std::string &app_name,
+                                        const std::string &remote_cluster,
+                                        const int32_t remote_replica_count)
+    {
+        return create_dup(app_name, remote_cluster, app_name, remote_replica_count);
     }
 
     duplication_add_response create_dup(const std::string &app_name)
     {
-        return create_dup(app_name, kTestRemoteClusterName);
+        return create_dup(app_name, kTestRemoteClusterName, kTestRemoteReplicaCount);
     }
 
     duplication_query_response query_dup_info(const std::string &app_name)
@@ -195,17 +216,17 @@ public:
 
         int last_dup = 0;
         for (int i = 0; i < 1000; i++) {
-            auto dup =
-                dup_svc().new_dup_from_init(kTestRemoteClusterName, kTestRemoteAppName, 3, {}, app);
+            auto dup = dup_svc().new_dup_from_init(
+                kTestRemoteClusterName, kTestRemoteAppName, kTestRemoteReplicaCount, {}, app);
 
             ASSERT_GT(dup->id, 0);
             ASSERT_FALSE(dup->is_altering());
-            ASSERT_EQ(dup->_status, duplication_status::DS_INIT);
-            ASSERT_EQ(dup->_next_status, duplication_status::DS_INIT);
+            ASSERT_EQ(duplication_status::DS_INIT, dup->_status);
+            ASSERT_EQ(duplication_status::DS_INIT, dup->_next_status);
 
             auto ent = dup->to_duplication_entry();
             for (int j = 0; j < app->partition_count; j++) {
-                ASSERT_EQ(ent.progress[j], invalid_decree);
+                ASSERT_EQ(invalid_decree, ent.progress[j]);
             }
 
             if (last_dup != 0) {
@@ -327,7 +348,7 @@ public:
         SetUp();
         create_app(kTestAppName);
         app = find_app(kTestAppName);
-        auto test_dup = create_dup(kTestAppName, kTestRemoteClusterName);
+        auto test_dup = create_dup(kTestAppName, kTestRemoteClusterName, kTestRemoteReplicaCount);
         ASSERT_EQ(test_dup.err, ERR_OK);
         duplication_info_s_ptr dup = app->duplications[test_dup.dupid];
         _ms->get_meta_storage()->create_node(meta_duplication_service::get_partition_path(dup, "0"),
@@ -348,7 +369,7 @@ public:
         SetUp();
         create_app(kTestAppName);
         app = find_app(kTestAppName);
-        test_dup = create_dup(kTestAppName, kTestRemoteClusterName);
+        test_dup = create_dup(kTestAppName, kTestRemoteClusterName, kTestRemoteReplicaCount);
         ASSERT_EQ(test_dup.err, ERR_OK);
         dup = app->duplications[test_dup.dupid];
         _ms->get_meta_storage()->create_node(meta_duplication_service::get_partition_path(dup, "x"),
@@ -368,6 +389,7 @@ public:
     {
         static const std::string kTestSameAppName(kTestAppName + "_same");
         static const std::string kTestAnotherAppName(kTestAppName + "_another");
+        static const std::string kTestNoSpecifyAppName(kTestAppName + "_no_specify");
 
         create_app(kTestAppName);
         create_app(kTestSameAppName);
@@ -377,38 +399,89 @@ public:
         {
             std::string app_name;
             std::string remote;
+
+            bool specify;
             std::string remote_app_name;
+            int32_t remote_replica_count;
 
             error_code wec;
         } tests[] = {
             // The general case that duplicating to remote cluster with specified remote_app_name.
-            {kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, ERR_OK},
+            {kTestAppName,
+             kTestRemoteClusterName,
+             true,
+             kTestRemoteAppName,
+             kTestRemoteReplicaCount,
+             ERR_OK},
             // A duplication that has been added would be found with its original remote_app_name.
-            {kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, ERR_OK},
+            {kTestAppName,
+             kTestRemoteClusterName,
+             true,
+             kTestRemoteAppName,
+             kTestRemoteReplicaCount,
+             ERR_OK},
             // The general case that duplicating to remote cluster with same remote_app_name.
-            {kTestSameAppName, kTestRemoteClusterName, kTestSameAppName, ERR_OK},
+            {kTestSameAppName,
+             kTestRemoteClusterName,
+             true,
+             kTestSameAppName,
+             kTestRemoteReplicaCount,
+             ERR_OK},
             // It is not allowed that remote_cluster_name does not exist in "duplication-group".
-            {kTestAppName, "test-invalid-remote", kTestRemoteAppName, ERR_INVALID_PARAMETERS},
+            {kTestAppName,
+             "test-invalid-remote",
+             true,
+             kTestRemoteAppName,
+             kTestRemoteReplicaCount,
+             ERR_INVALID_PARAMETERS},
             // Duplicating to local cluster is not allowed.
-            {kTestAppName, get_current_cluster_name(), kTestRemoteAppName, ERR_INVALID_PARAMETERS},
+            {kTestAppName,
+             get_current_cluster_name(),
+             true,
+             kTestRemoteAppName,
+             kTestRemoteReplicaCount,
+             ERR_INVALID_PARAMETERS},
             // It is not allowed that remote_cluster_name exists in "duplication-group" but not
             // exists in "pegasus.clusters".
             {kTestAppName,
              "cluster_without_address_for_test",
+             true,
              kTestRemoteAppName,
+             kTestRemoteReplicaCount,
              ERR_INVALID_PARAMETERS},
             // The attempt that duplicates another app to the same remote app would be blocked.
             {kTestAnotherAppName,
              kTestRemoteClusterName,
+             true,
              kTestRemoteAppName,
+             kTestRemoteReplicaCount,
              ERR_INVALID_PARAMETERS},
             // The attempt that duplicates another app to the different remote app would be
             // ok.
-            {kTestAnotherAppName, kTestRemoteClusterName, kTestAppName, ERR_OK},
+            {kTestAnotherAppName,
+             kTestRemoteClusterName,
+             true,
+             kTestAppName,
+             kTestRemoteReplicaCount,
+             ERR_OK},
+            // Add a duplication without specifying remote_app_name and remote_replica_count.
+            {kTestNoSpecifyAppName,
+             kTestRemoteClusterName,
+             false,
+             kTestNoSpecifyAppName,
+             3,
+             ERR_OK},
         };
 
         for (auto test : tests) {
-            auto resp = create_dup(test.app_name, test.remote, test.remote_app_name);
+            duplication_add_response resp;
+            if (test.specify) {
+                resp = create_dup(
+                    test.app_name, test.remote, test.remote_app_name, test.remote_replica_count);
+            } else {
+                resp = create_dup_without_specify(test.app_name, test.remote);
+            }
+
             ASSERT_EQ(test.wec, resp.err);
 
             if (test.wec != ERR_OK) {
@@ -423,6 +496,8 @@ public:
             ASSERT_EQ(test.remote, dup->remote_cluster_name);
             ASSERT_EQ(test.remote_app_name, resp.remote_app_name);
             ASSERT_EQ(test.remote_app_name, dup->remote_app_name);
+            ASSERT_EQ(test.remote_replica_count, resp.remote_replica_count);
+            ASSERT_EQ(test.remote_replica_count, dup->remote_replica_count);
             ASSERT_EQ(resp.dupid, dup->id);
             ASSERT_TRUE(app->duplicating);
         }
@@ -432,6 +507,7 @@ public:
 const std::string meta_duplication_service_test::kTestAppName = "test_app";
 const std::string meta_duplication_service_test::kTestRemoteClusterName = "slave-cluster";
 const std::string meta_duplication_service_test::kTestRemoteAppName = "remote_test_app";
+const int32_t meta_duplication_service_test::kTestRemoteReplicaCount = 3;
 
 // This test ensures that duplication upon an unavailable app will
 // be rejected with ERR_APP_NOT_EXIST.
@@ -494,14 +570,16 @@ TEST_F(meta_duplication_service_test, dont_create_if_existed)
     }
 }
 
-TEST_F(meta_duplication_service_test, add_dup_with_remote_app_name)
+TEST_F(meta_duplication_service_test, add_dup_with_params)
 {
     create_app(kTestAppName);
     auto app = find_app(kTestAppName);
     ASSERT_EQ(kTestAppName, app->app_name);
 
-    create_dup(kTestAppName, kTestRemoteClusterName, kTestRemoteAppName);
-    const dupid_t dupid = create_dup(kTestAppName).dupid;
+    const dupid_t dupid =
+        create_dup(
+            kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, kTestRemoteReplicaCount)
+            .dupid;
 
     const auto &resp = query_dup_info(kTestAppName);
     ASSERT_EQ(ERR_OK, resp.err);
@@ -511,6 +589,7 @@ TEST_F(meta_duplication_service_test, add_dup_with_remote_app_name)
     ASSERT_EQ(dupid, duplication_entry.dupid);
     ASSERT_EQ(duplication_status::DS_PREPARE, duplication_entry.status);
     ASSERT_EQ(kTestRemoteAppName, duplication_entry.remote_app_name);
+    ASSERT_EQ(kTestRemoteReplicaCount, duplication_entry.remote_replica_count);
 }
 
 TEST_F(meta_duplication_service_test, change_duplication_status)
@@ -754,7 +833,7 @@ TEST_F(meta_duplication_service_test, recover_from_corrupted_meta_data)
 TEST_F(meta_duplication_service_test, query_duplication_handler)
 {
     create_app(kTestAppName);
-    create_dup(kTestAppName, kTestRemoteClusterName, kTestRemoteAppName);
+    create_dup(kTestAppName, kTestRemoteClusterName, kTestRemoteAppName, kTestRemoteReplicaCount);
     meta_http_service mhs(_ms.get());
 
     http_request fake_req;
@@ -776,7 +855,8 @@ TEST_F(meta_duplication_service_test, query_duplication_handler)
     ASSERT_EQ(std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
                   std::to_string(dup->id) +
                   R"(,"fail_mode":"FAIL_SLOW","remote":"slave-cluster")"
-                  R"(,"remote_app_name":"remote_test_app","status":"DS_PREPARE"},"appid":2})",
+                  R"(,"remote_replica_count":3,"remote_app_name":"remote_test_app")"
+                  R"(,"status":"DS_PREPARE"},"appid":2})",
               fake_resp.body);
 }
 
