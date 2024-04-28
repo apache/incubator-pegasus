@@ -1585,8 +1585,7 @@ void replication_ddl_client::query_disk_info(
     std::map<dsn::host_port, query_disk_info_rpc> query_disk_info_rpcs;
     for (const auto &target : targets) {
         auto request = std::make_unique<query_disk_info_request>();
-        request->node = dsn::dns_resolver::instance().resolve_address(target);
-        request->__set_hp_node(target);
+        SET_IP_AND_HOST_PORT_BY_DNS(*request, node1, target);
         request->app_name = app_name;
         query_disk_info_rpcs.emplace(target,
                                      query_disk_info_rpc(std::move(request), RPC_QUERY_DISK_INFO));
