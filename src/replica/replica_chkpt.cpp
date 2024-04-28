@@ -49,6 +49,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "split/replica_split_manager.h"
