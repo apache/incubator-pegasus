@@ -137,7 +137,7 @@ void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rc
 {
     user_request_ptr req(new user_request());
     req->high_priority = rci->high_priority;
-    SET_IP_AND_HOST_PORT_BY_DNS(req->file_size_req, source1, rci->source);
+    SET_IP_AND_HOST_PORT_BY_DNS(req->file_size_req, source, rci->source);
     req->file_size_req.dst_dir = rci->dest_dir;
     req->file_size_req.file_list = rci->files;
     req->file_size_req.source_dir = rci->source_dir;
@@ -153,7 +153,7 @@ void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rc
                                 end_get_file_size(err, std::move(resp), req);
                             },
                             std::chrono::milliseconds(FLAGS_rpc_timeout_ms),
-                            req->file_size_req.source1);
+                            req->file_size_req.source);
 }
 
 void nfs_client_impl::end_get_file_size(::dsn::error_code err,
@@ -162,7 +162,7 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
 {
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
-                  FMT_HOST_PORT_AND_IP(ureq->file_size_req, source1),
+                  FMT_HOST_PORT_AND_IP(ureq->file_size_req, source),
                   ureq->file_size_req.source_dir,
                   err);
         ureq->nfs_task->enqueue(err, 0);
@@ -172,7 +172,7 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
     err = dsn::error_code(resp.error);
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
-                  FMT_HOST_PORT_AND_IP(ureq->file_size_req, source1),
+                  FMT_HOST_PORT_AND_IP(ureq->file_size_req, source),
                   ureq->file_size_req.source_dir,
                   err);
         ureq->nfs_task->enqueue(err, 0);
@@ -292,7 +292,7 @@ void nfs_client_impl::continue_copy()
                 }
 
                 copy_request copy_req;
-                SET_OBJ_IP_AND_HOST_PORT(copy_req, source1, ureq->file_size_req, source1);
+                SET_OBJ_IP_AND_HOST_PORT(copy_req, source, ureq->file_size_req, source);
                 copy_req.file_name = req->file_ctx->file_name;
                 copy_req.offset = req->offset;
                 copy_req.size = req->size;
@@ -315,7 +315,7 @@ void nfs_client_impl::continue_copy()
                                        }
                                    },
                                    std::chrono::milliseconds(FLAGS_rpc_timeout_ms),
-                                   req->file_ctx->user_req->file_size_req.source1);
+                                   req->file_ctx->user_req->file_size_req.source);
             } else {
                 --ureq->concurrent_copy_count;
                 --_concurrent_copy_request_count;
@@ -349,11 +349,11 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
 
         if (!fc->user_req->is_finished) {
             host_port hp;
-            GET_HOST_PORT(fc->user_req->file_size_req, source1, hp);
+            GET_HOST_PORT(fc->user_req->file_size_req, source, hp);
             if (reqc->retry_count > 0) {
                 LOG_WARNING("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
                             "err = {}, retry_count = {}",
-                            FMT_HOST_PORT_AND_IP(fc->user_req->file_size_req, source1),
+                            FMT_HOST_PORT_AND_IP(fc->user_req->file_size_req, source),
                             fc->user_req->file_size_req.source_dir,
                             fc->file_name,
                             err,
@@ -371,7 +371,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
             } else {
                 LOG_ERROR("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
                           "err = {}, retry_count = {}",
-                          FMT_HOST_PORT_AND_IP(fc->user_req->file_size_req, source1),
+                          FMT_HOST_PORT_AND_IP(fc->user_req->file_size_req, source),
                           fc->user_req->file_size_req.source_dir,
                           fc->file_name,
                           err,
