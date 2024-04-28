@@ -1445,17 +1445,19 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &slog_max_
         // `ERR_INCOMPLETE_DATA`, thus it's possible that `valid_start_offset == 0`.
         CHECK(valid_start_offset == 0 || file->end_offset() <= valid_start_offset,
               "valid start offset must be 0 or greater than the end of this log file");
-        LOG_DEBUG("gc @ {}: max_decree for {} is missing vs {} as garbage max decree, it's "
+        LOG_INFO("gc @ {}: max_decree for {} is missing vs {} as garbage max decree, it's "
                   "safe to delete this and all older logs for this replica",
                   pid,
                   file->path(),
                   garbage_max_decree);
         return true;
-    } else if (file->end_offset() <= valid_start_offset) {
+    }
+
+    if (file->end_offset() <= valid_start_offset) {
         // This file has been invalid for this replica, since `valid_start_offset` was reset
         // to a file with larger index than this file. Thus all decrees of this replica in
         // this file could be deleted.
-        LOG_DEBUG("gc @ {}: log is invalid for {}, as valid start offset vs log end offset = "
+        LOG_INFO("gc @ {}: log is invalid for {}, as valid start offset vs log end offset = "
                   "{} vs {}, it is therefore safe to delete this and all older logs for this "
                   "replica",
                   pid,
@@ -1463,11 +1465,13 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &slog_max_
                   valid_start_offset,
                   file->end_offset());
         return true;
-    } else if (it->second.max_decree <= garbage_max_decree) {
+    }
+
+    if (it->second.max_decree <= garbage_max_decree) {
         // All decrees are no more than the garbage max decree. Since all decrees less than
         // garbage max decree would be deleted, all decrees of this replica in this file
         // could be deleted.
-        LOG_DEBUG("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it is "
+        LOG_INFO("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it is "
                   "therefore safe to delete this and all older logs for this replica",
                   pid,
                   file->path(),
@@ -1480,7 +1484,7 @@ bool can_gc_replica_slog(const dsn::replication::replica_log_info_map &slog_max_
     //
     // Some decrees are more than garbage max decree, thus this file should not be deleted
     // for now.
-    LOG_DEBUG("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it "
+    LOG_INFO("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it "
               "is therefore not allowed to delete this and all older logs",
               pid,
               file->path(),
