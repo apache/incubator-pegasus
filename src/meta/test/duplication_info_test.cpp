@@ -200,11 +200,11 @@ public:
 
     static void test_encode_and_decode_default()
     {
-        const duplication_info::json_helper copy;
-        const auto json = json::json_forwarder<json_helper>::encode(copy);
-        ASSERT_TRUE(dup.remote_app_name.empty());
-        ASSERT_EQ(0, dup.remote_replica_count);
+        duplication_info::json_helper copy;
+        ASSERT_TRUE(copy.remote_app_name.empty());
+        ASSERT_EQ(0, copy.remote_replica_count);
 
+        const auto json = json::json_forwarder<duplication_info::json_helper>::encode(copy);
         auto dup = duplication_info::decode_from_blob(
             1, 1, kTestAppName, 4, kTestRemoteReplicaCount, kTestMetaStorePath, json);
         ASSERT_EQ(kTestAppName, dup->remote_app_name);
