@@ -48,7 +48,6 @@
 #include "meta/meta_server_failure_detector.h"
 #include "replica/replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
