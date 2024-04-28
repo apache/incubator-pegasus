@@ -207,7 +207,7 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
                                                           int32_t app_id,
                                                           const std::string &app_name,
                                                           int32_t partition_count,
-                                                          int32_t remote_replica_count,
+                                                          int32_t replica_count,
                                                           const std::string &store_path,
                                                           const blob &json)
 {
@@ -225,7 +225,7 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
     if (info.remote_replica_count == 0) {
         // remote_replica_count is missing, which means meta data in remote storage(zk) is
         // still of old version(< v2.6.0).
-        info.remote_replica_count = remote_replica_count;
+        info.remote_replica_count = replica_count;
     }
 
     std::vector<host_port> meta_list;

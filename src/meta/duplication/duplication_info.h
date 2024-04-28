@@ -141,7 +141,7 @@ public:
                                                    int32_t app_id,
                                                    const std::string &app_name,
                                                    int32_t partition_count,
-                                                   int32_t remote_replica_count,
+                                                   int32_t replica_count,
                                                    const std::string &store_path,
                                                    const blob &json);
 

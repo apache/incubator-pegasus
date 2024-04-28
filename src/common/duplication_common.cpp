@@ -159,6 +159,11 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
         json["remote_app_name"] = ent.remote_app_name;
     }
 
+    if (ent.__isset.remote_replica_count) {
+        // remote_replica_count is supported since v2.6.0, thus it won't be shown before v2.6.0.
+        json["remote_replica_count"] = ent.remote_replica_count;
+    }
+
     return json;
 }
 
