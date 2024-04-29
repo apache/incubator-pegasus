@@ -29,6 +29,7 @@
 #include <fmt/format.h>
 #include <stdint.h>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <ios>
 #include <map>
@@ -39,6 +40,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
@@ -63,9 +65,9 @@
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
+#include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
@@ -73,7 +75,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 
