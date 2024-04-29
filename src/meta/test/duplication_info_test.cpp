@@ -205,6 +205,7 @@ public:
         duplication_info::json_helper copy;
         copy.status = duplication_status::DS_INIT;
         copy.fail_mode = duplication_fail_mode::FAIL_SLOW;
+        copy.remote = kTestRemoteClusterName;
         ASSERT_TRUE(copy.remote_app_name.empty());
         ASSERT_EQ(0, copy.remote_replica_count);
 
