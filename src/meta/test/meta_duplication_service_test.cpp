@@ -79,14 +79,14 @@ public:
 
     duplication_add_response create_dup(const std::string &app_name,
                                         const std::string &remote_cluster,
-                                        const bool specify,
+                                        const bool specified,
                                         const std::string &remote_app_name,
                                         const int32_t remote_replica_count)
     {
         auto req = std::make_unique<duplication_add_request>();
         req->app_name = app_name;
         req->remote_cluster_name = remote_cluster;
-        if (specify) {
+        if (specified) {
             req->__set_remote_app_name(remote_app_name);
             req->__set_remote_replica_count(remote_replica_count);
         }
@@ -105,8 +105,8 @@ public:
         return create_dup(app_name, remote_cluster, true, app_name, remote_replica_count);
     }
 
-    duplication_add_response create_dup_without_specify(const std::string &app_name,
-                                                        const std::string &remote_cluster)
+    duplication_add_response create_dup_unspecified(const std::string &app_name,
+                                                    const std::string &remote_cluster)
     {
         return create_dup(app_name, remote_cluster, false, "", 0);
     }
@@ -389,7 +389,7 @@ public:
     {
         static const std::string kTestSameAppName(kTestAppName + "_same");
         static const std::string kTestAnotherAppName(kTestAppName + "_another");
-        static const std::string kTestNoSpecifyAppName(kTestAppName + "_no_specify");
+        static const std::string kTestUnSpecifiedAppName(kTestAppName + "_unspecified");
 
         create_app(kTestAppName);
         create_app(kTestSameAppName);
@@ -400,7 +400,7 @@ public:
             std::string app_name;
             std::string remote;
 
-            bool specify;
+            bool specified;
             std::string remote_app_name;
             int32_t remote_replica_count;
 
@@ -465,21 +465,21 @@ public:
              kTestRemoteReplicaCount,
              ERR_OK},
             // Add a duplication without specifying remote_app_name and remote_replica_count.
-            {kTestNoSpecifyAppName,
+            {kTestUnSpecifiedAppName,
              kTestRemoteClusterName,
              false,
-             kTestNoSpecifyAppName,
+             kTestUnSpecifiedAppName,
              3,
              ERR_OK},
         };
 
         for (auto test : tests) {
             duplication_add_response resp;
-            if (test.specify) {
+            if (test.specified) {
                 resp = create_dup(
                     test.app_name, test.remote, test.remote_app_name, test.remote_replica_count);
             } else {
-                resp = create_dup_without_specify(test.app_name, test.remote);
+                resp = create_dup_unspecified(test.app_name, test.remote);
             }
 
             ASSERT_EQ(test.wec, resp.err);

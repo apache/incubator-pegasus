@@ -83,12 +83,11 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
 
     // Read the replica count of the remote app, if any.
     const auto &remote_replica_count_ss = cmd({"-r", "--remote_replica_count"});
-    const auto missing_remote_replica_count = static_cast<bool>(remote_replica_count_ss);
 
     // 0 represents that remote_replica_count is missing, which means the remote_replica_count
     // would be set as the replica count of source app.
     int32_t remote_replica_count = 0;
-    if (!missing_remote_replica_count) {
+    if (static_cast<bool>(remote_replica_count_ss)) {
         std::string remote_replica_count_str(remote_replica_count_ss.str());
         if (!dsn::buf2int32(remote_replica_count_str, remote_replica_count) ||
             remote_replica_count < 1) {

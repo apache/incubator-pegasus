@@ -227,6 +227,13 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         request.remote_cluster_name,
         duplication_constants::kClustersSectionName);
 
+    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(
+        remote_replica_count >= 0,
+        response,
+        ERR_INVALID_PARAMETERS,
+        "invalid remote_replica_count({}) which should never be negative",
+        remote_replica_count);
+
     std::shared_ptr<app_state> app;
     duplication_info_s_ptr dup;
     {
