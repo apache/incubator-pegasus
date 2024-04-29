@@ -437,6 +437,11 @@ private:
                                            std::shared_ptr<learn_response> resp,
                                            const std::string &chk_dir);
 
+void init_plog_gc_enabled();
+void update_plog_gc_enabled(bool enabled);
+bool is_plog_gc_enabled() const;
+std::string get_plog_gc_enabled_message() const;
+
     /////////////////////////////////////////////////////////////////
     // cold backup
     virtual void generate_backup_checkpoint(cold_backup_context_ptr backup_context);
@@ -573,6 +578,8 @@ private:
 
     // local checkpoint timer for gc, checkpoint, etc.
     dsn::task_ptr _checkpoint_timer;
+
+    std::atomic<bool> _plog_gc_enabled{true};
 
     // application
     std::unique_ptr<replication_app_base> _app;

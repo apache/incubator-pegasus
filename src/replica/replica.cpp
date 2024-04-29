@@ -321,6 +321,8 @@ replica::replica(replica_stub *stub,
       METRIC_VAR_INIT_replica(backup_file_upload_successful_count),
       METRIC_VAR_INIT_replica(backup_file_upload_total_bytes)
 {
+    init_plog_gc_enabled();
+
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");
     _stub = stub;
