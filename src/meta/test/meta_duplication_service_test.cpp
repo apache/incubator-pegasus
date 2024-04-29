@@ -102,7 +102,7 @@ public:
                                         const std::string &remote_app_name,
                                         const int32_t remote_replica_count)
     {
-        return create_dup(app_name, remote_cluster, true, app_name, remote_replica_count);
+        return create_dup(app_name, remote_cluster, true, remote_app_name, remote_replica_count);
     }
 
     duplication_add_response create_dup_unspecified(const std::string &app_name,
@@ -389,11 +389,12 @@ public:
     {
         static const std::string kTestSameAppName(kTestAppName + "_same");
         static const std::string kTestAnotherAppName(kTestAppName + "_another");
-        static const std::string kTestUnSpecifiedAppName(kTestAppName + "_unspecified");
+        static const std::string kTestUnspecifiedAppName(kTestAppName + "_unspecified");
 
         create_app(kTestAppName);
         create_app(kTestSameAppName);
         create_app(kTestAnotherAppName);
+        create_app(kTestUnspecifiedAppName);
 
         struct TestData
         {
@@ -465,10 +466,10 @@ public:
              kTestRemoteReplicaCount,
              ERR_OK},
             // Add a duplication without specifying remote_app_name and remote_replica_count.
-            {kTestUnSpecifiedAppName,
+            {kTestUnspecifiedAppName,
              kTestRemoteClusterName,
              false,
-             kTestUnSpecifiedAppName,
+             kTestUnspecifiedAppName,
              3,
              ERR_OK},
         };
