@@ -48,6 +48,7 @@ class binary_reader;
 class binary_writer;
 class blob;
 class gpid;
+
 namespace utils {
 class latency_tracer;
 } // namespace utils

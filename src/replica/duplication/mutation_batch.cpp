@@ -32,7 +32,10 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+
+DSN_DECLARE_bool(duplication_unsafe_allow_non_idempotent);
 
 METRIC_DEFINE_gauge_int64(replica,
                           dup_recent_lost_mutations,
@@ -173,7 +176,8 @@ void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree
         // ERR_OPERATION_DISABLED, but there could still be a mutation written
         // before the duplication was added.
         // To ignore means this write will be lost, which is acceptable under this rare case.
-        if (!task_spec::get(update.code)->rpc_request_is_write_idempotent) {
+        if (!task_spec::get(update.code)->rpc_request_is_write_idempotent &&
+            !FLAGS_duplication_unsafe_allow_non_idempotent) {
             continue;
         }
         blob bb;

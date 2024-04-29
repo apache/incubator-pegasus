@@ -209,9 +209,11 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(incr_qps);
     INIT_COUNTER(check_and_set_qps);
     INIT_COUNTER(check_and_mutate_qps);
+    INIT_COUNTER(dup_unsafe_received_non_idempotent_duplicate_request);
     INIT_COUNTER(scan_qps);
     INIT_COUNTER(duplicate_qps);
     INIT_COUNTER(dup_shipped_ops);
+    INIT_COUNTER(dup_retry_non_idempotent_duplicate_request);
     INIT_COUNTER(dup_failed_shipping_ops);
     INIT_COUNTER(dup_recent_mutation_loss_count);
     INIT_COUNTER(recent_read_cu);
