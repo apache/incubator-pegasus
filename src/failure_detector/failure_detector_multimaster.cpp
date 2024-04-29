@@ -73,17 +73,14 @@ void slave_failure_detector_with_multimaster::end_ping(::dsn::error_code err,
     GET_HOST_PORT(ack, this_node, hp_this_node);
     GET_HOST_PORT(ack, primary_node, hp_primary_node);
 
-    LOG_INFO(
-        "end ping result, error[{}], time[{}], ack.this_node[{}({})], ack.primary_node[{}({})], "
-        "ack.is_master[{}], ack.allowed[{}]",
-        err,
-        ack.time,
-        hp_this_node,
-        ack.this_node,
-        hp_primary_node,
-        ack.primary_node,
-        ack.is_master ? "true" : "false",
-        ack.allowed ? "true" : "false");
+    LOG_INFO("end ping result, error[{}], time[{}], ack.this_node[{}], ack.primary_node[{}], "
+             "ack.is_master[{}], ack.allowed[{}]",
+             err,
+             ack.time,
+             FMT_HOST_PORT_AND_IP(ack, this_node),
+             FMT_HOST_PORT_AND_IP(ack, primary_node),
+             ack.is_master ? "true" : "false",
+             ack.allowed ? "true" : "false");
 
     zauto_lock l(failure_detector::_lock);
     if (!failure_detector::end_ping_internal(err, ack))

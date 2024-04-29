@@ -48,7 +48,6 @@
 #include "meta/meta_server_failure_detector.h"
 #include "replica/replica_stub.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_address.h"
@@ -145,8 +144,8 @@ public:
         else {
             LOG_DEBUG("ignore on ping, beacon msg, time[{}], from[{}], to[{}]",
                       beacon.time,
-                      beacon.from_node,
-                      beacon.to_node);
+                      FMT_HOST_PORT_AND_IP(beacon, from_node),
+                      FMT_HOST_PORT_AND_IP(beacon, to_node));
         }
     }
 
@@ -206,7 +205,7 @@ public:
     void on_master_config(const config_master_message &request, bool &response)
     {
         LOG_DEBUG("master config, request: {}, type: {}",
-                  request.master,
+                  FMT_HOST_PORT_AND_IP(request, master),
                   request.is_register ? "reg" : "unreg");
 
         host_port hp_master;
@@ -324,9 +323,8 @@ void worker_set_leader(test_worker *worker, int leader_contact)
     worker->fd()->set_leader_for_test(host_port("localhost", MPORT_START + leader_contact));
 
     config_master_message msg;
-    msg.master = rpc_address::from_host_port("localhost", MPORT_START + leader_contact);
+    SET_IP_AND_HOST_PORT_BY_DNS(msg, master, host_port("localhost", MPORT_START + leader_contact));
     msg.is_register = true;
-    msg.__set_hp_master(host_port::from_address(msg.master));
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(
@@ -336,13 +334,10 @@ void worker_set_leader(test_worker *worker, int leader_contact)
 
 void clear(test_worker *worker, std::vector<test_master *> masters)
 {
-    const auto &hp_leader = worker->fd()->get_servers().group_host_port()->leader();
-    const auto &leader = dsn::dns_resolver::instance().resolve_address(hp_leader);
-
     config_master_message msg;
-    msg.master = leader;
+    SET_IP_AND_HOST_PORT_BY_DNS(
+        msg, master, worker->fd()->get_servers().group_host_port()->leader());
     msg.is_register = false;
-    msg.__set_hp_master(hp_leader);
     error_code err;
     bool response;
     std::tie(err, response) = rpc::call_wait<bool>(
@@ -658,10 +653,8 @@ TEST(fd, update_stability)
 
     dsn::rpc_replier<beacon_ack> r(create_fake_rpc_response());
     beacon_msg msg;
-    msg.from_node = rpc_address::from_host_port("localhost", 123);
-    msg.__set_hp_from_node(host_port("localhost", 123));
-    msg.to_node = rpc_address::from_host_port("localhost", MPORT_START);
-    msg.__set_hp_to_node(host_port("localhost", MPORT_START));
+    SET_IP_AND_HOST_PORT_BY_DNS(msg, from_node, host_port("localhost", 123));
+    SET_IP_AND_HOST_PORT_BY_DNS(msg, to_node, host_port("localhost", MPORT_START));
     msg.time = dsn_now_ms();
     msg.__isset.start_time = true;
     msg.start_time = 1000;
