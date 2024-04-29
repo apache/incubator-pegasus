@@ -77,11 +77,7 @@
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
 
-DSN_DEFINE_bool(
-    replication,
-    plog_gc_enabled,
-    true,
-    "Whether to enable plog garbage collection.");
+DSN_DEFINE_bool(replication, plog_gc_enabled, true, "Whether to enable plog garbage collection.");
 
 /// The configuration management part of replica.
 
@@ -1209,20 +1205,11 @@ void replica::update_app_duplication_status(bool duplicating)
                         _app_info.duplicating);
 }
 
-void replica::init_plog_gc_enabled()
-{
-    _plog_gc_enabled.store(FLAGS_plog_gc_enabled);
-}
+void replica::init_plog_gc_enabled() { _plog_gc_enabled.store(FLAGS_plog_gc_enabled); }
 
-void replica::update_plog_gc_enabled(bool enabled)
-{
-    _plog_gc_enabled.store(enabled);
-}
+void replica::update_plog_gc_enabled(bool enabled) { _plog_gc_enabled.store(enabled); }
 
-bool replica::is_plog_gc_enabled() const
-{
-    _plog_gc_enabled.load();
-}
+bool replica::is_plog_gc_enabled() const { _plog_gc_enabled.load(); }
 
 std::string replica::get_plog_gc_enabled_message() const
 {

@@ -437,10 +437,10 @@ private:
                                            std::shared_ptr<learn_response> resp,
                                            const std::string &chk_dir);
 
-void init_plog_gc_enabled();
-void update_plog_gc_enabled(bool enabled);
-bool is_plog_gc_enabled() const;
-std::string get_plog_gc_enabled_message() const;
+    void init_plog_gc_enabled();
+    void update_plog_gc_enabled(bool enabled);
+    bool is_plog_gc_enabled() const;
+    std::string get_plog_gc_enabled_message() const;
 
     /////////////////////////////////////////////////////////////////
     // cold backup

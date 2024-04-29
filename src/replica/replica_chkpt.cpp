@@ -148,13 +148,13 @@ void replica::on_checkpoint_timer()
 
         if (is_duplication_plog_checking()) {
             LOG_INFO_PREFIX("gc_private {}: skip gc because duplication is checking plog files",
-                             enum_to_string(status()));
+                            enum_to_string(status()));
             return;
         }
 
         if (!is_plog_gc_enabled()) {
             LOG_INFO_PREFIX("gc_private {}: skip gc because plog gc is disabled",
-                             enum_to_string(status()));
+                            enum_to_string(status()));
             return;
         }
 
