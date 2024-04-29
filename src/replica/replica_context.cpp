@@ -106,17 +106,30 @@ void primary_context::reset_membership(const partition_configuration &new_pc, bo
 
     pc = new_pc;
 
-    if (pc.hp_primary) {
-        statuses[pc.hp_primary] = partition_status::PS_PRIMARY;
+    // Normalize the partition_configuration type 'pc' before using it.
+    dsn::host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    if (primary) {
+        statuses[primary] = partition_status::PS_PRIMARY;
+        // Normalize 'hp_primary'.
+        if (!pc.__isset.hp_primary) {
+            pc.__set_hp_primary(primary);
+        }
     }
 
-    for (auto it = new_pc.hp_secondaries.begin(); it != new_pc.hp_secondaries.end(); ++it) {
-        statuses[*it] = partition_status::PS_SECONDARY;
-        learners.erase(*it);
+    std::vector<dsn::host_port> secondaries;
+    GET_HOST_PORTS(new_pc, secondaries, secondaries);
+    for (const auto &secondary : secondaries) {
+        statuses[secondary] = partition_status::PS_SECONDARY;
+        learners.erase(secondary);
+    }
+    // Normalize 'hp_secondaries'.
+    if (!pc.__isset.hp_secondaries) {
+        pc.__set_hp_secondaries(secondaries);
     }
 
-    for (auto it = learners.begin(); it != learners.end(); ++it) {
-        statuses[it->first] = partition_status::PS_POTENTIAL_SECONDARY;
+    for (const auto &[learner, _] : learners) {
+        statuses[learner] = partition_status::PS_POTENTIAL_SECONDARY;
     }
 }
 
@@ -135,8 +148,10 @@ bool primary_context::check_exist(const ::dsn::host_port &node, partition_status
 {
     switch (st) {
     case partition_status::PS_PRIMARY:
+        DCHECK(pc.__isset.hp_primary, "");
         return pc.hp_primary == node;
     case partition_status::PS_SECONDARY:
+        DCHECK(pc.__isset.hp_secondaries, "");
         return utils::contains(pc.hp_secondaries, node);
     case partition_status::PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();

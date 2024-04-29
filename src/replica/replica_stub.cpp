@@ -1135,19 +1135,32 @@ void replica_stub::on_config_proposal(const configuration_update_request &propos
              enum_to_string(proposal.type),
              FMT_HOST_PORT_AND_IP(proposal, node));
 
-    replica_ptr rep = get_replica(proposal.config.pid);
+    // Normalize the partition_configuration type 'config' before using it.
+    configuration_update_request normalized_proposal = proposal;
+    if (!normalized_proposal.config.__isset.hp_primary) {
+        dsn::host_port primary;
+        GET_HOST_PORT(normalized_proposal.config, primary, primary);
+        normalized_proposal.config.__set_hp_primary(primary);
+    }
+    if (!normalized_proposal.config.__isset.hp_secondaries) {
+        std::vector<dsn::host_port> secondaries;
+        GET_HOST_PORTS(normalized_proposal.config, secondaries, secondaries);
+        normalized_proposal.config.__set_hp_secondaries(secondaries);
+    }
+
+    replica_ptr rep = get_replica(normalized_proposal.config.pid);
     if (rep == nullptr) {
-        if (proposal.type == config_type::CT_ASSIGN_PRIMARY) {
-            std::shared_ptr<configuration_update_request> req2(new configuration_update_request);
-            *req2 = proposal;
-            begin_open_replica(proposal.info, proposal.config.pid, nullptr, req2);
-        } else if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY) {
-            remove_replica_on_meta_server(proposal.info, proposal.config);
+        if (normalized_proposal.type == config_type::CT_ASSIGN_PRIMARY) {
+            auto cu_req = std::make_shared<configuration_update_request>(normalized_proposal);
+            begin_open_replica(
+                normalized_proposal.info, normalized_proposal.config.pid, nullptr, cu_req);
+        } else if (normalized_proposal.type == config_type::CT_UPGRADE_TO_PRIMARY) {
+            remove_replica_on_meta_server(normalized_proposal.info, normalized_proposal.config);
         }
     }
 
     if (rep != nullptr) {
-        rep->on_config_proposal((configuration_update_request &)proposal);
+        rep->on_config_proposal(normalized_proposal);
     }
 }
 

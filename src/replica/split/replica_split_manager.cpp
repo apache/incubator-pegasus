@@ -775,14 +775,18 @@ void replica_split_manager::update_child_group_partition_count(
         return;
     }
 
-    if (!_replica->_primary_states.learners.empty() ||
-        _replica->_primary_states.pc.hp_secondaries.size() + 1 <
-            _replica->_primary_states.pc.max_replica_count) {
-        LOG_ERROR_PREFIX("there are {} learners or not have enough secondaries(count is {})",
-                         _replica->_primary_states.learners.size(),
-                         _replica->_primary_states.pc.hp_secondaries.size());
-        parent_handle_split_error(
-            "update_child_group_partition_count failed, have learner or lack of secondary", true);
+    if (!_replica->_primary_states.learners.empty()) {
+        LOG_ERROR_PREFIX("there are {} learners", _replica->_primary_states.learners.size());
+        parent_handle_split_error("update_child_group_partition_count failed, have learner", true);
+        return;
+    }
+
+    std::vector<dsn::host_port> secondaries;
+    GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, secondaries);
+    if (secondaries.size() + 1 < _replica->_primary_states.pc.max_replica_count) {
+        LOG_ERROR_PREFIX("there are not enough secondaries(count is {})", secondaries.size());
+        parent_handle_split_error("update_child_group_partition_count failed, lack of secondary",
+                                  true);
         return;
     }
 
@@ -1221,14 +1225,17 @@ void replica_split_manager::trigger_primary_parent_split(
 
     _meta_split_status = meta_split_status;
     if (meta_split_status == split_status::SPLITTING) {
-        if (!_replica->_primary_states.learners.empty() ||
-            _replica->_primary_states.pc.hp_secondaries.size() + 1 <
-                _replica->_primary_states.pc.max_replica_count) {
-            LOG_WARNING_PREFIX(
-                "there are {} learners or not have enough secondaries(count is {}), wait for "
-                "next round",
-                _replica->_primary_states.learners.size(),
-                _replica->_primary_states.pc.hp_secondaries.size());
+        if (!_replica->_primary_states.learners.empty()) {
+            LOG_WARNING_PREFIX("there are {} learners, wait for next round",
+                               _replica->_primary_states.learners.size());
+            return;
+        }
+
+        std::vector<dsn::host_port> secondaries;
+        GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, secondaries);
+        if (secondaries.size() + 1 < _replica->_primary_states.pc.max_replica_count) {
+            LOG_WARNING_PREFIX("there are not enough secondaries(count is {}), wait for next round",
+                               secondaries.size());
             return;
         }
 
