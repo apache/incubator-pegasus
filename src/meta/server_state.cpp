@@ -1938,6 +1938,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
     partition_configuration &pc = req->config;
 
     unsigned i = 0;
+    // TODO(yingchun): also check pc.secondaries
     for (; i < pc.hp_secondaries.size(); ++i) {
         if (pc.hp_secondaries[i] == node) {
             SET_OBJ_IP_AND_HOST_PORT(*req, node, pc, last_drops[i]);

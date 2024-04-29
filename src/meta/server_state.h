@@ -286,6 +286,7 @@ private:
                                          const host_port &node);
     void
     downgrade_stateless_nodes(std::shared_ptr<app_state> &app, int pidx, const host_port &node);
+
     void
     on_partition_node_dead(std::shared_ptr<app_state> &app, int pidx, const dsn::host_port &node);
     void send_proposal(const host_port &target, const configuration_update_request &proposal);
