@@ -2039,18 +2039,17 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
 {
     partition_configuration &pc = app->partitions[pidx];
     if (app->is_stateful) {
-        if (is_primary(pc, node))
+        if (is_primary(pc, node)) {
             downgrade_primary_to_inactive(app, pidx);
-        else if (is_secondary(pc, node)) {
-            if (pc.hp_primary)
+        } else if (is_secondary(pc, node)) {
+            if (pc.hp_primary) {
                 downgrade_secondary_to_inactive(app, pidx, node);
-            else if (is_secondary(pc, node)) {
+            } else {
+                CHECK(is_secondary(pc, node), "no primary/secondary on this node: {}", node);
                 LOG_INFO("gpid({}): secondary({}) is down, ignored it due to no primary for this "
                          "partition available",
                          pc.pid,
                          node);
-            } else {
-                CHECK(false, "no primary/secondary on this node, node node = {}", node);
             }
         }
     } else {
