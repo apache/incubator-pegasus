@@ -2305,7 +2305,7 @@ void replica_stub::register_ctrl_command()
             "of 'app_id' or 'app_id.partition_id', or all replicas for empty",
             "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
-                return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     rep->update_plog_gc_enabled(true);
                     return rep->get_plog_gc_enabled_message();
                 });
@@ -2317,7 +2317,7 @@ void replica_stub::register_ctrl_command()
             "of 'app_id' or 'app_id.partition_id', or all replicas for empty",
             "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
-                return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     rep->update_plog_gc_enabled(false);
                     return rep->get_plog_gc_enabled_message();
                 });
@@ -2329,7 +2329,7 @@ void replica_stub::register_ctrl_command()
             "comma-separated list of 'app_id' or 'app_id.partition_id', or all replicas for empty",
             "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
-                return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     return rep->get_plog_gc_enabled_message();
                 });
             }));
