@@ -76,15 +76,15 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     }
 
     // Check if the boolean option is specified.
-    bool is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
+    const auto is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
 
     // Read the app name of the remote cluster, if any.
     // Otherwise, use app_name as the remote_app_name.
-    std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
+    const std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
 
     // Read the replica count of the remote app, if any.
-    auto remote_replica_count_ss = cmd({"-r", "--remote_replica_count"});
-    bool missing_remote_replica_count = remote_replica_count_ss.fail();
+    const auto &remote_replica_count_ss = cmd({"-r", "--remote_replica_count"});
+    const auto missing_remote_replica_count = static_cast<bool>(remote_replica_count_ss);
 
     // 0 represents that remote_replica_count is missing, which means the remote_replica_count
     // would be set as the replica count of source app.

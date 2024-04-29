@@ -200,6 +200,8 @@ public:
 
     static void test_encode_and_decode_default()
     {
+        dsn_run_config("config-test.ini", false);
+
         duplication_info::json_helper copy;
         copy.status = duplication_status::DS_INIT;
         copy.fail_mode = duplication_fail_mode::FAIL_SLOW;
