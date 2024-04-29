@@ -81,7 +81,6 @@ static void apply_update_request(/*in-out*/ configuration_update_request &update
     case config_type::CT_ASSIGN_PRIMARY:
     case config_type::CT_UPGRADE_TO_PRIMARY:
         SET_OBJ_IP_AND_HOST_PORT(pc, primary, update_req, node);
-        // TODO(yingchun): optimize the following code
         REMOVE_IP_AND_HOST_PORT_BY_OBJ(pc, secondaries, update_req, node);
         break;
 
