@@ -216,4 +216,21 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     return error_s::ok();
 }
 
+bool remove_node(const rpc_address &addr,
+                 const host_port &hp,
+                 /*inout*/ std::vector<rpc_address> &addrs,
+                 /*inout*/ std::vector<host_port> &hps)
+{
+    const auto it_addr = std::find(addrs.begin(), addrs.end(), addr);
+    const auto it_hp = std::find(hps.begin(), hps.end(), hp);
+    bool found_addr = (it_addr != addrs.end());
+    bool found_hp = (it_hp != hps.end());
+    DCHECK_EQ(found_addr, found_hp);
+    if (found_addr) {
+        addrs.erase(it_addr);
+        hps.erase(it_hp);
+    }
+    return found_addr;
+}
+
 } // namespace dsn
