@@ -1496,8 +1496,9 @@ void replica_split_manager::primary_parent_handle_stop_split(
         return;
     }
 
-    _replica->_primary_states.split_stopped_secondary.insert(
-        req->__isset.hp_node ? req->hp_node : host_port::from_address(req->node));
+    host_port secondary;
+    GET_HOST_PORT(*req, node, secondary);
+    _replica->_primary_states.split_stopped_secondary.emplace(std::move(secondary));
     auto count = 0;
     for (auto &iter : _replica->_primary_states.statuses) {
         if (iter.second == partition_status::PS_SECONDARY &&

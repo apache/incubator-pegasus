@@ -122,16 +122,16 @@ void replica::broadcast_group_check()
     }
 
     for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); ++it) {
-        if (it->first == _stub->primary_host_port())
+        if (it->first == _stub->primary_host_port()) {
             continue;
+        }
 
         auto hp = it->first;
-        auto addr = dsn::dns_resolver::instance().resolve_address(hp);
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app = _app_info;
-        request->node = addr;
-        request->__set_hp_node(hp);
+        const auto addr = dsn::dns_resolver::instance().resolve_address(hp);
+        SET_IP_AND_HOST_PORT(*request, node, addr, hp);
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
         request->__set_confirmed_decree(_duplication_mgr->min_confirmed_decree());
@@ -226,8 +226,7 @@ void replica::on_group_check(const group_check_request &request,
     }
 
     response.pid = get_gpid();
-    response.node = _stub->primary_address();
-    response.__set_hp_node(_stub->primary_host_port());
+    SET_IP_AND_HOST_PORT(response, node, _stub->primary_address(), _stub->primary_host_port());
     response.err = ERR_OK;
     if (status() == partition_status::PS_ERROR) {
         response.err = ERR_INVALID_STATE;
@@ -253,7 +252,7 @@ void replica::on_group_check_reply(error_code err,
     }
 
     auto r = _primary_states.group_check_pending_replies.erase(hp_node);
-    CHECK_EQ_MSG(r, 1, "invalid node address, address = {}({})", hp_node, req->node);
+    CHECK_EQ_MSG(r, 1, "invalid node: {}", FMT_HOST_PORT_AND_IP(*req, node));
 
     if (err != ERR_OK || resp->err != ERR_OK) {
         if (ERR_OK == err) {
