@@ -856,7 +856,7 @@ TEST_F(meta_duplication_service_test, query_duplication_handler)
     ASSERT_EQ(std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
                   std::to_string(dup->id) +
                   R"(,"fail_mode":"FAIL_SLOW","remote":"slave-cluster")"
-                  R"(,"remote_replica_count":3,"remote_app_name":"remote_test_app")"
+                  R"(,"remote_app_name":"remote_test_app","remote_replica_count":3)"
                   R"(,"status":"DS_PREPARE"},"appid":2})",
               fake_resp.body);
 }
