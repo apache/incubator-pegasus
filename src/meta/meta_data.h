@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 #include <algorithm>
 #include <atomic>
@@ -266,10 +267,26 @@ struct partition_configuration_stateless
 {
     partition_configuration &pc;
     partition_configuration_stateless(partition_configuration &_pc) : pc(_pc) {}
-    std::vector<dsn::host_port> &workers() { return pc.hp_last_drops; }
-    std::vector<dsn::host_port> &hosts() { return pc.hp_secondaries; }
-    bool is_host(const host_port &node) const { return utils::contains(pc.hp_secondaries, node); }
-    bool is_worker(const host_port &node) const { return utils::contains(pc.hp_last_drops, node); }
+    std::vector<dsn::host_port> &workers()
+    {
+        DCHECK(pc.__isset.hp_last_drops, "");
+        return pc.hp_last_drops;
+    }
+    std::vector<dsn::host_port> &hosts()
+    {
+        DCHECK(pc.__isset.hp_secondaries, "");
+        return pc.hp_secondaries;
+    }
+    bool is_host(const host_port &node) const
+    {
+        DCHECK(pc.__isset.hp_secondaries, "");
+        return utils::contains(pc.hp_secondaries, node);
+    }
+    bool is_worker(const host_port &node) const
+    {
+        DCHECK(pc.__isset.hp_last_drops, "");
+        return utils::contains(pc.hp_last_drops, node);
+    }
     bool is_member(const host_port &node) const { return is_host(node) || is_worker(node); }
 };
 
@@ -487,10 +504,16 @@ inline config_context *get_config_context(app_mapper &apps, const dsn::gpid &gpi
     return &(iter->second->helpers->contexts[gpid.get_partition_index()]);
 }
 
-inline int replica_count(const partition_configuration &pc)
+inline size_t replica_count(const partition_configuration &pc)
 {
-    int ans = pc.hp_primary ? 1 : 0;
-    return ans + pc.hp_secondaries.size();
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    size_t rc = primary ? 1 : 0;
+
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    rc += secondaries.size();
+    return rc;
 }
 
 enum health_status
@@ -507,18 +530,20 @@ enum health_status
 inline health_status partition_health_status(const partition_configuration &pc,
                                              int mutation_2pc_min_replica_count)
 {
-    if (!pc.hp_primary) {
-        if (pc.hp_secondaries.empty()) {
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    if (!primary) {
+        if (secondaries.empty()) {
             return HS_DEAD;
         }
         return HS_UNREADABLE;
     }
-
-    const auto replica_count = pc.hp_secondaries.size() + 1;
+    const auto replica_count = secondaries.size() + 1;
     if (replica_count < mutation_2pc_min_replica_count) {
         return HS_UNWRITABLE;
     }
-
     if (replica_count < pc.max_replica_count) {
         return HS_WRITABLE_ILL;
     }

@@ -180,12 +180,16 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     rc.learner_signature = invalid_signature;
     SET_OBJ_IP_AND_HOST_PORT(rc, primary, pc, primary);
 
-    if (node == pc.hp_primary) {
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    if (node == primary) {
         rc.status = partition_status::PS_PRIMARY;
         return true;
     }
 
-    if (utils::contains(pc.hp_secondaries, node)) {
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    if (utils::contains(secondaries, node)) {
         rc.status = partition_status::PS_SECONDARY;
         return true;
     }

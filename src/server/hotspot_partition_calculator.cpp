@@ -224,9 +224,9 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
     req.type = hotkey_type;
     req.action = action;
     req.pid = dsn::gpid(app_id, partition_index);
-    auto error =
-        _shell_context->ddl_client->detect_hotkey(pcs[partition_index].hp_primary, req, resp);
-
+    dsn::host_port primary;
+    GET_HOST_PORT(pcs[partition_index], primary, primary);
+    auto error = _shell_context->ddl_client->detect_hotkey(primary, req, resp);
     LOG_INFO("{} {} hotkey detection in {}.{}, server: {}",
              (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
              (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
