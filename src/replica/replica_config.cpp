@@ -1209,7 +1209,7 @@ void replica::init_plog_gc_enabled() { _plog_gc_enabled.store(FLAGS_plog_gc_enab
 
 void replica::update_plog_gc_enabled(bool enabled) { _plog_gc_enabled.store(enabled); }
 
-bool replica::is_plog_gc_enabled() const { _plog_gc_enabled.load(); }
+bool replica::is_plog_gc_enabled() const { return _plog_gc_enabled.load(); }
 
 std::string replica::get_plog_gc_enabled_message() const
 {

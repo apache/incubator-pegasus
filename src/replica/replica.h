@@ -437,6 +437,11 @@ private:
                                            std::shared_ptr<learn_response> resp,
                                            const std::string &chk_dir);
 
+    // Enable/Disable plog garbage collection to be executed. For example, to duplicate data
+    // to target cluster, we could firstly disable plog garbage collection, then do copy_data.
+    // After copy_data is finished, a duplication with DS_LOG status could be added to continue
+    // to duplicate data in plog to target cluster; at the same time, plog garbage collection
+    // certainly should be enabled again.
     void init_plog_gc_enabled();
     void update_plog_gc_enabled(bool enabled);
     bool is_plog_gc_enabled() const;
