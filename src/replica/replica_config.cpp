@@ -174,8 +174,8 @@ void replica::assign_primary(configuration_update_request &proposal)
 
     SET_IP_AND_HOST_PORT(
         proposal.config, primary, _stub->primary_address(), _stub->primary_host_port());
-    replica_helper::remove_node(_stub->primary_address(), proposal.config.secondaries);
-    replica_helper::remove_node(_stub->primary_host_port(), proposal.config.hp_secondaries);
+    REMOVE_IP_AND_HOST_PORT(
+        proposal.config, secondaries, _stub->primary_address(), _stub->primary_host_port());
 
     update_configuration_on_meta_server(proposal.type, node, proposal.config);
 }
@@ -298,12 +298,9 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request &pro
         RESET_IP_AND_HOST_PORT(proposal.config, primary);
     } else {
         CHECK_NE(proposal.node, proposal.config.primary);
-        CHECK(replica_helper::remove_node(proposal.node, proposal.config.secondaries),
+        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(proposal.config, secondaries, proposal, node),
               "remove node failed, node = {}",
-              proposal.node);
-        CHECK(replica_helper::remove_node(node, proposal.config.hp_secondaries),
-              "remove node failed, node = {}",
-              node);
+              FMT_HOST_PORT_AND_IP(proposal, node));
     }
 
     update_configuration_on_meta_server(
@@ -330,15 +327,11 @@ void replica::remove(configuration_update_request &proposal)
         RESET_IP_AND_HOST_PORT(proposal.config, primary);
         break;
     case partition_status::PS_SECONDARY: {
-        CHECK(replica_helper::remove_node(proposal.node, proposal.config.secondaries),
+        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(proposal.config, secondaries, proposal, node),
               "remove node failed, node = {}",
-              proposal.node);
-        CHECK(replica_helper::remove_node(node, proposal.config.hp_secondaries),
-              "remove_node failed, node = {}",
-              node);
+              FMT_HOST_PORT_AND_IP(proposal, node));
     } break;
     case partition_status::PS_POTENTIAL_SECONDARY:
-        break;
     default:
         break;
     }
