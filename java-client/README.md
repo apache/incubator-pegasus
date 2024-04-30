@@ -24,7 +24,7 @@ under the License.
 ### 1. Prepare
 
 ```
-cd scripts && bash recompile_thrift.sh
+cd scripts && bash download_thrift.sh
 ```
 
 ### 2. Format the code

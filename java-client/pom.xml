@@ -470,6 +470,36 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.thrift</groupId>
+        <artifactId>thrift-maven-plugin</artifactId>
+        <version>0.10.0</version>
+        <configuration>
+          <thriftSourceRoot>${project.basedir}/../idl</thriftSourceRoot>
+          <includes>
+            <include>backup.thrift</include>
+            <include>bulk_load.thrift</include>
+            <include>dsn.layer2.thrift</include>
+            <include>duplication.thrift</include>
+            <include>metadata.thrift</include>
+            <include>meta_admin.thrift</include>
+            <include>partition_split.thrift</include>
+            <include>rrdb.thrift</include>
+            <include>security.thrift</include>
+          </includes>
+          <thriftExecutable>thrift</thriftExecutable>
+          <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>thrift-sources</id>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <phase>generate-sources</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
     <testSourceDirectory>${project.basedir}/src/test/java</testSourceDirectory>
