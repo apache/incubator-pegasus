@@ -23,12 +23,24 @@
 
 DSN_DEFINE_string(replication, cluster_name, "", "name of this cluster");
 
+DSN_DEFINE_string(replication, dup_cluster_name, "", "name of this cluster used for duplication");
+
 namespace dsn {
 
 /*extern*/ const char *get_current_cluster_name()
 {
     CHECK(!utils::is_empty(FLAGS_cluster_name), "cluster_name is not set");
     return FLAGS_cluster_name;
+}
+
+/*extern*/ const char *get_current_dup_cluster_name()
+{
+    if (!utils::is_empty(FLAGS_dup_cluster_name)) {
+        return FLAGS_dup_cluster_name;
+    }
+
+    // Once dup_cluster_name is not configured, use cluster_name instead.
+    return get_current_cluster_name();
 }
 
 const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");

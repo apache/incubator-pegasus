@@ -28,5 +28,14 @@ namespace dsn {
 ///      cluster_name = "onebox"
 extern const char *get_current_cluster_name();
 
+/// Returns the cluster name (i.e, "onebox") if it's configured under
+/// "replication" section:
+///    [replication]
+///      dup_cluster_name = "onebox"
+///
+/// However, once dup_cluster_name is not configured, use cluster_name
+/// instead.
+extern const char *get_current_dup_cluster_name();
+
 extern const std::string PEGASUS_CLUSTER_SECTION_NAME;
 } // namespace dsn
