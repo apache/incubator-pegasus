@@ -33,6 +33,7 @@
 #include "duplication_types.h"
 #include "shell/argh.h"
 #include "shell/command_executor.h"
+#include "shell/command_helper.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
 #include "utils/error_code.h"
