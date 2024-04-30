@@ -89,11 +89,10 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     int32_t remote_replica_count = 0;
     if (static_cast<bool>(remote_replica_count_ss)) {
         std::string remote_replica_count_str(remote_replica_count_ss.str());
-        if (!dsn::buf2int32(remote_replica_count_str, remote_replica_count) ||
-            remote_replica_count < 1) {
-            fmt::print(stderr, "invalid remote_replica_count: {}\n", remote_replica_count_str);
-            return false;
-        }
+        RETURN_FALSE_IF_NOT(dsn::buf2int32(remote_replica_count_str, remote_replica_count) &&
+                                remote_replica_count >= 1,
+                            "invalid remote_replica_count: {}",
+                            remote_replica_count_str);
     }
 
     auto err_resp = sc->ddl_client->add_dup(app_name,

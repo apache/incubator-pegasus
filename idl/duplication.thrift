@@ -88,9 +88,9 @@ struct duplication_add_response
 
     // Since v2.6.0.
     //
-    // If new duplication is created, this would be its remote_app_name;
-    // Otherwise, once the duplication has existed, this would be the
-    // remote_app_name with which the duplication has been created.
+    // If new duplication is created, this would be requested remote_app_name in
+    // duplication_add_request; otherwise, once the duplication has existed, this
+    // would be the remote app name with which the duplication has been created.
     //
     // This field could also be used to check if the meta server supports
     // remote_app_name(i.e. the version of meta server must be >= v2.6.0).
@@ -98,9 +98,9 @@ struct duplication_add_response
 
     // Since v2.6.0.
     //
-    // If new duplication is created, this would be its remote_replica_count;
-    // Otherwise, once the duplication has existed, this would be the
-    // remote_replica_count with which the duplication has been created.
+    // If new duplication is created, this would be requested remote_replica_count in
+    // duplication_add_request; otherwise, once the duplication has existed, this would
+    // be the remote replica count with which the duplication has been created.
     //
     // This field could also be used to check if the meta server supports
     // remote_replica_count(i.e. the version of meta server must be >= v2.6.0).
