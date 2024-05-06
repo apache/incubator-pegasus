@@ -37,6 +37,8 @@ DSN_DEFINE_uint32(replication,
                   "send mutation log batch bytes size per rpc");
 DSN_TAG_VARIABLE(duplicate_log_batch_bytes, FT_MUTABLE);
 
+DSN_DEFINE_bool(replication, dup_ignore_other_cluster_ids, false, "is duplication enabled");
+
 namespace dsn {
 namespace replication {
 
@@ -89,7 +91,6 @@ public:
         return it->second;
     }
 
-    const std::map<std::string, uint8_t> &get_duplication_group() { return _group; }
     const std::set<uint8_t> &get_distinct_cluster_id_set() { return _distinct_cids; }
 
 private:
@@ -130,6 +131,23 @@ private:
 /*extern*/ error_with<uint8_t> get_duplication_cluster_id(const std::string &cluster_name)
 {
     return internal::duplication_group_registry::instance().get_cluster_id(cluster_name);
+}
+
+/*extern*/ uint8_t get_current_dup_cluster_id_or_default()
+{
+    // cluster_id is 0 if not configured, which means it will accept writes
+    // from any cluster as long as the timestamp is larger.
+    static const auto res =
+        get_duplication_cluster_id(get_current_dup_cluster_name());
+    static const uint8_t cluster_id = res.is_ok() ? res.get_value() : 0;
+    return cluster_id;
+}
+
+/*extern*/ uint8_t get_current_dup_cluster_id()
+{
+    static const uint8_t cluster_id =
+        get_duplication_cluster_id(get_current_dup_cluster_name()).get_value();
+    return cluster_id;
 }
 
 // TODO(wutao1): implement our C++ version of `TSimpleJSONProtocol` if there're
@@ -179,14 +197,20 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
     return json.dump();
 }
 
-/*extern*/ const std::map<std::string, uint8_t> &get_duplication_group()
-{
-    return internal::duplication_group_registry::instance().get_duplication_group();
-}
-
 /*extern*/ const std::set<uint8_t> &get_distinct_cluster_id_set()
 {
     return internal::duplication_group_registry::instance().get_distinct_cluster_id_set();
+}
+
+inline bool is_dup_cluster_id_configured(uint8_t cluster_id)
+{
+    if (cluster_id != get_current_dup_cluster_id()) {
+        if (FLAGS_dup_ignore_other_cluster_ids) {
+            return true;
+        }
+    }
+
+    return get_distinct_cluster_id_set().find(cluster_id) != get_distinct_cluster_id_set().end();
 }
 
 } // namespace replication

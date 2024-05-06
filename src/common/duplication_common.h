@@ -69,15 +69,9 @@ extern std::string duplication_entry_to_string(const duplication_entry &dup);
 /// Returns a json string.
 extern std::string duplication_query_response_to_string(const duplication_query_response &);
 
-/// Returns a mapping from cluster_name to cluster_id.
-extern const std::map<std::string, uint8_t> &get_duplication_group();
-
 extern const std::set<uint8_t> &get_distinct_cluster_id_set();
 
-inline bool is_cluster_id_configured(uint8_t cid)
-{
-    return get_distinct_cluster_id_set().find(cid) != get_distinct_cluster_id_set().end();
-}
+extern bool is_dup_cluster_id_configured(uint8_t cluster_id);
 
 struct duplication_constants
 {

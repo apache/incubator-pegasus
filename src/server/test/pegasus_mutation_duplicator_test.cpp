@@ -277,7 +277,7 @@ public:
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         ASSERT_EQ(duplicator_impl->_remote_cluster_id, 2);
         ASSERT_EQ(duplicator_impl->_remote_cluster, "onebox2");
-        ASSERT_EQ(get_current_cluster_id(), 1);
+        ASSERT_EQ(get_current_dup_cluster_id(), 1);
     }
 
 private:

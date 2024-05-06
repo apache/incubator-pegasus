@@ -44,4 +44,5 @@ namespace dsn {
 }
 
 const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
+
 } // namespace dsn

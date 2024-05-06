@@ -59,16 +59,6 @@ struct db_get_context
     bool expired{false};
 };
 
-inline int get_cluster_id_if_exists()
-{
-    // cluster_id is 0 if not configured, which means it will accept writes
-    // from any cluster as long as the timestamp is larger.
-    static auto cluster_id_res =
-        dsn::replication::get_duplication_cluster_id(dsn::get_current_cluster_name());
-    static uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
-    return cluster_id;
-}
-
 inline dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
                                                const bool verify_before_ingest,
                                                const dsn::replication::bulk_load_metadata &metadata,

@@ -55,13 +55,6 @@ class ingestion_response;
 namespace pegasus {
 namespace server {
 
-inline uint8_t get_current_cluster_id()
-{
-    static const uint8_t cluster_id =
-        dsn::replication::get_duplication_cluster_id(dsn::get_current_cluster_name()).get_value();
-    return cluster_id;
-}
-
 // The context of an mutation to the database.
 struct db_write_context
 {

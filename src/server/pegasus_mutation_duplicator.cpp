@@ -136,13 +136,13 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
 
     LOG_INFO_PREFIX("initialize mutation duplicator for local cluster [id:{}], "
                     "remote cluster [id:{}, addr:{}]",
-                    get_current_cluster_id(),
+                    get_current_dup_cluster_id(),
                     _remote_cluster_id,
                     remote_cluster);
 
     // never possible to duplicate data to itself
     CHECK_NE_PREFIX_MSG(
-        get_current_cluster_id(), _remote_cluster_id, "invalid remote cluster: {}", remote_cluster);
+        get_current_dup_cluster_id(), _remote_cluster_id, "invalid remote cluster: {}", remote_cluster);
 }
 
 void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
@@ -237,7 +237,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             entry.__set_raw_message(raw_message);
             entry.__set_task_code(rpc_code);
             entry.__set_timestamp(std::get<0>(mut));
-            entry.__set_cluster_id(get_current_cluster_id());
+            entry.__set_cluster_id(get_current_dup_cluster_id());
             batch_request->entries.emplace_back(std::move(entry));
             batch_bytes += raw_message.length();
         }

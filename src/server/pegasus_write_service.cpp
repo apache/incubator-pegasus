@@ -349,12 +349,12 @@ int pegasus_write_service::duplicate(int64_t decree,
 {
     // Verifies the cluster_id.
     for (const auto &request : requests.entries) {
-        if (!dsn::replication::is_cluster_id_configured(request.cluster_id)) {
+        if (!dsn::replication::is_dup_cluster_id_configured(request.cluster_id)) {
             resp.__set_error(rocksdb::Status::kInvalidArgument);
             resp.__set_error_hint("request cluster id is unconfigured");
             return empty_put(decree);
         }
-        if (request.cluster_id == get_current_cluster_id()) {
+        if (request.cluster_id == get_current_dup_cluster_id()) {
             resp.__set_error(rocksdb::Status::kInvalidArgument);
             resp.__set_error_hint("self-duplicating");
             return empty_put(decree);
