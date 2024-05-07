@@ -208,13 +208,13 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                                            "illegal operation: adding duplication to itself");
 
     if (!FLAGS_dup_ignore_other_cluster_ids) {
-    auto remote_cluster_id = get_duplication_cluster_id(request.remote_cluster_name);
-    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(remote_cluster_id.is_ok(),
-                                           response,
-                                           ERR_INVALID_PARAMETERS,
-                                           "get_duplication_cluster_id({}) failed, error: {}",
-                                           request.remote_cluster_name,
-                                           remote_cluster_id.get_error());
+        auto remote_cluster_id = get_duplication_cluster_id(request.remote_cluster_name);
+        LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(remote_cluster_id.is_ok(),
+                                               response,
+                                               ERR_INVALID_PARAMETERS,
+                                               "get_duplication_cluster_id({}) failed, error: {}",
+                                               request.remote_cluster_name,
+                                               remote_cluster_id.get_error());
     }
 
     std::vector<host_port> meta_list;

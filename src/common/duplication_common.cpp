@@ -137,8 +137,7 @@ private:
 {
     // cluster_id is 0 if not configured, which means it will accept writes
     // from any cluster as long as the timestamp is larger.
-    static const auto res =
-        get_duplication_cluster_id(get_current_dup_cluster_name());
+    static const auto res = get_duplication_cluster_id(get_current_dup_cluster_name());
     static const uint8_t cluster_id = res.is_ok() ? res.get_value() : 0;
     return cluster_id;
 }
