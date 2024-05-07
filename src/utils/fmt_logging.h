@@ -207,6 +207,30 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 #define CHECK_NOTNULL_PREFIX_MSG(p, ...) CHECK_PREFIX_MSG(p != nullptr, __VA_ARGS__)
 #define CHECK_NOTNULL_PREFIX(p) CHECK_NOTNULL_PREFIX_MSG(p, "")
 
+#define CHECK_STREQ_PREFIX_MSG(var1, var2, ...)                                                           \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK_EXPRESSION_PREFIX_MSG(var1 == var2,                                                             \
+                         dsn::utils::equals(_v1, _v2),                                             \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
+    } while (false)
+
+#define CHECK_STRNE_PREFIX_MSG(var1, var2, ...)                                                           \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK_EXPRESSION_PREFIX_MSG(var1 != var2,                                                             \
+                         !dsn::utils::equals(_v1, _v2),                                            \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
+    } while (false)
+
 #define CHECK_NE_PREFIX_MSG(var1, var2, ...)                                                       \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \

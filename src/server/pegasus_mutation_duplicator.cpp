@@ -50,6 +50,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
+DSN_DECLARE_bool(dup_ignore_other_cluster_ids);
+
 METRIC_DEFINE_counter(replica,
                       dup_shipped_successful_requests,
                       dsn::metric_unit::kRequests,
@@ -126,6 +128,17 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
 
     pegasus_client *client = pegasus_client_factory::get_client(remote_cluster.data(), app.data());
     _client = static_cast<client::pegasus_client_impl *>(client);
+
+    CHECK_STRNE_PREFIX_MSG(
+        get_current_dup_cluster_name(), remote_cluster.data(), "remote cluster should not be myself: {}", remote_cluster);
+
+    if (FLAGS_dup_ignore_other_cluster_ids) {
+    LOG_INFO_PREFIX("initialize mutation duplicator for local cluster [id:{}], "
+                    "remote cluster [id:ignored, addr:{}]",
+                    get_current_dup_cluster_id(),
+                    remote_cluster);
+        return;
+    }
 
     auto ret = dsn::replication::get_duplication_cluster_id(remote_cluster.data());
     CHECK_PREFIX_MSG(ret.is_ok(), // never possible, meta server disallows such remote_cluster.
