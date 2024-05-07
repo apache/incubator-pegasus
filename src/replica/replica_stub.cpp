@@ -234,7 +234,7 @@ DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
 DSN_DECLARE_int32(fd_lease_seconds);
 DSN_DECLARE_int32(gc_interval_ms);
-DSN_DECLARE_string(cluster_name);
+DSN_DECLARE_string(encryption_cluster_key_name);
 DSN_DECLARE_string(data_dirs);
 DSN_DECLARE_string(server_key);
 
@@ -448,7 +448,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     dsn::replication::kms_info kms_info;
     if (FLAGS_encrypt_data_at_rest && !utils::is_empty(FLAGS_hadoop_kms_url)) {
         _key_provider.reset(new dsn::security::kms_key_provider(
-            ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()), FLAGS_cluster_name));
+            ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()), FLAGS_encryption_cluster_key_name));
         const auto &ec = dsn::utils::load_rjobj_from_file(
             kms_path, dsn::utils::FileDataType::kNonSensitive, &kms_info);
         if (ec != dsn::ERR_PATH_NOT_FOUND && ec != dsn::ERR_OK) {
