@@ -98,9 +98,9 @@ jobs:
           export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
           ulimit -s unlimited
           ./run.sh start_onebox
-      - name: Recompile thrift
+      - name: Download thrift
         working-directory: ./java-client/scripts
-        run: ./recompile_thrift.sh
+        run: ./download_thrift.sh
       - name: Run Java client tests
         working-directory: ./java-client
         run: mvn test --no-transfer-progress
