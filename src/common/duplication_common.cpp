@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/common.h"
 #include "duplication_types.h"
 #include "nlohmann/detail/json_ref.hpp"
 #include "nlohmann/json_fwd.hpp"
@@ -201,7 +202,7 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
     return internal::duplication_group_registry::instance().get_distinct_cluster_id_set();
 }
 
-inline bool is_dup_cluster_id_configured(uint8_t cluster_id)
+/*extern*/ bool is_dup_cluster_id_configured(uint8_t cluster_id)
 {
     if (cluster_id != get_current_dup_cluster_id()) {
         if (FLAGS_dup_ignore_other_cluster_ids) {

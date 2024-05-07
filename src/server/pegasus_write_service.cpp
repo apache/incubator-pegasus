@@ -354,7 +354,7 @@ int pegasus_write_service::duplicate(int64_t decree,
             resp.__set_error_hint("request cluster id is unconfigured");
             return empty_put(decree);
         }
-        if (request.cluster_id == get_current_dup_cluster_id()) {
+        if (request.cluster_id == dsn::replication::get_current_dup_cluster_id()) {
             resp.__set_error(rocksdb::Status::kInvalidArgument);
             resp.__set_error_hint("self-duplicating");
             return empty_put(decree);
