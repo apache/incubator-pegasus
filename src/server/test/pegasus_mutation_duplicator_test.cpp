@@ -44,7 +44,6 @@
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
-#include "server/pegasus_write_service.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 

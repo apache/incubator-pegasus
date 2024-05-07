@@ -26,6 +26,7 @@
 
 #include "base/meta_store.h"
 #include "base/pegasus_value_schema.h"
+#include "common/duplication_common.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
 #include "pegasus_write_service_impl.h"

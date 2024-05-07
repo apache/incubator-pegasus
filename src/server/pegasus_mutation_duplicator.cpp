@@ -32,6 +32,7 @@
 #include <vector>
 
 #include "client_lib/pegasus_client_impl.h"
+#include "common/common.h"
 #include "common/duplication_common.h"
 #include "duplication_internal_types.h"
 #include "pegasus/client.h"
@@ -40,7 +41,6 @@
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_message.h"
-#include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"

@@ -22,10 +22,7 @@
 #include <cstdint>
 #include <memory>
 
-#include "common//duplication_common.h"
-#include "common/common.h"
 #include "replica/replica_base.h"
-#include "utils/errors.h"
 #include "utils/metrics.h"
 
 namespace dsn {
