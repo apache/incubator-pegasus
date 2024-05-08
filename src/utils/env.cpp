@@ -45,7 +45,7 @@ DSN_DEFINE_string(pegasus.server,
 
 DSN_DEFINE_string(pegasus.server,
                   encryption_method,
-                  "AES128CTR",
+                  "AES256CTR",
                   "The encryption method to use in the filesystem. Now "
                   "supports AES128CTR, AES192CTR, AES256CTR and SM4CTR.");
 
