@@ -46,7 +46,7 @@ class file_meta;
 
 // Save the current value of a flag and restore it at the end of the function.
 #define PRESERVE_FLAG(name)                                                                        \
-    auto PRESERVED_FLAGS_##name = FLAGS_##name;                                                    \
+    const auto PRESERVED_FLAGS_##name = FLAGS_##name;                                              \
     auto PRESERVED_FLAGS_##name##_cleanup =                                                        \
         dsn::defer([PRESERVED_FLAGS_##name]() { FLAGS_##name = PRESERVED_FLAGS_##name; })
 

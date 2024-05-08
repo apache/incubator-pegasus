@@ -274,9 +274,9 @@ public:
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
-        ASSERT_EQ(duplicator_impl->_remote_cluster_id, 2);
-        ASSERT_EQ(duplicator_impl->_remote_cluster, "onebox2");
-        ASSERT_EQ(get_current_dup_cluster_id(), 1);
+        ASSERT_EQ(2, duplicator_impl->_remote_cluster_id);
+        ASSERT_STREQ("onebox2", duplicator_impl->_remote_cluster.c_str());
+        ASSERT_EQ(1, get_current_dup_cluster_id());
     }
 
 private:

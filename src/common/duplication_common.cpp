@@ -146,8 +146,8 @@ private:
 
 /*extern*/ uint8_t get_current_dup_cluster_id_or_default()
 {
-    // cluster_id is 0 if not configured, which means it will accept writes
-    // from any cluster as long as the timestamp is larger.
+    // Set cluster id to 0 as default if it is not configured, which means it would accept
+    // writes from any cluster as long as the timestamp is larger.
     static const auto res = get_duplication_cluster_id(get_current_dup_cluster_name());
     static const uint8_t cluster_id = res.is_ok() ? res.get_value() : 0;
     return cluster_id;

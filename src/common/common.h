@@ -22,19 +22,20 @@
 #include <string>
 
 namespace dsn {
-/// Returns the cluster name (i.e, "onebox") if it's configured under
-/// "replication" section:
+/// Returns the cluster name ("onebox" in the following example) if it's
+/// configured under "replication" section:
 ///    [replication]
 ///      cluster_name = "onebox"
 extern const char *get_current_cluster_name();
 
-/// Returns the cluster name (i.e, "onebox") if it's configured under
-/// "replication" section:
+/// Returns the cluster name ("onebox" in the following example) which is
+/// only used for duplication (see the definition for `dup_cluster_name`
+/// flag for details) if it's configured under "replication" section:
 ///    [replication]
 ///      dup_cluster_name = "onebox"
 ///
-/// However, once dup_cluster_name is not configured, use cluster_name
-/// instead.
+/// However, once `[replication]dup_cluster_name` is not configured,
+/// `[replication]cluster_name` would be returned.
 extern const char *get_current_dup_cluster_name();
 
 extern const std::string PEGASUS_CLUSTER_SECTION_NAME;

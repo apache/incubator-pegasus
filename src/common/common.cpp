@@ -47,7 +47,7 @@ namespace dsn {
         return FLAGS_dup_cluster_name;
     }
 
-    // Once dup_cluster_name is not configured, use cluster_name instead.
+    // Once `dup_cluster_name` is not configured, use cluster_name instead.
     return get_current_cluster_name();
 }
 
