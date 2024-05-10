@@ -234,8 +234,8 @@ DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
 DSN_DECLARE_int32(fd_lease_seconds);
 DSN_DECLARE_int32(gc_interval_ms);
-DSN_DECLARE_string(encryption_cluster_key_name);
 DSN_DECLARE_string(data_dirs);
+DSN_DECLARE_string(encryption_cluster_key_name);
 DSN_DECLARE_string(server_key);
 
 DSN_DEFINE_bool(replication,
