@@ -83,18 +83,12 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     const std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
 
     // Read the replica count of the remote app, if any.
-    const auto &remote_replica_count_ss = cmd({"-r", "--remote_replica_count"});
+    const auto &remote_replica_count_ss = cmd();
 
     // 0 represents that remote_replica_count is missing, which means the remote_replica_count
     // would be set as the replica count of source app.
     int32_t remote_replica_count = 0;
-    if (static_cast<bool>(remote_replica_count_ss)) {
-        std::string remote_replica_count_str(remote_replica_count_ss.str());
-        RETURN_FALSE_IF_NOT(dsn::buf2int32(remote_replica_count_str, remote_replica_count) &&
-                                remote_replica_count >= 1,
-                            "invalid remote_replica_count: {}",
-                            remote_replica_count_str);
-    }
+    PARSE_OPT_UINT({"-r", "--remote_replica_count"}, remote_replica_count, 0);
 
     auto err_resp = sc->ddl_client->add_dup(app_name,
                                             remote_cluster_name,

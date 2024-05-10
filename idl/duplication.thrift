@@ -73,6 +73,7 @@ struct duplication_add_request
 
     // Since v2.6.0.
     // Specify the replica count of remote app.
+    // 0 means that the replica count would be set as the source app.
     5:optional i32 remote_replica_count;
 }
 
