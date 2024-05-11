@@ -70,6 +70,12 @@ struct duplication_add_request
     // Since v2.6.0.
     // Specify the app name of remote cluster.
     4:optional string remote_app_name;
+
+    // Since v2.6.0.
+    // Specify the replica count of remote app.
+    // 0 means that the replica count of the remote app would be the same as
+    // the source app.
+    5:optional i32 remote_replica_count;
 }
 
 struct duplication_add_response
@@ -84,13 +90,23 @@ struct duplication_add_response
 
     // Since v2.6.0.
     //
-    // If new duplication is created, this would be its remote_app_name;
-    // Otherwise, once the duplication has existed, this would be the
-    // remote_app_name with which the duplication has been created.
+    // If new duplication is created, this would be requested remote_app_name in
+    // duplication_add_request; otherwise, once the duplication has existed, this
+    // would be the remote app name with which the duplication has been created.
     //
     // This field could also be used to check if the meta server supports
     // remote_app_name(i.e. the version of meta server must be >= v2.6.0).
     5:optional string remote_app_name;
+
+    // Since v2.6.0.
+    //
+    // If new duplication is created, this would be requested remote_replica_count in
+    // duplication_add_request; otherwise, once the duplication has existed, this would
+    // be the remote replica count with which the duplication has been created.
+    //
+    // This field could also be used to check if the meta server supports
+    // remote_replica_count(i.e. the version of meta server must be >= v2.6.0).
+    6:optional i32 remote_replica_count;
 }
 
 // This request is sent from client to meta.
@@ -129,6 +145,11 @@ struct duplication_entry
     // For versions >= v2.6.0, this could be specified by client.
     // For versions < v2.6.0, this must be the same with source app_name.
     8:optional string remote_app_name;
+
+    // Since v2.6.0.
+    // For versions >= v2.6.0, this could be specified by client.
+    // For versions < v2.6.0, this must be the same with source replica_count.
+    9:optional i32 remote_replica_count;
 }
 
 // This request is sent from client to meta.

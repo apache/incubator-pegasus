@@ -193,11 +193,15 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         remote_app_name = request.app_name;
     }
 
+    int32_t remote_replica_count =
+        request.__isset.remote_replica_count ? request.remote_replica_count : 0;
+
     LOG_INFO("add duplication for app({}), remote cluster name is {}, "
-             "remote app name is {}",
+             "remote app name is {}, remote replica count is {}",
              request.app_name,
              request.remote_cluster_name,
-             remote_app_name);
+             remote_app_name,
+             remote_replica_count);
 
     LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(request.remote_cluster_name !=
                                                get_current_cluster_name(),
@@ -222,6 +226,13 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         "failed to find cluster[{}] address in config [{}]",
         request.remote_cluster_name,
         duplication_constants::kClustersSectionName);
+
+    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(
+        remote_replica_count >= 0,
+        response,
+        ERR_INVALID_PARAMETERS,
+        "invalid remote_replica_count({}) which should never be negative",
+        remote_replica_count);
 
     std::shared_ptr<app_state> app;
     duplication_info_s_ptr dup;
@@ -249,9 +260,16 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
             }
         }
 
+        if (remote_replica_count == 0) {
+            // 0 means that the replica count of the remote app would be the same as the
+            // source app.
+            remote_replica_count = app->max_replica_count;
+        }
+
         if (dup) {
             // The duplication for the same app to the same remote cluster has existed.
             remote_app_name = dup->remote_app_name;
+            remote_replica_count = dup->remote_replica_count;
             LOG_INFO("no need to add duplication, since it has existed: app_name={}, "
                      "remote_cluster_name={}, remote_app_name={}",
                      request.app_name,
@@ -283,18 +301,22 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
     }
 
     if (!dup) {
-        dup = new_dup_from_init(
-            request.remote_cluster_name, remote_app_name, std::move(meta_list), app);
+        dup = new_dup_from_init(request.remote_cluster_name,
+                                remote_app_name,
+                                remote_replica_count,
+                                std::move(meta_list),
+                                app);
     }
 
-    do_add_duplication(app, dup, rpc, remote_app_name);
+    do_add_duplication(app, dup, rpc, remote_app_name, remote_replica_count);
 }
 
 // ThreadPool(WRITE): THREAD_POOL_META_STATE
 void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &app,
                                                   duplication_info_s_ptr &dup,
                                                   duplication_add_rpc &rpc,
-                                                  const std::string &remote_app_name)
+                                                  const std::string &remote_app_name,
+                                                  const int32_t remote_replica_count)
 {
     const auto &ec = dup->start(rpc.request().is_duplicating_checkpoint);
     LOG_ERROR_DUP_HINT_AND_RETURN_IF_NOT(ec == ERR_OK,
@@ -308,7 +330,9 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
     auto value = dup->to_json_blob();
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
     _meta_svc->get_meta_storage()->create_node_recursively(
-        std::move(nodes), std::move(value), [app, this, dup, rpc, remote_app_name]() mutable {
+        std::move(nodes),
+        std::move(value),
+        [app, this, dup, rpc, remote_app_name, remote_replica_count]() mutable {
             LOG_INFO("[{}] add duplication successfully [app_name: {}, follower: {}]",
                      dup->log_prefix(),
                      app->app_name,
@@ -322,6 +346,7 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
             resp.appid = app->app_id;
             resp.dupid = dup->id;
             resp.__set_remote_app_name(remote_app_name);
+            resp.__set_remote_replica_count(remote_replica_count);
 
             zauto_write_lock l(app_lock());
             refresh_duplicating_no_lock(app);
@@ -434,7 +459,7 @@ void meta_duplication_service::create_follower_app_for_duplication(
     request.app_name = dup->remote_app_name;
     request.options.app_type = app->app_type;
     request.options.partition_count = app->partition_count;
-    request.options.replica_count = app->max_replica_count;
+    request.options.replica_count = dup->remote_replica_count;
     request.options.success_if_exist = false;
     request.options.envs = app->envs;
     request.options.is_stateful = app->is_stateful;
@@ -618,6 +643,7 @@ void meta_duplication_service::do_update_partition_confirmed(
 std::shared_ptr<duplication_info>
 meta_duplication_service::new_dup_from_init(const std::string &remote_cluster_name,
                                             const std::string &remote_app_name,
+                                            const int32_t remote_replica_count,
                                             std::vector<host_port> &&remote_cluster_metas,
                                             std::shared_ptr<app_state> &app) const
 {
@@ -637,6 +663,7 @@ meta_duplication_service::new_dup_from_init(const std::string &remote_cluster_na
                                                  app->app_id,
                                                  app->app_name,
                                                  app->partition_count,
+                                                 remote_replica_count,
                                                  dsn_now_ms(),
                                                  remote_cluster_name,
                                                  remote_app_name,
@@ -741,8 +768,13 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
         [ dup_id, this, app = std::move(app), store_path ](const blob &json) {
             zauto_write_lock l(app_lock());
 
-            auto dup = duplication_info::decode_from_blob(
-                dup_id, app->app_id, app->app_name, app->partition_count, store_path, json);
+            auto dup = duplication_info::decode_from_blob(dup_id,
+                                                          app->app_id,
+                                                          app->app_name,
+                                                          app->partition_count,
+                                                          app->max_replica_count,
+                                                          store_path,
+                                                          json);
             if (nullptr == dup) {
                 LOG_ERROR("failed to decode json \"{}\" on path {}", json, store_path);
                 return; // fail fast

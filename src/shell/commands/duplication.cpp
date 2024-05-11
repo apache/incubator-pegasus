@@ -33,13 +33,13 @@
 #include "duplication_types.h"
 #include "shell/argh.h"
 #include "shell/command_executor.h"
+#include "shell/command_helper.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
-#include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/time_utils.h"
 
@@ -49,18 +49,12 @@ using dsn::replication::duplication_status;
 bool add_dup(command_executor *e, shell_context *sc, arguments args)
 {
     // add_dup <app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str]
+    // [-r|--remote_replica_count num]
 
     argh::parser cmd(args.argc, args.argv);
-    if (cmd.pos_args().size() > 4) {
+    if (cmd.pos_args().size() > 5) {
         fmt::print(stderr, "too many params\n");
         return false;
-    }
-
-    for (const auto &flag : cmd.flags()) {
-        if (dsn_unlikely(flag != "s" && flag != "sst")) {
-            fmt::print(stderr, "unknown flag {}\n", flag);
-            return false;
-        }
     }
 
     if (!cmd(1)) {
@@ -82,14 +76,22 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     }
 
     // Check if the boolean option is specified.
-    bool is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
+    const auto is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
 
     // Read the app name of the remote cluster, if any.
     // Otherwise, use app_name as the remote_app_name.
-    std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
+    const std::string remote_app_name(cmd({"-a", "--remote_app_name"}, app_name).str());
 
-    auto err_resp = sc->ddl_client->add_dup(
-        app_name, remote_cluster_name, is_duplicating_checkpoint, remote_app_name);
+    // 0 represents that remote_replica_count is missing, which means the replica count of
+    // the remote app would be the same as the source app.
+    uint32_t remote_replica_count = 0;
+    PARSE_OPT_UINT(remote_replica_count, 0, {"-r", "--remote_replica_count"});
+
+    auto err_resp = sc->ddl_client->add_dup(app_name,
+                                            remote_cluster_name,
+                                            is_duplicating_checkpoint,
+                                            remote_app_name,
+                                            remote_replica_count);
     auto err = err_resp.get_error();
     std::string hint;
     if (err) {

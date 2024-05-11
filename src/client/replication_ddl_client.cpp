@@ -1362,7 +1362,8 @@ error_with<duplication_add_response>
 replication_ddl_client::add_dup(const std::string &app_name,
                                 const std::string &remote_cluster_name,
                                 bool is_duplicating_checkpoint,
-                                const std::string &remote_app_name)
+                                const std::string &remote_app_name,
+                                const uint32_t remote_replica_count)
 {
     RETURN_EW_NOT_OK_MSG(validate_app_name(remote_app_name, false),
                          duplication_add_response,
@@ -1374,6 +1375,7 @@ replication_ddl_client::add_dup(const std::string &app_name,
     req->remote_cluster_name = remote_cluster_name;
     req->is_duplicating_checkpoint = is_duplicating_checkpoint;
     req->__set_remote_app_name(remote_app_name);
+    req->__set_remote_replica_count(static_cast<int32_t>(remote_replica_count));
     return call_rpc_sync(duplication_add_rpc(std::move(req), RPC_CM_ADD_DUPLICATION));
 }
 

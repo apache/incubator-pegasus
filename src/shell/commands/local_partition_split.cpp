@@ -697,8 +697,8 @@ bool local_partition_split(command_executor *e, shell_context *sc, arguments arg
     PARSE_UINT(lpsc.src_partition_count);
     PARSE_UINT(lpsc.dst_partition_count);
     lpsc.dst_app_name = cmd(param_index++).str();
-    PARSE_OPT_UINT("threads_per_data_dir", lpsc.threads_per_data_dir, 1);
-    PARSE_OPT_UINT("threads_per_partition", lpsc.threads_per_partition, 1);
+    PARSE_OPT_UINT(lpsc.threads_per_data_dir, 1, "threads_per_data_dir");
+    PARSE_OPT_UINT(lpsc.threads_per_partition, 1, "threads_per_partition");
     lpsc.post_full_compact = cmd["--post_full_compact"];
     lpsc.post_count = cmd["--post_count"];
 

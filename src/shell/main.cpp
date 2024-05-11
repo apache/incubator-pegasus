@@ -475,7 +475,8 @@ static command_executor commands[] = {
     },
     {"add_dup",
      "add duplication",
-     "<app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str]",
+     "<app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str] "
+     "[-r|--remote_replica_count num]",
      add_dup},
     {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},

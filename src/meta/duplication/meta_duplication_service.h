@@ -81,7 +81,8 @@ private:
     void do_add_duplication(std::shared_ptr<app_state> &app,
                             duplication_info_s_ptr &dup,
                             duplication_add_rpc &rpc,
-                            const std::string &remote_app_name);
+                            const std::string &remote_app_name,
+                            const int32_t remote_replica_count);
 
     void do_modify_duplication(std::shared_ptr<app_state> &app,
                                duplication_info_s_ptr &dup,
@@ -124,6 +125,7 @@ private:
     std::shared_ptr<duplication_info>
     new_dup_from_init(const std::string &remote_cluster_name,
                       const std::string &remote_app_name,
+                      const int32_t remote_replica_count,
                       std::vector<host_port> &&remote_cluster_metas,
                       std::shared_ptr<app_state> &app) const;
 

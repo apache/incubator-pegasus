@@ -41,6 +41,7 @@ public:
     static const std::string kTestRemoteClusterName;
     static const std::string kTestRemoteAppName;
     static const std::string kTestMetaStorePath;
+    static const int32_t kTestRemoteReplicaCount;
 
     void force_update_status(duplication_info &dup, duplication_status::type status)
     {
@@ -54,6 +55,7 @@ public:
                              1,
                              kTestAppName,
                              2,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -108,6 +110,7 @@ public:
                              1,
                              kTestAppName,
                              4,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -120,6 +123,7 @@ public:
         auto dup_ent = dup.to_duplication_entry();
         ASSERT_EQ(0, dup_ent.progress.size());
         ASSERT_EQ(kTestRemoteAppName, dup_ent.remote_app_name);
+        ASSERT_EQ(kTestRemoteReplicaCount, dup_ent.remote_replica_count);
 
         for (int i = 0; i < 4; i++) {
             dup.init_progress(i, invalid_decree);
@@ -140,6 +144,7 @@ public:
                              1,
                              kTestAppName,
                              4,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -160,6 +165,7 @@ public:
                              1,
                              kTestAppName,
                              4,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -169,7 +175,7 @@ public:
         dup.persist_status();
 
         dup.alter_status(duplication_status::DS_APP);
-        auto json = dup.to_json_blob();
+        const auto &json = dup.to_json_blob();
         dup.persist_status();
 
         duplication_info::json_helper copy;
@@ -178,9 +184,12 @@ public:
         ASSERT_EQ(dup.create_timestamp_ms, copy.create_timestamp_ms);
         ASSERT_EQ(dup.remote_cluster_name, copy.remote);
         ASSERT_EQ(dup.remote_app_name, copy.remote_app_name);
+        ASSERT_EQ(kTestRemoteAppName, copy.remote_app_name);
+        ASSERT_EQ(dup.remote_replica_count, copy.remote_replica_count);
+        ASSERT_EQ(kTestRemoteReplicaCount, copy.remote_replica_count);
 
-        auto dup_sptr =
-            duplication_info::decode_from_blob(1, 1, kTestAppName, 4, kTestMetaStorePath, json);
+        auto dup_sptr = duplication_info::decode_from_blob(
+            1, 1, kTestAppName, 4, kTestRemoteReplicaCount, kTestMetaStorePath, json);
         ASSERT_TRUE(dup_sptr->equals_to(dup)) << *dup_sptr << " " << dup;
 
         blob new_json =
@@ -188,12 +197,31 @@ public:
         ASSERT_FALSE(json::json_forwarder<duplication_info::json_helper>::decode(new_json, copy));
         ASSERT_EQ(duplication_status::DS_REMOVED, copy.status);
     }
+
+    static void test_encode_and_decode_default()
+    {
+        dsn_run_config("config-test.ini", false);
+
+        duplication_info::json_helper copy;
+        copy.status = duplication_status::DS_INIT;
+        copy.fail_mode = duplication_fail_mode::FAIL_SLOW;
+        copy.remote = kTestRemoteClusterName;
+        ASSERT_TRUE(copy.remote_app_name.empty());
+        ASSERT_EQ(0, copy.remote_replica_count);
+
+        const auto json = json::json_forwarder<duplication_info::json_helper>::encode(copy);
+        auto dup = duplication_info::decode_from_blob(
+            1, 1, kTestAppName, 4, kTestRemoteReplicaCount, kTestMetaStorePath, json);
+        ASSERT_EQ(kTestAppName, dup->remote_app_name);
+        ASSERT_EQ(kTestRemoteReplicaCount, dup->remote_replica_count);
+    }
 };
 
 const std::string duplication_info_test::kTestAppName = "temp";
 const std::string duplication_info_test::kTestRemoteClusterName = "slave-cluster";
 const std::string duplication_info_test::kTestRemoteAppName = "remote_temp";
 const std::string duplication_info_test::kTestMetaStorePath = "/meta_test/101/duplication/1";
+const int32_t duplication_info_test::kTestRemoteReplicaCount = 3;
 
 TEST_F(duplication_info_test, alter_status_when_busy)
 {
@@ -201,6 +229,7 @@ TEST_F(duplication_info_test, alter_status_when_busy)
                          1,
                          kTestAppName,
                          4,
+                         kTestRemoteReplicaCount,
                          0,
                          kTestRemoteClusterName,
                          kTestRemoteAppName,
@@ -274,6 +303,7 @@ TEST_F(duplication_info_test, alter_status)
                              1,
                              kTestAppName,
                              4,
+                             kTestRemoteReplicaCount,
                              0,
                              kTestRemoteClusterName,
                              kTestRemoteAppName,
@@ -299,12 +329,15 @@ TEST_F(duplication_info_test, init_and_start) { test_init_and_start(); }
 
 TEST_F(duplication_info_test, encode_and_decode) { test_encode_and_decode(); }
 
+TEST_F(duplication_info_test, encode_and_decode_default) { test_encode_and_decode_default(); }
+
 TEST_F(duplication_info_test, is_valid)
 {
     duplication_info dup(1,
                          1,
                          kTestAppName,
                          4,
+                         kTestRemoteReplicaCount,
                          0,
                          kTestRemoteClusterName,
                          kTestRemoteAppName,
