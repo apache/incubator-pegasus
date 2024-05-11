@@ -117,8 +117,8 @@ void replica::on_checkpoint_timer()
     }
 
     if (!is_plog_gc_enabled()) {
-        LOG_INFO_PREFIX("gc_private {}: skip gc because plog gc is disabled",
-                        enum_to_string(status()));
+        LOG_WARNING_PREFIX("gc_private {}: skip gc because plog gc is disabled",
+                           enum_to_string(status()));
         return;
     }
 
@@ -134,6 +134,15 @@ void replica::on_checkpoint_timer()
     decree min_confirmed_decree = _duplication_mgr->min_confirmed_decree();
     decree cleanable_decree = last_durable_decree;
     int64_t valid_start_offset = _app->init_info().init_offset_in_private_log;
+
+    if (min_confirmed_decree < 0 && is_duplication_master()) {
+        // Not sure whether the plog files could be dropped, because min_confirmed_decree
+        // is currently unavailable.
+        LOG_INFO_PREFIX("gc_private {}: skip gc because confirmed duplication progress "
+                        "is unknown",
+                        enum_to_string(status()));
+        return;
+    }
 
     if (min_confirmed_decree >= 0) {
         // Do not rely on valid_start_offset for GC during duplication.
@@ -152,31 +161,29 @@ void replica::on_checkpoint_timer()
                             min_confirmed_decree,
                             last_durable_decree);
         }
-    } else if (is_duplication_master()) {
-        // unsure if the logs can be dropped, because min_confirmed_decree
-        // is currently unavailable
-        LOG_INFO_PREFIX("gc_private {}: skip gc because confirmed duplication progress is unknown",
-                        enum_to_string(status()));
-        return;
     }
 
-    tasking::enqueue(
-        LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
-        &_tracker,
-        [this, plog, cleanable_decree, valid_start_offset] {
-            // run in background thread to avoid file deletion operation blocking
-            // replication thread.
-            if (status() == partition_status::PS_ERROR || status() == partition_status::PS_INACTIVE)
-                return;
-            plog->garbage_collection(get_gpid(),
-                                     cleanable_decree,
-                                     valid_start_offset,
-                                     (int64_t)FLAGS_log_private_reserve_max_size_mb * 1024 * 1024,
-                                     (int64_t)FLAGS_log_private_reserve_max_time_seconds);
-            if (status() == partition_status::PS_PRIMARY) {
-                METRIC_VAR_SET(private_log_size_mb, _private_log->total_size() >> 20);
-            }
-        });
+    tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
+                     &_tracker,
+                     [this, plog, cleanable_decree, valid_start_offset] {
+                         // run in background thread to avoid file deletion operation blocking
+                         // replication thread.
+                         if (status() == partition_status::PS_ERROR ||
+                             status() == partition_status::PS_INACTIVE) {
+
+                             return;
+                         }
+
+                         plog->garbage_collection(
+                             get_gpid(),
+                             cleanable_decree,
+                             valid_start_offset,
+                             (int64_t)FLAGS_log_private_reserve_max_size_mb * 1024 * 1024,
+                             (int64_t)FLAGS_log_private_reserve_max_time_seconds);
+                         if (status() == partition_status::PS_PRIMARY) {
+                             METRIC_VAR_SET(private_log_size_mb, _private_log->total_size() >> 20);
+                         }
+                     });
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
