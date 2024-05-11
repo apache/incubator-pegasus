@@ -39,12 +39,12 @@ DSN_DEFINE_uint32(replication,
                   "send mutation log batch bytes size per rpc");
 DSN_TAG_VARIABLE(duplicate_log_batch_bytes, FT_MUTABLE);
 
-// While many small clusters are duplicated to a big cluster, we have to add many cluster
-// ids to the `*.ini` file of the big cluster, and the big cluster might be restarted very
-// frequently.
+// While many clusters are duplicated to a target cluster, we have to add many cluster
+// ids to the `*.ini` file of the target cluster, and the target cluster might be restarted
+// very frequently.
 //
-// `dup_ignore_other_cluster_ids` is added so that only my cluster id should be configured
-// while there is no need to add any other cluster id.
+// This option is added so that only the target cluster id should be configured while
+// there is no need to add any other cluster id.
 DSN_DEFINE_bool(replication,
                 dup_ignore_other_cluster_ids,
                 false,
