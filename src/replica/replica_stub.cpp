@@ -2299,6 +2299,41 @@ void replica_stub::register_ctrl_command()
                 });
             }));
 
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.enable-plog-gc",
+            "Enable plog garbage collection for replicas specified by comma-separated list "
+            "of 'app_id' or 'app_id.partition_id', or all replicas for empty",
+            "[id1,id2,...]",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    rep->update_plog_gc_enabled(true);
+                    return rep->get_plog_gc_enabled_message();
+                });
+            }));
+
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.disable-plog-gc",
+            "Disable plog garbage collection for replicas specified by comma-separated list "
+            "of 'app_id' or 'app_id.partition_id', or all replicas for empty",
+            "[id1,id2,...]",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    rep->update_plog_gc_enabled(false);
+                    return rep->get_plog_gc_enabled_message();
+                });
+            }));
+
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.query-plog-gc-enabled-status",
+            "Query if plog garbage collection is enabled or disabled for replicas specified by "
+            "comma-separated list of 'app_id' or 'app_id.partition_id', or all replicas for empty",
+            "[id1,id2,...]",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    return rep->get_plog_gc_enabled_message();
+                });
+            }));
+
 #ifdef DSN_ENABLE_GPERF
         _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
             _release_tcmalloc_memory,
@@ -2346,7 +2381,7 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
                                       bool allow_empty_args,
                                       std::function<std::string(const replica_ptr &rep)> func)
 {
-    if (!allow_empty_args && args.empty()) {
+    if (args.empty() && !allow_empty_args) {
         return std::string("invalid arguments");
     }
 

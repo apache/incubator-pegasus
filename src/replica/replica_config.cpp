@@ -29,6 +29,7 @@
 #include <fmt/format.h>
 #include <stdint.h>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <ios>
 #include <map>
@@ -39,6 +40,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
@@ -63,18 +65,20 @@
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
+#include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/thread_access_checker.h"
+
+DSN_DEFINE_bool(replication, plog_gc_enabled, true, "Whether to enable plog garbage collection.");
 
 /// The configuration management part of replica.
 
@@ -1200,6 +1204,17 @@ void replica::update_app_duplication_status(bool duplicating)
                         _app_info.app_id,
                         old_duplicating,
                         _app_info.duplicating);
+}
+
+void replica::init_plog_gc_enabled() { _plog_gc_enabled.store(FLAGS_plog_gc_enabled); }
+
+void replica::update_plog_gc_enabled(bool enabled) { _plog_gc_enabled.store(enabled); }
+
+bool replica::is_plog_gc_enabled() const { return _plog_gc_enabled.load(); }
+
+std::string replica::get_plog_gc_enabled_message() const
+{
+    return is_plog_gc_enabled() ? "enabled" : "disabled";
 }
 
 } // namespace replication
