@@ -925,9 +925,12 @@ private:
 
 // A helper macro to parse an optional command argument, the result is filled in an uint32_t
 // variable 'value'.
-#define PARSE_OPT_UINT(name, value, def_val)                                                       \
+//
+// Variable arguments are `name` or `init_list` of argh::parser::operator(). See argh::parser
+// for details.
+#define PARSE_OPT_UINT(value, def_val, ...)                                                        \
     do {                                                                                           \
-        const auto param = cmd(name, (def_val)).str();                                             \
+        const auto param = cmd(__VA_ARGS__, (def_val)).str();                                      \
         if (!::dsn::buf2uint32(param, value)) {                                                    \
             fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", param);    \
             return false;                                                                          \

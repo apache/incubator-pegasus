@@ -261,7 +261,8 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         }
 
         if (remote_replica_count == 0) {
-            // 0 means that the replica count would be set as the source app.
+            // 0 means that the replica count of the remote app would be the same as the
+            // source app.
             remote_replica_count = app->max_replica_count;
         }
 
