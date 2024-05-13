@@ -32,6 +32,7 @@
 #include <vector>
 
 #include "client_lib/pegasus_client_impl.h"
+#include "common/common.h"
 #include "common/duplication_common.h"
 #include "duplication_internal_types.h"
 #include "pegasus/client.h"
@@ -40,7 +41,6 @@
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_message.h"
-#include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
@@ -49,6 +49,8 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
+
+DSN_DECLARE_bool(dup_ignore_other_cluster_ids);
 
 METRIC_DEFINE_counter(replica,
                       dup_shipped_successful_requests,
@@ -127,6 +129,19 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
     pegasus_client *client = pegasus_client_factory::get_client(remote_cluster.data(), app.data());
     _client = static_cast<client::pegasus_client_impl *>(client);
 
+    CHECK_STRNE_PREFIX_MSG(dsn::get_current_dup_cluster_name(),
+                           remote_cluster.data(),
+                           "remote cluster should not be myself: {}",
+                           remote_cluster);
+
+    if (FLAGS_dup_ignore_other_cluster_ids) {
+        LOG_INFO_PREFIX("initialize mutation duplicator for local cluster [id:{}], "
+                        "remote cluster [id:ignored, addr:{}]",
+                        dsn::replication::get_current_dup_cluster_id(),
+                        remote_cluster);
+        return;
+    }
+
     auto ret = dsn::replication::get_duplication_cluster_id(remote_cluster.data());
     CHECK_PREFIX_MSG(ret.is_ok(), // never possible, meta server disallows such remote_cluster.
                      "invalid remote cluster: {}, err_ret: {}",
@@ -136,13 +151,15 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
 
     LOG_INFO_PREFIX("initialize mutation duplicator for local cluster [id:{}], "
                     "remote cluster [id:{}, addr:{}]",
-                    get_current_cluster_id(),
+                    dsn::replication::get_current_dup_cluster_id(),
                     _remote_cluster_id,
                     remote_cluster);
 
     // never possible to duplicate data to itself
-    CHECK_NE_PREFIX_MSG(
-        get_current_cluster_id(), _remote_cluster_id, "invalid remote cluster: {}", remote_cluster);
+    CHECK_NE_PREFIX_MSG(dsn::replication::get_current_dup_cluster_id(),
+                        _remote_cluster_id,
+                        "invalid remote cluster: {}",
+                        remote_cluster);
 }
 
 void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
@@ -237,7 +254,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             entry.__set_raw_message(raw_message);
             entry.__set_task_code(rpc_code);
             entry.__set_timestamp(std::get<0>(mut));
-            entry.__set_cluster_id(get_current_cluster_id());
+            entry.__set_cluster_id(dsn::replication::get_current_dup_cluster_id());
             batch_request->entries.emplace_back(std::move(entry));
             batch_bytes += raw_message.length();
         }

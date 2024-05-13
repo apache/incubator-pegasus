@@ -49,10 +49,13 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/zlocks.h"
+
+DSN_DECLARE_bool(dup_ignore_other_cluster_ids);
 
 namespace dsn {
 namespace replication {
@@ -209,13 +212,15 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                                            ERR_INVALID_PARAMETERS,
                                            "illegal operation: adding duplication to itself");
 
-    auto remote_cluster_id = get_duplication_cluster_id(request.remote_cluster_name);
-    LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(remote_cluster_id.is_ok(),
-                                           response,
-                                           ERR_INVALID_PARAMETERS,
-                                           "get_duplication_cluster_id({}) failed, error: {}",
-                                           request.remote_cluster_name,
-                                           remote_cluster_id.get_error());
+    if (!FLAGS_dup_ignore_other_cluster_ids) {
+        auto remote_cluster_id = get_duplication_cluster_id(request.remote_cluster_name);
+        LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(remote_cluster_id.is_ok(),
+                                               response,
+                                               ERR_INVALID_PARAMETERS,
+                                               "get_duplication_cluster_id({}) failed, error: {}",
+                                               request.remote_cluster_name,
+                                               remote_cluster_id.get_error());
+    }
 
     std::vector<host_port> meta_list;
     LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(

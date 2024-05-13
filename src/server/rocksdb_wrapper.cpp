@@ -26,6 +26,7 @@
 
 #include "base/meta_store.h"
 #include "base/pegasus_value_schema.h"
+#include "common/duplication_common.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
 #include "pegasus_write_service_impl.h"
@@ -121,7 +122,8 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
 
     uint64_t new_timetag = ctx.remote_timetag;
     if (!ctx.is_duplicated_write()) { // local write
-        new_timetag = generate_timetag(ctx.timestamp, get_cluster_id_if_exists(), false);
+        new_timetag = generate_timetag(
+            ctx.timestamp, dsn::replication::get_current_dup_cluster_id_or_default(), false);
     }
 
     if (ctx.verify_timetag &&         // needs read-before-write

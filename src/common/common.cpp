@@ -21,7 +21,17 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-DSN_DEFINE_string(replication, cluster_name, "", "name of this cluster");
+DSN_DEFINE_string(replication, cluster_name, "", "The name of this cluster");
+
+// Many Pegasus clusters are configured with the same `cluster_name`(namely
+// `[replication]cluster_name`). However, once we decide to duplicate tables
+// between them, their `cluster_name` have to be changed to be distinguished
+// from each other -- this might lead to side effects. Thus use `dup_cluster_name`
+// only for duplication in case `cluster_name` has to be changed.
+DSN_DEFINE_string(replication,
+                  dup_cluster_name,
+                  "",
+                  "The name of this cluster only used for duplication");
 
 namespace dsn {
 
@@ -31,5 +41,16 @@ namespace dsn {
     return FLAGS_cluster_name;
 }
 
+/*extern*/ const char *get_current_dup_cluster_name()
+{
+    if (!utils::is_empty(FLAGS_dup_cluster_name)) {
+        return FLAGS_dup_cluster_name;
+    }
+
+    // Once `dup_cluster_name` is not configured, use cluster_name instead.
+    return get_current_cluster_name();
+}
+
 const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
+
 } // namespace dsn
