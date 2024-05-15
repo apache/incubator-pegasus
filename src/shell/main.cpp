@@ -445,7 +445,8 @@ static command_executor commands[] = {
         "restore app from backup media",
         "<-c|--old_cluster_name str> <-p|--old_policy_name str> <-a|--old_app_name str> "
         "<-i|--old_app_id id> <-t|--timestamp/backup_id timestamp> "
-        "<-b|--backup_provider_type str> [-n|--new_app_name str] [-s|--skip_bad_partition]",
+        "<-b|--backup_provider_type str> [-n|--new_app_name str] [-s|--skip_bad_partition] "
+        "[-r|--restore_path str]",
         restore,
     },
     {

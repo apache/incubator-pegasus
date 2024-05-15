@@ -387,11 +387,13 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
                                            {"new_app_name", required_argument, 0, 'n'},
                                            {"timestamp", required_argument, 0, 't'},
                                            {"backup_provider_type", required_argument, 0, 'b'},
+                                           {"restore_path", required_argument, 0, 'r'},
                                            {"skip_bad_partition", no_argument, 0, 's'},
                                            {0, 0, 0, 0}};
     std::string old_cluster_name, old_policy_name;
     std::string old_app_name, new_app_name;
     std::string backup_provider_type;
+    std::string restore_path;
     int32_t old_app_id = 0;
     int64_t timestamp = 0;
     bool skip_bad_partition = false;
@@ -425,6 +427,9 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
         case 'b':
             backup_provider_type = optarg;
             break;
+        case 'r':
+            restore_path = optarg;
+            break;
         case 's':
             skip_bad_partition = true;
             break;
@@ -452,7 +457,8 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
                                                        old_app_name,
                                                        old_app_id,
                                                        new_app_name,
-                                                       skip_bad_partition);
+                                                       skip_bad_partition,
+                                                       restore_path);
     if (err != ::dsn::ERR_OK) {
         fprintf(stderr, "restore app failed with err(%s)\n", err.to_string());
     }
