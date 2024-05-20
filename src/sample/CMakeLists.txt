@@ -20,8 +20,11 @@ set(MY_PROJ_NAME "sample")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-    pegasus_client_static
-    )
+        pegasus_client_static
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
 set(MY_BOOST_LIBS Boost::filesystem Boost::system)
 

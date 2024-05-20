@@ -18,12 +18,11 @@
  */
 
 #include <unistd.h>
+#include <memory>
 #include <string>
 
 #include "common/replication_common.h"
 #include "compaction_operation.h"
-#include "info_collector_app.h"
-#include "meta/meta_service_app.h"
 #include "pegasus_server_impl.h"
 #include "pegasus_service_app.h"
 #include "runtime/app_model.h"
@@ -31,26 +30,23 @@
 #include "server/server_utils.h"
 #include "utils/fmt_logging.h"
 
+namespace dsn {
+class command_deregister;
+} // namespace dsn
+
 int main(int argc, char **argv)
 {
-    static const char server_name[] = "Pegasus server";
+    static const char server_name[] = "Replica server";
     if (help(argc, argv, server_name)) {
         dsn_exit(0);
     }
     LOG_INFO("{} starting, pid({}), version({})", server_name, getpid(), pegasus_server_rcsid());
-
-    // Register meta service.
-    dsn::service::meta_service_app::register_components();
-    dsn::service_app::register_factory<pegasus::server::pegasus_meta_service_app>("meta");
 
     // Register replica service.
     dsn::service_app::register_factory<pegasus::server::pegasus_replication_service_app>(
         dsn::replication::replication_options::kReplicaAppType.c_str());
     pegasus::server::pegasus_server_impl::register_service();
     pegasus::server::register_compaction_operations();
-
-    // Register collector service.
-    dsn::service_app::register_factory<pegasus::server::info_collector_app>("collector");
 
     auto server_info_cmd = register_server_info_cmd();
 

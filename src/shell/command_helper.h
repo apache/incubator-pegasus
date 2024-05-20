@@ -66,14 +66,6 @@
 
 using namespace dsn::replication;
 
-#define STR_I(var) #var
-#define STR(var) STR_I(var)
-#ifndef DSN_BUILD_TYPE
-#define PEGASUS_BUILD_TYPE ""
-#else
-#define PEGASUS_BUILD_TYPE STR(DSN_BUILD_TYPE)
-#endif
-
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_GET_METRICS, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
