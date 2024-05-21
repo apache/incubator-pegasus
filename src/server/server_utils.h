@@ -21,12 +21,12 @@
 
 #include <memory>
 
-#define STR_I(var) #var
-#define STR(var) STR_I(var)
+#include "utils/macros.h"
+
 #ifndef DSN_BUILD_TYPE
 #define PEGASUS_BUILD_TYPE ""
 #else
-#define PEGASUS_BUILD_TYPE STR(DSN_BUILD_TYPE)
+#define PEGASUS_BUILD_TYPE STRINGIFY(DSN_BUILD_TYPE)
 #endif
 
 namespace dsn {

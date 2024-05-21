@@ -67,15 +67,15 @@ std::unique_ptr<command_deregister> register_server_info_cmd()
         });
 }
 
-static char const rcsid[] =
-    "$Version: Pegasus Server " PEGASUS_VERSION " (" PEGASUS_GIT_COMMIT ")"
+static char const rcsid[] = "$Version: Pegasus Server " PEGASUS_VERSION " (" PEGASUS_GIT_COMMIT ")"
 #if defined(DSN_BUILD_TYPE)
-    " " STR(DSN_BUILD_TYPE)
+                            " " STRINGIFY(DSN_BUILD_TYPE)
 #endif
-        ", built by gcc " STR(__GNUC__) "." STR(__GNUC_MINOR__) "." STR(__GNUC_PATCHLEVEL__)
+                                ", built by gcc " STRINGIFY(__GNUC__) "." STRINGIFY(
+                                    __GNUC_MINOR__) "." STRINGIFY(__GNUC_PATCHLEVEL__)
 #if defined(DSN_BUILD_HOSTNAME)
-            ", built on " STR(DSN_BUILD_HOSTNAME)
+                                    ", built on " STRINGIFY(DSN_BUILD_HOSTNAME)
 #endif
-                ", built at " __DATE__ " " __TIME__ " $";
+                                        ", built at " __DATE__ " " __TIME__ " $";
 
 const char *pegasus_server_rcsid() { return rcsid; }
