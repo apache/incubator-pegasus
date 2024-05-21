@@ -568,6 +568,14 @@ DSN_DEFINE_string(pegasus.server,
 DSN_DEFINE_validator(rocksdb_filter_type, [](const char *value) -> bool {
     return dsn::utils::equals(value, "common") || dsn::utils::equals(value, "prefix");
 });
+DSN_DEFINE_uint64(pegasus.server,
+                  stats_dump_period_sec,
+                  600, // 600 is the default value in RocksDB.
+                  "If not zero, dump rocksdb.stats to rocksdb LOG every stats_dump_period_sec");
+DSN_DEFINE_uint64(pegasus.server,
+                  stats_persist_period_sec,
+                  600, // 600 is the default value in RocksDB.
+                  "If not zero, dump rocksdb.stats to RocksDB every stats_persist_period_sec");
 
 namespace dsn {
 namespace replication {
@@ -663,6 +671,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _db_opts.listeners.emplace_back(new pegasus_event_listener(this));
     _db_opts.max_background_flushes = FLAGS_rocksdb_max_background_flushes;
     _db_opts.max_background_compactions = FLAGS_rocksdb_max_background_compactions;
+    _db_opts.stats_dump_period_sec = FLAGS_stats_dump_period_sec;
+    _db_opts.stats_persist_period_sec = FLAGS_stats_persist_period_sec;
     // init rocksdb::ColumnFamilyOptions for data column family
     _data_cf_opts.write_buffer_size = FLAGS_rocksdb_write_buffer_size;
     _data_cf_opts.max_write_buffer_number = FLAGS_rocksdb_max_write_buffer_number;
