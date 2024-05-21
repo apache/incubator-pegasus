@@ -571,7 +571,7 @@ DSN_DEFINE_validator(rocksdb_filter_type, [](const char *value) -> bool {
 DSN_DEFINE_uint64(pegasus.server,
                   stats_dump_period_sec,
                   600, // 600 is the default value in RocksDB.
-                  "If not zero, dump rocksdb.stats to rocksdb LOG every stats_dump_period_sec");
+                  "If not zero, dump rocksdb.stats to RocksDB LOG every stats_dump_period_sec");
 DSN_DEFINE_uint64(pegasus.server,
                   stats_persist_period_sec,
                   600, // 600 is the default value in RocksDB.
