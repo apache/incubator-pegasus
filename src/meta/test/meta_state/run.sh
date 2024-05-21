@@ -40,9 +40,9 @@ while read -r -a line; do
         echo "run dsn_meta_state_tests $test_case failed"
         echo "---- ls ----"
         ls -l
-        if find . -name log.1.txt; then
-            echo "---- tail -n 100 log.1.txt ----"
-            tail -n 100 `find . -name log.1.txt`
+        if [ `find . -name pegasus.log.* | wc -l` -ne 0 ]; then
+            echo "---- tail -n 100 pegasus.log.* ----"
+            tail -n 100 `find . -name pegasus.log.*`
         fi
         if [ -f core ]; then
             echo "---- gdb ./dsn_meta_state_tests core ----"

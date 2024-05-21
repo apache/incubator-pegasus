@@ -81,7 +81,7 @@ public:
         ASSERT_TRUE(utils::filesystem::get_subfiles(test_dir, sub_list, false));
 
         file_names.clear();
-        std::regex pattern(R"(log\.[0-9]{8}_[0-9]{6}_[0-9]{3})");
+        std::regex pattern(R"(SimpleLogger\.log\.[0-9]{8}_[0-9]{6}_[0-9]{3})");
         for (const auto &path : sub_list) {
             std::string name(utils::filesystem::get_file_name(path));
             if (std::regex_match(name, pattern)) {
@@ -147,7 +147,7 @@ public:
 
 TEST_F(logger_test, screen_logger_test)
 {
-    auto logger = std::make_unique<screen_logger>(true);
+    auto logger = std::make_unique<screen_logger>(nullptr, nullptr);
     LOG_PRINT(logger.get(), "{}", "test_print");
     std::thread t([](screen_logger *lg) { LOG_PRINT(lg, "{}", "test_print"); }, logger.get());
     t.join();
@@ -161,7 +161,7 @@ TEST_F(simple_logger_test, redundant_log_test)
         std::set<std::string> before_files;
         NO_FATALS(get_log_files(before_files));
 
-        auto logger = std::make_unique<simple_logger>(test_dir.c_str());
+        auto logger = std::make_unique<simple_logger>(test_dir.c_str(), "SimpleLogger");
         for (unsigned int i = 0; i != 1000; ++i) {
             LOG_PRINT(logger.get(), "{}", "test_print");
         }

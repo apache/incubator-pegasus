@@ -40,12 +40,12 @@ class logging_provider
 {
 public:
     template <typename T>
-    static logging_provider *create(const char *log_dir)
+    static logging_provider *create(const char *log_dir, const char *role_name)
     {
-        return new T(log_dir);
+        return new T(log_dir, role_name);
     }
 
-    typedef logging_provider *(*factory)(const char *);
+    typedef logging_provider *(*factory)(const char *, const char *);
 
 public:
     virtual ~logging_provider() = default;
@@ -88,4 +88,5 @@ bool register_component_provider(const char *name,
 
 extern void dsn_log_init(const std::string &logging_factory_name,
                          const std::string &log_dir,
-                         std::function<std::string()> dsn_log_prefixed_message_func);
+                         const std::string &role_name,
+                         const std::function<std::string()> &dsn_log_prefixed_message_func);

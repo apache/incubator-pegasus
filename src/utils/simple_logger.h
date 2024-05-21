@@ -44,7 +44,7 @@ namespace tools {
 class screen_logger : public logging_provider
 {
 public:
-    explicit screen_logger(bool short_header);
+    explicit screen_logger(const char *, const char *) : _short_header(true) {}
     ~screen_logger() override = default;
 
     void log(const char *file,
@@ -74,7 +74,9 @@ private:
 class simple_logger : public logging_provider
 {
 public:
-    simple_logger(const char *log_dir);
+    // 'log_dir' is the directory to store log files, 'role_name' is the name of the process,
+    // such as 'replica_server', 'meta_server' in Pegasus.
+    simple_logger(const char *log_dir, const char *role_name);
     ~simple_logger() override;
 
     void log(const char *file,
