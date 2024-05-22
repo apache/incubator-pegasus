@@ -234,6 +234,7 @@ ExternalProject_Add(fmt
 )
 
 set(CURL_OPTIONS
+        --enable-shared
         --disable-dict
         --disable-file
         --disable-ftp
@@ -245,11 +246,12 @@ set(CURL_OPTIONS
         --disable-manual
         --disable-pop3
         --disable-rtsp
-        --disable-shared
         --disable-smtp
         --disable-telnet
         --disable-tftp
+        --without-brotli
         --without-libidn
+        --without-libidn2
         --without-librtmp
         --without-libssh2
         --without-ssl
@@ -261,8 +263,6 @@ if (APPLE)
     set(CURL_OPTIONS
             ${CURL_OPTIONS}
             --without-nghttp2
-            --without-libidn2
-            --without-brotli
             )
 endif ()
 ExternalProject_Add(curl
