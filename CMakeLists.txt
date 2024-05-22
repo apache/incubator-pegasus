@@ -64,4 +64,7 @@ if(USE_JEMALLOC)
     set(JEMALLOC_LIB_TYPE "SHARED")
 endif()
 
+option(SEPARATE_SERVERS "Whether to build pegasus_collector，pegasus_meta_server and pegasus_replica_server binaries separately, otherwise a combined pegasus_server binary will be built" OFF)
+message(STATUS "SEPARATE_SERVERS = ${SEPARATE_SERVERS}")
+
 add_subdirectory(src)

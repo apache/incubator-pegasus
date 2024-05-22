@@ -97,6 +97,7 @@ function usage_build()
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
     echo "   --use_jemalloc        build with jemalloc"
+    echo "   --separate_servers    whether to build pegasus_collector，pegasus_meta_server and pegasus_replica_server binaries separately, otherwise a combined pegasus_server binary will be built"
     echo "   --sanitizer <type>    build with sanitizer to check potential problems,
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
@@ -130,6 +131,7 @@ function run_build()
     SANITIZER=""
     ROCKSDB_PORTABLE=0
     USE_JEMALLOC=OFF
+    SEPARATE_SERVERS=OFF
     BUILD_TEST=OFF
     IWYU=""
     BUILD_MODULES=""
@@ -198,6 +200,9 @@ function run_build()
                 ENABLE_GPERF=OFF
                 USE_JEMALLOC=ON
                 ;;
+            --separate_servers)
+                SEPARATE_SERVERS=ON
+                ;;
             --test)
                 BUILD_TEST=ON
                 ;;
@@ -230,7 +235,8 @@ function run_build()
 
     CMAKE_OPTIONS="-DCMAKE_C_COMPILER=${C_COMPILER}
                    -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
-                   -DUSE_JEMALLOC=${USE_JEMALLOC}"
+                   -DUSE_JEMALLOC=${USE_JEMALLOC}
+                   -DSEPARATE_SERVERS=${SEPARATE_SERVERS}"
 
     echo "BUILD_TYPE=$BUILD_TYPE"
     if [ "$BUILD_TYPE" == "debug" ]

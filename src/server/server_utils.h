@@ -17,27 +17,24 @@
  * under the License.
  */
 
-#include <iostream>
-#include <string>
+#pragma once
 
-#include "pegasus/git_commit.h"
-#include "pegasus/version.h"
-#include "runtime/app_model.h"
-#include "server/server_utils.h"
-#include "shell/command_executor.h"
-#include "shell/commands.h"
+#include <memory>
 
-bool version(command_executor *e, shell_context *sc, arguments args)
-{
-    std::ostringstream oss;
-    oss << "Pegasus Shell " << PEGASUS_VERSION << " (" << PEGASUS_GIT_COMMIT << ") "
-        << PEGASUS_BUILD_TYPE;
-    std::cout << oss.str() << std::endl;
-    return true;
+#include "utils/macros.h"
+
+#ifndef DSN_BUILD_TYPE
+#define PEGASUS_BUILD_TYPE ""
+#else
+#define PEGASUS_BUILD_TYPE STRINGIFY(DSN_BUILD_TYPE)
+#endif
+
+namespace dsn {
+class command_deregister;
 }
 
-bool exit_shell(command_executor *e, shell_context *sc, arguments args)
-{
-    dsn_exit(0);
-    return true;
-}
+bool help(int argc, char **argv, const char *app_name);
+
+std::unique_ptr<dsn::command_deregister> register_server_info_cmd();
+
+const char *pegasus_server_rcsid();
