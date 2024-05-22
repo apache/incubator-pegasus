@@ -18,14 +18,23 @@
 
 set -e
 
-LOCAL_HOSTNAME=`hostname -f`
+LOCAL_HOSTNAME=$(hostname -f)
 PID=$$
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 export BUILD_ROOT_DIR=${ROOT}/build
 export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=$ROOT/thirdparty
-export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:${ROOT}/lib:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
+ARCH_TYPE=''
+arch_output=$(arch)
+if [ "$arch_output"x == "x86_64"x ]; then
+    ARCH_TYPE="amd64"
+elif [ "$arch_output"x == "aarch64"x ]; then
+    ARCH_TYPE="aarch64"
+else
+    echo "WARNING: unsupported CPU architecture '$arch_output', use 'x86_64' as default"
+fi
+export LD_LIBRARY_PATH=${JAVA_HOME}/jre/lib/${ARCH_TYPE}:${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 # Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
 # Add parameters in order to be able to generate coredump file when run ASAN tests
 export ASAN_OPTIONS=detect_odr_violation=0:abort_on_error=1:disable_coredump=0:unmap_shadow_on_exit=1
