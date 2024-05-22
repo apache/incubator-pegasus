@@ -736,7 +736,7 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
         _meta_function_level_VALUES_TO_NAMES.find(get_function_level())->second + 3);
     response.keys.push_back("balance_operation_count");
     std::vector<std::string> balance_operation_type;
-    balance_operation_type.emplace_back(std::string("detail"));
+    balance_operation_type.emplace_back("detail");
     response.values.push_back(_balancer->get_balance_operation_count(balance_operation_type));
     double primary_stddev, total_stddev;
     _state->get_cluster_balance_score(primary_stddev, total_stddev);
