@@ -18,6 +18,7 @@
  */
 
 #include <fmt/core.h>
+#include <netinet/in.h>
 #include <map>
 #include <memory>
 #include <string>
@@ -260,6 +261,21 @@ TEST(host_port_test, thrift_parser)
     host_port hp2("localhost", 1010);
     send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_BINARY);
     send_and_check_host_port_by_serialize(hp2, DSF_THRIFT_JSON);
+}
+
+TEST(host_port_test, lookup_hostname)
+{
+    const std::string valid_ip = "127.0.0.1";
+    const std::string expected_hostname = "localhost";
+
+    const auto rpc_example_valid = rpc_address::from_ip_port(valid_ip, 23010);
+    std::string hostname;
+    auto es = host_port::lookup_hostname(::htonl(rpc_example_valid.ip()), &hostname);
+    ASSERT_TRUE(es.is_ok()) << es.description();
+    ASSERT_EQ(expected_hostname, hostname);
+
+    es = host_port::lookup_hostname(12321, &hostname);
+    ASSERT_FALSE(es.is_ok());
 }
 
 TEST(host_port_test, test_macros)

@@ -28,8 +28,8 @@
 #include <string>
 #include <vector>
 
-#include "utils/flags.h"
 #include "absl/strings/string_view.h"
+#include "utils/flags.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
@@ -44,9 +44,6 @@ namespace utils {
 const uint32_t epoch_begin = 1451606400;
 inline uint32_t epoch_now() { return time(nullptr) - epoch_begin; }
 const static std::string kRedactedString = "<redacted>";
-
-// extract "host" from rpc_address
-void addr2host(const ::dsn::rpc_address &addr, char *str, int len);
 
 template <typename elem_type, typename compare = std::less<elem_type>>
 class top_n

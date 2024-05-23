@@ -18,6 +18,7 @@
  */
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -32,9 +33,9 @@
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/ports.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
 #include "utils/timer.h"
-#include "utils/utils.h"
 
 namespace dsn {
 
@@ -57,9 +58,9 @@ host_port host_port::from_address(rpc_address addr)
         WARNING, 100, "construct host_port '{}' from rpc_address '{}'", hp, addr);
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
-        CHECK(utils::hostname_from_ip(htonl(addr.ip()), &hp._host),
-              "invalid host_port {}",
-              addr.ipv4_str());
+        CHECK_OK(lookup_hostname(htonl(addr.ip()), &hp._host),
+                 "lookup_hostname failed for {}",
+                 addr.ipv4_str());
         hp._port = addr.port();
     } break;
     case HOST_TYPE_GROUP: {
@@ -213,6 +214,36 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     }
 
     addresses = std::move(result_addresses);
+    return error_s::ok();
+}
+
+error_s host_port::lookup_hostname(uint32_t ip, std::string *hostname)
+{
+    struct sockaddr_in addr_in;
+    addr_in.sin_family = AF_INET;
+    addr_in.sin_port = 0;
+    addr_in.sin_addr.s_addr = ip;
+    char host[NI_MAXHOST];
+    int rc = ::getnameinfo((struct sockaddr *)(&addr_in),
+                           sizeof(struct sockaddr),
+                           host,
+                           sizeof(host),
+                           nullptr,
+                           0,
+                           NI_NAMEREQD);
+    if (dsn_unlikely(rc != 0)) {
+        if (rc == EAI_SYSTEM) {
+            return error_s::make(dsn::ERR_NETWORK_FAILURE,
+                                 fmt::format("{}: {}: getnameinfo failed",
+                                             gai_strerror(rc),
+                                             dsn::utils::safe_strerror(errno)));
+        }
+
+        return error_s::make(dsn::ERR_NETWORK_FAILURE,
+                             fmt::format("{}: getnameinfo failed", gai_strerror(rc)));
+    }
+
+    *hostname = host;
     return error_s::ok();
 }
 
