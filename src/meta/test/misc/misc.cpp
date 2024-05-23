@@ -27,6 +27,7 @@
 #include "misc.h"
 
 #include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdio.h>
 #include <atomic>
@@ -50,8 +51,8 @@
 #include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
-#include "utils/fmt_logging.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
 using namespace dsn::replication;
