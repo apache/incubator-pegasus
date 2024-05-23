@@ -90,16 +90,16 @@ TEST(time_utils, get_current_physical_time_ns)
 template <typename T>
 void test_time_ms_to_string(T &str)
 {
-    time_ms_to_string(1605091506136, str);
+    time_ms_to_string(1605091506036, str);
 
     std::string actual_str(str);
 
-    // Time differ between time zones.
+    // Time differs between time zones.
     //
-    // The real time 2020-11-11 18:45:06.136 (UTC+8)
-    // so it must be 2020-11-1x xx:45:06.136.
+    // The real time 2020-11-11 18:45:06.036 (UTC+8)
+    // so it must be 2020-11-1x xx:45:06.036.
     ASSERT_EQ(std::string("2020-11-1"), actual_str.substr(0, 9));
-    ASSERT_EQ(std::string(":45:06.136"), actual_str.substr(13, 10));
+    ASSERT_EQ(std::string(":45:06.036"), actual_str.substr(13, 10));
 }
 
 TEST(time_utils, time_ms_to_buf)
@@ -112,6 +112,21 @@ TEST(time_utils, time_ms_to_str)
 {
     std::string str;
     test_time_ms_to_string(str);
+}
+
+TEST(time_utils, time_ms_to_sequent_str)
+{
+    std::string str;
+    time_ms_to_sequent_string(1605091506036, str);
+
+    std::string actual_str(str);
+
+    // Time differs between time zones.
+    //
+    // The real time 20201111_184506_036 (UTC+8)
+    // so it must be 2020111x_xx4506_036.
+    ASSERT_EQ(std::string("2020111"), actual_str.substr(0, 7));
+    ASSERT_EQ(std::string("4506_036"), actual_str.substr(11, 8));
 }
 
 } // namespace utils
