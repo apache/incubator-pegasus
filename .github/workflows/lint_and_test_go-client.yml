@@ -31,6 +31,7 @@ on:
     paths:
       - .github/workflows/lint_and_test_go-client.yml
       - go-client/**
+      - idl/**
 
   # for manually triggering workflow
   workflow_dispatch:

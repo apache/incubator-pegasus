@@ -32,6 +32,7 @@ on:
       - .github/workflows/lint_and_test_collector.yml
       - collector/**
       - go-client/**
+      - idl/**
 
   # for manually triggering workflow
   workflow_dispatch:

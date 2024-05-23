@@ -34,6 +34,7 @@ on:
       - docker/thirdparties-src/**
       - CMakeLists.txt
       - cmake_modules/**
+      - idl/**
       - run.sh
       - scripts/pack_server.sh
       - scripts/pack_tools.sh
