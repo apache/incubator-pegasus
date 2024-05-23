@@ -24,6 +24,8 @@
  * THE SOFTWARE.
  */
 
+namespace cpp dsn
+
 // place holder
 struct rpc_address
 {
