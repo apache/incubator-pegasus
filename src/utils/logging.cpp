@@ -72,7 +72,7 @@ static void log_on_sys_exit(::dsn::sys_exit_type)
 }
 
 void dsn_log_init(const std::string &logging_factory_name,
-                  const std::string &dir_log,
+                  const std::string &log_dir,
                   std::function<std::string()> dsn_log_prefixed_message_func)
 {
     log_start_level = enum_from_string(FLAGS_logging_start_level, LOG_LEVEL_INVALID);
@@ -86,7 +86,7 @@ void dsn_log_init(const std::string &logging_factory_name,
     }
 
     dsn::logging_provider *logger = dsn::utils::factory_store<dsn::logging_provider>::create(
-        logging_factory_name.c_str(), dsn::PROVIDER_TYPE_MAIN, dir_log.c_str());
+        logging_factory_name.c_str(), dsn::PROVIDER_TYPE_MAIN, log_dir.c_str());
     dsn::logging_provider::set_logger(logger);
 
     if (dsn_log_prefixed_message_func != nullptr) {

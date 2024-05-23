@@ -44,6 +44,8 @@
 #include <gperftools/malloc_extension.h>
 #endif
 
+#include "fmt/core.h"
+#include "fmt/format.h"
 #include "perf_counter/perf_counters.h"
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
@@ -53,8 +55,6 @@
 #include "runtime/rpc/rpc_engine.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
-#include "security/init.h"
-#include "security/negotiation_manager.h"
 #include "runtime/service_app.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
@@ -63,6 +63,8 @@
 #include "runtime/task/task_spec.h"
 #include "runtime/task/task_worker.h"
 #include "runtime/tool_api.h"
+#include "security/init.h"
+#include "security/negotiation_manager.h"
 #include "utils/api_utilities.h"
 #include "utils/command_manager.h"
 #include "utils/config_api.h"
@@ -443,9 +445,18 @@ bool run(const char *config_file,
 
     ::dsn::utils::coredump::init();
 
-    // setup log dir
-    spec.dir_log = ::dsn::utils::filesystem::path_combine(cdir, "log");
-    dsn::utils::filesystem::create_directory(spec.dir_log);
+    // Setup log directory.
+    // If log_dir is not set, use data_dir/log instead.
+    if (spec.log_dir.empty()) {
+        spec.log_dir = ::dsn::utils::filesystem::path_combine(spec.data_dir, "log");
+        fmt::print(stdout, "log_dir is not set, use '{}' instead\n", spec.log_dir);
+    }
+    // Validate log_dir.
+    if (!dsn::utils::filesystem::is_absolute_path(spec.log_dir)) {
+        fmt::print(stderr, "log_dir({}) should be set with an absolute path\n", spec.log_dir);
+        return false;
+    }
+    dsn::utils::filesystem::create_directory(spec.log_dir);
 
     // init tools
     dsn_all.tool.reset(::dsn::utils::factory_store<::dsn::tools::tool_app>::create(
@@ -463,7 +474,7 @@ bool run(const char *config_file,
 #endif
 
     // init logging
-    dsn_log_init(spec.logging_factory_name, spec.dir_log, dsn_log_prefixed_message_func);
+    dsn_log_init(spec.logging_factory_name, spec.log_dir, dsn_log_prefixed_message_func);
 
     // prepare minimum necessary
     ::dsn::service_engine::instance().init_before_toollets(spec);
