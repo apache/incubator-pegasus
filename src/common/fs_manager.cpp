@@ -298,6 +298,7 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
         for (const auto &dn : _dir_nodes) {
             // Do not allocate new replica on dir_node which is not NORMAL.
             if (dn->status != disk_status::NORMAL) {
+                LOG_INFO("skip the {} state dir_node({})", enum_to_string(dn->status), dn->tag);
                 continue;
             }
             CHECK(!dn->has(pid), "gpid({}) already exists in dir_node({})", pid, dn->tag);
@@ -440,6 +441,7 @@ dir_node *fs_manager::find_replica_dir(absl::string_view app_type, gpid pid)
         for (const auto &dn : _dir_nodes) {
             // Skip IO error dir_node.
             if (dn->status == disk_status::IO_ERROR) {
+                LOG_INFO("skip the {} state dir_node({})", enum_to_string(dn->status), dn->tag);
                 continue;
             }
             const auto dir = dn->replica_dir(app_type, pid);
@@ -498,6 +500,7 @@ dir_node *fs_manager::create_child_replica_dir(absl::string_view app_type,
         for (const auto &dn : _dir_nodes) {
             // Skip non-available dir_node.
             if (dn->status != disk_status::NORMAL) {
+                LOG_INFO("skip the {} state dir_node({})", enum_to_string(dn->status), dn->tag);
                 continue;
             }
             child_dir = dn->replica_dir(app_type, child_pid);
