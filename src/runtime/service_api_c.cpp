@@ -45,7 +45,6 @@
 #endif
 
 #include "fmt/core.h"
-#include "fmt/format.h"
 #include "perf_counter/perf_counters.h"
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
