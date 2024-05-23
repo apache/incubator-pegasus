@@ -27,6 +27,7 @@
 #include "misc.h"
 
 #include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdio.h>
 #include <atomic>
@@ -50,6 +51,7 @@
 #include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
+#include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
@@ -195,15 +197,13 @@ void generate_node_fs_manager(const app_mapper &apps,
                               int total_disks)
 {
     nfm.clear();
-    const char *prefix = "/home/work/";
-    char pid_dir[256];
+    std::string prefix;
+    CHECK(dsn::utils::filesystem::get_current_directory(prefix), "");
     std::vector<std::string> data_dirs(total_disks);
     std::vector<std::string> tags(total_disks);
     for (int i = 0; i < data_dirs.size(); ++i) {
-        snprintf(pid_dir, 256, "%sdisk%d", prefix, i + 1);
-        data_dirs[i] = pid_dir;
-        snprintf(pid_dir, 256, "disk%d", i + 1);
-        tags[i] = pid_dir;
+        data_dirs[i] = fmt::format("{}disk{}", prefix, i + 1);
+        tags[i] = fmt::format("disk{}", i + 1);
     }
 
     for (const auto &kv : nodes) {
@@ -215,15 +215,13 @@ void generate_node_fs_manager(const app_mapper &apps,
         manager.initialize(data_dirs, tags);
         ns.for_each_partition([&](const dsn::gpid &pid) {
             const config_context &cc = *get_config_context(apps, pid);
-            snprintf(pid_dir,
-                     256,
-                     "%s%s/%d.%d.test",
-                     prefix,
-                     cc.find_from_serving(ns.host_port())->disk_tag.c_str(),
-                     pid.get_app_id(),
-                     pid.get_partition_index());
-            LOG_DEBUG("concat pid_dir({}) of node({})", pid_dir, ns.host_port());
-            manager.add_replica(pid, pid_dir);
+            const auto dir = fmt::format("{}{}/{}.{}.test",
+                                         prefix,
+                                         cc.find_from_serving(ns.host_port())->disk_tag,
+                                         pid.get_app_id(),
+                                         pid.get_partition_index());
+            LOG_DEBUG("concat {} of node({})", dir, ns.host_port());
+            manager.add_replica(pid, dir);
             return true;
         });
     }
