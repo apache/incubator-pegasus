@@ -51,11 +51,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     // add_dup <app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str]
     // [-r|--remote_replica_count num]
 
-    argh::parser cmd(args.argc, args.argv);
-    if (cmd.pos_args().size() > 5) {
-        fmt::print(stderr, "too many params\n");
-        return false;
-    }
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
     if (!cmd(1)) {
         fmt::print(stderr, "missing param <app_name>\n");
@@ -68,6 +64,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
     std::string remote_cluster_name = cmd(2).str();
+
     if (remote_cluster_name == sc->current_cluster_name) {
         fmt::print(stderr,
                    "illegal operation: adding duplication to itself [remote: {}]\n",
@@ -87,6 +84,14 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     uint32_t remote_replica_count = 0;
     PARSE_OPT_UINT(remote_replica_count, 0, {"-r", "--remote_replica_count"});
 
+    fmt::print("trying to add duplication [app_name: {}, remote_cluster_name: {}, "
+               "is_duplicating_checkpoint: {}, remote_app_name: {}, remote_replica_count: {}]\n",
+               app_name,
+               remote_cluster_name,
+               is_duplicating_checkpoint,
+               remote_app_name,
+               remote_replica_count);
+
     auto err_resp = sc->ddl_client->add_dup(app_name,
                                             remote_cluster_name,
                                             is_duplicating_checkpoint,
@@ -101,10 +106,14 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
 
     if (!err) {
         fmt::print(stderr,
-                   "adding duplication failed [app: {}, remote: {}, checkpoint: {}, error: {}]\n",
+                   "adding duplication failed [app_name: {}, remote_cluster_name: {}, "
+                   "is_duplicating_checkpoint: {}, remote_app_name: {}, remote_replica_count: {}, "
+                   "error: {}]\n",
                    app_name,
                    remote_cluster_name,
                    is_duplicating_checkpoint,
+                   remote_app_name,
+                   remote_replica_count,
                    err);
 
         if (!hint.empty()) {
@@ -115,19 +124,34 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     }
 
     const auto &resp = err_resp.get_value();
-    fmt::print("adding duplication succeed [app: {}, remote: {}, appid: {}, dupid: "
-               "{}], checkpoint: {}",
-               app_name,
-               remote_cluster_name,
-               resp.appid,
-               resp.dupid,
-               is_duplicating_checkpoint);
+    fmt::print(
+        "adding duplication succeed [app_name: {}, remote_cluster_name: {}, appid: {}, dupid: "
+        "{}, checkpoint: {}",
+        app_name,
+        remote_cluster_name,
+        resp.appid,
+        resp.dupid,
+        is_duplicating_checkpoint);
 
     if (resp.__isset.remote_app_name) {
-        fmt::print(", remote_app_name: {}\n", remote_app_name);
-    } else {
-        fmt::print("\nWARNING: meta server does NOT support specifying remote_app_name, "
-                   "remote_app_name might has been specified with {}\n",
+        fmt::print(", remote_app_name: {}", resp.remote_app_name);
+    }
+
+    if (resp.__isset.remote_replica_count) {
+        fmt::print(", remote_replica_count: {}", resp.remote_replica_count);
+    }
+
+    fmt::print("]\n");
+
+    if (!resp.__isset.remote_app_name) {
+        fmt::print("WARNING: meta server does NOT support specifying remote_app_name, "
+                   "remote_app_name might has been specified with '{}'\n",
+                   app_name);
+    }
+
+    if (!resp.__isset.remote_replica_count) {
+        fmt::print("WARNING: meta server does NOT support specifying remote_replica_count, "
+                   "remote_replica_count might has been specified with the replica count of '{}'\n",
                    app_name);
     }
 
