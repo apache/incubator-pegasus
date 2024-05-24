@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <arpa/inet.h>
+#include <arpa/inet.h> // IWYU pragma: keep
 #include <fmt/core.h>
 #include <netinet/in.h>
 #include <map>
