@@ -270,7 +270,7 @@ TEST(host_port_test, lookup_hostname)
 
     const auto rpc_example_valid = rpc_address::from_ip_port(valid_ip, 23010);
     std::string hostname;
-    auto es = host_port::lookup_hostname(::htonl(rpc_example_valid.ip()), &hostname);
+    auto es = host_port::lookup_hostname(htonl(rpc_example_valid.ip()), &hostname);
     ASSERT_TRUE(es.is_ok()) << es.description();
     ASSERT_EQ(expected_hostname, hostname);
 

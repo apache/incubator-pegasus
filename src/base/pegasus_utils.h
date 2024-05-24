@@ -33,10 +33,6 @@
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
-namespace dsn {
-class rpc_address;
-} // namespace dsn
-
 namespace pegasus {
 namespace utils {
 
