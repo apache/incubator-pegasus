@@ -43,7 +43,7 @@ class screen_logger : public logging_provider
 {
 public:
     explicit screen_logger(bool short_header);
-    ~screen_logger() override;
+    ~screen_logger() override = default;
 
     void log(const char *file,
              const char *function,
@@ -54,6 +54,13 @@ public:
     virtual void flush();
 
 private:
+    static void print_header(log_level_t log_level);
+    void print_long_header(const char *file,
+                           const char *function,
+                           const int line,
+                           log_level_t log_level);
+    static void print_body(const char *body, log_level_t log_level);
+
     ::dsn::utils::ex_lock_nr _lock;
     const bool _short_header;
 };
@@ -77,17 +84,25 @@ public:
     void flush() override;
 
 private:
+    void print_header(log_level_t log_level);
+    void print_long_header(const char *file,
+                           const char *function,
+                           const int line,
+                           log_level_t log_level);
+    void print_body(const char *body, log_level_t log_level);
+
     void create_log_file();
 
 private:
     ::dsn::utils::ex_lock _lock; // use recursive lock to avoid dead lock when flush() is called
                                  // in signal handler if cored for bad logging format reason.
+    // The directory to store log files.
     const std::string _log_dir;
     FILE *_log;
     int _start_index;
     int _index;
     int _lines;
-    log_level_t _stderr_start_level;
+    const log_level_t _stderr_start_level;
 };
 } // namespace tools
 } // namespace dsn
