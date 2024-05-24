@@ -402,7 +402,7 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "c:p:a:i:n:t:b:s", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "c:p:a:i:n:t:b:r:s", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
