@@ -49,9 +49,12 @@
         section, #fld, default_value ? default_value->fld : default_fld_value, dsptr);
 
 #define CONFIG_FLD_STRING(fld, default_fld_value, dsptr)                                           \
+    CONFIG_FLD_STRING_BY_KEY(fld, #fld, default_fld_value, dsptr)
+
+#define CONFIG_FLD_STRING_BY_KEY(fld, key, default_fld_value, dsptr)                               \
     val.fld = dsn_config_get_value_string(                                                         \
         section,                                                                                   \
-        #fld,                                                                                      \
+        key,                                                                                       \
         (val.fld.length() > 0 && val.fld != std::string(default_fld_value))                        \
             ? val.fld.c_str()                                                                      \
             : (default_value ? default_value->fld.c_str() : default_fld_value),                    \

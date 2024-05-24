@@ -87,5 +87,5 @@ bool register_component_provider(const char *name,
 } // namespace dsn
 
 extern void dsn_log_init(const std::string &logging_factory_name,
-                         const std::string &dir_log,
+                         const std::string &log_dir,
                          std::function<std::string()> dsn_log_prefixed_message_func);
