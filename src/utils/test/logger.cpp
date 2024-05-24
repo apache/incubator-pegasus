@@ -81,7 +81,7 @@ public:
         ASSERT_TRUE(utils::filesystem::get_subfiles(test_dir, sub_list, false));
 
         file_names.clear();
-        std::regex pattern(R"(log\.log\.[0-9]{8}_[0-9]{6}_[0-9]{3})");
+        std::regex pattern(R"(log\.[0-9]{8}_[0-9]{6}_[0-9]{3})");
         for (const auto &path : sub_list) {
             std::string name(utils::filesystem::get_file_name(path));
             if (std::regex_match(name, pattern)) {
