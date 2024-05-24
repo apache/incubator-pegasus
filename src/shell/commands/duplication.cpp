@@ -126,7 +126,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     const auto &resp = err_resp.get_value();
     fmt::print(
         "adding duplication succeed [app_name: {}, remote_cluster_name: {}, appid: {}, dupid: "
-        "{}, checkpoint: {}",
+        "{}, is_duplicating_checkpoint: {}",
         app_name,
         remote_cluster_name,
         resp.appid,
