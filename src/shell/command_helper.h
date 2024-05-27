@@ -29,6 +29,7 @@
 #include <utility>
 
 #include <boost/algorithm/string.hpp>
+#include <fmt/color.h>
 #include <fmt/ostream.h>
 #include <rocksdb/db.h>
 #include <rocksdb/env.h>
@@ -63,6 +64,25 @@
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
+
+#define SHELL_PRINTLN_ERROR(msg, ...)                                                              \
+    fmt::print(stderr,                                                                             \
+               fmt::emphasis::bold | fmt::fg(fmt::color::red),                                     \
+               "ERROR: {}\n",                                                                      \
+               fmt::format(msg, ##__VA_ARGS__))
+
+#define SHELL_PRINTLN_WARNING(msg, ...)                                                            \
+    fmt::print(stdout,                                                                             \
+               fmt::emphasis::bold | fmt::fg(fmt::color::yellow),                                  \
+               "WARNING: {}\n",                                                                    \
+               fmt::format(msg, ##__VA_ARGS__))
+
+#define SHELL_PRINT_OK_BASE(msg, ...)                                                              \
+    fmt::print(stdout, fmt::emphasis::bold | fmt::fg(fmt::color::green), msg, ##__VA_ARGS__)
+
+#define SHELL_PRINT_OK(msg, ...) SHELL_PRINT_OK_BASE("{}", fmt::format(msg, ##__VA_ARGS__))
+
+#define SHELL_PRINTLN_OK(msg, ...) SHELL_PRINT_OK_BASE("{}\n", fmt::format(msg, ##__VA_ARGS__))
 
 using namespace dsn::replication;
 
