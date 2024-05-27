@@ -1201,10 +1201,8 @@ dsn::error_code replication_ddl_client::ls_backup_policy(bool json)
     return ERR_OK;
 }
 
-dsn::error_code
-replication_ddl_client::query_backup_policy(const std::vector<std::string> &policy_names,
-                                            int backup_info_cnt,
-                                            bool json)
+dsn::error_code replication_ddl_client::query_backup_policy(
+    const std::vector<std::string> &policy_names, int backup_info_cnt, bool json)
 {
     auto req = std::make_shared<configuration_query_backup_policy_request>();
     req->policy_names = policy_names;

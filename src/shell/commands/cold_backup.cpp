@@ -143,8 +143,7 @@ bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
 bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"json", no_argument, 0, 'j'},
-                                           {0, 0, 0, 0}};
+    static struct option long_options[] = {{"json", no_argument, 0, 'j'}, {0, 0, 0, 0}};
 
     bool json = false;
 
@@ -219,7 +218,8 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "empty policy_name, please assign policy_name you want to query\n");
         return false;
     }
-    ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt, json);
+    ::dsn::error_code ret =
+        sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt, json);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "query backup policy failed, err = %s\n", ret.to_string());
     }
