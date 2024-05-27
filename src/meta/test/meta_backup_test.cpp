@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+// IWYU pragma: no_include <type_traits>
 #include <utility>
 #include <vector>
 
