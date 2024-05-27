@@ -1473,9 +1473,17 @@ bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_nam
         return false;
     }
 
-    // Because the policy name is used as a metric name in prometheus, it must match the regex.
-    if (!prometheus::CheckLabelName(policy_name)) {
-        hint_message = "policy name should match regex '[a-zA-Z_][a-zA-Z0-9_]*'";
+    // Validate the policy name as a metric name in prometheus.
+    if (!prometheus::CheckMetricName(policy_name)) {
+        hint_message = "policy name should match regex '[a-zA-Z_:][a-zA-Z0-9_:]*' when act as a "
+                       "metric name in prometheus";
+        return false;
+    }
+
+    // Validate the policy name as a metric label in prometheus.
+    if (!prometheus::CheckLabelName(policy_name, prometheus::MetricType::Gauge)) {
+        hint_message = "policy name should match regex '[a-zA-Z_][a-zA-Z0-9_]*' when act as a "
+                       "metric label in prometheus";
         return false;
     }
 
