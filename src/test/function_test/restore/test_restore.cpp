@@ -78,7 +78,8 @@ public:
                                           table_name_,
                                           table_id_,
                                           kNewTableName,
-                                          false));
+                                          false,
+                                          ""));
         NO_FATALS(wait_table_healthy(kNewTableName));
     }
 

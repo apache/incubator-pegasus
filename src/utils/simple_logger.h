@@ -26,11 +26,13 @@
 
 #pragma once
 
+#include <cstdint>
 #include <cstdio>
 #include <string>
 
 #include "utils/api_utilities.h"
 #include "utils/logging_provider.h"
+#include "utils/ports.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
@@ -42,7 +44,7 @@ namespace tools {
 class screen_logger : public logging_provider
 {
 public:
-    explicit screen_logger(bool short_header);
+    explicit screen_logger(const char *, const char *) : _short_header(true) {}
     ~screen_logger() override = default;
 
     void log(const char *file,
@@ -72,7 +74,9 @@ private:
 class simple_logger : public logging_provider
 {
 public:
-    simple_logger(const char *log_dir);
+    // 'log_dir' is the directory to store log files, 'role_name' is the name of the process,
+    // such as 'replica_server', 'meta_server' in Pegasus.
+    simple_logger(const char *log_dir, const char *role_name);
     ~simple_logger() override;
 
     void log(const char *file,
@@ -91,17 +95,30 @@ private:
                            log_level_t log_level);
     void print_body(const char *body, log_level_t log_level);
 
+    inline void add_bytes_if_valid(int bytes)
+    {
+        if (dsn_likely(bytes > 0)) {
+            _file_bytes += static_cast<uint64_t>(bytes);
+        }
+    }
+
     void create_log_file();
+    void remove_redundant_files();
 
 private:
     ::dsn::utils::ex_lock _lock; // use recursive lock to avoid dead lock when flush() is called
                                  // in signal handler if cored for bad logging format reason.
     // The directory to store log files.
     const std::string _log_dir;
+    // The path of the symlink to the latest log file.
+    std::string _symlink_path;
+    // The prefix of the log file names. The actual log files are prefixed by '_file_name_prefix'
+    // and postfixed by timestamp.
+    std::string _file_name_prefix;
+    // The current log file descriptor.
     FILE *_log;
-    int _start_index;
-    int _index;
-    int _lines;
+    // The byte size of the current log file.
+    uint64_t _file_bytes;
     const log_level_t _stderr_start_level;
 };
 } // namespace tools

@@ -408,7 +408,7 @@ void tracer::install(service_spec &spec)
             "tracer.find",
             "Find related logs",
             "[forward|f|backward|b] [rpc|r|task|t] [trace_id|task_id(e.g., a023003920302390)] "
-            "<log_file_name(e.g., log.xx.txt)>",
+            "<log_file_name(e.g., replica.log.yyyyMMdd_hhmmss_SSS)>",
             tracer_log_flow);
     });
 }

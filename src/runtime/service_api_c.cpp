@@ -45,6 +45,7 @@
 #endif
 
 #include "fmt/core.h"
+#include "fmt/format.h"
 #include "perf_counter/perf_counters.h"
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
@@ -457,8 +458,25 @@ bool run(const char *config_file,
     ::MallocExtension::instance()->SetMemoryReleaseRate(FLAGS_tcmalloc_release_rate);
 #endif
 
-    // init logging
-    dsn_log_init(spec.logging_factory_name, spec.log_dir, dsn_log_prefixed_message_func);
+    // Extract app_names.
+    std::list<std::string> app_names_and_indexes;
+    ::dsn::utils::split_args(app_list.c_str(), app_names_and_indexes, ';');
+    std::vector<std::string> app_names;
+    for (const auto &app_name_and_index : app_names_and_indexes) {
+        std::vector<std::string> name_and_index;
+        ::dsn::utils::split_args(app_name_and_index.c_str(), name_and_index, '@');
+        if (name_and_index.empty()) {
+            fmt::print(stderr, "app_name should be specified in '{}'", app_name_and_index);
+            return false;
+        }
+        app_names.push_back(name_and_index[0]);
+    }
+
+    // Initialize logging.
+    dsn_log_init(spec.logging_factory_name,
+                 spec.log_dir,
+                 fmt::format("{}", fmt::join(app_names, ".")),
+                 dsn_log_prefixed_message_func);
 
     // Prepare the minimum necessary.
     ::dsn::service_engine::instance().init_before_toollets(spec);
@@ -513,9 +531,6 @@ bool run(const char *config_file,
         if (app_list.empty()) {
             create_it = true;
         } else {
-            // Extract app_names.
-            std::list<std::string> app_names_and_indexes;
-            ::dsn::utils::split_args(app_list.c_str(), app_names_and_indexes, ';');
             for (const auto &app_name_and_index : app_names_and_indexes) {
                 std::vector<std::string> name_and_index;
                 ::dsn::utils::split_args(app_name_and_index.c_str(), name_and_index, '@');

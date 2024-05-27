@@ -407,6 +407,7 @@ private:
 
     FRIEND_TEST(backup_service_test, test_init_backup);
     FRIEND_TEST(backup_service_test, test_query_backup_status);
+    FRIEND_TEST(backup_service_test, test_valid_policy_name);
     FRIEND_TEST(meta_backup_service_test, test_add_backup_policy);
 
     void start_create_policy_meta_root(dsn::task_ptr callback);
@@ -420,7 +421,7 @@ private:
                                             const policy &p,
                                             std::shared_ptr<policy_context> &p_context_ptr);
 
-    bool is_valid_policy_name_unlocked(const std::string &policy_name);
+    bool is_valid_policy_name_unlocked(const std::string &policy_name, std::string &hint_message);
 
     policy_factory _factory;
     meta_service *_meta_svc;

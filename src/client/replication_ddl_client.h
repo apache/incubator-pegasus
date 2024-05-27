@@ -162,7 +162,7 @@ public:
                                int32_t old_app_id,
                                const std::string &new_app_name,
                                bool skip_bad_partition,
-                               const std::string &restore_path = "");
+                               const std::string &restore_path);
 
     dsn::error_code query_restore(int32_t restore_app_id, bool detailed);
 
