@@ -19,6 +19,7 @@
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
+#include <prometheus/check_names.h>
 #include <algorithm>
 #include <iterator>
 #include <type_traits>
@@ -41,9 +42,9 @@
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
+#include "security/access_controller.h"
 #include "server_state.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
@@ -1349,9 +1350,10 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     {
         // check policy name
         zauto_lock l(_lock);
-        if (!is_valid_policy_name_unlocked(request.policy_name)) {
+        if (!is_valid_policy_name_unlocked(request.policy_name, hint_message)) {
             response.err = ERR_INVALID_PARAMETERS;
-            response.hint_message = "invalid policy_name: " + request.policy_name;
+            response.hint_message =
+                fmt::format("invalid policy name: '{}', {}", request.policy_name, hint_message);
             _meta_svc->reply_data(msg, response);
             msg->release_ref();
             return;
@@ -1459,10 +1461,32 @@ void backup_service::do_update_policy_to_remote_storage(
         });
 }
 
-bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_name)
+bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_name,
+                                                   std::string &hint_message)
 {
-    auto iter = _policy_states.find(policy_name);
-    return (iter == _policy_states.end());
+    // BACKUP_INFO and policy_name should not be the same, because they are in the same level in the
+    // output
+    // when query the policy details, use different names to distinguish the respective contents.
+    static const std::set<std::string> kReservedNames = {cold_backup_constant::BACKUP_INFO};
+    if (kReservedNames.count(policy_name) == 1) {
+        hint_message = "policy name is reserved";
+        return false;
+    }
+
+    // Because the policy name is used as a metric name in prometheus, it must match the regex.
+    if (!prometheus::CheckMetricName(policy_name)) {
+        hint_message = "policy name should match regex '[a-zA-Z_:][a-zA-Z0-9_:]*'";
+        return false;
+    }
+
+    const auto iter = _policy_states.find(policy_name);
+    if (iter != _policy_states.end()) {
+        hint_message = "policy name is already exist";
+        return false;
+    }
+
+    hint_message.clear();
+    return true;
 }
 
 void backup_service::query_backup_policy(query_backup_policy_rpc rpc)
