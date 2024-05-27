@@ -234,7 +234,6 @@ ExternalProject_Add(fmt
 )
 
 set(CURL_OPTIONS
-        --enable-shared
         --disable-dict
         --disable-file
         --disable-ftp
@@ -246,11 +245,11 @@ set(CURL_OPTIONS
         --disable-manual
         --disable-pop3
         --disable-rtsp
+        --disable-shared
         --disable-smtp
         --disable-telnet
         --disable-tftp
         --without-brotli
-        --without-libidn
         --without-libidn2
         --without-librtmp
         --without-libssh2
@@ -269,7 +268,7 @@ ExternalProject_Add(curl
         URL ${OSS_URL_PREFIX}/curl-8.4.0.tar.gz
         http://curl.haxx.se/download/curl-8.4.0.tar.gz
         URL_MD5 533e8a3b1228d5945a6a512537bea4c7
-        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+        CONFIGURE_COMMAND CFLAGS=-fPIC CPPFLAGS=-fPIC ./configure --prefix=${TP_OUTPUT}
         ${CURL_OPTIONS}
         BUILD_IN_SOURCE 1
         DOWNLOAD_EXTRACT_TIMESTAMP true
@@ -282,6 +281,8 @@ ExternalProject_Add(prometheus-cpp
         URL_MD5 cdb515e802aa9aaaf1f6dde1271a20a2
         DEPENDS curl
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_C_FLAGS=-fPIC
+        -DCMAKE_CXX_FLAGS=-fPIC
         -DENABLE_TESTING=OFF
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
