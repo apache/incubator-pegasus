@@ -67,21 +67,6 @@ std::shared_ptr<T> make_shared_array(size_t size)
     return std::shared_ptr<T>(new T[size], std::default_delete<T[]>());
 }
 
-// get host name from ip series
-// if can't get a hostname from ip(maybe no hostname or other errors), return false, and
-// hostname_result will be invalid value
-// if multiple hostname got and all of them are resolvable return true, otherwise return false.
-// and the hostname_result will be "hostname1,hostname2(or ip_address or )..."
-// we only support ipv4 currently
-// check if a.b.c.d:port can be resolved to hostname:port. If it can be resolved, return true
-// and hostname_result
-// will be the hostname, or it will be ip address or error message
-
-// TODO(yingchun): Consider to move it to rpc_address.
-// valid_ip_network_order -> return TRUE && hostname_result=hostname	|
-// invalid_ip_network_order -> return FALSE
-bool hostname_from_ip(uint32_t ip, std::string *hostname_result);
-
 template <typename A, typename B>
 std::multimap<B, A> flip_map(const std::map<A, B> &source)
 {

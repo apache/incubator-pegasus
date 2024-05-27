@@ -313,6 +313,7 @@ public:
 private:
     friend class dns_resolver;
     friend class rpc_group_host_port;
+    FRIEND_TEST(host_port_test, lookup_hostname);
     FRIEND_TEST(host_port_test, transfer_rpc_address);
 
     static const host_port s_invalid_host_port;
@@ -320,6 +321,9 @@ private:
     // Resolve host_port to rpc_addresses.
     // There may be multiple rpc_addresses for one host_port.
     error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
+
+    // Does reverse DNS lookup of the address and stores it in hostname.
+    static error_s lookup_hostname(uint32_t ip, std::string *hostname);
 
     std::string _host;
     uint16_t _port = 0;
