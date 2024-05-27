@@ -140,7 +140,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         SHELL_PRINT_OK(", remote_replica_count: {}", resp.remote_replica_count);
     }
 
-    SHELL_PRINT_OK("]");
+    SHELL_PRINTLN_OK("]");
 
     if (!resp.__isset.remote_app_name) {
         SHELL_PRINTLN_WARNING("WARNING: meta server does NOT support specifying remote_app_name, "
