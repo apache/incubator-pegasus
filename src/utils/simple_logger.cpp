@@ -53,6 +53,7 @@
 #include "utils/process_utils.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
+#include "utils/strings.h"
 #include "utils/time_utils.h"
 
 DSN_DEFINE_uint64(tools.simple_logger,
@@ -87,6 +88,8 @@ DSN_DEFINE_validator(stderr_start_level, [](const char *value) -> bool {
     const auto level = enum_from_string(value, LOG_LEVEL_INVALID);
     return LOG_LEVEL_DEBUG <= level && level <= LOG_LEVEL_FATAL;
 });
+
+DSN_DEFINE_string(tools.simple_logger, base_name, "pegasus", "The default base name for log file");
 
 DSN_DECLARE_string(logging_start_level);
 
@@ -166,8 +169,6 @@ inline void process_fatal_log(log_level_t log_level)
 
 } // anonymous namespace
 
-screen_logger::screen_logger(bool short_header) : _short_header(short_header) {}
-
 void screen_logger::print_header(log_level_t log_level)
 {
     ::dsn::tools::print_header(stdout, LOG_LEVEL_COUNT, log_level);
@@ -204,14 +205,15 @@ void screen_logger::log(
 
 void screen_logger::flush() { ::fflush(stdout); }
 
-simple_logger::simple_logger(const char *log_dir)
+simple_logger::simple_logger(const char *log_dir, const char *role_name)
     : _log_dir(std::string(log_dir)),
       _log(nullptr),
       _file_bytes(0),
       _stderr_start_level(enum_from_string(FLAGS_stderr_start_level, LOG_LEVEL_INVALID))
 {
     // Use 'role_name' if it is specified, otherwise use 'base_name'.
-    const std::string symlink_name("log");
+    const std::string symlink_name(
+        fmt::format("{}.log", utils::is_empty(role_name) ? FLAGS_base_name : role_name));
     _file_name_prefix = fmt::format("{}.", symlink_name);
     _symlink_path = utils::filesystem::path_combine(_log_dir, symlink_name);
 
