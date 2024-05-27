@@ -209,16 +209,16 @@ TEST_F(backup_service_test, test_valid_policy_name)
     std::string hint_message;
     ASSERT_FALSE(_backup_service->is_valid_policy_name_unlocked(cold_backup_constant::BACKUP_INFO,
                                                                 hint_message));
-    ASSERT_EQ("policy_name is reserved", hint_message);
+    ASSERT_EQ("policy name is reserved", hint_message);
 
     ASSERT_FALSE(_backup_service->is_valid_policy_name_unlocked("bad-policy-name", hint_message));
-    ASSERT_EQ("policy_name should match regex '[a-zA-Z_:][a-zA-Z0-9_:]*'", hint_message);
+    ASSERT_EQ("policy name should match regex '[a-zA-Z_:][a-zA-Z0-9_:]*'", hint_message);
 
     _backup_service->_policy_states.insert(std::make_pair("exist_policy_name", nullptr));
     ASSERT_FALSE(_backup_service->is_valid_policy_name_unlocked("exist_policy_name", hint_message));
-    ASSERT_EQ("policy_name is already exist", hint_message);
+    ASSERT_EQ("policy name is already exist", hint_message);
 
-    ASSERT_FALSE(_backup_service->is_valid_policy_name_unlocked("new_policy_name0", hint_message));
+    ASSERT_TRUE(_backup_service->is_valid_policy_name_unlocked("new_policy_name0", hint_message));
     ASSERT_TRUE(hint_message.empty());
 }
 

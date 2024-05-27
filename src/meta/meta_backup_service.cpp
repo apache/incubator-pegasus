@@ -1465,8 +1465,8 @@ bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_nam
                                                    std::string &hint_message)
 {
     // BACKUP_INFO and policy_name should not be the same, because they are in the same level in the
-    // output
-    // when query the policy details, use different names to distinguish the respective contents.
+    // output when query the policy details, use different names to distinguish the respective
+    // contents.
     static const std::set<std::string> kReservedNames = {cold_backup_constant::BACKUP_INFO};
     if (kReservedNames.count(policy_name) == 1) {
         hint_message = "policy name is reserved";
