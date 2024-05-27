@@ -1139,20 +1139,19 @@ dsn::error_code replication_ddl_client::enable_backup_policy(const std::string &
     }
 }
 
-static void print_policy_entry(const policy_entry &entry)
+static dsn::utils::table_printer print_policy_entry(const policy_entry &entry)
 {
-    dsn::utils::table_printer tp;
-    tp.add_row_name_and_data("    name", entry.policy_name);
-    tp.add_row_name_and_data("    backup_provider_type", entry.backup_provider_type);
-    tp.add_row_name_and_data("    backup_interval", entry.backup_interval_seconds + "s");
-    tp.add_row_name_and_data("    app_ids", fmt::format("{{{}}}", fmt::join(entry.app_ids, ", ")));
-    tp.add_row_name_and_data("    start_time", entry.start_time);
-    tp.add_row_name_and_data("    status", entry.is_disable ? "disabled" : "enabled");
-    tp.add_row_name_and_data("    backup_history_count", entry.backup_history_count_to_keep);
-    tp.output(std::cout);
+    dsn::utils::table_printer tp(entry.policy_name);
+    tp.add_row_name_and_data("backup_provider_type", entry.backup_provider_type);
+    tp.add_row_name_and_data("backup_interval", entry.backup_interval_seconds + "s");
+    tp.add_row_name_and_data("app_ids", fmt::format("{{{}}}", fmt::join(entry.app_ids, ", ")));
+    tp.add_row_name_and_data("start_time", entry.start_time);
+    tp.add_row_name_and_data("status", entry.is_disable ? "disabled" : "enabled");
+    tp.add_row_name_and_data("backup_history_count", entry.backup_history_count_to_keep);
+    return tp;
 }
 
-static void print_backup_entry(const backup_entry &bentry)
+static void print_backup_entry(dsn::utils::table_printer &tp, const backup_entry &bentry)
 {
     char start_time[30] = {'\0'};
     char end_time[30] = {'\0'};
@@ -1164,15 +1163,13 @@ static void print_backup_entry(const backup_entry &bentry)
         ::dsn::utils::time_ms_to_date_time(bentry.end_time_ms, end_time, 30);
     }
 
-    dsn::utils::table_printer tp;
-    tp.add_row_name_and_data("    id", bentry.backup_id);
-    tp.add_row_name_and_data("    start_time", start_time);
-    tp.add_row_name_and_data("    end_time", end_time);
-    tp.add_row_name_and_data("    app_ids", fmt::format("{{{}}}", fmt::join(bentry.app_ids, ", ")));
-    tp.output(std::cout);
+    tp.add_row(bentry.backup_id);
+    tp.append_data(start_time);
+    tp.append_data(end_time);
+    tp.append_data(fmt::format("{{{}}}", fmt::join(bentry.app_ids, ", ")));
 }
 
-dsn::error_code replication_ddl_client::ls_backup_policy()
+dsn::error_code replication_ddl_client::ls_backup_policy(bool json)
 {
     auto req = std::make_shared<configuration_query_backup_policy_request>();
     req->policy_names.clear();
@@ -1187,21 +1184,27 @@ dsn::error_code replication_ddl_client::ls_backup_policy()
     configuration_query_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
 
+    std::streambuf *buf;
+    std::ofstream of;
+    buf = std::cout.rdbuf();
+    std::ostream out(buf);
+
     if (resp.err != ERR_OK) {
         return resp.err;
     } else {
+        dsn::utils::multi_table_printer mtp;
         for (int32_t idx = 0; idx < resp.policys.size(); idx++) {
-            std::cout << "[" << idx + 1 << "]" << std::endl;
-            print_policy_entry(resp.policys[idx]);
-            std::cout << std::endl;
+            mtp.add(std::move(print_policy_entry(resp.policys[idx])));
         }
+        mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
     }
     return ERR_OK;
 }
 
 dsn::error_code
 replication_ddl_client::query_backup_policy(const std::vector<std::string> &policy_names,
-                                            int backup_info_cnt)
+                                            int backup_info_cnt,
+                                            bool json)
 {
     auto req = std::make_shared<configuration_query_backup_policy_request>();
     req->policy_names = policy_names;
@@ -1217,23 +1220,33 @@ replication_ddl_client::query_backup_policy(const std::vector<std::string> &poli
     configuration_query_backup_policy_response resp;
     ::dsn::unmarshall(resp_task->get_response(), resp);
 
+    std::streambuf *buf;
+    std::ofstream of;
+    buf = std::cout.rdbuf();
+    std::ostream out(buf);
+
     if (resp.err != ERR_OK) {
         return resp.err;
     } else {
+        dsn::utils::multi_table_printer mtp;
         for (int32_t idx = 0; idx < resp.policys.size(); idx++) {
             if (idx != 0) {
                 std::cout << "************************" << std::endl;
             }
             const policy_entry &pentry = resp.policys[idx];
-            std::cout << "policy_info:" << std::endl;
-            print_policy_entry(pentry);
-            std::cout << std::endl << "backup_infos:" << std::endl;
+            mtp.add(std::move(print_policy_entry(pentry)));
             const std::vector<backup_entry> &backup_infos = resp.backup_infos[idx];
+            dsn::utils::table_printer tp_backup("backup_infos");
+            tp_backup.add_title("id");
+            tp_backup.add_column("start_time");
+            tp_backup.add_column("end_time");
+            tp_backup.add_column("app_ids");
             for (int bi_idx = 0; bi_idx < backup_infos.size(); bi_idx++) {
-                std::cout << "[" << (bi_idx + 1) << "]" << std::endl;
-                print_backup_entry(backup_infos[bi_idx]);
+                print_backup_entry(tp_backup, backup_infos[bi_idx]);
             }
+            mtp.add(std::move(tp_backup));
         }
+        mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
     }
     return ERR_OK;
 }

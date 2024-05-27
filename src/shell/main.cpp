@@ -413,11 +413,16 @@ static command_executor commands[] = {
         "<-c|--backup_history_cnt num>",
         add_backup_policy,
     },
-    {"ls_backup_policy", "list the names of the subsistent backup policies", "", ls_backup_policy},
+    {
+        "ls_backup_policy",
+        "list the names of the subsistent backup policies",
+        "[-j|--json]",
+        ls_backup_policy,
+    },
     {
         "query_backup_policy",
         "query subsistent backup policy and last backup infos",
-        "<-p|--policy_name p1,p2...> [-b|--backup_info_cnt num]",
+        "<-p|--policy_name p1,p2...> [-b|--backup_info_cnt num] [-j|--json]",
         query_backup_policy,
     },
     {

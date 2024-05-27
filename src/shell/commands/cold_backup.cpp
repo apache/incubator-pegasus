@@ -143,31 +143,55 @@ bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
 bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    ::dsn::error_code err = sc->ddl_client->ls_backup_policy();
+    static struct option long_options[] = {{"json", no_argument, 0, 'j'},
+                                           {0, 0, 0, 0}};
+
+    bool json = false;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "j", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'j':
+            json = true;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    ::dsn::error_code err = sc->ddl_client->ls_backup_policy(json);
     if (err != ::dsn::ERR_OK) {
         std::cout << "ls backup policy failed" << std::endl;
-    } else {
-        std::cout << std::endl << "ls backup policy succeed" << std::endl;
     }
     return true;
 }
 
 bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
+    static struct option long_options[] = {{"json", no_argument, 0, 'j'},
+                                           {"policy_name", required_argument, 0, 'p'},
                                            {"backup_info_cnt", required_argument, 0, 'b'},
                                            {0, 0, 0, 0}};
     std::vector<std::string> policy_names;
     int backup_info_cnt = 3;
+    bool json = false;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "p:b:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "jp:b:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
+        case 'j':
+            json = true;
+            break;
         case 'p': {
             std::vector<std::string> names;
             ::dsn::utils::split_args(optarg, names, ',');
@@ -195,12 +219,11 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "empty policy_name, please assign policy_name you want to query\n");
         return false;
     }
-    ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
+    ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt, json);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "query backup policy failed, err = %s\n", ret.to_string());
-    } else {
-        std::cout << std::endl << "query backup policy succeed" << std::endl;
     }
+
     return true;
 }
 
