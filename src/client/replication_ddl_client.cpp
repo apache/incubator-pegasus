@@ -1194,7 +1194,8 @@ dsn::error_code replication_ddl_client::ls_backup_policy(bool json)
     } else {
         dsn::utils::multi_table_printer mtp;
         for (int32_t idx = 0; idx < resp.policys.size(); idx++) {
-            mtp.add(std::move(print_policy_entry(resp.policys[idx])));
+            dsn::utils::table_printer tp = print_policy_entry(resp.policys[idx]);
+            mtp.add(std::move(tp));
         }
         mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
     }
@@ -1232,7 +1233,8 @@ dsn::error_code replication_ddl_client::query_backup_policy(
                 std::cout << "************************" << std::endl;
             }
             const policy_entry &pentry = resp.policys[idx];
-            mtp.add(std::move(print_policy_entry(pentry)));
+            dsn::utils::table_printer tp_policy = print_policy_entry(pentry);
+            mtp.add(std::move(tp_policy));
             const std::vector<backup_entry> &backup_infos = resp.backup_infos[idx];
             dsn::utils::table_printer tp_backup("backup_infos");
             tp_backup.add_title("id");
