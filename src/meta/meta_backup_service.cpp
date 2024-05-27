@@ -1474,8 +1474,8 @@ bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_nam
     }
 
     // Because the policy name is used as a metric name in prometheus, it must match the regex.
-    if (!prometheus::CheckMetricName(policy_name)) {
-        hint_message = "policy name should match regex '[a-zA-Z_:][a-zA-Z0-9_:]*'";
+    if (!prometheus::CheckLabelName(policy_name)) {
+        hint_message = "policy name should match regex '[a-zA-Z_][a-zA-Z0-9_]*'";
         return false;
     }
 
