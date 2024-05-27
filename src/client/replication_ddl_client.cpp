@@ -38,6 +38,7 @@
 
 #include "backup_types.h"
 #include "common//duplication_common.h"
+#include "common/backup_common.h"
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
 #include "common/manual_compact.h"
@@ -1236,7 +1237,7 @@ dsn::error_code replication_ddl_client::query_backup_policy(
             dsn::utils::table_printer tp_policy = print_policy_entry(pentry);
             mtp.add(std::move(tp_policy));
             const std::vector<backup_entry> &backup_infos = resp.backup_infos[idx];
-            dsn::utils::table_printer tp_backup("backup_infos");
+            dsn::utils::table_printer tp_backup(cold_backup_constant::BACKUP_INFO);
             tp_backup.add_title("id");
             tp_backup.add_column("start_time");
             tp_backup.add_column("end_time");
