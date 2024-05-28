@@ -533,7 +533,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
     meta_servers.group_host_port()->add_list(dup->remote_cluster_metas);
 
     query_cfg_request meta_config_request;
-    meta_config_request.app_name = dup->app_name;
+    meta_config_request.app_name = dup->remote_app_name;
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     dsn::marshall(msg, meta_config_request);
@@ -604,7 +604,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                           "query follower app[{}.{}] replica configuration completed, result: "
                           "duplication_status = {}, query_err = {}, update_err = {}",
                           dup->remote_cluster_name,
-                          dup->app_name,
+                          dup->remote_app_name,
                           duplication_status_to_string(dup->status()),
                           query_err,
                           update_err);
