@@ -164,16 +164,7 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
                         query_backup_policy_help);
 
     std::vector<std::string> policy_names;
-    std::vector<std::string> names;
-    ::dsn::utils::split_args(cmd(1).str().c_str(), names, ',');
-    for (const auto &policy_name : names) {
-        if (policy_name.empty()) {
-            fprintf(stderr, "invalid, empty policy_name, just ignore\n");
-            continue;
-        } else {
-            policy_names.emplace_back(policy_name);
-        }
-    }
+    PARSE_STRS(policy_names);
 
     uint32_t backup_info_cnt;
     PARSE_OPT_UINT(backup_info_cnt, 3, {"-b", "--backup_info_cnt"});
