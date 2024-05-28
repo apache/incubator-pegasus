@@ -1206,7 +1206,7 @@ dsn::error_code replication_ddl_client::ls_backup_policy(bool json)
 dsn::error_code replication_ddl_client::query_backup_policy(
     const std::vector<std::string> &policy_names, int backup_info_cnt, bool json)
 {
-    // Output example by JSON format     
+    // Output example by JSON format
     // {
     //     "p1": {
     //         "backup_provider_type": "xxxx_service",
