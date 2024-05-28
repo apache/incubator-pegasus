@@ -1230,14 +1230,11 @@ dsn::error_code replication_ddl_client::query_backup_policy(
     } else {
         dsn::utils::multi_table_printer mtp;
         for (int32_t idx = 0; idx < resp.policys.size(); idx++) {
-            if (idx != 0) {
-                std::cout << "************************" << std::endl;
-            }
             const policy_entry &pentry = resp.policys[idx];
             dsn::utils::table_printer tp_policy = print_policy_entry(pentry);
             mtp.add(std::move(tp_policy));
             const std::vector<backup_entry> &backup_infos = resp.backup_infos[idx];
-            dsn::utils::table_printer tp_backup(cold_backup_constant::BACKUP_INFO);
+            dsn::utils::table_printer tp_backup(pentry.policy_name + "_" + cold_backup_constant::BACKUP_INFO);
             tp_backup.add_title("id");
             tp_backup.add_column("start_time");
             tp_backup.add_column("end_time");
