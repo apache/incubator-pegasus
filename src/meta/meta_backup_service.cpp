@@ -20,6 +20,7 @@
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
 #include <prometheus/check_names.h>
+#include <prometheus/metric_type.h>
 #include <algorithm>
 #include <iterator>
 #include <type_traits>
@@ -38,8 +39,8 @@
 #include "meta_backup_service.h"
 #include "meta_service.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
