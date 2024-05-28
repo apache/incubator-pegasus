@@ -1206,41 +1206,6 @@ dsn::error_code replication_ddl_client::ls_backup_policy(bool json)
 dsn::error_code replication_ddl_client::query_backup_policy(
     const std::vector<std::string> &policy_names, int backup_info_cnt, bool json)
 {
-    // Output example by JSON format
-    // {
-    //     "p1": {
-    //         "backup_provider_type": "xxxx_service",
-    //         "backup_interval": "86400s",
-    //         "app_ids": "{3}",
-    //         "start_time": "03:36",
-    //         "status": "enabled",
-    //         "backup_history_count": "1"
-    //     },
-    //     "p1_backup_info": {
-    //         "1716781003199": {
-    //             "id": "1716781003199",
-    //             "start_time": "2024-05-27 03:36:43",
-    //             "end_time": "-",
-    //             "app_ids": "{3}"
-    //         }
-    //     },
-    //     "p2": {
-    //         "backup_provider_type": "xxxx_service",
-    //         "backup_interval": "86400s",
-    //         "app_ids": "{3}",
-    //         "start_time": "20:25",
-    //         "status": "enabled",
-    //         "backup_history_count": "1"
-    //     },
-    //     "p2_backup_info": {
-    //         "1716840160297": {
-    //             "id": "1716840160297",
-    //             "start_time": "2024-05-27 20:02:40",
-    //             "end_time": "-",
-    //             "app_ids": "{3}"
-    //         }
-    //     }
-    // }
     auto req = std::make_shared<configuration_query_backup_policy_request>();
     req->policy_names = policy_names;
     req->backup_info_count = backup_info_cnt;
