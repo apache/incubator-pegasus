@@ -163,6 +163,7 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
                         "invalid command, should be in the form of '{}'",
                         query_backup_policy_help);
 
+    int param_index = 1;
     std::vector<std::string> policy_names;
     PARSE_STRS(policy_names);
 
