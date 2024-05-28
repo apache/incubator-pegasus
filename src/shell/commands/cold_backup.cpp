@@ -172,10 +172,6 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
     const bool json = cmd[{"-j", "--json"}];
 
-    if (policy_names.empty()) {
-        fprintf(stderr, "empty policy_name, please assign policy_name you want to query\n");
-        return false;
-    }
     ::dsn::error_code ret =
         sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt, json);
     if (ret != ::dsn::ERR_OK) {
