@@ -207,7 +207,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
              remote_replica_count);
 
     LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(request.remote_cluster_name !=
-                                               get_current_cluster_name(),
+                                               get_current_dup_cluster_name(),
                                            response,
                                            ERR_INVALID_PARAMETERS,
                                            "illegal operation: adding duplication to itself");
@@ -474,7 +474,7 @@ void meta_duplication_service::create_follower_app_for_duplication(
     // `kDuplicationEnvMasterClusterKey=>{master_cluster_name}`
     // `kDuplicationEnvMasterMetasKey=>{master_meta_list}`
     request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
-                                 get_current_cluster_name());
+                                 get_current_dup_cluster_name());
     request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
                                  _meta_svc->get_meta_list_string());
     request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterAppNameKey,

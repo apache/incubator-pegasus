@@ -437,7 +437,7 @@ public:
              ERR_INVALID_PARAMETERS},
             // Duplicating to local cluster is not allowed.
             {kTestAppName,
-             get_current_cluster_name(),
+             get_current_dup_cluster_name(),
              true,
              kTestRemoteAppName,
              kTestRemoteReplicaCount,
