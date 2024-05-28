@@ -138,8 +138,12 @@ public:
     rpc_session_ptr io_session; // send/recv session
     rpc_address to_address;     // always ipv4/v6 address, it is the to_node's net address
     rpc_address server_address; // used by requests, and may be of uri/group address
-    host_port to_host_port;     // fqdn from 'to_address'
-    host_port server_host_port; // fqdn from 'server_address'
+    // hostname from 'to_address'. It's possible to be invalid if 'to_address' can not be reverse
+    // resolved.
+    host_port to_host_port;
+    // hostname from 'server_address'. It's possible to be invalid if 'server_address' can not be
+    // reverse resolved.
+    host_port server_host_port;
     dsn::task_code local_rpc_code;
     network_header_format hdr_format;
     int send_retry_count;

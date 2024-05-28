@@ -127,10 +127,16 @@ inline rpc_group_host_port::rpc_group_host_port(const rpc_group_address *g_addr)
 {
     _name = g_addr->name();
     for (const auto &addr : g_addr->members()) {
-        CHECK_TRUE(add(host_port::from_address(addr)));
+        const auto hp = host_port::from_address(addr);
+        CHECK(hp, "'{}' can not be reverse resolved", addr);
+        CHECK_TRUE(add(hp));
     }
     _update_leader_automatically = g_addr->is_update_leader_automatically();
-    set_leader(host_port::from_address(g_addr->leader()));
+    if (g_addr->leader()) {
+        const auto hp = host_port::from_address(g_addr->leader());
+        CHECK(hp, "'{}' can not be reverse resolved", g_addr->leader());
+        set_leader(hp);
+    }
 }
 
 inline rpc_group_host_port &rpc_group_host_port::operator=(const rpc_group_host_port &other)

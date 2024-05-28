@@ -165,7 +165,7 @@ void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call)
 
     auto msg = rpc_call->get_request();
     msg->server_address = server;
-    msg->server_host_port = dsn::host_port::from_address(server);
+    msg->server_host_port = dsn::host_port::from_address(msg->server_address);
     ::dsn::task::get_current_rpc()->call(msg, dsn::rpc_response_task_ptr(rpc_call));
 }
 
@@ -173,7 +173,7 @@ dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *req
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
-    msg->server_host_port = dsn::host_port::from_address(server);
+    msg->server_host_port = dsn::host_port::from_address(msg->server_address);
 
     ::dsn::rpc_response_task *rtask = new ::dsn::rpc_response_task(msg, nullptr, 0);
     rtask->add_ref();

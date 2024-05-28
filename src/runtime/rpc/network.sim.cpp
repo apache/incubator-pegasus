@@ -162,6 +162,7 @@ sim_network_provider::sim_network_provider(rpc_engine *rpc, network *inner_provi
 {
     _address = rpc_address::from_host_port("localhost", 1);
     _hp = ::dsn::host_port::from_address(_address);
+    LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
 }
 
 error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
@@ -172,6 +173,7 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
 
     _address = dsn::rpc_address::from_host_port("localhost", port);
     _hp = ::dsn::host_port::from_address(_address);
+    LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
     auto hostname = boost::asio::ip::host_name();
     if (!client_only) {
         for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++) {
