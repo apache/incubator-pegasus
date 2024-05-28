@@ -1469,7 +1469,7 @@ bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_nam
     // output when query the policy details, use different names to distinguish the respective
     // contents.
     static const std::set<std::string> kReservedNames = {cold_backup_constant::BACKUP_INFO};
-    if (kReservedNames.count(policy_name) == 1) {
+    if (policy_name.find(cold_backup_constant::BACKUP_INFO) != std::string::npos) {
         hint_message = "policy name is reserved";
         return false;
     }
