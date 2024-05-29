@@ -35,6 +35,6 @@ elif [ "$arch_output"x == "aarch64"x ]; then
 else
     echo "WARNING: unsupported CPU architecture '$arch_output', use 'x86_64' as default"
 fi
-export LD_LIBRARY_PATH=${JAVA_HOME}/jre/lib/${ARCH_TYPE}:${PEGASUS_THIRDPARTY_ROOT}/output/lib:$(pwd)/../../lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${JAVA_HOME}/jre/lib/${ARCH_TYPE}:${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server:${PEGASUS_THIRDPARTY_ROOT}/output/lib:$(pwd)/../../lib:${LD_LIBRARY_PATH}
 
 ./sample onebox temp
