@@ -47,12 +47,14 @@
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+#include "utils/test_macros.h"
 
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
@@ -62,12 +64,13 @@ namespace replication {
 class meta_options;
 
 static void random_assign_partition_config(std::shared_ptr<app_state> &app,
-                                           const std::vector<dsn::rpc_address> &server_list,
+                                           std::vector<dsn::host_port> &server_list,
                                            int max_replica_count)
 {
     auto get_server = [&server_list](int indice) {
-        if (indice % 2 != 0)
-            return dsn::rpc_address();
+        if (indice % 2 != 0) {
+            return dsn::host_port();
+        }
         return server_list[indice / 2];
     };
 
@@ -79,13 +82,15 @@ static void random_assign_partition_config(std::shared_ptr<app_state> &app,
             indices.push_back(random32(start, max_servers));
             start = indices.back() + 1;
         }
-        pc.primary = get_server(indices[0]);
+        const auto &primary = get_server(indices[0]);
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
         for (int i = 1; i < indices.size(); ++i) {
-            dsn::rpc_address addr = get_server(indices[i]);
-            if (!addr.is_invalid())
-                pc.secondaries.push_back(addr);
+            const auto &secondary = get_server(indices[i]);
+            if (secondary) {
+                ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, secondary);
+            }
         }
-        pc.last_drops = {server_list.back()};
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, last_drops, server_list.back());
     }
 }
 
@@ -120,7 +125,7 @@ void meta_service_test_app::state_sync_test()
 {
     int apps_count = 15;
     int drop_ratio = 5;
-    std::vector<dsn::rpc_address> server_list;
+    std::vector<dsn::host_port> server_list;
     std::vector<int> drop_set;
     generate_node_list(server_list, 10, 10);
 
@@ -241,7 +246,7 @@ void meta_service_test_app::state_sync_test()
         dsn::error_code ec = ss2->initialize_data_structure();
         ASSERT_EQ(ec, dsn::ERR_OK);
 
-        app_mapper_compare(ss1->_all_apps, ss2->_all_apps);
+        NO_FATALS(app_mapper_compare(ss1->_all_apps, ss2->_all_apps));
         ASSERT_EQ(ss1->_exist_apps.size(), ss2->_exist_apps.size());
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());
@@ -262,7 +267,7 @@ void meta_service_test_app::state_sync_test()
         dsn::error_code ec = ss2->restore_from_local_storage("meta_state.dump3");
         ASSERT_EQ(ec, dsn::ERR_OK);
 
-        app_mapper_compare(ss1->_all_apps, ss2->_all_apps);
+        NO_FATALS(app_mapper_compare(ss1->_all_apps, ss2->_all_apps));
         ASSERT_TRUE(ss1->_exist_apps.size() == ss2->_exist_apps.size());
         for (const auto &iter : ss1->_exist_apps) {
             ASSERT_TRUE(ss2->_exist_apps.find(iter.first) != ss2->_exist_apps.end());
@@ -381,7 +386,7 @@ void meta_service_test_app::construct_apps_test()
 
     std::shared_ptr<meta_service> svc(new meta_service());
 
-    std::vector<dsn::rpc_address> nodes;
+    std::vector<dsn::host_port> nodes;
     std::string hint_message;
     generate_node_list(nodes, 1, 1);
     svc->_state->construct_apps({resp}, nodes, hint_message);

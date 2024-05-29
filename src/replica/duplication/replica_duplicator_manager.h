@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -52,7 +53,7 @@ public:
     // - the app is not assigned with duplication (dup_map.empty())
     void update_duplication_map(const std::map<int32_t, duplication_entry> &new_dup_map)
     {
-        if (_replica->status() != partition_status::PS_PRIMARY || new_dup_map.empty()) {
+        if (new_dup_map.empty() || _replica->status() != partition_status::PS_PRIMARY) {
             remove_all_duplications();
             return;
         }
@@ -88,6 +89,7 @@ public:
         decree last_decree{invalid_decree};
         decree confirmed_decree{invalid_decree};
         duplication_fail_mode::type fail_mode{duplication_fail_mode::FAIL_SLOW};
+        std::string remote_app_name;
     };
     std::vector<dup_state> get_dup_states() const;
 

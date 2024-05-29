@@ -18,13 +18,17 @@
  */
 package org.apache.pegasus.security;
 
+import java.io.Closeable;
 import org.apache.pegasus.rpc.async.ReplicaSession;
 
 /** authentiation protocol */
-public interface AuthProtocol {
+public interface AuthProtocol extends Closeable {
   String name();
   /** start the authentiate process */
   void authenticate(ReplicaSession session);
 
   boolean isAuthRequest(final ReplicaSession.RequestEntry entry);
+
+  @Override
+  void close();
 }

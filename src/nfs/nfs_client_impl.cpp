@@ -33,6 +33,8 @@
 #include "fmt/core.h"
 #include "nfs/nfs_code_definition.h"
 #include "nfs/nfs_node.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/command_manager.h"
 #include "utils/filesystem.h"
@@ -136,7 +138,7 @@ void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rc
 {
     user_request_ptr req(new user_request());
     req->high_priority = rci->high_priority;
-    req->file_size_req.source = rci->source;
+    SET_IP_AND_HOST_PORT_BY_DNS(req->file_size_req, source, rci->source);
     req->file_size_req.dst_dir = rci->dest_dir;
     req->file_size_req.file_list = rci->files;
     req->file_size_req.source_dir = rci->source_dir;
@@ -161,7 +163,7 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
 {
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
-                  ureq->file_size_req.source,
+                  FMT_HOST_PORT_AND_IP(ureq->file_size_req, source),
                   ureq->file_size_req.source_dir,
                   err);
         ureq->nfs_task->enqueue(err, 0);
@@ -171,7 +173,7 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
     err = dsn::error_code(resp.error);
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
-                  ureq->file_size_req.source,
+                  FMT_HOST_PORT_AND_IP(ureq->file_size_req, source),
                   ureq->file_size_req.source_dir,
                   err);
         ureq->nfs_task->enqueue(err, 0);
@@ -291,7 +293,7 @@ void nfs_client_impl::continue_copy()
                 }
 
                 copy_request copy_req;
-                copy_req.source = ureq->file_size_req.source;
+                SET_OBJ_IP_AND_HOST_PORT(copy_req, source, ureq->file_size_req, source);
                 copy_req.file_name = req->file_ctx->file_name;
                 copy_req.offset = req->offset;
                 copy_req.size = req->size;
@@ -347,10 +349,12 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
         METRIC_VAR_INCREMENT(nfs_client_copy_failed_requests);
 
         if (!fc->user_req->is_finished) {
+            host_port hp;
+            GET_HOST_PORT(fc->user_req->file_size_req, source, hp);
             if (reqc->retry_count > 0) {
                 LOG_WARNING("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
                             "err = {}, retry_count = {}",
-                            fc->user_req->file_size_req.source,
+                            FMT_HOST_PORT_AND_IP(fc->user_req->file_size_req, source),
                             fc->user_req->file_size_req.source_dir,
                             fc->file_name,
                             err,
@@ -368,7 +372,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
             } else {
                 LOG_ERROR("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
                           "err = {}, retry_count = {}",
-                          fc->user_req->file_size_req.source,
+                          FMT_HOST_PORT_AND_IP(fc->user_req->file_size_req, source),
                           fc->user_req->file_size_req.source_dir,
                           fc->file_name,
                           err,

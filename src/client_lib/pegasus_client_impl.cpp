@@ -35,7 +35,8 @@
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
 #include "rrdb/rrdb.client.h"
-#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
@@ -62,12 +63,12 @@ std::unordered_map<int, int> pegasus_client_impl::_server_error_to_client;
 pegasus_client_impl::pegasus_client_impl(const char *cluster_name, const char *app_name)
     : _cluster_name(cluster_name), _app_name(app_name)
 {
-    std::vector<dsn::rpc_address> meta_servers;
-    dsn::replication::replica_helper::load_meta_servers(
-        meta_servers, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name);
+    std::vector<dsn::host_port> meta_servers;
+    dsn::replication::replica_helper::load_servers_from_config(
+        dsn::PEGASUS_CLUSTER_SECTION_NAME, cluster_name, meta_servers);
     CHECK_GT(meta_servers.size(), 0);
     _meta_server.assign_group("meta-servers");
-    _meta_server.group_address()->add_list(meta_servers);
+    _meta_server.group_host_port()->add_list(meta_servers);
 
     _client = new ::dsn::apps::rrdb_client(cluster_name, meta_servers, app_name);
 }
@@ -1253,7 +1254,7 @@ void pegasus_client_impl::async_get_unordered_scanners(
 
     query_cfg_request req;
     req.app_name = _app_name;
-    ::dsn::rpc::call(_meta_server,
+    ::dsn::rpc::call(dns_resolver::instance().resolve_address(_meta_server),
                      RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
                      req,
                      nullptr,

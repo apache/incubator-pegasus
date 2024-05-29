@@ -26,28 +26,44 @@
 
 #include "utils/simple_logger.h"
 
+#include <errno.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
-#include <stdint.h>
+#include <fmt/printf.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <algorithm>
+#include <cstdint>
+#include <ctime>
 #include <functional>
 #include <memory>
-#include <sstream>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "absl/strings/string_view.h"
 #include "runtime/api_layer1.h"
 #include "utils/command_manager.h"
+#include "utils/errors.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/process_utils.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
-DSN_DEFINE_bool(tools.simple_logger, fast_flush, false, "whether to flush immediately");
+DSN_DEFINE_uint64(tools.simple_logger,
+                  max_log_file_bytes,
+                  64 * 1024 * 1024,
+                  "The maximum bytes of a log file. A new log file will be created if the current "
+                  "log file exceeds this size.");
+DSN_DEFINE_validator(max_log_file_bytes, [](int32_t value) -> bool { return value > 0; });
+
+DSN_DEFINE_bool(tools.simple_logger, fast_flush, false, "Whether to flush logs immediately");
 DSN_DEFINE_bool(tools.simple_logger,
                 short_header,
                 false,
@@ -55,26 +71,34 @@ DSN_DEFINE_bool(tools.simple_logger,
                 "file, file number and function name "
                 "fields in each line)");
 
-DSN_DEFINE_uint64(tools.simple_logger,
-                  max_number_of_log_files_on_disk,
-                  20,
-                  "max number of log files reserved on disk, older logs are auto deleted");
+DSN_DEFINE_uint64(
+    tools.simple_logger,
+    max_number_of_log_files_on_disk,
+    20,
+    "The maximum number of log files to be reserved on disk, older logs are deleted automatically");
+DSN_DEFINE_validator(max_number_of_log_files_on_disk,
+                     [](int32_t value) -> bool { return value > 0; });
 
-DSN_DEFINE_string(tools.simple_logger,
-                  stderr_start_level,
-                  "LOG_LEVEL_WARNING",
-                  "copy log messages at or above this level to stderr in addition to logfiles");
-DSN_DEFINE_validator(stderr_start_level, [](const char *level) -> bool {
-    return !dsn::utils::equals(level, "LOG_LEVEL_INVALID");
+DSN_DEFINE_string(
+    tools.simple_logger,
+    stderr_start_level,
+    "LOG_LEVEL_WARNING",
+    "The lowest level of log messages to be copied to stderr in addition to log files");
+DSN_DEFINE_validator(stderr_start_level, [](const char *value) -> bool {
+    const auto level = enum_from_string(value, LOG_LEVEL_INVALID);
+    return LOG_LEVEL_DEBUG <= level && level <= LOG_LEVEL_FATAL;
 });
+
+DSN_DEFINE_string(tools.simple_logger, base_name, "pegasus", "The default base name for log file");
 
 DSN_DECLARE_string(logging_start_level);
 
 namespace dsn {
 namespace tools {
-static void print_header(FILE *fp, log_level_t log_level)
+namespace {
+int print_header(FILE *fp, log_level_t stderr_start_level, log_level_t log_level)
 {
-    // The leading character of each log lines, corresponding to the log level
+    // The leading character of each log line, corresponding to the log level
     // D: Debug
     // I: Info
     // W: Warning
@@ -87,16 +111,43 @@ static void print_header(FILE *fp, log_level_t log_level)
     dsn::utils::time_ms_to_string(ts / 1000000, time_str);
 
     int tid = dsn::utils::get_current_tid();
-    fmt::print(fp,
-               "{}{} ({} {}) {}",
-               s_level_char[log_level],
-               time_str,
-               ts,
-               tid,
-               log_prefixed_message_func().c_str());
+    const auto header = fmt::format(
+        "{}{} ({} {}) {}", s_level_char[log_level], time_str, ts, tid, log_prefixed_message_func());
+    const int written_size = fmt::fprintf(fp, "%s", header.c_str());
+    if (log_level >= stderr_start_level) {
+        fmt::fprintf(stderr, "%s", header.c_str());
+    }
+    return written_size;
 }
 
-namespace {
+int print_long_header(FILE *fp,
+                      const char *file,
+                      const char *function,
+                      const int line,
+                      bool short_header,
+                      log_level_t stderr_start_level,
+                      log_level_t log_level)
+{
+    if (short_header) {
+        return 0;
+    }
+
+    const auto long_header = fmt::format("{}:{}:{}(): ", file, line, function);
+    const int written_size = fmt::fprintf(fp, "%s", long_header.c_str());
+    if (log_level >= stderr_start_level) {
+        fmt::fprintf(stderr, "%s", long_header.c_str());
+    }
+    return written_size;
+}
+
+int print_body(FILE *fp, const char *body, log_level_t stderr_start_level, log_level_t log_level)
+{
+    const int written_size = fmt::fprintf(fp, "%s\n", body);
+    if (log_level >= stderr_start_level) {
+        fmt::fprintf(stderr, "%s\n", body);
+    }
+    return written_size;
+}
 
 inline void process_fatal_log(log_level_t log_level)
 {
@@ -118,21 +169,33 @@ inline void process_fatal_log(log_level_t log_level)
 
 } // anonymous namespace
 
-screen_logger::screen_logger(bool short_header) : _short_header(short_header) {}
+void screen_logger::print_header(log_level_t log_level)
+{
+    ::dsn::tools::print_header(stdout, LOG_LEVEL_COUNT, log_level);
+}
 
-screen_logger::~screen_logger(void) {}
+void screen_logger::print_long_header(const char *file,
+                                      const char *function,
+                                      const int line,
+                                      log_level_t log_level)
+{
+    ::dsn::tools::print_long_header(
+        stdout, file, function, line, _short_header, LOG_LEVEL_COUNT, log_level);
+}
+
+void screen_logger::print_body(const char *body, log_level_t log_level)
+{
+    ::dsn::tools::print_body(stdout, body, LOG_LEVEL_COUNT, log_level);
+}
 
 void screen_logger::log(
     const char *file, const char *function, const int line, log_level_t log_level, const char *str)
 {
     utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
 
-    print_header(stdout, log_level);
-    if (!_short_header) {
-        printf("%s:%d:%s(): ", file, line, function);
-    }
-    printf("%s\n", str);
-
+    print_header(log_level);
+    print_long_header(file, function, line, log_level);
+    print_body(str, log_level);
     if (log_level >= LOG_LEVEL_ERROR) {
         ::fflush(stdout);
     }
@@ -142,46 +205,17 @@ void screen_logger::log(
 
 void screen_logger::flush() { ::fflush(stdout); }
 
-simple_logger::simple_logger(const char *log_dir)
+simple_logger::simple_logger(const char *log_dir, const char *role_name)
     : _log_dir(std::string(log_dir)),
       _log(nullptr),
-      // we assume all valid entries are positive
-      _start_index(0),
-      _index(1),
-      _lines(0),
+      _file_bytes(0),
       _stderr_start_level(enum_from_string(FLAGS_stderr_start_level, LOG_LEVEL_INVALID))
 {
-    // check existing log files
-    std::vector<std::string> sub_list;
-    CHECK(dsn::utils::filesystem::get_subfiles(_log_dir, sub_list, false),
-          "Fail to get subfiles in {}",
-          _log_dir);
-    for (auto &fpath : sub_list) {
-        auto &&name = dsn::utils::filesystem::get_file_name(fpath);
-        if (name.length() <= 8 || name.substr(0, 4) != "log.") {
-            continue;
-        }
-
-        int index;
-        if (1 != sscanf(name.c_str(), "log.%d.txt", &index) || index <= 0) {
-            continue;
-        }
-
-        if (index > _index) {
-            _index = index;
-        }
-
-        if (_start_index == 0 || index < _start_index) {
-            _start_index = index;
-        }
-    }
-    sub_list.clear();
-
-    if (_start_index == 0) {
-        _start_index = _index;
-    } else {
-        ++_index;
-    }
+    // Use 'role_name' if it is specified, otherwise use 'base_name'.
+    const std::string symlink_name(
+        fmt::format("{}.log", utils::is_empty(role_name) ? FLAGS_base_name : role_name));
+    _file_name_prefix = fmt::format("{}.", symlink_name);
+    _symlink_path = utils::filesystem::path_combine(_log_dir, symlink_name);
 
     create_log_file();
 
@@ -189,19 +223,19 @@ simple_logger::simple_logger(const char *log_dir)
     //  "assertion expression: [_handlers.empty()] All commands must be deregistered before
     //  command_manager is destroyed, however 'flush-log' is still registered".
     //  We need to fix it.
-    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-        {"flush-log"},
-        "flush-log - flush log to stderr or log file",
+    _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
         "flush-log",
+        "Flush log to stderr or file",
+        "",
         [this](const std::vector<std::string> &args) {
             this->flush();
             return "Flush done.";
         }));
 
-    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-        {"reset-log-start-level"},
-        "reset-log-start-level - reset the log start level",
-        "reset-log-start-level [DEBUG | INFO | WARNING | ERROR | FATAL]",
+    _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+        "reset-log-start-level",
+        "Reset the log start level",
+        "[DEBUG | INFO | WARNING | ERROR | FATAL]",
         [](const std::vector<std::string> &args) {
             log_level_t start_level;
             if (args.size() == 0) {
@@ -220,41 +254,136 @@ simple_logger::simple_logger(const char *log_dir)
 
 void simple_logger::create_log_file()
 {
+    // Close the current log file if it is opened.
     if (_log != nullptr) {
         ::fclose(_log);
+        _log = nullptr;
     }
 
-    _lines = 0;
+    // Reset the file size.
+    _file_bytes = 0;
 
-    std::stringstream str;
-    str << _log_dir << "/log." << _index++ << ".txt";
-    _log = ::fopen(str.str().c_str(), "w+");
+    // Open the new log file.
+    uint64_t ts = dsn::utils::get_current_physical_time_ns();
+    std::string time_str;
+    ::dsn::utils::time_ms_to_sequent_string(ts / 1000000, time_str);
+    const std::string file_name(fmt::format("{}{}", _file_name_prefix, time_str));
+    const std::string path(utils::filesystem::path_combine(_log_dir, file_name));
+    _log = ::fopen(path.c_str(), "w+");
+    CHECK_NOTNULL(_log, "Failed to fopen {}: {}", path, dsn::utils::safe_strerror(errno));
 
-    // TODO: move gc out of criticial path
-    while (_index - _start_index > FLAGS_max_number_of_log_files_on_disk) {
-        std::stringstream str2;
-        str2 << "log." << _start_index++ << ".txt";
-        auto dp = utils::filesystem::path_combine(_log_dir, str2.str());
-        if (utils::filesystem::file_exists(dp)) {
-            if (::remove(dp.c_str()) != 0) {
-                // if remove failed, just print log and ignore it.
-                printf("Failed to remove garbage log file %s\n", dp.c_str());
-            }
+    // Unlink the latest log file.
+    if (::unlink(_symlink_path.c_str()) != 0) {
+        if (errno != ENOENT) {
+            fmt::print(stderr,
+                       "Failed to unlink {}: {}\n",
+                       _symlink_path,
+                       dsn::utils::safe_strerror(errno));
+        }
+    }
+
+    // Create a new symlink to the newly created log file.
+    if (::symlink(file_name.c_str(), _symlink_path.c_str()) != 0) {
+        fmt::print(stderr,
+                   "Failed to symlink {} as {}: {}\n",
+                   file_name,
+                   _symlink_path,
+                   dsn::utils::safe_strerror(errno));
+    }
+
+    // Remove redundant log files.
+    remove_redundant_files();
+}
+
+void simple_logger::remove_redundant_files()
+{
+    // Collect log files.
+    const auto file_path_pattern =
+        fmt::format("{}*", utils::filesystem::path_combine(_log_dir, _file_name_prefix));
+    std::vector<std::string> matching_files;
+    const auto es = dsn::utils::filesystem::glob(file_path_pattern, matching_files);
+    if (!es) {
+        fmt::print(
+            stderr, "{}: Failed to glob '{}', error \n", es.description(), file_path_pattern);
+        return;
+    }
+
+    // Skip if the number of log files is not exceeded.
+    auto max_matches = static_cast<size_t>(FLAGS_max_number_of_log_files_on_disk);
+    if (matching_files.size() <= max_matches) {
+        return;
+    }
+
+    // Collect mtimes of log files.
+    std::vector<std::pair<time_t, std::string>> matching_file_mtimes;
+    for (auto &matching_file_path : matching_files) {
+        struct stat s;
+        if (::stat(matching_file_path.c_str(), &s) != 0) {
+            fmt::print(stderr,
+                       "Failed to stat {}: {}\n",
+                       matching_file_path,
+                       dsn::utils::safe_strerror(errno));
+            continue;
+        }
+
+#ifdef __APPLE__
+        int64_t mtime = s.st_mtimespec.tv_sec * 1000000 + s.st_mtimespec.tv_nsec / 1000;
+#else
+        int64_t mtime = s.st_mtim.tv_sec * 1000000 + s.st_mtim.tv_nsec / 1000;
+#endif
+        matching_file_mtimes.emplace_back(mtime, std::move(matching_file_path));
+    }
+
+    // Use mtime to determine which matching files to delete. This could
+    // potentially be ambiguous, depending on the resolution of last-modified
+    // timestamp in the filesystem, but that is part of the contract.
+    std::sort(matching_file_mtimes.begin(), matching_file_mtimes.end());
+    matching_file_mtimes.resize(matching_file_mtimes.size() - max_matches);
+
+    // Remove redundant log files.
+    for (const auto & [ _, matching_file ] : matching_file_mtimes) {
+        if (::remove(matching_file.c_str()) != 0) {
+            // If remove failed, just print log and ignore it.
+            fmt::print(stderr,
+                       "Failed to remove redundant log file {}: {}\n",
+                       matching_file,
+                       dsn::utils::safe_strerror(errno));
         }
     }
 }
 
-simple_logger::~simple_logger(void)
+simple_logger::~simple_logger()
 {
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
     ::fclose(_log);
+    _log = nullptr;
 }
 
 void simple_logger::flush()
 {
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
     ::fflush(_log);
+    ::fflush(stderr);
     ::fflush(stdout);
+}
+
+void simple_logger::print_header(log_level_t log_level)
+{
+    add_bytes_if_valid(::dsn::tools::print_header(_log, _stderr_start_level, log_level));
+}
+
+void simple_logger::print_long_header(const char *file,
+                                      const char *function,
+                                      const int line,
+                                      log_level_t log_level)
+{
+    add_bytes_if_valid(::dsn::tools::print_long_header(
+        _log, file, function, line, FLAGS_short_header, _stderr_start_level, log_level));
+}
+
+void simple_logger::print_body(const char *body, log_level_t log_level)
+{
+    add_bytes_if_valid(::dsn::tools::print_body(_log, body, _stderr_start_level, log_level));
 }
 
 void simple_logger::log(
@@ -262,26 +391,17 @@ void simple_logger::log(
 {
     utils::auto_lock<::dsn::utils::ex_lock> l(_lock);
 
-    print_header(_log, log_level);
-    if (!FLAGS_short_header) {
-        fprintf(_log, "%s:%d:%s(): ", file, line, function);
-    }
-    fprintf(_log, "%s\n", str);
+    CHECK_NOTNULL(_log, "Log file hasn't been initialized yet");
+    print_header(log_level);
+    print_long_header(file, function, line, log_level);
+    print_body(str, log_level);
     if (FLAGS_fast_flush || log_level >= LOG_LEVEL_ERROR) {
         ::fflush(_log);
     }
 
-    if (log_level >= _stderr_start_level) {
-        print_header(stdout, log_level);
-        if (!FLAGS_short_header) {
-            printf("%s:%d:%s(): ", file, line, function);
-        }
-        printf("%s\n", str);
-    }
-
     process_fatal_log(log_level);
 
-    if (++_lines >= 200000) {
+    if (_file_bytes >= FLAGS_max_log_file_bytes) {
         create_log_file();
     }
 }

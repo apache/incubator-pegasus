@@ -16,3 +16,43 @@
 // under the License.
 
 package hotspot
+
+import (
+	"time"
+
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/tomb.v2"
+)
+
+type PartitionDetector interface {
+	Run(tom *tomb.Tomb) error
+}
+
+type PartitionDetectorConfig struct {
+	DetectInterval time.Duration
+}
+
+func NewPartitionDetector(conf PartitionDetectorConfig) PartitionDetector {
+	return &partitionDetector{
+		detectInterval: conf.DetectInterval,
+	}
+}
+
+type partitionDetector struct {
+	detectInterval time.Duration
+}
+
+func (d *partitionDetector) Run(tom *tomb.Tomb) error {
+	for {
+		select {
+		case <-time.After(d.detectInterval):
+			d.detect()
+		case <-tom.Dying():
+			log.Info("Hotspot partition detector exited.")
+			return nil
+		}
+	}
+}
+
+func (d *partitionDetector) detect() {
+}

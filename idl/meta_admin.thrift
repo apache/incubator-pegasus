@@ -67,15 +67,16 @@ struct configuration_update_request
 {
     1:dsn.layer2.app_info                 info;
     2:dsn.layer2.partition_configuration  config;
-    3:config_type              type = config_type.CT_INVALID;
-    4:dsn.rpc_address          node;
-    5:dsn.rpc_address          host_node; // deprecated, only used by stateless apps
+    3:config_type                         type = config_type.CT_INVALID;
+    4:dsn.rpc_address                     node;
+    5:dsn.rpc_address                     host_node; // deprecated, only used by stateless apps
 
     // Used for partition split
     // if replica is splitting (whose split_status is not NOT_SPLIT)
     // the `meta_split_status` will be set
     // only used when on_config_sync
-    6:optional metadata.split_status    meta_split_status;
+    6:optional metadata.split_status      meta_split_status;
+    7:optional dsn.host_port              hp_node;
 }
 
 // meta server (config mgr) => primary | secondary (downgrade) (w/ new config)
@@ -100,9 +101,10 @@ struct replica_server_info
 
 struct configuration_query_by_node_request
 {
-    1:dsn.rpc_address  node;
+    1:dsn.rpc_address                      node;
     2:optional list<metadata.replica_info> stored_replicas;
-    3:optional replica_server_info info;
+    3:optional replica_server_info         info;
+    4:optional dsn.host_port               hp_node;
 }
 
 struct configuration_query_by_node_response
@@ -114,9 +116,10 @@ struct configuration_query_by_node_response
 
 struct configuration_recovery_request
 {
-    1:list<dsn.rpc_address> recovery_set;
-    2:bool skip_bad_nodes;
-    3:bool skip_lost_partitions;
+    1:list<dsn.rpc_address>        recovery_nodes;
+    2:bool                         skip_bad_nodes;
+    3:bool                         skip_lost_partitions;
+    4:optional list<dsn.host_port> hp_recovery_nodes;
 }
 
 struct configuration_recovery_response
@@ -204,7 +207,8 @@ struct configuration_list_apps_response
 
 struct query_app_info_request
 {
-    1:dsn.rpc_address meta_server;
+    1:dsn.rpc_address        meta_server;
+    2:optional dsn.host_port hp_meta_server;
 }
 
 struct query_app_info_response
@@ -278,8 +282,9 @@ struct query_app_manual_compact_response
 
 struct node_info
 {
-    1:node_status      status = node_status.NS_INVALID;
-    2:dsn.rpc_address  address;
+    1:node_status            status = node_status.NS_INVALID;
+    2:dsn.rpc_address        node;
+    3:optional dsn.host_port hp_node;
 }
 
 struct configuration_list_nodes_request
@@ -342,13 +347,15 @@ enum balancer_request_type
 
 struct configuration_proposal_action
 {
-    1:dsn.rpc_address target;
-    2:dsn.rpc_address node;
-    3:config_type type;
+    1:dsn.rpc_address        target;
+    2:dsn.rpc_address        node;
+    3:config_type            type;
 
     // depricated now
     // new fields of this struct should start with 5
     // 4:i64 period_ts;
+    5:optional dsn.host_port hp_target;
+    6:optional dsn.host_port hp_node;
 }
 
 struct configuration_balancer_request
@@ -374,13 +381,14 @@ struct ddd_diagnose_request
 
 struct ddd_node_info
 {
-    1:dsn.rpc_address node;
-    2:i64             drop_time_ms;
-    3:bool            is_alive; // if the node is alive now
-    4:bool            is_collected; // if replicas has been collected from this node
-    5:i64             ballot; // collected && ballot == -1 means replica not exist on this node
-    6:i64             last_committed_decree;
-    7:i64             last_prepared_decree;
+    1:dsn.rpc_address        node;
+    2:i64                    drop_time_ms;
+    3:bool                   is_alive; // if the node is alive now
+    4:bool                   is_collected; // if replicas has been collected from this node
+    5:i64                    ballot; // collected && ballot == -1 means replica not exist on this node
+    6:i64                    last_committed_decree;
+    7:i64                    last_prepared_decree;
+    8:optional dsn.host_port hp_node;
 }
 
 struct ddd_partition_info

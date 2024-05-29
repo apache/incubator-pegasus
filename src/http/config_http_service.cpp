@@ -48,6 +48,12 @@ void get_config(const http_request &req, http_response &resp)
         }
     }
 
+    if (config_name.empty()) {
+        resp.status_code = http_status_code::kBadRequest;
+        resp.body = "name shouldn't be empty";
+        return;
+    }
+
     auto res = get_flag_str(config_name);
     if (res.is_ok()) {
         resp.body = res.get_value();

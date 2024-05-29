@@ -26,7 +26,7 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "replica/replica_base.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
@@ -47,7 +47,7 @@ public:
 
     const std::string &get_master_app_name() const { return _master_app_name; };
 
-    const std::vector<rpc_address> &get_master_meta_list() const { return _master_meta_list; };
+    const std::vector<host_port> &get_master_meta_list() const { return _master_meta_list; };
 
     const bool is_need_duplicate() const { return need_duplicate; }
 
@@ -59,7 +59,7 @@ private:
 
     std::string _master_cluster_name;
     std::string _master_app_name;
-    std::vector<rpc_address> _master_meta_list;
+    std::vector<host_port> _master_meta_list;
     partition_configuration _master_replica_config;
 
     bool need_duplicate{false};
@@ -69,7 +69,7 @@ private:
     error_code update_master_replica_config(error_code err, query_cfg_response &&resp);
     void copy_master_replica_checkpoint();
     error_code nfs_copy_checkpoint(error_code err, learn_response &&resp);
-    void nfs_copy_remote_files(const rpc_address &remote_node,
+    void nfs_copy_remote_files(const host_port &remote_node,
                                const std::string &remote_disk,
                                const std::string &remote_dir,
                                std::vector<std::string> &file_list,
@@ -78,9 +78,11 @@ private:
     std::string master_replica_name()
     {
         std::string app_info = fmt::format("{}.{}", _master_cluster_name, _master_app_name);
-        if (_master_replica_config.primary != rpc_address::s_invalid_address) {
-            return fmt::format(
-                "{}({}|{})", app_info, _master_replica_config.primary, _master_replica_config.pid);
+        if (_master_replica_config.hp_primary) {
+            return fmt::format("{}({}|{})",
+                               app_info,
+                               FMT_HOST_PORT_AND_IP(_master_replica_config, primary),
+                               _master_replica_config.pid);
         }
         return app_info;
     }

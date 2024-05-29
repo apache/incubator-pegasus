@@ -19,6 +19,7 @@ import static org.apache.pegasus.client.PConfigUtil.loadConfiguration;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Properties;
+import org.apache.pegasus.client.retry.RetryPolicies;
 import org.apache.pegasus.security.Credential;
 import org.apache.pegasus.tools.WriteLimiter;
 import org.apache.pegasus.util.PropertyUtils;
@@ -56,7 +57,9 @@ public class ClientOptions {
   public static final String PEGASUS_AUTH_PROTOCOL_KEY = "auth_protocol";
   public static final String PEGASUS_SESSION_RESET_TIME_WINDOW_SECS_KEY =
       "session_reset_time_window_secs";
-
+  public static final String PEGASUS_RETRY_POLICY_KEY = "retry_policy";
+  public static final String PEGASUS_RETRY_BASE_INTERVAL_MS = "retry_base_interval_ms";
+  public static final String PEGASUS_RETRY_MAX_TIMES = "retry_max_times";
   public static final String DEFAULT_META_SERVERS =
       "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
   public static final Duration DEFAULT_OPERATION_TIMEOUT = Duration.ofMillis(1000);
@@ -68,7 +71,9 @@ public class ClientOptions {
   public static final Duration DEFAULT_META_QUERY_TIMEOUT = Duration.ofMillis(5000);
   public static final String DEFAULT_AUTH_PROTOCOL = "";
   public static final long DEFAULT_SESSION_RESET_SECS_WINDOW = 30;
-
+  public static final String DEFAULT_RETRY_POLICY = RetryPolicies.DEFAULT.name().toLowerCase();
+  public static final long DEFAULT_RETRY_BASE_INTERVAL_MS = 20;
+  public static final int DEFAULT_RETRY_MAX_TIMES = Integer.MAX_VALUE;
   private final String metaServers;
   private final Duration operationTimeout;
   private final int asyncWorkers;
@@ -79,6 +84,9 @@ public class ClientOptions {
   private final Duration metaQueryTimeout;
   private final Credential credential;
   private final long sessionResetTimeWindowSecs;
+  private final RetryPolicies retryPolicy;
+  private final Duration retryBaseInterval;
+  private final int retryMaxTimes;
 
   protected ClientOptions(Builder builder) {
     this.metaServers = builder.metaServers;
@@ -91,6 +99,9 @@ public class ClientOptions {
     this.metaQueryTimeout = builder.metaQueryTimeout;
     this.credential = builder.credential;
     this.sessionResetTimeWindowSecs = builder.sessionResetTimeWindowSecs;
+    this.retryPolicy = builder.retryPolicy;
+    this.retryBaseInterval = builder.retryBaseInterval;
+    this.retryMaxTimes = builder.retryMaxTimes;
   }
 
   protected ClientOptions(ClientOptions original) {
@@ -104,6 +115,9 @@ public class ClientOptions {
     this.metaQueryTimeout = original.getMetaQueryTimeout();
     this.credential = original.getCredential();
     this.sessionResetTimeWindowSecs = original.getSessionResetTimeWindowSecs();
+    this.retryPolicy = original.getRetryPolicy();
+    this.retryBaseInterval = original.getRetryBaseInterval();
+    this.retryMaxTimes = original.getRetryMaxTimes();
   }
 
   /**
@@ -176,6 +190,15 @@ public class ClientOptions {
     long sessionResetTimeWindowSecs =
         PropertyUtils.getLong(
             config, PEGASUS_SESSION_RESET_TIME_WINDOW_SECS_KEY, DEFAULT_SESSION_RESET_SECS_WINDOW);
+    RetryPolicies retryPolicy =
+        RetryPolicies.valueOf(
+            config.getProperty(PEGASUS_RETRY_POLICY_KEY, DEFAULT_RETRY_POLICY.toUpperCase()));
+    Duration retryBaseInterval =
+        Duration.ofMillis(
+            PropertyUtils.getLong(
+                config, PEGASUS_RETRY_BASE_INTERVAL_MS, DEFAULT_RETRY_BASE_INTERVAL_MS));
+    int retryMaxTimes =
+        PropertyUtils.getInt(config, PEGASUS_RETRY_MAX_TIMES, DEFAULT_RETRY_MAX_TIMES);
 
     return ClientOptions.builder()
         .metaServers(metaList)
@@ -187,6 +210,9 @@ public class ClientOptions {
         .metaQueryTimeout(metaQueryTimeout)
         .credential(credential)
         .sessionResetTimeWindowSecs(sessionResetTimeWindowSecs)
+        .retryPolicy(retryPolicy)
+        .retryBaseInterval(retryBaseInterval)
+        .retryMaxTimes(retryMaxTimes)
         .build();
   }
 
@@ -206,7 +232,10 @@ public class ClientOptions {
           && this.enableWriteLimit == clientOptions.enableWriteLimit
           && this.metaQueryTimeout.toMillis() == clientOptions.metaQueryTimeout.toMillis()
           && this.credential == clientOptions.credential
-          && this.sessionResetTimeWindowSecs == clientOptions.sessionResetTimeWindowSecs;
+          && this.sessionResetTimeWindowSecs == clientOptions.sessionResetTimeWindowSecs
+          && this.retryPolicy == clientOptions.retryPolicy
+          && this.retryBaseInterval.equals(clientOptions.retryBaseInterval)
+          && this.retryMaxTimes == clientOptions.retryMaxTimes;
     }
     return false;
   }
@@ -250,7 +279,13 @@ public class ClientOptions {
             + ", metaQueryTimeout(ms)="
             + metaQueryTimeout.toMillis()
             + ", sessionResetTimeWindowSecs="
-            + sessionResetTimeWindowSecs;
+            + sessionResetTimeWindowSecs
+            + ", retryPolicy="
+            + retryPolicy
+            + ", retryBaseInterval="
+            + retryBaseInterval
+            + ", retryMaxTimes="
+            + retryMaxTimes;
     if (credential != null) {
       res += ", credential=" + credential.toString();
     }
@@ -269,6 +304,9 @@ public class ClientOptions {
     private Duration metaQueryTimeout = DEFAULT_META_QUERY_TIMEOUT;
     private Credential credential = null;
     private long sessionResetTimeWindowSecs = DEFAULT_SESSION_RESET_SECS_WINDOW;
+    private RetryPolicies retryPolicy = RetryPolicies.valueOf(DEFAULT_RETRY_POLICY.toUpperCase());
+    private Duration retryBaseInterval = Duration.ofMillis(DEFAULT_RETRY_BASE_INTERVAL_MS);
+    private int retryMaxTimes = DEFAULT_RETRY_MAX_TIMES;
 
     protected Builder() {}
 
@@ -400,6 +438,22 @@ public class ClientOptions {
       return this;
     }
 
+    public Builder retryPolicy(RetryPolicies retryPolicy) {
+      this.retryPolicy = retryPolicy;
+      return this;
+    }
+
+    public Builder retryBaseInterval(Duration retryBaseInterval) {
+      this.retryBaseInterval = retryBaseInterval;
+      return this;
+    }
+
+    public Builder retryMaxTimes(int retryMaxTimes) {
+      assert retryMaxTimes >= 0 : String.format("must pass non negative value: %d", retryMaxTimes);
+      this.retryMaxTimes = retryMaxTimes;
+      return this;
+    }
+
     /**
      * Create a new instance of {@link ClientOptions}.
      *
@@ -432,7 +486,10 @@ public class ClientOptions {
         .falconPushInterval(getFalconPushInterval())
         .enableWriteLimit(isWriteLimitEnabled())
         .metaQueryTimeout(getMetaQueryTimeout())
-        .credential(getCredential());
+        .credential(getCredential())
+        .retryPolicy(getRetryPolicy())
+        .retryBaseInterval(getRetryBaseInterval())
+        .retryMaxTimes(getRetryMaxTimes());
     return builder;
   }
 
@@ -530,5 +587,17 @@ public class ClientOptions {
    */
   public long getSessionResetTimeWindowSecs() {
     return sessionResetTimeWindowSecs;
+  }
+
+  public RetryPolicies getRetryPolicy() {
+    return retryPolicy;
+  }
+
+  public Duration getRetryBaseInterval() {
+    return retryBaseInterval;
+  }
+
+  public int getRetryMaxTimes() {
+    return retryMaxTimes;
   }
 }

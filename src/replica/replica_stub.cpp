@@ -31,11 +31,11 @@
 #include <fmt/format.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <iterator>
 #include <mutex>
 #include <ostream>
 #include <set>
@@ -234,14 +234,17 @@ DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
 DSN_DECLARE_int32(fd_lease_seconds);
 DSN_DECLARE_int32(gc_interval_ms);
-DSN_DECLARE_string(cluster_name);
 DSN_DECLARE_string(data_dirs);
+DSN_DECLARE_string(encryption_cluster_key_name);
 DSN_DECLARE_string(server_key);
 
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
                 false,
-                "Whether to deny client read and write requests when starting the server");
+                "Whether to deny client read and write "
+                "requests. The 'on_start' in the name is "
+                "meaningless, this config takes effect "
+                "all the time");
 DSN_DEFINE_bool(replication,
                 verbose_client_log_on_start,
                 false,
@@ -257,11 +260,12 @@ DSN_DEFINE_bool(
     false,
     "Whether to disable replica statistics. The name contains 'gc' is for legacy reason");
 DSN_DEFINE_bool(replication, disk_stat_disabled, false, "whether to disable disk stat");
-DSN_DEFINE_bool(replication,
-                delay_for_fd_timeout_on_start,
-                false,
-                "whether to delay for beacon grace period to make failure detector timeout when "
-                "starting the server");
+DSN_DEFINE_bool(
+    replication,
+    delay_for_fd_timeout_on_start,
+    false,
+    "Whether to delay for a period of time to make failure detector timeout when "
+    "starting the server. The delayed time is depends on [replication]fd_grace_seconds");
 DSN_DEFINE_bool(replication,
                 config_sync_disabled,
                 false,
@@ -278,11 +282,13 @@ DSN_DEFINE_uint32(replication,
                   "max concurrent manual emergency checkpoint running count");
 DSN_TAG_VARIABLE(max_concurrent_manual_emergency_checkpointing_count, FT_MUTABLE);
 
-DSN_DEFINE_uint32(
-    replication,
-    config_sync_interval_ms,
-    30000,
-    "The interval milliseconds of replica server to syncs replica configuration with meta server");
+DSN_DEFINE_uint32(replication,
+                  config_sync_interval_ms,
+                  30000,
+                  "The interval milliseconds of "
+                  "replica server to send replica "
+                  "config-sync requests to meta "
+                  "server");
 DSN_TAG_VARIABLE(config_sync_interval_ms, FT_MUTABLE);
 DSN_DEFINE_validator(config_sync_interval_ms, [](uint32_t value) -> bool { return value > 0; });
 
@@ -391,7 +397,6 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     _is_long_subscriber = is_long_subscriber;
     _failure_detector = nullptr;
     _state = NS_Disconnected;
-    _primary_address_str[0] = '\0';
 }
 
 replica_stub::~replica_stub(void) { close(); }
@@ -406,9 +411,9 @@ void replica_stub::initialize(bool clear /* = false*/)
 
 void replica_stub::initialize(const replication_options &opts, bool clear /* = false*/)
 {
-    _primary_address = dsn_primary_address();
-    strcpy(_primary_address_str, _primary_address.to_string());
-    LOG_INFO("primary_address = {}", _primary_address_str);
+    _primary_host_port = dsn_primary_host_port();
+    _primary_host_port_cache = _primary_host_port.to_string();
+    LOG_INFO("primary_host_port = {}", _primary_host_port_cache);
 
     set_options(opts);
     LOG_INFO("meta_servers = {}", fmt::join(_options.meta_servers, ", "));
@@ -443,7 +448,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     dsn::replication::kms_info kms_info;
     if (FLAGS_encrypt_data_at_rest && !utils::is_empty(FLAGS_hadoop_kms_url)) {
         _key_provider.reset(new dsn::security::kms_key_provider(
-            ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()), FLAGS_cluster_name));
+            ::absl::StrSplit(FLAGS_hadoop_kms_url, ",", ::absl::SkipEmpty()),
+            FLAGS_encryption_cluster_key_name));
         const auto &ec = dsn::utils::load_rjobj_from_file(
             kms_path, dsn::utils::FileDataType::kNonSensitive, &kms_info);
         if (ec != dsn::ERR_PATH_NOT_FOUND && ec != dsn::ERR_OK) {
@@ -525,7 +531,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                                          LOG_INFO("{}@{}: load replica '{}' success, <durable, "
                                                   "commit> = <{}, {}>, last_prepared_decree = {}",
                                                   r->get_gpid(),
-                                                  dsn_primary_address(),
+                                                  dsn_primary_host_port(),
                                                   dir,
                                                   r->last_durable_decree(),
                                                   r->last_committed_decree(),
@@ -733,6 +739,34 @@ dsn::error_code replica_stub::on_kill_replica(gpid id)
     }
 }
 
+std::vector<replica_ptr> replica_stub::get_all_replicas() const
+{
+    std::vector<replica_ptr> result;
+    {
+        zauto_read_lock l(_replicas_lock);
+        std::transform(_replicas.begin(),
+                       _replicas.end(),
+                       std::back_inserter(result),
+                       [](const std::pair<gpid, replica_ptr> &r) { return r.second; });
+    }
+    return result;
+}
+
+std::vector<replica_ptr> replica_stub::get_all_primaries() const
+{
+    std::vector<replica_ptr> result;
+    {
+        zauto_read_lock l(_replicas_lock);
+        for (const auto & [ _, r ] : _replicas) {
+            if (r->status() != partition_status::PS_PRIMARY) {
+                continue;
+            }
+            result.push_back(r);
+        }
+    }
+    return result;
+}
+
 replica_ptr replica_stub::get_replica(gpid id) const
 {
     zauto_read_lock l(_replicas_lock);
@@ -766,7 +800,7 @@ void replica_stub::on_client_write(gpid id, dsn::message_ex *request)
     if (_verbose_client_log && request) {
         LOG_INFO("{}@{}: client = {}, code = {}, timeout = {}",
                  id,
-                 _primary_address_str,
+                 _primary_host_port_cache,
                  request->header->from_address,
                  request->header->rpc_name,
                  request->header->client.timeout_ms);
@@ -788,7 +822,7 @@ void replica_stub::on_client_read(gpid id, dsn::message_ex *request)
     if (_verbose_client_log && request) {
         LOG_INFO("{}@{}: client = {}, code = {}, timeout = {}",
                  id,
-                 _primary_address_str,
+                 _primary_host_port_cache,
                  request->header->from_address,
                  request->header->rpc_name,
                  request->header->client.timeout_ms);
@@ -806,17 +840,17 @@ void replica_stub::on_config_proposal(const configuration_update_request &propos
     if (!is_connected()) {
         LOG_WARNING("{}@{}: received config proposal {} for {}: not connected, ignore",
                     proposal.config.pid,
-                    _primary_address_str,
+                    _primary_host_port_cache,
                     enum_to_string(proposal.type),
-                    proposal.node);
+                    FMT_HOST_PORT_AND_IP(proposal, node));
         return;
     }
 
     LOG_INFO("{}@{}: received config proposal {} for {}",
              proposal.config.pid,
-             _primary_address_str,
+             _primary_host_port_cache,
              enum_to_string(proposal.type),
-             proposal.node);
+             FMT_HOST_PORT_AND_IP(proposal, node));
 
     replica_ptr rep = get_replica(proposal.config.pid);
     if (rep == nullptr) {
@@ -941,7 +975,7 @@ void replica_stub::on_query_app_info(query_app_info_rpc rpc)
     const query_app_info_request &req = rpc.request();
     query_app_info_response &resp = rpc.response();
 
-    LOG_INFO("got query app info request from ({})", req.meta_server);
+    LOG_INFO("got query app info request from ({})", FMT_HOST_PORT_AND_IP(req, meta_server));
     resp.err = dsn::ERR_OK;
     std::set<app_id> visited_apps;
     {
@@ -982,8 +1016,12 @@ void replica_stub::on_add_new_disk(add_new_disk_rpc rpc)
     std::vector<std::string> data_dir_tags;
     std::string err_msg;
     if (disk_str.empty() ||
-        !replication_options::get_data_dir_and_tag(
-            disk_str, "", "replica", data_dirs, data_dir_tags, err_msg)) {
+        !replication_options::get_data_dir_and_tag(disk_str,
+                                                   "",
+                                                   replication_options::kReplicaAppType,
+                                                   data_dirs,
+                                                   data_dir_tags,
+                                                   err_msg)) {
         resp.err = ERR_INVALID_PARAMETERS;
         resp.__set_err_hint(fmt::format("invalid str({}), err_msg: {}", disk_str, err_msg));
         return;
@@ -1060,15 +1098,15 @@ void replica_stub::on_group_check(group_check_rpc rpc)
     if (!is_connected()) {
         LOG_WARNING("{}@{}: received group check: not connected, ignore",
                     request.config.pid,
-                    _primary_address_str);
+                    _primary_host_port_cache);
         return;
     }
 
     LOG_INFO("{}@{}: received group check, primary = {}, ballot = {}, status = {}, "
              "last_committed_decree = {}",
              request.config.pid,
-             _primary_address_str,
-             request.config.primary,
+             _primary_host_port_cache,
+             FMT_HOST_PORT_AND_IP(request.config, primary),
              request.config.ballot,
              enum_to_string(request.config.status),
              request.last_committed_decree);
@@ -1129,16 +1167,16 @@ void replica_stub::on_add_learner(const group_check_request &request)
     if (!is_connected()) {
         LOG_WARNING("{}@{}: received add learner, primary = {}, not connected, ignore",
                     request.config.pid,
-                    _primary_address_str,
-                    request.config.primary);
+                    _primary_host_port_cache,
+                    FMT_HOST_PORT_AND_IP(request.config, primary));
         return;
     }
 
     LOG_INFO("{}@{}: received add learner, primary = {}, ballot = {}, status = {}, "
              "last_committed_decree = {}",
              request.config.pid,
-             _primary_address_str,
-             request.config.primary,
+             _primary_host_port_cache,
+             FMT_HOST_PORT_AND_IP(request.config, primary),
              request.config.ballot,
              enum_to_string(request.config.status),
              request.last_committed_decree);
@@ -1217,7 +1255,7 @@ void replica_stub::query_configuration_by_node()
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_CONFIG_SYNC);
 
     configuration_query_by_node_request req;
-    req.node = _primary_address;
+    SET_IP_AND_HOST_PORT(req, node, primary_address(), _primary_host_port);
 
     // TODO: send stored replicas may cost network, we shouldn't config the frequency
     get_local_replicas(req.stored_replicas);
@@ -1228,7 +1266,8 @@ void replica_stub::query_configuration_by_node()
     LOG_INFO("send query node partitions request to meta server, stored_replicas_count = {}",
              req.stored_replicas.size());
 
-    rpc_address target(_failure_detector->get_servers());
+    const auto &target =
+        dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
     _config_query_task =
         rpc::call(target,
                   msg,
@@ -1259,7 +1298,7 @@ void replica_stub::on_node_query_reply(error_code err,
 {
     LOG_INFO("query node partitions replied, err = {}", err);
 
-    zauto_lock l(_state_lock);
+    zauto_lock sl(_state_lock);
     _config_query_task = nullptr;
     if (err != ERR_OK) {
         if (_state == NS_Connecting) {
@@ -1304,7 +1343,7 @@ void replica_stub::on_node_query_reply(error_code err,
 
         replicas rs;
         {
-            zauto_read_lock l(_replicas_lock);
+            zauto_read_lock rl(_replicas_lock);
             rs = _replicas;
         }
 
@@ -1375,17 +1414,17 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_,
                                 req.__isset.meta_split_status ? req.meta_split_status
                                                               : split_status::NOT_SPLIT);
     } else {
-        if (req.config.primary == _primary_address) {
+        if (req.config.hp_primary == _primary_host_port) {
             LOG_INFO("{}@{}: replica not exists on replica server, which is primary, remove it "
                      "from meta server",
                      req.config.pid,
-                     _primary_address_str);
+                     _primary_host_port_cache);
             remove_replica_on_meta_server(req.info, req.config);
         } else {
             LOG_INFO(
                 "{}@{}: replica not exists on replica server, which is not primary, just ignore",
                 req.config.pid,
-                _primary_address_str);
+                _primary_host_port_cache);
         }
     }
 }
@@ -1423,30 +1462,29 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
     request->info = info;
     request->config = config;
     request->config.ballot++;
-    request->node = _primary_address;
+    SET_IP_AND_HOST_PORT(*request, node, primary_address(), _primary_host_port);
     request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
 
-    if (_primary_address == config.primary) {
-        request->config.primary.set_invalid();
-    } else if (replica_helper::remove_node(_primary_address, request->config.secondaries)) {
+    if (_primary_host_port == config.hp_primary) {
+        RESET_IP_AND_HOST_PORT(request->config, primary);
+    } else if (replica_helper::remove_node(primary_address(), request->config.secondaries) &&
+               replica_helper::remove_node(_primary_host_port, request->config.hp_secondaries)) {
     } else {
         return;
     }
 
     ::dsn::marshall(msg, *request);
 
-    rpc_address target(_failure_detector->get_servers());
-    rpc::call(_failure_detector->get_servers(),
-              msg,
-              nullptr,
-              [](error_code err, dsn::message_ex *, dsn::message_ex *) {});
+    const auto &target =
+        dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
+    rpc::call(target, msg, nullptr, [](error_code err, dsn::message_ex *, dsn::message_ex *) {});
 }
 
 void replica_stub::on_meta_server_disconnected()
 {
     LOG_INFO("meta server disconnected");
 
-    zauto_lock l(_state_lock);
+    zauto_lock sl(_state_lock);
     if (NS_Disconnected == _state)
         return;
 
@@ -1454,7 +1492,7 @@ void replica_stub::on_meta_server_disconnected()
 
     replicas rs;
     {
-        zauto_read_lock l(_replicas_lock);
+        zauto_read_lock rl(_replicas_lock);
         rs = _replicas;
     }
 
@@ -1503,7 +1541,7 @@ void replica_stub::response_client(gpid id,
         }
         LOG_ERROR("{}@{}: {} fail: client = {}, code = {}, timeout = {}, status = {}, error = {}",
                   id,
-                  _primary_address_str,
+                  _primary_host_port_cache,
                   is_read ? "read" : "write",
                   request == nullptr ? "null" : request->header->from_address.to_string(),
                   request == nullptr ? "null" : request->header->rpc_name,
@@ -1738,7 +1776,7 @@ void replica_stub::open_replica(
         // process below
         LOG_INFO("{}@{}: start to load replica {} group check, dir = {}",
                  id,
-                 _primary_address_str,
+                 _primary_host_port_cache,
                  group_check ? "with" : "without",
                  dir);
         rep = load_replica(dn, dir.c_str());
@@ -1782,7 +1820,7 @@ void replica_stub::open_replica(
                   "{}@{}: cannot load replica({}.{}), ballot = {}, "
                   "last_committed_decree = {}, but it does not existed!",
                   id,
-                  _primary_address_str,
+                  _primary_host_port_cache,
                   id,
                   app.app_type.c_str(),
                   configuration_update->config.ballot,
@@ -1820,8 +1858,9 @@ void replica_stub::open_replica(
     }
 
     if (rep == nullptr) {
-        LOG_WARNING(
-            "{}@{}: open replica failed, erase from opening replicas", id, _primary_address_str);
+        LOG_WARNING("{}@{}: open replica failed, erase from opening replicas",
+                    id,
+                    _primary_host_port_cache);
         zauto_write_lock l(_replicas_lock);
         CHECK_GT_MSG(_opening_replicas.erase(id), 0, "replica {} is not in _opening_replicas", id);
         METRIC_VAR_DECREMENT(opening_replicas);
@@ -1841,12 +1880,12 @@ void replica_stub::open_replica(
     }
 
     if (nullptr != group_check) {
-        rpc::call_one_way_typed(_primary_address,
+        rpc::call_one_way_typed(primary_address(),
                                 RPC_LEARN_ADD_LEARNER,
                                 *group_check,
                                 group_check->config.pid.thread_hash());
     } else if (nullptr != configuration_update) {
-        rpc::call_one_way_typed(_primary_address,
+        rpc::call_one_way_typed(primary_address(),
                                 RPC_CONFIG_PROPOSAL,
                                 *configuration_update,
                                 configuration_update->config.pid.thread_hash());
@@ -1900,57 +1939,76 @@ replica *replica_stub::new_replica(gpid gpid,
     return rep;
 }
 
+bool replica_stub::validate_replica_dir(const std::string &dir,
+                                        app_info &ai,
+                                        gpid &pid,
+                                        std::string &hint_message)
+{
+    if (!utils::filesystem::directory_exists(dir)) {
+        hint_message = fmt::format("replica dir '{}' not exist", dir);
+        return false;
+    }
+
+    char splitters[] = {'\\', '/', 0};
+    const auto name = utils::get_last_component(dir, splitters);
+    if (name.empty()) {
+        hint_message = fmt::format("invalid replica dir '{}'", dir);
+        return false;
+    }
+
+    char app_type[128] = {0};
+    int32_t app_id, pidx;
+    if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
+        hint_message = fmt::format("invalid replica dir '{}'", dir);
+        return false;
+    }
+
+    pid = gpid(app_id, pidx);
+    replica_app_info rai(&ai);
+    const auto ai_path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
+    const auto err = rai.load(ai_path);
+    if (ERR_OK != err) {
+        hint_message = fmt::format("load app-info from '{}' failed, err = {}", ai_path, err);
+        return false;
+    }
+
+    if (ai.app_type != app_type) {
+        hint_message = fmt::format("unmatched app type '{}' for '{}'", ai.app_type, ai_path);
+        return false;
+    }
+
+    // When the online partition split function aborted, the garbage partitions are with pidx in
+    // the range of [ai.partition_count, 2 * ai.partition_count), which means the partitions with
+    // pidx >= ai.partition_count are garbage partitions.
+    if (ai.partition_count <= pidx) {
+        hint_message = fmt::format(
+            "partition[{}], count={}, this replica may be partition split garbage partition, "
+            "ignore it",
+            pid,
+            ai.partition_count);
+        return false;
+    }
+
+    return true;
+}
+
 replica *replica_stub::load_replica(dir_node *dn, const char *dir)
 {
     FAIL_POINT_INJECT_F("mock_replica_load",
                         [&](absl::string_view) -> replica * { return nullptr; });
 
-    char splitters[] = {'\\', '/', 0};
-    std::string name = utils::get_last_component(std::string(dir), splitters);
-    if (name.empty()) {
-        LOG_ERROR("invalid replica dir {}", dir);
+    app_info ai;
+    gpid pid;
+    std::string hint_message;
+    if (!validate_replica_dir(dir, ai, pid, hint_message)) {
+        LOG_ERROR("invalid replica dir '{}', hint: {}", dir, hint_message);
         return nullptr;
     }
 
-    char app_type[128];
-    int32_t app_id, pidx;
-    if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
-        LOG_ERROR("invalid replica dir {}", dir);
-        return nullptr;
-    }
-
-    gpid pid(app_id, pidx);
-    if (!utils::filesystem::directory_exists(dir)) {
-        LOG_ERROR("replica dir {} not exist", dir);
-        return nullptr;
-    }
-
-    dsn::app_info info;
-    replica_app_info info2(&info);
-    std::string path = utils::filesystem::path_combine(dir, replica::kAppInfo);
-    auto err = info2.load(path);
-    if (ERR_OK != err) {
-        LOG_ERROR("load app-info from {} failed, err = {}", path, err);
-        return nullptr;
-    }
-
-    if (info.app_type != app_type) {
-        LOG_ERROR("unmatched app type {} for {}", info.app_type, path);
-        return nullptr;
-    }
-
-    if (info.partition_count < pidx) {
-        LOG_ERROR("partition[{}], count={}, this replica may be partition split garbage partition, "
-                  "ignore it",
-                  pid,
-                  info.partition_count);
-        return nullptr;
-    }
-
-    // The replica's directory must exists when creating a replica.
-    CHECK_EQ(dir, dn->replica_dir(app_type, pid));
-    auto *rep = new replica(this, pid, info, dn, false);
-    err = rep->initialize_on_load();
+    // The replica's directory must exist when creating a replica.
+    CHECK_EQ(dir, dn->replica_dir(ai.app_type, pid));
+    auto *rep = new replica(this, pid, ai, dn, false);
+    const auto err = rep->initialize_on_load();
     if (err != ERR_OK) {
         LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
         rep->close();
@@ -2061,9 +2119,9 @@ void replica_stub::notify_replica_state_update(const replica_configuration &conf
             tasking::enqueue(
                 LPC_REPLICA_STATE_CHANGE_NOTIFICATION,
                 &_tracker,
-                std::bind(_replica_state_subscriber, _primary_address, config, is_closing));
+                std::bind(_replica_state_subscriber, _primary_host_port, config, is_closing));
         } else {
-            _replica_state_subscriber(_primary_address, config, is_closing);
+            _replica_state_subscriber(_primary_host_port, config, is_closing);
         }
     }
 }
@@ -2129,10 +2187,10 @@ void replica_stub::open_service()
 #if !defined(DSN_ENABLE_GPERF) && defined(DSN_USE_JEMALLOC)
 void replica_stub::register_jemalloc_ctrl_command()
 {
-    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-        {"replica.dump-jemalloc-stats"},
-        fmt::format("replica.dump-jemalloc-stats <{}> [buffer size]", kAllJeStatsTypesStr),
-        "dump stats of jemalloc",
+    _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+        "replica.dump-jemalloc-stats",
+        "Dump stats of jemalloc",
+        fmt::format("<{}> [buffer size]", kAllJeStatsTypesStr),
         [](const std::vector<std::string> &args) {
             if (args.empty()) {
                 return std::string("invalid arguments");
@@ -2170,10 +2228,10 @@ void replica_stub::register_ctrl_command()
     /// failure_detector::register_ctrl_commands and nfs_client_impl::register_cli_commands
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.kill_partition"},
-            "replica.kill_partition [app_id [partition_index]]",
-            "replica.kill_partition: kill partitions by (all, one app, one partition)",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.kill_partition",
+            "Kill partitions by (all, one app, one partition)",
+            "[app_id [partition_index]]",
             [this](const std::vector<std::string> &args) {
                 dsn::gpid pid;
                 if (args.size() == 0) {
@@ -2205,11 +2263,10 @@ void replica_stub::register_ctrl_command()
             "replica.verbose-commit-log",
             "control if print verbose log when commit mutation"));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.trigger-checkpoint"},
-            "replica.trigger-checkpoint [id1,id2,...] (where id is 'app_id' or "
-            "'app_id.partition_id')",
-            "replica.trigger-checkpoint - trigger replicas to do checkpoint",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.trigger-checkpoint",
+            "Trigger replicas to do checkpoint by app_id or app_id.partition_id",
+            "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
                     tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
@@ -2220,25 +2277,61 @@ void replica_stub::register_ctrl_command()
                 });
             }));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.query-compact"},
-            "replica.query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-            "replica.query-compact - query full compact status on the underlying storage engine",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.query-compact",
+            "Query full compact status on the underlying storage engine by app_id or "
+            "app_id.partition_id",
+            "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     return rep->query_manual_compact_state();
                 });
             }));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.query-app-envs"},
-            "replica.query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-            "replica.query-app-envs - query app envs on the underlying storage engine",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.query-app-envs",
+            "Query app envs on the underlying storage engine by app_id or app_id.partition_id",
+            "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     std::map<std::string, std::string> kv_map;
                     rep->query_app_envs(kv_map);
                     return dsn::utils::kv_map_to_string(kv_map, ',', '=');
+                });
+            }));
+
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.enable-plog-gc",
+            "Enable plog garbage collection for replicas specified by comma-separated list "
+            "of 'app_id' or 'app_id.partition_id', or all replicas for empty",
+            "[id1,id2,...]",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    rep->update_plog_gc_enabled(true);
+                    return rep->get_plog_gc_enabled_message();
+                });
+            }));
+
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.disable-plog-gc",
+            "Disable plog garbage collection for replicas specified by comma-separated list "
+            "of 'app_id' or 'app_id.partition_id', or all replicas for empty",
+            "[id1,id2,...]",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    rep->update_plog_gc_enabled(false);
+                    return rep->get_plog_gc_enabled_message();
+                });
+            }));
+
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.query-plog-gc-enabled-status",
+            "Query if plog garbage collection is enabled or disabled for replicas specified by "
+            "comma-separated list of 'app_id' or 'app_id.partition_id', or all replicas for empty",
+            "[id1,id2,...]",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    return rep->get_plog_gc_enabled_message();
                 });
             }));
 
@@ -2248,10 +2341,10 @@ void replica_stub::register_ctrl_command()
             "replica.release-tcmalloc-memory",
             "control if try to release tcmalloc memory"));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.get-tcmalloc-status"},
-            "replica.get-tcmalloc-status - get status of tcmalloc",
-            "get status of tcmalloc",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.get-tcmalloc-status",
+            "Get the status of tcmalloc",
+            "",
             [](const std::vector<std::string> &args) {
                 char buf[4096];
                 MallocExtension::instance()->GetStats(buf, 4096);
@@ -2265,10 +2358,10 @@ void replica_stub::register_ctrl_command()
             "control tcmalloc max reserved but not-used memory percentage",
             &check_mem_release_max_reserved_mem_percentage));
 
-        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
-            {"replica.release-all-reserved-memory"},
-            "replica.release-all-reserved-memory - release tcmalloc all reserved-not-used memory",
-            "release tcmalloc all reserverd not-used memory back to operating system",
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.release-all-reserved-memory",
+            "Release tcmalloc all reserved-not-used memory back to operating system",
+            "",
             [this](const std::vector<std::string> &args) {
                 auto release_bytes = gc_tcmalloc_memory(true);
                 return "OK, release_bytes=" + std::to_string(release_bytes);
@@ -2289,7 +2382,7 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
                                       bool allow_empty_args,
                                       std::function<std::string(const replica_ptr &rep)> func)
 {
-    if (!allow_empty_args && args.empty()) {
+    if (args.empty() && !allow_empty_args) {
         return std::string("invalid arguments");
     }
 
@@ -2379,7 +2472,7 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &args,
     std::stringstream query_state;
     query_state << processed << " processed, " << not_found << " not found";
     for (auto &kv : results) {
-        query_state << "\n    " << kv.first << "@" << _primary_address_str;
+        query_state << "\n    " << kv.first << "@" << _primary_host_port_cache;
         if (kv.second.first != partition_status::PS_INVALID)
             query_state << "@" << (kv.second.first == partition_status::PS_PRIMARY ? "P" : "S");
         query_state << " : " << kv.second.second;
@@ -2525,7 +2618,7 @@ uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
 //
 // partition split
 //
-void replica_stub::create_child_replica(rpc_address primary_address,
+void replica_stub::create_child_replica(const host_port &primary_address,
                                         app_info app,
                                         ballot init_ballot,
                                         gpid child_gpid,
@@ -2668,7 +2761,7 @@ void replica_stub::on_bulk_load(bulk_load_rpc rpc)
     const bulk_load_request &request = rpc.request();
     bulk_load_response &response = rpc.response();
 
-    LOG_INFO("[{}@{}]: receive bulk load request", request.pid, _primary_address_str);
+    LOG_INFO("[{}@{}]: receive bulk load request", request.pid, _primary_host_port_cache);
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
         rep->get_bulk_loader()->on_bulk_load(request, response);
@@ -2686,8 +2779,8 @@ void replica_stub::on_group_bulk_load(group_bulk_load_rpc rpc)
     LOG_INFO("[{}@{}]: received group bulk load request, primary = {}, ballot = {}, "
              "meta_bulk_load_status = {}",
              request.config.pid,
-             _primary_address_str,
-             request.config.primary,
+             _primary_host_port_cache,
+             FMT_HOST_PORT_AND_IP(request.config, primary),
              request.config.ballot,
              enum_to_string(request.meta_bulk_load_status));
 
@@ -2707,7 +2800,7 @@ void replica_stub::on_detect_hotkey(detect_hotkey_rpc rpc)
 
     LOG_INFO("[{}@{}]: received detect hotkey request, hotkey_type = {}, detect_action = {}",
              request.pid,
-             _primary_address_str,
+             _primary_host_port_cache,
              enum_to_string(request.type),
              enum_to_string(request.action));
 

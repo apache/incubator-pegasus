@@ -36,7 +36,6 @@ DSN_DEFINE_bool(meta_server,
                 "only try to make the primary balanced by move");
 
 namespace dsn {
-class rpc_address;
 
 namespace replication {
 app_balance_policy::app_balance_policy(meta_service *svc) : load_balance_policy(svc)
@@ -117,7 +116,7 @@ bool app_balance_policy::copy_secondary(const std::shared_ptr<app_state> &app, b
     int replicas_low = app->partition_count / _alive_nodes;
 
     std::unique_ptr<copy_replica_operation> operation = std::make_unique<copy_secondary_operation>(
-        app, apps, nodes, address_vec, address_id, replicas_low);
+        app, apps, nodes, host_port_vec, host_port_id, replicas_low);
     return operation->start(_migration_result);
 }
 
@@ -125,17 +124,18 @@ copy_secondary_operation::copy_secondary_operation(
     const std::shared_ptr<app_state> app,
     const app_mapper &apps,
     node_mapper &nodes,
-    const std::vector<dsn::rpc_address> &address_vec,
-    const std::unordered_map<dsn::rpc_address, int> &address_id,
+    const std::vector<dsn::host_port> &host_port_vec,
+    const std::unordered_map<dsn::host_port, int> &host_port_id,
     int replicas_low)
-    : copy_replica_operation(app, apps, nodes, address_vec, address_id), _replicas_low(replicas_low)
+    : copy_replica_operation(app, apps, nodes, host_port_vec, host_port_id),
+      _replicas_low(replicas_low)
 {
 }
 
 bool copy_secondary_operation::can_continue()
 {
-    int id_min = *_ordered_address_ids.begin();
-    int id_max = *_ordered_address_ids.rbegin();
+    int id_min = *_ordered_host_port_ids.begin();
+    int id_max = *_ordered_host_port_ids.rbegin();
     if (_partition_counts[id_max] <= _replicas_low ||
         _partition_counts[id_max] - _partition_counts[id_min] <= 1) {
         LOG_INFO("{}: stop copy secondary coz it will be balanced later", _app->get_logname());
@@ -151,8 +151,8 @@ int copy_secondary_operation::get_partition_count(const node_state &ns) const
 
 bool copy_secondary_operation::can_select(gpid pid, migration_list *result)
 {
-    int id_max = *_ordered_address_ids.rbegin();
-    const node_state &max_ns = _nodes.at(_address_vec[id_max]);
+    int id_max = *_ordered_host_port_ids.rbegin();
+    const node_state &max_ns = _nodes.at(_host_port_vec[id_max]);
     if (max_ns.served_as(pid) == partition_status::PS_PRIMARY) {
         LOG_DEBUG("{}: skip gpid({}.{}) coz it is primary",
                   _app->get_logname(),
@@ -170,8 +170,8 @@ bool copy_secondary_operation::can_select(gpid pid, migration_list *result)
         return false;
     }
 
-    int id_min = *_ordered_address_ids.begin();
-    const node_state &min_ns = _nodes.at(_address_vec[id_min]);
+    int id_min = *_ordered_host_port_ids.begin();
+    const node_state &min_ns = _nodes.at(_host_port_vec[id_min]);
     if (min_ns.served_as(pid) != partition_status::PS_INACTIVE) {
         LOG_DEBUG("{}: skip gpid({}.{}) coz it is already a member on the target node",
                   _app->get_logname(),

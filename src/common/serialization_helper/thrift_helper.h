@@ -237,7 +237,7 @@ inline uint32_t rpc_address::read(apache::thrift::protocol::TProtocol *iprot)
         xfer += iprot->readStructEnd();
 
         // currently only support ipv4 format
-        this->assign_ipv4(host.c_str(), port);
+        *this = from_host_port(host, static_cast<uint16_t>(port));
 
         return xfer;
     }

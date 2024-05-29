@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME "backup_restore_test")
+set(MY_PROJ_NAME backup_restore_test)
 project(${MY_PROJ_NAME} C CXX)
 set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
@@ -30,7 +30,11 @@ set(MY_PROJ_LIBS
         krb5
         function_test_utils
         pegasus_client_static
-        test_utils)
+        test_utils
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

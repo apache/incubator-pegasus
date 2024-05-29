@@ -39,6 +39,7 @@ set(MY_PROJ_LIBS
         dsn_http
         dsn_runtime
         dsn_aio
+        prometheus-cpp-core
         zookeeper
         hashtable
         hdfs

@@ -23,7 +23,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <algorithm>
-#include <string>
 #include <unordered_set>
 #include <utility>
 
@@ -32,7 +31,6 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "kill_testor.h"
-#include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -54,8 +52,8 @@ kill_testor::kill_testor(const char *config_file)
     }
 
     // load meta_list
-    dsn::replication::replica_helper::load_meta_servers(
-        meta_list, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), FLAGS_pegasus_cluster_name);
+    dsn::replication::replica_helper::load_servers_from_config(
+        dsn::PEGASUS_CLUSTER_SECTION_NAME, FLAGS_pegasus_cluster_name, meta_list);
     if (meta_list.empty()) {
         LOG_ERROR("Should config the meta address for killer");
         exit(-1);
@@ -113,22 +111,22 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
         for (int i = 0; i < partitions.size(); i++) {
             const dsn::partition_configuration &p = partitions[i];
             int replica_count = 0;
-            if (!p.primary.is_invalid()) {
+            if (p.hp_primary) {
                 replica_count++;
             }
-            replica_count += p.secondaries.size();
+            replica_count += p.hp_secondaries.size();
             if (replica_count == p.max_replica_count) {
                 healthy_partition_cnt++;
             } else {
                 std::stringstream info;
                 info << "gpid=" << p.pid.get_app_id() << "." << p.pid.get_partition_index() << ", ";
-                info << "primay=" << p.primary.to_std_string() << ", ";
+                info << "primay=" << p.hp_primary << ", ";
                 info << "secondaries=[";
-                for (int idx = 0; idx < p.secondaries.size(); idx++) {
+                for (int idx = 0; idx < p.hp_secondaries.size(); idx++) {
                     if (idx != 0)
-                        info << "," << p.secondaries[idx].to_std_string();
+                        info << "," << p.hp_secondaries[idx];
                     else
-                        info << p.secondaries[idx].to_std_string();
+                        info << p.hp_secondaries[idx];
                 }
                 info << "], ";
                 info << "last_committed_decree=" << p.last_committed_decree;

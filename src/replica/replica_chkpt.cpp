@@ -49,6 +49,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "split/replica_split_manager.h"
@@ -74,13 +75,13 @@ DSN_DEFINE_int32(replication,
                  "The maximum size of useless private log to be reserved. NOTE: only when "
                  "'log_private_reserve_max_size_mb' and 'log_private_reserve_max_time_seconds' are "
                  "both satisfied, the useless logs can be reserved");
-DSN_DEFINE_int32(replication,
-                 log_private_reserve_max_time_seconds,
-                 36000,
-                 "The maximum time in seconds of useless private log to be reserved. NOTE: only "
-                 "when 'log_private_reserve_max_size_mb' and "
-                 "'log_private_reserve_max_time_seconds' are both satisfied, the useless logs can "
-                 "be reserved");
+DSN_DEFINE_int32(
+    replication,
+    log_private_reserve_max_time_seconds,
+    36000,
+    "The maximum time in seconds of useless private log to be reserved. NOTE: only "
+    "when 'log_private_reserve_max_size_mb' and 'log_private_reserve_max_time_seconds' "
+    "are both satisfied, the useless logs can be reserved");
 
 namespace dsn {
 namespace replication {
@@ -111,60 +112,78 @@ void replica::on_checkpoint_timer()
         init_checkpoint(false);
     }
 
-    if (_private_log) {
-        mutation_log_ptr plog = _private_log;
-
-        decree last_durable_decree = _app->last_durable_decree();
-        decree min_confirmed_decree = _duplication_mgr->min_confirmed_decree();
-        decree cleanable_decree = last_durable_decree;
-        int64_t valid_start_offset = _app->init_info().init_offset_in_private_log;
-
-        if (min_confirmed_decree >= 0) {
-            // Do not rely on valid_start_offset for GC during duplication.
-            // cleanable_decree is the only GC trigger.
-            valid_start_offset = 0;
-            if (min_confirmed_decree < last_durable_decree) {
-                LOG_INFO_PREFIX("gc_private {}: delay gc for duplication: min_confirmed_decree({}) "
-                                "last_durable_decree({})",
-                                enum_to_string(status()),
-                                min_confirmed_decree,
-                                last_durable_decree);
-                cleanable_decree = min_confirmed_decree;
-            } else {
-                LOG_INFO_PREFIX("gc_private {}: min_confirmed_decree({}) last_durable_decree({})",
-                                enum_to_string(status()),
-                                min_confirmed_decree,
-                                last_durable_decree);
-            }
-        } else if (is_duplication_master()) {
-            // unsure if the logs can be dropped, because min_confirmed_decree
-            // is currently unavailable
-            LOG_INFO_PREFIX(
-                "gc_private {}: skip gc because confirmed duplication progress is unknown",
-                enum_to_string(status()));
-            return;
-        }
-
-        tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
-                         &_tracker,
-                         [this, plog, cleanable_decree, valid_start_offset] {
-                             // run in background thread to avoid file deletion operation blocking
-                             // replication thread.
-                             if (status() == partition_status::PS_ERROR ||
-                                 status() == partition_status::PS_INACTIVE)
-                                 return;
-                             plog->garbage_collection(
-                                 get_gpid(),
-                                 cleanable_decree,
-                                 valid_start_offset,
-                                 (int64_t)FLAGS_log_private_reserve_max_size_mb * 1024 * 1024,
-                                 (int64_t)FLAGS_log_private_reserve_max_time_seconds);
-                             if (status() == partition_status::PS_PRIMARY) {
-                                 METRIC_VAR_SET(private_log_size_mb,
-                                                _private_log->total_size() >> 20);
-                             }
-                         });
+    if (_private_log == nullptr) {
+        return;
     }
+
+    if (!is_plog_gc_enabled()) {
+        LOG_WARNING_PREFIX("gc_private {}: skip gc because plog gc is disabled",
+                           enum_to_string(status()));
+        return;
+    }
+
+    if (is_duplication_plog_checking()) {
+        LOG_INFO_PREFIX("gc_private {}: skip gc because duplication is checking plog files",
+                        enum_to_string(status()));
+        return;
+    }
+
+    mutation_log_ptr plog = _private_log;
+
+    decree last_durable_decree = _app->last_durable_decree();
+    decree min_confirmed_decree = _duplication_mgr->min_confirmed_decree();
+    decree cleanable_decree = last_durable_decree;
+    int64_t valid_start_offset = _app->init_info().init_offset_in_private_log;
+
+    if (min_confirmed_decree < 0 && is_duplication_master()) {
+        // Not sure whether the plog files could be dropped, because min_confirmed_decree
+        // is currently unavailable.
+        LOG_INFO_PREFIX("gc_private {}: skip gc because confirmed duplication progress "
+                        "is unknown",
+                        enum_to_string(status()));
+        return;
+    }
+
+    if (min_confirmed_decree >= 0) {
+        // Do not rely on valid_start_offset for GC during duplication.
+        // cleanable_decree is the only GC trigger.
+        valid_start_offset = 0;
+        if (min_confirmed_decree < last_durable_decree) {
+            LOG_INFO_PREFIX("gc_private {}: delay gc for duplication: min_confirmed_decree({}) "
+                            "last_durable_decree({})",
+                            enum_to_string(status()),
+                            min_confirmed_decree,
+                            last_durable_decree);
+            cleanable_decree = min_confirmed_decree;
+        } else {
+            LOG_INFO_PREFIX("gc_private {}: min_confirmed_decree({}) last_durable_decree({})",
+                            enum_to_string(status()),
+                            min_confirmed_decree,
+                            last_durable_decree);
+        }
+    }
+
+    tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
+                     &_tracker,
+                     [this, plog, cleanable_decree, valid_start_offset] {
+                         // run in background thread to avoid file deletion operation blocking
+                         // replication thread.
+                         if (status() == partition_status::PS_ERROR ||
+                             status() == partition_status::PS_INACTIVE) {
+
+                             return;
+                         }
+
+                         plog->garbage_collection(
+                             get_gpid(),
+                             cleanable_decree,
+                             valid_start_offset,
+                             (int64_t)FLAGS_log_private_reserve_max_size_mb * 1024 * 1024,
+                             (int64_t)FLAGS_log_private_reserve_max_time_seconds);
+                         if (status() == partition_status::PS_PRIMARY) {
+                             METRIC_VAR_SET(private_log_size_mb, _private_log->total_size() >> 20);
+                         }
+                     });
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -255,7 +274,8 @@ void replica::on_query_last_checkpoint(/*out*/ learn_response &response)
         // for example: base_local_dir = "./data" + "checkpoint.1024" = "./data/checkpoint.1024"
         response.base_local_dir = utils::filesystem::path_combine(
             _app->data_dir(), checkpoint_folder(response.state.to_decree_included));
-        response.address = _stub->_primary_address;
+        SET_IP_AND_HOST_PORT(
+            response, learnee, _stub->primary_address(), _stub->primary_host_port());
         for (auto &file : response.state.files) {
             // response.state.files contain file absolute path， for example:
             // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst

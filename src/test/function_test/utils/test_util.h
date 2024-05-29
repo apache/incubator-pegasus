@@ -28,7 +28,7 @@
 #include <vector>
 
 #include "dsn.layer2_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 
 // TODO(yingchun): it's too tricky, but I don't know how does it happen, we can fix it later.
 #define TRICKY_CODE_TO_AVOID_LINK_ERROR                                                            \
@@ -117,7 +117,7 @@ protected:
     int32_t partition_count_ = 8;
     std::vector<dsn::partition_configuration> partitions_;
     pegasus_client *client_ = nullptr;
-    std::vector<dsn::rpc_address> meta_list_;
+    std::vector<dsn::host_port> meta_list_;
     std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client_;
 };
 } // namespace pegasus

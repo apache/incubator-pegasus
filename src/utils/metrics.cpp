@@ -29,15 +29,14 @@
 #include "http/http_method.h"
 #include "http/http_status_code.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_engine.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/service_app.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
 #include "utils/flags.h"
 #include "utils/rand.h"
 #include "utils/shared_io_service.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
 
 DSN_DEFINE_uint64(metrics,
@@ -286,7 +285,10 @@ metrics_http_service::metrics_http_service(metric_registry *registry) : _registr
                                this,
                                std::placeholders::_1,
                                std::placeholders::_2),
-                     fmt::format("ip:port{}", kMetricsQueryPath));
+                     "[with_metric_fields=field1,field2,...][&types=type1,type2,...][&ids=id1,id2,."
+                     "..][&attributes=attr1,value1,attr2,value2,...][&metrics=metric1,metric2,...]["
+                     "&detail=true|false]"
+                     "Query the node metrics.");
 }
 
 namespace {
@@ -517,7 +519,7 @@ void encode_port(dsn::metric_json_writer &writer)
     writer.Key(dsn::kMetricPortField.c_str());
 
     const auto *const rpc = dsn::task::get_current_rpc2();
-    ENCODE_OBJ_VAL(rpc != nullptr, rpc->primary_address().port());
+    ENCODE_OBJ_VAL(rpc != nullptr, rpc->primary_host_port().port());
 }
 
 void encode_timestamp_ns(dsn::metric_json_writer &writer)

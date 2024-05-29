@@ -22,10 +22,7 @@
 #include <cstdint>
 #include <memory>
 
-#include "common//duplication_common.h"
-#include "common/common.h"
 #include "replica/replica_base.h"
-#include "utils/errors.h"
 #include "utils/metrics.h"
 
 namespace dsn {
@@ -54,13 +51,6 @@ class ingestion_response;
 
 namespace pegasus {
 namespace server {
-
-inline uint8_t get_current_cluster_id()
-{
-    static const uint8_t cluster_id =
-        dsn::replication::get_duplication_cluster_id(dsn::get_current_cluster_name()).get_value();
-    return cluster_id;
-}
 
 // The context of an mutation to the database.
 struct db_write_context
@@ -239,7 +229,7 @@ private:
     uint32_t _put_batch_size;
     uint32_t _remove_batch_size;
 
-    // TODO(wutao1): add perf counters for failed rpc.
+    // TODO(wutao1): add metrics for failed rpc.
 };
 
 } // namespace server

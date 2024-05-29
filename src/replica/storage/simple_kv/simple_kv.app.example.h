@@ -45,9 +45,8 @@ public:
             return ::dsn::ERR_INVALID_PARAMETERS;
 
         printf("%s %s %s\n", args[1].c_str(), args[2].c_str(), args[3].c_str());
-        dsn::rpc_address meta;
-        meta.from_string_ipv4(args[2].c_str());
-        _simple_kv_client.reset(new simple_kv_client(args[1].c_str(), {meta}, args[3].c_str()));
+        const auto hp = host_port::from_string(args[2]);
+        _simple_kv_client.reset(new simple_kv_client(args[1].c_str(), {hp}, args[3].c_str()));
 
         _timer = ::dsn::tasking::enqueue_timer(LPC_SIMPLE_KV_TEST_TIMER,
                                                &_tracker,

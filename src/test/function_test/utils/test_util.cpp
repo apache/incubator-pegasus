@@ -40,7 +40,6 @@
 #include "nlohmann/detail/iterators/iter_impl.hpp"
 #include "nlohmann/json_fwd.hpp"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"
 #include "test_util/test_util.h"
@@ -50,6 +49,10 @@
 #include "utils/filesystem.h"
 #include "utils/rand.h"
 #include "utils/test_macros.h"
+
+namespace dsn {
+class rpc_address;
+} // namespace dsn
 
 using dsn::partition_configuration;
 using dsn::replication::replica_helper;
@@ -82,13 +85,14 @@ void test_util::SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize
 
 void test_util::SetUp()
 {
-    ASSERT_TRUE(replica_helper::load_meta_servers(
-        meta_list_, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), kClusterName.c_str()));
+    ASSERT_TRUE(replica_helper::load_servers_from_config(
+        dsn::PEGASUS_CLUSTER_SECTION_NAME, kClusterName, meta_list_));
     ASSERT_FALSE(meta_list_.empty());
 
     ddl_client_ = std::make_shared<replication_ddl_client>(meta_list_);
     ASSERT_TRUE(ddl_client_ != nullptr);
     ddl_client_->set_max_wait_app_ready_secs(120);
+    ddl_client_->set_meta_servers_leader();
 
     dsn::error_code ret =
         ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, kCreateEnvs, false);
@@ -171,7 +175,7 @@ void test_util::wait_table_healthy(const std::string &table_name) const
             std::vector<partition_configuration> pcs;
             ASSERT_EQ(dsn::ERR_OK, ddl_client_->list_app(table_name, table_id, pcount, pcs));
             for (const auto &pc : pcs) {
-                ASSERT_FALSE(pc.primary.is_invalid());
+                ASSERT_TRUE(pc.primary);
                 ASSERT_EQ(1 + pc.secondaries.size(), pc.max_replica_count);
             }
         },

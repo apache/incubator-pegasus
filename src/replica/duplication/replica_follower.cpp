@@ -32,7 +32,9 @@
 #include "nfs/nfs_node.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/group_host_port.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
@@ -58,23 +60,31 @@ void replica_follower::init_master_info()
 {
     const auto &envs = _replica->get_app_info()->envs;
 
-    if (envs.find(duplication_constants::kDuplicationEnvMasterClusterKey) == envs.end() ||
-        envs.find(duplication_constants::kDuplicationEnvMasterMetasKey) == envs.end()) {
+    const auto &cluster_name = envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
+    const auto &metas = envs.find(duplication_constants::kDuplicationEnvMasterMetasKey);
+    if (cluster_name == envs.end() || metas == envs.end()) {
         return;
     }
 
     need_duplicate = true;
 
-    _master_cluster_name = envs.at(duplication_constants::kDuplicationEnvMasterClusterKey);
-    _master_app_name = _replica->get_app_info()->app_name;
+    _master_cluster_name = cluster_name->second;
 
-    const auto &meta_list_str = envs.at(duplication_constants::kDuplicationEnvMasterMetasKey);
-    std::vector<std::string> metas;
-    dsn::utils::split_args(meta_list_str.c_str(), metas, ',');
-    CHECK(!metas.empty(), "master cluster meta list is invalid!");
-    for (const auto &meta : metas) {
-        dsn::rpc_address node;
-        CHECK(node.from_string_ipv4(meta.c_str()), "{} is invalid meta address", meta);
+    const auto &app_name = envs.find(duplication_constants::kDuplicationEnvMasterAppNameKey);
+    if (app_name == envs.end()) {
+        // The version of meta server of master cluster is old(< v2.6.0), thus the app name of
+        // the follower cluster is the same with master cluster.
+        _master_app_name = _replica->get_app_info()->app_name;
+    } else {
+        _master_app_name = app_name->second;
+    }
+
+    std::vector<std::string> master_metas;
+    dsn::utils::split_args(metas->second.c_str(), master_metas, ',');
+    CHECK(!master_metas.empty(), "master cluster meta list is invalid!");
+    for (const auto &meta : master_metas) {
+        const auto node = host_port::from_string(meta);
+        CHECK(node, "{} is invalid meta host_port", meta);
         _master_meta_list.emplace_back(std::move(node));
     }
 }
@@ -105,9 +115,9 @@ error_code replica_follower::duplicate_checkpoint()
 // ThreadPool: THREAD_POOL_DEFAULT
 void replica_follower::async_duplicate_checkpoint_from_master_replica()
 {
-    rpc_address meta_servers;
+    host_port meta_servers;
     meta_servers.assign_group(_master_cluster_name.c_str());
-    meta_servers.group_address()->add_list(_master_meta_list);
+    meta_servers.group_host_port()->add_list(_master_meta_list);
 
     query_cfg_request meta_config_request;
     meta_config_request.app_name = _master_app_name;
@@ -118,18 +128,21 @@ void replica_follower::async_duplicate_checkpoint_from_master_replica()
     dsn::message_ex *msg = dsn::message_ex::create_request(
         RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, get_gpid().thread_hash());
     dsn::marshall(msg, meta_config_request);
-    rpc::call(meta_servers, msg, &_tracker, [&](error_code err, query_cfg_response &&resp) mutable {
-        FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](absl::string_view s) -> void {
-            _tracker.set_tasks_success();
-            return;
-        });
+    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
+              msg,
+              &_tracker,
+              [&](error_code err, query_cfg_response &&resp) mutable {
+                  FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](absl::string_view s) -> void {
+                      _tracker.set_tasks_success();
+                      return;
+                  });
 
-        FAIL_POINT_INJECT_F("duplicate_checkpoint_failed",
-                            [&](absl::string_view s) -> void { return; });
-        if (update_master_replica_config(err, std::move(resp)) == ERR_OK) {
-            copy_master_replica_checkpoint();
-        }
-    });
+                  FAIL_POINT_INJECT_F("duplicate_checkpoint_failed",
+                                      [&](absl::string_view s) -> void { return; });
+                  if (update_master_replica_config(err, std::move(resp)) == ERR_OK) {
+                      copy_master_replica_checkpoint();
+                  }
+              });
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
@@ -165,7 +178,7 @@ error_code replica_follower::update_master_replica_config(error_code err, query_
         return ERR_INCONSISTENT_STATE;
     }
 
-    if (dsn_unlikely(resp.partitions[0].primary == rpc_address::s_invalid_address)) {
+    if (dsn_unlikely(!resp.partitions[0].hp_primary)) {
         LOG_ERROR_PREFIX("master[{}] partition address is invalid", master_replica_name());
         return ERR_INVALID_STATE;
     }
@@ -175,7 +188,7 @@ error_code replica_follower::update_master_replica_config(error_code err, query_
     LOG_INFO_PREFIX(
         "query master[{}] config successfully and update local config: remote={}, gpid={}",
         master_replica_name(),
-        _master_replica_config.primary,
+        FMT_HOST_PORT_AND_IP(_master_replica_config, primary),
         _master_replica_config.pid);
     return ERR_OK;
 }
@@ -217,13 +230,16 @@ error_code replica_follower::nfs_copy_checkpoint(error_code err, learn_response 
         return ERR_FILE_OPERATION_FAILED;
     }
 
+    host_port hp_learnee;
+    GET_HOST_PORT(resp, learnee, hp_learnee);
+
     nfs_copy_remote_files(
-        resp.address, resp.replica_disk_tag, resp.base_local_dir, resp.state.files, dest);
+        hp_learnee, resp.replica_disk_tag, resp.base_local_dir, resp.state.files, dest);
     return ERR_OK;
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
-void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
+void replica_follower::nfs_copy_remote_files(const host_port &remote_node,
                                              const std::string &remote_disk,
                                              const std::string &remote_dir,
                                              std::vector<std::string> &file_list,

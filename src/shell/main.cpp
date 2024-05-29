@@ -86,15 +86,16 @@ static command_executor commands[] = {
     {
         "ls",
         "list all apps",
-        "[-a|-all] [-d|--detailed] [-j|--json] [-o|--output file_name]"
+        "[-a|-all] [-d|--detailed] [-j|--json] [-o|--output file_name] "
         "[-s|--status all|available|creating|dropping|dropped]",
         ls_apps,
     },
     {
         "nodes",
         "get the node status for this cluster",
-        "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage]"
-        "[-o|--output file_name] [-s|--status all|alive|unalive] [-q|--qps]",
+        "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage] "
+        "[-o|--output file_name] [-s|--status all|alive|unalive] [-q|--qps] "
+        "[-t|--sample_interval_ms num]",
         ls_nodes,
     },
     {
@@ -333,7 +334,7 @@ static command_executor commands[] = {
         "remote_command",
         "send remote command to servers",
         "[-t all|meta-server|replica-server] [-r|--resolve_ip] [-l ip:port,ip:port...]"
-        "<command> [arguments...]",
+        " <command> [arguments...]",
         remote_command,
     },
     {
@@ -352,7 +353,7 @@ static command_executor commands[] = {
         "app_stat",
         "get stat of apps",
         "[-a|--app_name str] [-q|--only_qps] [-u|--only_usage] [-j|--json] "
-        "[-o|--output file_name]",
+        "[-o|--output file_name] [-t|--sample_interval_ms num]",
         app_stat,
     },
     {
@@ -444,7 +445,8 @@ static command_executor commands[] = {
         "restore app from backup media",
         "<-c|--old_cluster_name str> <-p|--old_policy_name str> <-a|--old_app_name str> "
         "<-i|--old_app_id id> <-t|--timestamp/backup_id timestamp> "
-        "<-b|--backup_provider_type str> [-n|--new_app_name str] [-s|--skip_bad_partition]",
+        "<-b|--backup_provider_type str> [-n|--new_app_name str] [-s|--skip_bad_partition] "
+        "[-r|--restore_path str]",
         restore,
     },
     {
@@ -472,7 +474,11 @@ static command_executor commands[] = {
         "[-s|--skip_prompt] [-o|--output file_name]",
         ddd_diagnose,
     },
-    {"add_dup", "add duplication", "<app_name> <remote_cluster_name> [-s|--sst]", add_dup},
+    {"add_dup",
+     "add duplication",
+     "<app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str] "
+     "[-r|--remote_replica_count num]",
+     add_dup},
     {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
@@ -530,6 +536,37 @@ static command_executor commands[] = {
         "set the max replica count of an app",
         "<app_name> <replica_count>",
         set_max_replica_count,
+    },
+    {
+        "local_partition_split",
+        "Split the local partitions offline. It's helpful to split the table which has large "
+        "amount of data but with a few partitions into more partitions to improve the throughput "
+        "and lower latency. Note:\n"
+        "  * Make sure the table to be split is in HEALTH status\n"
+        "  * Stop the replica servers before executing this command\n"
+        "  * Execute this tool on all replica servers which have the partitions of the "
+        "    <src_app_id>\n"
+        "  * <src_data_dirs> and <dst_data_dirs> are ',' split data directories, and have the same "
+        "    size\n"
+        "  * <src_app_id> is the app id to be split\n"
+        "  * <dst_app_id> is the new app id after splitting, make sure it's not exist in the "
+        "    cluster\n"
+        "  * <src_partition_ids> is the partitions to be split, it's allowed to specify partial "
+        "    partition ids on a single replica server once, but make sure the union set is all "
+        "    the partitions of the <src_app_id> among all replica servers using this tool\n"
+        "  * <src_partition_count> is the partition count of the <src_app_id>\n"
+        "  * <dst_partition_count> is the partition count of the <dst_app_id>, it must be 2^n "
+        "    times of <src_app_id> where n > 1\n"
+        "  * <dst_app_name> is the new app name after splitting\n"
+        "  * --post_full_compact indicate whether do the post full compact for the new partitions\n"
+        "  * --post_count indicate whether do the post data counting for the new partitions\n"
+        "  * --threads_per_data_dir indicate the threads count for each data directory\n"
+        "  * --threads_per_partition indicate the threads count for each partition\n"
+        "  * Use 'recover' tool to build the metadata of the new table on Zookeeper after "
+        "    splitting\n"
+        "  * Use 'rename' tool to rename the tables if needed\n",
+        local_partition_split_help.c_str(),
+        local_partition_split,
     },
     {
         "exit", "exit shell", "", exit_shell,
@@ -663,9 +700,8 @@ static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
                                     "",
                                     "");
 
-    dsn::replication::replica_helper::load_meta_servers(s_global_context.meta_list,
-                                                        dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
-                                                        cluster_name.c_str());
+    dsn::replication::replica_helper::load_servers_from_config(
+        dsn::PEGASUS_CLUSTER_SECTION_NAME, cluster_name, s_global_context.meta_list);
     s_global_context.ddl_client =
         std::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
 

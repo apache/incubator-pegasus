@@ -90,6 +90,14 @@ std::string http_service::get_rel_path(const std::string &sub_path) const
 
 void http_service::register_handler(std::string sub_path, http_callback cb, std::string help) const
 {
+    register_handler(std::move(sub_path), std::move(cb), "", std::move(help));
+}
+
+void http_service::register_handler(std::string sub_path,
+                                    http_callback cb,
+                                    std::string parameters,
+                                    std::string help) const
+{
     CHECK_FALSE(sub_path.empty());
     if (!FLAGS_enable_http_server) {
         return;
@@ -97,9 +105,13 @@ void http_service::register_handler(std::string sub_path, http_callback cb, std:
 
     auto call = std::make_unique<http_call>();
     call->path = get_rel_path(sub_path);
-    call->callback = std::move(cb);
-    call->help = std::move(help);
+    call->with_callback(std::move(cb)).with_help(parameters, help);
     http_call_registry::instance().add(std::move(call));
+}
+
+void http_service::deregister_handler(std::string sub_path) const
+{
+    http_call_registry::instance().remove(get_rel_path(sub_path));
 }
 
 void http_server_base::update_config_handler(const http_request &req, http_response &resp)

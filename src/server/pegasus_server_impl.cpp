@@ -46,6 +46,7 @@
 
 #include "absl/strings/string_view.h"
 #include "base/idl_utils.h" // IWYU pragma: keep
+#include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
@@ -56,7 +57,6 @@
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "hotkey_collector.h"
-#include "meta_store.h"
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
 #include "replica_admin_types.h"
@@ -142,15 +142,12 @@ std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffe
 METRIC_VAR_DEFINE_gauge_int64(rdb_block_cache_mem_usage_bytes, pegasus_server_impl);
 METRIC_VAR_DEFINE_gauge_int64(rdb_write_rate_limiter_through_bytes_per_sec, pegasus_server_impl);
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
-const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
-const std::string pegasus_server_impl::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
 const std::chrono::seconds pegasus_server_impl::kServerStatUpdateTimeSec = std::chrono::seconds(10);
 
 // should be same with items in dsn::backup_restore_constant
 const std::string ROCKSDB_ENV_RESTORE_FORCE_RESTORE("restore.force_restore");
 const std::string ROCKSDB_ENV_RESTORE_POLICY_NAME("restore.policy_name");
 const std::string ROCKSDB_ENV_RESTORE_BACKUP_ID("restore.backup_id");
-const std::string ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS("rocksdb.checkpoint.reserve_time_seconds");
 
 using cf_opts_setter = std::function<bool(const std::string &, rocksdb::ColumnFamilyOptions &)>;
 const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters = {
@@ -420,7 +417,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     if (dsn_unlikely(FLAGS_inject_read_error_for_test != rocksdb::Status::kOk)) {
         resp.error = FLAGS_inject_read_error_for_test;
@@ -498,7 +495,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -908,7 +905,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     auto &response = rpc.response();
     response.app_id = _gpid.get_app_id();
     response.partition_index = _gpid.get_partition_index();
-    response.server = _primary_address;
+    response.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -1020,7 +1017,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -1093,7 +1090,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -1153,7 +1150,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -1400,7 +1397,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
-    resp.server = _primary_address;
+    resp.server = _primary_host_port;
 
     CHECK_READ_THROTTLING();
 
@@ -1585,7 +1582,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     //          3, restore_dir is exist
     //
     bool db_exist = true;
-    auto rdb_path = dsn::utils::filesystem::path_combine(data_dir(), "rdb");
+    auto rdb_path = dsn::utils::filesystem::path_combine(data_dir(), replication_app_base::kRdbDir);
     auto duplication_path = duplication_dir();
     if (dsn::utils::filesystem::path_exists(rdb_path)) {
         // only case 1
@@ -1691,7 +1688,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 
         if (!has_incompatible_db_options) {
             for (int i = 0; i < loaded_cf_descs.size(); ++i) {
-                if (loaded_cf_descs[i].name == DATA_COLUMN_FAMILY_NAME) {
+                if (loaded_cf_descs[i].name == meta_store::DATA_COLUMN_FAMILY_NAME) {
                     loaded_data_cf_opts = loaded_cf_descs[i].options;
                 }
             }
@@ -1710,7 +1707,8 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     }
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-        {{DATA_COLUMN_FAMILY_NAME, _table_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
+        {{meta_store::DATA_COLUMN_FAMILY_NAME, _table_data_cf_opts},
+         {meta_store::META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
     rocksdb::ConfigOptions config_options;
     config_options.ignore_unknown_options = true;
     config_options.ignore_unsupported_options = true;
@@ -1730,13 +1728,13 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
         return dsn::ERR_LOCAL_APP_FAILURE;
     }
     CHECK_EQ_PREFIX(2, handles_opened.size());
-    CHECK_EQ_PREFIX(handles_opened[0]->GetName(), DATA_COLUMN_FAMILY_NAME);
-    CHECK_EQ_PREFIX(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
+    CHECK_EQ_PREFIX(handles_opened[0]->GetName(), meta_store::DATA_COLUMN_FAMILY_NAME);
+    CHECK_EQ_PREFIX(handles_opened[1]->GetName(), meta_store::META_COLUMN_FAMILY_NAME);
     _data_cf = handles_opened[0];
     _meta_cf = handles_opened[1];
 
     // Create _meta_store which provide Pegasus meta data read and write.
-    _meta_store = std::make_unique<meta_store>(this, _db, _meta_cf);
+    _meta_store = std::make_unique<meta_store>(replica_name(), _db, _meta_cf);
 
     if (db_exist) {
         auto cleanup = dsn::defer([this]() { release_db(); });
@@ -1891,7 +1889,7 @@ void pegasus_server_impl::cancel_background_work(bool wait)
 
     if (clear_state) {
         // when clean the data dir, please clean the checkpoints first.
-        // otherwise, if the "rdb" is removed but the checkpoints remains,
+        // otherwise, if the replication_app_base::kRdbDir is removed but the checkpoints remains,
         // the storage engine can't be opened again
         for (auto iter = reserved_checkpoints.begin(); iter != reserved_checkpoints.end(); ++iter) {
             std::string chkpt_path =
@@ -2192,8 +2190,8 @@ private:
         // Because of RocksDB's restriction, we have to to open default column family even though
         // not use it
         std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-            {{DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
-             {META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
+            {{meta_store::DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
+             {meta_store::META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
         status = rocksdb::DB::OpenForReadOnly(
             _db_opts, checkpoint_dir, column_families, &handles_opened, &snapshot_db);
         if (!status.ok()) {
@@ -2204,7 +2202,7 @@ private:
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
         CHECK_EQ_PREFIX(handles_opened.size(), 2);
-        CHECK_EQ_PREFIX(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
+        CHECK_EQ_PREFIX(handles_opened[1]->GetName(), meta_store::META_COLUMN_FAMILY_NAME);
         uint64_t last_flushed_decree =
             _meta_store->get_decree_from_readonly_db(snapshot_db, handles_opened[1]);
         *checkpoint_decree = last_flushed_decree;
@@ -2295,7 +2293,8 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
 
         // move learned files from learn_dir to data_dir/rdb
         std::string learn_dir = ::dsn::utils::filesystem::remove_file_name(state.files[0]);
-        std::string new_dir = ::dsn::utils::filesystem::path_combine(data_dir(), "rdb");
+        std::string new_dir =
+            ::dsn::utils::filesystem::path_combine(data_dir(), replication_app_base::kRdbDir);
         if (!::dsn::utils::filesystem::rename_path(learn_dir, new_dir)) {
             LOG_ERROR_PREFIX("rename directory {} to {} failed", learn_dir, new_dir);
             return ::dsn::ERR_FILE_OPERATION_FAILED;
@@ -2754,7 +2753,7 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
     // if not specified, default is normal
     auto find = envs.find(dsn::replica_envs::ROCKSDB_USAGE_SCENARIO);
     std::string new_usage_scenario =
-        (find != envs.end() ? find->second : meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
+        (find != envs.end() ? find->second : dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
     if (new_usage_scenario != _usage_scenario) {
         std::string old_usage_scenario = _usage_scenario;
         if (set_usage_scenario(new_usage_scenario)) {
@@ -2802,7 +2801,7 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
             return;
         }
     }
-    find = envs.find(ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS);
+    find = envs.find(dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS);
     if (find != envs.end()) {
         if (!dsn::buf2int32(find->second, time) || time < 0) {
             LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
@@ -2819,7 +2818,7 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
     }
     if (time != _checkpoint_reserve_time_seconds) {
         LOG_INFO_PREFIX("update app env[{}] from \"{}\" to \"{}\" succeed",
-                        ROCKDB_CHECKPOINT_RESERVE_TIME_SECONDS,
+                        dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS,
                         _checkpoint_reserve_time_seconds,
                         time);
         _checkpoint_reserve_time_seconds = time;
@@ -3064,9 +3063,9 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
         return false;
     std::string old_usage_scenario = _usage_scenario;
     std::unordered_map<std::string, std::string> new_options;
-    if (usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL ||
-        usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE) {
-        if (_usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
+    if (usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL ||
+        usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE) {
+        if (_usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
             // old usage scenario is bulk load, reset first
             new_options["level0_file_num_compaction_trigger"] =
                 std::to_string(_data_cf_opts.level0_file_num_compaction_trigger);
@@ -3086,12 +3085,12 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
                 std::to_string(_data_cf_opts.max_write_buffer_number);
         }
 
-        if (usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL) {
+        if (usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL) {
             new_options["write_buffer_size"] =
                 std::to_string(get_random_nearby(_data_cf_opts.write_buffer_size));
             new_options["level0_file_num_compaction_trigger"] =
                 std::to_string(_data_cf_opts.level0_file_num_compaction_trigger);
-        } else { // meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE
+        } else { // dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE
             uint64_t buffer_size = dsn::rand::next_u64(_data_cf_opts.write_buffer_size,
                                                        _data_cf_opts.write_buffer_size * 2);
             new_options["write_buffer_size"] = std::to_string(buffer_size);
@@ -3099,7 +3098,7 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
             new_options["level0_file_num_compaction_trigger"] =
                 std::to_string(std::max<uint64_t>(4UL, max_size / buffer_size));
         }
-    } else if (usage_scenario == meta_store::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
+    } else if (usage_scenario == dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
         // refer to Options::PrepareForBulkLoad()
         new_options["level0_file_num_compaction_trigger"] = "1000000000";
         new_options["level0_slowdown_writes_trigger"] = "1000000000";
@@ -3219,9 +3218,9 @@ void pegasus_server_impl::recalculate_data_cf_options(
         return;
     }
     std::unordered_map<std::string, std::string> new_options;
-    if (meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
-        meta_store::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
-        if (meta_store::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario) {
+    if (dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
+        dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
+        if (dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario) {
             UPDATE_OPTION_IF_NOT_NEARBY(write_buffer_size, _data_cf_opts.write_buffer_size);
             UPDATE_OPTION_IF_NEEDED(level0_file_num_compaction_trigger);
         } else {
@@ -3322,9 +3321,9 @@ bool pegasus_server_impl::set_options(
     }
 
     for (const auto &column_family : column_families) {
-        if (column_family == META_COLUMN_FAMILY_NAME) {
+        if (column_family == meta_store::META_COLUMN_FAMILY_NAME) {
             *missing_meta_cf = false;
-        } else if (column_family == DATA_COLUMN_FAMILY_NAME) {
+        } else if (column_family == meta_store::DATA_COLUMN_FAMILY_NAME) {
             *missing_data_cf = false;
         } else {
             LOG_ERROR_PREFIX("unknown column family name: {}", column_family);
@@ -3343,11 +3342,12 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
                     dsn_now_ms() - start_time);
 
     // do compact
-    LOG_INFO_PREFIX(
-        "start CompactRange, target_level = {}, bottommost_level_compaction = {}",
-        options.target_level,
-        options.bottommost_level_compaction == rocksdb::BottommostLevelCompaction::kForce ? "force"
-                                                                                          : "skip");
+    LOG_INFO_PREFIX("start CompactRange, target_level = {}, bottommost_level_compaction = {}",
+                    options.target_level,
+                    options.bottommost_level_compaction ==
+                            rocksdb::BottommostLevelCompaction::kForce
+                        ? dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE
+                        : dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP);
     start_time = dsn_now_ms();
     auto status = _db->CompactRange(options, _data_cf, nullptr, nullptr);
     auto end_time = dsn_now_ms();

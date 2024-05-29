@@ -32,12 +32,13 @@
 #include <chrono>
 #include <cstdint>
 
+#include "absl/strings/string_view.h"
 #include "common/common.h"
 #include "common/replication_other_types.h"
 #include "pegasus/client.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/serialization.h"
 #include "utils/api_utilities.h"
 #include "utils/binary_writer.h"
@@ -45,7 +46,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 
@@ -96,9 +96,9 @@ redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
 {
     ::dsn::apps::rrdb_client *r;
     if (op) {
-        std::vector<dsn::rpc_address> meta_list;
-        dsn::replication::replica_helper::load_meta_servers(
-            meta_list, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), op->get_cluster());
+        std::vector<dsn::host_port> meta_list;
+        dsn::replication::replica_helper::load_servers_from_config(
+            dsn::PEGASUS_CLUSTER_SECTION_NAME, op->get_cluster(), meta_list);
         r = new ::dsn::apps::rrdb_client(op->get_cluster(), meta_list, op->get_app());
         if (!dsn::utils::is_empty(op->get_geo_app())) {
             _geo_client = std::make_unique<geo::geo_client>(

@@ -23,8 +23,8 @@
 #include "pegasus/git_commit.h"
 #include "pegasus/version.h"
 #include "runtime/app_model.h"
+#include "server/server_utils.h"
 #include "shell/command_executor.h"
-#include "shell/command_helper.h"
 #include "shell/commands.h"
 
 bool version(command_executor *e, shell_context *sc, arguments args)

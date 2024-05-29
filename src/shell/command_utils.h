@@ -30,7 +30,7 @@
 #include "utils/strings.h"
 
 namespace dsn {
-class rpc_address;
+class host_port;
 }
 struct shell_context;
 
@@ -67,13 +67,14 @@ inline bool validate_cmd(const argh::parser &cmd,
 
 bool validate_ip(shell_context *sc,
                  const std::string &ip_str,
-                 /*out*/ dsn::rpc_address &target_address,
+                 /*out*/ dsn::host_port &target_hp,
                  /*out*/ std::string &err_info);
 
-#define verify_logged(exp, ...)                                                                    \
+// Print messages to stderr and return false if `exp` is evaluated to false.
+#define PRINT_AND_RETURN_FALSE_IF_NOT(exp, ...)                                                    \
     do {                                                                                           \
-        if (!(exp)) {                                                                              \
-            fprintf(stderr, __VA_ARGS__);                                                          \
+        if (dsn_unlikely(!(exp))) {                                                                \
+            fmt::print(stderr, __VA_ARGS__);                                                       \
             return false;                                                                          \
         }                                                                                          \
     } while (0)

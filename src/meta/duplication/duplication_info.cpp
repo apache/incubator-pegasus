@@ -186,9 +186,11 @@ blob duplication_info::to_json_blob() const
 {
     json_helper copy;
     copy.create_timestamp_ms = create_timestamp_ms;
-    copy.remote = follower_cluster_name;
+    copy.remote = remote_cluster_name;
     copy.status = _next_status;
     copy.fail_mode = _next_fail_mode;
+    copy.remote_app_name = remote_app_name;
+    copy.remote_replica_count = remote_replica_count;
     return json::json_forwarder<json_helper>::encode(copy);
 }
 
@@ -205,16 +207,30 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
                                                           int32_t app_id,
                                                           const std::string &app_name,
                                                           int32_t partition_count,
-                                                          std::string store_path,
+                                                          int32_t replica_count,
+                                                          const std::string &store_path,
                                                           const blob &json)
 {
     json_helper info;
     if (!json::json_forwarder<json_helper>::decode(json, info)) {
         return nullptr;
     }
-    std::vector<rpc_address> meta_list;
-    if (!dsn::replication::replica_helper::load_meta_servers(
-            meta_list, duplication_constants::kClustersSectionName.c_str(), info.remote.c_str())) {
+
+    if (info.remote_app_name.empty()) {
+        // remote_app_name is missing, which means meta data in remote storage(zk) is
+        // still of old version(< v2.6.0).
+        info.remote_app_name = app_name;
+    }
+
+    if (info.remote_replica_count == 0) {
+        // remote_replica_count is missing, which means meta data in remote storage(zk) is
+        // still of old version(< v2.6.0).
+        info.remote_replica_count = replica_count;
+    }
+
+    std::vector<host_port> meta_list;
+    if (!dsn::replication::replica_helper::load_servers_from_config(
+            duplication_constants::kClustersSectionName, info.remote, meta_list)) {
         return nullptr;
     }
 
@@ -222,10 +238,12 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
                                                   app_id,
                                                   app_name,
                                                   partition_count,
+                                                  info.remote_replica_count,
                                                   info.create_timestamp_ms,
-                                                  std::move(info.remote),
+                                                  info.remote,
+                                                  info.remote_app_name,
                                                   std::move(meta_list),
-                                                  std::move(store_path));
+                                                  store_path);
     dup->_status = info.status;
     dup->_fail_mode = info.fail_mode;
     return dup;

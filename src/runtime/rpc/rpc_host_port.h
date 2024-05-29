@@ -29,6 +29,8 @@
 #include <string_view>
 #include <vector>
 
+#include <gtest/gtest_prod.h>
+
 #include "runtime/rpc/rpc_address.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
@@ -42,6 +44,224 @@ class TProtocol;
 } // namespace thrift
 } // namespace apache
 
+// Get host_port from 'obj', the result is filled in 'target', the source is from host_port type
+// field 'hp_<field>' if it is set, otherwise, reverse resolve from the rpc_address '<field>'.
+#define GET_HOST_PORT(obj, field, target)                                                          \
+    do {                                                                                           \
+        const auto &_obj = (obj);                                                                  \
+        auto &_target = (target);                                                                  \
+        if (_obj.__isset.hp_##field) {                                                             \
+            DCHECK(_obj.field, "invalid address: {}", _obj.field);                                 \
+            DCHECK_EQ(_obj.field, dsn::dns_resolver::instance().resolve_address(_obj.hp_##field)); \
+            _target = _obj.hp_##field;                                                             \
+        } else {                                                                                   \
+            _target = std::move(dsn::host_port::from_address(_obj.field));                         \
+        }                                                                                          \
+    } while (0)
+
+// Get std::vector<host_port> from 'obj', the result is filled in 'target', the source is from
+// std::vector<host_port> type field 'hp_<field>' if it is set, otherwise, reverse resolve from the
+// std::vector<rpc_address> '<field>'.
+#define GET_HOST_PORTS(obj, field, target)                                                         \
+    do {                                                                                           \
+        const auto &_obj = (obj);                                                                  \
+        auto &_target = (target);                                                                  \
+        CHECK(_target.empty(), "");                                                                \
+        if (_obj.__isset.hp_##field) {                                                             \
+            DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                  \
+            _target = _obj.hp_##field;                                                             \
+        } else {                                                                                   \
+            _target.reserve(_obj.field.size());                                                    \
+            for (const auto &addr : _obj.field) {                                                  \
+                _target.emplace_back(host_port::from_address(addr));                               \
+            }                                                                                      \
+        }                                                                                          \
+    } while (0)
+
+// Set 'addr' and 'hp' to the '<field>' and optional 'hp_<field>' of 'obj'. The types of the
+// fields are rpc_address and host_port, respectively.
+#define SET_IP_AND_HOST_PORT(obj, field, addr, hp)                                                 \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        const auto &_addr = (addr);                                                                \
+        const auto &_hp = (hp);                                                                    \
+        DCHECK_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        _obj.field = _addr;                                                                        \
+        _obj.__set_hp_##field(_hp);                                                                \
+    } while (0)
+
+// GTest check whether the '<field>' and 'hp_<field>' of 'obj' equal to 'addr' and 'hp'. The types
+// of the fields are rpc_address and host_port, respectively.
+#define ASSERT_IP_AND_HOST_PORT(obj, field, addr, hp)                                              \
+    do {                                                                                           \
+        const auto &_obj = (obj);                                                                  \
+        const auto &_addr = (addr);                                                                \
+        const auto &_hp = (hp);                                                                    \
+        ASSERT_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        ASSERT_EQ(_addr, _obj.field);                                                              \
+        ASSERT_EQ(_hp, _obj.hp_##field);                                                           \
+    } while (0)
+
+// Set '<src_field>' and 'hp_<src_field>' of 'src_obj' to the '<dst_field>' and optional
+// 'hp_<dst_field>' of 'dst_obj'. The types of the fields are rpc_address and host_port,
+// respectively.
+#define SET_OBJ_IP_AND_HOST_PORT(dst_obj, dst_field, src_obj, src_field)                           \
+    do {                                                                                           \
+        const auto &_src_obj = (src_obj);                                                          \
+        auto &_dst_obj = (dst_obj);                                                                \
+        DCHECK_EQ(_src_obj.src_field,                                                              \
+                  dsn::dns_resolver::instance().resolve_address(_src_obj.hp_##src_field));         \
+        _dst_obj.dst_field = _src_obj.src_field;                                                   \
+        _dst_obj.__set_hp_##dst_field(_src_obj.hp_##src_field);                                    \
+    } while (0)
+
+// Set 'hp' and its DNS resolved rpc_address to the optional 'hp_<field>' and '<field>' of 'obj'.
+// The types of the fields are host_port and rpc_address, respectively.
+#define SET_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                                \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        const auto &_hp = (hp);                                                                    \
+        _obj.field = dsn::dns_resolver::instance().resolve_address(_hp);                           \
+        _obj.__set_hp_##field(_hp);                                                                \
+    } while (0)
+
+// Reset the '<field>' and optional 'hp_<field>' of 'obj'. The types of the fields are rpc_address
+// and host_port, respectively.
+#define RESET_IP_AND_HOST_PORT(obj, field)                                                         \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        _obj.field.set_invalid();                                                                  \
+        _obj.hp_##field.reset();                                                                   \
+    } while (0)
+
+// Clear the '<field>' and optional 'hp_<field>' of 'obj'. The types of the fields are std::vector
+// with rpc_address and host_port elements, respectively.
+#define CLEAR_IP_AND_HOST_PORT(obj, field)                                                         \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        _obj.field.clear();                                                                        \
+        _obj.__set_hp_##field({});                                                                 \
+    } while (0)
+
+// Add 'addr' and 'hp' to the vector '<field>' and optional vector 'hp_<field>' of 'obj'. The types
+// of the fields are std::vector<rpc_address> and std::vector<host_port>, respectively.
+#define ADD_IP_AND_HOST_PORT(obj, field, addr, hp)                                                 \
+    do {                                                                                           \
+        const auto &_addr = (addr);                                                                \
+        const auto &_hp = (hp);                                                                    \
+        DCHECK_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        auto &_obj = (obj);                                                                        \
+        _obj.field.push_back(_addr);                                                               \
+        if (!_obj.__isset.hp_##field) {                                                            \
+            _obj.__set_hp_##field({_hp});                                                          \
+        } else {                                                                                   \
+            _obj.hp_##field.push_back(_hp);                                                        \
+        }                                                                                          \
+    } while (0)
+
+// Add 'hp' and its DNS resolved rpc_address to the optional vector 'hp_<field>' and vector
+// '<field>' of 'obj'. The types of the fields are std::vector<rpc_address> and
+// std::vector<host_port>, respectively.
+#define ADD_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                                \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        const auto &_hp = (hp);                                                                    \
+        _obj.field.push_back(dsn::dns_resolver::instance().resolve_address(_hp));                  \
+        if (!_obj.__isset.hp_##field) {                                                            \
+            _obj.__set_hp_##field({_hp});                                                          \
+        } else {                                                                                   \
+            _obj.hp_##field.push_back(_hp);                                                        \
+        }                                                                                          \
+        DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                      \
+    } while (0)
+
+#define SET_IPS_AND_HOST_PORTS_BY_DNS_1(obj, field, hp1)                                           \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        const auto &_hp1 = (hp1);                                                                  \
+        _obj.field = {dsn::dns_resolver::instance().resolve_address(_hp1)};                        \
+        _obj.__set_hp_##field({_hp1});                                                             \
+    } while (0)
+#define SET_IPS_AND_HOST_PORTS_BY_DNS_2(obj, field, hp1, hp2)                                      \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        const auto &_hp1 = (hp1);                                                                  \
+        const auto &_hp2 = (hp2);                                                                  \
+        _obj.field = {dsn::dns_resolver::instance().resolve_address(_hp1),                         \
+                      dsn::dns_resolver::instance().resolve_address(_hp2)};                        \
+        _obj.__set_hp_##field({_hp1, _hp2});                                                       \
+    } while (0)
+#define SET_IPS_AND_HOST_PORTS_BY_DNS_3(obj, field, hp1, hp2, hp3)                                 \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        const auto &_hp1 = (hp1);                                                                  \
+        const auto &_hp2 = (hp2);                                                                  \
+        const auto &_hp3 = (hp3);                                                                  \
+        _obj.field = {dsn::dns_resolver::instance().resolve_address(_hp1),                         \
+                      dsn::dns_resolver::instance().resolve_address(_hp2),                         \
+                      dsn::dns_resolver::instance().resolve_address(_hp3)};                        \
+        _obj.__set_hp_##field({_hp1, _hp2, _hp3});                                                 \
+    } while (0)
+#define SET_IPS_AND_HOST_PORTS_BY_DNS_GET_MACRO(hp1, hp2, hp3, NAME, ...) NAME
+#define SET_IPS_AND_HOST_PORTS_BY_DNS_GET_MACRO_(tuple)                                            \
+    SET_IPS_AND_HOST_PORTS_BY_DNS_GET_MACRO tuple
+
+// Set ... and their DNS resolved rpc_addresses to the vector '<field>' and optional vector
+// 'hp_<field>' of 'obj'. The types of the fields are std::vector<rpc_address> and
+// std::vector<host_port>, respectively.
+#define SET_IPS_AND_HOST_PORTS_BY_DNS(obj, field, ...)                                             \
+    SET_IPS_AND_HOST_PORTS_BY_DNS_GET_MACRO_((__VA_ARGS__,                                         \
+                                              SET_IPS_AND_HOST_PORTS_BY_DNS_3,                     \
+                                              SET_IPS_AND_HOST_PORTS_BY_DNS_2,                     \
+                                              SET_IPS_AND_HOST_PORTS_BY_DNS_1))                    \
+    (obj, field, __VA_ARGS__);
+
+// Head insert 'hp' and its DNS resolved rpc_address to the optional vector 'hp_<field>' and vector
+// '<field>' of 'obj'. The types of the fields are std::vector<rpc_address> and
+// std::vector<host_port>, respectively.
+#define HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                        \
+    do {                                                                                           \
+        auto &_obj = (obj);                                                                        \
+        const auto &_hp = (hp);                                                                    \
+        _obj.field.insert(_obj.field.begin(), dsn::dns_resolver::instance().resolve_address(_hp)); \
+        if (!_obj.__isset.hp_##field) {                                                            \
+            _obj.__set_hp_##field({_hp});                                                          \
+        } else {                                                                                   \
+            _obj.hp_##field.insert(_obj.hp_##field.begin(), _hp);                                  \
+        }                                                                                          \
+        DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                      \
+    } while (0)
+
+// TODO(yingchun): the 'hp' can be reduced.
+// Set 'value' to the '<field>' map and optional 'hp_<field>' map of 'obj'. The key of the
+// maps are rpc_address and host_port type and indexed by 'addr' and 'hp', respectively.
+#define SET_VALUE_FROM_IP_AND_HOST_PORT(obj, field, addr, hp, value)                               \
+    do {                                                                                           \
+        const auto &_hp = (hp);                                                                    \
+        const auto &_addr = (addr);                                                                \
+        DCHECK_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        auto &_obj = (obj);                                                                        \
+        const auto &_value = (value);                                                              \
+        _obj.field[_addr] = _value;                                                                \
+        if (!_obj.__isset.hp_##field) {                                                            \
+            _obj.__set_hp_##field({});                                                             \
+        }                                                                                          \
+        _obj.hp_##field[_hp] = _value;                                                             \
+        DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                      \
+    } while (0)
+
+// Set 'value' to the '<field>' map and optional 'hp_<field>' map of 'obj'. The key of the
+// maps are rpc_address and host_port type and indexed by 'addr' and reverse resolve result of
+// 'addr', respectively.
+#define SET_VALUE_FROM_HOST_PORT(obj, field, hp, value)                                            \
+    do {                                                                                           \
+        const auto &__hp = (hp);                                                                   \
+        const auto addr = dsn::dns_resolver::instance().resolve_address(__hp);                     \
+        SET_VALUE_FROM_IP_AND_HOST_PORT(obj, field, addr, __hp, value);                            \
+    } while (0)
+
+#define FMT_HOST_PORT_AND_IP(obj, field) fmt::format("{}({})", (obj).hp_##field, (obj).field)
+
 namespace dsn {
 
 class rpc_group_host_port;
@@ -49,7 +269,6 @@ class rpc_group_host_port;
 class host_port
 {
 public:
-    static const host_port s_invalid_host_port;
     explicit host_port() = default;
     explicit host_port(std::string host, uint16_t port);
 
@@ -62,8 +281,7 @@ public:
     dsn_host_type_t type() const { return _type; }
     const std::string &host() const { return _host; }
     uint16_t port() const { return _port; }
-
-    [[nodiscard]] bool is_invalid() const { return _type == HOST_TYPE_INVALID; }
+    operator bool() const { return _type != HOST_TYPE_INVALID; }
 
     std::string to_string() const;
 
@@ -79,16 +297,12 @@ public:
     }
     void assign_group(const char *name);
 
-    // Resolve host_port to rpc_addresses.
-    // Trere may be multiple rpc_addresses for one host_port.
-    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
-
     // Construct a host_port object from 'addr'
     static host_port from_address(rpc_address addr);
 
     // Construct a host_port object from 'host_port_str', the latter is in the format of
     // "localhost:8888".
-    // NOTE: The constructed host_port object maybe invalid, remember to check it by is_invalid()
+    // NOTE: The constructed host_port object maybe invalid, remember to check if it's valid
     // before using it.
     static host_port from_string(const std::string &host_port_str);
 
@@ -97,6 +311,20 @@ public:
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 
 private:
+    friend class dns_resolver;
+    friend class rpc_group_host_port;
+    FRIEND_TEST(host_port_test, lookup_hostname);
+    FRIEND_TEST(host_port_test, transfer_rpc_address);
+
+    static const host_port s_invalid_host_port;
+
+    // Resolve host_port to rpc_addresses.
+    // There may be multiple rpc_addresses for one host_port.
+    error_s resolve_addresses(std::vector<rpc_address> &addresses) const;
+
+    // Does reverse DNS lookup of the address and stores it in hostname.
+    static error_s lookup_hostname(uint32_t ip, std::string *hostname);
+
     std::string _host;
     uint16_t _port = 0;
     dsn_host_type_t _type = HOST_TYPE_INVALID;

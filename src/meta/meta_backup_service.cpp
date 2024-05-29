@@ -19,6 +19,8 @@
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
+#include <prometheus/check_names.h>
+#include <prometheus/metric_type.h>
 #include <algorithm>
 #include <iterator>
 #include <type_traits>
@@ -37,13 +39,13 @@
 #include "meta_backup_service.h"
 #include "meta_service.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "security/access_controller.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
+#include "security/access_controller.h"
 #include "server_state.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
@@ -155,7 +157,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
         int total_partitions = iter->second;
         for (int32_t pidx = 0; pidx < total_partitions; ++pidx) {
             update_partition_progress_unlocked(
-                gpid(app_id, pidx), cold_backup_constant::PROGRESS_FINISHED, dsn::rpc_address());
+                gpid(app_id, pidx), cold_backup_constant::PROGRESS_FINISHED, dsn::host_port());
         }
         return;
     }
@@ -458,7 +460,7 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
 
 bool policy_context::update_partition_progress_unlocked(gpid pid,
                                                         int32_t progress,
-                                                        const rpc_address &source)
+                                                        const host_port &source)
 {
     int32_t &local_progress = _progress.partition_progress[pid];
     if (local_progress == cold_backup_constant::PROGRESS_FINISHED) {
@@ -509,7 +511,7 @@ void policy_context::record_partition_checkpoint_size_unlock(const gpid &pid, in
 
 void policy_context::start_backup_partition_unlocked(gpid pid)
 {
-    dsn::rpc_address partition_primary;
+    dsn::host_port partition_primary;
     {
         // check app and partition status
         zauto_read_lock l;
@@ -521,12 +523,12 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
                 "{}: app {} is not available, skip to backup it.", _backup_sig, pid.get_app_id());
             _progress.is_app_skipped[pid.get_app_id()] = true;
             update_partition_progress_unlocked(
-                pid, cold_backup_constant::PROGRESS_FINISHED, dsn::rpc_address());
+                pid, cold_backup_constant::PROGRESS_FINISHED, dsn::host_port());
             return;
         }
-        partition_primary = app->partitions[pid.get_partition_index()].primary;
+        partition_primary = app->partitions[pid.get_partition_index()].hp_primary;
     }
-    if (partition_primary.is_invalid()) {
+    if (!partition_primary) {
         LOG_WARNING("{}: partition {} doesn't have a primary now, retry to backup it later",
                     _backup_sig,
                     pid);
@@ -565,7 +567,7 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
 void policy_context::on_backup_reply(error_code err,
                                      backup_response &&response,
                                      gpid pid,
-                                     const rpc_address &primary)
+                                     const host_port &primary)
 {
     LOG_INFO(
         "{}: receive backup response for partition {} from server {}.", _backup_sig, pid, primary);
@@ -1349,9 +1351,10 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
     {
         // check policy name
         zauto_lock l(_lock);
-        if (!is_valid_policy_name_unlocked(request.policy_name)) {
+        if (!is_valid_policy_name_unlocked(request.policy_name, hint_message)) {
             response.err = ERR_INVALID_PARAMETERS;
-            response.hint_message = "invalid policy_name: " + request.policy_name;
+            response.hint_message =
+                fmt::format("invalid policy name: '{}', {}", request.policy_name, hint_message);
             _meta_svc->reply_data(msg, response);
             msg->release_ref();
             return;
@@ -1459,10 +1462,40 @@ void backup_service::do_update_policy_to_remote_storage(
         });
 }
 
-bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_name)
+bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_name,
+                                                   std::string &hint_message)
 {
-    auto iter = _policy_states.find(policy_name);
-    return (iter == _policy_states.end());
+    // BACKUP_INFO and policy_name should not be the same, because they are in the same level in the
+    // output when query the policy details, use different names to distinguish the respective
+    // contents.
+    static const std::set<std::string> kReservedNames = {cold_backup_constant::BACKUP_INFO};
+    if (kReservedNames.count(policy_name) == 1) {
+        hint_message = "policy name is reserved";
+        return false;
+    }
+
+    // Validate the policy name as a metric name in prometheus.
+    if (!prometheus::CheckMetricName(policy_name)) {
+        hint_message = "policy name should match regex '[a-zA-Z_:][a-zA-Z0-9_:]*' when act as a "
+                       "metric name in prometheus";
+        return false;
+    }
+
+    // Validate the policy name as a metric label in prometheus.
+    if (!prometheus::CheckLabelName(policy_name, prometheus::MetricType::Gauge)) {
+        hint_message = "policy name should match regex '[a-zA-Z_][a-zA-Z0-9_]*' when act as a "
+                       "metric label in prometheus";
+        return false;
+    }
+
+    const auto iter = _policy_states.find(policy_name);
+    if (iter != _policy_states.end()) {
+        hint_message = "policy name is already exist";
+        return false;
+    }
+
+    hint_message.clear();
+    return true;
 }
 
 void backup_service::query_backup_policy(query_backup_policy_rpc rpc)
@@ -1715,7 +1748,7 @@ void backup_service::start_backup_app(start_backup_app_rpc rpc)
     });
 
     int32_t app_id = request.app_id;
-    std::shared_ptr<backup_engine> engine = std::make_shared<backup_engine>(this);
+    auto engine = std::make_shared<backup_engine>(this);
     error_code err = engine->init_backup(app_id);
     if (err != ERR_OK) {
         response.err = err;

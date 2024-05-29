@@ -29,9 +29,9 @@
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <limits.h>
 #include <mutex>
-#include <ostream>
 
 #include "fmt/core.h"
+#include "nlohmann/json.hpp"
 #include "runtime/global_config.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
@@ -184,42 +184,50 @@ bool task_worker_pool::shared_same_worker_with_current_task(task *tsk) const
     }
 }
 
-void task_worker_pool::get_runtime_info(const std::string &indent,
-                                        const std::vector<std::string> &args,
-                                        /*out*/ std::stringstream &ss)
+nlohmann::json task_worker_pool::get_runtime_info(const std::vector<std::string> &args) const
 {
-    std::string indent2 = indent + "\t";
-    ss << indent << "contains " << _workers.size() << " threads with " << _queues.size()
-       << " queues" << std::endl;
+    nlohmann::json info;
 
-    for (auto &q : _queues) {
-        if (q) {
-            ss << indent2 << q->get_name() << " now has " << q->count() << " pending tasks"
-               << std::endl;
+    // Queues.
+    nlohmann::json queues;
+    for (const auto &queue : _queues) {
+        if (queue) {
+            nlohmann::json q;
+            q["name"] = queue->get_name();
+            q["pending_task_count"] = queue->count();
+            queues.emplace_back(q);
         }
     }
+    info["queues"] = queues;
 
-    for (auto &wk : _workers) {
-        if (wk) {
-            ss << indent2 << wk->index() << " (TID = " << wk->native_tid()
-               << ") attached with queue " << wk->queue()->get_name() << std::endl;
+    // Threads.
+    nlohmann::json workers;
+    for (const auto &worker : _workers) {
+        if (worker) {
+            nlohmann::json w;
+            w["index"] = worker->index();
+            w["TID"] = worker->native_tid();
+            w["queue_name"] = worker->queue()->get_name();
+            workers.emplace_back(w);
         }
     }
+    info["threads"] = workers;
+
+    return info;
 }
-void task_worker_pool::get_queue_info(/*out*/ std::stringstream &ss)
+
+nlohmann::json task_worker_pool::get_queue_info() const
 {
-    ss << "[";
-    bool first_flag = 0;
-    for (auto &q : _queues) {
-        if (q) {
-            if (!first_flag)
-                first_flag = 1;
-            else
-                ss << ",";
-            ss << "\t\t{\"name\":\"" << q->get_name() << "\",\n\t\t\"num\":" << q->count() << "}\n";
+    nlohmann::json queues;
+    for (const auto &queue : _queues) {
+        if (queue) {
+            nlohmann::json q;
+            q["name"] = queue->get_name();
+            q["pending_task_count"] = queue->count();
+            queues.emplace_back(q);
         }
     }
-    ss << "]\n";
+    return queues;
 }
 
 task_engine::task_engine(service_node *node)
@@ -279,74 +287,71 @@ volatile int *task_engine::get_task_queue_virtual_length_ptr(dsn::task_code code
     return pl->queues()[idx]->get_virtual_length_ptr();
 }
 
-void task_engine::get_runtime_info(const std::string &indent,
-                                   const std::vector<std::string> &args,
-                                   /*out*/ std::stringstream &ss)
+nlohmann::json task_engine::get_runtime_info(const std::vector<std::string> &args) const
 {
-    std::string indent2 = indent + "\t";
-    for (auto &p : _pools) {
-        if (p) {
-            ss << indent << p->spec().pool_code.to_string() << std::endl;
-            p->get_runtime_info(indent2, args, ss);
+    nlohmann::json pools;
+    for (const auto &pool : _pools) {
+        if (pool) {
+            pools[pool->spec().pool_code.to_string()] = pool->get_runtime_info(args);
         }
     }
+    return pools;
 }
 
-void task_engine::get_queue_info(/*out*/ std::stringstream &ss)
+nlohmann::json task_engine::get_queue_info() const
 {
-    bool first_flag = 0;
-    for (auto &p : _pools) {
-        if (p) {
-            if (!first_flag)
-                first_flag = 1;
-            else
-                ss << ",";
-            ss << "\t{\"pool_name\":\"" << p->spec().pool_code << "\",\n\t\"pool_queue\":\n";
-            p->get_queue_info(ss);
-            ss << "}\n";
+    nlohmann::json pools;
+    for (const auto &pool : _pools) {
+        if (pool) {
+            nlohmann::json p;
+            p["name"] = pool->spec().pool_code.to_string();
+            p["queue"] = pool->get_queue_info();
+            pools.emplace_back(p);
         }
     }
+    return pools;
 }
 
 void task_engine::register_cli_commands()
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _task_queue_max_length_cmd = dsn::command_manager::instance().register_command(
-            {"task.queue_max_length"},
-            "task.queue_max_length <pool_code> [queue_max_length]",
-            "get/set the max task queue length of specific thread_pool, you can set INT_MAX, to "
-            "set a big enough value, but you can't cancel delay/reject dynamically",
+        _task_queue_max_length_cmd = dsn::command_manager::instance().register_single_command(
+            "task.queue_max_length",
+            "Get the current or set a new max task queue length of a specific thread_pool. It can "
+            "be set it to INT_MAX which means a big enough value, but it can't be cancelled the "
+            "delay/reject policy dynamically",
+            "<pool_code> [new_max_queue_length]",
             [this](const std::vector<std::string> &args) {
-                if (args.size() < 1) {
+                if (args.empty()) {
                     return std::string("ERR: invalid arguments, task.queue_max_length <pool_code> "
                                        "[queue_max_length]");
                 }
 
-                for (auto &it : _pools) {
-                    if (!it) {
+                for (const auto &pool : _pools) {
+                    if (!pool) {
                         continue;
                     }
-                    if (it->_spec.pool_code.to_string() == args[0]) {
-                        // when args length is 1, return current value
+                    if (pool->_spec.pool_code.to_string() == args[0]) {
+                        // Query.
                         if (args.size() == 1) {
-                            return fmt::format("task queue {}, length {}",
+                            return fmt::format("The current task queue length of {} is {}",
                                                args[0],
-                                               it->_spec.queue_length_throttling_threshold);
+                                               pool->_spec.queue_length_throttling_threshold);
                         }
+
+                        // Update.
                         if (args.size() == 2) {
-                            int queue_length = INT_MAX;
-                            if ((args[1] != "INT_MAX") &&
-                                (!dsn::buf2int32(args[1], queue_length))) {
-                                return fmt::format("queue_max_length must >= 0, or set `INT_MAX`");
+                            int new_queue_length = INT_MAX;
+                            if ((args[1] != "INT_MAX" &&
+                                 !dsn::buf2int32(args[1], new_queue_length)) ||
+                                new_queue_length < 0) {
+                                return fmt::format("queue_max_length must be >= 0 or 'INT_MAX'");
                             }
-                            if (queue_length < 0) {
-                                queue_length = INT_MAX;
-                            }
-                            it->_spec.queue_length_throttling_threshold = queue_length;
-                            return fmt::format("task queue {}, length {}",
+                            pool->_spec.queue_length_throttling_threshold = new_queue_length;
+                            return fmt::format("Task queue {} is updated to new max length {}",
                                                args[0],
-                                               it->_spec.queue_length_throttling_threshold);
+                                               pool->_spec.queue_length_throttling_threshold);
                         }
                     }
                 }

@@ -30,6 +30,8 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.ClientOptions;
+import org.apache.pegasus.client.retry.DefaultRetryPolicy;
+import org.apache.pegasus.client.retry.RetryPolicy;
 import org.apache.pegasus.metrics.MetricsManager;
 import org.apache.pegasus.rpc.Cluster;
 import org.apache.pegasus.rpc.InternalTableOptions;
@@ -42,7 +44,7 @@ public class ClusterManager extends Cluster {
 
   private int operationTimeout;
   private long sessionResetTimeWindowSecs;
-  private int retryDelay;
+  private RetryPolicy retryPolicy;
   private boolean enableCounter;
 
   private ConcurrentHashMap<rpc_address, ReplicaSession> replicaSessions;
@@ -68,6 +70,19 @@ public class ClusterManager extends Cluster {
     setTimeout((int) opts.getOperationTimeout().toMillis());
     this.enableCounter = opts.isEnablePerfCounter();
     this.sessionResetTimeWindowSecs = opts.getSessionResetTimeWindowSecs();
+    try {
+      this.retryPolicy =
+          opts.getRetryPolicy()
+              .getImplementationClass()
+              .getConstructor(ClientOptions.class)
+              .newInstance(opts);
+    } catch (Exception e) {
+      logger.warn(
+          "failed to create retry policy {}, use default retry policy instead",
+          opts.getRetryPolicy(),
+          e);
+      this.retryPolicy = new DefaultRetryPolicy(opts);
+    }
     if (enableCounter) {
       MetricsManager.detectHostAndInit(
           opts.getFalconPerfCounterTags(), (int) opts.getFalconPushInterval().getSeconds());
@@ -125,8 +140,8 @@ public class ClusterManager extends Cluster {
     return (timeoutMs < 3 ? 1 : timeoutMs / 3);
   }
 
-  public int getRetryDelay() {
-    return retryDelay;
+  public RetryPolicy getRetryPolicy() {
+    return retryPolicy;
   }
 
   public boolean counterEnabled() {
@@ -135,8 +150,6 @@ public class ClusterManager extends Cluster {
 
   public void setTimeout(int t) {
     operationTimeout = t;
-    // set retry delay as t/3.
-    retryDelay = (t < 3 ? 1 : t / 3);
   }
 
   public static EventLoopGroup getEventLoopGroupInstance(int threadsCount) {
@@ -175,6 +188,8 @@ public class ClusterManager extends Cluster {
 
   @Override
   public void close() {
+    sessionInterceptorManager.close();
+
     if (enableCounter) {
       MetricsManager.finish();
     }

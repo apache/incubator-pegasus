@@ -45,6 +45,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
@@ -187,7 +188,7 @@ class progress_liar : public meta_service
 public:
     // req is held by callback, we don't need to handle the life-time of it
     virtual void send_request(dsn::message_ex *req,
-                              const rpc_address &target,
+                              const host_port &target,
                               const rpc_response_task_ptr &callback)
     {
         // need to handle life-time manually
@@ -498,14 +499,14 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
         int64_t cur_start_time_ms = static_cast<int64_t>(dsn_now_ms());
         {
             zauto_lock l(_mp._lock);
-            std::vector<dsn::rpc_address> node_list;
+            std::vector<dsn::host_port> node_list;
             generate_node_list(node_list, 3, 3);
 
             app_state *app = state->_all_apps[3].get();
             app->status = dsn::app_status::AS_AVAILABLE;
             for (partition_configuration &pc : app->partitions) {
-                pc.primary = node_list[0];
-                pc.secondaries = {node_list[1], node_list[2]};
+                SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, node_list[0]);
+                SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, node_list[1], node_list[2]);
             }
 
             _mp._backup_history.clear();

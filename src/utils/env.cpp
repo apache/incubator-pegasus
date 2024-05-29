@@ -40,12 +40,12 @@ DSN_DEFINE_bool(pegasus.server,
 
 DSN_DEFINE_string(pegasus.server,
                   server_key,
-                  "0123456789ABCDEF0123456789ABCDEF",
+                  "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF",
                   "The encrypted server key to use in the filesystem.");
 
 DSN_DEFINE_string(pegasus.server,
                   encryption_method,
-                  "AES128CTR",
+                  "AES256CTR",
                   "The encryption method to use in the filesystem. Now "
                   "supports AES128CTR, AES192CTR, AES256CTR and SM4CTR.");
 

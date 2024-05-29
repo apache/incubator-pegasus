@@ -27,8 +27,6 @@
 #include "common/replication_common.h"
 
 #include <string.h>
-// IWYU pragma: no_include <ext/alloc_traits.h>
-#include <algorithm>
 #include <fstream>
 #include <memory>
 
@@ -36,13 +34,15 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "fmt/core.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/service_app.h"
 #include "utils/config_api.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/string_conv.h"
 #include "utils/strings.h"
+#include "utils/utils.h"
 
 DSN_DEFINE_bool(replication, duplication_enabled, true, "is duplication enabled");
 
@@ -59,7 +59,7 @@ DSN_DEFINE_int32(replication,
 DSN_DEFINE_int32(replication,
                  fd_check_interval_seconds,
                  2,
-                 "The interval seconds of failure detector to check healthness of remote peers");
+                 "The interval seconds of failure detector to check healthiness of remote peers");
 DSN_DEFINE_int32(replication,
                  fd_beacon_interval_seconds,
                  3,
@@ -107,9 +107,15 @@ DSN_DEFINE_string(replication,
                   cold_backup_root,
                   "",
                   "The prefix of cold backup data path on remote storage");
+DSN_DEFINE_string(meta_server,
+                  server_list,
+                  "",
+                  "Comma-separated list of MetaServers in the Pegasus cluster");
 
 namespace dsn {
 namespace replication {
+const std::string replication_options::kRepsDir = "reps";
+const std::string replication_options::kReplicaAppType = "replica";
 
 replication_options::~replication_options() {}
 
@@ -146,8 +152,8 @@ void replication_options::initialize()
     }
 
     CHECK(!data_dirs.empty(), "no replica data dir found, maybe not set or excluded by black list");
-
-    CHECK(replica_helper::load_meta_servers(meta_servers), "invalid meta server config");
+    CHECK(replica_helper::parse_server_list(FLAGS_server_list, meta_servers),
+          "invalid meta server config");
 }
 
 int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_replica_count) const
@@ -160,77 +166,58 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     }
 }
 
-/*static*/ bool replica_helper::remove_node(::dsn::rpc_address node,
-                                            /*inout*/ std::vector<::dsn::rpc_address> &nodeList)
-{
-    auto it = std::find(nodeList.begin(), nodeList.end(), node);
-    if (it != nodeList.end()) {
-        nodeList.erase(it);
-        return true;
-    } else {
-        return false;
-    }
-}
-
 /*static*/ bool replica_helper::get_replica_config(const partition_configuration &partition_config,
-                                                   ::dsn::rpc_address node,
+                                                   const ::dsn::host_port &node,
                                                    /*out*/ replica_configuration &replica_config)
 {
     replica_config.pid = partition_config.pid;
-    replica_config.primary = partition_config.primary;
     replica_config.ballot = partition_config.ballot;
     replica_config.learner_signature = invalid_signature;
+    SET_OBJ_IP_AND_HOST_PORT(replica_config, primary, partition_config, primary);
 
-    if (node == partition_config.primary) {
+    if (node == partition_config.hp_primary) {
         replica_config.status = partition_status::PS_PRIMARY;
         return true;
-    } else if (std::find(partition_config.secondaries.begin(),
-                         partition_config.secondaries.end(),
-                         node) != partition_config.secondaries.end()) {
+    }
+
+    if (utils::contains(partition_config.hp_secondaries, node)) {
         replica_config.status = partition_status::PS_SECONDARY;
         return true;
-    } else {
-        replica_config.status = partition_status::PS_INACTIVE;
-        return false;
     }
+
+    replica_config.status = partition_status::PS_INACTIVE;
+    return false;
 }
 
-bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &servers,
-                                       const char *section,
-                                       const char *key)
+bool replica_helper::load_servers_from_config(const std::string &section,
+                                              const std::string &key,
+                                              /*out*/ std::vector<dsn::host_port> &servers)
+{
+    const auto *server_list = dsn_config_get_value_string(section.c_str(), key.c_str(), "", "");
+    return dsn::replication::replica_helper::parse_server_list(server_list, servers);
+}
+
+bool replica_helper::parse_server_list(const char *server_list,
+                                       /*out*/ std::vector<dsn::host_port> &servers)
 {
     servers.clear();
-    std::string server_list = dsn_config_get_value_string(section, key, "", "");
-    std::vector<std::string> lv;
-    ::dsn::utils::split_args(server_list.c_str(), lv, ',');
-    for (auto &s : lv) {
-        ::dsn::rpc_address addr;
-        std::vector<std::string> hostname_port;
-        uint32_t ip = 0;
-        utils::split_args(s.c_str(), hostname_port, ':');
-        CHECK_EQ_MSG(2,
-                     hostname_port.size(),
-                     "invalid address '{}' specified in config [{}].{}",
-                     s,
-                     section,
-                     key);
-        uint32_t port_num = 0;
-        CHECK(dsn::internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
-              "invalid address '{}' specified in config [{}].{}",
-              s,
-              section,
-              key);
-        if (0 != (ip = ::dsn::rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
-            addr.assign_ipv4(ip, static_cast<uint16_t>(port_num));
-        } else if (!addr.from_string_ipv4(s.c_str())) {
-            LOG_ERROR("invalid address '{}' specified in config [{}].{}", s, section, key);
+    std::vector<std::string> host_port_strs;
+    ::dsn::utils::split_args(server_list, host_port_strs, ',');
+    for (const auto &host_port_str : host_port_strs) {
+        const auto hp = dsn::host_port::from_string(host_port_str);
+        if (!hp) {
+            LOG_ERROR("invalid host_port '{}' specified in '{}'", host_port_str, server_list);
             return false;
         }
-        // TODO(yingchun): check there is no duplicates
-        servers.push_back(addr);
+        servers.push_back(hp);
     }
+
     if (servers.empty()) {
-        LOG_ERROR("no meta server specified in config [{}].{}", section, key);
+        LOG_ERROR("no meta server specified");
+        return false;
+    }
+    if (servers.size() != host_port_strs.size()) {
+        LOG_ERROR("server_list {} have duplicate server", server_list);
         return false;
     }
     return true;
@@ -293,7 +280,7 @@ replication_options::get_data_dir_and_tag(const std::string &config_dirs_str,
     for (unsigned i = 0; i < dirs.size(); ++i) {
         const std::string &dir = dirs[i];
         LOG_INFO("data_dirs[{}] = {}, tag = {}", i + 1, dir, dir_tags[i]);
-        data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
+        data_dirs.push_back(utils::filesystem::path_combine(dir, kRepsDir));
         data_dir_tags.push_back(dir_tags[i]);
     }
     return true;

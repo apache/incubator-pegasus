@@ -40,7 +40,7 @@
 #include "geo/lib/geo_client.h"
 #include "gtest/gtest.h"
 #include "pegasus/client.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
@@ -61,10 +61,10 @@ class geo_client_test : public ::testing::Test
 public:
     geo_client_test()
     {
-        std::vector<dsn::rpc_address> meta_list;
-        bool ok = dsn::replication::replica_helper::load_meta_servers(
-            meta_list, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), "onebox");
-        CHECK(ok, "load_meta_servers failed");
+        std::vector<dsn::host_port> meta_list;
+        CHECK(dsn::replication::replica_helper::load_servers_from_config(
+                  dsn::PEGASUS_CLUSTER_SECTION_NAME, "onebox", meta_list),
+              "load_servers_from_config failed");
         auto ddl_client = new dsn::replication::replication_ddl_client(meta_list);
         dsn::error_code error = ddl_client->create_app("temp_geo", "pegasus", 4, 3, {}, false);
         CHECK_EQ(dsn::ERR_OK, error);

@@ -40,7 +40,8 @@ public:
     {
         std::unique_ptr<tools::sim_network_provider> sim_net(
             new tools::sim_network_provider(nullptr, nullptr));
-        _sim_session = sim_net->create_client_session(rpc_address("localhost", 10086));
+        _sim_session =
+            sim_net->create_client_session(rpc_address::from_host_port("localhost", 10086));
         _client_negotiation = std::make_unique<client_negotiation>(_sim_session);
     }
 

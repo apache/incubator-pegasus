@@ -421,7 +421,9 @@ inline bool json_decode(const dsn::json::JsonObject &in, dsn::rpc_address &addre
     if (rpc_address_string == "invalid address") {
         return true;
     }
-    return address.from_string_ipv4(rpc_address_string.c_str());
+
+    address = dsn::rpc_address::from_host_port(rpc_address_string);
+    return static_cast<bool>(address);
 }
 
 // json serialization for rpc host_port, we use the string representation of a host_port
@@ -437,7 +439,7 @@ inline bool json_decode(const dsn::json::JsonObject &in, dsn::host_port &hp)
         return true;
     }
     hp = host_port::from_string(host_port_string);
-    return !hp.is_invalid();
+    return static_cast<bool>(hp);
 }
 
 inline void json_encode(JsonWriter &out, const dsn::partition_configuration &config);
@@ -713,7 +715,10 @@ NON_MEMBER_JSON_SERIALIZATION(dsn::partition_configuration,
                               secondaries,
                               last_drops,
                               last_committed_decree,
-                              partition_flags)
+                              partition_flags,
+                              hp_primary,
+                              hp_secondaries,
+                              hp_last_drops)
 
 NON_MEMBER_JSON_SERIALIZATION(dsn::app_info,
                               status,

@@ -74,7 +74,7 @@ void mutation_buffer::commit(decree d, commit_type ct)
         //             n+m(m>1)            n+k(k>=m)
         //
         // just LOG_ERROR but not CHECK if mutation loss or other problem, it's different from
-        // base class implement. And from the error and perf-counter, we can choose restart
+        // base class implement. And based on the error and metric, we can choose to restart
         // duplication or ignore the loss.
         if (next_committed_mutation == nullptr || !next_committed_mutation->is_logged()) {
             LOG_ERROR_PREFIX("mutation[{}] is lost in prepare_list: "

@@ -30,16 +30,17 @@ namespace cpp dsn.service
 
 struct copy_request
 {
-    1: dsn.rpc_address source;
-    2: string source_dir;
-    3: string dst_dir;
-    4: string file_name;
-    5: i64 offset;
-    6: i32 size;
-    7: bool is_last;
-    8: bool overwrite;
-    9: optional string source_disk_tag;
-    10: optional dsn.gpid pid;
+    1: dsn.rpc_address         source;
+    2: string                  source_dir;
+    3: string                  dst_dir;
+    4: string                  file_name;
+    5: i64                     offset;
+    6: i32                     size;
+    7: bool                    is_last;
+    8: bool                    overwrite;
+    9: optional string         source_disk_tag;
+    10: optional dsn.gpid      pid;
+    11: optional dsn.host_port hp_source;
 }
 
 struct copy_response
@@ -52,14 +53,15 @@ struct copy_response
 
 struct get_file_size_request
 {
-    1: dsn.rpc_address source;
-    2: string dst_dir;
-    3: list<string> file_list;
-    4: string source_dir;
-    5: bool overwrite;
-    6: optional string source_disk_tag;
-    7: optional string dest_disk_tag;
-    8: optional dsn.gpid pid;
+    1: dsn.rpc_address        source;
+    2: string                 dst_dir;
+    3: list<string>           file_list;
+    4: string                 source_dir;
+    5: bool                   overwrite;
+    6: optional string        source_disk_tag;
+    7: optional string        dest_disk_tag;
+    8: optional dsn.gpid      pid;
+    9: optional dsn.host_port hp_source;
 }
 
 struct get_file_size_response

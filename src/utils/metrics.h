@@ -25,10 +25,12 @@
 #include <algorithm>
 #include <atomic>
 #include <bitset>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <new>
+#include <ratio>
 #include <set>
 #include <sstream>
 #include <string>
@@ -45,6 +47,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/casts.h"
 #include "utils/enum_helper.h"
+#include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"
 #include "utils/long_adder.h"
@@ -52,8 +55,10 @@
 #include "utils/nth_element.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
+#include "utils/string_conv.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
+#include "utils/utils.h"
 
 namespace boost {
 namespace system {
@@ -465,7 +470,7 @@ struct metric_filters
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
         // Will use `bool operator==(const string &lhs, const char *rhs);` to compare each element
         // in `white_list` with `candidate`.
-        return std::find(white_list.begin(), white_list.end(), candidate) != white_list.end();
+        return utils::contains(white_list, candidate);
     }
 
     static inline bool match(const std::string &candidate,
@@ -1705,6 +1710,65 @@ DEF_ALL_METRIC_BRIEF_SNAPSHOTS(p99);
             return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string: {}", json_string);         \
         }                                                                                          \
     } while (0)
+
+// Currently only Gauge and Counter are considered to have "increase" and "rate", which means
+// samples are needed. Thus brief `value` field is enough.
+#define DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(                                                  \
+    json_string_start, json_string_end, query_snapshot_start, query_snapshot_end)                  \
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_start, query_snapshot_start);       \
+    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_end, query_snapshot_end);           \
+                                                                                                   \
+    do {                                                                                           \
+        if (query_snapshot_end.timestamp_ns <= query_snapshot_start.timestamp_ns) {                \
+            return FMT_ERR(dsn::ERR_INVALID_DATA,                                                  \
+                           "duration for metric samples should be > 0: timestamp_ns_start={}, "    \
+                           "timestamp_ns_end={}",                                                  \
+                           query_snapshot_start.timestamp_ns,                                      \
+                           query_snapshot_end.timestamp_ns);                                       \
+        }                                                                                          \
+    } while (0)
+
+// Find the duration between the 2 timestamps, generally used for calculate the rates over the
+// metrics, such as QPS.
+inline double calc_metric_sample_duration_s(uint64_t timestamp_ns_start, uint64_t timestamp_ns_end)
+{
+    CHECK_LT(timestamp_ns_start, timestamp_ns_end);
+
+    const std::chrono::duration<double, std::nano> duration_ns(
+        static_cast<double>(timestamp_ns_end - timestamp_ns_start));
+    const std::chrono::duration<double> duration_s = duration_ns;
+    return duration_s.count();
+}
+
+// Parse the attributes as their original types.
+template <typename TAttrValue,
+          typename = typename std::enable_if<std::is_arithmetic<TAttrValue>::value>::type>
+inline error_s parse_metric_attribute(const metric_entity::attr_map &attrs,
+                                      const std::string &name,
+                                      TAttrValue &value)
+{
+    const auto &iter = attrs.find(name);
+    if (dsn_unlikely(iter == attrs.end())) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA, "{} field was not found", name);
+    }
+
+    if (dsn_unlikely(!dsn::buf2numeric(iter->second, value))) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid {}: {}", name, iter->second);
+    }
+
+    return dsn::error_s::ok();
+}
+
+inline error_s parse_metric_table_id(const metric_entity::attr_map &attrs, int32_t &table_id)
+{
+    return parse_metric_attribute(attrs, "table_id", table_id);
+}
+
+inline error_s parse_metric_partition_id(const metric_entity::attr_map &attrs,
+                                         int32_t &partition_id)
+{
+    return parse_metric_attribute(attrs, "partition_id", partition_id);
+}
 
 } // namespace dsn
 

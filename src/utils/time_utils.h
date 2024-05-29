@@ -47,12 +47,15 @@ static struct tm *get_localtime(uint64_t ts_ms, struct tm *tm_buf)
     return localtime_r(&t, tm_buf);
 }
 
-// get time string, which format is yyyy-MM-dd hh:mm:ss.SSS
+// Get time string, which format is yyyy-MM-dd hh:mm:ss.SSS
 // NOTE: using char* as output is usually unsafe, remember to initialize its memory as zero before
 // calling 'time_ms_to_string'. Please use std::string as the output argument as long as it's
 // possible.
 extern void time_ms_to_string(uint64_t ts_ms, char *str);
 extern void time_ms_to_string(uint64_t ts_ms, std::string &str);
+
+// Get time string, which format is yyyyMMdd_hhmmss_SSS
+extern void time_ms_to_sequent_string(uint64_t ts_ms, std::string &str);
 
 // get date string with format of 'yyyy-MM-dd' from given timestamp
 inline void time_ms_to_date(uint64_t ts_ms, char *str, int len)

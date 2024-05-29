@@ -18,13 +18,14 @@
  */
 package org.apache.pegasus.rpc.interceptor;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.pegasus.client.ClientOptions;
 import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.apache.pegasus.security.AuthReplicaSessionInterceptor;
 
-public class ReplicaSessionInterceptorManager {
+public class ReplicaSessionInterceptorManager implements Closeable {
   private List<ReplicaSessionInterceptor> interceptors = new ArrayList<>();
 
   public ReplicaSessionInterceptorManager(ClientOptions options) {
@@ -48,5 +49,12 @@ public class ReplicaSessionInterceptorManager {
       }
     }
     return true;
+  }
+
+  @Override
+  public void close() {
+    for (ReplicaSessionInterceptor interceptor : interceptors) {
+      interceptor.close();
+    }
   }
 }

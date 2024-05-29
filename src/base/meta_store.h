@@ -24,7 +24,6 @@
 #include <stdint.h>
 #include <string>
 
-#include "replica/replica_base.h"
 #include "utils/error_code.h"
 
 namespace rocksdb {
@@ -35,16 +34,18 @@ class DB;
 namespace pegasus {
 namespace server {
 
-class pegasus_server_impl;
-
 // Manage meta data of Pegasus, now support
 // - pegasus_data_version
 // - pegasus_last_flushed_decree
 // - pegasus_last_manual_compact_finish_time
-class meta_store : public dsn::replication::replica_base
+class meta_store
 {
 public:
-    meta_store(pegasus_server_impl *server, rocksdb::DB *db, rocksdb::ColumnFamilyHandle *meta_cf);
+    // Column family names.
+    static const std::string DATA_COLUMN_FAMILY_NAME;
+    static const std::string META_COLUMN_FAMILY_NAME;
+
+    meta_store(const char *log_prefix, rocksdb::DB *db, rocksdb::ColumnFamilyHandle *meta_cf);
 
     dsn::error_code get_last_flushed_decree(uint64_t *decree) const;
     uint64_t get_decree_from_readonly_db(rocksdb::DB *db,
@@ -85,14 +86,14 @@ private:
     FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_latest_options);
     FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_app_envs);
 
+    const char *log_prefix() const { return _log_prefix.c_str(); }
+
     // Keys of meta data wrote into meta column family.
     static const std::string DATA_VERSION;
     static const std::string LAST_FLUSHED_DECREE;
     static const std::string LAST_MANUAL_COMPACT_FINISH_TIME;
-    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
-    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE;
-    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
 
+    const std::string _log_prefix;
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_meta_cf;
     rocksdb::WriteOptions _wt_opts;

@@ -35,6 +35,7 @@
 #include "dsn.layer2_types.h"
 #include "partition_resolver_simple.h"
 #include "runtime/api_layer1.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
@@ -48,7 +49,7 @@
 namespace dsn {
 namespace replication {
 
-partition_resolver_simple::partition_resolver_simple(rpc_address meta_server, const char *app_name)
+partition_resolver_simple::partition_resolver_simple(host_port meta_server, const char *app_name)
     : partition_resolver(meta_server, app_name),
       _app_id(-1),
       _app_partition_count(-1),
@@ -63,12 +64,12 @@ void partition_resolver_simple::resolve(uint64_t partition_hash,
     int idx = -1;
     if (_app_partition_count != -1) {
         idx = get_partition_index(_app_partition_count, partition_hash);
-        rpc_address target;
-        auto err = get_address(idx, target);
+        host_port target;
+        auto err = get_host_port(idx, target);
         if (dsn_unlikely(err == ERR_CHILD_NOT_READY)) {
             // child partition is not ready, its requests should be sent to parent partition
             idx -= _app_partition_count / 2;
-            err = get_address(idx, target);
+            err = get_host_port(idx, target);
         }
         if (dsn_likely(err == ERR_OK)) {
             callback(resolve_result{ERR_OK, target, {_app_id, idx}});
@@ -128,7 +129,7 @@ void partition_resolver_simple::clear_all_pending_requests()
             pc.second->query_config_task->cancel(true);
 
         for (auto &rc : pc.second->requests) {
-            end_request(std::move(rc), ERR_TIMEOUT, rpc_address());
+            end_request(std::move(rc), ERR_TIMEOUT, host_port());
         }
         delete pc.second;
     }
@@ -137,12 +138,12 @@ void partition_resolver_simple::clear_all_pending_requests()
 
 void partition_resolver_simple::on_timeout(request_context_ptr &&rc) const
 {
-    end_request(std::move(rc), ERR_TIMEOUT, rpc_address(), true);
+    end_request(std::move(rc), ERR_TIMEOUT, host_port(), true);
 }
 
 void partition_resolver_simple::end_request(request_context_ptr &&request,
                                             error_code err,
-                                            rpc_address addr,
+                                            host_port hp,
                                             bool called_by_timer) const
 {
     zauto_lock l(request->lock);
@@ -153,7 +154,7 @@ void partition_resolver_simple::end_request(request_context_ptr &&request,
     if (!called_by_timer && request->timeout_timer != nullptr)
         request->timeout_timer->cancel(false);
 
-    request->callback(resolve_result{err, addr, {_app_id, request->partition_index}});
+    request->callback(resolve_result{err, hp, {_app_id, request->partition_index}});
     request->completed = true;
 }
 
@@ -164,13 +165,13 @@ void partition_resolver_simple::call(request_context_ptr &&request, bool from_me
 {
     int pindex = request->partition_index;
     if (-1 != pindex) {
-        // fill target address if possible
-        rpc_address addr;
-        auto err = get_address(pindex, addr);
+        // fill target host_port if possible
+        host_port hp;
+        auto err = get_host_port(pindex, hp);
 
-        // target address known
+        // target host_port known
         if (err == ERR_OK) {
-            end_request(std::move(request), ERR_OK, addr);
+            end_request(std::move(request), ERR_OK, hp);
             return;
         }
     }
@@ -180,7 +181,7 @@ void partition_resolver_simple::call(request_context_ptr &&request, bool from_me
     // timeout will happen very soon, no way to get the rpc call done
     if (nts + 100 >= request->timeout_ts_us) // within 100 us
     {
-        end_request(std::move(request), ERR_TIMEOUT, rpc_address());
+        end_request(std::move(request), ERR_TIMEOUT, host_port());
         return;
     }
 
@@ -260,7 +261,7 @@ task_ptr partition_resolver_simple::query_config(int partition_index, int timeou
     marshall(msg, req);
 
     return rpc::call(
-        _meta_server,
+        dns_resolver::instance().resolve_address(_meta_server),
         msg,
         &_tracker,
         [this, partition_index](error_code err, dsn::message_ex *req, dsn::message_ex *resp) {
@@ -306,7 +307,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
                 LOG_DEBUG_PREFIX("query config reply, gpid = {}, ballot = {}, primary = {}",
                                  new_config.pid,
                                  new_config.ballot,
-                                 new_config.primary);
+                                 FMT_HOST_PORT_AND_IP(new_config, primary));
 
                 auto it2 = _config_cache.find(new_config.pid.get_partition_index());
                 if (it2 == _config_cache.end()) {
@@ -393,16 +394,16 @@ void partition_resolver_simple::handle_pending_requests(std::deque<request_conte
 {
     for (auto &req : reqs) {
         if (err == ERR_OK) {
-            rpc_address addr;
-            err = get_address(req->partition_index, addr);
+            host_port hp;
+            err = get_host_port(req->partition_index, hp);
             if (err == ERR_OK) {
-                end_request(std::move(req), err, addr);
+                end_request(std::move(req), err, hp);
             } else {
                 call(std::move(req), true);
             }
         } else if (err == ERR_HANDLER_NOT_FOUND || err == ERR_APP_NOT_EXIST ||
                    err == ERR_OPERATION_DISABLED) {
-            end_request(std::move(req), err, rpc_address());
+            end_request(std::move(req), err, host_port());
         } else {
             call(std::move(req), true);
         }
@@ -411,20 +412,20 @@ void partition_resolver_simple::handle_pending_requests(std::deque<request_conte
 }
 
 /*search in cache*/
-rpc_address partition_resolver_simple::get_address(const partition_configuration &config) const
+host_port partition_resolver_simple::get_host_port(const partition_configuration &config) const
 {
     if (_app_is_stateful) {
-        return config.primary;
-    } else {
-        if (config.last_drops.size() == 0) {
-            return rpc_address();
-        } else {
-            return config.last_drops[rand::next_u32(0, config.last_drops.size() - 1)];
-        }
+        return config.hp_primary;
     }
+
+    if (config.hp_last_drops.empty()) {
+        return host_port();
+    }
+
+    return config.hp_last_drops[rand::next_u32(0, config.last_drops.size() - 1)];
 }
 
-error_code partition_resolver_simple::get_address(int partition_index, /*out*/ rpc_address &addr)
+error_code partition_resolver_simple::get_host_port(int partition_index, /*out*/ host_port &hp)
 {
     // partition_configuration config;
     {
@@ -436,8 +437,8 @@ error_code partition_resolver_simple::get_address(int partition_index, /*out*/ r
                 // client query config for splitting app, child partition is not ready
                 return ERR_CHILD_NOT_READY;
             }
-            addr = get_address(it->second->config);
-            if (addr.is_invalid()) {
+            hp = get_host_port(it->second->config);
+            if (!hp) {
                 return ERR_IO_PENDING;
             } else {
                 return ERR_OK;
@@ -448,9 +449,5 @@ error_code partition_resolver_simple::get_address(int partition_index, /*out*/ r
     }
 }
 
-int partition_resolver_simple::get_partition_index(int partition_count, uint64_t partition_hash)
-{
-    return partition_hash % static_cast<uint64_t>(partition_count);
-}
 } // namespace replication
 } // namespace dsn

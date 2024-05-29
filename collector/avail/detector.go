@@ -34,7 +34,7 @@ import (
 
 // Detector periodically checks the service availability of the Pegasus cluster.
 type Detector interface {
-	Start(tom *tomb.Tomb) error
+	Run(tom *tomb.Tomb) error
 }
 
 // NewDetector returns a service-availability detector.
@@ -96,7 +96,7 @@ type pegasusDetector struct {
 	partitionCount int
 }
 
-func (d *pegasusDetector) Start(tom *tomb.Tomb) error {
+func (d *pegasusDetector) Run(tom *tomb.Tomb) error {
 	var err error
 	// Open the detect table.
 	d.detectTable, err = d.client.OpenTable(context.Background(), d.detectTableName)

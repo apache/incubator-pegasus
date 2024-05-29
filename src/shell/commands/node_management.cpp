@@ -38,7 +38,7 @@
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
@@ -52,9 +52,9 @@
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/strings.h"
-#include "utils/utils.h"
 
 DSN_DEFINE_uint32(shell, nodes_sample_interval_ms, 1000, "The interval between sampling metrics.");
+DSN_DEFINE_validator(nodes_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {
@@ -238,23 +238,28 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                                            {"json", no_argument, 0, 'j'},
                                            {"status", required_argument, 0, 's'},
                                            {"output", required_argument, 0, 'o'},
+                                           {"sample_interval_ms", required_argument, 0, 't'},
                                            {0, 0, 0, 0}};
 
     std::string status;
     std::string output_file;
+    uint32_t sample_interval_ms = FLAGS_nodes_sample_interval_ms;
     bool detailed = false;
     bool resolve_ip = false;
     bool resource_usage = false;
     bool show_qps = false;
     bool show_latency = false;
     bool json = false;
+
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "druqjs:o:", long_options, &option_index);
-        if (c == -1)
+        int c = getopt_long(args.argc, args.argv, "druqjs:o:t:", long_options, &option_index);
+        if (c == -1) {
+            // -1 means all command-line options have been parsed.
             break;
+        }
+
         switch (c) {
         case 'd':
             detailed = true;
@@ -278,6 +283,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             output_file = optarg;
             break;
+        case 't':
+            RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
+            break;
         default:
             return false;
         }
@@ -298,30 +306,26 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         s = type_from_string(dsn::replication::_node_status_VALUES_TO_NAMES,
                              std::string("ns_") + status,
                              ::dsn::replication::node_status::NS_INVALID);
-        verify_logged(s != ::dsn::replication::node_status::NS_INVALID,
-                      "parse %s as node_status::type failed",
-                      status.c_str());
+        PRINT_AND_RETURN_FALSE_IF_NOT(s != ::dsn::replication::node_status::NS_INVALID,
+                                      "parse {} as node_status::type failed",
+                                      status);
     }
 
-    std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
-    auto r = sc->ddl_client->list_nodes(s, nodes);
+    std::map<dsn::host_port, dsn::replication::node_status::type> status_by_hp;
+    auto r = sc->ddl_client->list_nodes(s, status_by_hp);
     if (r != dsn::ERR_OK) {
         std::cout << "list nodes failed, error=" << r << std::endl;
         return true;
     }
 
-    std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
+    std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
-    for (auto &kv : nodes) {
+    for (auto &kv : status_by_hp) {
         if (kv.second == dsn::replication::node_status::NS_ALIVE)
             alive_node_count++;
         std::string status_str = dsn::enum_to_string(kv.second);
         status_str = status_str.substr(status_str.find("NS_") + 3);
-        std::string node_name = kv.first.to_std_string();
-        if (resolve_ip) {
-            // TODO: put hostname_from_ip_port into common utils
-            dsn::utils::hostname_from_ip_port(node_name.c_str(), &node_name);
-        }
+        const auto node_name = replication_ddl_client::node_name(kv.first, resolve_ip);
         tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
     }
 
@@ -344,14 +348,14 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             }
 
             for (const dsn::partition_configuration &p : partitions) {
-                if (!p.primary.is_invalid()) {
-                    auto find = tmp_map.find(p.primary);
+                if (p.hp_primary) {
+                    auto find = tmp_map.find(p.hp_primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (const dsn::rpc_address &addr : p.secondaries) {
-                    auto find = tmp_map.find(addr);
+                for (const auto &hp : p.hp_secondaries) {
+                    auto find = tmp_map.find(hp);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;
                     }
@@ -370,7 +374,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         const auto &results = get_metrics(nodes, resource_usage_filters().to_query_string());
 
         for (size_t i = 0; i < nodes.size(); ++i) {
-            auto tmp_it = tmp_map.find(nodes[i].address);
+            auto tmp_it = tmp_map.find(nodes[i].hp);
             if (tmp_it == tmp_map.end()) {
                 continue;
             }
@@ -390,30 +394,36 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             return true;
         }
 
-        const auto &results_1 = get_metrics(nodes, rw_requests_filters().to_query_string());
-        std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_nodes_sample_interval_ms));
-        const auto &results_2 = get_metrics(nodes, rw_requests_filters().to_query_string());
+        const auto &query_string = rw_requests_filters().to_query_string();
+        const auto &results_start = get_metrics(nodes, query_string);
+        std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
+        const auto &results_end = get_metrics(nodes, query_string);
 
         for (size_t i = 0; i < nodes.size(); ++i) {
-            auto tmp_it = tmp_map.find(nodes[i].address);
+            auto tmp_it = tmp_map.find(nodes[i].hp);
             if (tmp_it == tmp_map.end()) {
                 continue;
             }
 
-            RETURN_SHELL_IF_GET_METRICS_FAILED(results_1[i], nodes[i], "1st rw requests");
-            RETURN_SHELL_IF_GET_METRICS_FAILED(results_2[i], nodes[i], "2nd rw requests");
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results_start[i], nodes[i], "starting rw requests");
+            RETURN_SHELL_IF_GET_METRICS_FAILED(results_end[i], nodes[i], "ending rw requests");
 
             list_nodes_helper &stat = tmp_it->second;
-            stat_var_map incs = {{"read_capacity_units", &stat.read_cu},
-                                 {"write_capacity_units", &stat.write_cu}};
-            stat_var_map rates = {{"get_requests", &stat.get_qps},
-                                  {"multi_get_requests", &stat.multi_get_qps},
-                                  {"batch_get_requests", &stat.batch_get_qps},
-                                  {"put_requests", &stat.put_qps},
-                                  {"multi_put_requests", &stat.multi_put_qps}};
+            aggregate_stats_calcs calcs;
+            calcs.create_increases<total_aggregate_stats>(
+                "replica",
+                stat_var_map({{"read_capacity_units", &stat.read_cu},
+                              {"write_capacity_units", &stat.write_cu}}));
+            calcs.create_rates<total_aggregate_stats>(
+                "replica",
+                stat_var_map({{"get_requests", &stat.get_qps},
+                              {"multi_get_requests", &stat.multi_get_qps},
+                              {"batch_get_requests", &stat.batch_get_qps},
+                              {"put_requests", &stat.put_qps},
+                              {"multi_put_requests", &stat.multi_put_qps}}));
+
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
-                calc_metric_deltas(
-                    results_1[i].body(), results_2[i].body(), "replica", incs, rates),
+                calcs.aggregate_metrics(results_start[i].body(), results_end[i].body()),
                 nodes[i],
                 "rw requests");
         }
@@ -429,7 +439,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         const auto &results = get_metrics(nodes, profiler_latency_filters().to_query_string());
 
         for (size_t i = 0; i < nodes.size(); ++i) {
-            auto tmp_it = tmp_map.find(nodes[i].address);
+            auto tmp_it = tmp_map.find(nodes[i].hp);
             if (tmp_it == tmp_map.end()) {
                 continue;
             }
@@ -522,9 +532,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     mtp.add(std::move(tp));
 
     dsn::utils::table_printer tp_count("summary");
-    tp_count.add_row_name_and_data("total_node_count", nodes.size());
+    tp_count.add_row_name_and_data("total_node_count", status_by_hp.size());
     tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
-    tp_count.add_row_name_and_data("unalive_node_count", nodes.size() - alive_node_count);
+    tp_count.add_row_name_and_data("unalive_node_count", status_by_hp.size() - alive_node_count);
     mtp.add(std::move(tp_count));
 
     mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
@@ -626,8 +636,8 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
 
         for (std::string &token : tokens) {
-            dsn::rpc_address node;
-            if (!node.from_string_ipv4(token.c_str())) {
+            const auto node = dsn::host_port::from_string(token);
+            if (!node) {
                 fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
                 return true;
             }
@@ -648,19 +658,14 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     int failed = 0;
     // TODO (yingchun) output is hard to read, need do some refactor
     for (int i = 0; i < node_list.size(); ++i) {
-        node_desc &n = node_list[i];
-        std::string hostname;
-        if (resolve_ip) {
-            dsn::utils::hostname_from_ip_port(n.address.to_string(), &hostname);
-        } else {
-            hostname = n.address.to_string();
-        }
-        fprintf(stderr, "CALL [%s] [%s] ", n.desc.c_str(), hostname.c_str());
+        const auto &node = node_list[i];
+        const auto hostname = replication_ddl_client::node_name(node.hp, resolve_ip);
+        fprintf(stderr, "CALL [%s] [%s] ", node.desc.c_str(), hostname.c_str());
         if (results[i].first) {
-            fprintf(stderr, "succeed: %s\n", results[i].second.c_str());
+            fprintf(stderr, "succeed:\n%s\n", results[i].second.c_str());
             succeed++;
         } else {
-            fprintf(stderr, "failed: %s\n", results[i].second.c_str());
+            fprintf(stderr, "failed:\n%s\n", results[i].second.c_str());
             failed++;
         }
     }

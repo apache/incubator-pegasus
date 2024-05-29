@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-cmake_minimum_required(VERSION 3.11.0)
+cmake_minimum_required(VERSION 3.24.0)
 project(pegasus)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -63,5 +63,8 @@ if(USE_JEMALLOC)
     message(STATUS "jemalloc is enabled")
     set(JEMALLOC_LIB_TYPE "SHARED")
 endif()
+
+option(SEPARATE_SERVERS "Whether to build pegasus_collector，pegasus_meta_server and pegasus_replica_server binaries separately, otherwise a combined pegasus_server binary will be built" OFF)
+message(STATUS "SEPARATE_SERVERS = ${SEPARATE_SERVERS}")
 
 add_subdirectory(src)

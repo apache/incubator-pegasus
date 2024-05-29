@@ -534,8 +534,8 @@ void event_on_rpc::init(message_ex *msg, task *tsk)
     if (msg != nullptr) {
         _trace_id = fmt::sprintf("%016llx", msg->header->trace_id);
         _rpc_name = msg->header->rpc_name;
-        _from = address_to_node(msg->header->from_address);
-        _to = address_to_node(msg->to_address);
+        _from = address_to_node(host_port::from_address(msg->header->from_address));
+        _to = address_to_node(msg->to_host_port);
     }
 }
 
@@ -815,8 +815,7 @@ bool client_case_line::parse(const std::string &params)
         _config_receiver = node_to_address(kv_map["receiver"]);
         _config_type = parse_config_command(kv_map["type"]);
         _config_node = node_to_address(kv_map["node"]);
-        if (_config_receiver.is_invalid() || _config_type == config_type::CT_INVALID ||
-            _config_node.is_invalid())
+        if (!_config_receiver || _config_type == config_type::CT_INVALID || !_config_node)
             parse_ok = false;
         break;
     }
@@ -914,9 +913,9 @@ void client_case_line::get_read_params(int &id, std::string &key, int &timeout_m
     timeout_ms = _timeout;
 }
 
-void client_case_line::get_replica_config_params(rpc_address &receiver,
+void client_case_line::get_replica_config_params(host_port &receiver,
                                                  dsn::replication::config_type::type &type,
-                                                 rpc_address &node) const
+                                                 host_port &node) const
 {
     CHECK_EQ(_type, replica_config);
     receiver = _config_receiver;
@@ -1166,9 +1165,9 @@ bool test_case::check_client_write(int &id, std::string &key, std::string &value
     return true;
 }
 
-bool test_case::check_replica_config(rpc_address &receiver,
+bool test_case::check_replica_config(host_port &receiver,
                                      dsn::replication::config_type::type &type,
-                                     rpc_address &node)
+                                     host_port &node)
 {
     if (!check_client_instruction(client_case_line::replica_config))
         return false;

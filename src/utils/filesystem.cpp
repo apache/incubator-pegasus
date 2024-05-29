@@ -25,10 +25,12 @@
  */
 
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <boost/system/error_code.hpp>
 #include <errno.h>
 #include <fmt/core.h>
 #include <ftw.h>
+#include <glob.h>
 #include <limits.h>
 #include <openssl/md5.h>
 #include <rocksdb/env.h>
@@ -42,6 +44,7 @@
 #include <memory>
 
 #include "absl/strings/string_view.h"
+#include "errors.h"
 #include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/fail_point.h"
@@ -492,6 +495,12 @@ bool create_file(const std::string &path)
     return true;
 }
 
+bool is_absolute_path(const std::string &path)
+{
+    boost::filesystem::path p(path);
+    return p.is_absolute();
+}
+
 bool get_absolute_path(const std::string &path1, std::string &path2)
 {
     bool succ;
@@ -899,6 +908,36 @@ bool check_dir_rw(const std::string &path, std::string &err_msg)
     }
 
     return true;
+}
+
+error_s glob(const std::string &path_pattern, std::vector<std::string> &path_list)
+{
+    glob_t result;
+    auto cleanup = dsn::defer([&] { ::globfree(&result); });
+
+    errno = 0;
+    int ret = ::glob(path_pattern.c_str(), GLOB_TILDE | GLOB_ERR, NULL, &result);
+    switch (ret) {
+    case 0:
+        break;
+
+    case GLOB_NOMATCH:
+        return error_s::ok();
+
+    case GLOB_NOSPACE:
+        return error_s::make(ERR_FS_INTERNAL, "glob out of memory");
+
+    default:
+        std::string error(errno == 0 ? "unknown error" : safe_strerror(errno));
+        return error_s::make(ERR_FS_INTERNAL,
+                             fmt::format("glob failed for '{}': {}", path_pattern, error));
+    }
+
+    for (size_t i = 0; i < result.gl_pathc; ++i) {
+        path_list.emplace_back(result.gl_pathv[i]);
+    }
+
+    return error_s::ok();
 }
 
 } // namespace filesystem

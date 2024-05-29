@@ -36,10 +36,6 @@
 #include <string>
 #include <utility>
 
-namespace dsn {
-class rpc_address;
-} // namespace dsn
-
 #define TIME_MS_MAX 0xffffffff
 
 // The COMPILE_ASSERT macro can be used to verify that a compile time
@@ -71,43 +67,6 @@ std::shared_ptr<T> make_shared_array(size_t size)
     return std::shared_ptr<T>(new T[size], std::default_delete<T[]>());
 }
 
-// get host name from ip series
-// if can't get a hostname from ip(maybe no hostname or other errors), return false, and
-// hostname_result will be invalid value
-// if multiple hostname got and all of them are resolvable return true, otherwise return false.
-// and the hostname_result will be "hostname1,hostname2(or ip_address or )..."
-// we only support ipv4 currently
-// check if a.b.c.d:port can be resolved to hostname:port. If it can be resolved, return true
-// and hostname_result
-// will be the hostname, or it will be ip address or error message
-
-// valid a.b.c.d -> return TRUE && hostname_result=hostname | invalid a.b.c.d:port1 -> return
-// FALSE
-// && hostname_result=a.b.c.d
-bool hostname_from_ip(const char *ip, std::string *hostname_result);
-
-// valid a.b.c.d：port -> return TRUE && hostname_result=hostname:port | invalid a.b.c.d:port1
-// ->
-// return FALSE  && hostname_result=a.b.c.d:port
-bool hostname_from_ip_port(const char *ip_port, std::string *hostname_result);
-
-// valid a.b.c.d,e.f.g.h -> return TRUE && hostname_result_list=hostname1,hostname2 | invalid
-// a.b.c.d,e.f.g.h -> return TRUE && hostname_result_list=a.b.c.d,e.f.g.h
-bool list_hostname_from_ip(const char *ip_port_list, std::string *hostname_result_list);
-
-// valid a.b.c.d:port1,e.f.g.h:port2 -> return TRUE &&
-// hostname_result_list=hostname1:port1,hostname2:port2 | invalid a.b.c.d:port1,e.f.g.h:port2 ->
-// return TRUE && hostname_result_list=a.b.c.d:port1,e.f.g.h:port2
-bool list_hostname_from_ip_port(const char *ip_port_list, std::string *hostname_result_list);
-
-// valid_ipv4_rpc_address return TRUE && hostname_result=hostname:port | invalid_ipv4 -> return
-// FALSE
-bool hostname(const dsn::rpc_address &address, std::string *hostname_result);
-
-// valid_ip_network_order -> return TRUE && hostname_result=hostname	|
-// invalid_ip_network_order -> return FALSE
-bool hostname_from_ip(uint32_t ip, std::string *hostname_result);
-
 template <typename A, typename B>
 std::multimap<B, A> flip_map(const std::map<A, B> &source)
 {
@@ -129,6 +88,12 @@ std::set<T> get_intersection(const std::set<T> &set1, const std::set<T> &set2)
                           set2.end(),
                           std::inserter(intersection, intersection.begin()));
     return intersection;
+}
+
+template <typename SeqContainer, typename Elem>
+bool contains(const SeqContainer &container, const Elem &elem)
+{
+    return std::find(container.begin(), container.end(), elem) != container.end();
 }
 } // namespace utils
 } // namespace dsn

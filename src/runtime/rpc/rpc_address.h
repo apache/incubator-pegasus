@@ -33,7 +33,6 @@
 #include <functional>
 #include <memory>
 #include <sstream>
-#include <string>
 #include <string_view>
 
 #include "utils/errors.h"
@@ -65,57 +64,39 @@ class rpc_group_address;
 class rpc_address
 {
 public:
-    static const rpc_address s_invalid_address;
+    // Convert IPv4:port to rpc_address, e.g. "192.168.0.1:12345" or "localhost:54321".
+    // NOTE:
+    //   - IP address without port (e.g. "127.0.0.1") is considered as invalid.
+    static rpc_address from_ip_port(std::string_view ip_port);
+
+    // Similar to the above, but specify the 'ip' and 'port' separately.
+    static rpc_address from_ip_port(std::string_view ip, uint16_t port);
+
+    // Convert hostname:port to rpc_address, e.g. "192.168.0.1:12345", "localhost:54321" or
+    // "host1:12345".
+    // NOTE:
+    //   - Hostname without port (e.g. "host1") is considered as invalid.
+    //   - It contains a hostname resolve produce, so typically it's slower than from_ip_port().
+    //   - It requires 'hostname' is a null terminate string which only contains hostname.
+    static rpc_address from_host_port(std::string_view host_port);
+
+    // Similar to the above, but specify the 'host' and 'port' separately.
+    static rpc_address from_host_port(std::string_view host, uint16_t port);
+
     static bool is_docker_netcard(const char *netcard_interface, uint32_t ip_net);
     static bool is_site_local_address(uint32_t ip_net);
-    static uint32_t ipv4_from_host(const char *hostname);
+    // TODO(yingchun): Use dsn_resolver to resolve hostname.
+    static error_s ipv4_from_host(std::string_view hostname, uint32_t *ip);
     static uint32_t ipv4_from_network_interface(const char *network_interface);
-    static error_s GetAddrInfo(const std::string &hostname, const addrinfo &hints, AddrInfo *info);
-
-    ~rpc_address();
+    static error_s GetAddrInfo(std::string_view hostname, const addrinfo &hints, AddrInfo *info);
 
     constexpr rpc_address() = default;
-
+    rpc_address(uint32_t ip, uint16_t port);
+    explicit rpc_address(const struct sockaddr_in &addr);
     rpc_address(const rpc_address &another);
+    ~rpc_address();
 
     rpc_address &operator=(const rpc_address &another);
-
-    rpc_address(uint32_t ip, uint16_t port)
-    {
-        assign_ipv4(ip, port);
-        static_assert(sizeof(rpc_address) == sizeof(uint64_t),
-                      "make sure rpc_address does not "
-                      "add new payload to rpc_address "
-                      "to keep it sizeof(uint64_t)");
-    }
-
-    rpc_address(const char *host, uint16_t port) { assign_ipv4(host, port); }
-
-    explicit rpc_address(const struct sockaddr_in &addr);
-
-    void assign_ipv4(uint32_t ip, uint16_t port)
-    {
-        set_invalid();
-        _addr.v4.type = HOST_TYPE_IPV4;
-        _addr.v4.ip = ip;
-        _addr.v4.port = port;
-    }
-
-    void assign_ipv4(const char *host, uint16_t port)
-    {
-        set_invalid();
-        _addr.v4.type = HOST_TYPE_IPV4;
-        _addr.v4.ip = rpc_address::ipv4_from_host(host);
-        _addr.v4.port = port;
-    }
-
-    void assign_ipv4_local_address(const char *network_interface, uint16_t port)
-    {
-        set_invalid();
-        _addr.v4.type = HOST_TYPE_IPV4;
-        _addr.v4.ip = rpc_address::ipv4_from_network_interface(network_interface);
-        _addr.v4.port = port;
-    }
 
     void assign_group(const char *name);
 
@@ -123,13 +104,6 @@ public:
 
     // return a.b.c.d if address is ipv4
     const char *ipv4_str() const;
-
-    std::string to_std_string() const { return std::string(to_string()); }
-
-    // This function is used for validating the format of ipv4 like "192.168.0.1:12345"
-    // Due to historical legacy, we also consider "localhost:8080" is in a valid format
-    // IP address without port like "127.0.0.1" is invalid here
-    bool from_string_ipv4(const char *s);
 
     uint64_t &value() { return _addr.value; }
 
@@ -146,7 +120,7 @@ public:
         return (rpc_group_address *)(uintptr_t)_addr.group.group;
     }
 
-    bool is_invalid() const { return _addr.v4.type == HOST_TYPE_INVALID; }
+    operator bool() const { return _addr.v4.type != HOST_TYPE_INVALID; }
 
     // before you assign new value, must call set_invalid() to release original value
     // and you MUST ensure that _addr is INITIALIZED before you call this function
@@ -164,7 +138,7 @@ public:
 
         switch (type()) {
         case HOST_TYPE_IPV4:
-            return ip() == r.ip() && _addr.v4.port == r.port();
+            return ip() == r.ip() && port() == r.port();
         case HOST_TYPE_GROUP:
             return _addr.group.group == r._addr.group.group;
         default:
@@ -199,6 +173,13 @@ public:
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 
 private:
+    friend class rpc_group_address;
+    friend class test_client;
+    template <typename TResponse>
+    friend class rpc_replier;
+
+    static const rpc_address s_invalid_address;
+
     union
     {
         struct

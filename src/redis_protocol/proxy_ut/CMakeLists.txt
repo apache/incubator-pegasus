@@ -29,15 +29,19 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
-set(MY_PROJ_LIBS pegasus.rproxylib
-                pegasus_base
-                absl::flat_hash_set
-                absl::strings
-                pegasus_geo_lib
-                s2
-                pegasus_client_static
-                gtest
-                )
+set(MY_PROJ_LIBS
+        pegasus.rproxylib
+        pegasus_base
+        absl::flat_hash_set
+        absl::strings
+        pegasus_geo_lib
+        s2
+        pegasus_client_static
+        rocksdb
+        lz4
+        zstd
+        snappy
+        gtest)
 
 set(MY_BINPLACES "config.ini" "run.sh")
 

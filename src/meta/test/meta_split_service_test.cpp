@@ -60,6 +60,7 @@
 #include "metadata_types.h"
 #include "partition_split_types.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -148,7 +149,7 @@ public:
         request->app.app_id = app->app_id;
         request->parent_config = parent_config;
         request->child_config = child_config;
-        request->primary_address = NODE;
+        SET_IP_AND_HOST_PORT_BY_DNS(*request, primary, NODE);
 
         register_child_rpc rpc(std::move(request), RPC_CM_REGISTER_CHILD_REPLICA);
         split_svc().register_child_on_meta(rpc);
@@ -377,7 +378,7 @@ public:
     const int32_t PARENT_BALLOT = 3;
     const int32_t PARENT_INDEX = 0;
     const int32_t CHILD_INDEX = 4;
-    const rpc_address NODE = rpc_address("127.0.0.1", 10086);
+    const host_port NODE = host_port("localhost", 10086);
     std::shared_ptr<app_state> app;
 };
 
@@ -505,7 +506,7 @@ TEST_F(meta_split_service_test, on_config_sync_test)
     info1.pid = pid1;
     info2.pid = pid2;
     configuration_query_by_node_request req;
-    req.node = NODE;
+    SET_IP_AND_HOST_PORT_BY_DNS(req, node, NODE);
     req.__isset.stored_replicas = true;
     req.stored_replicas.emplace_back(info1);
     req.stored_replicas.emplace_back(info2);

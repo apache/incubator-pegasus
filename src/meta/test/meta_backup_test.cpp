@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+// IWYU pragma: no_include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -35,7 +36,7 @@
 #include "meta/server_state.h"
 #include "meta_test_base.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
@@ -204,6 +205,31 @@ TEST_F(backup_service_test, test_query_backup_status)
     ASSERT_EQ(1, resp.backup_items.size());
 }
 
+TEST_F(backup_service_test, test_valid_policy_name)
+{
+    std::string hint_message;
+    ASSERT_FALSE(_backup_service->is_valid_policy_name_unlocked(cold_backup_constant::BACKUP_INFO,
+                                                                hint_message));
+    ASSERT_EQ("policy name is reserved", hint_message);
+
+    ASSERT_FALSE(_backup_service->is_valid_policy_name_unlocked("bad-policy-name", hint_message));
+    ASSERT_EQ("policy name should match regex '[a-zA-Z_:][a-zA-Z0-9_:]*' when act as a metric name "
+              "in prometheus",
+              hint_message);
+
+    ASSERT_FALSE(_backup_service->is_valid_policy_name_unlocked("bad_policy_name:", hint_message));
+    ASSERT_EQ("policy name should match regex '[a-zA-Z_][a-zA-Z0-9_]*' when act as a metric label "
+              "in prometheus",
+              hint_message);
+
+    _backup_service->_policy_states.insert(std::make_pair("exist_policy_name", nullptr));
+    ASSERT_FALSE(_backup_service->is_valid_policy_name_unlocked("exist_policy_name", hint_message));
+    ASSERT_EQ("policy name is already exist", hint_message);
+
+    ASSERT_TRUE(_backup_service->is_valid_policy_name_unlocked("new_policy_name0", hint_message));
+    ASSERT_TRUE(hint_message.empty());
+}
+
 class backup_engine_test : public meta_test_base
 {
 public:
@@ -250,7 +276,7 @@ public:
                               int32_t progress)
     {
         gpid pid = gpid(_app_id, partition_index);
-        rpc_address mock_primary_address = rpc_address("127.0.0.1", 10000 + partition_index);
+        const auto hp_mock_primary = host_port("localhost", 10000 + partition_index);
 
         backup_response resp;
         resp.backup_id = _backup_engine->_cur_backup.backup_id;
@@ -258,15 +284,15 @@ public:
         resp.err = resp_err;
         resp.progress = progress;
 
-        _backup_engine->on_backup_reply(rpc_err, resp, pid, mock_primary_address);
+        _backup_engine->on_backup_reply(rpc_err, resp, pid, hp_mock_primary);
     }
 
     void mock_on_backup_reply_when_timeout(int32_t partition_index, error_code rpc_err)
     {
         gpid pid = gpid(_app_id, partition_index);
-        rpc_address mock_primary_address = rpc_address("127.0.0.1", 10000 + partition_index);
+        const auto hp_mock_primary = host_port("localhost", 10000 + partition_index);
         backup_response resp;
-        _backup_engine->on_backup_reply(rpc_err, resp, pid, mock_primary_address);
+        _backup_engine->on_backup_reply(rpc_err, resp, pid, hp_mock_primary);
     }
 
     bool is_backup_failed() const

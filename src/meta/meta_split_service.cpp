@@ -42,6 +42,7 @@
 #include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
@@ -304,10 +305,11 @@ void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
     update_child_request->config = request.child_config;
     update_child_request->info = *app;
     update_child_request->type = config_type::CT_REGISTER_CHILD;
-    update_child_request->node = request.primary_address;
+    SET_OBJ_IP_AND_HOST_PORT(*update_child_request, node, request, primary);
 
     partition_configuration child_config = app->partitions[child_gpid.get_partition_index()];
     child_config.secondaries = request.child_config.secondaries;
+    child_config.__set_hp_secondaries(request.child_config.hp_secondaries);
     _state->update_configuration_locally(*app, update_child_request);
 
     if (parent_context.msg) {

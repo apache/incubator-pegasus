@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include <arpa/inet.h>
+#include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -31,9 +33,9 @@
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/ports.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
 #include "utils/timer.h"
-#include "utils/utils.h"
 
 namespace dsn {
 
@@ -42,8 +44,11 @@ const host_port host_port::s_invalid_host_port;
 host_port::host_port(std::string host, uint16_t port)
     : _host(std::move(host)), _port(port), _type(HOST_TYPE_IPV4)
 {
-    // ipv4_from_host may be slow, just call it in DEBUG version.
-    DCHECK_NE_MSG(rpc_address::ipv4_from_host(_host.c_str()), 0, "invalid hostname: {}", _host);
+    // Solve the problem of not translating "0.0.0.0"
+    if (_host != "0.0.0.0") {
+        // ipv4_from_host may be slow, just call it in DEBUG version.
+        DCHECK_OK(rpc_address::ipv4_from_host(_host, nullptr), "invalid hostname: {}", _host);
+    }
 }
 
 host_port host_port::from_address(rpc_address addr)
@@ -53,9 +58,9 @@ host_port host_port::from_address(rpc_address addr)
         WARNING, 100, "construct host_port '{}' from rpc_address '{}'", hp, addr);
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
-        CHECK(utils::hostname_from_ip(htonl(addr.ip()), &hp._host),
-              "invalid host_port {}",
-              addr.ipv4_str());
+        CHECK_OK(lookup_hostname(htonl(addr.ip()), &hp._host),
+                 "lookup_hostname failed for {}",
+                 addr.ipv4_str());
         hp._port = addr.port();
     } break;
     case HOST_TYPE_GROUP: {
@@ -65,7 +70,7 @@ host_port host_port::from_address(rpc_address addr)
         break;
     }
 
-    // Now is_invalid() return false.
+    // Now is valid.
     hp._type = addr.type();
     return hp;
 }
@@ -86,11 +91,12 @@ host_port host_port::from_string(const std::string &host_port_str)
         return hp;
     }
 
-    if (dsn_unlikely(rpc_address::ipv4_from_host(hp._host.c_str()) == 0)) {
+    // Validate the hostname.
+    if (dsn_unlikely(!rpc_address::ipv4_from_host(hp._host, nullptr))) {
         return hp;
     }
 
-    // Now is_invalid() return false.
+    // Now is valid.
     hp._type = HOST_TYPE_IPV4;
     return hp;
 }
@@ -168,13 +174,17 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
         __builtin_unreachable();
     }
 
-    rpc_address rpc_addr;
-    // Resolve hostname like "localhost:80" or "192.168.0.1:8080".
-    if (rpc_addr.from_string_ipv4(this->to_string().c_str())) {
-        addresses.emplace_back(rpc_addr);
-        return error_s::ok();
+    // 1. Try to resolve hostname in the form of "192.168.0.1:8080".
+    uint32_t ip_addr;
+    if (inet_pton(AF_INET, this->_host.c_str(), &ip_addr)) {
+        const auto rpc_addr = rpc_address::from_ip_port(this->to_string());
+        if (rpc_addr) {
+            addresses.emplace_back(rpc_addr);
+            return error_s::ok();
+        }
     }
 
+    // 2. Try to resolve hostname in the form of "host1:80".
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -204,6 +214,36 @@ error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const
     }
 
     addresses = std::move(result_addresses);
+    return error_s::ok();
+}
+
+error_s host_port::lookup_hostname(uint32_t ip, std::string *hostname)
+{
+    struct sockaddr_in addr_in;
+    addr_in.sin_family = AF_INET;
+    addr_in.sin_port = 0;
+    addr_in.sin_addr.s_addr = ip;
+    char host[NI_MAXHOST];
+    int rc = ::getnameinfo((struct sockaddr *)(&addr_in),
+                           sizeof(struct sockaddr),
+                           host,
+                           sizeof(host),
+                           nullptr,
+                           0,
+                           NI_NAMEREQD);
+    if (dsn_unlikely(rc != 0)) {
+        if (rc == EAI_SYSTEM) {
+            return error_s::make(dsn::ERR_NETWORK_FAILURE,
+                                 fmt::format("{}: {}: getnameinfo failed",
+                                             gai_strerror(rc),
+                                             dsn::utils::safe_strerror(errno)));
+        }
+
+        return error_s::make(dsn::ERR_NETWORK_FAILURE,
+                             fmt::format("{}: getnameinfo failed", gai_strerror(rc)));
+    }
+
+    *hostname = host;
     return error_s::ok();
 }
 

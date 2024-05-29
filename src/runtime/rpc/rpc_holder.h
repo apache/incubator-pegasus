@@ -63,7 +63,7 @@ using literals::chrono_literals::operator"" _ms;
 //       request->data = "abc";
 //       request->timestamp = 12;
 //       write_rpc rpc(std::move(request), RPC_WRITE);
-//       rpc.call(rpc_address("10.57.223.31", 12321), nullptr, on_write_rpc_reply);
+//       rpc.call(rpc_address::from_ip_port("10.57.223.31", 12321), nullptr, on_write_rpc_reply);
 //       ...
 //   }
 //
@@ -97,7 +97,7 @@ public:
                std::chrono::milliseconds timeout = 0_ms,
                uint64_t partition_hash = 0,
                int thread_hash = 0)
-        : _i(new internal(req, code, timeout, partition_hash, thread_hash))
+        : _i(new internal(std::move(req), code, timeout, partition_hash, thread_hash))
     {
     }
 
@@ -285,7 +285,7 @@ private:
             unmarshall(req, *thrift_request);
         }
 
-        internal(std::unique_ptr<TRequest> &req,
+        internal(std::unique_ptr<TRequest> req,
                  task_code code,
                  std::chrono::milliseconds timeout,
                  uint64_t partition_hash,

@@ -145,7 +145,8 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
           "invalid given channel {}",
           channel);
 
-    _address.assign_ipv4(get_local_ipv4(), port);
+    _address = rpc_address(get_local_ipv4(), port);
+    _hp = ::dsn::host_port::from_address(_address);
 
     if (!client_only) {
         auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
@@ -333,6 +334,19 @@ void asio_udp_provider::do_receive()
                 return;
             }
 
+            // Get the remote endpoint of the socket.
+            boost::system::error_code ec;
+            auto remote = _socket->remote_endpoint(ec);
+            if (ec) {
+                LOG_ERROR("failed to get the remote endpoint: {}", ec.message());
+                do_receive();
+                return;
+            }
+
+            auto ip = remote.address().to_v4().to_ulong();
+            auto port = remote.port();
+            const auto &remote_addr = ::dsn::rpc_address(ip, port);
+
             auto hdr_format = message_parser::get_header_type(_recv_reader._buffer.data());
             if (NET_HDR_INVALID == hdr_format) {
                 LOG_ERROR("{}: asio udp read failed: invalid header type '{}'",
@@ -356,7 +370,25 @@ void asio_udp_provider::do_receive()
                 return;
             }
 
+            if (msg->header->from_address != remote_addr) {
+                if (!msg->header->context.u.is_forwarded) {
+                    msg->header->from_address = remote_addr;
+                    LOG_DEBUG("{}: message's from_address {} is not equal to socket's remote_addr "
+                              "{}, assign it to remote_addr.",
+                              _address,
+                              msg->header->from_address,
+                              remote_addr);
+                } else {
+                    LOG_DEBUG("{}: message's from_address {} is not equal to socket's remote_addr "
+                              "{}, but it's forwarded message, ignore it!.",
+                              _address,
+                              msg->header->from_address,
+                              remote_addr);
+                }
+            }
+
             msg->to_address = _address;
+            msg->to_host_port = _hp;
             if (msg->header->context.u.is_request) {
                 on_recv_request(msg, 0);
             } else {
@@ -376,11 +408,11 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
         do {
             // FIXME: we actually do not need to set a random port for client if the rpc_engine is
             // refactored
-            _address.assign_ipv4(get_local_ipv4(),
-                                 std::numeric_limits<uint16_t>::max() -
-                                     rand::next_u64(std::numeric_limits<uint64_t>::min(),
-                                                    std::numeric_limits<uint64_t>::max()) %
-                                         5000);
+            _address = rpc_address(get_local_ipv4(),
+                                   std::numeric_limits<uint16_t>::max() -
+                                       rand::next_u64(std::numeric_limits<uint64_t>::min(),
+                                                      std::numeric_limits<uint64_t>::max()) %
+                                           5000);
             ::boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address_v4::any(),
                                                       _address.port());
             boost::system::error_code ec;
@@ -402,7 +434,7 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
             break;
         } while (true);
     } else {
-        _address.assign_ipv4(get_local_ipv4(), port);
+        _address = rpc_address(get_local_ipv4(), port);
         ::boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address_v4::any(),
                                                   _address.port());
         boost::system::error_code ec;
@@ -422,6 +454,8 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
             return ERR_NETWORK_INIT_FAILED;
         }
     }
+
+    _hp = ::dsn::host_port::from_address(_address);
 
     for (int i = 0; i < FLAGS_io_service_worker_count; i++) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {

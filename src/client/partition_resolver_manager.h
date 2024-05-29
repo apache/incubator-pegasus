@@ -35,7 +35,7 @@
 #include "utils/zlocks.h"
 
 namespace dsn {
-class rpc_address;
+class host_port;
 
 namespace replication {
 
@@ -43,7 +43,7 @@ class partition_resolver_manager : public dsn::utils::singleton<partition_resolv
 {
 public:
     partition_resolver_ptr find_or_create(const char *cluster_name,
-                                          const std::vector<rpc_address> &meta_list,
+                                          const std::vector<host_port> &meta_list,
                                           const char *app_name);
 
 private:

@@ -32,10 +32,10 @@ class command_manager_test : public ::testing::Test
 public:
     command_manager_test()
     {
-        _cmd = command_manager::instance().register_command(
-            {"test-cmd"},
-            "test-cmd - just for command_manager unit-test",
-            "test-cmd arg1 arg2 ...",
+        _cmd = command_manager::instance().register_single_command(
+            "test-cmd",
+            "Just for command_manager unit-test",
+            "arg1 arg2 ...",
             [](const vector<string> &args) {
                 return fmt::format("test-cmd response: [{}]", boost::join(args, " "));
             });

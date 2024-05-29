@@ -61,8 +61,12 @@ TEST(replication_common, get_data_dir_test)
     for (const auto &test : tests) {
         data_dirs.clear();
         data_dir_tags.clear();
-        bool flag = replication_options::get_data_dir_and_tag(
-            test.data_dir_str, "test_dir", "replica", data_dirs, data_dir_tags, err_msg);
+        bool flag = replication_options::get_data_dir_and_tag(test.data_dir_str,
+                                                              "test_dir",
+                                                              replication_options::kReplicaAppType,
+                                                              data_dirs,
+                                                              data_dir_tags,
+                                                              err_msg);
         ASSERT_EQ(flag, test.expected_val);
         ASSERT_EQ(data_dirs.size(), data_dir_tags.size());
         ASSERT_EQ(data_dirs.size(), test.expected_length);

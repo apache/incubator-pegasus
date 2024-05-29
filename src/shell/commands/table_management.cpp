@@ -30,7 +30,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -39,7 +38,7 @@
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
@@ -47,12 +46,15 @@
 #include "shell/sds/sds.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
+#include "utils/flags.h"
 #include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
-#include "utils/utils.h"
+
+DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
+DSN_DEFINE_validator(tables_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
 
 double convert_to_ratio(double hit, double total)
 {
@@ -106,9 +108,8 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
         s = type_from_string(::dsn::_app_status_VALUES_TO_NAMES,
                              std::string("as_") + status,
                              ::dsn::app_status::AS_INVALID);
-        verify_logged(s != ::dsn::app_status::AS_INVALID,
-                      "parse %s as app_status::type failed",
-                      status.c_str());
+        PRINT_AND_RETURN_FALSE_IF_NOT(
+            s != ::dsn::app_status::AS_INVALID, "parse {} as app_status::type failed", status);
     }
     ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
     if (err != ::dsn::ERR_OK)
@@ -196,15 +197,8 @@ dsn::error_s parse_sst_stat(const std::string &json_string,
                            entity.type);
         }
 
-        const auto &partition = entity.attributes.find("partition_id");
-        if (dsn_unlikely(partition == entity.attributes.end())) {
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "partition_id field was not found");
-        }
-
         int32_t partition_id;
-        if (dsn_unlikely(!dsn::buf2int32(partition->second, partition_id))) {
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid partition_id: {}", partition->second);
-        }
+        RETURN_NOT_OK(dsn::parse_metric_partition_id(entity.attributes, partition_id));
 
         for (const auto &m : entity.metrics) {
             if (m.name == "rdb_total_sst_files") {
@@ -310,16 +304,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
     const auto &results = get_metrics(nodes, sst_stat_filters(app_id).to_query_string());
 
-    std::map<dsn::rpc_address, std::map<int32_t, double>> disk_map;
-    std::map<dsn::rpc_address, std::map<int32_t, double>> count_map;
+    std::map<dsn::host_port, std::map<int32_t, double>> disk_map;
+    std::map<dsn::host_port, std::map<int32_t, double>> count_map;
     for (size_t i = 0; i < nodes.size(); ++i) {
         RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "sst");
 
-        RETURN_SHELL_IF_PARSE_METRICS_FAILED(parse_sst_stat(results[i].body(),
-                                                            count_map[nodes[i].address],
-                                                            disk_map[nodes[i].address]),
-                                             nodes[i],
-                                             "sst");
+        RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+            parse_sst_stat(results[i].body(), count_map[nodes[i].hp], disk_map[nodes[i].hp]),
+            nodes[i],
+            "sst");
     }
 
     ::dsn::utils::table_printer tp_general("result");
@@ -343,10 +336,10 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     for (int i = 0; i < partitions.size(); i++) {
         const dsn::partition_configuration &p = partitions[i];
         int replica_count = 0;
-        if (!p.primary.is_invalid()) {
+        if (p.hp_primary) {
             replica_count++;
         }
-        replica_count += p.secondaries.size();
+        replica_count += p.hp_secondaries.size();
         std::string replica_count_str;
         {
             std::stringstream oss;
@@ -354,10 +347,10 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             replica_count_str = oss.str();
         }
         std::string primary_str("-");
-        if (!p.primary.is_invalid()) {
+        if (p.hp_primary) {
             bool disk_found = false;
             double disk_value = 0;
-            auto f1 = disk_map.find(p.primary);
+            auto f1 = disk_map.find(p.hp_primary);
             if (f1 != disk_map.end()) {
                 auto &sub_map = f1->second;
                 auto f2 = sub_map.find(p.pid.get_partition_index());
@@ -372,23 +365,17 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             }
             bool count_found = false;
             double count_value = 0;
-            auto f3 = count_map.find(p.primary);
+            auto f3 = count_map.find(p.hp_primary);
             if (f3 != count_map.end()) {
                 auto &sub_map = f3->second;
-                auto f3 = sub_map.find(p.pid.get_partition_index());
-                if (f3 != sub_map.end()) {
+                auto f4 = sub_map.find(p.pid.get_partition_index());
+                if (f4 != sub_map.end()) {
                     count_found = true;
-                    count_value = f3->second;
+                    count_value = f4->second;
                 }
             }
             std::stringstream oss;
-            std::string hostname;
-            std::string ip = p.primary.to_string();
-            if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
-                oss << hostname << "(";
-            } else {
-                oss << p.primary << "(";
-            };
+            oss << replication_ddl_client::node_name(p.hp_primary, resolve_ip) << "(";
             if (disk_found)
                 oss << disk_value;
             else
@@ -405,12 +392,12 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         {
             std::stringstream oss;
             oss << "[";
-            for (int j = 0; j < p.secondaries.size(); j++) {
+            for (int j = 0; j < p.hp_secondaries.size(); j++) {
                 if (j != 0)
                     oss << ",";
                 bool found = false;
                 double value = 0;
-                auto f1 = disk_map.find(p.secondaries[j]);
+                auto f1 = disk_map.find(p.hp_secondaries[j]);
                 if (f1 != disk_map.end()) {
                     auto &sub_map = f1->second;
                     auto f2 = sub_map.find(p.pid.get_partition_index());
@@ -423,7 +410,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
                 bool count_found = false;
                 double count_value = 0;
-                auto f3 = count_map.find(p.secondaries[j]);
+                auto f3 = count_map.find(p.hp_secondaries[j]);
                 if (f3 != count_map.end()) {
                     auto &sub_map = f3->second;
                     auto f3 = sub_map.find(p.pid.get_partition_index());
@@ -433,13 +420,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                     }
                 }
 
-                std::string hostname;
-                std::string ip = p.secondaries[j].to_string();
-                if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
-                    oss << hostname << "(";
-                } else {
-                    oss << p.secondaries[j] << "(";
-                };
+                oss << replication_ddl_client::node_name(p.hp_secondaries[j], resolve_ip) << "(";
                 if (found)
                     oss << value;
                 else
@@ -485,10 +466,11 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 bool app_stat(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
-                                           {"only_qps", required_argument, 0, 'q'},
-                                           {"only_usage", required_argument, 0, 'u'},
+                                           {"only_qps", no_argument, 0, 'q'},
+                                           {"only_usage", no_argument, 0, 'u'},
                                            {"json", no_argument, 0, 'j'},
                                            {"output", required_argument, 0, 'o'},
+                                           {"sample_interval_ms", required_argument, 0, 't'},
                                            {0, 0, 0, 0}};
 
     std::string app_name;
@@ -496,14 +478,17 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     bool only_qps = false;
     bool only_usage = false;
     bool json = false;
+    uint32_t sample_interval_ms = FLAGS_tables_sample_interval_ms;
 
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "a:qujo:", long_options, &option_index);
-        if (c == -1)
+        int c = getopt_long(args.argc, args.argv, "a:qujo:t:", long_options, &option_index);
+        if (c == -1) {
+            // -1 means all command-line options have been parsed.
             break;
+        }
+
         switch (c) {
         case 'a':
             app_name = optarg;
@@ -520,6 +505,9 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             out_file = optarg;
             break;
+        case 't':
+            RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
+            break;
         default:
             return false;
         }
@@ -532,15 +520,14 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     }
 
     std::vector<row_data> rows;
-    if (!get_app_stat(sc, app_name, rows)) {
+    if (!get_app_stat(sc, app_name, sample_interval_ms, rows)) {
         std::cout << "ERROR: query app stat from server failed" << std::endl;
         return true;
     }
 
-    rows.resize(rows.size() + 1);
-    row_data &sum = rows.back();
-    sum.row_name = "(total:" + std::to_string(rows.size() - 1) + ")";
-    for (int i = 0; i < rows.size() - 1; ++i) {
+    rows.emplace_back(fmt::format("(total:{})", rows.size() - 1));
+    auto &sum = rows.back();
+    for (size_t i = 0; i < rows.size() - 1; ++i) {
         row_data &row = rows[i];
         sum.partition_count += row.partition_count;
         sum.get_qps += row.get_qps;

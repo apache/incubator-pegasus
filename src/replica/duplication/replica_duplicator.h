@@ -102,6 +102,8 @@ public:
 
     const std::string &remote_cluster_name() const { return _remote_cluster_name; }
 
+    const std::string &remote_app_name() const { return _remote_app_name; }
+
     // Thread-safe
     duplication_progress progress() const
     {
@@ -137,7 +139,9 @@ public:
     // For metric "dup.pending_mutations_count"
     uint64_t get_pending_mutations_count() const;
 
-    duplication_status::type status() const { return _status; };
+    duplication_status::type status() const { return _status; }
+
+    void set_duplication_plog_checking(bool checking);
 
 private:
     friend class duplication_test_base;
@@ -153,6 +157,7 @@ private:
 
     const dupid_t _id;
     const std::string _remote_cluster_name;
+    const std::string _remote_app_name;
 
     replica *_replica;
     replica_stub *_stub;

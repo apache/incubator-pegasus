@@ -22,9 +22,9 @@
 #include <gtest/gtest_prod.h>
 
 #include "base/idl_utils.h"
+#include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
 #include "logging_utils.h"
-#include "meta_store.h"
 #include "pegasus_server_impl.h"
 #include "pegasus_write_service.h"
 #include "rocksdb_wrapper.h"
@@ -59,16 +59,6 @@ struct db_get_context
     bool expired{false};
 };
 
-inline int get_cluster_id_if_exists()
-{
-    // cluster_id is 0 if not configured, which means it will accept writes
-    // from any cluster as long as the timestamp is larger.
-    static auto cluster_id_res =
-        dsn::replication::get_duplication_cluster_id(dsn::get_current_cluster_name());
-    static uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
-    return cluster_id;
-}
-
 inline dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
                                                const bool verify_before_ingest,
                                                const dsn::replication::bulk_load_metadata &metadata,
@@ -91,7 +81,7 @@ class pegasus_write_service::impl : public dsn::replication::replica_base
 public:
     explicit impl(pegasus_server_impl *server)
         : replica_base(server),
-          _primary_address(server->_primary_address),
+          _primary_host_port(server->_primary_host_port),
           _pegasus_data_version(server->_pegasus_data_version)
     {
         _rocksdb_wrapper = std::make_unique<rocksdb_wrapper>(server);
@@ -117,7 +107,7 @@ public:
         resp.app_id = get_gpid().get_app_id();
         resp.partition_index = get_gpid().get_partition_index();
         resp.decree = decree;
-        resp.server = _primary_address;
+        resp.server = _primary_host_port;
 
         if (update.kvs.empty()) {
             LOG_ERROR_PREFIX("invalid argument for multi_put: decree = {}, error = {}",
@@ -152,7 +142,7 @@ public:
         resp.app_id = get_gpid().get_app_id();
         resp.partition_index = get_gpid().get_partition_index();
         resp.decree = decree;
-        resp.server = _primary_address;
+        resp.server = _primary_host_port;
 
         if (update.sort_keys.empty()) {
             LOG_ERROR_PREFIX("invalid argument for multi_remove: decree = {}, error = {}",
@@ -186,7 +176,7 @@ public:
         resp.app_id = get_gpid().get_app_id();
         resp.partition_index = get_gpid().get_partition_index();
         resp.decree = decree;
-        resp.server = _primary_address;
+        resp.server = _primary_host_port;
 
         absl::string_view raw_key = update.key.to_string_view();
         int64_t new_value = 0;
@@ -270,7 +260,7 @@ public:
         resp.app_id = get_gpid().get_app_id();
         resp.partition_index = get_gpid().get_partition_index();
         resp.decree = decree;
-        resp.server = _primary_address;
+        resp.server = _primary_host_port;
 
         if (!is_check_type_supported(update.check_type)) {
             LOG_ERROR_PREFIX("invalid argument for check_and_set: decree = {}, error = {}",
@@ -366,7 +356,7 @@ public:
         resp.app_id = get_gpid().get_app_id();
         resp.partition_index = get_gpid().get_partition_index();
         resp.decree = decree;
-        resp.server = _primary_address;
+        resp.server = _primary_host_port;
 
         if (update.mutate_list.empty()) {
             LOG_ERROR_PREFIX("invalid argument for check_and_mutate: decree = {}, error = {}",
@@ -562,7 +552,7 @@ private:
             resp.app_id = get_gpid().get_app_id();
             resp.partition_index = get_gpid().get_partition_index();
             resp.decree = decree;
-            resp.server = _primary_address;
+            resp.server = _primary_host_port;
             for (dsn::apps::update_response *uresp : _update_responses) {
                 *uresp = resp;
             }
@@ -696,7 +686,7 @@ private:
     FRIEND_TEST(pegasus_write_service_impl_test, put_verify_timetag);
     FRIEND_TEST(pegasus_write_service_impl_test, verify_timetag_compatible_with_version_0);
 
-    const std::string _primary_address;
+    const std::string _primary_host_port;
     const uint32_t _pegasus_data_version;
 
     std::unique_ptr<rocksdb_wrapper> _rocksdb_wrapper;
