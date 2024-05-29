@@ -378,8 +378,8 @@ jobs:
       - name: Run server tests
         uses: "./.github/actions/run_server_tests"
 
-  build_pegasus_on_macos:
-    name: macOS
+  build_release_on_macos:
+    name: Build Release on macOS
     needs: cpp_clang_format_linter
     runs-on: macos-12
     steps:
@@ -411,3 +411,20 @@ jobs:
           ccache -z
           ./run.sh build --test --skip_thirdparty -j $(sysctl -n hw.physicalcpu)
           ccache -s
+
+  build_debug_on_centos7:
+    name: Build Debug on CentOS 7
+    needs: cpp_clang_format_linter
+    runs-on: ubuntu-latest
+    env:
+      USE_JEMALLOC: OFF
+      BUILD_OPTIONS: -t debug --test
+    container:
+      image: apache/pegasus:thirdparties-bin-centos7-${{ github.base_ref }}
+    steps:
+      - name: Clone code
+        uses: actions/checkout@v3
+      - name: Rebuild thirdparty if needed
+        uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - name: Build Pegasus
+        uses: "./.github/actions/build_pegasus"
