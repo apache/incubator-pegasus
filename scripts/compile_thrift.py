@@ -225,7 +225,7 @@ if __name__ == "__main__":
     print("root_dir = " + root_dir)
 
     if not os.path.isfile(thrift_exe):
-        print("Error: can't find compiler %s\nPlease build thrift in thirdparty/" % thrift_exe)
+        print("Error: can't find compiler %s\nPlease build thrift in %s/" % (thrift_exe, os.environ['THIRDPARTY_ROOT']))
         sys.exit(1)
 
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
