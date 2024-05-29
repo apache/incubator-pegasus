@@ -20,7 +20,11 @@ set -e
 
 function get_stdcpp_lib()
 {
-    libname=`ldd ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server 2>/dev/null | grep libstdc++`
+    if [[ $2 == "false" ]]; then
+        libname=`ldd ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server 2>/dev/null | grep libstdc++`
+    else
+        libname=`ldd ${BUILD_LATEST_DIR}/output/bin/pegasus_meta_server/pegasus_meta_server 2>/dev/null | grep libstdc++`
+    fi
     libname=`echo $libname | cut -f1 -d" "`
     if [ $1 = "true" ]; then
         gcc_path=`which gcc`

@@ -27,6 +27,7 @@ function usage() {
     echo "  -g|--custom-gcc"
     echo "  -k|--keytab-file"
     echo "  -j|--use-jemalloc"
+    echo "  -s|--separate_servers"
     exit 0
 }
 
@@ -36,11 +37,6 @@ cd "$shell_dir" || exit 1
 
 if [ ! -f src/include/pegasus/git_commit.h ]; then
     echo "ERROR: src/include/pegasus/git_commit.h not found"
-    exit 1
-fi
-
-if [ ! -f ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server ]; then
-    echo "ERROR: ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server not found"
     exit 1
 fi
 
@@ -77,7 +73,8 @@ fi
 
 custom_gcc="false"
 keytab_file=""
-use_jemalloc="off"
+use_jemalloc="false"
+separate_servers="false"
 
 while [[ $# > 0 ]]; do
     option_key="$1"
@@ -97,7 +94,10 @@ while [[ $# > 0 ]]; do
         shift
         ;;
     -j | --use-jemalloc)
-        use_jemalloc="on"
+        use_jemalloc="true"
+        ;;
+    -s | --separate_servers)
+        separate_servers="true"
         ;;
     *)
         echo "ERROR: unknown option \"$option_key\""
@@ -110,12 +110,17 @@ while [[ $# > 0 ]]; do
 done
 
 mkdir -p ${pack}/bin
-copy_file ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server ${pack}/bin
+if [[ $separate_servers == "false" ]]; then
+    copy_file ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server ${pack}/bin
+else
+    copy_file ${BUILD_LATEST_DIR}/output/bin/pegasus_meta_server/pegasus_meta_server ${pack}/bin
+    copy_file ${BUILD_LATEST_DIR}/output/bin/pegasus_replica_server/pegasus_replica_server ${pack}/bin
+fi
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_meta_server.so ${pack}/bin
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_replica_server.so ${pack}/bin
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_utils.so ${pack}/bin
 
-if [ "$use_jemalloc" == "on" ]; then
+if [ "$use_jemalloc" == "true" ]; then
     copy_file ${THIRDPARTY_ROOT}/output/lib/libjemalloc.so.2 ${pack}/bin
     copy_file ${THIRDPARTY_ROOT}/output/lib/libprofiler.so.0 ${pack}/bin
 else
@@ -130,14 +135,18 @@ copy_file ./src/server/config.ini ${pack}/bin
 copy_file ./src/server/config.min.ini ${pack}/bin
 copy_file ./scripts/config_hdfs.sh ${pack}/bin
 
-copy_file "$(get_stdcpp_lib $custom_gcc)" "${pack}/bin"
+copy_file "$(get_stdcpp_lib $custom_gcc $separate_servers)" "${pack}/bin"
 
 pack_server_lib() {
-    pack_system_lib "${pack}/bin" server "$1"
+    if [[ $2 == "false" ]]; then
+        pack_system_lib "${pack}/bin" server "$1"
+    else
+        pack_system_lib "${pack}/bin" meta_server "$1"
+    fi
 }
 
-pack_server_lib crypto
-pack_server_lib ssl
+pack_server_lib crypto $separate_servers
+pack_server_lib ssl $separate_servers
 
 # Pack hadoop-related files.
 # If you want to use hdfs service to backup/restore/bulkload pegasus tables,

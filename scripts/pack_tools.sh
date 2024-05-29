@@ -27,6 +27,7 @@ function usage()
     echo "  -p|--update-package-template <minos-package-template-file-path>"
     echo "  -g|--custom-gcc"
     echo "  -j|--use-jemalloc"
+    echo "  -s|--separate_servers"
     exit 0
 }
 
@@ -82,7 +83,8 @@ if [ -n "$MINOS_CONFIG_FILE" ]; then
 fi
 
 custom_gcc="false"
-use_jemalloc="off"
+use_jemalloc="false"
+separate_servers="false"
 
 while [[ $# > 0 ]]; do
     option_key="$1"
@@ -98,7 +100,10 @@ while [[ $# > 0 ]]; do
             usage
             ;;
         -j|--use-jemalloc)
-            use_jemalloc="on"
+            use_jemalloc="true"
+            ;;
+        -s | --separate_servers)
+        separate_servers="true"
             ;;
         *)
             echo "ERROR: unknown option \"$option_key\""
@@ -114,7 +119,12 @@ mkdir -p ${pack}
 copy_file ./run.sh ${pack}/
 
 mkdir -p ${pack}/bin
-cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_server ${pack}/bin/
+if [[ $separate_servers == "false" ]]; then
+    copy_file ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server ${pack}/bin
+else
+    copy_file ${BUILD_LATEST_DIR}/output/bin/pegasus_meta_server/pegasus_meta_server ${pack}/bin
+    copy_file ${BUILD_LATEST_DIR}/output/bin/pegasus_replica_server/pegasus_replica_server ${pack}/bin
+fi
 cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_shell ${pack}/bin/
 cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_bench ${pack}/bin/
 cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_kill_test ${pack}/bin/
@@ -124,7 +134,7 @@ cp -v -r ${BUILD_LATEST_DIR}/output/bin/pegasus_pressureclient ${pack}/bin/
 mkdir -p ${pack}/lib
 copy_file ${BUILD_LATEST_DIR}/output/lib/*.so* ${pack}/lib/
 
-if [ "$use_jemalloc" == "on" ]; then
+if [ "$use_jemalloc" == "true" ]; then
     copy_file ${THIRDPARTY_ROOT}/output/lib/libjemalloc.so.2 ${pack}/lib/
     copy_file ${THIRDPARTY_ROOT}/output/lib/libprofiler.so.0 ${pack}/lib/
 else
@@ -134,14 +144,14 @@ fi
 copy_file ${THIRDPARTY_ROOT}/output/lib/libboost*.so.1.69.0 ${pack}/lib/
 copy_file ${THIRDPARTY_ROOT}/output/lib/libhdfs* ${pack}/lib/
 copy_file ${THIRDPARTY_ROOT}/output/lib/librocksdb.so.8 ${pack}/lib/
-copy_file `get_stdcpp_lib $custom_gcc` ${pack}/lib/
+copy_file `get_stdcpp_lib $custom_gcc $separate_servers` ${pack}/lib/
 
 pack_tools_lib() {
     pack_system_lib "${pack}/lib" shell "$1"
 }
 
-pack_tools_lib crypto
-pack_tools_lib ssl
+pack_tools_lib crypto $separate_servers
+pack_tools_lib ssl $separate_servers
 
 chmod -x ${pack}/lib/*
 
