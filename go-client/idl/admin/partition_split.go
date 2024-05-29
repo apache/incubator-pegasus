@@ -1144,12 +1144,14 @@ func (p *QuerySplitResponse) String() string {
 //   - ParentGpid
 //   - ChildGpid
 //   - ChildBallot
-//   - ChildAddress
+//   - Child
+//   - HpChild
 type NotifyCatchUpRequest struct {
-	ParentGpid   *base.Gpid       `thrift:"parent_gpid,1" db:"parent_gpid" json:"parent_gpid"`
-	ChildGpid    *base.Gpid       `thrift:"child_gpid,2" db:"child_gpid" json:"child_gpid"`
-	ChildBallot  int64            `thrift:"child_ballot,3" db:"child_ballot" json:"child_ballot"`
-	ChildAddress *base.RPCAddress `thrift:"child_address,4" db:"child_address" json:"child_address"`
+	ParentGpid  *base.Gpid       `thrift:"parent_gpid,1" db:"parent_gpid" json:"parent_gpid"`
+	ChildGpid   *base.Gpid       `thrift:"child_gpid,2" db:"child_gpid" json:"child_gpid"`
+	ChildBallot int64            `thrift:"child_ballot,3" db:"child_ballot" json:"child_ballot"`
+	Child       *base.RPCAddress `thrift:"child,4" db:"child" json:"child"`
+	HpChild     *base.HostPort   `thrift:"hp_child,5" db:"hp_child" json:"hp_child,omitempty"`
 }
 
 func NewNotifyCatchUpRequest() *NotifyCatchUpRequest {
@@ -1178,13 +1180,22 @@ func (p *NotifyCatchUpRequest) GetChildBallot() int64 {
 	return p.ChildBallot
 }
 
-var NotifyCatchUpRequest_ChildAddress_DEFAULT *base.RPCAddress
+var NotifyCatchUpRequest_Child_DEFAULT *base.RPCAddress
 
-func (p *NotifyCatchUpRequest) GetChildAddress() *base.RPCAddress {
-	if !p.IsSetChildAddress() {
-		return NotifyCatchUpRequest_ChildAddress_DEFAULT
+func (p *NotifyCatchUpRequest) GetChild() *base.RPCAddress {
+	if !p.IsSetChild() {
+		return NotifyCatchUpRequest_Child_DEFAULT
 	}
-	return p.ChildAddress
+	return p.Child
+}
+
+var NotifyCatchUpRequest_HpChild_DEFAULT *base.HostPort
+
+func (p *NotifyCatchUpRequest) GetHpChild() *base.HostPort {
+	if !p.IsSetHpChild() {
+		return NotifyCatchUpRequest_HpChild_DEFAULT
+	}
+	return p.HpChild
 }
 func (p *NotifyCatchUpRequest) IsSetParentGpid() bool {
 	return p.ParentGpid != nil
@@ -1194,8 +1205,12 @@ func (p *NotifyCatchUpRequest) IsSetChildGpid() bool {
 	return p.ChildGpid != nil
 }
 
-func (p *NotifyCatchUpRequest) IsSetChildAddress() bool {
-	return p.ChildAddress != nil
+func (p *NotifyCatchUpRequest) IsSetChild() bool {
+	return p.Child != nil
+}
+
+func (p *NotifyCatchUpRequest) IsSetHpChild() bool {
+	return p.HpChild != nil
 }
 
 func (p *NotifyCatchUpRequest) Read(iprot thrift.TProtocol) error {
@@ -1252,6 +1267,16 @@ func (p *NotifyCatchUpRequest) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -1293,9 +1318,17 @@ func (p *NotifyCatchUpRequest) ReadField3(iprot thrift.TProtocol) error {
 }
 
 func (p *NotifyCatchUpRequest) ReadField4(iprot thrift.TProtocol) error {
-	p.ChildAddress = &base.RPCAddress{}
-	if err := p.ChildAddress.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ChildAddress), err)
+	p.Child = &base.RPCAddress{}
+	if err := p.Child.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Child), err)
+	}
+	return nil
+}
+
+func (p *NotifyCatchUpRequest) ReadField5(iprot thrift.TProtocol) error {
+	p.HpChild = &base.HostPort{}
+	if err := p.HpChild.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpChild), err)
 	}
 	return nil
 }
@@ -1315,6 +1348,9 @@ func (p *NotifyCatchUpRequest) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
 			return err
 		}
 	}
@@ -1367,14 +1403,29 @@ func (p *NotifyCatchUpRequest) writeField3(oprot thrift.TProtocol) (err error) {
 }
 
 func (p *NotifyCatchUpRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("child_address", thrift.STRUCT, 4); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:child_address: ", p), err)
+	if err := oprot.WriteFieldBegin("child", thrift.STRUCT, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:child: ", p), err)
 	}
-	if err := p.ChildAddress.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ChildAddress), err)
+	if err := p.Child.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Child), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:child_address: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:child: ", p), err)
+	}
+	return err
+}
+
+func (p *NotifyCatchUpRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpChild() {
+		if err := oprot.WriteFieldBegin("hp_child", thrift.STRUCT, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:hp_child: ", p), err)
+		}
+		if err := p.HpChild.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpChild), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:hp_child: ", p), err)
+		}
 	}
 	return err
 }
@@ -1494,28 +1545,30 @@ func (p *NotifyCacthUpResponse) String() string {
 }
 
 // Attributes:
-//   - TargetAddress
+//   - Target
 //   - NewPartitionCount_
 //   - ChildPid
 //   - Ballot
+//   - HpTarget
 type UpdateChildGroupPartitionCountRequest struct {
-	TargetAddress      *base.RPCAddress `thrift:"target_address,1" db:"target_address" json:"target_address"`
+	Target             *base.RPCAddress `thrift:"target,1" db:"target" json:"target"`
 	NewPartitionCount_ int32            `thrift:"new_partition_count,2" db:"new_partition_count" json:"new_partition_count"`
 	ChildPid           *base.Gpid       `thrift:"child_pid,3" db:"child_pid" json:"child_pid"`
 	Ballot             int64            `thrift:"ballot,4" db:"ballot" json:"ballot"`
+	HpTarget           *base.HostPort   `thrift:"hp_target,5" db:"hp_target" json:"hp_target,omitempty"`
 }
 
 func NewUpdateChildGroupPartitionCountRequest() *UpdateChildGroupPartitionCountRequest {
 	return &UpdateChildGroupPartitionCountRequest{}
 }
 
-var UpdateChildGroupPartitionCountRequest_TargetAddress_DEFAULT *base.RPCAddress
+var UpdateChildGroupPartitionCountRequest_Target_DEFAULT *base.RPCAddress
 
-func (p *UpdateChildGroupPartitionCountRequest) GetTargetAddress() *base.RPCAddress {
-	if !p.IsSetTargetAddress() {
-		return UpdateChildGroupPartitionCountRequest_TargetAddress_DEFAULT
+func (p *UpdateChildGroupPartitionCountRequest) GetTarget() *base.RPCAddress {
+	if !p.IsSetTarget() {
+		return UpdateChildGroupPartitionCountRequest_Target_DEFAULT
 	}
-	return p.TargetAddress
+	return p.Target
 }
 
 func (p *UpdateChildGroupPartitionCountRequest) GetNewPartitionCount_() int32 {
@@ -1534,12 +1587,25 @@ func (p *UpdateChildGroupPartitionCountRequest) GetChildPid() *base.Gpid {
 func (p *UpdateChildGroupPartitionCountRequest) GetBallot() int64 {
 	return p.Ballot
 }
-func (p *UpdateChildGroupPartitionCountRequest) IsSetTargetAddress() bool {
-	return p.TargetAddress != nil
+
+var UpdateChildGroupPartitionCountRequest_HpTarget_DEFAULT *base.HostPort
+
+func (p *UpdateChildGroupPartitionCountRequest) GetHpTarget() *base.HostPort {
+	if !p.IsSetHpTarget() {
+		return UpdateChildGroupPartitionCountRequest_HpTarget_DEFAULT
+	}
+	return p.HpTarget
+}
+func (p *UpdateChildGroupPartitionCountRequest) IsSetTarget() bool {
+	return p.Target != nil
 }
 
 func (p *UpdateChildGroupPartitionCountRequest) IsSetChildPid() bool {
 	return p.ChildPid != nil
+}
+
+func (p *UpdateChildGroupPartitionCountRequest) IsSetHpTarget() bool {
+	return p.HpTarget != nil
 }
 
 func (p *UpdateChildGroupPartitionCountRequest) Read(iprot thrift.TProtocol) error {
@@ -1596,6 +1662,16 @@ func (p *UpdateChildGroupPartitionCountRequest) Read(iprot thrift.TProtocol) err
 					return err
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -1612,9 +1688,9 @@ func (p *UpdateChildGroupPartitionCountRequest) Read(iprot thrift.TProtocol) err
 }
 
 func (p *UpdateChildGroupPartitionCountRequest) ReadField1(iprot thrift.TProtocol) error {
-	p.TargetAddress = &base.RPCAddress{}
-	if err := p.TargetAddress.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TargetAddress), err)
+	p.Target = &base.RPCAddress{}
+	if err := p.Target.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Target), err)
 	}
 	return nil
 }
@@ -1645,6 +1721,14 @@ func (p *UpdateChildGroupPartitionCountRequest) ReadField4(iprot thrift.TProtoco
 	return nil
 }
 
+func (p *UpdateChildGroupPartitionCountRequest) ReadField5(iprot thrift.TProtocol) error {
+	p.HpTarget = &base.HostPort{}
+	if err := p.HpTarget.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpTarget), err)
+	}
+	return nil
+}
+
 func (p *UpdateChildGroupPartitionCountRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("update_child_group_partition_count_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1662,6 +1746,9 @@ func (p *UpdateChildGroupPartitionCountRequest) Write(oprot thrift.TProtocol) er
 		if err := p.writeField4(oprot); err != nil {
 			return err
 		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
@@ -1673,14 +1760,14 @@ func (p *UpdateChildGroupPartitionCountRequest) Write(oprot thrift.TProtocol) er
 }
 
 func (p *UpdateChildGroupPartitionCountRequest) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("target_address", thrift.STRUCT, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:target_address: ", p), err)
+	if err := oprot.WriteFieldBegin("target", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:target: ", p), err)
 	}
-	if err := p.TargetAddress.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TargetAddress), err)
+	if err := p.Target.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Target), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:target_address: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:target: ", p), err)
 	}
 	return err
 }
@@ -1720,6 +1807,21 @@ func (p *UpdateChildGroupPartitionCountRequest) writeField4(oprot thrift.TProtoc
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:ballot: ", p), err)
+	}
+	return err
+}
+
+func (p *UpdateChildGroupPartitionCountRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpTarget() {
+		if err := oprot.WriteFieldBegin("hp_target", thrift.STRUCT, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:hp_target: ", p), err)
+		}
+		if err := p.HpTarget.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpTarget), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:hp_target: ", p), err)
+		}
 	}
 	return err
 }
@@ -1842,12 +1944,14 @@ func (p *UpdateChildGroupPartitionCountResponse) String() string {
 //   - App
 //   - ParentConfig
 //   - ChildConfig
-//   - PrimaryAddress
+//   - Primary
+//   - HpPrimary
 type RegisterChildRequest struct {
-	App            *replication.AppInfo                `thrift:"app,1" db:"app" json:"app"`
-	ParentConfig   *replication.PartitionConfiguration `thrift:"parent_config,2" db:"parent_config" json:"parent_config"`
-	ChildConfig    *replication.PartitionConfiguration `thrift:"child_config,3" db:"child_config" json:"child_config"`
-	PrimaryAddress *base.RPCAddress                    `thrift:"primary_address,4" db:"primary_address" json:"primary_address"`
+	App          *replication.AppInfo                `thrift:"app,1" db:"app" json:"app"`
+	ParentConfig *replication.PartitionConfiguration `thrift:"parent_config,2" db:"parent_config" json:"parent_config"`
+	ChildConfig  *replication.PartitionConfiguration `thrift:"child_config,3" db:"child_config" json:"child_config"`
+	Primary      *base.RPCAddress                    `thrift:"primary,4" db:"primary" json:"primary"`
+	HpPrimary    *base.HostPort                      `thrift:"hp_primary,5" db:"hp_primary" json:"hp_primary,omitempty"`
 }
 
 func NewRegisterChildRequest() *RegisterChildRequest {
@@ -1881,13 +1985,22 @@ func (p *RegisterChildRequest) GetChildConfig() *replication.PartitionConfigurat
 	return p.ChildConfig
 }
 
-var RegisterChildRequest_PrimaryAddress_DEFAULT *base.RPCAddress
+var RegisterChildRequest_Primary_DEFAULT *base.RPCAddress
 
-func (p *RegisterChildRequest) GetPrimaryAddress() *base.RPCAddress {
-	if !p.IsSetPrimaryAddress() {
-		return RegisterChildRequest_PrimaryAddress_DEFAULT
+func (p *RegisterChildRequest) GetPrimary() *base.RPCAddress {
+	if !p.IsSetPrimary() {
+		return RegisterChildRequest_Primary_DEFAULT
 	}
-	return p.PrimaryAddress
+	return p.Primary
+}
+
+var RegisterChildRequest_HpPrimary_DEFAULT *base.HostPort
+
+func (p *RegisterChildRequest) GetHpPrimary() *base.HostPort {
+	if !p.IsSetHpPrimary() {
+		return RegisterChildRequest_HpPrimary_DEFAULT
+	}
+	return p.HpPrimary
 }
 func (p *RegisterChildRequest) IsSetApp() bool {
 	return p.App != nil
@@ -1901,8 +2014,12 @@ func (p *RegisterChildRequest) IsSetChildConfig() bool {
 	return p.ChildConfig != nil
 }
 
-func (p *RegisterChildRequest) IsSetPrimaryAddress() bool {
-	return p.PrimaryAddress != nil
+func (p *RegisterChildRequest) IsSetPrimary() bool {
+	return p.Primary != nil
+}
+
+func (p *RegisterChildRequest) IsSetHpPrimary() bool {
+	return p.HpPrimary != nil
 }
 
 func (p *RegisterChildRequest) Read(iprot thrift.TProtocol) error {
@@ -1959,6 +2076,16 @@ func (p *RegisterChildRequest) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -2003,9 +2130,17 @@ func (p *RegisterChildRequest) ReadField3(iprot thrift.TProtocol) error {
 }
 
 func (p *RegisterChildRequest) ReadField4(iprot thrift.TProtocol) error {
-	p.PrimaryAddress = &base.RPCAddress{}
-	if err := p.PrimaryAddress.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.PrimaryAddress), err)
+	p.Primary = &base.RPCAddress{}
+	if err := p.Primary.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Primary), err)
+	}
+	return nil
+}
+
+func (p *RegisterChildRequest) ReadField5(iprot thrift.TProtocol) error {
+	p.HpPrimary = &base.HostPort{}
+	if err := p.HpPrimary.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpPrimary), err)
 	}
 	return nil
 }
@@ -2025,6 +2160,9 @@ func (p *RegisterChildRequest) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
 			return err
 		}
 	}
@@ -2077,14 +2215,29 @@ func (p *RegisterChildRequest) writeField3(oprot thrift.TProtocol) (err error) {
 }
 
 func (p *RegisterChildRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("primary_address", thrift.STRUCT, 4); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:primary_address: ", p), err)
+	if err := oprot.WriteFieldBegin("primary", thrift.STRUCT, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:primary: ", p), err)
 	}
-	if err := p.PrimaryAddress.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.PrimaryAddress), err)
+	if err := p.Primary.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Primary), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:primary_address: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:primary: ", p), err)
+	}
+	return err
+}
+
+func (p *RegisterChildRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpPrimary() {
+		if err := oprot.WriteFieldBegin("hp_primary", thrift.STRUCT, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:hp_primary: ", p), err)
+		}
+		if err := p.HpPrimary.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpPrimary), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:hp_primary: ", p), err)
+		}
 	}
 	return err
 }

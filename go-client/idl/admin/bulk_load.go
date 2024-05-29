@@ -1135,23 +1135,25 @@ func (p *PartitionBulkLoadState) String() string {
 // Attributes:
 //   - Pid
 //   - AppName
-//   - PrimaryAddr
+//   - Primary
 //   - RemoteProviderName
 //   - ClusterName
 //   - Ballot
 //   - MetaBulkLoadStatus
 //   - QueryBulkLoadMetadata
 //   - RemoteRootPath
+//   - HpPrimary
 type BulkLoadRequest struct {
 	Pid                   *base.Gpid       `thrift:"pid,1" db:"pid" json:"pid"`
 	AppName               string           `thrift:"app_name,2" db:"app_name" json:"app_name"`
-	PrimaryAddr           *base.RPCAddress `thrift:"primary_addr,3" db:"primary_addr" json:"primary_addr"`
+	Primary               *base.RPCAddress `thrift:"primary,3" db:"primary" json:"primary"`
 	RemoteProviderName    string           `thrift:"remote_provider_name,4" db:"remote_provider_name" json:"remote_provider_name"`
 	ClusterName           string           `thrift:"cluster_name,5" db:"cluster_name" json:"cluster_name"`
 	Ballot                int64            `thrift:"ballot,6" db:"ballot" json:"ballot"`
 	MetaBulkLoadStatus    BulkLoadStatus   `thrift:"meta_bulk_load_status,7" db:"meta_bulk_load_status" json:"meta_bulk_load_status"`
 	QueryBulkLoadMetadata bool             `thrift:"query_bulk_load_metadata,8" db:"query_bulk_load_metadata" json:"query_bulk_load_metadata"`
 	RemoteRootPath        string           `thrift:"remote_root_path,9" db:"remote_root_path" json:"remote_root_path"`
+	HpPrimary             *base.HostPort   `thrift:"hp_primary,10" db:"hp_primary" json:"hp_primary,omitempty"`
 }
 
 func NewBulkLoadRequest() *BulkLoadRequest {
@@ -1171,13 +1173,13 @@ func (p *BulkLoadRequest) GetAppName() string {
 	return p.AppName
 }
 
-var BulkLoadRequest_PrimaryAddr_DEFAULT *base.RPCAddress
+var BulkLoadRequest_Primary_DEFAULT *base.RPCAddress
 
-func (p *BulkLoadRequest) GetPrimaryAddr() *base.RPCAddress {
-	if !p.IsSetPrimaryAddr() {
-		return BulkLoadRequest_PrimaryAddr_DEFAULT
+func (p *BulkLoadRequest) GetPrimary() *base.RPCAddress {
+	if !p.IsSetPrimary() {
+		return BulkLoadRequest_Primary_DEFAULT
 	}
-	return p.PrimaryAddr
+	return p.Primary
 }
 
 func (p *BulkLoadRequest) GetRemoteProviderName() string {
@@ -1203,12 +1205,25 @@ func (p *BulkLoadRequest) GetQueryBulkLoadMetadata() bool {
 func (p *BulkLoadRequest) GetRemoteRootPath() string {
 	return p.RemoteRootPath
 }
+
+var BulkLoadRequest_HpPrimary_DEFAULT *base.HostPort
+
+func (p *BulkLoadRequest) GetHpPrimary() *base.HostPort {
+	if !p.IsSetHpPrimary() {
+		return BulkLoadRequest_HpPrimary_DEFAULT
+	}
+	return p.HpPrimary
+}
 func (p *BulkLoadRequest) IsSetPid() bool {
 	return p.Pid != nil
 }
 
-func (p *BulkLoadRequest) IsSetPrimaryAddr() bool {
-	return p.PrimaryAddr != nil
+func (p *BulkLoadRequest) IsSetPrimary() bool {
+	return p.Primary != nil
+}
+
+func (p *BulkLoadRequest) IsSetHpPrimary() bool {
+	return p.HpPrimary != nil
 }
 
 func (p *BulkLoadRequest) Read(iprot thrift.TProtocol) error {
@@ -1315,6 +1330,16 @@ func (p *BulkLoadRequest) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField10(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -1348,9 +1373,9 @@ func (p *BulkLoadRequest) ReadField2(iprot thrift.TProtocol) error {
 }
 
 func (p *BulkLoadRequest) ReadField3(iprot thrift.TProtocol) error {
-	p.PrimaryAddr = &base.RPCAddress{}
-	if err := p.PrimaryAddr.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.PrimaryAddr), err)
+	p.Primary = &base.RPCAddress{}
+	if err := p.Primary.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Primary), err)
 	}
 	return nil
 }
@@ -1410,6 +1435,14 @@ func (p *BulkLoadRequest) ReadField9(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *BulkLoadRequest) ReadField10(iprot thrift.TProtocol) error {
+	p.HpPrimary = &base.HostPort{}
+	if err := p.HpPrimary.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpPrimary), err)
+	}
+	return nil
+}
+
 func (p *BulkLoadRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("bulk_load_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1440,6 +1473,9 @@ func (p *BulkLoadRequest) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField9(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField10(oprot); err != nil {
 			return err
 		}
 	}
@@ -1479,14 +1515,14 @@ func (p *BulkLoadRequest) writeField2(oprot thrift.TProtocol) (err error) {
 }
 
 func (p *BulkLoadRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("primary_addr", thrift.STRUCT, 3); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:primary_addr: ", p), err)
+	if err := oprot.WriteFieldBegin("primary", thrift.STRUCT, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:primary: ", p), err)
 	}
-	if err := p.PrimaryAddr.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.PrimaryAddr), err)
+	if err := p.Primary.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Primary), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:primary_addr: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:primary: ", p), err)
 	}
 	return err
 }
@@ -1569,6 +1605,21 @@ func (p *BulkLoadRequest) writeField9(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
+func (p *BulkLoadRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpPrimary() {
+		if err := oprot.WriteFieldBegin("hp_primary", thrift.STRUCT, 10); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:hp_primary: ", p), err)
+		}
+		if err := p.HpPrimary.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpPrimary), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:hp_primary: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *BulkLoadRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1587,6 +1638,7 @@ func (p *BulkLoadRequest) String() string {
 //   - IsGroupIngestionFinished
 //   - IsGroupBulkLoadContextCleanedUp
 //   - IsGroupBulkLoadPaused
+//   - HpGroupBulkLoadState
 type BulkLoadResponse struct {
 	Err                             *base.ErrorCode                              `thrift:"err,1" db:"err" json:"err"`
 	Pid                             *base.Gpid                                   `thrift:"pid,2" db:"pid" json:"pid"`
@@ -1598,6 +1650,7 @@ type BulkLoadResponse struct {
 	IsGroupIngestionFinished        *bool                                        `thrift:"is_group_ingestion_finished,8" db:"is_group_ingestion_finished" json:"is_group_ingestion_finished,omitempty"`
 	IsGroupBulkLoadContextCleanedUp *bool                                        `thrift:"is_group_bulk_load_context_cleaned_up,9" db:"is_group_bulk_load_context_cleaned_up" json:"is_group_bulk_load_context_cleaned_up,omitempty"`
 	IsGroupBulkLoadPaused           *bool                                        `thrift:"is_group_bulk_load_paused,10" db:"is_group_bulk_load_paused" json:"is_group_bulk_load_paused,omitempty"`
+	HpGroupBulkLoadState            map[*base.HostPort]*PartitionBulkLoadState   `thrift:"hp_group_bulk_load_state,11" db:"hp_group_bulk_load_state" json:"hp_group_bulk_load_state,omitempty"`
 }
 
 func NewBulkLoadResponse() *BulkLoadResponse {
@@ -1678,6 +1731,12 @@ func (p *BulkLoadResponse) GetIsGroupBulkLoadPaused() bool {
 	}
 	return *p.IsGroupBulkLoadPaused
 }
+
+var BulkLoadResponse_HpGroupBulkLoadState_DEFAULT map[*base.HostPort]*PartitionBulkLoadState
+
+func (p *BulkLoadResponse) GetHpGroupBulkLoadState() map[*base.HostPort]*PartitionBulkLoadState {
+	return p.HpGroupBulkLoadState
+}
 func (p *BulkLoadResponse) IsSetErr() bool {
 	return p.Err != nil
 }
@@ -1704,6 +1763,10 @@ func (p *BulkLoadResponse) IsSetIsGroupBulkLoadContextCleanedUp() bool {
 
 func (p *BulkLoadResponse) IsSetIsGroupBulkLoadPaused() bool {
 	return p.IsGroupBulkLoadPaused != nil
+}
+
+func (p *BulkLoadResponse) IsSetHpGroupBulkLoadState() bool {
+	return p.HpGroupBulkLoadState != nil
 }
 
 func (p *BulkLoadResponse) Read(iprot thrift.TProtocol) error {
@@ -1813,6 +1876,16 @@ func (p *BulkLoadResponse) Read(iprot thrift.TProtocol) error {
 		case 10:
 			if fieldTypeId == thrift.BOOL {
 				if err := p.ReadField10(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.MAP {
+				if err := p.ReadField11(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -1940,6 +2013,32 @@ func (p *BulkLoadResponse) ReadField10(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *BulkLoadResponse) ReadField11(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[*base.HostPort]*PartitionBulkLoadState, size)
+	p.HpGroupBulkLoadState = tMap
+	for i := 0; i < size; i++ {
+		_key3 := &base.HostPort{}
+		if err := _key3.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _key3), err)
+		}
+		_val4 := &PartitionBulkLoadState{
+			IngestStatus: 0,
+		}
+		if err := _val4.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val4), err)
+		}
+		p.HpGroupBulkLoadState[_key3] = _val4
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
 func (p *BulkLoadResponse) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("bulk_load_response"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1973,6 +2072,9 @@ func (p *BulkLoadResponse) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField10(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField11(oprot); err != nil {
 			return err
 		}
 	}
@@ -2136,6 +2238,32 @@ func (p *BulkLoadResponse) writeField10(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
+func (p *BulkLoadResponse) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpGroupBulkLoadState() {
+		if err := oprot.WriteFieldBegin("hp_group_bulk_load_state", thrift.MAP, 11); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:hp_group_bulk_load_state: ", p), err)
+		}
+		if err := oprot.WriteMapBegin(thrift.STRUCT, thrift.STRUCT, len(p.HpGroupBulkLoadState)); err != nil {
+			return thrift.PrependError("error writing map begin: ", err)
+		}
+		for k, v := range p.HpGroupBulkLoadState {
+			if err := k.Write(oprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", k), err)
+			}
+			if err := v.Write(oprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return thrift.PrependError("error writing map end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:hp_group_bulk_load_state: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *BulkLoadResponse) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2145,20 +2273,22 @@ func (p *BulkLoadResponse) String() string {
 
 // Attributes:
 //   - AppName
-//   - TargetAddress
+//   - Target
 //   - Config
 //   - ProviderName
 //   - ClusterName
 //   - MetaBulkLoadStatus
 //   - RemoteRootPath
+//   - HpTarget
 type GroupBulkLoadRequest struct {
 	AppName            string                `thrift:"app_name,1" db:"app_name" json:"app_name"`
-	TargetAddress      *base.RPCAddress      `thrift:"target_address,2" db:"target_address" json:"target_address"`
+	Target             *base.RPCAddress      `thrift:"target,2" db:"target" json:"target"`
 	Config             *ReplicaConfiguration `thrift:"config,3" db:"config" json:"config"`
 	ProviderName       string                `thrift:"provider_name,4" db:"provider_name" json:"provider_name"`
 	ClusterName        string                `thrift:"cluster_name,5" db:"cluster_name" json:"cluster_name"`
 	MetaBulkLoadStatus BulkLoadStatus        `thrift:"meta_bulk_load_status,6" db:"meta_bulk_load_status" json:"meta_bulk_load_status"`
 	RemoteRootPath     string                `thrift:"remote_root_path,7" db:"remote_root_path" json:"remote_root_path"`
+	HpTarget           *base.HostPort        `thrift:"hp_target,8" db:"hp_target" json:"hp_target,omitempty"`
 }
 
 func NewGroupBulkLoadRequest() *GroupBulkLoadRequest {
@@ -2169,13 +2299,13 @@ func (p *GroupBulkLoadRequest) GetAppName() string {
 	return p.AppName
 }
 
-var GroupBulkLoadRequest_TargetAddress_DEFAULT *base.RPCAddress
+var GroupBulkLoadRequest_Target_DEFAULT *base.RPCAddress
 
-func (p *GroupBulkLoadRequest) GetTargetAddress() *base.RPCAddress {
-	if !p.IsSetTargetAddress() {
-		return GroupBulkLoadRequest_TargetAddress_DEFAULT
+func (p *GroupBulkLoadRequest) GetTarget() *base.RPCAddress {
+	if !p.IsSetTarget() {
+		return GroupBulkLoadRequest_Target_DEFAULT
 	}
-	return p.TargetAddress
+	return p.Target
 }
 
 var GroupBulkLoadRequest_Config_DEFAULT *ReplicaConfiguration
@@ -2202,12 +2332,25 @@ func (p *GroupBulkLoadRequest) GetMetaBulkLoadStatus() BulkLoadStatus {
 func (p *GroupBulkLoadRequest) GetRemoteRootPath() string {
 	return p.RemoteRootPath
 }
-func (p *GroupBulkLoadRequest) IsSetTargetAddress() bool {
-	return p.TargetAddress != nil
+
+var GroupBulkLoadRequest_HpTarget_DEFAULT *base.HostPort
+
+func (p *GroupBulkLoadRequest) GetHpTarget() *base.HostPort {
+	if !p.IsSetHpTarget() {
+		return GroupBulkLoadRequest_HpTarget_DEFAULT
+	}
+	return p.HpTarget
+}
+func (p *GroupBulkLoadRequest) IsSetTarget() bool {
+	return p.Target != nil
 }
 
 func (p *GroupBulkLoadRequest) IsSetConfig() bool {
 	return p.Config != nil
+}
+
+func (p *GroupBulkLoadRequest) IsSetHpTarget() bool {
+	return p.HpTarget != nil
 }
 
 func (p *GroupBulkLoadRequest) Read(iprot thrift.TProtocol) error {
@@ -2294,6 +2437,16 @@ func (p *GroupBulkLoadRequest) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField8(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -2319,9 +2472,9 @@ func (p *GroupBulkLoadRequest) ReadField1(iprot thrift.TProtocol) error {
 }
 
 func (p *GroupBulkLoadRequest) ReadField2(iprot thrift.TProtocol) error {
-	p.TargetAddress = &base.RPCAddress{}
-	if err := p.TargetAddress.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TargetAddress), err)
+	p.Target = &base.RPCAddress{}
+	if err := p.Target.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Target), err)
 	}
 	return nil
 }
@@ -2373,6 +2526,14 @@ func (p *GroupBulkLoadRequest) ReadField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *GroupBulkLoadRequest) ReadField8(iprot thrift.TProtocol) error {
+	p.HpTarget = &base.HostPort{}
+	if err := p.HpTarget.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpTarget), err)
+	}
+	return nil
+}
+
 func (p *GroupBulkLoadRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("group_bulk_load_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -2399,6 +2560,9 @@ func (p *GroupBulkLoadRequest) Write(oprot thrift.TProtocol) error {
 		if err := p.writeField7(oprot); err != nil {
 			return err
 		}
+		if err := p.writeField8(oprot); err != nil {
+			return err
+		}
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
@@ -2423,14 +2587,14 @@ func (p *GroupBulkLoadRequest) writeField1(oprot thrift.TProtocol) (err error) {
 }
 
 func (p *GroupBulkLoadRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("target_address", thrift.STRUCT, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:target_address: ", p), err)
+	if err := oprot.WriteFieldBegin("target", thrift.STRUCT, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:target: ", p), err)
 	}
-	if err := p.TargetAddress.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TargetAddress), err)
+	if err := p.Target.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Target), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:target_address: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:target: ", p), err)
 	}
 	return err
 }
@@ -2496,6 +2660,21 @@ func (p *GroupBulkLoadRequest) writeField7(oprot thrift.TProtocol) (err error) {
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 7:remote_root_path: ", p), err)
+	}
+	return err
+}
+
+func (p *GroupBulkLoadRequest) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpTarget() {
+		if err := oprot.WriteFieldBegin("hp_target", thrift.STRUCT, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:hp_target: ", p), err)
+		}
+		if err := p.HpTarget.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpTarget), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:hp_target: ", p), err)
+		}
 	}
 	return err
 }
@@ -3534,6 +3713,7 @@ func (p *QueryBulkLoadRequest) String() string {
 //   - BulkLoadStates
 //   - HintMsg
 //   - IsBulkLoading
+//   - HpBulkLoadStates
 type QueryBulkLoadResponse struct {
 	Err              *base.ErrorCode                                `thrift:"err,1" db:"err" json:"err"`
 	AppName          string                                         `thrift:"app_name,2" db:"app_name" json:"app_name"`
@@ -3543,6 +3723,7 @@ type QueryBulkLoadResponse struct {
 	BulkLoadStates   []map[*base.RPCAddress]*PartitionBulkLoadState `thrift:"bulk_load_states,6" db:"bulk_load_states" json:"bulk_load_states"`
 	HintMsg          *string                                        `thrift:"hint_msg,7" db:"hint_msg" json:"hint_msg,omitempty"`
 	IsBulkLoading    *bool                                          `thrift:"is_bulk_loading,8" db:"is_bulk_loading" json:"is_bulk_loading,omitempty"`
+	HpBulkLoadStates []map[*base.HostPort]*PartitionBulkLoadState   `thrift:"hp_bulk_load_states,9" db:"hp_bulk_load_states" json:"hp_bulk_load_states,omitempty"`
 }
 
 func NewQueryBulkLoadResponse() *QueryBulkLoadResponse {
@@ -3595,6 +3776,12 @@ func (p *QueryBulkLoadResponse) GetIsBulkLoading() bool {
 	}
 	return *p.IsBulkLoading
 }
+
+var QueryBulkLoadResponse_HpBulkLoadStates_DEFAULT []map[*base.HostPort]*PartitionBulkLoadState
+
+func (p *QueryBulkLoadResponse) GetHpBulkLoadStates() []map[*base.HostPort]*PartitionBulkLoadState {
+	return p.HpBulkLoadStates
+}
 func (p *QueryBulkLoadResponse) IsSetErr() bool {
 	return p.Err != nil
 }
@@ -3605,6 +3792,10 @@ func (p *QueryBulkLoadResponse) IsSetHintMsg() bool {
 
 func (p *QueryBulkLoadResponse) IsSetIsBulkLoading() bool {
 	return p.IsBulkLoading != nil
+}
+
+func (p *QueryBulkLoadResponse) IsSetHpBulkLoadStates() bool {
+	return p.HpBulkLoadStates != nil
 }
 
 func (p *QueryBulkLoadResponse) Read(iprot thrift.TProtocol) error {
@@ -3701,6 +3892,16 @@ func (p *QueryBulkLoadResponse) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 9:
+			if fieldTypeId == thrift.LIST {
+				if err := p.ReadField9(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -3751,14 +3952,14 @@ func (p *QueryBulkLoadResponse) ReadField4(iprot thrift.TProtocol) error {
 	tSlice := make([]BulkLoadStatus, 0, size)
 	p.PartitionsStatus = tSlice
 	for i := 0; i < size; i++ {
-		var _elem3 BulkLoadStatus
+		var _elem5 BulkLoadStatus
 		if v, err := iprot.ReadI32(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
 			temp := BulkLoadStatus(v)
-			_elem3 = temp
+			_elem5 = temp
 		}
-		p.PartitionsStatus = append(p.PartitionsStatus, _elem3)
+		p.PartitionsStatus = append(p.PartitionsStatus, _elem5)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -3788,24 +3989,24 @@ func (p *QueryBulkLoadResponse) ReadField6(iprot thrift.TProtocol) error {
 			return thrift.PrependError("error reading map begin: ", err)
 		}
 		tMap := make(map[*base.RPCAddress]*PartitionBulkLoadState, size)
-		_elem4 := tMap
+		_elem6 := tMap
 		for i := 0; i < size; i++ {
-			_key5 := &base.RPCAddress{}
-			if err := _key5.Read(iprot); err != nil {
-				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _key5), err)
+			_key7 := &base.RPCAddress{}
+			if err := _key7.Read(iprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _key7), err)
 			}
-			_val6 := &PartitionBulkLoadState{
+			_val8 := &PartitionBulkLoadState{
 				IngestStatus: 0,
 			}
-			if err := _val6.Read(iprot); err != nil {
-				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val6), err)
+			if err := _val8.Read(iprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val8), err)
 			}
-			_elem4[_key5] = _val6
+			_elem6[_key7] = _val8
 		}
 		if err := iprot.ReadMapEnd(); err != nil {
 			return thrift.PrependError("error reading map end: ", err)
 		}
-		p.BulkLoadStates = append(p.BulkLoadStates, _elem4)
+		p.BulkLoadStates = append(p.BulkLoadStates, _elem6)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -3827,6 +4028,44 @@ func (p *QueryBulkLoadResponse) ReadField8(iprot thrift.TProtocol) error {
 		return thrift.PrependError("error reading field 8: ", err)
 	} else {
 		p.IsBulkLoading = &v
+	}
+	return nil
+}
+
+func (p *QueryBulkLoadResponse) ReadField9(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]map[*base.HostPort]*PartitionBulkLoadState, 0, size)
+	p.HpBulkLoadStates = tSlice
+	for i := 0; i < size; i++ {
+		_, _, size, err := iprot.ReadMapBegin()
+		if err != nil {
+			return thrift.PrependError("error reading map begin: ", err)
+		}
+		tMap := make(map[*base.HostPort]*PartitionBulkLoadState, size)
+		_elem9 := tMap
+		for i := 0; i < size; i++ {
+			_key10 := &base.HostPort{}
+			if err := _key10.Read(iprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _key10), err)
+			}
+			_val11 := &PartitionBulkLoadState{
+				IngestStatus: 0,
+			}
+			if err := _val11.Read(iprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val11), err)
+			}
+			_elem9[_key10] = _val11
+		}
+		if err := iprot.ReadMapEnd(); err != nil {
+			return thrift.PrependError("error reading map end: ", err)
+		}
+		p.HpBulkLoadStates = append(p.HpBulkLoadStates, _elem9)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
 	}
 	return nil
 }
@@ -3858,6 +4097,9 @@ func (p *QueryBulkLoadResponse) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField8(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField9(oprot); err != nil {
 			return err
 		}
 	}
@@ -4000,6 +4242,40 @@ func (p *QueryBulkLoadResponse) writeField8(oprot thrift.TProtocol) (err error) 
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:is_bulk_loading: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *QueryBulkLoadResponse) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpBulkLoadStates() {
+		if err := oprot.WriteFieldBegin("hp_bulk_load_states", thrift.LIST, 9); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:hp_bulk_load_states: ", p), err)
+		}
+		if err := oprot.WriteListBegin(thrift.MAP, len(p.HpBulkLoadStates)); err != nil {
+			return thrift.PrependError("error writing list begin: ", err)
+		}
+		for _, v := range p.HpBulkLoadStates {
+			if err := oprot.WriteMapBegin(thrift.STRUCT, thrift.STRUCT, len(v)); err != nil {
+				return thrift.PrependError("error writing map begin: ", err)
+			}
+			for k, v := range v {
+				if err := k.Write(oprot); err != nil {
+					return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", k), err)
+				}
+				if err := v.Write(oprot); err != nil {
+					return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+				}
+			}
+			if err := oprot.WriteMapEnd(); err != nil {
+				return thrift.PrependError("error writing map end: ", err)
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return thrift.PrependError("error writing list end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:hp_bulk_load_states: ", p), err)
 		}
 	}
 	return err

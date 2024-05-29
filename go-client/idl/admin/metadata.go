@@ -501,6 +501,7 @@ func (p *FileMeta) String() string {
 //   - LearnerSignature
 //   - PopAll
 //   - SplitSyncToChild
+//   - HpPrimary
 type ReplicaConfiguration struct {
 	Pid              *base.Gpid       `thrift:"pid,1" db:"pid" json:"pid"`
 	Ballot           int64            `thrift:"ballot,2" db:"ballot" json:"ballot"`
@@ -509,6 +510,7 @@ type ReplicaConfiguration struct {
 	LearnerSignature int64            `thrift:"learner_signature,5" db:"learner_signature" json:"learner_signature"`
 	PopAll           bool             `thrift:"pop_all,6" db:"pop_all" json:"pop_all"`
 	SplitSyncToChild bool             `thrift:"split_sync_to_child,7" db:"split_sync_to_child" json:"split_sync_to_child"`
+	HpPrimary        *base.HostPort   `thrift:"hp_primary,8" db:"hp_primary" json:"hp_primary,omitempty"`
 }
 
 func NewReplicaConfiguration() *ReplicaConfiguration {
@@ -558,6 +560,15 @@ var ReplicaConfiguration_SplitSyncToChild_DEFAULT bool = false
 func (p *ReplicaConfiguration) GetSplitSyncToChild() bool {
 	return p.SplitSyncToChild
 }
+
+var ReplicaConfiguration_HpPrimary_DEFAULT *base.HostPort
+
+func (p *ReplicaConfiguration) GetHpPrimary() *base.HostPort {
+	if !p.IsSetHpPrimary() {
+		return ReplicaConfiguration_HpPrimary_DEFAULT
+	}
+	return p.HpPrimary
+}
 func (p *ReplicaConfiguration) IsSetPid() bool {
 	return p.Pid != nil
 }
@@ -572,6 +583,10 @@ func (p *ReplicaConfiguration) IsSetPopAll() bool {
 
 func (p *ReplicaConfiguration) IsSetSplitSyncToChild() bool {
 	return p.SplitSyncToChild != ReplicaConfiguration_SplitSyncToChild_DEFAULT
+}
+
+func (p *ReplicaConfiguration) IsSetHpPrimary() bool {
+	return p.HpPrimary != nil
 }
 
 func (p *ReplicaConfiguration) Read(iprot thrift.TProtocol) error {
@@ -658,6 +673,16 @@ func (p *ReplicaConfiguration) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField8(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -735,6 +760,14 @@ func (p *ReplicaConfiguration) ReadField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ReplicaConfiguration) ReadField8(iprot thrift.TProtocol) error {
+	p.HpPrimary = &base.HostPort{}
+	if err := p.HpPrimary.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpPrimary), err)
+	}
+	return nil
+}
+
 func (p *ReplicaConfiguration) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("replica_configuration"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -759,6 +792,9 @@ func (p *ReplicaConfiguration) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField7(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField8(oprot); err != nil {
 			return err
 		}
 	}
@@ -861,6 +897,21 @@ func (p *ReplicaConfiguration) writeField7(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:split_sync_to_child: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ReplicaConfiguration) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpPrimary() {
+		if err := oprot.WriteFieldBegin("hp_primary", thrift.STRUCT, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:hp_primary: ", p), err)
+		}
+		if err := p.HpPrimary.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpPrimary), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:hp_primary: ", p), err)
 		}
 	}
 	return err

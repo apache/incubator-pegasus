@@ -170,10 +170,14 @@ func (p *DuplicationFailMode) Value() (driver.Value, error) {
 //   - AppName
 //   - RemoteClusterName
 //   - IsDuplicatingCheckpoint
+//   - RemoteAppName
+//   - RemoteReplicaCount
 type DuplicationAddRequest struct {
-	AppName                 string `thrift:"app_name,1" db:"app_name" json:"app_name"`
-	RemoteClusterName       string `thrift:"remote_cluster_name,2" db:"remote_cluster_name" json:"remote_cluster_name"`
-	IsDuplicatingCheckpoint bool   `thrift:"is_duplicating_checkpoint,3" db:"is_duplicating_checkpoint" json:"is_duplicating_checkpoint"`
+	AppName                 string  `thrift:"app_name,1" db:"app_name" json:"app_name"`
+	RemoteClusterName       string  `thrift:"remote_cluster_name,2" db:"remote_cluster_name" json:"remote_cluster_name"`
+	IsDuplicatingCheckpoint bool    `thrift:"is_duplicating_checkpoint,3" db:"is_duplicating_checkpoint" json:"is_duplicating_checkpoint"`
+	RemoteAppName           *string `thrift:"remote_app_name,4" db:"remote_app_name" json:"remote_app_name,omitempty"`
+	RemoteReplicaCount      *int32  `thrift:"remote_replica_count,5" db:"remote_replica_count" json:"remote_replica_count,omitempty"`
 }
 
 func NewDuplicationAddRequest() *DuplicationAddRequest {
@@ -195,8 +199,34 @@ var DuplicationAddRequest_IsDuplicatingCheckpoint_DEFAULT bool = true
 func (p *DuplicationAddRequest) GetIsDuplicatingCheckpoint() bool {
 	return p.IsDuplicatingCheckpoint
 }
+
+var DuplicationAddRequest_RemoteAppName_DEFAULT string
+
+func (p *DuplicationAddRequest) GetRemoteAppName() string {
+	if !p.IsSetRemoteAppName() {
+		return DuplicationAddRequest_RemoteAppName_DEFAULT
+	}
+	return *p.RemoteAppName
+}
+
+var DuplicationAddRequest_RemoteReplicaCount_DEFAULT int32
+
+func (p *DuplicationAddRequest) GetRemoteReplicaCount() int32 {
+	if !p.IsSetRemoteReplicaCount() {
+		return DuplicationAddRequest_RemoteReplicaCount_DEFAULT
+	}
+	return *p.RemoteReplicaCount
+}
 func (p *DuplicationAddRequest) IsSetIsDuplicatingCheckpoint() bool {
 	return p.IsDuplicatingCheckpoint != DuplicationAddRequest_IsDuplicatingCheckpoint_DEFAULT
+}
+
+func (p *DuplicationAddRequest) IsSetRemoteAppName() bool {
+	return p.RemoteAppName != nil
+}
+
+func (p *DuplicationAddRequest) IsSetRemoteReplicaCount() bool {
+	return p.RemoteReplicaCount != nil
 }
 
 func (p *DuplicationAddRequest) Read(iprot thrift.TProtocol) error {
@@ -236,6 +266,26 @@ func (p *DuplicationAddRequest) Read(iprot thrift.TProtocol) error {
 		case 3:
 			if fieldTypeId == thrift.BOOL {
 				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField5(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -285,6 +335,24 @@ func (p *DuplicationAddRequest) ReadField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *DuplicationAddRequest) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		p.RemoteAppName = &v
+	}
+	return nil
+}
+
+func (p *DuplicationAddRequest) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 5: ", err)
+	} else {
+		p.RemoteReplicaCount = &v
+	}
+	return nil
+}
+
 func (p *DuplicationAddRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("duplication_add_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -297,6 +365,12 @@ func (p *DuplicationAddRequest) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
 			return err
 		}
 	}
@@ -350,6 +424,36 @@ func (p *DuplicationAddRequest) writeField3(oprot thrift.TProtocol) (err error) 
 	return err
 }
 
+func (p *DuplicationAddRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteAppName() {
+		if err := oprot.WriteFieldBegin("remote_app_name", thrift.STRING, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:remote_app_name: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.RemoteAppName)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.remote_app_name (4) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:remote_app_name: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *DuplicationAddRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteReplicaCount() {
+		if err := oprot.WriteFieldBegin("remote_replica_count", thrift.I32, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:remote_replica_count: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.RemoteReplicaCount)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.remote_replica_count (5) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:remote_replica_count: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *DuplicationAddRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -362,11 +466,15 @@ func (p *DuplicationAddRequest) String() string {
 //   - Appid
 //   - Dupid
 //   - Hint
+//   - RemoteAppName
+//   - RemoteReplicaCount
 type DuplicationAddResponse struct {
-	Err   *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
-	Appid int32           `thrift:"appid,2" db:"appid" json:"appid"`
-	Dupid int32           `thrift:"dupid,3" db:"dupid" json:"dupid"`
-	Hint  *string         `thrift:"hint,4" db:"hint" json:"hint,omitempty"`
+	Err                *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
+	Appid              int32           `thrift:"appid,2" db:"appid" json:"appid"`
+	Dupid              int32           `thrift:"dupid,3" db:"dupid" json:"dupid"`
+	Hint               *string         `thrift:"hint,4" db:"hint" json:"hint,omitempty"`
+	RemoteAppName      *string         `thrift:"remote_app_name,5" db:"remote_app_name" json:"remote_app_name,omitempty"`
+	RemoteReplicaCount *int32          `thrift:"remote_replica_count,6" db:"remote_replica_count" json:"remote_replica_count,omitempty"`
 }
 
 func NewDuplicationAddResponse() *DuplicationAddResponse {
@@ -398,12 +506,38 @@ func (p *DuplicationAddResponse) GetHint() string {
 	}
 	return *p.Hint
 }
+
+var DuplicationAddResponse_RemoteAppName_DEFAULT string
+
+func (p *DuplicationAddResponse) GetRemoteAppName() string {
+	if !p.IsSetRemoteAppName() {
+		return DuplicationAddResponse_RemoteAppName_DEFAULT
+	}
+	return *p.RemoteAppName
+}
+
+var DuplicationAddResponse_RemoteReplicaCount_DEFAULT int32
+
+func (p *DuplicationAddResponse) GetRemoteReplicaCount() int32 {
+	if !p.IsSetRemoteReplicaCount() {
+		return DuplicationAddResponse_RemoteReplicaCount_DEFAULT
+	}
+	return *p.RemoteReplicaCount
+}
 func (p *DuplicationAddResponse) IsSetErr() bool {
 	return p.Err != nil
 }
 
 func (p *DuplicationAddResponse) IsSetHint() bool {
 	return p.Hint != nil
+}
+
+func (p *DuplicationAddResponse) IsSetRemoteAppName() bool {
+	return p.RemoteAppName != nil
+}
+
+func (p *DuplicationAddResponse) IsSetRemoteReplicaCount() bool {
+	return p.RemoteReplicaCount != nil
 }
 
 func (p *DuplicationAddResponse) Read(iprot thrift.TProtocol) error {
@@ -453,6 +587,26 @@ func (p *DuplicationAddResponse) Read(iprot thrift.TProtocol) error {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField6(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -510,6 +664,24 @@ func (p *DuplicationAddResponse) ReadField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *DuplicationAddResponse) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 5: ", err)
+	} else {
+		p.RemoteAppName = &v
+	}
+	return nil
+}
+
+func (p *DuplicationAddResponse) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 6: ", err)
+	} else {
+		p.RemoteReplicaCount = &v
+	}
+	return nil
+}
+
 func (p *DuplicationAddResponse) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("duplication_add_response"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -525,6 +697,12 @@ func (p *DuplicationAddResponse) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField6(oprot); err != nil {
 			return err
 		}
 	}
@@ -586,6 +764,36 @@ func (p *DuplicationAddResponse) writeField4(oprot thrift.TProtocol) (err error)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:hint: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *DuplicationAddResponse) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteAppName() {
+		if err := oprot.WriteFieldBegin("remote_app_name", thrift.STRING, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:remote_app_name: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.RemoteAppName)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.remote_app_name (5) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:remote_app_name: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *DuplicationAddResponse) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteReplicaCount() {
+		if err := oprot.WriteFieldBegin("remote_replica_count", thrift.I32, 6); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:remote_replica_count: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.RemoteReplicaCount)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.remote_replica_count (6) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:remote_replica_count: ", p), err)
 		}
 	}
 	return err
@@ -999,6 +1207,8 @@ func (p *DuplicationModifyResponse) String() string {
 //   - CreateTs
 //   - Progress
 //   - FailMode
+//   - RemoteAppName
+//   - RemoteReplicaCount
 type DuplicationEntry struct {
 	Dupid    int32             `thrift:"dupid,1" db:"dupid" json:"dupid"`
 	Status   DuplicationStatus `thrift:"status,2" db:"status" json:"status"`
@@ -1006,7 +1216,9 @@ type DuplicationEntry struct {
 	CreateTs int64             `thrift:"create_ts,4" db:"create_ts" json:"create_ts"`
 	Progress map[int32]int64   `thrift:"progress,5" db:"progress" json:"progress,omitempty"`
 	// unused field # 6
-	FailMode *DuplicationFailMode `thrift:"fail_mode,7" db:"fail_mode" json:"fail_mode,omitempty"`
+	FailMode           *DuplicationFailMode `thrift:"fail_mode,7" db:"fail_mode" json:"fail_mode,omitempty"`
+	RemoteAppName      *string              `thrift:"remote_app_name,8" db:"remote_app_name" json:"remote_app_name,omitempty"`
+	RemoteReplicaCount *int32               `thrift:"remote_replica_count,9" db:"remote_replica_count" json:"remote_replica_count,omitempty"`
 }
 
 func NewDuplicationEntry() *DuplicationEntry {
@@ -1043,12 +1255,38 @@ func (p *DuplicationEntry) GetFailMode() DuplicationFailMode {
 	}
 	return *p.FailMode
 }
+
+var DuplicationEntry_RemoteAppName_DEFAULT string
+
+func (p *DuplicationEntry) GetRemoteAppName() string {
+	if !p.IsSetRemoteAppName() {
+		return DuplicationEntry_RemoteAppName_DEFAULT
+	}
+	return *p.RemoteAppName
+}
+
+var DuplicationEntry_RemoteReplicaCount_DEFAULT int32
+
+func (p *DuplicationEntry) GetRemoteReplicaCount() int32 {
+	if !p.IsSetRemoteReplicaCount() {
+		return DuplicationEntry_RemoteReplicaCount_DEFAULT
+	}
+	return *p.RemoteReplicaCount
+}
 func (p *DuplicationEntry) IsSetProgress() bool {
 	return p.Progress != nil
 }
 
 func (p *DuplicationEntry) IsSetFailMode() bool {
 	return p.FailMode != nil
+}
+
+func (p *DuplicationEntry) IsSetRemoteAppName() bool {
+	return p.RemoteAppName != nil
+}
+
+func (p *DuplicationEntry) IsSetRemoteReplicaCount() bool {
+	return p.RemoteReplicaCount != nil
 }
 
 func (p *DuplicationEntry) Read(iprot thrift.TProtocol) error {
@@ -1118,6 +1356,26 @@ func (p *DuplicationEntry) Read(iprot thrift.TProtocol) error {
 		case 7:
 			if fieldTypeId == thrift.I32 {
 				if err := p.ReadField7(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField8(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField9(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -1215,6 +1473,24 @@ func (p *DuplicationEntry) ReadField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *DuplicationEntry) ReadField8(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 8: ", err)
+	} else {
+		p.RemoteAppName = &v
+	}
+	return nil
+}
+
+func (p *DuplicationEntry) ReadField9(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 9: ", err)
+	} else {
+		p.RemoteReplicaCount = &v
+	}
+	return nil
+}
+
 func (p *DuplicationEntry) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("duplication_entry"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1236,6 +1512,12 @@ func (p *DuplicationEntry) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField7(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField8(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField9(oprot); err != nil {
 			return err
 		}
 	}
@@ -1336,6 +1618,36 @@ func (p *DuplicationEntry) writeField7(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:fail_mode: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *DuplicationEntry) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteAppName() {
+		if err := oprot.WriteFieldBegin("remote_app_name", thrift.STRING, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:remote_app_name: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.RemoteAppName)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.remote_app_name (8) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:remote_app_name: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *DuplicationEntry) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteReplicaCount() {
+		if err := oprot.WriteFieldBegin("remote_replica_count", thrift.I32, 9); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:remote_replica_count: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.RemoteReplicaCount)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.remote_replica_count (9) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:remote_replica_count: ", p), err)
 		}
 	}
 	return err
@@ -1848,9 +2160,11 @@ func (p *DuplicationConfirmEntry) String() string {
 // Attributes:
 //   - Node
 //   - ConfirmList
+//   - HpNode
 type DuplicationSyncRequest struct {
 	Node        *base.RPCAddress                          `thrift:"node,1" db:"node" json:"node"`
 	ConfirmList map[*base.Gpid][]*DuplicationConfirmEntry `thrift:"confirm_list,2" db:"confirm_list" json:"confirm_list"`
+	HpNode      *base.HostPort                            `thrift:"hp_node,3" db:"hp_node" json:"hp_node"`
 }
 
 func NewDuplicationSyncRequest() *DuplicationSyncRequest {
@@ -1869,8 +2183,21 @@ func (p *DuplicationSyncRequest) GetNode() *base.RPCAddress {
 func (p *DuplicationSyncRequest) GetConfirmList() map[*base.Gpid][]*DuplicationConfirmEntry {
 	return p.ConfirmList
 }
+
+var DuplicationSyncRequest_HpNode_DEFAULT *base.HostPort
+
+func (p *DuplicationSyncRequest) GetHpNode() *base.HostPort {
+	if !p.IsSetHpNode() {
+		return DuplicationSyncRequest_HpNode_DEFAULT
+	}
+	return p.HpNode
+}
 func (p *DuplicationSyncRequest) IsSetNode() bool {
 	return p.Node != nil
+}
+
+func (p *DuplicationSyncRequest) IsSetHpNode() bool {
+	return p.HpNode != nil
 }
 
 func (p *DuplicationSyncRequest) Read(iprot thrift.TProtocol) error {
@@ -1900,6 +2227,16 @@ func (p *DuplicationSyncRequest) Read(iprot thrift.TProtocol) error {
 		case 2:
 			if fieldTypeId == thrift.MAP {
 				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField3(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -1966,6 +2303,14 @@ func (p *DuplicationSyncRequest) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *DuplicationSyncRequest) ReadField3(iprot thrift.TProtocol) error {
+	p.HpNode = &base.HostPort{}
+	if err := p.HpNode.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpNode), err)
+	}
+	return nil
+}
+
 func (p *DuplicationSyncRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("duplication_sync_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1975,6 +2320,9 @@ func (p *DuplicationSyncRequest) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
 			return err
 		}
 	}
@@ -2028,6 +2376,19 @@ func (p *DuplicationSyncRequest) writeField2(oprot thrift.TProtocol) (err error)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:confirm_list: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationSyncRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("hp_node", thrift.STRUCT, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:hp_node: ", p), err)
+	}
+	if err := p.HpNode.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpNode), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:hp_node: ", p), err)
 	}
 	return err
 }

@@ -218,10 +218,12 @@ func (p *DetectAction) Value() (driver.Value, error) {
 
 // Attributes:
 //   - Pid
-//   - Node
+//   - Node1
+//   - HpNode1
 type QueryReplicaDecreeRequest struct {
-	Pid  *base.Gpid       `thrift:"pid,1" db:"pid" json:"pid"`
-	Node *base.RPCAddress `thrift:"node,2" db:"node" json:"node"`
+	Pid     *base.Gpid       `thrift:"pid,1" db:"pid" json:"pid"`
+	Node1   *base.RPCAddress `thrift:"node1,2" db:"node1" json:"node1"`
+	HpNode1 *base.HostPort   `thrift:"hp_node1,3" db:"hp_node1" json:"hp_node1,omitempty"`
 }
 
 func NewQueryReplicaDecreeRequest() *QueryReplicaDecreeRequest {
@@ -237,20 +239,33 @@ func (p *QueryReplicaDecreeRequest) GetPid() *base.Gpid {
 	return p.Pid
 }
 
-var QueryReplicaDecreeRequest_Node_DEFAULT *base.RPCAddress
+var QueryReplicaDecreeRequest_Node1_DEFAULT *base.RPCAddress
 
-func (p *QueryReplicaDecreeRequest) GetNode() *base.RPCAddress {
-	if !p.IsSetNode() {
-		return QueryReplicaDecreeRequest_Node_DEFAULT
+func (p *QueryReplicaDecreeRequest) GetNode1() *base.RPCAddress {
+	if !p.IsSetNode1() {
+		return QueryReplicaDecreeRequest_Node1_DEFAULT
 	}
-	return p.Node
+	return p.Node1
+}
+
+var QueryReplicaDecreeRequest_HpNode1_DEFAULT *base.HostPort
+
+func (p *QueryReplicaDecreeRequest) GetHpNode1() *base.HostPort {
+	if !p.IsSetHpNode1() {
+		return QueryReplicaDecreeRequest_HpNode1_DEFAULT
+	}
+	return p.HpNode1
 }
 func (p *QueryReplicaDecreeRequest) IsSetPid() bool {
 	return p.Pid != nil
 }
 
-func (p *QueryReplicaDecreeRequest) IsSetNode() bool {
-	return p.Node != nil
+func (p *QueryReplicaDecreeRequest) IsSetNode1() bool {
+	return p.Node1 != nil
+}
+
+func (p *QueryReplicaDecreeRequest) IsSetHpNode1() bool {
+	return p.HpNode1 != nil
 }
 
 func (p *QueryReplicaDecreeRequest) Read(iprot thrift.TProtocol) error {
@@ -287,6 +302,16 @@ func (p *QueryReplicaDecreeRequest) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -311,9 +336,17 @@ func (p *QueryReplicaDecreeRequest) ReadField1(iprot thrift.TProtocol) error {
 }
 
 func (p *QueryReplicaDecreeRequest) ReadField2(iprot thrift.TProtocol) error {
-	p.Node = &base.RPCAddress{}
-	if err := p.Node.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Node), err)
+	p.Node1 = &base.RPCAddress{}
+	if err := p.Node1.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Node1), err)
+	}
+	return nil
+}
+
+func (p *QueryReplicaDecreeRequest) ReadField3(iprot thrift.TProtocol) error {
+	p.HpNode1 = &base.HostPort{}
+	if err := p.HpNode1.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpNode1), err)
 	}
 	return nil
 }
@@ -327,6 +360,9 @@ func (p *QueryReplicaDecreeRequest) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
 			return err
 		}
 	}
@@ -353,14 +389,29 @@ func (p *QueryReplicaDecreeRequest) writeField1(oprot thrift.TProtocol) (err err
 }
 
 func (p *QueryReplicaDecreeRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("node", thrift.STRUCT, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:node: ", p), err)
+	if err := oprot.WriteFieldBegin("node1", thrift.STRUCT, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:node1: ", p), err)
 	}
-	if err := p.Node.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Node), err)
+	if err := p.Node1.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Node1), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:node: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:node1: ", p), err)
+	}
+	return err
+}
+
+func (p *QueryReplicaDecreeRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpNode1() {
+		if err := oprot.WriteFieldBegin("hp_node1", thrift.STRUCT, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:hp_node1: ", p), err)
+		}
+		if err := p.HpNode1.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpNode1), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:hp_node1: ", p), err)
+		}
 	}
 	return err
 }
@@ -521,25 +572,40 @@ func (p *QueryReplicaDecreeResponse) String() string {
 }
 
 // Attributes:
-//   - Node
+//   - Node1
+//   - HpNode1
 type QueryReplicaInfoRequest struct {
-	Node *base.RPCAddress `thrift:"node,1" db:"node" json:"node"`
+	Node1   *base.RPCAddress `thrift:"node1,1" db:"node1" json:"node1"`
+	HpNode1 *base.HostPort   `thrift:"hp_node1,2" db:"hp_node1" json:"hp_node1,omitempty"`
 }
 
 func NewQueryReplicaInfoRequest() *QueryReplicaInfoRequest {
 	return &QueryReplicaInfoRequest{}
 }
 
-var QueryReplicaInfoRequest_Node_DEFAULT *base.RPCAddress
+var QueryReplicaInfoRequest_Node1_DEFAULT *base.RPCAddress
 
-func (p *QueryReplicaInfoRequest) GetNode() *base.RPCAddress {
-	if !p.IsSetNode() {
-		return QueryReplicaInfoRequest_Node_DEFAULT
+func (p *QueryReplicaInfoRequest) GetNode1() *base.RPCAddress {
+	if !p.IsSetNode1() {
+		return QueryReplicaInfoRequest_Node1_DEFAULT
 	}
-	return p.Node
+	return p.Node1
 }
-func (p *QueryReplicaInfoRequest) IsSetNode() bool {
-	return p.Node != nil
+
+var QueryReplicaInfoRequest_HpNode1_DEFAULT *base.HostPort
+
+func (p *QueryReplicaInfoRequest) GetHpNode1() *base.HostPort {
+	if !p.IsSetHpNode1() {
+		return QueryReplicaInfoRequest_HpNode1_DEFAULT
+	}
+	return p.HpNode1
+}
+func (p *QueryReplicaInfoRequest) IsSetNode1() bool {
+	return p.Node1 != nil
+}
+
+func (p *QueryReplicaInfoRequest) IsSetHpNode1() bool {
+	return p.HpNode1 != nil
 }
 
 func (p *QueryReplicaInfoRequest) Read(iprot thrift.TProtocol) error {
@@ -566,6 +632,16 @@ func (p *QueryReplicaInfoRequest) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -582,9 +658,17 @@ func (p *QueryReplicaInfoRequest) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *QueryReplicaInfoRequest) ReadField1(iprot thrift.TProtocol) error {
-	p.Node = &base.RPCAddress{}
-	if err := p.Node.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Node), err)
+	p.Node1 = &base.RPCAddress{}
+	if err := p.Node1.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Node1), err)
+	}
+	return nil
+}
+
+func (p *QueryReplicaInfoRequest) ReadField2(iprot thrift.TProtocol) error {
+	p.HpNode1 = &base.HostPort{}
+	if err := p.HpNode1.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpNode1), err)
 	}
 	return nil
 }
@@ -595,6 +679,9 @@ func (p *QueryReplicaInfoRequest) Write(oprot thrift.TProtocol) error {
 	}
 	if p != nil {
 		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
 			return err
 		}
 	}
@@ -608,14 +695,29 @@ func (p *QueryReplicaInfoRequest) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *QueryReplicaInfoRequest) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("node", thrift.STRUCT, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:node: ", p), err)
+	if err := oprot.WriteFieldBegin("node1", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:node1: ", p), err)
 	}
-	if err := p.Node.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Node), err)
+	if err := p.Node1.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Node1), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:node: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:node1: ", p), err)
+	}
+	return err
+}
+
+func (p *QueryReplicaInfoRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpNode1() {
+		if err := oprot.WriteFieldBegin("hp_node1", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:hp_node1: ", p), err)
+		}
+		if err := p.HpNode1.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpNode1), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:hp_node1: ", p), err)
+		}
 	}
 	return err
 }
@@ -1209,31 +1311,46 @@ func (p *DiskInfo) String() string {
 }
 
 // Attributes:
-//   - Node
+//   - Node1
 //   - AppName
+//   - HpNode1
 type QueryDiskInfoRequest struct {
-	Node    *base.RPCAddress `thrift:"node,1" db:"node" json:"node"`
+	Node1   *base.RPCAddress `thrift:"node1,1" db:"node1" json:"node1"`
 	AppName string           `thrift:"app_name,2" db:"app_name" json:"app_name"`
+	HpNode1 *base.HostPort   `thrift:"hp_node1,3" db:"hp_node1" json:"hp_node1,omitempty"`
 }
 
 func NewQueryDiskInfoRequest() *QueryDiskInfoRequest {
 	return &QueryDiskInfoRequest{}
 }
 
-var QueryDiskInfoRequest_Node_DEFAULT *base.RPCAddress
+var QueryDiskInfoRequest_Node1_DEFAULT *base.RPCAddress
 
-func (p *QueryDiskInfoRequest) GetNode() *base.RPCAddress {
-	if !p.IsSetNode() {
-		return QueryDiskInfoRequest_Node_DEFAULT
+func (p *QueryDiskInfoRequest) GetNode1() *base.RPCAddress {
+	if !p.IsSetNode1() {
+		return QueryDiskInfoRequest_Node1_DEFAULT
 	}
-	return p.Node
+	return p.Node1
 }
 
 func (p *QueryDiskInfoRequest) GetAppName() string {
 	return p.AppName
 }
-func (p *QueryDiskInfoRequest) IsSetNode() bool {
-	return p.Node != nil
+
+var QueryDiskInfoRequest_HpNode1_DEFAULT *base.HostPort
+
+func (p *QueryDiskInfoRequest) GetHpNode1() *base.HostPort {
+	if !p.IsSetHpNode1() {
+		return QueryDiskInfoRequest_HpNode1_DEFAULT
+	}
+	return p.HpNode1
+}
+func (p *QueryDiskInfoRequest) IsSetNode1() bool {
+	return p.Node1 != nil
+}
+
+func (p *QueryDiskInfoRequest) IsSetHpNode1() bool {
+	return p.HpNode1 != nil
 }
 
 func (p *QueryDiskInfoRequest) Read(iprot thrift.TProtocol) error {
@@ -1270,6 +1387,16 @@ func (p *QueryDiskInfoRequest) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -1286,9 +1413,9 @@ func (p *QueryDiskInfoRequest) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *QueryDiskInfoRequest) ReadField1(iprot thrift.TProtocol) error {
-	p.Node = &base.RPCAddress{}
-	if err := p.Node.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Node), err)
+	p.Node1 = &base.RPCAddress{}
+	if err := p.Node1.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Node1), err)
 	}
 	return nil
 }
@@ -1298,6 +1425,14 @@ func (p *QueryDiskInfoRequest) ReadField2(iprot thrift.TProtocol) error {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
 		p.AppName = v
+	}
+	return nil
+}
+
+func (p *QueryDiskInfoRequest) ReadField3(iprot thrift.TProtocol) error {
+	p.HpNode1 = &base.HostPort{}
+	if err := p.HpNode1.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpNode1), err)
 	}
 	return nil
 }
@@ -1313,6 +1448,9 @@ func (p *QueryDiskInfoRequest) Write(oprot thrift.TProtocol) error {
 		if err := p.writeField2(oprot); err != nil {
 			return err
 		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
@@ -1324,14 +1462,14 @@ func (p *QueryDiskInfoRequest) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *QueryDiskInfoRequest) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("node", thrift.STRUCT, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:node: ", p), err)
+	if err := oprot.WriteFieldBegin("node1", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:node1: ", p), err)
 	}
-	if err := p.Node.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Node), err)
+	if err := p.Node1.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Node1), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:node: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:node1: ", p), err)
 	}
 	return err
 }
@@ -1345,6 +1483,21 @@ func (p *QueryDiskInfoRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:app_name: ", p), err)
+	}
+	return err
+}
+
+func (p *QueryDiskInfoRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpNode1() {
+		if err := oprot.WriteFieldBegin("hp_node1", thrift.STRUCT, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:hp_node1: ", p), err)
+		}
+		if err := p.HpNode1.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpNode1), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:hp_node1: ", p), err)
+		}
 	}
 	return err
 }

@@ -120,6 +120,9 @@ func (p *AppStatus) Value() (driver.Value, error) {
 //   - LastDrops
 //   - LastCommittedDecree
 //   - PartitionFlags
+//   - HpPrimary
+//   - HpSecondaries
+//   - HpLastDrops
 type PartitionConfiguration struct {
 	Pid                 *base.Gpid         `thrift:"pid,1" db:"pid" json:"pid"`
 	Ballot              int64              `thrift:"ballot,2" db:"ballot" json:"ballot"`
@@ -129,6 +132,9 @@ type PartitionConfiguration struct {
 	LastDrops           []*base.RPCAddress `thrift:"last_drops,6" db:"last_drops" json:"last_drops"`
 	LastCommittedDecree int64              `thrift:"last_committed_decree,7" db:"last_committed_decree" json:"last_committed_decree"`
 	PartitionFlags      int32              `thrift:"partition_flags,8" db:"partition_flags" json:"partition_flags"`
+	HpPrimary           *base.HostPort     `thrift:"hp_primary,9" db:"hp_primary" json:"hp_primary,omitempty"`
+	HpSecondaries       []*base.HostPort   `thrift:"hp_secondaries,10" db:"hp_secondaries" json:"hp_secondaries,omitempty"`
+	HpLastDrops         []*base.HostPort   `thrift:"hp_last_drops,11" db:"hp_last_drops" json:"hp_last_drops,omitempty"`
 }
 
 func NewPartitionConfiguration() *PartitionConfiguration {
@@ -176,12 +182,45 @@ func (p *PartitionConfiguration) GetLastCommittedDecree() int64 {
 func (p *PartitionConfiguration) GetPartitionFlags() int32 {
 	return p.PartitionFlags
 }
+
+var PartitionConfiguration_HpPrimary_DEFAULT *base.HostPort
+
+func (p *PartitionConfiguration) GetHpPrimary() *base.HostPort {
+	if !p.IsSetHpPrimary() {
+		return PartitionConfiguration_HpPrimary_DEFAULT
+	}
+	return p.HpPrimary
+}
+
+var PartitionConfiguration_HpSecondaries_DEFAULT []*base.HostPort
+
+func (p *PartitionConfiguration) GetHpSecondaries() []*base.HostPort {
+	return p.HpSecondaries
+}
+
+var PartitionConfiguration_HpLastDrops_DEFAULT []*base.HostPort
+
+func (p *PartitionConfiguration) GetHpLastDrops() []*base.HostPort {
+	return p.HpLastDrops
+}
 func (p *PartitionConfiguration) IsSetPid() bool {
 	return p.Pid != nil
 }
 
 func (p *PartitionConfiguration) IsSetPrimary() bool {
 	return p.Primary != nil
+}
+
+func (p *PartitionConfiguration) IsSetHpPrimary() bool {
+	return p.HpPrimary != nil
+}
+
+func (p *PartitionConfiguration) IsSetHpSecondaries() bool {
+	return p.HpSecondaries != nil
+}
+
+func (p *PartitionConfiguration) IsSetHpLastDrops() bool {
+	return p.HpLastDrops != nil
 }
 
 func (p *PartitionConfiguration) Read(iprot thrift.TProtocol) error {
@@ -271,6 +310,36 @@ func (p *PartitionConfiguration) Read(iprot thrift.TProtocol) error {
 		case 8:
 			if fieldTypeId == thrift.I32 {
 				if err := p.ReadField8(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField9(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.LIST {
+				if err := p.ReadField10(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.LIST {
+				if err := p.ReadField11(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -385,6 +454,54 @@ func (p *PartitionConfiguration) ReadField8(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *PartitionConfiguration) ReadField9(iprot thrift.TProtocol) error {
+	p.HpPrimary = &base.HostPort{}
+	if err := p.HpPrimary.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HpPrimary), err)
+	}
+	return nil
+}
+
+func (p *PartitionConfiguration) ReadField10(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]*base.HostPort, 0, size)
+	p.HpSecondaries = tSlice
+	for i := 0; i < size; i++ {
+		_elem2 := &base.HostPort{}
+		if err := _elem2.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem2), err)
+		}
+		p.HpSecondaries = append(p.HpSecondaries, _elem2)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
+	}
+	return nil
+}
+
+func (p *PartitionConfiguration) ReadField11(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]*base.HostPort, 0, size)
+	p.HpLastDrops = tSlice
+	for i := 0; i < size; i++ {
+		_elem3 := &base.HostPort{}
+		if err := _elem3.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem3), err)
+		}
+		p.HpLastDrops = append(p.HpLastDrops, _elem3)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
+	}
+	return nil
+}
+
 func (p *PartitionConfiguration) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("partition_configuration"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -412,6 +529,15 @@ func (p *PartitionConfiguration) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField8(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField9(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField10(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField11(oprot); err != nil {
 			return err
 		}
 	}
@@ -544,6 +670,67 @@ func (p *PartitionConfiguration) writeField8(oprot thrift.TProtocol) (err error)
 	return err
 }
 
+func (p *PartitionConfiguration) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpPrimary() {
+		if err := oprot.WriteFieldBegin("hp_primary", thrift.STRUCT, 9); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:hp_primary: ", p), err)
+		}
+		if err := p.HpPrimary.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HpPrimary), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:hp_primary: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *PartitionConfiguration) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpSecondaries() {
+		if err := oprot.WriteFieldBegin("hp_secondaries", thrift.LIST, 10); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:hp_secondaries: ", p), err)
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.HpSecondaries)); err != nil {
+			return thrift.PrependError("error writing list begin: ", err)
+		}
+		for _, v := range p.HpSecondaries {
+			if err := v.Write(oprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return thrift.PrependError("error writing list end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:hp_secondaries: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *PartitionConfiguration) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHpLastDrops() {
+		if err := oprot.WriteFieldBegin("hp_last_drops", thrift.LIST, 11); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:hp_last_drops: ", p), err)
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.HpLastDrops)); err != nil {
+			return thrift.PrependError("error writing list begin: ", err)
+		}
+		for _, v := range p.HpLastDrops {
+			if err := v.Write(oprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return thrift.PrependError("error writing list end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:hp_last_drops: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *PartitionConfiguration) String() string {
 	if p == nil {
 		return "<nil>"
@@ -636,13 +823,13 @@ func (p *QueryCfgRequest) ReadField2(iprot thrift.TProtocol) error {
 	tSlice := make([]int32, 0, size)
 	p.PartitionIndices = tSlice
 	for i := 0; i < size; i++ {
-		var _elem2 int32
+		var _elem4 int32
 		if v, err := iprot.ReadI32(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_elem2 = v
+			_elem4 = v
 		}
-		p.PartitionIndices = append(p.PartitionIndices, _elem2)
+		p.PartitionIndices = append(p.PartitionIndices, _elem4)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -880,11 +1067,11 @@ func (p *QueryCfgResponse) ReadField5(iprot thrift.TProtocol) error {
 	tSlice := make([]*PartitionConfiguration, 0, size)
 	p.Partitions = tSlice
 	for i := 0; i < size; i++ {
-		_elem3 := &PartitionConfiguration{}
-		if err := _elem3.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem3), err)
+		_elem5 := &PartitionConfiguration{}
+		if err := _elem5.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem5), err)
 		}
-		p.Partitions = append(p.Partitions, _elem3)
+		p.Partitions = append(p.Partitions, _elem5)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -1595,19 +1782,19 @@ func (p *AppInfo) ReadField6(iprot thrift.TProtocol) error {
 	tMap := make(map[string]string, size)
 	p.Envs = tMap
 	for i := 0; i < size; i++ {
-		var _key4 string
+		var _key6 string
 		if v, err := iprot.ReadString(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_key4 = v
+			_key6 = v
 		}
-		var _val5 string
+		var _val7 string
 		if v, err := iprot.ReadString(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_val5 = v
+			_val7 = v
 		}
-		p.Envs[_key4] = _val5
+		p.Envs[_key6] = _val7
 	}
 	if err := iprot.ReadMapEnd(); err != nil {
 		return thrift.PrependError("error reading map end: ", err)
