@@ -24,7 +24,8 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 export BUILD_ROOT_DIR=${ROOT}/build
 export BUILD_LATEST_DIR=${BUILD_ROOT_DIR}/latest
 export REPORT_DIR="$ROOT/test_report"
-export THIRDPARTY_ROOT=$ROOT/thirdparty
+# It's possible to specify THIRDPARTY_ROOT by setting the environment variable PEGASUS_THIRDPARTY_ROOT.
+export THIRDPARTY_ROOT=${PEGASUS_THIRDPARTY_ROOT:-"$ROOT/thirdparty"}
 ARCH_TYPE=''
 arch_output=$(arch)
 if [ "$arch_output"x == "x86_64"x ]; then

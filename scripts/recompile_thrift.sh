@@ -17,7 +17,6 @@
 # under the License.
 
 cd `dirname $0`
-THIRDPARTY_ROOT=../thirdparty
 
 if [ ! -d "$THIRDPARTY_ROOT" ]; then
   echo "ERROR: THIRDPARTY_ROOT not set"
