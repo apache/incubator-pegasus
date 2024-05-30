@@ -116,15 +116,15 @@ copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_replica_server.so ${pack}/bin
 copy_file ${BUILD_LATEST_DIR}/output/lib/libdsn_utils.so ${pack}/bin
 
 if [ "$use_jemalloc" == "on" ]; then
-    copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/bin
-    copy_file ./thirdparty/output/lib/libprofiler.so.0 ${pack}/bin
+    copy_file ${THIRDPARTY_ROOT}/output/lib/libjemalloc.so.2 ${pack}/bin
+    copy_file ${THIRDPARTY_ROOT}/output/lib/libprofiler.so.0 ${pack}/bin
 else
-    copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
+    copy_file ${THIRDPARTY_ROOT}/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
 fi
 
-copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
-copy_file ./thirdparty/output/lib/libhdfs* ${pack}/bin
-copy_file ./thirdparty/output/lib/librocksdb.so.8 ${pack}/bin
+copy_file ${THIRDPARTY_ROOT}/output/lib/libboost*.so.1.69.0 ${pack}/bin
+copy_file ${THIRDPARTY_ROOT}/output/lib/libhdfs* ${pack}/bin
+copy_file ${THIRDPARTY_ROOT}/output/lib/librocksdb.so.8 ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 copy_file ./src/server/config.min.ini ${pack}/bin
