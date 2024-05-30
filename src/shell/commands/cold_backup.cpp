@@ -32,7 +32,9 @@
 #include <vector>
 
 #include "client/replication_ddl_client.h"
+#include "shell/argh.h"
 #include "shell/command_executor.h"
+#include "shell/command_helper.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
 #include "utils/error_code.h"
@@ -143,64 +145,39 @@ bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
 bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    ::dsn::error_code err = sc->ddl_client->ls_backup_policy();
+    argh::parser cmd(args.argc, args.argv);
+    const bool json = cmd[{"-j", "--json"}];
+
+    ::dsn::error_code err = sc->ddl_client->ls_backup_policy(json);
     if (err != ::dsn::ERR_OK) {
         std::cout << "ls backup policy failed" << std::endl;
-    } else {
-        std::cout << std::endl << "ls backup policy succeed" << std::endl;
     }
     return true;
 }
 
 bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
-                                           {"backup_info_cnt", required_argument, 0, 'b'},
-                                           {0, 0, 0, 0}};
-    std::vector<std::string> policy_names;
-    int backup_info_cnt = 3;
+    const std::string query_backup_policy_help = "<policy_name> [-b|--backup_info_cnt] [-j|--json]";
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+    RETURN_FALSE_IF_NOT(cmd.pos_args().size() > 1,
+                        "invalid command, should be in the form of '{}'",
+                        query_backup_policy_help);
 
-    optind = 0;
-    while (true) {
-        int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "p:b:", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 'p': {
-            std::vector<std::string> names;
-            ::dsn::utils::split_args(optarg, names, ',');
-            for (const auto &policy_name : names) {
-                if (policy_name.empty()) {
-                    fprintf(stderr, "invalid, empty policy_name, just ignore\n");
-                    continue;
-                } else {
-                    policy_names.emplace_back(policy_name);
-                }
-            }
-        } break;
-        case 'b':
-            backup_info_cnt = atoi(optarg);
-            if (backup_info_cnt <= 0) {
-                fprintf(stderr, "invalid backup_info_cnt %s\n", optarg);
-                return false;
-            }
-            break;
-        default:
-            return false;
-        }
-    }
-    if (policy_names.empty()) {
-        fprintf(stderr, "empty policy_name, please assign policy_name you want to query\n");
-        return false;
-    }
-    ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
+    int param_index = 1;
+    std::vector<std::string> policy_names;
+    PARSE_STRS(policy_names);
+
+    uint32_t backup_info_cnt;
+    PARSE_OPT_UINT(backup_info_cnt, 3, {"-b", "--backup_info_cnt"});
+
+    const bool json = cmd[{"-j", "--json"}];
+
+    ::dsn::error_code ret =
+        sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt, json);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "query backup policy failed, err = %s\n", ret.to_string());
-    } else {
-        std::cout << std::endl << "query backup policy succeed" << std::endl;
     }
+
     return true;
 }
 

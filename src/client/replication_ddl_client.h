@@ -179,14 +179,15 @@ public:
 
     error_with<query_backup_status_response> query_backup(int32_t app_id, int64_t backup_id);
 
-    dsn::error_code ls_backup_policy();
+    dsn::error_code ls_backup_policy(bool json);
 
     dsn::error_code disable_backup_policy(const std::string &policy_name);
 
     dsn::error_code enable_backup_policy(const std::string &policy_name);
 
     dsn::error_code query_backup_policy(const std::vector<std::string> &policy_names,
-                                        int backup_info_cnt);
+                                        int backup_info_cnt,
+                                        bool json);
 
     dsn::error_code update_backup_policy(const std::string &policy_name,
                                          const std::vector<int32_t> &add_appids,
