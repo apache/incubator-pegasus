@@ -125,15 +125,15 @@ mkdir -p ${pack}/lib
 copy_file ${BUILD_LATEST_DIR}/output/lib/*.so* ${pack}/lib/
 
 if [ "$use_jemalloc" == "on" ]; then
-    copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/lib/
-    copy_file ./thirdparty/output/lib/libprofiler.so.0 ${pack}/lib/
+    copy_file ${THIRDPARTY_ROOT}/output/lib/libjemalloc.so.2 ${pack}/lib/
+    copy_file ${THIRDPARTY_ROOT}/output/lib/libprofiler.so.0 ${pack}/lib/
 else
-    copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/lib/
+    copy_file ${THIRDPARTY_ROOT}/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/lib/
 fi
 
-copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/lib/
-copy_file ./thirdparty/output/lib/libhdfs* ${pack}/lib/
-copy_file ./thirdparty/output/lib/librocksdb.so.8 ${pack}/lib/
+copy_file ${THIRDPARTY_ROOT}/output/lib/libboost*.so.1.69.0 ${pack}/lib/
+copy_file ${THIRDPARTY_ROOT}/output/lib/libhdfs* ${pack}/lib/
+copy_file ${THIRDPARTY_ROOT}/output/lib/librocksdb.so.8 ${pack}/lib/
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/lib/
 
 pack_tools_lib() {
