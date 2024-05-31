@@ -335,9 +335,7 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
     auto value = dup->to_json_blob();
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
     _meta_svc->get_meta_storage()->create_node_recursively(
-        std::move(nodes),
-        std::move(value),
-        [app, this, dup, rpc, resp_err]() mutable {
+        std::move(nodes), std::move(value), [app, this, dup, rpc, resp_err]() mutable {
             LOG_INFO("[{}] add duplication successfully [app_name: {}, remote_cluster_name: {}]",
                      dup->log_prefix(),
                      app->app_name,
