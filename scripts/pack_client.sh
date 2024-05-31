@@ -39,12 +39,6 @@ then
     exit 1
 fi
 
-if [ ! -f ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server ]
-then
-    echo "ERROR: ${BUILD_LATEST_DIR}/output/bin/pegasus_server/pegasus_server not found"
-    exit 1
-fi
-
 if [ ! -f ${BUILD_LATEST_DIR}/CMakeCache.txt ]
 then
     echo "ERROR: ${BUILD_LATEST_DIR}/CMakeCache.txt not found"
