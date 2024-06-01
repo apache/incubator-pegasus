@@ -31,6 +31,7 @@
 #include "utils/fmt_logging.h"
 
 namespace dsn {
+class error_code;
 class host_port;
 class zrwlock_nr;
 
