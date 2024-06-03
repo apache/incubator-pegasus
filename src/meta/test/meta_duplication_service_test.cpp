@@ -57,6 +57,7 @@
 #include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
 #include "meta_test_base.h"
+#include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
@@ -399,7 +400,7 @@ public:
         struct TestData
         {
             std::string app_name;
-            std::string remote;
+            std::string remote_cluster_name;
 
             bool specified;
             std::string remote_app_name;
@@ -414,13 +415,14 @@ public:
              kTestRemoteAppName,
              kTestRemoteReplicaCount,
              ERR_OK},
-            // A duplication that has been added would be found with its original remote_app_name.
+            // Add a duplication that has been existing for the same table with the same remote
+            // cluster.
             {kTestAppName,
              kTestRemoteClusterName,
-             true,
+             false,
              kTestRemoteAppName,
              kTestRemoteReplicaCount,
-             ERR_OK},
+             ERR_DUP_EXIST},
             // The general case that duplicating to remote cluster with same remote_app_name.
             {kTestSameAppName,
              kTestRemoteClusterName,
@@ -477,10 +479,12 @@ public:
         for (auto test : tests) {
             duplication_add_response resp;
             if (test.specified) {
-                resp = create_dup(
-                    test.app_name, test.remote, test.remote_app_name, test.remote_replica_count);
+                resp = create_dup(test.app_name,
+                                  test.remote_cluster_name,
+                                  test.remote_app_name,
+                                  test.remote_replica_count);
             } else {
-                resp = create_dup_unspecified(test.app_name, test.remote);
+                resp = create_dup_unspecified(test.app_name, test.remote_cluster_name);
             }
 
             ASSERT_EQ(test.wec, resp.err);
@@ -494,7 +498,7 @@ public:
             ASSERT_TRUE(dup != nullptr);
             ASSERT_EQ(app->app_id, dup->app_id);
             ASSERT_EQ(duplication_status::DS_PREPARE, dup->_status);
-            ASSERT_EQ(test.remote, dup->remote_cluster_name);
+            ASSERT_EQ(test.remote_cluster_name, dup->remote_cluster_name);
             ASSERT_EQ(test.remote_app_name, resp.remote_app_name);
             ASSERT_EQ(test.remote_app_name, dup->remote_app_name);
             ASSERT_EQ(test.remote_replica_count, resp.remote_replica_count);
@@ -524,23 +528,24 @@ TEST_F(meta_duplication_service_test, dup_op_upon_unavail_app)
     create_app(test_app_unavail);
     find_app(test_app_unavail)->status = app_status::AS_DROPPED;
 
-    dupid_t test_dup = create_dup(kTestAppName).dupid;
-
     struct TestData
     {
         std::string app;
-
         error_code wec;
     } tests[] = {
         {test_app_not_exist, ERR_APP_NOT_EXIST},
         {test_app_unavail, ERR_APP_NOT_EXIST},
-
         {kTestAppName, ERR_OK},
     };
 
     for (auto test : tests) {
+        const auto &resp = create_dup(test.app);
+        ASSERT_EQ(test.wec, resp.err);
+
         ASSERT_EQ(test.wec, query_dup_info(test.app).err);
-        ASSERT_EQ(test.wec, create_dup(test.app).err);
+
+        // For the response with some error, `dupid` doesn't matter.
+        dupid_t test_dup = test.wec == ERR_OK ? resp.dupid : static_cast<dupid_t>(dsn_now_s());
         ASSERT_EQ(test.wec,
                   change_dup_status(test.app, test_dup, duplication_status::DS_REMOVED).err);
     }
