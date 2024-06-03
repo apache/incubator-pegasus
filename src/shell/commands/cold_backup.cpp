@@ -157,8 +157,8 @@ bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
 bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    const std::string query_backup_policy_help = "<policy_name> [-b|--backup_info_cnt] [-j|--json]";
-    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+    const std::string query_backup_policy_help = "<-p|--policy_name> [-b|--backup_info_cnt] [-j|--json]";
+    argh::parser cmd(args.argc, args.argv);
     RETURN_FALSE_IF_NOT(cmd.pos_args().size() > 1,
                         "invalid command, should be in the form of '{}'",
                         query_backup_policy_help);
