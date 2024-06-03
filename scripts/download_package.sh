@@ -54,7 +54,7 @@ if [ ! -f "${PACKAGE_NAME}" ]; then
     echo "Downloading ${PACKAGE_NAME} ..."
 
     DOWNLOAD_URL=${DEFAULT_DOWNLOAD_BASE_URL}${PACKAGE_NAME}
-    if ! wget -T 10 -t 5 "${DOWNLOAD_URL}"; then
+    if ! wget -q -T 10 -t 5 "${DOWNLOAD_URL}"; then
         echo "ERROR: download ${PACKAGE_NAME} failed"
         exit 1
     fi

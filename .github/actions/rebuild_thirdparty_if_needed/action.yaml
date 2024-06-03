@@ -46,4 +46,6 @@ runs:
         ../scripts/download_zk.sh zookeeper-bin
         rm -rf hadoop-bin/share/doc
         rm -rf zookeeper-bin/docs
+        mv thirdparty/hadoop-bin ./
+        mv thirdparty/zookeeper-bin ./
       shell: bash
