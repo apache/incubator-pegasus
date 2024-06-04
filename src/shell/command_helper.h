@@ -71,16 +71,21 @@
                "ERROR: {}\n",                                                                      \
                fmt::format(msg, ##__VA_ARGS__))
 
-#define SHELL_PRINTLN_WARNING(msg, ...)                                                            \
+#define SHELL_PRINT_WARNING_BASE(msg, ...)                                                         \
     fmt::print(stdout,                                                                             \
                fmt::emphasis::bold | fmt::fg(fmt::color::yellow),                                  \
-               "WARNING: {}\n",                                                                    \
+               "WARNING: {}",                                                                      \
                fmt::format(msg, ##__VA_ARGS__))
+
+#define SHELL_PRINT_WARNING(msg, ...) SHELL_PRINT_WARNING_BASE(msg, ##__VA_ARGS__)
+
+#define SHELL_PRINTLN_WARNING(msg, ...)                                                            \
+    SHELL_PRINT_WARNING_BASE("{}\n", fmt::format(msg, ##__VA_ARGS__))
 
 #define SHELL_PRINT_OK_BASE(msg, ...)                                                              \
     fmt::print(stdout, fmt::emphasis::bold | fmt::fg(fmt::color::green), msg, ##__VA_ARGS__)
 
-#define SHELL_PRINT_OK(msg, ...) SHELL_PRINT_OK_BASE("{}", fmt::format(msg, ##__VA_ARGS__))
+#define SHELL_PRINT_OK(msg, ...) SHELL_PRINT_OK_BASE(msg, ##__VA_ARGS__)
 
 #define SHELL_PRINTLN_OK(msg, ...) SHELL_PRINT_OK_BASE("{}\n", fmt::format(msg, ##__VA_ARGS__))
 

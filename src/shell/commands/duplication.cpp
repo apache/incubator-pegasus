@@ -102,7 +102,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         hint = err_resp.get_value().hint;
     }
 
-    if (!err) {
+    if (!err && err.code() != dsn::ERR_DUP_EXIST) {
         SHELL_PRINTLN_ERROR(
             "adding duplication failed [app_name: {}, remote_cluster_name: {}, "
             "is_duplicating_checkpoint: {}, remote_app_name: {}, remote_replica_count: {}, "
@@ -121,15 +121,22 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
+    if (err.code() == dsn::ERR_DUP_EXIST) {
+        SHELL_PRINT_WARNING("duplication has been existing");
+    } else {
+        SHELL_PRINT_OK("adding duplication succeed");
+    }
+
     const auto &resp = err_resp.get_value();
-    SHELL_PRINT_OK(
-        "adding duplication succeed [app_name: {}, remote_cluster_name: {}, appid: {}, dupid: "
-        "{}, is_duplicating_checkpoint: {}",
-        app_name,
-        remote_cluster_name,
-        resp.appid,
-        resp.dupid,
-        is_duplicating_checkpoint);
+    SHELL_PRINT_OK(" [app_name: {}, remote_cluster_name: {}, appid: {}, dupid: {}",
+                   app_name,
+                   remote_cluster_name,
+                   resp.appid,
+                   resp.dupid);
+
+    if (err) {
+        SHELL_PRINT_OK(", is_duplicating_checkpoint: {}", is_duplicating_checkpoint);
+    }
 
     if (resp.__isset.remote_app_name) {
         SHELL_PRINT_OK(", remote_app_name: {}", resp.remote_app_name);
