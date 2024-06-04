@@ -927,19 +927,7 @@ private:
 #define PARSE_OPT_STRS(container, def_val, ...)                                                    \
     do {                                                                                           \
         const auto param = cmd(__VA_ARGS__, (def_val)).str();                                      \
-        ::dsn::utils::split_args(param.c_str(), container, ',');                                   \
-        if (container.empty()) {                                                                   \
-            fmt::print(stderr,                                                                     \
-                       "invalid command, '{}' should be in the form of 'val1,val2,val3' and "      \
-                       "should not be empty\n",                                                    \
-                       param);                                                                     \
-            return false;                                                                          \
-        }                                                                                          \
-        std::set<std::string> str_set(container.begin(), container.end());                         \
-        if (str_set.size() != container.size()) {                                                  \
-            fmt::print(stderr, "invalid command, '{}' has duplicate values\n", param);             \
-            return false;                                                                          \
-        }                                                                                          \
+        ::dsn::utils::split_args(param.c_str(), container, ',');                                                                                                                            \
     } while (false)
 
 // A helper macro to parse command argument, the result is filled in an uint32_t variable named
