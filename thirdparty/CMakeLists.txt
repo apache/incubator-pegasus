@@ -120,26 +120,49 @@ ExternalProject_Add(gperftools
         DOWNLOAD_NO_PROGRESS true
 )
 
-execute_process(COMMAND arch OUTPUT_VARIABLE ARCH_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
-set(HADOOP_VERSION "hadoop-3.3.6")
-if (ARCH_NAME STREQUAL "aarch64")
-    set(HADOOP_PACKAGE_NAME ${HADOOP_VERSION}-${ARCH_NAME})
-    set(HADOOP_MD5 "369f899194a920e0d1c3c3bc1718b3b5")
-else ()
-    # Consider as x86_64 architecture as default
-    set(HADOOP_PACKAGE_NAME ${HADOOP_VERSION})
-    set(HADOOP_MD5 "1cbe1214299cd3bd282d33d3934b5cbd")
-endif ()
-set(HADOOP_URL_PREFIX "https://archive.apache.org/dist/hadoop/common/${HADOOP_VERSION}")
+ExternalProject_Add(abseil
+        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
+        https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
+        URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DABSL_FIND_GOOGLETEST=OFF
+        -DCMAKE_CXX_STANDARD=17
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
 
+ExternalProject_Add(protobuf
+        URL https://github.com/protocolbuffers/protobuf/archive/refs/tags/v27.0.tar.gz
+        URL_MD5 c96aaf02c8acea549d65bb7b2d549bf6
+        CMAKE_ARGS -DCMAKE_BUILD_TYPE=release
+        -Dprotobuf_BUILD_TESTS=OFF
+        -Dprotobuf_BUILD_PROTOC_BINARIES=OFF
+        -Dprotobuf_BUILD_LIBUPB=OFF
+        -Dprotobuf_ABSL_PROVIDER=package
+        -DBUILD_SHARED_LIBS=OFF
+        -DBUILD_SHARED_HDFSPP=OFF
+        -DHDFSPP_LIBRARY_ONLY=ON
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DABSL_ROOT_DIR=${TP_OUTPUT}
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
+set(HDFS_CLIENT_DIR "hadoop-hdfs-project/hadoop-hdfs-native-client")
 ExternalProject_Add(hadoop
-        URL ${HADOOP_URL_PREFIX}/${HADOOP_PACKAGE_NAME}.tar.gz
-        URL_MD5 ${HADOOP_MD5}
+        URL https://mirrors.aliyun.com/apache/hadoop/common/hadoop-3.3.6/hadoop-3.3.6-src.tar.gz
+        URL_MD5 285c07d8ad2c837c8ee04a4fa49c73cd
         PATCH_COMMAND ""
-        COMMAND mkdir -p ${TP_OUTPUT}/include/hdfs/ && cp include/hdfs.h ${TP_OUTPUT}/include/hdfs/ && cp lib/native/libhdfs.a lib/native/libhdfs.so ${TP_OUTPUT}/lib/ && cd ${TP_OUTPUT}/lib/ && ln -sf libhdfs.so libhdfs.so.0.0.0
+        COMMAND cd ${HDFS_CLIENT_DIR} && mvn package -Pdist,native -DskipTests -Dmaven.javadoc.skip=true -Dtar -Dopenssl.prefix=/usr/local/opt/openssl
+        COMMAND cd ${HDFS_CLIENT_DIR} && cp -R target/hadoop-hdfs-native-client-3.3.6/include/. ${TP_OUTPUT}/include/hdfs && cp -R target/hadoop-hdfs-native-client-3.3.6/lib/native/. ${TP_OUTPUT}/lib
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND ""
+        DEPENDS abseil protobuf
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
 )
@@ -312,18 +335,6 @@ ExternalProject_Add(nlohmann_json
         DOWNLOAD_NO_PROGRESS true
 )
 
-ExternalProject_Add(abseil
-        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
-        https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
-        URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DABSL_FIND_GOOGLETEST=OFF
-        -DCMAKE_CXX_STANDARD=17
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-        DOWNLOAD_NO_PROGRESS true
-)
-
 ExternalProject_Add(s2geometry
         URL ${OSS_URL_PREFIX}/s2geometry-0.10.0.tar.gz
         https://github.com/google/s2geometry/archive/refs/tags/v0.10.0.tar.gz
@@ -365,6 +376,7 @@ set(SNAPPY_OPTIONS
         -DSNAPPY_BUILD_BENCHMARKS=OFF
         -DSNAPPY_FUZZING_BUILD=OFF
         -DSNAPPY_INSTALL=ON)
+execute_process(COMMAND arch OUTPUT_VARIABLE ARCH_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
 if (ARCH_NAME STREQUAL "x86_64")
     set(SNAPPY_OPTIONS
             ${SNAPPY_OPTIONS}
