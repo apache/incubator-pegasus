@@ -27,7 +27,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -157,15 +159,28 @@ bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
 bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    const std::string query_backup_policy_help = "<policy_name> [-b|--backup_info_cnt] [-j|--json]";
+    const std::string query_backup_policy_help =
+        "<-p|--policy_name> [-b|--backup_info_cnt] [-j|--json]";
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
-    RETURN_FALSE_IF_NOT(cmd.pos_args().size() > 1,
+    RETURN_FALSE_IF_NOT(cmd.params().size() >= 1,
                         "invalid command, should be in the form of '{}'",
                         query_backup_policy_help);
 
-    int param_index = 1;
     std::vector<std::string> policy_names;
-    PARSE_STRS(policy_names);
+    PARSE_OPT_STRS(policy_names, "", {"-p", "--policy_name"});
+
+    if (policy_names.empty()) {
+        SHELL_PRINTLN_ERROR(
+            "invalid command, policy_name should be in the form of 'val1,val2,val3' and "
+            "should not be empty");
+        return false;
+    }
+
+    std::set<std::string> str_set(policy_names.begin(), policy_names.end());
+    if (str_set.size() != policy_names.size()) {
+        SHELL_PRINTLN_ERROR("invalid command, policy_name has duplicate values");
+        return false;
+    }
 
     uint32_t backup_info_cnt;
     PARSE_OPT_UINT(backup_info_cnt, 3, {"-b", "--backup_info_cnt"});
