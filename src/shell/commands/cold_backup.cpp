@@ -39,7 +39,6 @@
 #include "shell/sds/sds.h"
 #include "utils/error_code.h"
 #include "utils/strings.h"
-#include "utils/fmt_logging.h"
 
 bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
