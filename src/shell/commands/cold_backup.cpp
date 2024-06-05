@@ -167,11 +167,11 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
     std::vector<std::string> policy_names;
     PARSE_OPT_STRS(policy_names, "", {"-p", "--policy_name"});
-    
+
     if (policy_names.empty()) {
         SHELL_PRINTLN_ERROR(
-                "invalid command, policy_name should be in the form of 'val1,val2,val3' and "
-                "should not be empty");
+            "invalid command, policy_name should be in the form of 'val1,val2,val3' and "
+            "should not be empty");
         return false;
     }
 
