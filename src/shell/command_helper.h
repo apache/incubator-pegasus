@@ -929,6 +929,12 @@ private:
         }                                                                                          \
     } while (false)
 
+#define PARSE_OPT_STRS(container, def_val, ...)                                                    \
+    do {                                                                                           \
+        const auto param = cmd(__VA_ARGS__, (def_val)).str();                                      \
+        ::dsn::utils::split_args(param.c_str(), container, ',');                                   \
+    } while (false)
+
 // A helper macro to parse command argument, the result is filled in an uint32_t variable named
 // 'value'.
 #define PARSE_UINT(value)                                                                          \
