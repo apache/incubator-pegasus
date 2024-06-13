@@ -498,6 +498,7 @@ public:
     meta_op_status get_op_status() { return _ms->get_op_status(); }
 
     void unlock_meta_op_status() { return _ms->unlock_meta_op_status(); }
+
 public:
     int32_t APP_ID = 1;
     std::string APP_NAME = "bulk_load_test";

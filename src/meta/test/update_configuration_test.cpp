@@ -24,6 +24,8 @@
  * THE SOFTWARE.
  */
 
+#include <stdlib.h>
+#include <time.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <algorithm>
 #include <atomic>
@@ -32,8 +34,10 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -43,7 +47,10 @@
 #include "dsn.layer2_types.h"
 #include "dummy_balancer.h"
 #include "gtest/gtest.h"
+#include "meta/app_balance_policy.h"
+#include "meta/cluster_balance_policy.h"
 #include "meta/greedy_load_balancer.h"
+#include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_service.h"
@@ -544,6 +551,145 @@ void meta_service_test_app::cannot_run_balancer_test()
 
     // recover original FLAGS_min_live_node_count_for_unfreeze
     FLAGS_min_live_node_count_for_unfreeze = reserved_min_live_node_count_for_unfreeze;
+}
+
+void meta_service_test_app::app_balancer_nodes_blacklist_test()
+{
+    app_mapper apps;
+    node_mapper nodes;
+    nodes_fs_manager manager;
+    srand((unsigned)time(NULL));
+    std::vector<dsn::host_port> node_list;
+    generate_node_list(node_list, 5, 10);
+
+    int disk_on_node = 5;
+
+    generate_apps(apps, node_list, 5, disk_on_node, std::pair<uint32_t, uint32_t>(32, 128), true);
+    generate_node_mapper(nodes, apps, node_list);
+    generate_node_fs_manager(apps, nodes, manager, disk_on_node);
+
+    // set ignored nodes
+    std::string ignored_nodeslist = "localhost:1,localhost:2";
+    std::vector<std::string> args = {"set"};
+    args.emplace_back(ignored_nodeslist);
+
+    LOG_INFO("the ignored nodes is {}", ignored_nodeslist);
+
+    for (const auto &iter : nodes) {
+        LOG_INFO("node({}) have {} primaries, {} partitions",
+                 iter.first,
+                 iter.second.primary_count(),
+                 iter.second.partition_count());
+    }
+    greedy_load_balancer greedy_lb(nullptr);
+    greedy_lb._app_balance_policy.reset();
+
+    std::unique_ptr<load_balance_policy> _app_balance(new app_balance_policy(nullptr));
+    _app_balance->remote_command_balancer_ignored_node_addrs(args);
+    //_app_balance->clear_balancer_ignored_node_addrs();
+    greedy_lb._app_balance_policy.reset(_app_balance.release());
+
+    migration_list ml;
+    // iterate 100 times balance
+
+    for (int i = 0; i < 1000 && greedy_lb.balance({&apps, &nodes}, ml); ++i) {
+        LOG_DEBUG("the {}th round of balancer", i);
+        migration_check_and_apply(apps, nodes, ml, &manager);
+        for (const auto &ml_pair : ml) {
+            // If the migration_list does not contain the ignored app's gpid, it indicates that the
+            // app blacklist is effective.
+            for (configuration_proposal_action it : ml_pair.second->action_list) {
+                if (it.type == 2 || it.type == 5)
+                    continue;
+                CHECK_TRUE(
+                    greedy_lb._app_balance_policy->_balancer_ignored_nodes.count(it.hp_node) == 0);
+            }
+        }
+        greedy_lb.check({&apps, &nodes}, ml);
+        LOG_DEBUG("balance checker operation count = {}", ml.size());
+    }
+
+    for (const auto &iter : nodes) {
+        LOG_INFO("node({}) have {} primaries, {} partitions",
+                 iter.first,
+                 iter.second.primary_count(),
+                 iter.second.partition_count());
+    }
+}
+
+void meta_service_test_app::cluster_balancer_nodes_blacklist_test()
+{
+    app_mapper apps;
+    node_mapper nodes;
+    nodes_fs_manager manager;
+    srand((unsigned)time(NULL));
+    std::vector<dsn::host_port> node_list;
+    generate_node_list(node_list, 5, 10);
+
+    int disk_on_node = 5;
+
+    generate_apps(apps, node_list, 5, disk_on_node, std::pair<uint32_t, uint32_t>(32, 128), true);
+    generate_node_mapper(nodes, apps, node_list);
+    generate_node_fs_manager(apps, nodes, manager, disk_on_node);
+
+    // set ignored nodes
+    std::string ignored_nodeslist = "localhost:2";
+    std::vector<std::string> args = {"set"};
+    args.emplace_back(ignored_nodeslist);
+
+    LOG_INFO("the ignored nodes is {}", ignored_nodeslist);
+
+    for (const auto &iter : nodes) {
+        LOG_INFO("node({}) have {} primaries, {} partitions",
+                 iter.first,
+                 iter.second.primary_count(),
+                 iter.second.partition_count());
+    }
+
+    greedy_load_balancer greedy_lb(nullptr);
+    greedy_lb._cluster_balance_policy.reset();
+    std::unique_ptr<load_balance_policy> _cluster_balance(new cluster_balance_policy(nullptr));
+    _cluster_balance->remote_command_balancer_ignored_node_addrs(args);
+    //_cluster_balance->clear_balancer_ignored_node_addrs();
+    greedy_lb._cluster_balance_policy.reset(_cluster_balance.release());
+
+    update_flag("balance_cluster", "true");
+
+    migration_list ml;
+    // iterate 100 times balance
+    for (int i = 0; i < 10000 && greedy_lb.balance({&apps, &nodes}, ml); ++i) {
+        LOG_DEBUG("the {} th round of balancer", i);
+        migration_check_and_apply(apps, nodes, ml, &manager);
+        for (const auto &ml_pair : ml) {
+            // If the migration_list does not contain the ignored app's gpid, it indicates that the
+            // app blacklist is effective.
+            for (configuration_proposal_action it : ml_pair.second->action_list) {
+                if (it.type == 2 || it.type == 5)
+                    continue;
+                CHECK_TRUE(greedy_lb._cluster_balance_policy->_balancer_ignored_nodes.count(
+                               it.hp_node) == 0);
+            }
+        }
+        LOG_DEBUG("balance checker operation count = {}", ml.size());
+        greedy_lb.check({&apps, &nodes}, ml);
+    }
+
+    for (const auto &iter : nodes) {
+        LOG_INFO("node({}) have {} primaries, {} partitions",
+                 iter.first,
+                 iter.second.primary_count(),
+                 iter.second.partition_count());
+    }
+
+    for (const auto &iter : apps) {
+        for (auto node : nodes) {
+            LOG_INFO("app {} node({}) have {} primaries, {} partitions",
+                     iter.first,
+                     node.first,
+                     node.second.primary_count(iter.first),
+                     node.second.partition_count(iter.first));
+        }
+    }
 }
 } // namespace replication
 } // namespace dsn

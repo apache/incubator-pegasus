@@ -89,8 +89,12 @@ TEST(cluster_balance_policy, get_skew)
         {host_port("localhost", 10086), 3},
         {host_port("localhost", 10087), 5},
     };
+    std::set<dsn::host_port> balancer_ignored_nodes;
 
-    ASSERT_EQ(get_skew(count_map), count_map.rbegin()->second - count_map.begin()->second);
+    ASSERT_EQ(get_skew(count_map, balancer_ignored_nodes),
+              count_map.rbegin()->second - count_map.begin()->second);
+    balancer_ignored_nodes.insert(host_port("localhost", 10085));
+    ASSERT_EQ(get_skew(count_map, balancer_ignored_nodes), 2);
 }
 
 TEST(cluster_balance_policy, get_partition_count)
@@ -194,16 +198,29 @@ TEST(cluster_balance_policy, get_node_migration_info)
 TEST(cluster_balance_policy, get_min_max_set)
 {
     std::map<host_port, uint32_t> node_count_map;
+    std::set<dsn::host_port> balancer_ignored_nodes;
     node_count_map.emplace(host_port("localhost", 10081), 1);
     node_count_map.emplace(host_port("localhost", 10082), 3);
     node_count_map.emplace(host_port("localhost", 10083), 5);
     node_count_map.emplace(host_port("localhost", 10084), 5);
 
     std::set<host_port> min_set, max_set;
-    get_min_max_set(node_count_map, min_set, max_set);
+    get_min_max_set(node_count_map, min_set, max_set, balancer_ignored_nodes);
 
     ASSERT_EQ(min_set.size(), 1);
     ASSERT_EQ(*min_set.begin(), host_port("localhost", 10081));
+    ASSERT_EQ(max_set.size(), 2);
+    ASSERT_EQ(*max_set.begin(), host_port("localhost", 10083));
+    ASSERT_EQ(*max_set.rbegin(), host_port("localhost", 10084));
+
+    node_count_map.emplace(host_port("localhost", 10085), 6);
+    balancer_ignored_nodes.insert(host_port("localhost", 10081));
+    balancer_ignored_nodes.insert(host_port("localhost", 10085));
+    min_set.clear();
+    max_set.clear();
+    get_min_max_set(node_count_map, min_set, max_set, balancer_ignored_nodes);
+    ASSERT_EQ(min_set.size(), 1);
+    ASSERT_EQ(*min_set.begin(), host_port("localhost", 10082));
     ASSERT_EQ(max_set.size(), 2);
     ASSERT_EQ(*max_set.begin(), host_port("localhost", 10083));
     ASSERT_EQ(*max_set.rbegin(), host_port("localhost", 10084));

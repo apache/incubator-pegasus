@@ -83,6 +83,13 @@ TEST(meta, adjust_dropped_size) { g_app->adjust_dropped_size(); }
 
 TEST(meta, app_envs_basic_test) { g_app->app_envs_basic_test(); }
 
+TEST(meta, app_balancer_nodes_blacklist_test) { g_app->app_balancer_nodes_blacklist_test(); }
+
+TEST(meta, cluster_balancer_nodes_blacklist_test)
+{
+    g_app->cluster_balancer_nodes_blacklist_test();
+}
+
 dsn::error_code meta_service_test_app::start(const std::vector<std::string> &args)
 {
     if (FLAGS_random_seed == 0) {

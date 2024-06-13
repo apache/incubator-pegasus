@@ -78,6 +78,8 @@ private:
     std::unique_ptr<load_balance_policy> _cluster_balance_policy;
 
     std::unique_ptr<command_deregister> _get_balance_operation_count;
+    friend class meta_service_test_app;
+    friend class meta_service_test;
 
 private:
     void greedy_balancer(bool balance_checker);

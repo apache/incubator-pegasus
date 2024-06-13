@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <functional>
-#include <iterator>
 #include <map>
 #include <set>
 
@@ -66,6 +65,12 @@ app_balance_policy::app_balance_policy(meta_service *svc) : load_balance_policy(
 void app_balance_policy::balance(bool checker, const meta_view *global_view, migration_list *list)
 {
     init(global_view, list);
+
+    if (_alive_nodes - _balancer_ignored_nodes.size() < 2) {
+        LOG_WARNING("the nodes that could balance is less 2");
+        return;
+    }
+
     const app_mapper &apps = *_global_view->apps;
     if (!execute_balance(apps,
                          checker,
@@ -116,7 +121,7 @@ bool app_balance_policy::copy_secondary(const std::shared_ptr<app_state> &app, b
     int replicas_low = app->partition_count / _alive_nodes;
 
     std::unique_ptr<copy_replica_operation> operation = std::make_unique<copy_secondary_operation>(
-        app, apps, nodes, host_port_vec, host_port_id, replicas_low);
+        app, apps, nodes, host_port_vec, host_port_id, _balancer_ignored_nodes, replicas_low);
     return operation->start(_migration_result);
 }
 
@@ -126,16 +131,17 @@ copy_secondary_operation::copy_secondary_operation(
     node_mapper &nodes,
     const std::vector<dsn::host_port> &host_port_vec,
     const std::unordered_map<dsn::host_port, int> &host_port_id,
+    const std::set<dsn::host_port> balancer_ignored_nodes,
     int replicas_low)
-    : copy_replica_operation(app, apps, nodes, host_port_vec, host_port_id),
+    : copy_replica_operation(app, apps, nodes, host_port_vec, host_port_id, balancer_ignored_nodes),
       _replicas_low(replicas_low)
 {
 }
 
 bool copy_secondary_operation::can_continue()
 {
-    int id_min = *_ordered_host_port_ids.begin();
-    int id_max = *_ordered_host_port_ids.rbegin();
+    int id_min = find_min_load_nodes_without_blacklist();
+    int id_max = find_max_load_nodes_without_blacklist();
     if (_partition_counts[id_max] <= _replicas_low ||
         _partition_counts[id_max] - _partition_counts[id_min] <= 1) {
         LOG_INFO("{}: stop copy secondary coz it will be balanced later", _app->get_logname());
@@ -151,7 +157,7 @@ int copy_secondary_operation::get_partition_count(const node_state &ns) const
 
 bool copy_secondary_operation::can_select(gpid pid, migration_list *result)
 {
-    int id_max = *_ordered_host_port_ids.rbegin();
+    int id_max = find_max_load_nodes_without_blacklist();
     const node_state &max_ns = _nodes.at(_host_port_vec[id_max]);
     if (max_ns.served_as(pid) == partition_status::PS_PRIMARY) {
         LOG_DEBUG("{}: skip gpid({}.{}) coz it is primary",
@@ -170,7 +176,7 @@ bool copy_secondary_operation::can_select(gpid pid, migration_list *result)
         return false;
     }
 
-    int id_min = *_ordered_host_port_ids.begin();
+    int id_min = find_min_load_nodes_without_blacklist();
     const node_state &min_ns = _nodes.at(_host_port_vec[id_min]);
     if (min_ns.served_as(pid) != partition_status::PS_INACTIVE) {
         LOG_DEBUG("{}: skip gpid({}.{}) coz it is already a member on the target node",

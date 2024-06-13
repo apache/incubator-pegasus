@@ -58,6 +58,7 @@ public:
     virtual error_code get_result(unsigned int entry_index) override;
 
     std::shared_ptr<zookeeper_session::zoo_atomic_packet> packet() { return _pkt; }
+
 private:
     std::shared_ptr<zookeeper_session::zoo_atomic_packet> _pkt;
 };
@@ -429,5 +430,5 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(ref_this,
         break;
     }
 }
-}
-}
+} // namespace dist
+} // namespace dsn

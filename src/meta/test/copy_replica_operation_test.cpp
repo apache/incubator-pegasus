@@ -68,7 +68,9 @@ TEST(copy_primary_operation, misc)
     host_port_id[hp1] = 0;
     host_port_id[hp2] = 1;
     host_port_id[hp3] = 2;
-    copy_primary_operation op(app, apps, nodes, host_port_vec, host_port_id, false, 0);
+    std::set<dsn::host_port> balancer_ignored_nodes;
+    copy_primary_operation op(
+        app, apps, nodes, host_port_vec, host_port_id, balancer_ignored_nodes, false, 0);
 
     /**
      * Test init_ordered_host_port_ids
@@ -168,7 +170,9 @@ TEST(copy_primary_operation, can_select)
     node_mapper nodes;
     std::vector<dsn::host_port> host_port_vec;
     std::unordered_map<dsn::host_port, int> host_port_id;
-    copy_primary_operation op(nullptr, apps, nodes, host_port_vec, host_port_id, false, false);
+    std::set<dsn::host_port> balancer_ignored_nodes;
+    copy_primary_operation op(
+        nullptr, apps, nodes, host_port_vec, host_port_id, balancer_ignored_nodes, false, false);
 
     gpid cannot_select_gpid(1, 1);
     gpid can_select_gpid(1, 2);
@@ -185,7 +189,9 @@ TEST(copy_primary_operation, only_copy_primary)
     node_mapper nodes;
     std::vector<dsn::host_port> host_port_vec;
     std::unordered_map<dsn::host_port, int> host_port_id;
-    copy_primary_operation op(nullptr, apps, nodes, host_port_vec, host_port_id, false, false);
+    std::set<dsn::host_port> balancer_ignored_nodes;
+    copy_primary_operation op(
+        nullptr, apps, nodes, host_port_vec, host_port_id, balancer_ignored_nodes, false, false);
 
     ASSERT_TRUE(op.only_copy_primary());
 }
@@ -221,7 +227,9 @@ TEST(copy_secondary_operation, misc)
     host_port_id[hp1] = 0;
     host_port_id[hp2] = 1;
     host_port_id[hp3] = 2;
-    copy_secondary_operation op(app, apps, nodes, host_port_vec, host_port_id, 0);
+    std::set<dsn::host_port> balancer_ignored_nodes;
+    copy_secondary_operation op(
+        app, apps, nodes, host_port_vec, host_port_id, balancer_ignored_nodes, 0);
     op.init_ordered_host_port_ids();
 
     /**

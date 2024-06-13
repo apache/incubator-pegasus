@@ -19,16 +19,17 @@
 
 #include <gtest/gtest_prod.h>
 #include <memory>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
 #include "load_balance_policy.h"
 #include "meta/meta_data.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/command_manager.h"
 
 namespace dsn {
 class gpid;
-class host_port;
 
 namespace replication {
 class meta_service;
@@ -51,6 +52,11 @@ private:
     bool _balancer_in_turn;
     bool _only_primary_balancer;
     bool _only_move_primary;
+
+    std::set<dsn::host_port> ignored_nodes;
+
+    friend class meta_service_test_app;
+    friend class meta_service_test;
 };
 
 class copy_secondary_operation : public copy_replica_operation
@@ -61,6 +67,7 @@ public:
                              node_mapper &nodes,
                              const std::vector<dsn::host_port> &address_vec,
                              const std::unordered_map<dsn::host_port, int> &address_id,
+                             const std::set<dsn::host_port> balancer_ignored_nodes,
                              int replicas_low);
     ~copy_secondary_operation() = default;
 

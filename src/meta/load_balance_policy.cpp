@@ -24,7 +24,6 @@
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <algorithm>
-#include <iterator>
 #include <limits>
 #include <mutex>
 #include <ostream>
@@ -193,8 +192,11 @@ generate_balancer_request(const app_mapper &apps,
     return std::make_shared<configuration_balancer_request>(std::move(result));
 }
 
+std::set<app_id> load_balance_policy::_balancer_ignored_apps;
+std::set<dsn::host_port> load_balance_policy::_balancer_ignored_nodes;
+
 load_balance_policy::load_balance_policy(meta_service *svc)
-    : _svc(svc), _ctrl_balancer_ignored_apps(nullptr)
+    : _svc(svc), _ctrl_balancer_ignored_apps(nullptr), _ctrl_balancer_ignored_nodes(nullptr)
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
@@ -204,6 +206,13 @@ load_balance_policy::load_balance_policy(meta_service *svc)
             "<get|set|clear> [set_app_id1,set_app_id2,...]",
             [this](const std::vector<std::string> &args) {
                 return remote_command_balancer_ignored_app_ids(args);
+            });
+        _ctrl_balancer_ignored_nodes = dsn::command_manager::instance().register_single_command(
+            "meta.lb.ignored_nodes_list",
+            "meta.lb.ignored_nodes_list <get|set|clear> [node_addr1,nodes_addr2..]",
+            "get, set and clear balancer ignored_node_list",
+            [this](const std::vector<std::string> &args) {
+                return remote_command_balancer_ignored_node_addrs(args);
             });
     });
 }
@@ -255,8 +264,14 @@ bool load_balance_policy::copy_primary(const std::shared_ptr<app_state> &app,
     const app_mapper &apps = *_global_view->apps;
     int replicas_low = app->partition_count / _alive_nodes;
 
-    auto operation = std::make_unique<copy_primary_operation>(
-        app, apps, nodes, host_port_vec, host_port_id, still_have_less_than_average, replicas_low);
+    auto operation = std::make_unique<copy_primary_operation>(app,
+                                                              apps,
+                                                              nodes,
+                                                              host_port_vec,
+                                                              host_port_id,
+                                                              _balancer_ignored_nodes,
+                                                              still_have_less_than_average,
+                                                              replicas_low);
     return operation->start(_migration_result);
 }
 
@@ -487,6 +502,86 @@ bool load_balance_policy::is_ignored_app(app_id app_id)
     return _balancer_ignored_apps.find(app_id) != _balancer_ignored_apps.end();
 }
 
+std::string load_balance_policy::remote_command_balancer_ignored_node_addrs(
+    const std::vector<std::string> &args)
+{
+    static const std::string invalid_arguments_message("invalid arguments");
+    nlohmann::json info;
+    do {
+        if (args.empty()) {
+            break;
+        }
+        if (args[0] == "set") {
+            return set_balancer_ignored_node_addrs(args);
+        } else if (args[0] == "get") {
+            return get_balancer_ignored_node_addrs();
+        } else if (args[0] == "clear") {
+            return clear_balancer_ignored_node_addrs();
+        }
+    } while (false);
+    info["error"] = invalid_arguments_message;
+    return info.dump(2);
+}
+
+std::string
+load_balance_policy::set_balancer_ignored_node_addrs(const std::vector<std::string> &args)
+{
+    nlohmann::json info;
+    info["error"] = "invalid argument";
+    if (args.size() != 2) {
+        return info.dump(2);
+    }
+
+    std::vector<std::string> ip_ports;
+    dsn::utils::split_args(args[1].c_str(), ip_ports, ',');
+    if (ip_ports.empty()) {
+        return info.dump(2);
+    }
+
+    std::set<dsn::host_port> addr_list;
+    for (const std::string &ip_port_str : ip_ports) {
+        const auto hp = host_port::from_string(ip_port_str);
+        if (!hp) {
+            return info.dump(2);
+        }
+        addr_list.insert(hp);
+    }
+
+    {
+        dsn::zauto_write_lock l(_balancer_ignored_nodes_lock);
+        _balancer_ignored_nodes = std::move(addr_list);
+    }
+    info["error"] = "ok";
+    return info.dump(2);
+}
+
+std::string load_balance_policy::get_balancer_ignored_node_addrs()
+{
+    nlohmann::json data;
+    {
+        dsn::zauto_read_lock l(_balancer_ignored_nodes_lock);
+        data["ignored_node_addr_list"] = fmt::format("{}", fmt::join(_balancer_ignored_nodes, ","));
+    }
+    return data.dump(2);
+}
+
+std::string load_balance_policy::clear_balancer_ignored_node_addrs()
+{
+    {
+        dsn::zauto_write_lock l(_balancer_ignored_nodes_lock);
+        _balancer_ignored_nodes.clear();
+    }
+    nlohmann::json info;
+    info["error"] = "ok";
+    return info.dump(2);
+}
+
+bool load_balance_policy::is_ignored_node(dsn::host_port hp)
+{
+    dsn::zauto_read_lock l(_balancer_ignored_nodes_lock);
+    return _balancer_ignored_nodes.count(hp) != 0;
+}
+
 void load_balance_policy::number_nodes(const node_mapper &nodes)
 {
     int current_id = 1;
@@ -640,12 +735,14 @@ copy_replica_operation::copy_replica_operation(
     const app_mapper &apps,
     node_mapper &nodes,
     const std::vector<dsn::host_port> &host_port_vec,
-    const std::unordered_map<dsn::host_port, int> &host_port_id)
+    const std::unordered_map<dsn::host_port, int> &host_port_id,
+    const std::set<dsn::host_port> balancer_ignored_nodes)
     : _app(app),
       _apps(apps),
       _nodes(nodes),
       _host_port_vec(host_port_vec),
-      _host_port_id(host_port_id)
+      _host_port_id(host_port_id),
+      _balancer_ignored_nodes(balancer_ignored_nodes)
 {
 }
 
@@ -675,7 +772,7 @@ bool copy_replica_operation::start(migration_list *result)
 
 const partition_set *copy_replica_operation::get_all_partitions()
 {
-    int id_max = *_ordered_host_port_ids.rbegin();
+    int id_max = find_max_load_nodes_without_blacklist();
     const node_state &ns = _nodes.find(_host_port_vec[id_max])->second;
     const partition_set *partitions = ns.partitions(_app->app_id, only_copy_primary());
     return partitions;
@@ -684,7 +781,7 @@ const partition_set *copy_replica_operation::get_all_partitions()
 gpid copy_replica_operation::select_max_load_gpid(const partition_set *partitions,
                                                   migration_list *result)
 {
-    int id_max = *_ordered_host_port_ids.rbegin();
+    int id_max = find_max_load_nodes_without_blacklist();
     const auto &load_on_max = _node_loads.at(_host_port_vec[id_max]);
 
     gpid selected_pid(-1, -1);
@@ -706,8 +803,8 @@ gpid copy_replica_operation::select_max_load_gpid(const partition_set *partition
 
 void copy_replica_operation::copy_once(gpid selected_pid, migration_list *result)
 {
-    const auto &from = _host_port_vec[*_ordered_host_port_ids.rbegin()];
-    const auto &to = _host_port_vec[*_ordered_host_port_ids.begin()];
+    const auto &from = _host_port_vec[find_max_load_nodes_without_blacklist()];
+    const auto &to = _host_port_vec[find_min_load_nodes_without_blacklist()];
 
     auto pc = _app->partitions[selected_pid.get_partition_index()];
     auto request = generate_balancer_request(_apps, pc, get_balance_type(), from, to);
@@ -716,13 +813,13 @@ void copy_replica_operation::copy_once(gpid selected_pid, migration_list *result
 
 void copy_replica_operation::update_ordered_host_port_ids()
 {
-    int id_min = *_ordered_host_port_ids.begin();
-    int id_max = *_ordered_host_port_ids.rbegin();
+    int id_min = find_min_load_nodes_without_blacklist();
+    int id_max = find_max_load_nodes_without_blacklist();
     --_partition_counts[id_max];
     ++_partition_counts[id_min];
 
-    _ordered_host_port_ids.erase(_ordered_host_port_ids.begin());
-    _ordered_host_port_ids.erase(--_ordered_host_port_ids.end());
+    earse_max_node_without_blacknode();
+    earse_min_node_without_blacknode();
 
     _ordered_host_port_ids.insert(id_max);
     _ordered_host_port_ids.insert(id_min);
@@ -747,13 +844,60 @@ void copy_replica_operation::init_ordered_host_port_ids()
         ordered_queue.insert(id);
     }
     _ordered_host_port_ids.swap(ordered_queue);
+    for (auto iter : _balancer_ignored_nodes) {
+        if (_host_port_id.count(iter) == 0)
+            continue;
+        _balancer_ignored_nodes_id.insert(_host_port_id.at(iter));
+        LOG_INFO("the ignored node id is {}", _host_port_id.at(iter));
+    }
+}
+
+int copy_replica_operation::find_max_load_nodes_without_blacklist()
+{
+    auto iter = --_ordered_host_port_ids.end();
+    while (_balancer_ignored_nodes_id.count(*iter) != 0) {
+        --iter;
+    }
+    return *iter;
+}
+
+int copy_replica_operation::find_min_load_nodes_without_blacklist()
+{
+    auto iter = _ordered_host_port_ids.begin();
+    while (_balancer_ignored_nodes_id.count(*iter) != 0) {
+        iter++;
+    }
+    return *iter;
+}
+
+void copy_replica_operation::earse_max_node_without_blacknode()
+{
+    auto iter = --_ordered_host_port_ids.end();
+    while (_balancer_ignored_nodes_id.count(*iter) != 0) {
+        --iter;
+    }
+    _ordered_host_port_ids.erase(iter);
+}
+
+void copy_replica_operation::earse_min_node_without_blacknode()
+{
+    auto iter = _ordered_host_port_ids.begin();
+    while (_balancer_ignored_nodes_id.count(*iter) != 0) {
+        iter++;
+    }
+    _ordered_host_port_ids.erase(iter);
+}
+
+bool copy_replica_operation::is_ignored_node(dsn::host_port hp)
+{
+    return _balancer_ignored_nodes.count(hp) != 0;
 }
 
 gpid copy_replica_operation::select_partition(migration_list *result)
 {
     const partition_set *partitions = get_all_partitions();
 
-    int id_max = *_ordered_host_port_ids.rbegin();
+    int id_max = find_max_load_nodes_without_blacklist();
     const node_state &ns = _nodes.find(_host_port_vec[id_max])->second;
     CHECK(partitions != nullptr && !partitions->empty(),
           "max load({}) shouldn't empty",
@@ -768,9 +912,10 @@ copy_primary_operation::copy_primary_operation(
     node_mapper &nodes,
     const std::vector<dsn::host_port> &host_port_vec,
     const std::unordered_map<dsn::host_port, int> &host_port_id,
+    const std::set<dsn::host_port> balancer_ignored_nodes,
     bool have_lower_than_average,
     int replicas_low)
-    : copy_replica_operation(app, apps, nodes, host_port_vec, host_port_id)
+    : copy_replica_operation(app, apps, nodes, host_port_vec, host_port_id, balancer_ignored_nodes)
 {
     _have_lower_than_average = have_lower_than_average;
     _replicas_low = replicas_low;
@@ -788,14 +933,14 @@ bool copy_primary_operation::can_select(gpid pid, migration_list *result)
 
 bool copy_primary_operation::can_continue()
 {
-    int id_min = *_ordered_host_port_ids.begin();
+    int id_min = find_min_load_nodes_without_blacklist();
+    int id_max = find_max_load_nodes_without_blacklist();
     if (_have_lower_than_average && _partition_counts[id_min] >= _replicas_low) {
         LOG_INFO("{}: stop the copy due to primaries on all nodes will reach low later.",
                  _app->get_logname());
         return false;
     }
 
-    int id_max = *_ordered_host_port_ids.rbegin();
     if (!_have_lower_than_average && _partition_counts[id_max] - _partition_counts[id_min] <= 1) {
         LOG_INFO("{}: stop the copy due to the primary will be balanced later.",
                  _app->get_logname());

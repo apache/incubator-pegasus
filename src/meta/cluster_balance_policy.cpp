@@ -67,10 +67,20 @@ uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t ap
     return (uint32_t)count;
 }
 
-uint32_t get_skew(const std::map<host_port, uint32_t> &count_map)
+uint32_t get_skew(const std::map<host_port, uint32_t> &count_map,
+                  std::set<dsn::host_port> balancer_ignored_nodes)
 {
     uint32_t min = UINT_MAX, max = 0;
+
+    for (auto iter : balancer_ignored_nodes) {
+        LOG_INFO("get_skew the ignored node is {}", iter);
+    }
+
     for (const auto &kv : count_map) {
+        if (balancer_ignored_nodes.count(kv.first) != 0) {
+            continue;
+        }
+        LOG_INFO("the  node is {}", kv.first);
         if (kv.second < min) {
             min = kv.second;
         }
@@ -83,17 +93,31 @@ uint32_t get_skew(const std::map<host_port, uint32_t> &count_map)
 
 void get_min_max_set(const std::map<host_port, uint32_t> &node_count_map,
                      /*out*/ std::set<host_port> &min_set,
-                     /*out*/ std::set<host_port> &max_set)
+                     /*out*/ std::set<host_port> &max_set,
+                     std::set<dsn::host_port> balancer_ignored_nodes)
 {
     std::multimap<uint32_t, host_port> count_multimap = utils::flip_map(node_count_map);
 
-    auto range = count_multimap.equal_range(count_multimap.begin()->first);
-    for (auto iter = range.first; iter != range.second; ++iter) {
+    auto iter = count_multimap.begin();
+    while (iter != count_multimap.end() && balancer_ignored_nodes.count(iter->second) != 0) {
+        ++iter;
+    }
+    auto min_range = count_multimap.equal_range(iter->first);
+    for (auto iter = min_range.first; iter != min_range.second; ++iter) {
+        if (balancer_ignored_nodes.count(iter->second) != 0)
+            continue;
         min_set.insert(iter->second);
     }
 
-    range = count_multimap.equal_range(count_multimap.rbegin()->first);
-    for (auto iter = range.first; iter != range.second; ++iter) {
+    auto iter_max = count_multimap.rbegin();
+    while (iter_max != count_multimap.rend() &&
+           balancer_ignored_nodes.count(iter_max->second) != 0) {
+        --iter_max;
+    }
+    auto max_range = count_multimap.equal_range(iter_max->first);
+    for (auto iter = max_range.first; iter != max_range.second; ++iter) {
+        if (balancer_ignored_nodes.count(iter->second) != 0)
+            continue;
         max_set.insert(iter->second);
     }
 }
@@ -105,6 +129,11 @@ void cluster_balance_policy::balance(bool checker,
                                      migration_list *list)
 {
     init(global_view, list);
+
+    if (_alive_nodes - _ignored_nodes.size() < 2) {
+        LOG_WARNING("the nodes that could balance is less 2");
+        return;
+    }
 
     if (!execute_balance(*_global_view->apps,
                          false, /* balance_checker */
@@ -198,8 +227,8 @@ bool cluster_balance_policy::get_cluster_migration_info(
         if (!get_app_migration_info(app, nodes, type, info)) {
             return false;
         }
+        cluster_info.apps_skew[kv.first] = get_skew(info.replicas_count, _balancer_ignored_nodes);
         cluster_info.apps_info.emplace(kv.first, std::move(info));
-        cluster_info.apps_skew[kv.first] = get_skew(info.replicas_count);
     }
 
     for (const auto &kv : nodes) {
@@ -282,7 +311,7 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
         return false;
     }
 
-    auto server_skew = get_skew(cluster_info.replicas_count);
+    auto server_skew = get_skew(cluster_info.replicas_count, _balancer_ignored_nodes);
     if (max_app_skew <= 1 && server_skew <= 1) {
         LOG_INFO("every app is balanced and the cluster as a whole is balanced");
         return false;
@@ -295,7 +324,10 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
      **/
     std::set<host_port> cluster_min_count_nodes;
     std::set<host_port> cluster_max_count_nodes;
-    get_min_max_set(cluster_info.replicas_count, cluster_min_count_nodes, cluster_max_count_nodes);
+    get_min_max_set(cluster_info.replicas_count,
+                    cluster_min_count_nodes,
+                    cluster_max_count_nodes,
+                    _balancer_ignored_nodes);
 
     bool found = false;
     auto app_range = app_skew_multimap.equal_range(max_app_skew);
@@ -308,7 +340,7 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
         auto app_map = it->second.replicas_count;
         std::set<host_port> app_min_count_nodes;
         std::set<host_port> app_max_count_nodes;
-        get_min_max_set(app_map, app_min_count_nodes, app_max_count_nodes);
+        get_min_max_set(app_map, app_min_count_nodes, app_max_count_nodes, _balancer_ignored_nodes);
 
         /**
          * Compute the intersection of the replica servers most loaded for the app
@@ -327,7 +359,19 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
          * cluster skew the same or make it worse while keeping the app balanced.
          **/
         std::multimap<uint32_t, host_port> app_count_multimap = utils::flip_map(app_map);
-        if (app_count_multimap.rbegin()->first <= app_count_multimap.begin()->first + 1 &&
+
+        auto app_min_partition = app_count_multimap.begin();
+        while (app_min_partition != app_count_multimap.end() &&
+               is_ignored_node(app_min_partition->second)) {
+            ++app_min_partition;
+        }
+        auto app_max_partition = app_count_multimap.rbegin();
+        while (app_max_partition != app_count_multimap.rend() &&
+               is_ignored_node(app_max_partition->second)) {
+            --app_max_partition;
+        }
+
+        if (app_max_partition->first <= app_min_partition->first + 1 &&
             (app_cluster_min_set.empty() || app_cluster_max_set.empty())) {
             LOG_INFO("do not move replicas of a balanced app({}) if the least (most) loaded "
                      "servers overall do not intersect the servers hosting the least (most) "
@@ -554,7 +598,7 @@ bool cluster_balance_policy::apply_move(const move_info &move,
         move.pid, generate_balancer_request(*_global_view->apps, pc, move.type, source, target));
     selected_pids.insert(move.pid);
 
-    cluster_info.apps_skew[app_id] = get_skew(app_info.replicas_count);
+    cluster_info.apps_skew[app_id] = get_skew(app_info.replicas_count, _balancer_ignored_nodes);
     cluster_info.apps_info[app_id] = app_info;
     cluster_info.nodes_info[source] = node_source;
     cluster_info.nodes_info[target] = node_target;

@@ -88,7 +88,7 @@ public:
 protected:
     void init(const meta_view *global_view, migration_list *list);
     bool is_ignored_app(app_id app_id);
-
+    bool is_ignored_node(dsn::host_port hp);
     bool execute_balance(
         const app_mapper &apps,
         bool balance_checker,
@@ -110,9 +110,14 @@ protected:
 
     // the app set which won't be re-balanced
     dsn::zrwlock_nr _balancer_ignored_apps_lock; // {
-    std::set<app_id> _balancer_ignored_apps;
+    static std::set<app_id> _balancer_ignored_apps;
     // }
     std::unique_ptr<command_deregister> _ctrl_balancer_ignored_apps;
+
+    // the node set which won't be re-balanced
+    dsn::zrwlock_nr _balancer_ignored_nodes_lock;
+    static std::set<dsn::host_port> _balancer_ignored_nodes;
+    std::unique_ptr<command_deregister> _ctrl_balancer_ignored_nodes;
 
 private:
     void start_moving_primary(const std::shared_ptr<app_state> &app,
@@ -136,6 +141,13 @@ private:
     std::string get_balancer_ignored_app_ids();
     std::string clear_balancer_ignored_app_ids();
 
+    std::string remote_command_balancer_ignored_node_addrs(const std::vector<std::string> &args);
+    std::string set_balancer_ignored_node_addrs(const std::vector<std::string> &args);
+    std::string get_balancer_ignored_node_addrs();
+    std::string clear_balancer_ignored_node_addrs();
+
+    friend class meta_service_test_app;
+    friend class meta_service_test;
     FRIEND_TEST(cluster_balance_policy, calc_potential_moving);
 };
 
@@ -245,7 +257,8 @@ public:
                            const app_mapper &apps,
                            node_mapper &nodes,
                            const std::vector<dsn::host_port> &host_port_vec,
-                           const std::unordered_map<dsn::host_port, int> &host_port_id);
+                           const std::unordered_map<dsn::host_port, int> &host_port_id,
+                           const std::set<dsn::host_port> balancer_ignored_nodes);
     virtual ~copy_replica_operation() = default;
 
     bool start(migration_list *result);
@@ -253,6 +266,12 @@ public:
 protected:
     void init_ordered_host_port_ids();
     virtual int get_partition_count(const node_state &ns) const = 0;
+    bool is_ignored_node(dsn::host_port hp);
+    void update_ignored_nodes_order();
+    int find_max_load_nodes_without_blacklist();
+    int find_min_load_nodes_without_blacklist();
+    void earse_max_node_without_blacknode();
+    void earse_min_node_without_blacknode();
 
     gpid select_partition(migration_list *result);
     const partition_set *get_all_partitions();
@@ -272,6 +291,8 @@ protected:
     const std::unordered_map<dsn::host_port, int> &_host_port_id;
     std::unordered_map<dsn::host_port, disk_load> _node_loads;
     std::vector<int> _partition_counts;
+    const std::set<dsn::host_port> _balancer_ignored_nodes;
+    std::set<int> _balancer_ignored_nodes_id;
 
     FRIEND_TEST(copy_primary_operation, misc);
     FRIEND_TEST(copy_replica_operation, get_all_partitions);
@@ -285,6 +306,7 @@ public:
                            node_mapper &nodes,
                            const std::vector<dsn::host_port> &host_port_vec,
                            const std::unordered_map<dsn::host_port, int> &host_port_id,
+                           const std::set<dsn::host_port> balancer_ignored_nodes,
                            bool have_lower_than_average,
                            int replicas_low);
     ~copy_primary_operation() = default;
