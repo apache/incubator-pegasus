@@ -93,6 +93,9 @@ public:
     };
     std::vector<dup_state> get_dup_states() const;
 
+    // Get current progress message of each duplication.
+    std::map<dupid_t, std::string> get_progress_messages() const;
+
 private:
     void sync_duplication(const duplication_entry &ent);
 

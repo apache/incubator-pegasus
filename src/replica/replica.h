@@ -223,8 +223,17 @@ public:
     const app_info *get_app_info() const { return &_app_info; }
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
+
+    // The last decree that has been applied into rocksdb.
+    decree last_applied_decree() const;
+
     decree last_prepared_decree() const;
     decree last_durable_decree() const;
+
+    // Get current progress message of decrees, including both local writes and duplications
+    // of this replica.
+    std::string get_progress_message() const;
+
     const std::string &dir() const { return _dir; }
     uint64_t create_time_milliseconds() const { return _create_time_ms; }
     const char *name() const { return replica_name(); }
@@ -429,13 +438,6 @@ private:
     error_code background_sync_checkpoint();
     void catch_up_with_private_logs(partition_status::type s);
     void on_checkpoint_completed(error_code err);
-    void on_copy_checkpoint_ack(error_code err,
-                                const std::shared_ptr<replica_configuration> &req,
-                                const std::shared_ptr<learn_response> &resp);
-    void on_copy_checkpoint_file_completed(error_code err,
-                                           size_t sz,
-                                           std::shared_ptr<learn_response> resp,
-                                           const std::string &chk_dir);
 
     // Enable/Disable plog garbage collection to be executed. For example, to duplicate data
     // to target cluster, we could firstly disable plog garbage collection, then do copy_data.

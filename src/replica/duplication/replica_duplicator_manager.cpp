@@ -47,23 +47,27 @@ replica_duplicator_manager::get_duplication_confirms_to_update() const
     zauto_lock l(_lock);
 
     std::vector<duplication_confirm_entry> updates;
-    for (const auto &kv : _duplications) {
-        replica_duplicator *duplicator = kv.second.get();
-        duplication_progress p = duplicator->progress();
-        if (p.last_decree != p.confirmed_decree ||
-            (kv.second->status() == duplication_status::DS_PREPARE && p.checkpoint_has_prepared)) {
-            if (p.last_decree < p.confirmed_decree) {
-                LOG_ERROR_PREFIX("invalid decree state: p.last_decree({}) < p.confirmed_decree({})",
-                                 p.last_decree,
-                                 p.confirmed_decree);
-                continue;
-            }
-            duplication_confirm_entry entry;
-            entry.dupid = duplicator->id();
-            entry.confirmed_decree = p.last_decree;
-            entry.__set_checkpoint_prepared(p.checkpoint_has_prepared);
-            updates.emplace_back(entry);
+    for (const auto & [ _, dup ] : _duplications) {
+        const auto &progress = dup->progress();
+        if (progress.last_decree == progress.confirmed_decree &&
+            (dup->status() != duplication_status::DS_PREPARE ||
+             !progress.checkpoint_has_prepared)) {
+            continue;
         }
+
+        if (progress.last_decree < progress.confirmed_decree) {
+            LOG_ERROR_PREFIX(
+                "invalid decree state: progress.last_decree({}) < progress.confirmed_decree({})",
+                progress.last_decree,
+                progress.confirmed_decree);
+            continue;
+        }
+
+        duplication_confirm_entry entry;
+        entry.dupid = dup->id();
+        entry.confirmed_decree = progress.last_decree;
+        entry.__set_checkpoint_prepared(progress.checkpoint_has_prepared);
+        updates.emplace_back(entry);
     }
     return updates;
 }
@@ -189,6 +193,31 @@ replica_duplicator_manager::get_dup_states() const
         ret.emplace_back(state);
     }
     return ret;
+}
+
+std::map<dupid_t, std::string> replica_duplicator_manager::get_progress_messages() const
+{
+    std::map<dupid_t, std::string> dup_messages;
+
+    zauto_lock l(_lock);
+
+    std::transform(_duplications.begin(),
+                   _duplications.end(),
+                   std::inserter(dup_messages, dup_messages.end()),
+                   [](const decltype(_duplications)::value_type &dup) {
+                       const auto &progress = dup.second->progress();
+                       return std::make_pair(
+                           dup.first,
+                           fmt::format("dupid={}, remote_cluster_name={}, remote_app_name={}, "
+                                       "confirmed_decree={}, persisted_decree={}",
+                                       dup.first,
+                                       dup.second->remote_cluster_name(),
+                                       dup.second->remote_app_name(),
+                                       progress.last_decree,
+                                       progress.confirmed_decree));
+                   });
+
+    return dup_messages;
 }
 
 } // namespace replication

@@ -2335,6 +2335,17 @@ void replica_stub::register_ctrl_command()
                 });
             }));
 
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.query-progress",
+            "Query the progress of decrees, including both local writes and duplications for "
+            "replicas specified by comma-separated list of 'app_id' or 'app_id.partition_id', "
+            "or all replicas for empty",
+            "[id1,id2,...]",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(
+                    args, true, [](const replica_ptr &rep) { return rep->get_progress_message(); });
+            }));
+
 #ifdef DSN_ENABLE_GPERF
         _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
             _release_tcmalloc_memory,

@@ -578,6 +578,8 @@ mutation_ptr replica::new_mutation(decree decree)
     return mu;
 }
 
+decree replica::last_applied_decree() const { return _app->last_committed_decree(); }
+
 decree replica::last_durable_decree() const { return _app->last_durable_decree(); }
 
 decree replica::last_prepared_decree() const
@@ -593,6 +595,35 @@ decree replica::last_prepared_decree() const
         lastBallot = mu->data.header.ballot;
     }
     return start;
+}
+
+std::string replica::get_progress_message() const
+{
+    auto message = fmt::format("max_prepared_decree={}, max_plog_decree={}, "
+                               "last_committed_decree={}, last_applied_decree={}, "
+                               "last_flushed_decree={}, last_durable_decree={}, "
+                               "max_gc_decree={}",
+                               max_prepared_decree(),
+                               _private_log->max_decree(get_gpid()),
+                               last_committed_decree(),
+                               last_applied_decree(),
+                               _app->last_flushed_decree(),
+                               last_durable_decree(),
+                               _private_log->max_gced_decree(get_gpid()));
+
+    const auto &dup_messages = _duplication_mgr->get_progress_messages();
+    if (dup_messages.empty()) {
+        return message;
+    }
+
+    message += "\n        duplications {";
+    for (const auto &dup_message : dup_messages) {
+        message += "\n            ";
+        message += dup_message.second;
+    }
+    message += "\n        }";
+
+    return message;
 }
 
 bool replica::verbose_commit_log() const { return _stub->_verbose_commit_log; }

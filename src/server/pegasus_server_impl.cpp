@@ -2168,47 +2168,49 @@ private:
     }
     LOG_INFO_PREFIX("copy checkpoint to dir({}) succeed", checkpoint_dir);
 
-    if (checkpoint_decree != nullptr) {
-        rocksdb::DB *snapshot_db = nullptr;
-        std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
-        auto cleanup = [&](bool remove_checkpoint) {
-            if (remove_checkpoint && !::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
-                LOG_ERROR_PREFIX("remove checkpoint directory {} failed", checkpoint_dir);
-            }
-            if (snapshot_db) {
-                for (auto handle : handles_opened) {
-                    if (handle) {
-                        snapshot_db->DestroyColumnFamilyHandle(handle);
-                        handle = nullptr;
-                    }
-                }
-                delete snapshot_db;
-                snapshot_db = nullptr;
-            }
-        };
-
-        // Because of RocksDB's restriction, we have to to open default column family even though
-        // not use it
-        std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-            {{meta_store::DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
-             {meta_store::META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
-        status = rocksdb::DB::OpenForReadOnly(
-            _db_opts, checkpoint_dir, column_families, &handles_opened, &snapshot_db);
-        if (!status.ok()) {
-            LOG_ERROR_PREFIX(
-                "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
-            snapshot_db = nullptr;
-            cleanup(true);
-            return ::dsn::ERR_LOCAL_APP_FAILURE;
-        }
-        CHECK_EQ_PREFIX(handles_opened.size(), 2);
-        CHECK_EQ_PREFIX(handles_opened[1]->GetName(), meta_store::META_COLUMN_FAMILY_NAME);
-        uint64_t last_flushed_decree =
-            _meta_store->get_decree_from_readonly_db(snapshot_db, handles_opened[1]);
-        *checkpoint_decree = last_flushed_decree;
-
-        cleanup(false);
+    if (checkpoint_decree == nullptr) {
+        return ::dsn::ERR_OK;
     }
+
+    rocksdb::DB *snapshot_db = nullptr;
+    std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
+    auto cleanup = [&](bool remove_checkpoint) {
+        if (remove_checkpoint && !::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
+            LOG_ERROR_PREFIX("remove checkpoint directory {} failed", checkpoint_dir);
+        }
+        if (snapshot_db) {
+            for (auto handle : handles_opened) {
+                if (handle) {
+                    snapshot_db->DestroyColumnFamilyHandle(handle);
+                    handle = nullptr;
+                }
+            }
+            delete snapshot_db;
+            snapshot_db = nullptr;
+        }
+    };
+
+    // Because of RocksDB's restriction, we have to to open default column family even though
+    // not use it
+    std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
+        {{meta_store::DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
+         {meta_store::META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
+    status = rocksdb::DB::OpenForReadOnly(
+        _db_opts, checkpoint_dir, column_families, &handles_opened, &snapshot_db);
+    if (!status.ok()) {
+        LOG_ERROR_PREFIX(
+            "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
+        snapshot_db = nullptr;
+        cleanup(true);
+        return ::dsn::ERR_LOCAL_APP_FAILURE;
+    }
+    CHECK_EQ_PREFIX(handles_opened.size(), 2);
+    CHECK_EQ_PREFIX(handles_opened[1]->GetName(), meta_store::META_COLUMN_FAMILY_NAME);
+    uint64_t last_flushed_decree =
+        _meta_store->get_decree_from_readonly_db(snapshot_db, handles_opened[1]);
+    *checkpoint_decree = last_flushed_decree;
+
+    cleanup(false);
 
     return ::dsn::ERR_OK;
 }
@@ -2316,6 +2318,17 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
 
     LOG_INFO_PREFIX("apply checkpoint succeed, last_durable_decree = {}", last_durable_decree());
     return ::dsn::ERR_OK;
+}
+
+int64_t pegasus_server_impl::last_flushed_decree() const
+{
+    uint64_t decree = 0;
+    const auto &err = _meta_store->get_last_flushed_decree(&decree);
+    if (dsn_unlikely(err != dsn::ERR_OK)) {
+        return -1;
+    }
+
+    return static_cast<int64_t>(decree);
 }
 
 bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_type,
