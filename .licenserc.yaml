@@ -43,12 +43,12 @@ header:
     # Special files for golang.
     - '**/go.sum'
     # TODO(wangdan): Generated files for go client, could generate dynamically?
-    - 'go-client/idl/admin/*'
-    - 'go-client/idl/base/*'
-    - 'go-client/idl/cmd/*'
-    - 'go-client/idl/radmin/*'
-    - 'go-client/idl/replication/*'
-    - 'go-client/idl/rrdb/*'
+    - 'go-client/idl/admin/**'
+    - 'go-client/idl/base/**'
+    - 'go-client/idl/cmd/**'
+    - 'go-client/idl/radmin/**'
+    - 'go-client/idl/replication/**'
+    - 'go-client/idl/rrdb/**'
     # Special files for nodejs.
     - '**/.npmigonre'
     # Special files for python.
