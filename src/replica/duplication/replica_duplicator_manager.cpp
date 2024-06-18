@@ -16,9 +16,12 @@
 // under the License.
 
 #include <absl/strings/string_view.h>
+#include <fmt/core.h>
 #include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <memory>
+#include <type_traits>
 
 #include "common//duplication_common.h"
 #include "common/gpid.h"
