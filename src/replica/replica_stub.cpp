@@ -29,6 +29,7 @@
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <rapidjson/ostreamwrapper.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
@@ -37,8 +38,8 @@
 #include <deque>
 #include <iterator>
 #include <mutex>
-#include <ostream>
 #include <set>
+#include <sstream>
 #include <type_traits>
 #include <vector>
 
@@ -47,6 +48,7 @@
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
 #include "common/duplication_common.h"
+#include "common/json_helper.h"
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
 #include "disk_cleaner.h"

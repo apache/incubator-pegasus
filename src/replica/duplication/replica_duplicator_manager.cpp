@@ -16,15 +16,15 @@
 // under the License.
 
 #include <absl/strings/string_view.h>
-#include <fmt/core.h>
 #include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <memory>
-#include <type_traits>
 
 #include "common//duplication_common.h"
 #include "common/gpid.h"
+#include "common/replication_enums.h"
+#include "duplication/replica_duplicator_manager.h"
+#include "metadata_types.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/replica.h"
 #include "replica_duplicator_manager.h"

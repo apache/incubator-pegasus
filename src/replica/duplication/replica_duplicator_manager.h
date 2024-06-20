@@ -24,18 +24,16 @@
 #include <vector>
 
 #include "common//duplication_common.h"
-#include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
-#include "metadata_types.h"
 #include "replica/replica_base.h"
 #include "replica_duplicator.h"
-#include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
+class replica;
 
 /// replica_duplicator_manager manages the set of duplications on this replica.
 /// \see duplication_sync_timer
