@@ -703,6 +703,7 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 
 		case base.ERR_TIMEOUT:
 		case context.DeadlineExceeded:
+			confUpdate = true
 		case context.Canceled:
 			// timeout will not trigger a configuration update
 
