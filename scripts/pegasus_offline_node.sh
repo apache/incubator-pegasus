@@ -52,6 +52,9 @@ echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
 
+echo "Check the cluster version..."
+source ./scripts/pegasus_command_version.sh $cluster $meta_list
+
 rs_list_file="/tmp/$UID.$PID.pegasus.rolling_update.rs.list"
 echo "Generating $rs_list_file..."
 minos_show_replica $cluster $rs_list_file
@@ -91,7 +94,7 @@ if [ $set_ok -ne 1 ]; then
 fi
 
 echo "Set lb.assign_delay_ms to 10..."
-echo "remote_command -l $pmeta meta.lb.assign_delay_ms 10" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms
+echo "remote_command -l $pmeta ${meta_lb_assign_delay_ms} 10" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to 10 failed"
@@ -160,7 +163,7 @@ do
   while read line2 
   do
     gpid=`echo $line2 | awk '{print $3}' | sed 's/\./ /'`
-    echo "remote_command -l $node replica.kill_partition $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.kill_partition
+    echo "remote_command -l $node ${replica_kill_partition} $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.kill_partition
   done </tmp/$UID.$PID.pegasus.offline_node.downgrade_node.propose
   echo "Sent kill_partition to `cat /tmp/$UID.$PID.pegasus.offline_node.downgrade_node.propose | wc -l` partitions"
   echo
@@ -189,7 +192,7 @@ do
 done <$rs_list_file
 
 echo "Set lb.assign_delay_ms to DEFAULT..."
-echo "remote_command -l $pmeta meta.lb.assign_delay_ms DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms
+echo "remote_command -l $pmeta ${meta_lb_assign_delay_ms} DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to DEFAULT failed"
