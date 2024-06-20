@@ -42,7 +42,6 @@ header:
     - '**/*.pdf'
     # Special files for golang.
     - '**/go.sum'
-    # TODO(wangdan): Generated files for go client, could generate dynamically?
     - 'go-client/idl/admin/**'
     - 'go-client/idl/base/**'
     - 'go-client/idl/cmd/**'
