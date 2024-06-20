@@ -79,7 +79,7 @@ protected:
     // when get message from raw parser, request & response of "dsn::message_ex*" are not in couple.
     // we need to backup one request to create a response struct.
     dsn::message_ex *_backup_one_request;
-    // the client  for which this session served
+    // the client host_port for which this session served
     dsn::host_port _session_remote;
     std::string _session_remote_str;
 };

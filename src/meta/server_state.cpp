@@ -735,7 +735,7 @@ void server_state::initialize_node_state()
             }
 
             for (auto &ep : pc.hp_secondaries) {
-                CHECK(ep, "invalid secondary address, addr = {}", ep);
+                CHECK(ep, "invalid secondary: {}", ep);
                 node_state *ns = get_node_state(_nodes, ep, true);
                 ns->put_partition(pc.pid, false);
             }
@@ -1913,13 +1913,13 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
 
 void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
                                              int pidx,
-                                             const host_port &address)
+                                             const host_port &node)
 {
     std::shared_ptr<configuration_update_request> req =
         std::make_shared<configuration_update_request>();
     req->info = *app;
     req->type = config_type::CT_REMOVE;
-    req->host_node = dsn::dns_resolver::instance().resolve_address(address);
+    req->host_node = dsn::dns_resolver::instance().resolve_address(node);
     RESET_IP_AND_HOST_PORT(*req, node);
     req->config = app->partitions[pidx];
 
@@ -1927,15 +1927,16 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
     partition_configuration &pc = req->config;
 
     unsigned i = 0;
+    // TODO(yingchun): also check pc.secondaries
     for (; i < pc.hp_secondaries.size(); ++i) {
-        if (pc.hp_secondaries[i] == address) {
+        if (pc.hp_secondaries[i] == node) {
             SET_OBJ_IP_AND_HOST_PORT(*req, node, pc, last_drops[i]);
             break;
         }
     }
-    host_port node;
-    GET_HOST_PORT(*req, node, node);
-    CHECK(node, "invalid node: {}", node);
+    host_port new_node;
+    GET_HOST_PORT(*req, node, new_node);
+    CHECK(new_node, "invalid new_node: {}", new_node);
     // remove host_node & node from secondaries/last_drops, as it will be sync to remote
     // storage
     for (++i; i < pc.hp_secondaries.size(); ++i) {
@@ -1954,7 +1955,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
                     "removing host({}) worker({})",
                     pc.pid,
                     req->host_node,
-                    node);
+                    new_node);
         cc.cancel_sync();
     }
     cc.stage = config_status::pending_remote_sync;
@@ -2034,26 +2035,25 @@ void server_state::on_update_configuration(
 
 void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
                                           int pidx,
-                                          const dsn::host_port &address)
+                                          const dsn::host_port &node)
 {
     partition_configuration &pc = app->partitions[pidx];
     if (app->is_stateful) {
-        if (is_primary(pc, address))
+        if (is_primary(pc, node)) {
             downgrade_primary_to_inactive(app, pidx);
-        else if (is_secondary(pc, address)) {
-            if (pc.hp_primary)
-                downgrade_secondary_to_inactive(app, pidx, address);
-            else if (is_secondary(pc, address)) {
+        } else if (is_secondary(pc, node)) {
+            if (pc.hp_primary) {
+                downgrade_secondary_to_inactive(app, pidx, node);
+            } else {
+                CHECK(is_secondary(pc, node), "no primary/secondary on this node: {}", node);
                 LOG_INFO("gpid({}): secondary({}) is down, ignored it due to no primary for this "
                          "partition available",
                          pc.pid,
-                         address);
-            } else {
-                CHECK(false, "no primary/secondary on this node, node address = {}", address);
+                         node);
             }
         }
     } else {
-        downgrade_stateless_nodes(app, pidx, address);
+        downgrade_stateless_nodes(app, pidx, node);
     }
 }
 
@@ -2701,19 +2701,19 @@ void server_state::check_consistency(const dsn::gpid &gpid)
     if (app.is_stateful) {
         if (config.hp_primary) {
             auto it = _nodes.find(config.hp_primary);
-            CHECK(it != _nodes.end(), "invalid primary address, address = {}", config.hp_primary);
+            CHECK(it != _nodes.end(), "invalid primary: {}", config.hp_primary);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_PRIMARY);
             CHECK(!utils::contains(config.hp_last_drops, config.hp_primary),
-                  "primary shouldn't appear in last_drops, address = {}",
+                  "primary({}) shouldn't appear in last_drops",
                   config.hp_primary);
         }
 
         for (auto &ep : config.hp_secondaries) {
             auto it = _nodes.find(ep);
-            CHECK(it != _nodes.end(), "invalid secondary address, address = {}", ep);
+            CHECK(it != _nodes.end(), "invalid secondary: {}", ep);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
             CHECK(!utils::contains(config.hp_last_drops, ep),
-                  "secondary shouldn't appear in last_drops, address = {}",
+                  "secondary({}) shouldn't appear in last_drops",
                   ep);
         }
     } else {
@@ -2721,7 +2721,7 @@ void server_state::check_consistency(const dsn::gpid &gpid)
         CHECK_EQ(pcs.hosts().size(), pcs.workers().size());
         for (auto &ep : pcs.hosts()) {
             auto it = _nodes.find(ep);
-            CHECK(it != _nodes.end(), "invalid host, address = {}", ep);
+            CHECK(it != _nodes.end(), "invalid node: {}", ep);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
         }
     }
