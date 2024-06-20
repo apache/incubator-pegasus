@@ -44,7 +44,6 @@
 #include "duplication/replica_follower.h"
 #include "mutation.h"
 #include "mutation_log.h"
-#include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"

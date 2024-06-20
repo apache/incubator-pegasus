@@ -38,6 +38,7 @@
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "duplication/replica_duplicator_manager.h" // IWYU pragma: keep
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
@@ -97,7 +98,6 @@ class replica;
 class replica_backup_manager;
 class replica_bulk_loader;
 class replica_disk_migrator;
-class replica_duplicator_manager;
 class replica_follower;
 class replica_split_manager;
 class replica_stub;
