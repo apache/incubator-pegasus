@@ -237,6 +237,12 @@
         JSON_DECODE_ENTRIES(input, t, __VA_ARGS__);                                                \
     }
 
+#define JSON_ENCODE_OBJ(writer, name, ...)                                                         \
+    do {                                                                                           \
+        writer.Key(#name);                                                                         \
+        dsn::json::json_encode(writer, __VA_ARGS__);                                               \
+    } while (0)
+
 namespace dsn {
 namespace json {
 

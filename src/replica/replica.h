@@ -35,8 +35,10 @@
 #include <string>
 #include <utility>
 
+#include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "duplication/replica_duplicator_manager.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
@@ -96,7 +98,6 @@ class replica;
 class replica_backup_manager;
 class replica_bulk_loader;
 class replica_disk_migrator;
-class replica_duplicator_manager;
 class replica_follower;
 class replica_split_manager;
 class replica_stub;
@@ -224,15 +225,35 @@ public:
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
 
-    // The last decree that has been applied into rocksdb.
+    // The last decree that has been applied into rocksdb memtable.
     decree last_applied_decree() const;
+
+    // The last decree that has been flushed into rocksdb sst.
+    decree last_flushed_decree() const;
 
     decree last_prepared_decree() const;
     decree last_durable_decree() const;
 
-    // Get current progress message of decrees, including both local writes and duplications
+    // Encode current progress of decrees into json, including both local writes and duplications
     // of this replica.
-    std::string get_progress_message() const;
+    template <typename TWriter>
+    void encode_progress(TWriter &writer) const
+    {
+        writer.StartObject();
+
+        JSON_ENCODE_OBJ(writer, max_prepared_decree, max_prepared_decree());
+        JSON_ENCODE_OBJ(writer, max_plog_decree, _private_log->max_decree(get_gpid()));
+        JSON_ENCODE_OBJ(writer, max_plog_commit_on_disk, _private_log->max_commit_on_disk());
+        JSON_ENCODE_OBJ(writer, last_committed_decree, last_committed_decree());
+        JSON_ENCODE_OBJ(writer, last_applied_decree, last_applied_decree());
+        JSON_ENCODE_OBJ(writer, last_flushed_decree, last_flushed_decree());
+        JSON_ENCODE_OBJ(writer, last_durable_decree, last_durable_decree());
+        JSON_ENCODE_OBJ(writer, max_gc_decree, _private_log->max_gced_decree(get_gpid()));
+
+        _duplication_mgr->encode_progress(writer);
+
+        writer.EndObject();
+    }
 
     const std::string &dir() const { return _dir; }
     uint64_t create_time_milliseconds() const { return _create_time_ms; }

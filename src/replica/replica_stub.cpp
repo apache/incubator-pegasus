@@ -2342,8 +2342,13 @@ void replica_stub::register_ctrl_command()
             "or all replicas for empty",
             "[id1,id2,...]",
             [this](const std::vector<std::string> &args) {
-                return exec_command_on_replica(
-                    args, true, [](const replica_ptr &rep) { return rep->get_progress_message(); });
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    std::ostringstream out;
+                    rapidjson::OStreamWrapper wrapper(out);
+                    dsn::json::PrettyJsonWriter writer(wrapper);
+                    rep->encode_progress(writer);
+                    return out.str();
+                });
             }));
 
 #ifdef DSN_ENABLE_GPERF

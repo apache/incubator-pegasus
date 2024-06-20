@@ -23,6 +23,7 @@
 #include <string>
 
 #include "common//duplication_common.h"
+#include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
 #include "replica/replica_base.h"
@@ -142,6 +143,25 @@ public:
     duplication_status::type status() const { return _status; }
 
     void set_duplication_plog_checking(bool checking);
+
+    // Encode current progress of this duplication into json.
+    template <typename TWriter>
+    void encode_progress(TWriter &writer) const
+    {
+        writer.StartObject();
+
+        JSON_ENCODE_OBJ(writer, dupid, _id);
+        JSON_ENCODE_OBJ(writer, remote_cluster_name, _remote_cluster_name);
+        JSON_ENCODE_OBJ(writer, remote_app_name, _remote_app_name);
+
+        {
+            zauto_read_lock l(_lock);
+            JSON_ENCODE_OBJ(writer, confirmed_decree, _progress.last_decree);
+            JSON_ENCODE_OBJ(writer, persisted_decree, _progress.confirmed_decree);
+        }
+
+        writer.EndObject();
+    }
 
 private:
     friend class duplication_test_base;

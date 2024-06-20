@@ -26,6 +26,7 @@
 #include "common//duplication_common.h"
 #include "common/gpid.h"
 #include "replica/duplication/replica_duplicator.h"
+#include "replica/replica.h"
 #include "replica_duplicator_manager.h"
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
@@ -44,6 +45,21 @@ replica_duplicator_manager::replica_duplicator_manager(replica *r)
 {
 }
 
+void replica_duplicator_manager::update_duplication_map(
+    const std::map<int32_t, duplication_entry> &new_dup_map)
+{
+    if (new_dup_map.empty() || _replica->status() != partition_status::PS_PRIMARY) {
+        remove_all_duplications();
+        return;
+    }
+
+    remove_non_existed_duplications(new_dup_map);
+
+    for (const auto &kv2 : new_dup_map) {
+        sync_duplication(kv2.second);
+    }
+}
+
 std::vector<duplication_confirm_entry>
 replica_duplicator_manager::get_duplication_confirms_to_update() const
 {
@@ -51,6 +67,14 @@ replica_duplicator_manager::get_duplication_confirms_to_update() const
 
     std::vector<duplication_confirm_entry> updates;
     for (const auto & [ _, dup ] : _duplications) {
+        // There are two conditions when we should send confirmed decrees to meta server to update
+        // the progress:
+        //
+        // 1. the acknowledged decree from remote cluster has changed, making it different from
+        // the one that is persisted in zk by meta server; otherwise,
+        //
+        // 2. the duplication has been in the stage of synchronizing checkpoint to the remote
+        // cluster, and the synchronized checkpoint has been ready.
         const auto &progress = dup->progress();
         if (progress.last_decree == progress.confirmed_decree &&
             (dup->status() != duplication_status::DS_PREPARE ||
@@ -198,29 +222,16 @@ replica_duplicator_manager::get_dup_states() const
     return ret;
 }
 
-std::map<dupid_t, std::string> replica_duplicator_manager::get_progress_messages() const
+void replica_duplicator_manager::remove_all_duplications()
 {
-    std::map<dupid_t, std::string> dup_messages;
+    // fast path
+    if (_duplications.empty()) {
+        return;
+    }
 
-    zauto_lock l(_lock);
-
-    std::transform(_duplications.begin(),
-                   _duplications.end(),
-                   std::inserter(dup_messages, dup_messages.end()),
-                   [](const decltype(_duplications)::value_type &dup) {
-                       const auto &progress = dup.second->progress();
-                       return std::make_pair(
-                           dup.first,
-                           fmt::format("dupid={}, remote_cluster_name={}, remote_app_name={}, "
-                                       "confirmed_decree={}, persisted_decree={}",
-                                       dup.first,
-                                       dup.second->remote_cluster_name(),
-                                       dup.second->remote_app_name(),
-                                       progress.last_decree,
-                                       progress.confirmed_decree));
-                   });
-
-    return dup_messages;
+    LOG_WARNING_PREFIX("remove all duplication, replica status = {}",
+                       enum_to_string(_replica->status()));
+    _duplications.clear();
 }
 
 } // namespace replication
