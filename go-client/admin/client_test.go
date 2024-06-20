@@ -175,7 +175,7 @@ func TestAdmin_ListNodes(t *testing.T) {
 	for i, node := range nodes {
 		// Each node should be alive.
 		assert.Equal(t, admin.NodeStatus_NS_ALIVE, node.Status)
-		actualReplicaServerPorts[i] = node.Address.GetPort()
+		actualReplicaServerPorts[i] = node.GetNode().GetPort()
 	}
 
 	// Match elements without extra ordering.
