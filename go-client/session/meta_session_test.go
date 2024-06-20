@@ -118,11 +118,27 @@ func TestMetaManager_FirstMetaDead(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		call := newMetaCall(mm.currentLeader, mm.metas, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 			return ms.queryConfig(rpcCtx, "temp")
-		})
+		}, []string{"0.0.0.0:12345", "0.0.0.0:34603", "0.0.0.0:34602", "0.0.0.0:34601"})
 		// This a trick for testing. If metaCall issue to other meta, not only to the leader, this nil channel will cause panic.
 		call.backupCh = nil
 		metaResp, err := call.Run(context.Background())
 		assert.Nil(t, err)
 		assert.Equal(t, metaResp.GetErr().Errno, base.ERR_OK.String())
+	}
+}
+
+// This case mocks the case that the server primary meta is not in the client metalist.
+// And the client will forward to the primary meta automatically.
+func TestNodeSession_ForwardToPrimaryMeta(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	metaList := []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"}
+
+	for i := 0; i < 3; i++ {
+		mm := NewMetaManager(metaList[i:i+1], NewNodeSession)
+		defer mm.Close()
+		resp, err := mm.QueryConfig(context.Background(), "temp")
+		assert.Nil(t, err)
+		assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
 	}
 }
