@@ -147,6 +147,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
 
     _address = rpc_address(get_local_ipv4(), port);
     _hp = ::dsn::host_port::from_address(_address);
+    LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
 
     if (!client_only) {
         auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
@@ -456,6 +457,7 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
     }
 
     _hp = ::dsn::host_port::from_address(_address);
+    LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
 
     for (int i = 0; i < FLAGS_io_service_worker_count; i++) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {

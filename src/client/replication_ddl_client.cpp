@@ -93,7 +93,7 @@ replication_ddl_client::replication_ddl_client(const std::vector<dsn::host_port>
     _meta_server.assign_group("meta-servers");
     for (const auto &m : meta_servers) {
         if (!_meta_server.group_host_port()->add(m)) {
-            LOG_WARNING("duplicate adress {}", m);
+            LOG_WARNING("duplicate address {}", m);
         }
     }
 }
