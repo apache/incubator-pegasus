@@ -150,8 +150,9 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
             case GRPC_TO_LEADER:
                 if (req->server_address.group_address()->is_update_leader_automatically()) {
                     req->server_address.group_address()->set_leader(addr);
-                    req->server_host_port.group_host_port()->set_leader(
-                        host_port::from_address(addr));
+                    const auto hp = host_port::from_address(addr);
+                    CHECK(hp, "'{}' can not be reverse resolved", addr);
+                    req->server_host_port.group_host_port()->set_leader(hp);
                 }
                 break;
             default:
@@ -180,8 +181,9 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
                         req->server_address.group_address()->is_update_leader_automatically()) {
                         req->server_address.group_address()->set_leader(
                             reply->header->from_address);
-                        req->server_host_port.group_host_port()->set_leader(
-                            host_port::from_address(reply->header->from_address));
+                        const auto hp = host_port::from_address(reply->header->from_address);
+                        CHECK(hp, "'{}' can not be reverse resolved", reply->header->from_address);
+                        req->server_host_port.group_host_port()->set_leader(hp);
                     }
                     break;
                 default:
@@ -523,6 +525,7 @@ error_code rpc_engine::start(const service_app_spec &aspec)
     _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
     _local_primary_address.set_port(aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id);
     _local_primary_host_port = host_port::from_address(_local_primary_address);
+    CHECK(_local_primary_host_port, "'{}' can not be reverse resolved", _local_primary_address);
 
     LOG_INFO("=== service_node=[{}], primary_address=[{}({})] ===",
              _node->full_name(),

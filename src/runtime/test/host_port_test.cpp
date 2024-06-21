@@ -71,8 +71,7 @@ TEST(host_port_test, host_port_build)
 
     {
         const auto addr = rpc_address::from_host_port("localhost", 8080);
-        host_port hp1 = host_port::from_address(addr);
-        ASSERT_EQ(hp, hp1);
+        ASSERT_EQ(hp, host_port::from_address(addr));
     }
 }
 
@@ -203,8 +202,7 @@ TEST(host_port_test, rpc_group_host_port)
     ASSERT_EQ(addr2, g_addr->leader());
     ASSERT_EQ(2, g_addr->count());
 
-    host_port hp_grp2;
-    hp_grp2 = host_port::from_address(addr_grp);
+    host_port hp_grp2 = host_port::from_address(addr_grp);
     ASSERT_EQ(HOST_TYPE_GROUP, hp_grp2.type());
 
     auto g_hp = hp_grp2.group_host_port();

@@ -451,19 +451,17 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
              req->remote_root_path);
 
     bulk_load_rpc rpc(std::move(req), RPC_BULK_LOAD, 0_ms, 0, pid.thread_hash());
-    rpc.call(pconfig.primary, _meta_svc->tracker(), [this, rpc](error_code err) mutable {
-        // fill host_port struct if needed
-        // remote server maybe not supported host_post, just have address
-        auto &bulk_load_resp = rpc.response();
-        if (!bulk_load_resp.__isset.hp_group_bulk_load_state) {
-            bulk_load_resp.__set_hp_group_bulk_load_state({});
-            for (const auto & [ addr, pbls ] : bulk_load_resp.group_bulk_load_state) {
-                bulk_load_resp.hp_group_bulk_load_state[host_port::from_address(addr)] = pbls;
-            }
-        }
-
-        on_partition_bulk_load_reply(err, rpc.request(), rpc.response());
-    });
+    rpc.call(
+        pconfig.primary, _meta_svc->tracker(), [this, pid, rpc, pconfig](error_code err) mutable {
+            // The remote server may not support FQDN, but do not try to reverse resolve the
+            // IP addresses because they may be unresolved. Just warning and ignore this.
+            LOG_WARNING_IF(!rpc.response().__isset.hp_group_bulk_load_state,
+                           "The {} primary {} doesn't support FQDN, the response "
+                           "hp_group_bulk_load_state field is not set",
+                           pid,
+                           FMT_HOST_PORT_AND_IP(pconfig, primary));
+            on_partition_bulk_load_reply(err, rpc.request(), rpc.response());
+        });
 }
 
 // ThreadPool: THREAD_POOL_META_STATE

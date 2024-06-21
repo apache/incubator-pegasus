@@ -58,9 +58,11 @@ host_port host_port::from_address(rpc_address addr)
         WARNING, 100, "construct host_port '{}' from rpc_address '{}'", hp, addr);
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
-        CHECK_OK(lookup_hostname(htonl(addr.ip()), &hp._host),
-                 "lookup_hostname failed for {}",
-                 addr.ipv4_str());
+        const auto s = lookup_hostname(htonl(addr.ip()), &hp._host);
+        if (dsn_unlikely(!s)) {
+            LOG_WARNING("lookup_hostname failed for {}: {}", addr.ipv4_str(), s.description());
+            return hp;
+        }
         hp._port = addr.port();
     } break;
     case HOST_TYPE_GROUP: {
@@ -70,7 +72,7 @@ host_port host_port::from_address(rpc_address addr)
         break;
     }
 
-    // Now is valid.
+    // 'hp' become valid now.
     hp._type = addr.type();
     return hp;
 }

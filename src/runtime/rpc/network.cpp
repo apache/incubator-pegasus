@@ -388,7 +388,9 @@ rpc_session::rpc_session(connection_oriented_network &net,
       _message_sent(0),
       _net(net),
       _remote_addr(remote_addr),
-      _remote_host_port(host_port::from_address(remote_addr)),
+      // TODO(yingchun): '_remote_host_port' is possible to be invalid after this!
+      // TODO(yingchun): It's too cost to reverse resolve host in constructor.
+      _remote_host_port(host_port::from_address(_remote_addr)),
       _max_buffer_block_count_per_send(net.max_buffer_block_count_per_send()),
       _reader(net.message_buffer_block_size()),
       _parser(parser),
@@ -396,6 +398,7 @@ rpc_session::rpc_session(connection_oriented_network &net,
       _matcher(_net.engine()->matcher()),
       _delay_server_receive_ms(0)
 {
+    LOG_WARNING_IF(!_remote_host_port, "'{}' can not be reverse resolved", _remote_addr);
     if (!is_client) {
         on_rpc_session_connected.execute(this);
     }

@@ -95,6 +95,7 @@ private:
     std::vector<std::unique_ptr<boost::asio::io_service>> _io_services;
     std::vector<std::shared_ptr<std::thread>> _workers;
     ::dsn::rpc_address _address;
+    // NOTE: '_hp' is possible to be invalid if '_address' can not be reverse resolved.
     ::dsn::host_port _hp;
 };
 

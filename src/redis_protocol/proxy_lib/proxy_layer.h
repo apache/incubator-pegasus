@@ -25,6 +25,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task_code.h"
@@ -79,8 +80,9 @@ protected:
     // when get message from raw parser, request & response of "dsn::message_ex*" are not in couple.
     // we need to backup one request to create a response struct.
     dsn::message_ex *_backup_one_request;
-    // the client  for which this session served
-    dsn::host_port _session_remote;
+    // The client for which this session served for.
+    // The source IP address is possible to be reverse un-resolved, so use rpc_address directly.
+    dsn::rpc_address _session_remote;
     std::string _session_remote_str;
 };
 
@@ -107,14 +109,15 @@ public:
         this->unregister_rpc_handler(RPC_CALL_RAW_MESSAGE);
         this->unregister_rpc_handler(RPC_CALL_RAW_SESSION_DISCONNECT);
     }
-    void remove_session(dsn::host_port remote_address);
+    void remove_session(dsn::rpc_address remote_address);
 
 private:
     void on_rpc_request(dsn::message_ex *request);
     void on_recv_remove_session_request(dsn::message_ex *);
 
     ::dsn::zrwlock_nr _lock;
-    std::unordered_map<::dsn::host_port, std::shared_ptr<proxy_session>> _sessions;
+    // The source IP address is possible to be un-reverse resolved, so use rpc_address.
+    std::unordered_map<::dsn::rpc_address, std::shared_ptr<proxy_session>> _sessions;
     proxy_session::factory _factory;
     ::dsn::host_port _uri_address;
     std::string _cluster;

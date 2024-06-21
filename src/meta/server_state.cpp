@@ -1587,7 +1587,7 @@ void server_state::update_configuration_locally(
             break;
         case config_type::CT_REGISTER_CHILD: {
             ns->put_partition(gpid, true);
-            // TODO(yingchun): optimize this
+            // TODO(yingchun): optimize the duplicate loops.
             if (config_request->config.__isset.hp_secondaries) {
                 for (const auto &secondary : config_request->config.hp_secondaries) {
                     auto secondary_node = get_node_state(_nodes, secondary, false);
@@ -1595,8 +1595,16 @@ void server_state::update_configuration_locally(
                 }
             } else {
                 for (const auto &secondary : config_request->config.secondaries) {
-                    auto secondary_node =
-                        get_node_state(_nodes, host_port::from_address(secondary), false);
+                    const auto hp = host_port::from_address(secondary);
+                    if (!hp) {
+                        LOG_ERROR("The registering secondary {} for pid {} can no be reverse "
+                                  "resolved, skip registering it, please check the network "
+                                  "configuration",
+                                  secondary,
+                                  config_request->config.pid);
+                        continue;
+                    }
+                    auto secondary_node = get_node_state(_nodes, hp, false);
                     secondary_node->put_partition(gpid, false);
                 }
             }
@@ -1608,8 +1616,9 @@ void server_state::update_configuration_locally(
         }
     } else {
         CHECK_EQ(old_cfg.ballot, new_cfg.ballot);
-
         const auto host_node = host_port::from_address(config_request->host_node);
+        // The non-stateful app is just for testing, so just check the host_node is resolvable.
+        CHECK(host_node, "'{}' can not be reverse resolved", config_request->host_node);
         new_cfg = old_cfg;
         partition_configuration_stateless pcs(new_cfg);
         if (config_request->type == config_type::type::CT_ADD_SECONDARY) {
