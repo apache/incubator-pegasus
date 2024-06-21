@@ -223,6 +223,8 @@ public:
     ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
                                                const dsn::replication::learn_state &state) override;
 
+    int64_t last_flushed_decree() const override;
+
     int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
 
     void update_app_envs(const std::map<std::string, std::string> &envs) override;

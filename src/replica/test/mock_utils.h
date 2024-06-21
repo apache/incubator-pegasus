@@ -83,6 +83,8 @@ public:
     // we mock the followings
     void update_app_envs(const std::map<std::string, std::string> &envs) override { _envs = envs; }
     void query_app_envs(std::map<std::string, std::string> &out) override { out = _envs; }
+
+    decree last_flushed_decree() const override { return _last_durable_decree; }
     decree last_durable_decree() const override { return _last_durable_decree; }
 
     // TODO(heyuchen): implement this function in further pull request

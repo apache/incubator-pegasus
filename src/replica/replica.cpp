@@ -41,10 +41,10 @@
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "consensus_types.h"
-#include "duplication/replica_duplicator_manager.h"
 #include "duplication/replica_follower.h"
 #include "mutation.h"
 #include "mutation_log.h"
+#include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
@@ -577,6 +577,10 @@ mutation_ptr replica::new_mutation(decree decree)
     mu->data.header.log_offset = invalid_offset;
     return mu;
 }
+
+decree replica::last_applied_decree() const { return _app->last_committed_decree(); }
+
+decree replica::last_flushed_decree() const { return _app->last_flushed_decree(); }
 
 decree replica::last_durable_decree() const { return _app->last_durable_decree(); }
 
