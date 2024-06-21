@@ -27,6 +27,7 @@
 #include "metadata_types.h"
 #include "mutation_batch.h"
 #include "replica_duplicator.h"
+#include "replica/replica.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
@@ -123,6 +124,15 @@ error_s mutation_batch::add(mutation_ptr mu)
             _start_decree);
     }
 
+    if (mu->get_decree() <= _replica->last_applied_decree()) {
+        // Once this mutation has been applied into rocksdb memtable, commit it for duplication;
+        // otherwise, this mutation would be delayed at least several minutes to be duplicated to
+        // the remote cluster. It would not be duplicated until some new mutations (such as empty
+        // writes) enter, since the last decree that is committed for this replica is NOT
+        // mu->data.header.decree but rather mu->data.header.last_committed_decree.
+        _mutation_buffer->commit(mu->get_decree(), COMMIT_TO_DECREE_HARD);
+    }
+
     return error_s::ok();
 }
 
@@ -140,7 +150,7 @@ mutation_tuple_set mutation_batch::move_all_mutations()
     return std::move(_loaded_mutations);
 }
 
-mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r)
+mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r), _replica(r->_replica)
 {
     // Prepend a special tag identifying this is a mutation_batch,
     // so `dxxx_replica` logging in prepare_list will print along with its real caller.

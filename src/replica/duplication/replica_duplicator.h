@@ -170,6 +170,7 @@ private:
     friend class load_from_private_log_test;
     friend class ship_mutation_test;
 
+    friend class mutation_batch;
     friend class load_mutation;
     friend class ship_mutation;
 

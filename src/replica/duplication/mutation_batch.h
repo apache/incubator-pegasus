@@ -31,7 +31,7 @@
 
 namespace dsn {
 namespace replication {
-
+class replica;
 class replica_duplicator;
 
 class mutation_buffer : public prepare_list
@@ -68,6 +68,8 @@ public:
     // mutations with decree < d will be ignored.
     void set_start_decree(decree d);
 
+    void set_last_committed_decree(decree d);
+
     void reset_mutation_buffer(decree d);
 
     size_t size() const { return _loaded_mutations.size(); }
@@ -77,6 +79,8 @@ public:
 private:
     friend class replica_duplicator_test;
     friend class mutation_batch_test;
+
+    replica *_replica;
 
     std::unique_ptr<prepare_list> _mutation_buffer;
     mutation_tuple_set _loaded_mutations;

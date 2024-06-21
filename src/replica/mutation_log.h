@@ -189,9 +189,9 @@ public:
     // thread safe
     void update_max_decree(gpid gpid, decree d);
 
-    // update current max commit of private log
+    // update current max decree and max committed decree of private log
     // thread safe
-    void update_max_commit_on_disk(decree d);
+    void update_max_decree_on_disk(decree max_decree, decree max_commit);
 
     //
     //  garbage collection logs that are already covered by
@@ -238,13 +238,12 @@ public:
     // thread safe (because nerver changed)
     const std::string &dir() const { return _dir; }
 
-    // replica
-    replica *owner_replica() const { return _owner_replica; }
-
     // get current max decree for gpid
     // returns 0 if not found
     // thread safe
     decree max_decree(gpid gpid) const;
+
+    decree max_decree_on_disk() const;
 
     // get current max commit on disk of private log.
     // thread safe
@@ -310,10 +309,13 @@ private:
                              replay_callback callback,
                              /*out*/ int64_t &end_offset);
 
-    // update max decree without lock
+    // Update max decree without lock.
     void update_max_decree_no_lock(gpid gpid, decree d);
 
-    // update max commit on disk without lock
+    // Update max decree on disk without lock.
+    void update_max_decree_on_disk_no_lock(decree d);
+
+    // Update max commit on disk without lock.
     void update_max_commit_on_disk_no_lock(decree d);
 
     // create new log file and set it as the current log file
@@ -367,11 +369,12 @@ private:
 
     // replica log info for private log
     replica_log_info _private_log_info;
-    decree
-        _private_max_commit_on_disk; // the max last_committed_decree of written mutations up to now
-                                     // used for limiting garbage collection of shared log, because
-                                     // the ending of private log should be covered by shared log
+
+    decree _plog_max_decree_on_disk;
+
+    decree _plog_max_commit_on_disk;
 };
+
 typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
 
 class mutation_log_private : public mutation_log, private replica_base
@@ -418,6 +421,7 @@ private:
 
     void commit_pending_mutations(log_file_ptr &lf,
                                   std::shared_ptr<log_appender> &pending,
+                                  decree max_decree,
                                   decree max_commit);
 
     void init_states() override;
