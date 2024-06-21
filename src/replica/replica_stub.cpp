@@ -29,6 +29,7 @@
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <rapidjson/ostreamwrapper.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
@@ -37,8 +38,8 @@
 #include <deque>
 #include <iterator>
 #include <mutex>
-#include <ostream>
 #include <set>
+#include <sstream>
 #include <type_traits>
 #include <vector>
 
@@ -47,6 +48,7 @@
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
 #include "common/duplication_common.h"
+#include "common/json_helper.h"
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
 #include "disk_cleaner.h"
@@ -2332,6 +2334,22 @@ void replica_stub::register_ctrl_command()
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     return rep->get_plog_gc_enabled_message();
+                });
+            }));
+
+        _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
+            "replica.query-progress",
+            "Query the progress of decrees, including both local writes and duplications for "
+            "replicas specified by comma-separated list of 'app_id' or 'app_id.partition_id', "
+            "or all replicas for empty",
+            "[id1,id2,...]",
+            [this](const std::vector<std::string> &args) {
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    std::ostringstream out;
+                    rapidjson::OStreamWrapper wrapper(out);
+                    dsn::json::PrettyJsonWriter writer(wrapper);
+                    rep->encode_progress(writer);
+                    return out.str();
                 });
             }));
 

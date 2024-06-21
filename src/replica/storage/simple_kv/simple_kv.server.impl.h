@@ -70,7 +70,9 @@ public:
 
     virtual ::dsn::error_code stop(bool cleanup = false) override;
 
-    virtual int64_t last_durable_decree() const override { return _last_durable_decree; }
+    int64_t last_flushed_decree() const override { return _last_durable_decree; }
+
+    int64_t last_durable_decree() const override { return _last_durable_decree; }
 
     virtual ::dsn::error_code sync_checkpoint() override;
 
