@@ -57,7 +57,10 @@ void load_mutation::run()
 {
     decree last_decree = _duplicator->progress().last_decree;
     _start_decree = last_decree + 1;
-    if (_replica->private_log()->max_commit_on_disk() < _start_decree) {
+
+    const auto max_plog_committed_decree =
+        std::min(_replica->private_log()->max_decree_on_disk(), _replica->last_applied_decree());
+    if (max_plog_committed_decree < _start_decree) {
         // wait 100ms for next try if no mutation was added.
         repeat(100_ms);
         return;

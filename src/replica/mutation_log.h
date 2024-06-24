@@ -76,9 +76,10 @@ public:
     typedef std::function<void(dsn::error_code err)> io_failure_callback;
 
 public:
-    // append a log mutation
-    // return value: nullptr for error
-    // thread safe
+    // Append a log mutation.
+    // Return value: nullptr for error.
+    //
+    // Thread safe.
     virtual ::dsn::task_ptr append(mutation_ptr &mu,
                                    dsn::task_code callback_code,
                                    dsn::task_tracker *tracker,
@@ -86,34 +87,37 @@ public:
                                    int hash = 0,
                                    int64_t *pending_size = nullptr) = 0;
 
-    // get learn state in memory, including pending and writing mutations
-    // return true if some data is filled into writer
-    // return false if no data is filled into writer
-    // thread safe
+    // Get learn state in memory, including pending and writing mutations:
+    // - return true if some data is filled into writer
+    // - return false if no data is filled into writer
+    //
+    // Thread safe
     virtual bool get_learn_state_in_memory(decree start_decree, binary_writer &writer) const
     {
         return false;
     }
 
-    // only for private log
-    // get in-memory mutations, including pending and writing mutations
+    // Only for private log.
+    // get in-memory mutations, including pending and writing mutations.
     virtual void get_in_memory_mutations(decree start_decree,
                                          ballot current_ballot,
                                          /*out*/ std::vector<mutation_ptr> &mutations_list) const
     {
     }
 
-    // flush the pending buffer until all data is on disk
-    // thread safe
+    // Flush the pending buffer until all data is on disk.
+    //
+    // Thread safe.
     virtual void flush() = 0;
 
-    // flush the pending buffer at most once
-    // thread safe
+    // Flush the pending buffer at most once.
+    //
+    // Thread safe.
     virtual void flush_once() = 0;
 
 public:
     //
-    // ctors
+    // Ctors
     // when is_private = true, should specify "private_gpid"
     //
     mutation_log(const std::string &dir, int32_t max_log_file_mb, gpid gpid, replica *r = nullptr);
@@ -121,22 +125,24 @@ public:
     virtual ~mutation_log() = default;
 
     //
-    // initialization
+    // Initialization
     //
 
-    // open and replay
-    // returns ERR_OK if succeed
-    // not thread safe, but only be called when init
+    // Open and replay.
+    // return ERR_OK if succeed.
+    // Not thread safe, but only be called when init.
     error_code open(replay_callback read_callback, io_failure_callback write_error_callback);
     error_code open(replay_callback read_callback,
                     io_failure_callback write_error_callback,
                     const std::map<gpid, decree> &replay_condition);
-    // close the log
-    // thread safe
+
+    // Close the log.
+    //
+    // Thread safe.
     void close();
 
     //
-    // replay
+    // Replay.
     //
     static error_code replay(std::vector<std::string> &log_files,
                              replay_callback callback,
@@ -173,55 +179,61 @@ public:
     error_code reset_from(const std::string &dir, replay_callback, io_failure_callback);
 
     //
-    // maintain max_decree & valid_start_offset
+    // Maintain max_decree & valid_start_offset
     //
 
-    // when open a exist replica, need to set valid_start_offset on open
-    // thread safe
+    // valid_start_offset is needed to be set while opening an existing replica.
+    //
+    // Thread safe.
     void set_valid_start_offset_on_open(gpid gpid, int64_t valid_start_offset);
 
-    // when create a new replica, need to reset current max decree
-    // returns current global end offset, needs to be remebered by caller for gc usage
-    // thread safe
+    // Current max decree is needed to be reset, while creating a new replica.
+    // Return current global end offset, should be remebered by caller for gc usage.
+    //
+    // Thread safe.
     int64_t on_partition_reset(gpid gpid, decree max_decree);
 
-    // update current max decree
-    // thread safe
+    // Update current max decree.
+    //
+    // Thread safe.
     void update_max_decree(gpid gpid, decree d);
 
-    // update current max decree and max committed decree of private log
-    // thread safe
+    // Update current max decree and committed decree that have ever been written onto disk
+    // for plog.
+    //
+    // Thread safe.
     void update_max_decree_on_disk(decree max_decree, decree max_commit);
 
     //
-    //  garbage collection logs that are already covered by
+    //  Garbage collection logs that are already covered by
     //  durable state on disk, return deleted log segment count
     //
 
-    // garbage collection for private log, returns removed file count.
-    // can remove log files if satisfy all the conditions:
+    // Garbage collection for private log, returns removed file count.
+    //
+    // Log files could be removed once all the following conditions are satisfied:
     //  - the file is not the current log file
     //  - the file is not covered by reserve_max_size or reserve_max_time
     //  - file.max_decree <= "durable_decree" || file.end_offset <= "valid_start_offset"
-    // that means, should reserve files if satisfy one of the conditions:
+    // which means, files should be reserved if one of the conditions is satisfied:
     //  - the file is the current log file
     //  - the file is covered by both reserve_max_size and reserve_max_time
     //  - file.max_decree > "durable_decree" && file.end_offset > "valid_start_offset"
-    // thread safe
+    //
+    // Thread safe.
     int garbage_collection(gpid gpid,
                            decree durable_decree,
                            int64_t valid_start_offset,
                            int64_t reserve_max_size,
                            int64_t reserve_max_time);
 
-    //
-    // when this is a private log, log files are learned by remote replicas
-    // return true if private log surely covers the learning range
-    //
+    // When this is a private log, log files are learned by remote replicas
+    // return true if private log surely covers the learning range.
     bool get_learn_state(gpid gpid, decree start, /*out*/ learn_state &state) const;
 
-    // only valid for private log.
-    // get parent mutations in memory and private log files during partition split.
+    // Only valid for private log.
+    //
+    // Get parent mutations in memory and private log files during partition split.
     // `total_file_size` is used for the metrics of partition split.
     void get_parent_mutations_and_logs(gpid pid,
                                        decree start_decree,
@@ -231,22 +243,28 @@ public:
                                        /*out*/ uint64_t &total_file_size) const;
 
     //
-    //  other inquiry routines
+    //  Other inquiry routines
     //
 
-    // log dir
-    // thread safe (because nerver changed)
+    // Get log dir.
+    //
+    // Thread safe (because nerver changed).
     const std::string &dir() const { return _dir; }
 
-    // get current max decree for gpid
-    // returns 0 if not found
-    // thread safe
+    // Get current max decree for gpid.
+    // Return 0 if not found.
+    //
+    // Thread safe.
     decree max_decree(gpid gpid) const;
 
+    // Get current max decree on disk for plog.
+    //
+    // Thread safe.
     decree max_decree_on_disk() const;
 
-    // get current max commit on disk of private log.
-    // thread safe
+    // Get current max committed decree on disk for plog.
+    //
+    // Thread safe.
     decree max_commit_on_disk() const;
 
     // Decree of the maximum garbage-collected mutation.
@@ -259,7 +277,7 @@ public:
     // than the others, the max_gced_decree = 9.
     // Returns `invalid_decree` when plog directory is empty.
     //
-    // thread-safe & private log only
+    // Thread safe & private log only.
     decree max_gced_decree(gpid gpid) const;
     decree max_gced_decree_no_lock(gpid gpid) const;
 
@@ -268,11 +286,14 @@ public:
     // thread-safe
     log_file_map_by_index get_log_file_map() const;
 
-    // check the consistence of valid_start_offset
-    // thread safe
+    // Check the consistence of valid_start_offset
+    //
+    // Thread safe.
     void check_valid_start_offset(gpid gpid, int64_t valid_start_offset) const;
 
-    // get total size.
+    // Get the total size.
+    //
+    // Thread safe.
     int64_t total_size() const;
 
     void hint_switch_file() { _switch_file_hint = true; }
@@ -281,20 +302,22 @@ public:
     task_tracker *tracker() { return &_tracker; }
 
 protected:
-    // thread-safe
     // 'size' is data size to write; the '_global_end_offset' will be updated by 'size'.
     // can switch file only when create_new_log_if_needed = true;
     // return pair: the first is target file to write; the second is the global offset to start
-    // write
+    // write.
+    //
+    // Thread safe.
     std::pair<log_file_ptr, int64_t> mark_new_offset(size_t size, bool create_new_log_if_needed);
-    // thread-safe
+
+    // Thread safe.
     int64_t get_global_offset() const
     {
         zauto_lock l(_lock);
         return _global_end_offset;
     }
 
-    // init memory states
+    // Init memory states.
     virtual void init_states();
 
 private:
@@ -315,7 +338,7 @@ private:
     // Update max decree on disk without lock.
     void update_max_decree_on_disk_no_lock(decree d);
 
-    // Update max commit on disk without lock.
+    // Update max committed decree on disk without lock.
     void update_max_commit_on_disk_no_lock(decree d);
 
     // create new log file and set it as the current log file
@@ -325,7 +348,7 @@ private:
     // - _lock.locked()
     error_code create_new_log_file();
 
-    // get total size ithout lock.
+    // Get total size without lock.
     int64_t total_size_no_lock() const;
 
 protected:
@@ -370,8 +393,12 @@ private:
     // replica log info for private log
     replica_log_info _private_log_info;
 
+    // The max decree of the mutations that have ever been written onto the disk for plog.
     decree _plog_max_decree_on_disk;
 
+    // The max decree of the committed mutations that have ever been written onto the disk
+    // for plog. Since it is set with mutation.data.header.last_committed_decree, usually
+    // it equals to _plog_max_decree_on_disk - 1.
     decree _plog_max_commit_on_disk;
 };
 
