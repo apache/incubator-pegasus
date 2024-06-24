@@ -15,9 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <algorithm>
 #include <atomic>
-#include <map>
+#include <iterator>
 #include <memory>
+#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
