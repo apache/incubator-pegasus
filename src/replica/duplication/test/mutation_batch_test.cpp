@@ -56,6 +56,58 @@ public:
 
 INSTANTIATE_TEST_SUITE_P(, mutation_batch_test, ::testing::Values(false, true));
 
+TEST_P(mutation_batch_test, prepare_mutation)
+{
+    auto duplicator = create_test_duplicator(0);
+    mutation_batch batcher(duplicator.get());
+
+    auto mu1 = create_test_mutation(1, 0, "first mutation");
+    set_last_applied_decree(1);
+    ASSERT_TRUE(batcher.add(mu1));
+    ASSERT_EQ(1, batcher.last_decree());
+
+    auto mu2 = create_test_mutation(2, 1, "abcde");
+    set_last_applied_decree(2);
+    ASSERT_TRUE(batcher.add(mu2));
+    ASSERT_EQ(2, batcher.last_decree());
+
+    auto mu3 = create_test_mutation(3, 2, "hello world");
+    ASSERT_TRUE(batcher.add(mu3));
+
+    // The last decree has not been updated.
+    ASSERT_EQ(2, batcher.last_decree());
+
+    auto mu4 = create_test_mutation(4, 2, "foo bar");
+    ASSERT_TRUE(batcher.add(mu4));
+    ASSERT_EQ(2, batcher.last_decree());
+
+    // The committed mutation would be ignored.
+    auto mu2_another = create_test_mutation(2, 1, "another second mutation");
+    ASSERT_TRUE(batcher.add(mu2_another));
+    ASSERT_EQ(2, batcher.last_decree());
+
+    // The mutation with duplicate decree would be ignored.
+    auto mu3_another = create_test_mutation(3, 2, "123 xyz");
+    ASSERT_TRUE(batcher.add(mu3_another));
+    ASSERT_EQ(2, batcher.last_decree());
+
+    auto mu5 = create_test_mutation(5, 2, "5th mutation");
+    set_last_applied_decree(5);
+    ASSERT_TRUE(batcher.add(mu5));
+    ASSERT_EQ(5, batcher.last_decree());
+
+    // Check contents of the mutations.
+    const auto all_mutations = batcher.move_all_mutations();
+    std::set<std::string> actual_mutations;
+    std::transform(all_mutations.begin(),
+                   all_mutations.end(),
+                   std::inserter(actual_mutations, actual_mutations.end()),
+                   [](const mutation_tuple &tuple) { return std::get<2>(tuple).to_string(); });
+    ASSERT_EQ(std::set<std::string>(
+                  {"first mutation", "abcde", "hello world", "foo bar", "5th mutation"}),
+              actual_mutations);
+}
+
 TEST_P(mutation_batch_test, add_mutation_if_valid)
 {
     auto duplicator = create_test_duplicator(0);

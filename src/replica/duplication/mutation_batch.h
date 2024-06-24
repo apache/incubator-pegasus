@@ -57,15 +57,19 @@ public:
 
     explicit mutation_batch(replica_duplicator *r);
 
+    // Add mutations to prepare list. Only those who have been committed would be
+    // duplicated to the remote cluster.
     error_s add(mutation_ptr mu);
 
+    // Add the committed mutation to the loading list, which would be shipped to
+    // the remote cluster later.
     void add_mutation_if_valid(mutation_ptr &, decree start_decree);
 
     mutation_tuple_set move_all_mutations();
 
     decree last_decree() const;
 
-    // mutations with decree < d will be ignored.
+    // Mutations with decree < d will be ignored.
     void set_start_decree(decree d);
 
     void reset_mutation_buffer(decree d);

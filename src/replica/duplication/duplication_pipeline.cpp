@@ -19,6 +19,7 @@
 
 #include <absl/strings/string_view.h>
 #include <stddef.h>
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <utility>

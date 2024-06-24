@@ -56,8 +56,9 @@ mutation_buffer::mutation_buffer(replica_base *r,
 
 void mutation_buffer::commit(decree d, commit_type ct)
 {
-    if (d <= last_committed_decree())
+    if (d <= last_committed_decree()) {
         return;
+    }
 
     CHECK_EQ_PREFIX(ct, COMMIT_TO_DECREE_HARD);
 
@@ -102,13 +103,13 @@ void mutation_buffer::commit(decree d, commit_type ct)
 error_s mutation_batch::add(mutation_ptr mu)
 {
     if (mu->get_decree() <= _mutation_buffer->last_committed_decree()) {
-        // ignore
+        // Ignore the mutations that have been committed.
         return error_s::ok();
     }
 
     auto old = _mutation_buffer->get_mutation_by_decree(mu->get_decree());
     if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot) {
-        // ignore
+        // The mutation with duplicate decree would be ignored.
         return error_s::ok();
     }
 
@@ -170,14 +171,16 @@ mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r), _replic
 void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree)
 {
     if (mu->get_decree() < start_decree) {
-        // ignore
+        // Ignore the mutations before start_decree.
         return;
     }
+
     for (mutation_update &update : mu->data.updates) {
-        // ignore WRITE_EMPTY
         if (update.code == RPC_REPLICATION_WRITE_EMPTY) {
+            // Ignore empty writes.
             continue;
         }
+
         // Ignore non-idempotent writes.
         // Normally a duplicating replica will reply non-idempotent writes with
         // ERR_OPERATION_DISABLED, but there could still be a mutation written
@@ -186,6 +189,7 @@ void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree
         if (!task_spec::get(update.code)->rpc_request_is_write_idempotent) {
             continue;
         }
+
         blob bb;
         if (update.data.buffer() != nullptr) {
             bb = std::move(update.data);

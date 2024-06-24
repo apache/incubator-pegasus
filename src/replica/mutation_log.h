@@ -397,8 +397,8 @@ private:
     decree _plog_max_decree_on_disk;
 
     // The max decree of the committed mutations that have ever been written onto the disk
-    // for plog. Since it is set with mutation.data.header.last_committed_decree, usually
-    // it equals to _plog_max_decree_on_disk - 1.
+    // for plog. Since it is set with mutation.data.header.last_committed_decree, it must
+    // be less than _plog_max_decree_on_disk.
     decree _plog_max_commit_on_disk;
 };
 
