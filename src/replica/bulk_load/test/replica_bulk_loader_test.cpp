@@ -236,13 +236,13 @@ public:
     void mock_primary_states()
     {
         mock_replica_config(partition_status::PS_PRIMARY);
-        partition_configuration config;
-        config.max_replica_count = 3;
-        config.pid = PID;
-        config.ballot = BALLOT;
-        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, PRIMARY_HP);
-        SET_IPS_AND_HOST_PORTS_BY_DNS(config, secondaries, SECONDARY_HP, SECONDARY_HP2);
-        _replica->set_primary_partition_configuration(config);
+        partition_configuration pc;
+        pc.max_replica_count = 3;
+        pc.pid = PID;
+        pc.ballot = BALLOT;
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, PRIMARY_HP);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, SECONDARY_HP, SECONDARY_HP2);
+        _replica->set_primary_partition_configuration(pc);
     }
 
     void create_local_metadata_file()
@@ -773,7 +773,7 @@ TEST_P(replica_bulk_loader_test, report_group_ingestion_status_test)
 // report_group_context_clean_flag unit tests
 TEST_P(replica_bulk_loader_test, report_group_cleanup_flag_in_unhealthy_state)
 {
-    // _primary_states.membership.secondaries is empty
+    // _primary_states.pc.secondaries is empty
     mock_replica_config(partition_status::PS_PRIMARY);
     ASSERT_FALSE(test_report_group_cleaned_up());
 }

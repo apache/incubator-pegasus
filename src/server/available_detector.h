@@ -86,7 +86,6 @@ private:
     std::vector<::dsn::task_ptr> _detect_tasks;
     int32_t _app_id;
     int32_t _partition_count;
-    std::vector<::dsn::partition_configuration> partitions;
 
     std::string _send_alert_email_cmd;
     std::string _send_availability_info_email_cmd;

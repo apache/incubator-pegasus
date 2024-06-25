@@ -776,11 +776,11 @@ void replica_split_manager::update_child_group_partition_count(
     }
 
     if (!_replica->_primary_states.learners.empty() ||
-        _replica->_primary_states.membership.hp_secondaries.size() + 1 <
-            _replica->_primary_states.membership.max_replica_count) {
+        _replica->_primary_states.pc.hp_secondaries.size() + 1 <
+            _replica->_primary_states.pc.max_replica_count) {
         LOG_ERROR_PREFIX("there are {} learners or not have enough secondaries(count is {})",
                          _replica->_primary_states.learners.size(),
-                         _replica->_primary_states.membership.hp_secondaries.size());
+                         _replica->_primary_states.pc.hp_secondaries.size());
         parent_handle_split_error(
             "update_child_group_partition_count failed, have learner or lack of secondary", true);
         return;
@@ -987,17 +987,17 @@ void replica_split_manager::register_child_on_meta(ballot b) // on primary paren
         return;
     }
 
-    partition_configuration child_config = _replica->_primary_states.membership;
-    child_config.ballot++;
-    child_config.last_committed_decree = 0;
-    CLEAR_IP_AND_HOST_PORT(child_config, last_drops);
-    child_config.pid.set_partition_index(_replica->_app_info.partition_count +
-                                         get_gpid().get_partition_index());
+    auto child_pc = _replica->_primary_states.pc;
+    child_pc.ballot++;
+    child_pc.last_committed_decree = 0;
+    CLEAR_IP_AND_HOST_PORT(child_pc, last_drops);
+    child_pc.pid.set_partition_index(_replica->_app_info.partition_count +
+                                     get_gpid().get_partition_index());
 
     register_child_request request;
     request.app = _replica->_app_info;
-    request.child_config = child_config;
-    request.parent_config = _replica->_primary_states.membership;
+    request.child_config = child_pc;
+    request.parent_config = _replica->_primary_states.pc;
     SET_IP_AND_HOST_PORT(request, primary, _stub->primary_address(), _stub->primary_host_port());
 
     // reject client request
@@ -1141,8 +1141,7 @@ void replica_split_manager::on_register_child_on_meta_reply(
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-void replica_split_manager::child_partition_active(
-    const partition_configuration &config) // on child
+void replica_split_manager::child_partition_active(const partition_configuration &pc) // on child
 {
     if (status() != partition_status::PS_PARTITION_SPLIT) {
         LOG_WARNING_PREFIX("child partition has been active, status={}", enum_to_string(status()));
@@ -1151,7 +1150,7 @@ void replica_split_manager::child_partition_active(
 
     _replica->_primary_states.last_prepare_decree_on_new_primary =
         _replica->_prepare_list->max_decree();
-    _replica->update_configuration(config);
+    _replica->update_configuration(pc);
     METRIC_VAR_INCREMENT(splitting_successful_count);
     LOG_INFO_PREFIX("child partition is active, status={}", enum_to_string(status()));
 }
@@ -1223,13 +1222,13 @@ void replica_split_manager::trigger_primary_parent_split(
     _meta_split_status = meta_split_status;
     if (meta_split_status == split_status::SPLITTING) {
         if (!_replica->_primary_states.learners.empty() ||
-            _replica->_primary_states.membership.hp_secondaries.size() + 1 <
-                _replica->_primary_states.membership.max_replica_count) {
+            _replica->_primary_states.pc.hp_secondaries.size() + 1 <
+                _replica->_primary_states.pc.max_replica_count) {
             LOG_WARNING_PREFIX(
                 "there are {} learners or not have enough secondaries(count is {}), wait for "
                 "next round",
                 _replica->_primary_states.learners.size(),
-                _replica->_primary_states.membership.hp_secondaries.size());
+                _replica->_primary_states.pc.hp_secondaries.size());
             return;
         }
 
@@ -1508,7 +1507,7 @@ void replica_split_manager::primary_parent_handle_stop_split(
         }
     }
     // all secondaries have already stop split succeed
-    if (count == _replica->_primary_states.membership.max_replica_count - 1) {
+    if (count == _replica->_primary_states.pc.max_replica_count - 1) {
         _replica->_primary_states.cleanup_split_states();
         parent_send_notify_stop_request(req->meta_split_status);
     }

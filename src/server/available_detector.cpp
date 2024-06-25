@@ -266,8 +266,8 @@ void available_detector::report_availability_info()
 bool available_detector::generate_hash_keys()
 {
     // get app_id and partition_count.
-    auto err =
-        _ddl_client->list_app(FLAGS_available_detect_app, _app_id, _partition_count, partitions);
+    std::vector<::dsn::partition_configuration> pcs;
+    auto err = _ddl_client->list_app(FLAGS_available_detect_app, _app_id, _partition_count, pcs);
     if (err == ::dsn::ERR_OK && _app_id >= 0) {
         _hash_keys.clear();
         for (auto pidx = 0; pidx < _partition_count; pidx++) {

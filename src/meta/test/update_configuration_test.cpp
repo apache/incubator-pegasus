@@ -161,8 +161,9 @@ public:
     {
         action.type = config_type::CT_INVALID;
         const dsn::partition_configuration &pc = *get_config(*view.apps, gpid);
-        if (pc.hp_primary && pc.hp_secondaries.size() == 2)
+        if (pc.hp_primary && pc.hp_secondaries.size() == 2) {
             return pc_status::healthy;
+        }
         return pc_status::ill;
     }
 };
@@ -248,12 +249,12 @@ void meta_service_test_app::update_configuration_test()
     std::vector<dsn::host_port> nodes;
     generate_node_list(nodes, 4, 4);
 
-    dsn::partition_configuration &pc0 = app->partitions[0];
+    auto &pc0 = app->pcs[0];
     SET_IP_AND_HOST_PORT_BY_DNS(pc0, primary, nodes[0]);
     SET_IPS_AND_HOST_PORTS_BY_DNS(pc0, secondaries, nodes[1], nodes[2]);
     pc0.ballot = 3;
 
-    dsn::partition_configuration &pc1 = app->partitions[1];
+    auto &pc1 = app->pcs[1];
     SET_IP_AND_HOST_PORT_BY_DNS(pc1, primary, nodes[1]);
     SET_IPS_AND_HOST_PORTS_BY_DNS(pc1, secondaries, nodes[0], nodes[2]);
     pc1.ballot = 3;
@@ -326,7 +327,7 @@ void meta_service_test_app::adjust_dropped_size()
     generate_node_list(nodes, 10, 10);
 
     // first, the replica is healthy, and there are 2 dropped
-    dsn::partition_configuration &pc = app->partitions[0];
+    auto &pc = app->pcs[0];
     SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
     SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[1], nodes[2]);
     pc.ballot = 10;
@@ -394,8 +395,8 @@ static void clone_app_mapper(app_mapper &output, const app_mapper &input)
         const std::shared_ptr<app_state> &old_app = iter.second;
         dsn::app_info info = *old_app;
         std::shared_ptr<app_state> new_app = app_state::create(info);
-        for (unsigned int i = 0; i != old_app->partition_count; ++i)
-            new_app->partitions[i] = old_app->partitions[i];
+        CHECK_EQ(old_app->partition_count, old_app->pcs.size());
+        new_app->pcs = old_app->pcs;
         output.emplace(new_app->app_id, new_app);
     }
 }
@@ -498,12 +499,12 @@ void meta_service_test_app::cannot_run_balancer_test()
     info.partition_count = 1;
     info.status = dsn::app_status::AS_AVAILABLE;
 
-    std::shared_ptr<app_state> the_app = app_state::create(info);
-    svc->_state->_all_apps.emplace(info.app_id, the_app);
-    svc->_state->_exist_apps.emplace(info.app_name, the_app);
+    std::shared_ptr<app_state> app = app_state::create(info);
+    svc->_state->_all_apps.emplace(info.app_id, app);
+    svc->_state->_exist_apps.emplace(info.app_name, app);
     svc->_state->_table_metric_entities.create_entity(info.app_id, info.partition_count);
 
-    dsn::partition_configuration &pc = the_app->partitions[0];
+    auto &pc = app->pcs[0];
     SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
     SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[1], nodes[2]);
 
@@ -535,11 +536,11 @@ void meta_service_test_app::cannot_run_balancer_test()
 
     // some apps are staging
     REGENERATE_NODE_MAPPER;
-    the_app->status = dsn::app_status::AS_DROPPING;
+    app->status = dsn::app_status::AS_DROPPING;
     ASSERT_FALSE(svc->_state->check_all_partitions());
 
     // call function can run balancer
-    the_app->status = dsn::app_status::AS_AVAILABLE;
+    app->status = dsn::app_status::AS_AVAILABLE;
     ASSERT_TRUE(svc->_state->can_run_balancer());
 
     // recover original FLAGS_min_live_node_count_for_unfreeze

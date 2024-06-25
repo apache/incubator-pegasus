@@ -756,9 +756,9 @@ void meta_service::on_query_configuration_by_index(configuration_query_by_index_
     host_port forward_hp;
     if (!check_status_and_authz(rpc, &forward_hp)) {
         if (forward_hp) {
-            partition_configuration config;
-            SET_IP_AND_HOST_PORT_BY_DNS(config, primary, forward_hp);
-            response.partitions.push_back(std::move(config));
+            partition_configuration pc;
+            SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, forward_hp);
+            response.partitions.push_back(std::move(pc));
         }
         return;
     }

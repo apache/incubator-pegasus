@@ -1562,7 +1562,7 @@ inline stat_var_map create_rates(row_data &row)
 // Given all tables, create all aggregations needed for the table-level stats. All selected
 // partitions should have their primary replicas on this node.
 inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs(
-    const std::map<int32_t, std::vector<dsn::partition_configuration>> &table_partitions,
+    const std::map<int32_t, std::vector<dsn::partition_configuration>> &pcs_by_appid,
     const dsn::host_port &node,
     const std::string &entity_type,
     std::vector<row_data> &rows)
@@ -1584,18 +1584,18 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
             processor.first->emplace(row.app_id, processor.second(row));
         }
 
-        const auto &table = table_partitions.find(row.app_id);
-        CHECK(table != table_partitions.end(),
-              "table could not be found in table_partitions: table_id={}",
+        const auto &iter = pcs_by_appid.find(row.app_id);
+        CHECK(iter != pcs_by_appid.end(),
+              "table could not be found in pcs_by_appid: table_id={}",
               row.app_id);
 
-        for (const auto &partition : table->second) {
-            if (partition.hp_primary != node) {
+        for (const auto &pc : iter->second) {
+            if (pc.hp_primary != node) {
                 // Ignore once the replica of the metrics is not the primary of the partition.
                 continue;
             }
 
-            partitions.insert(partition.pid);
+            partitions.insert(pc.pid);
         }
     }
 
@@ -1610,18 +1610,18 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
 // stats. All selected partitions should have their primary replicas on this node.
 inline std::unique_ptr<aggregate_stats_calcs>
 create_partition_aggregate_stats_calcs(const int32_t table_id,
-                                       const std::vector<dsn::partition_configuration> &partitions,
+                                       const std::vector<dsn::partition_configuration> &pcs,
                                        const dsn::host_port &node,
                                        const std::string &entity_type,
                                        std::vector<row_data> &rows)
 {
-    CHECK_EQ(rows.size(), partitions.size());
+    CHECK_EQ(rows.size(), pcs.size());
 
     partition_stat_map sums;
     partition_stat_map increases;
     partition_stat_map rates;
     for (size_t i = 0; i < rows.size(); ++i) {
-        if (partitions[i].hp_primary != node) {
+        if (pcs[i].hp_primary != node) {
             // Ignore once the replica of the metrics is not the primary of the partition.
             continue;
         }
@@ -1791,13 +1791,13 @@ inline bool get_apps_and_nodes(shell_context *sc,
 inline bool
 get_app_partitions(shell_context *sc,
                    const std::vector<::dsn::app_info> &apps,
-                   std::map<int32_t, std::vector<dsn::partition_configuration>> &app_partitions)
+                   std::map<int32_t, std::vector<dsn::partition_configuration>> &pcs_by_appid)
 {
     for (const ::dsn::app_info &app : apps) {
         int32_t app_id = 0;
         int32_t partition_count = 0;
         dsn::error_code err = sc->ddl_client->list_app(
-            app.app_name, app_id, partition_count, app_partitions[app.app_id]);
+            app.app_name, app_id, partition_count, pcs_by_appid[app.app_id]);
         if (err != ::dsn::ERR_OK) {
             LOG_ERROR("list app {} failed, error = {}", app.app_name, err);
             return false;
@@ -1850,8 +1850,8 @@ inline bool get_app_partition_stat(shell_context *sc,
     }
 
     // get app_id --> partitions
-    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
-    if (!get_app_partitions(sc, apps, app_partitions)) {
+    std::map<int32_t, std::vector<dsn::partition_configuration>> pcs_by_appid;
+    if (!get_app_partitions(sc, apps, pcs_by_appid)) {
         return false;
     }
 
@@ -1875,8 +1875,8 @@ inline bool get_app_partition_stat(shell_context *sc,
             if (parse_app_pegasus_perf_counter_name(
                     m.name, app_id_x, partition_index_x, counter_name)) {
                 // only primary partition will be counted
-                auto find = app_partitions.find(app_id_x);
-                if (find != app_partitions.end() &&
+                const auto find = pcs_by_appid.find(app_id_x);
+                if (find != pcs_by_appid.end() &&
                     find->second[partition_index_x].hp_primary == nodes[i].hp) {
                     row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
                     row.row_name = std::to_string(partition_index_x);
@@ -1914,8 +1914,8 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
     std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
     const auto &results_end = get_metrics(nodes, query_string);
 
-    std::map<int32_t, std::vector<dsn::partition_configuration>> table_partitions;
-    if (!get_app_partitions(sc, apps, table_partitions)) {
+    std::map<int32_t, std::vector<dsn::partition_configuration>> pcs_by_appid;
+    if (!get_app_partitions(sc, apps, pcs_by_appid)) {
         return false;
     }
 
@@ -1929,15 +1929,14 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
             row.partition_count = app.partition_count;
             return row;
         });
-    CHECK_EQ(rows.size(), table_partitions.size());
+    CHECK_EQ(rows.size(), pcs_by_appid.size());
 
     for (size_t i = 0; i < nodes.size(); ++i) {
         RETURN_SHELL_IF_GET_METRICS_FAILED(
             results_start[i], nodes[i], "starting row data requests");
         RETURN_SHELL_IF_GET_METRICS_FAILED(results_end[i], nodes[i], "ending row data requests");
 
-        auto calcs =
-            create_table_aggregate_stats_calcs(table_partitions, nodes[i].hp, "replica", rows);
+        auto calcs = create_table_aggregate_stats_calcs(pcs_by_appid, nodes[i].hp, "replica", rows);
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
@@ -1961,13 +1960,13 @@ inline bool get_partition_stats(shell_context *sc,
 
     int32_t table_id = 0;
     int32_t partition_count = 0;
-    std::vector<dsn::partition_configuration> partitions;
-    const auto &err = sc->ddl_client->list_app(table_name, table_id, partition_count, partitions);
+    std::vector<dsn::partition_configuration> pcs;
+    const auto &err = sc->ddl_client->list_app(table_name, table_id, partition_count, pcs);
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR("list app {} failed, error = {}", table_name, err);
         return false;
     }
-    CHECK_EQ(partitions.size(), partition_count);
+    CHECK_EQ(pcs.size(), partition_count);
 
     const auto &query_string = row_data_filters(table_id).to_query_string();
     const auto &results_start = get_metrics(nodes, query_string);
@@ -1986,8 +1985,8 @@ inline bool get_partition_stats(shell_context *sc,
         RETURN_SHELL_IF_GET_METRICS_FAILED(
             results_end[i], nodes[i], "ending row data requests for table(id={})", table_id);
 
-        auto calcs = create_partition_aggregate_stats_calcs(
-            table_id, partitions, nodes[i].hp, "replica", rows);
+        auto calcs =
+            create_partition_aggregate_stats_calcs(table_id, pcs, nodes[i].hp, "replica", rows);
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
@@ -2097,17 +2096,16 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         return false;
     }
 
-    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
-    if (!get_app_partitions(sc, apps, app_partitions)) {
+    std::map<int32_t, std::vector<dsn::partition_configuration>> pcs_by_appid;
+    if (!get_app_partitions(sc, apps, pcs_by_appid)) {
         LOG_ERROR("get app partitions failed");
         return false;
     }
-    for (auto &kv : app_partitions) {
-        auto &v = kv.second;
-        for (auto &c : v) {
+    for (auto &[_, pcs] : pcs_by_appid) {
+        for (auto &pc : pcs) {
             // use partition_flags to record if this partition's storage size is calculated,
-            // because `app_partitions' is a temporary variable, so we can re-use partition_flags.
-            c.partition_flags = 0;
+            // because `pcs_by_appid' is a temporary variable, so we can re-use partition_flags.
+            pc.partition_flags = 0;
         }
     }
 
@@ -2128,10 +2126,10 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
             CHECK(parse_ret, "name = {}", m.name);
             if (counter_name != "disk.storage.sst(MB)")
                 continue;
-            auto find = app_partitions.find(app_id_x);
-            if (find == app_partitions.end()) // app id not found
+            auto find = pcs_by_appid.find(app_id_x);
+            if (find == pcs_by_appid.end()) // app id not found
                 continue;
-            dsn::partition_configuration &pc = find->second[partition_index_x];
+            auto &pc = find->second[partition_index_x];
             if (pc.hp_primary != nodes[i].hp) // not primary replica
                 continue;
             if (pc.partition_flags != 0) // already calculated

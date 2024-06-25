@@ -157,7 +157,7 @@ public:
 
     void query_configuration_by_index(const query_cfg_request &request,
                                       /*out*/ query_cfg_response &response);
-    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &config);
+    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &pc);
 
     // app options
     void create_app(dsn::message_ex *msg);
@@ -276,7 +276,7 @@ private:
     void
     update_configuration_locally(app_state &app,
                                  std::shared_ptr<configuration_update_request> &config_request);
-    void request_check(const partition_configuration &old,
+    void request_check(const partition_configuration &old_pc,
                        const configuration_update_request &request);
     void recall_partition(std::shared_ptr<app_state> &app, int pidx);
     void drop_partition(std::shared_ptr<app_state> &app, int pidx);
@@ -285,11 +285,9 @@ private:
                                          int pidx,
                                          const host_port &node);
     void
-    downgrade_stateless_nodes(std::shared_ptr<app_state> &app, int pidx, const host_port &address);
-
-    void on_partition_node_dead(std::shared_ptr<app_state> &app,
-                                int pidx,
-                                const dsn::host_port &address);
+    downgrade_stateless_nodes(std::shared_ptr<app_state> &app, int pidx, const host_port &node);
+    void
+    on_partition_node_dead(std::shared_ptr<app_state> &app, int pidx, const dsn::host_port &node);
     void send_proposal(const host_port &target, const configuration_update_request &proposal);
     void send_proposal(const configuration_proposal_action &action,
                        const partition_configuration &pc,
@@ -347,18 +345,16 @@ private:
                                             int32_t partition_index,
                                             int32_t new_max_replica_count,
                                             partition_callback on_partition_updated);
-    task_ptr update_partition_max_replica_count_on_remote(
-        std::shared_ptr<app_state> &app,
-        const partition_configuration &new_partition_config,
-        partition_callback on_partition_updated);
-    void on_update_partition_max_replica_count_on_remote_reply(
-        error_code ec,
-        std::shared_ptr<app_state> &app,
-        const partition_configuration &new_partition_config,
-        partition_callback on_partition_updated);
+    task_ptr update_partition_max_replica_count_on_remote(std::shared_ptr<app_state> &app,
+                                                          const partition_configuration &new_pc,
+                                                          partition_callback on_partition_updated);
     void
-    update_partition_max_replica_count_locally(std::shared_ptr<app_state> &app,
-                                               const partition_configuration &new_partition_config);
+    on_update_partition_max_replica_count_on_remote_reply(error_code ec,
+                                                          std::shared_ptr<app_state> &app,
+                                                          const partition_configuration &new_pc,
+                                                          partition_callback on_partition_updated);
+    void update_partition_max_replica_count_locally(std::shared_ptr<app_state> &app,
+                                                    const partition_configuration &new_pc);
 
     void recover_all_partitions_max_replica_count(std::shared_ptr<app_state> &app,
                                                   int32_t max_replica_count,

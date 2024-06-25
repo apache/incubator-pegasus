@@ -198,7 +198,7 @@ struct parti_config
     bool operator<(const parti_config &o) const { return pid == o.pid && ballot < o.ballot; }
     std::string to_string() const;
     bool from_string(const std::string &str);
-    void convert_from(const partition_configuration &c);
+    void convert_from(const partition_configuration &pc);
 
     friend std::ostream &operator<<(std::ostream &os, const parti_config &pc)
     {

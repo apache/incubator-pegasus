@@ -134,8 +134,9 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     // when add node to pc.last_drops, we don't remove it from our cc.drop_list
     CHECK(pc.hp_last_drops.empty(), "last_drops of partition({}) must be empty", pid);
     for (auto iter = drop_list.rbegin(); iter != drop_list.rend(); ++iter) {
-        if (pc.hp_last_drops.size() + 1 >= max_replica_count)
+        if (pc.hp_last_drops.size() + 1 >= max_replica_count) {
             break;
+        }
         // similar to cc.drop_list, pc.last_drop is also a stack structure
         HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(pc, last_drops, iter->node);
         LOG_INFO("construct for ({}), select {} into last_drops, ballot({}), "
@@ -303,8 +304,8 @@ void config_context::check_size()
 {
     // when add learner, it is possible that replica_count > max_replica_count, so we
     // need to remove things from dropped only when it's not empty.
-    while (replica_count(*config_owner) + dropped.size() >
-               config_owner->max_replica_count + FLAGS_max_reserved_dropped_replicas &&
+    while (replica_count(*pc) + dropped.size() >
+               pc->max_replica_count + FLAGS_max_reserved_dropped_replicas &&
            !dropped.empty()) {
         dropped.erase(dropped.begin());
         prefered_dropped = (int)dropped.size() - 1;
@@ -377,7 +378,7 @@ int config_context::collect_drop_replica(const host_port &node, const replica_in
         CHECK(!in_dropped,
               "adjust position of existing node({}) failed, this is a bug, partition({})",
               node,
-              config_owner->pid);
+              pc->pid);
         return -1;
     }
     return in_dropped ? 1 : 0;
@@ -391,7 +392,7 @@ bool config_context::check_order()
         if (dropped_cmp(dropped[i], dropped[i + 1]) > 0) {
             LOG_ERROR("check dropped order for gpid({}) failed, [{},{},{},{},{}@{}] vs "
                       "[{},{},{},{},{}@{}]",
-                      config_owner->pid,
+                      pc->pid,
                       dropped[i].node,
                       dropped[i].time,
                       dropped[i].ballot,
@@ -474,9 +475,9 @@ void app_state_helper::on_init_partitions()
     context.prefered_dropped = -1;
     contexts.assign(owner->partition_count, context);
 
-    std::vector<partition_configuration> &partitions = owner->partitions;
+    auto &pcs = owner->pcs;
     for (unsigned int i = 0; i != owner->partition_count; ++i) {
-        contexts[i].config_owner = &(partitions[i]);
+        contexts[i].pc = &(pcs[i]);
     }
 
     partitions_in_progress.store(owner->partition_count);
@@ -525,19 +526,20 @@ app_state::app_state(const app_info &info) : app_info(info), helpers(new app_sta
     log_name = info.app_name + "(" + boost::lexical_cast<std::string>(info.app_id) + ")";
     helpers->owner = this;
 
-    partition_configuration config;
-    config.ballot = 0;
-    config.pid.set_app_id(app_id);
-    config.last_committed_decree = 0;
-    config.max_replica_count = app_info::max_replica_count;
+    partition_configuration pc;
+    pc.ballot = 0;
+    pc.pid.set_app_id(app_id);
+    pc.last_committed_decree = 0;
+    pc.max_replica_count = app_info::max_replica_count;
 
-    RESET_IP_AND_HOST_PORT(config, primary);
-    CLEAR_IP_AND_HOST_PORT(config, secondaries);
-    CLEAR_IP_AND_HOST_PORT(config, last_drops);
+    RESET_IP_AND_HOST_PORT(pc, primary);
+    CLEAR_IP_AND_HOST_PORT(pc, secondaries);
+    CLEAR_IP_AND_HOST_PORT(pc, last_drops);
 
-    partitions.assign(app_info::partition_count, config);
-    for (int i = 0; i != app_info::partition_count; ++i)
-        partitions[i].pid.set_partition_index(i);
+    pcs.assign(app_info::partition_count, pc);
+    for (int i = 0; i != app_info::partition_count; ++i) {
+        pcs[i].pid.set_partition_index(i);
+    }
 
     helpers->on_init_partitions();
 }

@@ -100,7 +100,7 @@ public:
     void cleanup(bool clean_pending_mutations = true);
     bool is_cleaned();
 
-    void reset_membership(const partition_configuration &config, bool clear_learners);
+    void reset_membership(const partition_configuration &new_pc, bool clear_learners);
     void get_replica_config(partition_status::type status,
                             /*out*/ replica_configuration &config,
                             uint64_t learner_signature = invalid_signature);
@@ -120,7 +120,7 @@ public:
 
 public:
     // membership mgr, including learners
-    partition_configuration membership;
+    partition_configuration pc;
     node_statuses statuses;
     learner_map learners;
     uint64_t next_learning_version;

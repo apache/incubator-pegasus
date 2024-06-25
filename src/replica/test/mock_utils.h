@@ -180,9 +180,9 @@ public:
     void prepare_list_commit_hard(decree d) { _prepare_list->commit(d, COMMIT_TO_DECREE_HARD); }
     decree get_app_last_committed_decree() { return _app->last_committed_decree(); }
     void set_app_last_committed_decree(decree d) { _app->_last_committed_decree = d; }
-    void set_primary_partition_configuration(partition_configuration &pconfig)
+    void set_primary_partition_configuration(partition_configuration &pc)
     {
-        _primary_states.membership = pconfig;
+        _primary_states.pc = pc;
     }
     partition_bulk_load_state get_secondary_bulk_load_state(const host_port &node)
     {

@@ -154,8 +154,8 @@ public:
         auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        auto &partition_config = app->partitions[partition_index];
-        partition_config.max_replica_count = max_replica_count;
+        auto &pc = app->pcs[partition_index];
+        pc.max_replica_count = max_replica_count;
     }
 
     void set_max_replica_count_env(const std::string &app_name, const std::string &env)
@@ -217,16 +217,15 @@ public:
         auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        auto partition_size = static_cast<int>(app->partitions.size());
+        auto partition_size = static_cast<int>(app->pcs.size());
         for (int i = 0; i < partition_size; ++i) {
             // set local max_replica_count of each partition
-            auto &partition_config = app->partitions[i];
-            partition_config.max_replica_count = max_replica_count;
+            auto &pc = app->pcs[i];
+            pc.max_replica_count = max_replica_count;
 
             // set remote max_replica_count of each partition
-            auto partition_path = _ss->get_partition_path(partition_config.pid);
-            auto json_config =
-                dsn::json::json_forwarder<partition_configuration>::encode(partition_config);
+            auto partition_path = _ss->get_partition_path(pc.pid);
+            auto json_config = dsn::json::json_forwarder<partition_configuration>::encode(pc);
             dsn::task_tracker tracker;
             _ms->get_remote_storage()->set_data(
                 partition_path,
@@ -260,28 +259,27 @@ public:
         auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        auto partition_size = static_cast<int>(app->partitions.size());
+        auto partition_size = static_cast<int>(app->pcs.size());
         for (int i = 0; i < partition_size; ++i) {
             // verify local max_replica_count of each partition
-            auto &partition_config = app->partitions[i];
-            ASSERT_EQ(partition_config.max_replica_count, expected_max_replica_count);
+            auto &pc = app->pcs[i];
+            ASSERT_EQ(pc.max_replica_count, expected_max_replica_count);
 
             // verify remote max_replica_count of each partition
-            auto partition_path = _ss->get_partition_path(partition_config.pid);
+            auto partition_path = _ss->get_partition_path(pc.pid);
             dsn::task_tracker tracker;
             _ms->get_remote_storage()->get_data(
                 partition_path,
                 LPC_META_CALLBACK,
-                [expected_pid = partition_config.pid,
-                 expected_max_replica_count](error_code ec, const blob &value) {
+                [expected_pid = pc.pid, expected_max_replica_count](error_code ec,
+                                                                    const blob &value) {
                     ASSERT_EQ(ec, ERR_OK);
 
-                    partition_configuration partition_config;
-                    dsn::json::json_forwarder<partition_configuration>::decode(value,
-                                                                               partition_config);
+                    partition_configuration pc;
+                    dsn::json::json_forwarder<partition_configuration>::decode(value, pc);
 
-                    ASSERT_EQ(partition_config.pid, expected_pid);
-                    ASSERT_EQ(partition_config.max_replica_count, expected_max_replica_count);
+                    ASSERT_EQ(pc.pid, expected_pid);
+                    ASSERT_EQ(pc.max_replica_count, expected_max_replica_count);
                 },
                 &tracker);
             tracker.wait_outstanding_tasks();

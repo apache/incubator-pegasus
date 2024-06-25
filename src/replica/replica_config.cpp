@@ -189,9 +189,9 @@ void replica::add_potential_secondary(const configuration_update_request &propos
     }
 
     CHECK_EQ(proposal.config.ballot, get_ballot());
-    CHECK_EQ(proposal.config.pid, _primary_states.membership.pid);
-    CHECK_EQ(proposal.config.hp_primary, _primary_states.membership.hp_primary);
-    CHECK(proposal.config.hp_secondaries == _primary_states.membership.hp_secondaries, "");
+    CHECK_EQ(proposal.config.pid, _primary_states.pc.pid);
+    CHECK_EQ(proposal.config.hp_primary, _primary_states.pc.hp_primary);
+    CHECK(proposal.config.hp_secondaries == _primary_states.pc.hp_secondaries, "");
 
     host_port node;
     GET_HOST_PORT(proposal, node, node);
@@ -199,8 +199,8 @@ void replica::add_potential_secondary(const configuration_update_request &propos
     CHECK(!_primary_states.check_exist(node, partition_status::PS_SECONDARY), "node = {}", node);
 
     int potential_secondaries_count =
-        _primary_states.membership.hp_secondaries.size() + _primary_states.learners.size();
-    if (potential_secondaries_count >= _primary_states.membership.max_replica_count - 1) {
+        _primary_states.pc.hp_secondaries.size() + _primary_states.learners.size();
+    if (potential_secondaries_count >= _primary_states.pc.max_replica_count - 1) {
         if (proposal.type == config_type::CT_ADD_SECONDARY) {
             if (_primary_states.learners.find(node) == _primary_states.learners.end()) {
                 LOG_INFO_PREFIX(
@@ -209,7 +209,7 @@ void replica::add_potential_secondary(const configuration_update_request &propos
                 return;
             }
         } else if (proposal.type == config_type::CT_ADD_SECONDARY_FOR_LB) {
-            if (potential_secondaries_count >= _primary_states.membership.max_replica_count) {
+            if (potential_secondaries_count >= _primary_states.pc.max_replica_count) {
                 LOG_INFO_PREFIX("only allow one extra (potential) secondary, ingnore new potential "
                                 "secondary proposal");
                 return;
@@ -255,12 +255,12 @@ void replica::upgrade_to_secondary_on_primary(const ::dsn::host_port &node)
 {
     LOG_INFO_PREFIX("upgrade potential secondary {} to secondary", node);
 
-    partition_configuration new_config = _primary_states.membership;
+    partition_configuration new_pc = _primary_states.pc;
 
     // add secondary
-    ADD_IP_AND_HOST_PORT_BY_DNS(new_config, secondaries, node);
+    ADD_IP_AND_HOST_PORT_BY_DNS(new_pc, secondaries, node);
 
-    update_configuration_on_meta_server(config_type::CT_UPGRADE_TO_SECONDARY, node, new_config);
+    update_configuration_on_meta_server(config_type::CT_UPGRADE_TO_SECONDARY, node, new_pc);
 }
 
 void replica::downgrade_to_secondary_on_primary(configuration_update_request &proposal)
@@ -269,9 +269,9 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request &pr
         return;
     }
 
-    CHECK_EQ(proposal.config.pid, _primary_states.membership.pid);
-    CHECK_EQ(proposal.config.hp_primary, _primary_states.membership.hp_primary);
-    CHECK(proposal.config.hp_secondaries == _primary_states.membership.hp_secondaries, "");
+    CHECK_EQ(proposal.config.pid, _primary_states.pc.pid);
+    CHECK_EQ(proposal.config.hp_primary, _primary_states.pc.hp_primary);
+    CHECK(proposal.config.hp_secondaries == _primary_states.pc.hp_secondaries, "");
     CHECK_EQ(proposal.hp_node, proposal.config.hp_primary);
     CHECK_EQ(proposal.node, proposal.config.primary);
 
@@ -286,9 +286,9 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request &pro
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    CHECK_EQ(proposal.config.pid, _primary_states.membership.pid);
-    CHECK_EQ(proposal.config.hp_primary, _primary_states.membership.hp_primary);
-    CHECK(proposal.config.hp_secondaries == _primary_states.membership.hp_secondaries, "");
+    CHECK_EQ(proposal.config.pid, _primary_states.pc.pid);
+    CHECK_EQ(proposal.config.hp_primary, _primary_states.pc.hp_primary);
+    CHECK(proposal.config.hp_secondaries == _primary_states.pc.hp_secondaries, "");
 
     host_port node;
     GET_HOST_PORT(proposal, node, node);
@@ -314,9 +314,9 @@ void replica::remove(configuration_update_request &proposal)
     if (proposal.config.ballot != get_ballot() || status() != partition_status::PS_PRIMARY)
         return;
 
-    CHECK_EQ(proposal.config.pid, _primary_states.membership.pid);
-    CHECK_EQ(proposal.config.hp_primary, _primary_states.membership.hp_primary);
-    CHECK(proposal.config.hp_secondaries == _primary_states.membership.hp_secondaries, "");
+    CHECK_EQ(proposal.config.pid, _primary_states.pc.pid);
+    CHECK_EQ(proposal.config.hp_primary, _primary_states.pc.hp_primary);
+    CHECK(proposal.config.hp_secondaries == _primary_states.pc.hp_secondaries, "");
 
     host_port node;
     GET_HOST_PORT(proposal, node, node);
@@ -375,24 +375,24 @@ void replica::on_remove(const replica_configuration &request)
 
 void replica::update_configuration_on_meta_server(config_type::type type,
                                                   const host_port &node,
-                                                  partition_configuration &new_config)
+                                                  partition_configuration &new_pc)
 {
     // type should never be `CT_REGISTER_CHILD`
     // if this happens, it means serious mistake happened during partition split
     // assert here to stop split and avoid splitting wrong
     CHECK_NE_PREFIX(type, config_type::CT_REGISTER_CHILD);
 
-    new_config.last_committed_decree = last_committed_decree();
+    new_pc.last_committed_decree = last_committed_decree();
 
     if (type == config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT) {
         CHECK(status() == partition_status::PS_INACTIVE && _inactive_is_transient &&
                   _is_initializing,
               "");
-        CHECK_EQ(new_config.hp_primary, node);
+        CHECK_EQ(new_pc.hp_primary, node);
     } else if (type != config_type::CT_ASSIGN_PRIMARY &&
                type != config_type::CT_UPGRADE_TO_PRIMARY) {
         CHECK_EQ(status(), partition_status::PS_PRIMARY);
-        CHECK_EQ(new_config.ballot, _primary_states.membership.ballot);
+        CHECK_EQ(new_pc.ballot, _primary_states.pc.ballot);
     }
 
     // disable 2pc during reconfiguration
@@ -406,7 +406,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->info = _app_info;
-    request->config = new_config;
+    request->config = new_pc;
     request->config.ballot++;
     request->type = type;
     SET_IP_AND_HOST_PORT_BY_DNS(*request, node, node);
@@ -645,23 +645,24 @@ void replica::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)
     }
 }
 
-bool replica::update_configuration(const partition_configuration &config)
+bool replica::update_configuration(const partition_configuration &pc)
 {
-    CHECK_GE(config.ballot, get_ballot());
+    CHECK_GE(pc.ballot, get_ballot());
 
     replica_configuration rconfig;
-    replica_helper::get_replica_config(config, _stub->primary_host_port(), rconfig);
+    replica_helper::get_replica_config(pc, _stub->primary_host_port(), rconfig);
 
     if (rconfig.status == partition_status::PS_PRIMARY &&
         (rconfig.ballot > get_ballot() || status() != partition_status::PS_PRIMARY)) {
-        _primary_states.reset_membership(config, config.hp_primary != _stub->primary_host_port());
+        _primary_states.reset_membership(pc, pc.hp_primary != _stub->primary_host_port());
     }
 
-    if (config.ballot > get_ballot() ||
+    if (pc.ballot > get_ballot() ||
         is_same_ballot_status_change_allowed(status(), rconfig.status)) {
         return update_local_configuration(rconfig, true);
-    } else
+    } else {
         return false;
+    }
 }
 
 bool replica::is_same_ballot_status_change_allowed(partition_status::type olds,
@@ -1041,7 +1042,8 @@ bool replica::update_local_configuration(const replica_configuration &config,
             init_prepare(next, false);
         }
 
-        if (_primary_states.membership.hp_secondaries.size() + 1 <
+        CHECK(_primary_states.pc.__isset.hp_secondaries, "");
+        if (_primary_states.pc.hp_secondaries.size() + 1 <
             _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
             std::vector<mutation_ptr> queued;
             _primary_states.write_queue.clear(queued);
@@ -1069,12 +1071,12 @@ bool replica::update_local_configuration_with_no_ballot_change(partition_status:
 
 // ThreadPool: THREAD_POOL_REPLICATION
 void replica::on_config_sync(const app_info &info,
-                             const partition_configuration &config,
+                             const partition_configuration &pc,
                              split_status::type meta_split_status)
 {
     LOG_DEBUG_PREFIX("configuration sync");
     // no outdated update
-    if (config.ballot < get_ballot())
+    if (pc.ballot < get_ballot())
         return;
 
     update_app_max_replica_count(info.max_replica_count);
@@ -1091,25 +1093,25 @@ void replica::on_config_sync(const app_info &info,
     } else {
         if (_is_initializing) {
             // in initializing, when replica still primary, need to inc ballot
-            if (config.hp_primary == _stub->primary_host_port() &&
+            if (pc.hp_primary == _stub->primary_host_port() &&
                 status() == partition_status::PS_INACTIVE && _inactive_is_transient) {
                 update_configuration_on_meta_server(config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT,
-                                                    config.hp_primary,
-                                                    const_cast<partition_configuration &>(config));
+                                                    pc.hp_primary,
+                                                    const_cast<partition_configuration &>(pc));
                 return;
             }
             _is_initializing = false;
         }
 
-        update_configuration(config);
+        update_configuration(pc);
 
         if (status() == partition_status::PS_INACTIVE && !_inactive_is_transient) {
-            if (config.hp_primary == _stub->primary_host_port() // dead primary
-                || !config.hp_primary // primary is dead (otherwise let primary remove this)
+            if (pc.hp_primary == _stub->primary_host_port() // dead primary
+                || !pc.hp_primary // primary is dead (otherwise let primary remove this)
             ) {
                 LOG_INFO_PREFIX("downgrade myself as inactive is not transient, remote_config({})",
-                                boost::lexical_cast<std::string>(config));
-                _stub->remove_replica_on_meta_server(_app_info, config);
+                                boost::lexical_cast<std::string>(pc));
+                _stub->remove_replica_on_meta_server(_app_info, pc);
             } else {
                 LOG_INFO_PREFIX("state is non-transient inactive, waiting primary to remove me");
             }
