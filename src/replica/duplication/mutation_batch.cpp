@@ -57,6 +57,7 @@ mutation_buffer::mutation_buffer(replica_base *r,
 void mutation_buffer::commit(decree d, commit_type ct)
 {
     if (d <= last_committed_decree()) {
+        // Ignore the decrees that have been committed.
         return;
     }
 
