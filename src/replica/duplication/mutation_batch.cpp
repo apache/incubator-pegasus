@@ -87,8 +87,8 @@ void mutation_buffer::commit(decree d, commit_type ct)
                              min_decree(),
                              max_decree());
             METRIC_VAR_SET(dup_recent_lost_mutations, min_decree() - last_committed_decree());
-            // if next_commit_mutation loss, let last_commit_decree catch up  with min_decree, and
-            // the next loop will commit from min_decree
+            // If next_commit_mutation loss, let last_commit_decree catch up  with min_decree, and
+            // the next loop will commit from min_decree.
             _last_committed_decree = min_decree() - 1;
             return;
         }
@@ -160,11 +160,13 @@ mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r), _replic
         r->get_gpid(), std::string("mutation_batch@") + r->replica_name(), r->app_name());
     _mutation_buffer = std::make_unique<mutation_buffer>(
         &base, 0, PREPARE_LIST_NUM_ENTRIES, [this](mutation_ptr &mu) {
-            // committer
+            // The committer for the prepare list, used for duplicating to add the committed
+            // mutations to the loading list, which would be shipped to the remote cluster
+            // later.
             add_mutation_if_valid(mu, _start_decree);
         });
 
-    // start duplication from confirmed_decree
+    // Start duplication from the confirmed decree that has been persisted in the meta server.
     _mutation_buffer->reset(r->progress().confirmed_decree);
 }
 

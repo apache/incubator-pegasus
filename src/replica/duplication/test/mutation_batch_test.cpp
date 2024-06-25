@@ -42,17 +42,33 @@ namespace replication {
 class mutation_batch_test : public duplication_test_base
 {
 public:
-    void
-    reset_buffer(const mutation_batch &batcher, const decree last_commit, decree start, decree end)
+    void reset_buffer(const decree last_commit,
+                      const decree start,
+                      const decree end,
+                      mutation_batch &batcher)
     {
         batcher._mutation_buffer->reset(last_commit);
         batcher._mutation_buffer->_start_decree = start;
         batcher._mutation_buffer->_end_decree = end;
     }
 
-    void commit_buffer(const mutation_batch &batcher, const decree current_decree)
+    void commit_buffer(const decree current_decree, mutation_batch &batcher)
     {
         batcher._mutation_buffer->commit(current_decree, COMMIT_TO_DECREE_HARD);
+    }
+
+    void check_mutation_contents(const std::set<std::string> &expected_mutations,
+                                 mutation_batch &batcher)
+    {
+        const auto all_mutations = batcher.move_all_mutations();
+
+        std::set<std::string> actual_mutations;
+        std::transform(all_mutations.begin(),
+                       all_mutations.end(),
+                       std::inserter(actual_mutations, actual_mutations.end()),
+                       [](const mutation_tuple &tuple) { return std::get<2>(tuple).to_string(); });
+
+        ASSERT_EQ(expected_mutations, actual_mutations);
     }
 };
 
@@ -98,16 +114,8 @@ TEST_P(mutation_batch_test, prepare_mutation)
     ASSERT_TRUE(batcher.add(mu5));
     ASSERT_EQ(5, batcher.last_decree());
 
-    // Check contents of the mutations.
-    const auto all_mutations = batcher.move_all_mutations();
-    std::set<std::string> actual_mutations;
-    std::transform(all_mutations.begin(),
-                   all_mutations.end(),
-                   std::inserter(actual_mutations, actual_mutations.end()),
-                   [](const mutation_tuple &tuple) { return std::get<2>(tuple).to_string(); });
-    ASSERT_EQ(std::set<std::string>(
-                  {"first mutation", "abcde", "hello world", "foo bar", "5th mutation"}),
-              actual_mutations);
+    check_mutation_contents({"first mutation", "abcde", "hello world", "foo bar", "5th mutation"},
+                            batcher);
 }
 
 TEST_P(mutation_batch_test, add_mutation_if_valid)
@@ -115,29 +123,21 @@ TEST_P(mutation_batch_test, add_mutation_if_valid)
     auto duplicator = create_test_duplicator(0);
     mutation_batch batcher(duplicator.get());
 
-    mutation_tuple_set result;
-
-    std::string s = "hello";
-    mutation_ptr mu1 = create_test_mutation(1, s);
+    auto mu1 = create_test_mutation(1, "hello");
     batcher.add_mutation_if_valid(mu1, 0);
-    result = batcher.move_all_mutations();
-    mutation_tuple mt1 = *result.begin();
+    check_mutation_contents({"hello"}, batcher);
 
-    s = "world";
-    mutation_ptr mu2 = create_test_mutation(2, s);
+    auto mu2 = create_test_mutation(2, "world");
     batcher.add_mutation_if_valid(mu2, 0);
-    result = batcher.move_all_mutations();
-    mutation_tuple mt2 = *result.begin();
+    check_mutation_contents({"world"}, batcher);
 
-    ASSERT_EQ(std::get<2>(mt1).to_string(), "hello");
-    ASSERT_EQ(std::get<2>(mt2).to_string(), "world");
-
-    // decree 1 should be ignored
-    mutation_ptr mu3 = create_test_mutation(1, s);
+    // mu1 would be ignored, since its decree is less than the start decree.
+    batcher.add_mutation_if_valid(mu1, 2);
     batcher.add_mutation_if_valid(mu2, 2);
+
+    auto mu3 = create_test_mutation(1, "hi");
     batcher.add_mutation_if_valid(mu3, 1);
-    result = batcher.move_all_mutations();
-    ASSERT_EQ(result.size(), 2);
+    check_mutation_contents({"hi", "world"}, batcher);
 }
 
 TEST_P(mutation_batch_test, ignore_non_idempotent_write)
@@ -145,23 +145,23 @@ TEST_P(mutation_batch_test, ignore_non_idempotent_write)
     auto duplicator = create_test_duplicator(0);
     mutation_batch batcher(duplicator.get());
 
-    std::string s = "hello";
-    mutation_ptr mu = create_test_mutation(1, s);
+    auto mu = create_test_mutation(1, "hello");
     mu->data.updates[0].code = RPC_DUPLICATION_NON_IDEMPOTENT_WRITE;
     batcher.add_mutation_if_valid(mu, 0);
-    mutation_tuple_set result = batcher.move_all_mutations();
-    ASSERT_EQ(result.size(), 0);
+    check_mutation_contents({}, batcher);
 }
 
 TEST_P(mutation_batch_test, mutation_buffer_commit)
 {
     auto duplicator = create_test_duplicator(0);
     mutation_batch batcher(duplicator.get());
-    // mock mutation_buffer[last=10, start=15, end=20], last + 1(next commit decree) is out of
-    // [start~end]
-    reset_buffer(batcher, 10, 15, 20);
-    commit_buffer(batcher, 15);
-    ASSERT_EQ(batcher.last_decree(), 14);
+
+    // Mock mutation_buffer[last=10, start=15, end=20], last + 1(next commit decree) is out of
+    // [start~end], then last would become min_decree() - 1, see mutation_buffer::commit() for
+    // details.
+    reset_buffer(10, 15, 20, batcher);
+    commit_buffer(15, batcher);
+    ASSERT_EQ(14, batcher.last_decree());
 }
 
 } // namespace replication
