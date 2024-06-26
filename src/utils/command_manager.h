@@ -27,6 +27,7 @@
 #pragma once
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdint.h>
 #include <functional>
@@ -147,7 +148,9 @@ private:
 
         // Invalid arguments size.
         if (args.size() > 1) {
-            msg["error"] = "ERR: invalid arguments, only one integer argument is acceptable";
+            msg["error"] =
+                fmt::format("ERR: invalid arguments '{}', only one argument is acceptable",
+                            fmt::join(args, " "));
             return msg.dump(2);
         }
 
@@ -162,7 +165,8 @@ private:
         T new_value = 0;
         if (!internal::buf2signed(args[0], new_value) ||
             !validator(static_cast<int64_t>(new_value))) {
-            msg["error"] = "ERR: invalid arguments";
+            msg["error"] =
+                fmt::format("ERR: invalid argument '{}', the value is not acceptable", args[0]);
             return msg.dump(2);
         }
 
