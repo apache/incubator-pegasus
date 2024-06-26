@@ -131,7 +131,8 @@ error_s mutation_batch::add(mutation_ptr mu)
         // otherwise, this mutation would be delayed at least several minutes to be duplicated to
         // the remote cluster. It would not be duplicated until some new mutations (such as empty
         // writes) enter, since the last decree that is committed for this replica is NOT
-        // mu->data.header.decree but rather mu->data.header.last_committed_decree.
+        // mu->data.header.decree but rather mu->data.header.last_committed_decree. See also
+        // `mutation_header` in src/common/consensus.thrift.
         _mutation_buffer->commit(mu->get_decree(), COMMIT_TO_DECREE_HARD);
     }
 
