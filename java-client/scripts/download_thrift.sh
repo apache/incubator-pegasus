@@ -48,21 +48,4 @@ if ! $thrift -version | grep "0.11.0" ; then
     exit 1
 fi
 
-TMP_DIR=./gen-java
-rm -rf $TMP_DIR
-
-mkdir -p $TMP_DIR
-$thrift --gen java ../../idl/backup.thrift
-$thrift --gen java ../../idl/bulk_load.thrift
-$thrift --gen java ../../idl/dsn.layer2.thrift
-$thrift --gen java ../../idl/duplication.thrift
-$thrift --gen java ../../idl/metadata.thrift
-$thrift --gen java ../../idl/meta_admin.thrift
-$thrift --gen java ../../idl/partition_split.thrift
-$thrift --gen java ../../idl/rrdb.thrift
-$thrift --gen java ../../idl/security.thrift
-
-cp -v -r $TMP_DIR/* ../src/main/java/
-rm -rf $TMP_DIR
-
 echo "done"
