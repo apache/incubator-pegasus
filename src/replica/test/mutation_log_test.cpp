@@ -291,13 +291,15 @@ public:
 
     void TearDown() override { utils::filesystem::remove_path(_log_dir); }
 
-    mutation_ptr create_test_mutation(decree d, const std::string &data) override
+    mutation_ptr create_test_mutation(int64_t decree,
+                                      int64_t last_committed_decree,
+                                      const std::string &data) override
     {
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
-        mu->data.header.decree = d;
+        mu->data.header.decree = decree;
         mu->data.header.pid = get_gpid();
-        mu->data.header.last_committed_decree = d - 1;
+        mu->data.header.last_committed_decree = last_committed_decree;
         mu->data.header.log_offset = 0;
 
         binary_writer writer;
@@ -311,6 +313,11 @@ public:
         mu->client_requests.push_back(nullptr);
 
         return mu;
+    }
+
+    mutation_ptr create_test_mutation(int64_t decree, const std::string &data) override
+    {
+        return mutation_log_test::create_test_mutation(decree, decree - 1, data);
     }
 
     static void ASSERT_BLOB_EQ(const blob &lhs, const blob &rhs)

@@ -243,6 +243,7 @@ public:
 
         JSON_ENCODE_OBJ(writer, max_prepared_decree, max_prepared_decree());
         JSON_ENCODE_OBJ(writer, max_plog_decree, _private_log->max_decree(get_gpid()));
+        JSON_ENCODE_OBJ(writer, max_plog_decree_on_disk, _private_log->max_decree_on_disk());
         JSON_ENCODE_OBJ(writer, max_plog_commit_on_disk, _private_log->max_commit_on_disk());
         JSON_ENCODE_OBJ(writer, last_committed_decree, last_committed_decree());
         JSON_ENCODE_OBJ(writer, last_applied_decree, last_applied_decree());

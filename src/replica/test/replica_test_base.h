@@ -61,13 +61,14 @@ public:
         _log_dir = _replica->dir();
     }
 
-    virtual mutation_ptr create_test_mutation(int64_t decree, const std::string &data)
+    virtual mutation_ptr
+    create_test_mutation(int64_t decree, int64_t last_committed_decree, const std::string &data)
     {
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
         mu->data.header.decree = decree;
         mu->data.header.pid = _replica->get_gpid();
-        mu->data.header.last_committed_decree = decree - 1;
+        mu->data.header.last_committed_decree = last_committed_decree;
         mu->data.header.log_offset = 0;
         mu->data.header.timestamp = decree;
 
@@ -84,7 +85,14 @@ public:
         return mu;
     }
 
+    virtual mutation_ptr create_test_mutation(int64_t decree, const std::string &data)
+    {
+        return replica_test_base::create_test_mutation(decree, decree - 1, data);
+    }
+
     gpid get_gpid() const { return _replica->get_gpid(); }
+
+    void set_last_applied_decree(decree d) { _replica->set_app_last_committed_decree(d); }
 };
 
 } // namespace replication

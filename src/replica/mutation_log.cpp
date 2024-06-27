@@ -243,6 +243,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     // move or reset pending variables
     std::shared_ptr<log_appender> pending = std::move(_pending_write);
     _issued_write = pending;
+    decree max_decree = _pending_write_max_decree;
     decree max_commit = _pending_write_max_commit;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
@@ -250,11 +251,12 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     // Free plog from lock during committing log block, in the meantime
     // new mutations can still be appended.
     _plock.unlock();
-    commit_pending_mutations(pr.first, pending, max_commit);
+    commit_pending_mutations(pr.first, pending, max_decree, max_commit);
 }
 
 void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
                                                     std::shared_ptr<log_appender> &pending,
+                                                    decree max_decree,
                                                     decree max_commit)
 {
     if (dsn_unlikely(FLAGS_enable_latency_tracer)) {
@@ -263,64 +265,66 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
         }
     }
 
-    lf->commit_log_blocks(*pending,
-                          LPC_WRITE_REPLICATION_LOG_PRIVATE,
-                          &_tracker,
-                          [this, lf, pending, max_commit](error_code err, size_t sz) mutable {
-                              CHECK(_is_writing.load(std::memory_order_relaxed), "");
+    lf->commit_log_blocks(
+        *pending,
+        LPC_WRITE_REPLICATION_LOG_PRIVATE,
+        &_tracker,
+        [this, lf, pending, max_decree, max_commit](error_code err, size_t sz) mutable {
+            CHECK(_is_writing.load(std::memory_order_relaxed), "");
 
-                              for (auto &block : pending->all_blocks()) {
-                                  auto hdr = (log_block_header *)block.front().data();
-                                  CHECK_EQ(hdr->magic, 0xdeadbeef);
-                              }
+            for (auto &block : pending->all_blocks()) {
+                auto hdr = (log_block_header *)block.front().data();
+                CHECK_EQ(hdr->magic, 0xdeadbeef);
+            }
 
-                              if (dsn_unlikely(FLAGS_enable_latency_tracer)) {
-                                  for (const auto &mu : pending->mutations()) {
-                                      ADD_CUSTOM_POINT(mu->_tracer, "commit_pending_completed");
-                                  }
-                              }
+            if (dsn_unlikely(FLAGS_enable_latency_tracer)) {
+                for (const auto &mu : pending->mutations()) {
+                    ADD_CUSTOM_POINT(mu->_tracer, "commit_pending_completed");
+                }
+            }
 
-                              // notify the callbacks
-                              // ATTENTION: callback may be called before this code block executed
-                              // done.
-                              for (auto &c : pending->callbacks()) {
-                                  c->enqueue(err, sz);
-                              }
+            // notify the callbacks
+            // ATTENTION: callback may be called before this code block executed
+            // done.
+            for (auto &c : pending->callbacks()) {
+                c->enqueue(err, sz);
+            }
 
-                              if (err != ERR_OK) {
-                                  LOG_ERROR("write private log failed, err = {}", err);
-                                  _is_writing.store(false, std::memory_order_relaxed);
-                                  if (_io_error_callback) {
-                                      _io_error_callback(err);
-                                  }
-                                  return;
-                              }
-                              CHECK_EQ(sz, pending->size());
+            if (err != ERR_OK) {
+                LOG_ERROR("write private log failed, err = {}", err);
+                _is_writing.store(false, std::memory_order_relaxed);
+                if (_io_error_callback) {
+                    _io_error_callback(err);
+                }
+                return;
+            }
+            CHECK_EQ(sz, pending->size());
 
-                              // flush to ensure that there is no gap between private log and
-                              // in-memory buffer
-                              // so that we can get all mutations in learning process.
-                              //
-                              // FIXME : the file could have been closed
-                              if (FLAGS_plog_force_flush) {
-                                  lf->flush();
-                              }
+            // flush to ensure that there is no gap between private log and
+            // in-memory buffer
+            // so that we can get all mutations in learning process.
+            //
+            // FIXME : the file could have been closed
+            if (FLAGS_plog_force_flush) {
+                lf->flush();
+            }
 
-                              // update _private_max_commit_on_disk after written into log file done
-                              update_max_commit_on_disk(max_commit);
+            // Update both _plog_max_decree_on_disk and _plog_max_commit_on_disk
+            // after written into log file done.
+            update_max_decree_on_disk(max_decree, max_commit);
 
-                              _is_writing.store(false, std::memory_order_relaxed);
+            _is_writing.store(false, std::memory_order_relaxed);
 
-                              // start to write if possible
-                              _plock.lock();
+            // start to write if possible
+            _plock.lock();
 
-                              if (!_is_writing.load(std::memory_order_acquire) && _pending_write) {
-                                  write_pending_mutations(true);
-                              } else {
-                                  _plock.unlock();
-                              }
-                          },
-                          get_gpid().thread_hash());
+            if (!_is_writing.load(std::memory_order_acquire) && _pending_write) {
+                write_pending_mutations(true);
+            } else {
+                _plock.unlock();
+            }
+        },
+        get_gpid().thread_hash());
 }
 
 ///////////////////////////////////////////////////////////////
@@ -355,7 +359,8 @@ void mutation_log::init_states()
 
     // replica states
     _private_log_info = {0, 0};
-    _private_max_commit_on_disk = 0;
+    _plog_max_decree_on_disk = 0;
+    _plog_max_commit_on_disk = 0;
 }
 
 error_code mutation_log::open(replay_callback read_callback,
@@ -522,6 +527,7 @@ error_code mutation_log::open(replay_callback read_callback,
             if (ret) {
                 this->update_max_decree_no_lock(mu->data.header.pid, mu->data.header.decree);
                 if (this->_is_private) {
+                    this->update_max_decree_on_disk_no_lock(mu->data.header.decree);
                     this->update_max_commit_on_disk_no_lock(mu->data.header.last_committed_decree);
                 }
             }
@@ -702,11 +708,18 @@ decree mutation_log::max_decree(gpid gpid) const
     return _private_log_info.max_decree;
 }
 
+decree mutation_log::max_decree_on_disk() const
+{
+    zauto_lock l(_lock);
+    CHECK(_is_private, "this method is only valid for private logs");
+    return _plog_max_decree_on_disk;
+}
+
 decree mutation_log::max_commit_on_disk() const
 {
     zauto_lock l(_lock);
     CHECK(_is_private, "this method is only valid for private logs");
-    return _private_max_commit_on_disk;
+    return _plog_max_commit_on_disk;
 }
 
 decree mutation_log::max_gced_decree(gpid gpid) const
@@ -862,17 +875,26 @@ void mutation_log::update_max_decree_no_lock(gpid gpid, decree d)
     }
 }
 
-void mutation_log::update_max_commit_on_disk(decree d)
+void mutation_log::update_max_decree_on_disk(decree max_decree, decree max_commit)
 {
     zauto_lock l(_lock);
-    update_max_commit_on_disk_no_lock(d);
+    update_max_decree_on_disk_no_lock(max_decree);
+    update_max_commit_on_disk_no_lock(max_commit);
+}
+
+void mutation_log::update_max_decree_on_disk_no_lock(decree d)
+{
+    CHECK(_is_private, "this method is only valid for private logs");
+    if (d > _plog_max_decree_on_disk) {
+        _plog_max_decree_on_disk = d;
+    }
 }
 
 void mutation_log::update_max_commit_on_disk_no_lock(decree d)
 {
     CHECK(_is_private, "this method is only valid for private logs");
-    if (d > _private_max_commit_on_disk) {
-        _private_max_commit_on_disk = d;
+    if (d > _plog_max_commit_on_disk) {
+        _plog_max_commit_on_disk = d;
     }
 }
 
