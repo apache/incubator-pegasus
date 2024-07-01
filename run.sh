@@ -1766,7 +1766,9 @@ function run_shell()
     cd ${ROOT}
     if [ -f ${ROOT}/bin/pegasus_shell/pegasus_shell ]; then
         # The pegasus_shell was packaged by pack_tools, to be used on production environment.
-        ln -s -f ${ROOT}/bin/pegasus_shell/pegasus_shell
+        if test ! -f ./pegasus_shell; then
+            ln -s -f ${ROOT}/bin/pegasus_shell/pegasus_shell
+        fi
     elif [ -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell ]; then
         # The pegasus_shell was built locally, to be used for test on development environment.
         ln -s -f ${BUILD_LATEST_DIR}/output/bin/pegasus_shell/pegasus_shell
