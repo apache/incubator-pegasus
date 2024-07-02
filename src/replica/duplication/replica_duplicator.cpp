@@ -67,7 +67,8 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
         // keep current max committed_decree as start point.
         // todo(jiashuo1) _checkpoint_decree hasn't be ready to persist zk, so if master restart,
         // the value will be reset 0
-        _checkpoint_decree = _progress.last_decree = std::max(_replica->last_applied_decree(), 1);
+        _checkpoint_decree = _progress.last_decree =
+            std::max(_replica->last_applied_decree(), static_cast<decree>(1));
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
