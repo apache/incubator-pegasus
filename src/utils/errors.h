@@ -136,7 +136,7 @@ public:
         return os << s.description();
     }
 
-    friend bool operator==(const error_s lhs, const error_s &rhs)
+    friend bool operator==(const error_s &lhs, const error_s &rhs)
     {
         if (lhs._info && rhs._info) {
             return lhs._info->code == rhs._info->code && lhs._info->msg == rhs._info->msg;

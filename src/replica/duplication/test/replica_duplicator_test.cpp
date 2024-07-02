@@ -157,23 +157,25 @@ TEST_P(replica_duplicator_test, pause_start_duplication) { test_pause_start_dupl
 TEST_P(replica_duplicator_test, duplication_progress)
 {
     auto duplicator = create_test_duplicator();
-    ASSERT_EQ(1, duplicator->progress().last_decree); // start duplication from empty plog
-    ASSERT_EQ(duplicator->progress().confirmed_decree, invalid_decree);
+
+    // Start duplication from empty replica.
+    ASSERT_EQ(1, duplicator->progress().last_decree);
+    ASSERT_EQ(invalid_decree, duplicator->progress().confirmed_decree);
 
     duplicator->update_progress(duplicator->progress().set_last_decree(10));
-    ASSERT_EQ(duplicator->progress().last_decree, 10);
-    ASSERT_EQ(duplicator->progress().confirmed_decree, invalid_decree);
+    ASSERT_EQ(10, duplicator->progress().last_decree);
+    ASSERT_EQ(invalid_decree, duplicator->progress().confirmed_decree);
 
     duplicator->update_progress(duplicator->progress().set_confirmed_decree(10));
-    ASSERT_EQ(duplicator->progress().confirmed_decree, 10);
-    ASSERT_EQ(duplicator->progress().last_decree, 10);
+    ASSERT_EQ(10, duplicator->progress().confirmed_decree);
+    ASSERT_EQ(10, duplicator->progress().last_decree);
 
-    ASSERT_EQ(duplicator->update_progress(duplicator->progress().set_confirmed_decree(1)),
-              error_s::make(ERR_INVALID_STATE, "never decrease confirmed_decree: new(1) old(10)"));
+    ASSERT_EQ(error_s::make(ERR_INVALID_STATE, "never decrease confirmed_decree: new(1) old(10)"),
+              duplicator->update_progress(duplicator->progress().set_confirmed_decree(1)));
 
-    ASSERT_EQ(duplicator->update_progress(duplicator->progress().set_confirmed_decree(12)),
-              error_s::make(ERR_INVALID_STATE,
-                            "last_decree(10) should always larger than confirmed_decree(12)"));
+    ASSERT_EQ(error_s::make(ERR_INVALID_STATE,
+                            "last_decree(10) should always larger than confirmed_decree(12)"),
+              duplicator->update_progress(duplicator->progress().set_confirmed_decree(12)));
 
     auto duplicator_for_checkpoint = create_test_duplicator(invalid_decree, 100);
     ASSERT_FALSE(duplicator_for_checkpoint->progress().checkpoint_has_prepared);
