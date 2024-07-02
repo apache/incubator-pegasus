@@ -268,7 +268,11 @@ public:
     //
     // Duplication
     //
-    error_code trigger_manual_emergency_checkpoint(decree old_decree);
+    using trigger_checkpoint_callback = std::function<void(error_code)>;
+    void async_trigger_manual_emergency_checkpoint(decree checkpoint_decree,
+                                                   uint32_t delay_ms,
+                                                   trigger_checkpoint_callback callback = {});
+    error_code trigger_manual_emergency_checkpoint(decree checkpoint_decree);
     void on_query_last_checkpoint(learn_response &response);
     std::shared_ptr<replica_duplicator_manager> get_duplication_manager() const
     {

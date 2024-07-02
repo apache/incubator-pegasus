@@ -39,7 +39,7 @@ namespace replication {
 class duplication_progress
 {
 public:
-    // check if checkpoint has catch up with `_start_point_decree`
+    // check if checkpoint has catch up with `_checkpoint_decree`
     bool checkpoint_has_prepared{false};
     // the maximum decree that's been persisted in meta server
     decree confirmed_decree{invalid_decree};
@@ -184,7 +184,7 @@ private:
     replica_stub *_stub;
     dsn::task_tracker _tracker;
 
-    decree _start_point_decree = invalid_decree;
+    decree _checkpoint_decree = invalid_decree;
     duplication_status::type _status{duplication_status::DS_INIT};
     std::atomic<duplication_fail_mode::type> _fail_mode{duplication_fail_mode::FAIL_SLOW};
 

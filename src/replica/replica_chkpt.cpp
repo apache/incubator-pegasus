@@ -69,12 +69,14 @@ DSN_DEFINE_int32(replication,
                  checkpoint_max_interval_hours,
                  2,
                  "The maximum time interval in hours of replica checkpoints must be generated");
+
 DSN_DEFINE_int32(replication,
                  log_private_reserve_max_size_mb,
                  1000,
                  "The maximum size of useless private log to be reserved. NOTE: only when "
                  "'log_private_reserve_max_size_mb' and 'log_private_reserve_max_time_seconds' are "
                  "both satisfied, the useless logs can be reserved");
+
 DSN_DEFINE_int32(
     replication,
     log_private_reserve_max_time_seconds,
@@ -82,6 +84,11 @@ DSN_DEFINE_int32(
     "The maximum time in seconds of useless private log to be reserved. NOTE: only "
     "when 'log_private_reserve_max_size_mb' and 'log_private_reserve_max_time_seconds' "
     "are both satisfied, the useless logs can be reserved");
+
+DSN_DEFINE_uint32(replication,
+                  trigger_checkpoint_retry_interval_ms,
+                  100,
+                  "The wait interval before next attempt for empty write.");
 
 namespace dsn {
 namespace replication {
@@ -186,8 +193,51 @@ void replica::on_checkpoint_timer()
                      });
 }
 
+void replica::async_trigger_manual_emergency_checkpoint(decree checkpoint_decree,
+                                                        uint32_t delay_ms,
+                                                        trigger_checkpoint_callback callback)
+{
+    CHECK_GT_PREFIX_MSG(checkpoint_decree, 0, "");
+
+    tasking::enqueue(
+        LPC_REPLICATION_COMMON,
+        &_tracker,
+        [checkpoint_decree, callback, this]() {
+            _checker.only_one_thread_access();
+
+            if (_app == nullptr) {
+                LOG_ERROR_PREFIX("app hasn't been initialized or has been released");
+                return;
+            }
+
+            const decree applied_decree = last_applied_decree();
+            if (applied_decree < checkpoint_decree) {
+                LOG_INFO_PREFIX("ready to commit an empty write to trigger checkpoint: "
+                                "last_applied_decree={}, checkpoint_decree={}",
+                                applied_decree,
+                                checkpoint_decree);
+
+                mutation_ptr mu = new_mutation(invalid_decree);
+                mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+                init_prepare(mu, false);
+
+                async_trigger_manual_emergency_checkpoint(
+                    checkpoint_decree, FLAGS_trigger_checkpoint_retry_interval_ms, callback);
+
+                return;
+            }
+
+            const auto err = trigger_manual_emergency_checkpoint(checkpoint_decree);
+            if (callback) {
+                callback(err);
+            }
+        },
+        get_gpid().thread_hash(),
+        std::chrono::milliseconds(delay_ms));
+}
+
 // ThreadPool: THREAD_POOL_REPLICATION
-error_code replica::trigger_manual_emergency_checkpoint(decree old_decree)
+error_code replica::trigger_manual_emergency_checkpoint(decree checkpoint_decree)
 {
     _checker.only_one_thread_access();
 
@@ -196,20 +246,21 @@ error_code replica::trigger_manual_emergency_checkpoint(decree old_decree)
         return ERR_LOCAL_APP_FAILURE;
     }
 
-    if (old_decree <= _app->last_durable_decree()) {
-        LOG_INFO_PREFIX("checkpoint has been completed: old = {} vs latest = {}",
-                        old_decree,
-                        _app->last_durable_decree());
+    const decree durable_decree = last_durable_decree();
+    if (checkpoint_decree <= durable_decree) {
+        LOG_INFO_PREFIX(
+            "checkpoint has been completed: checkpoint_decree={}, last_durable_decree={}",
+            checkpoint_decree,
+            durable_decree);
         _is_manual_emergency_checkpointing = false;
-        _stub->_manual_emergency_checkpointing_count == 0
-            ? 0
-            : (--_stub->_manual_emergency_checkpointing_count);
+        if (_stub->_manual_emergency_checkpointing_count > 0) {
+            --_stub->_manual_emergency_checkpointing_count;
+        }
         return ERR_OK;
     }
 
     if (_is_manual_emergency_checkpointing) {
-        LOG_WARNING_PREFIX("replica is checkpointing, last_durable_decree = {}",
-                           _app->last_durable_decree());
+        LOG_WARNING_PREFIX("replica is checkpointing, last_durable_decree={}", durable_decree);
         return ERR_BUSY;
     }
 
@@ -307,9 +358,9 @@ error_code replica::background_async_checkpoint(bool is_emergency)
 
         if (_is_manual_emergency_checkpointing) {
             _is_manual_emergency_checkpointing = false;
-            _stub->_manual_emergency_checkpointing_count == 0
-                ? 0
-                : (--_stub->_manual_emergency_checkpointing_count);
+            if (_stub->_manual_emergency_checkpointing_count > 0) {
+                --_stub->_manual_emergency_checkpointing_count;
+            }
         }
 
         return err;
@@ -330,9 +381,9 @@ error_code replica::background_async_checkpoint(bool is_emergency)
 
     if (_is_manual_emergency_checkpointing) {
         _is_manual_emergency_checkpointing = false;
-        _stub->_manual_emergency_checkpointing_count == 0
-            ? 0
-            : (--_stub->_manual_emergency_checkpointing_count);
+        if (_stub->_manual_emergency_checkpointing_count > 0) {
+            --_stub->_manual_emergency_checkpointing_count;
+        }
     }
     if (err == ERR_WRONG_TIMING) {
         // do nothing

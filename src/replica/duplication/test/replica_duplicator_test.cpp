@@ -64,9 +64,9 @@ public:
 
     decree last_durable_decree() const { return _replica->last_durable_decree(); }
 
-    decree log_dup_start_decree(const std::unique_ptr<replica_duplicator> &dup) const
+    decree checkpoint_decree(const std::unique_ptr<replica_duplicator> &dup) const
     {
-        return dup->_start_point_decree;
+        return dup->_checkpoint_decree;
     }
 
     void test_new_duplicator(const std::string &remote_app_name, bool specify_remote_app_name)
@@ -183,13 +183,16 @@ TEST_P(replica_duplicator_test, duplication_progress)
     ASSERT_TRUE(duplicator_for_checkpoint->progress().checkpoint_has_prepared);
 }
 
-TEST_P(replica_duplicator_test, prapre_dup)
+TEST_P(replica_duplicator_test, prepare_dup)
 {
     auto duplicator = create_test_duplicator(invalid_decree, 100);
+    replica()->update_last_applied_decree(100);
     replica()->update_expect_last_durable_decree(100);
     duplicator->prepare_dup();
     wait_all(duplicator);
-    ASSERT_EQ(last_durable_decree(), log_dup_start_decree(duplicator));
+
+    ASSERT_EQ(100, checkpoint_decree(duplicator));
+    ASSERT_EQ(100, last_durable_decree());
 }
 
 } // namespace replication

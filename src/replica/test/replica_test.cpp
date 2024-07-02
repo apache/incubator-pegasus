@@ -56,6 +56,7 @@
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
+#include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/defer.h"
 #include "utils/env.h"
@@ -65,10 +66,14 @@
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 #include "utils/string_conv.h"
+#include "utils/synchronize.h"
 #include "utils/test_macros.h"
 
 DSN_DECLARE_bool(fd_disabled);
 DSN_DECLARE_string(cold_backup_root);
+DSN_DECLARE_uint32(mutation_2pc_min_replica_count);
+
+using pegasus::AssertEventually;
 
 namespace dsn {
 namespace replication {
@@ -90,6 +95,7 @@ public:
         mock_app_info();
         _mock_replica =
             stub->generate_replica_ptr(_app_info, _pid, partition_status::PS_PRIMARY, 1);
+        _mock_replica->init_private_log(_log_dir);
 
         // set FLAGS_cold_backup_root manually.
         // FLAGS_cold_backup_root is set by configuration "replication.cold_backup_root",
@@ -203,6 +209,25 @@ public:
     }
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
+
+    void test_trigger_manual_emergency_checkpoint(const decree checkpoint_decree,
+                                                  const error_code expected_err,
+                                                  std::function<void()> callback = {})
+    {
+        dsn::utils::notify_event op_completed;
+        _mock_replica->async_trigger_manual_emergency_checkpoint(
+            checkpoint_decree, 0, [&](error_code actual_err) {
+                ASSERT_EQ(expected_err, actual_err);
+
+                if (callback) {
+                    callback();
+                }
+
+                op_completed.notify();
+            });
+
+        op_completed.wait();
+    }
 
     bool has_gpid(gpid &pid) const
     {
@@ -426,28 +451,54 @@ TEST_P(replica_test, test_replica_backup_and_restore_with_specific_path)
 
 TEST_P(replica_test, test_trigger_manual_emergency_checkpoint)
 {
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(100), ERR_OK);
-    ASSERT_TRUE(is_checkpointing());
+    // There is only one replica for the unit test.
+    PRESERVE_FLAG(mutation_2pc_min_replica_count);
+    FLAGS_mutation_2pc_min_replica_count = 1;
+
+    // Initially the mutation log is empty.
+    ASSERT_EQ(0, _mock_replica->last_applied_decree());
+    ASSERT_EQ(0, _mock_replica->last_durable_decree());
+
+    _mock_replica->update_expect_last_durable_decree(1);
+    test_trigger_manual_emergency_checkpoint(1, ERR_OK);
+    _mock_replica->tracker()->wait_outstanding_tasks();
+
+    // ASSERT_IN_TIME([&] { ASSERT_LE(1, _mock_replica->last_applied_decree()); }, 60);
+
+    // ASSERT_IN_TIME([&] { ASSERT_EQ(1, _mock_replica->last_durable_decree()); }, 60);
+
+    ASSERT_LE(1, _mock_replica->last_applied_decree());
+
+    ASSERT_EQ(1, _mock_replica->last_durable_decree());
+
+    _mock_replica->update_last_applied_decree(100);
+    test_trigger_manual_emergency_checkpoint(
+        100, ERR_OK, [this]() { ASSERT_TRUE(is_checkpointing()); });
     _mock_replica->update_last_durable_decree(100);
 
-    // test no need start checkpoint because `old_decree` < `last_durable`
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(100), ERR_OK);
-    ASSERT_FALSE(is_checkpointing());
+    // test no need start checkpoint because `old_decree` <= `last_durable`
+    test_trigger_manual_emergency_checkpoint(
+        100, ERR_OK, [this]() { ASSERT_FALSE(is_checkpointing()); });
 
-    // test has existed running task
+    // Test existing running task.
     force_update_checkpointing(true);
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_BUSY);
-    ASSERT_TRUE(is_checkpointing());
+    _mock_replica->update_last_applied_decree(101);
+    test_trigger_manual_emergency_checkpoint(
+        101, ERR_BUSY, [this]() { ASSERT_TRUE(is_checkpointing()); });
+
     // test running task completed
     _mock_replica->tracker()->wait_outstanding_tasks();
     ASSERT_FALSE(is_checkpointing());
 
     // test exceed max concurrent count
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_OK);
+    test_trigger_manual_emergency_checkpoint(101, ERR_OK);
     force_update_checkpointing(false);
+
+    PRESERVE_FLAG(max_concurrent_manual_emergency_checkpointing_count);
     FLAGS_max_concurrent_manual_emergency_checkpointing_count = 1;
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_TRY_AGAIN);
-    ASSERT_FALSE(is_checkpointing());
+
+    test_trigger_manual_emergency_checkpoint(
+        101, ERR_TRY_AGAIN, [this]() { ASSERT_FALSE(is_checkpointing()); });
     _mock_replica->tracker()->wait_outstanding_tasks();
 }
 

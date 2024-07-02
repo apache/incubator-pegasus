@@ -100,6 +100,8 @@ public:
         return manual_compaction_status::IDLE;
     }
 
+    void set_last_applied_decree(decree d) { _last_committed_decree.store(d); }
+
     void set_last_durable_decree(decree d) { _last_durable_decree = d; }
 
     void set_expect_last_durable_decree(decree d) { _expect_last_durable_decree = d; }
@@ -216,6 +218,11 @@ public:
             return;
         }
         backup_context->complete_checkpoint();
+    }
+
+    void update_last_applied_decree(decree decree)
+    {
+        dynamic_cast<mock_replication_app_base *>(_app.get())->set_last_applied_decree(decree);
     }
 
     void update_last_durable_decree(decree decree)

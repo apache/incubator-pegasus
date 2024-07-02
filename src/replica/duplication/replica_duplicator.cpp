@@ -65,9 +65,9 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it->second == invalid_decree) {
         // keep current max committed_decree as start point.
-        // todo(jiashuo1) _start_point_decree hasn't be ready to persist zk, so if master restart,
+        // todo(jiashuo1) _checkpoint_decree hasn't be ready to persist zk, so if master restart,
         // the value will be reset 0
-        _start_point_decree = _progress.last_decree = _replica->private_log()->max_commit_on_disk();
+        _checkpoint_decree = _progress.last_decree = std::max(_replica->last_applied_decree(), 1);
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
@@ -86,17 +86,13 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 
 void replica_duplicator::prepare_dup()
 {
-    LOG_INFO_PREFIX("start prepare checkpoint to catch up with latest durable decree: "
-                    "start_point_decree({}) < last_durable_decree({}) = {}",
-                    _start_point_decree,
-                    _replica->last_durable_decree(),
-                    _start_point_decree < _replica->last_durable_decree());
+    LOG_INFO_PREFIX("start to make checkpoint: checkpoint_decree={}, "
+                    "last_applied_decree={}, last_durable_decree={}",
+                    _checkpoint_decree,
+                    _replica->last_applied_decree(),
+                    _replica->last_durable_decree());
 
-    tasking::enqueue(
-        LPC_REPLICATION_COMMON,
-        &_tracker,
-        [this]() { _replica->trigger_manual_emergency_checkpoint(_start_point_decree); },
-        get_gpid().thread_hash());
+    _replica->async_trigger_manual_emergency_checkpoint(_checkpoint_decree, 0);
 }
 
 void replica_duplicator::start_dup_log()
@@ -163,18 +159,18 @@ void replica_duplicator::update_status_if_needed(duplication_status::type next_s
     }
 
     // DS_PREPARE means replica is checkpointing, it may need trigger multi time to catch
-    // _start_point_decree of the plog
+    // _checkpoint_decree of the plog
     if (_status == next_status && next_status != duplication_status::DS_PREPARE) {
         return;
     }
 
-    LOG_INFO_PREFIX(
-        "update duplication status: {}=>{}[start_point={}, last_commit={}, last_durable={}]",
-        duplication_status_to_string(_status),
-        duplication_status_to_string(next_status),
-        _start_point_decree,
-        _replica->last_committed_decree(),
-        _replica->last_durable_decree());
+    LOG_INFO_PREFIX("update duplication status: {}=>{} [checkpoint_decree={}, "
+                    "last_committed_decree={}, last_durable_decree={}]",
+                    duplication_status_to_string(_status),
+                    duplication_status_to_string(next_status),
+                    _checkpoint_decree,
+                    _replica->last_committed_decree(),
+                    _replica->last_durable_decree());
 
     _status = next_status;
     if (_status == duplication_status::DS_PREPARE) {
@@ -220,7 +216,7 @@ error_s replica_duplicator::update_progress(const duplication_progress &p)
     decree last_confirmed_decree = _progress.confirmed_decree;
     _progress.confirmed_decree = std::max(_progress.confirmed_decree, p.confirmed_decree);
     _progress.last_decree = std::max(_progress.last_decree, p.last_decree);
-    _progress.checkpoint_has_prepared = _start_point_decree <= _replica->last_durable_decree();
+    _progress.checkpoint_has_prepared = _checkpoint_decree <= _replica->last_durable_decree();
 
     if (_progress.confirmed_decree > _progress.last_decree) {
         return FMT_ERR(ERR_INVALID_STATE,

@@ -54,8 +54,9 @@ public:
         return dup_entities[dupid].get();
     }
 
-    std::unique_ptr<replica_duplicator> create_test_duplicator(decree confirmed = invalid_decree,
-                                                               decree start = invalid_decree)
+    std::unique_ptr<replica_duplicator>
+    create_test_duplicator(decree confirmed = invalid_decree,
+                           decree checkpoint_decree = invalid_decree)
     {
         duplication_entry dup_ent;
         dup_ent.dupid = 1;
@@ -64,7 +65,7 @@ public:
         dup_ent.progress[_replica->get_gpid().get_partition_index()] = confirmed;
 
         auto duplicator = std::make_unique<replica_duplicator>(dup_ent, _replica.get());
-        duplicator->_start_point_decree = start;
+        duplicator->_checkpoint_decree = checkpoint_decree;
         return duplicator;
     }
 
@@ -92,7 +93,7 @@ public:
 
     void wait_all(const std::unique_ptr<replica_duplicator> &dup)
     {
-        dup->tracker()->wait_outstanding_tasks();
+        // dup->tracker()->wait_outstanding_tasks();
         dup->_replica->tracker()->wait_outstanding_tasks();
     }
 };
