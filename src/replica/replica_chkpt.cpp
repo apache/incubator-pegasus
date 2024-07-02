@@ -211,12 +211,14 @@ void replica::async_trigger_manual_emergency_checkpoint(decree checkpoint_decree
                 return;
             }
 
-            const decree applied_decree = last_applied_decree();
-            if (applied_decree < checkpoint_decree) {
+            const auto last_applied_decree = this->last_applied_decree();
+            if (last_applied_decree == 0) {
                 LOG_INFO_PREFIX("ready to commit an empty write to trigger checkpoint: "
-                                "last_applied_decree={}, checkpoint_decree={}",
-                                applied_decree,
-                                checkpoint_decree);
+                                "checkpoint_decree={}, last_applied_decree={}, "
+                                "last_durable_decree={}",
+                                checkpoint_decree,
+                                last_applied_decree,
+                                last_durable_decree());
 
                 mutation_ptr mu = new_mutation(invalid_decree);
                 mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
@@ -247,12 +249,12 @@ error_code replica::trigger_manual_emergency_checkpoint(decree checkpoint_decree
         return ERR_LOCAL_APP_FAILURE;
     }
 
-    const decree durable_decree = last_durable_decree();
-    if (checkpoint_decree <= durable_decree) {
+    const auto last_durable_decree = this->last_durable_decree();
+    if (checkpoint_decree <= last_durable_decree) {
         LOG_INFO_PREFIX(
             "checkpoint has been completed: checkpoint_decree={}, last_durable_decree={}",
             checkpoint_decree,
-            durable_decree);
+            last_durable_decree);
         _is_manual_emergency_checkpointing = false;
         if (_stub->_manual_emergency_checkpointing_count > 0) {
             --_stub->_manual_emergency_checkpointing_count;
@@ -261,7 +263,7 @@ error_code replica::trigger_manual_emergency_checkpoint(decree checkpoint_decree
     }
 
     if (_is_manual_emergency_checkpointing) {
-        LOG_WARNING_PREFIX("replica is checkpointing, last_durable_decree={}", durable_decree);
+        LOG_WARNING_PREFIX("replica is checkpointing, last_durable_decree={}", last_durable_decree);
         return ERR_BUSY;
     }
 
