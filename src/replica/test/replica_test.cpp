@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <atomic>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <memory>

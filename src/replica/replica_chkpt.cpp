@@ -42,6 +42,7 @@
 #include "metadata_types.h"
 #include "mutation_log.h"
 #include "replica.h"
+#include "replica/mutation.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"

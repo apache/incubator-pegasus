@@ -35,7 +35,6 @@
 #include "load_from_private_log.h"
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
-#include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"

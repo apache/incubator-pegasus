@@ -157,7 +157,7 @@ TEST_P(replica_duplicator_test, pause_start_duplication) { test_pause_start_dupl
 TEST_P(replica_duplicator_test, duplication_progress)
 {
     auto duplicator = create_test_duplicator();
-    ASSERT_EQ(duplicator->progress().last_decree, 0); // start duplication from empty plog
+    ASSERT_EQ(1, duplicator->progress().last_decree); // start duplication from empty plog
     ASSERT_EQ(duplicator->progress().confirmed_decree, invalid_decree);
 
     duplicator->update_progress(duplicator->progress().set_last_decree(10));
