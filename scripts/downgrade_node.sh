@@ -16,8 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 PID=$$
 
 function usage()
@@ -63,7 +61,7 @@ echo "UID=$UID"
 echo "PID=$PID"
 echo
 
-if [ [ "$cluster" != "" ]; then
+if [ "$cluster" != "" ]; then
   echo "set_meta_level steady" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.set_meta_level
   echo ls | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.ls
 else
