@@ -41,6 +41,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/strings.h"
+#include "utils/utils.h"
 
 DSN_DEFINE_uint64(replication,
                   hdfs_read_batch_size_bytes,
