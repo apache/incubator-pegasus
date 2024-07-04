@@ -249,12 +249,12 @@ class MetaSessionManager(SessionManager):
     def add_meta_server(self, meta_addr):
         rpc_addr = rpc_address()
         if rpc_addr.from_string(meta_addr):
-            host_port_list = meta_addr.split(':')
-            if not len(host_port_list) == 2:
+            ip_port = meta_addr.split(':')
+            if not len(ip_port) == 2:
                 return False
 
-            host, port = host_port_list[0], int(host_port_list[1])
-            self.addr_list.append((host, port))
+            ip, port = ip_port[0], int(ip_port[1])
+            self.addr_list.append((ip, port))
 
             return True
         else:
@@ -281,9 +281,9 @@ class MetaSessionManager(SessionManager):
 
     def query(self):
         ds = []
-        for (host, port) in self.addr_list:
+        for (ip, port) in self.addr_list:
             rpc_addr = rpc_address()
-            rpc_addr.from_string(host + ':' + str(port))
+            rpc_addr.from_string(ip + ':' + str(port))
             if rpc_addr in self.session_dict:
                 self.session_dict[rpc_addr].close()
 
@@ -294,7 +294,7 @@ class MetaSessionManager(SessionManager):
                               None,
                               self,
                               self.timeout
-                              ).connectTCP(host, port, self.timeout)
+                              ).connectTCP(ip, port, self.timeout)
             d.addCallbacks(self.got_conn, self.got_err)
             d.addCallbacks(self.query_one, self.got_err)
             ds.append(d)
@@ -345,7 +345,7 @@ class Table(SessionManager):
             if rpc_addr in connected_rpc_addrs or rpc_addr.address == 0:
                 continue
 
-            host, port = rpc_addr.to_host_port()
+            ip, port = rpc_addr.to_ip_port()
             if rpc_addr in self.session_dict:
                 self.session_dict[rpc_addr].close()
 
@@ -356,7 +356,7 @@ class Table(SessionManager):
                               None,
                               self.container,
                               self.timeout
-                              ).connectTCP(host, port, self.timeout)
+                              ).connectTCP(ip, port, self.timeout)
             connected_rpc_addrs[rpc_addr] = 1
             d.addCallbacks(self.got_conn, self.got_err)
             ds.append(d)
@@ -642,8 +642,8 @@ class Pegasus(object):
         self.table = Table(table_name, self, timeout)
         self.meta_session_manager = MetaSessionManager(table_name, timeout)
         if isinstance(meta_addrs, list):
-            for host_port in meta_addrs:
-                self.meta_session_manager.add_meta_server(host_port)
+            for meta_addr in meta_addrs:
+                self.meta_session_manager.add_meta_server(meta_addr)
         PegasusHash.populate_table()
         self.timeout_times = 0
         self.update_partition = False

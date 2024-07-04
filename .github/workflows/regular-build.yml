@@ -39,7 +39,7 @@ jobs:
     name: Lint Cpp
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: clang-format
         run: ./scripts/run-clang-format.py --clang-format-executable clang-format-14 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
@@ -70,7 +70,7 @@ jobs:
         working-directory: /root/incubator-pegasus
     steps:
       - name: Clone Apache Pegasus Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Unpack prebuilt third-parties
         uses: "./.github/actions/unpack_prebuilt_thirdparties"
       - name: Build Pegasus
@@ -85,7 +85,7 @@ jobs:
         # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
         run: sudo apt-get install -y thrift-compiler
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -128,7 +128,7 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
