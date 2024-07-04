@@ -229,6 +229,7 @@ bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
 bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
+extern const std::string disable_backup_policy_help;
 bool disable_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
 bool enable_backup_policy(command_executor *e, shell_context *sc, arguments args);

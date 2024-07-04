@@ -1634,9 +1634,16 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
     if (request.__isset.is_disable) {
         if (request.is_disable) {
             if (is_under_backup) {
-                LOG_INFO("{}: policy is under backuping, not allow to disable",
-                         cur_policy.policy_name);
-                response.err = ERR_BUSY;
+                if (request.__isset.force_disable && request.force_disable) {
+                    LOG_INFO("{}: policy is under backuping, force to disable",
+                             cur_policy.policy_name);
+                    cur_policy.is_disable = true;
+                    have_modify_policy = true;
+                } else {
+                    LOG_INFO("{}: policy is under backuping, not allow to disable",
+                             cur_policy.policy_name);
+                    response.err = ERR_BUSY;
+                }
             } else if (!cur_policy.is_disable) {
                 LOG_INFO("{}: policy is marked to disable", cur_policy.policy_name);
                 cur_policy.is_disable = true;
