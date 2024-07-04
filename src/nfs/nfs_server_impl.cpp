@@ -35,6 +35,7 @@
 
 #include "absl/strings/string_view.h"
 #include "nfs/nfs_code_definition.h"
+#include "nlohmann/json.hpp"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
 #include "utils/TokenBucket.h"

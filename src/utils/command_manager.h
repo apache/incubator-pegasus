@@ -32,6 +32,8 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <vector>
 
@@ -134,34 +136,40 @@ private:
                                const std::vector<std::string> &args,
                                const std::function<bool(int64_t value)> &validator)
     {
+        nlohmann::json msg;
+        msg["error"] = "ok";
         // Query.
         if (args.empty()) {
-            return std::to_string(value);
+            msg[name] = fmt::format("{}", std::to_string(value));
+            return msg.dump(2);
         }
 
         // Invalid arguments size.
         if (args.size() > 1) {
-            return fmt::format("ERR: invalid arguments, only one integer argument is acceptable");
+            msg["error"] = "ERR: invalid arguments, only one integer argument is acceptable";
+            return msg.dump(2);
         }
 
         // Reset to the default value.
         if (dsn::utils::iequals(args[0], "DEFAULT")) {
             value = default_value;
-            return "OK";
+            msg[name] = default_value;
+            return msg.dump(2);
         }
 
         // Invalid argument.
         T new_value = 0;
         if (!internal::buf2signed(args[0], new_value) ||
             !validator(static_cast<int64_t>(new_value))) {
-            return {"ERR: invalid arguments"};
+            msg["error"] = "ERR: invalid arguments";
+            return msg.dump(2);
         }
 
         // Set to a new value.
         value = new_value;
         LOG_INFO("set {} to {} by remote command", name, new_value);
 
-        return "OK";
+        return msg.dump(2);
     }
 
     typedef ref_ptr<command_instance> command_instance_ptr;
