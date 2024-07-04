@@ -20,6 +20,7 @@
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <getopt.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -31,6 +32,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
@@ -162,7 +164,7 @@ bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
     const std::string query_backup_policy_help =
         "<-p|--policy_name> [-b|--backup_info_cnt] [-j|--json]";
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
-    RETURN_FALSE_IF_NOT(cmd.params().size() >= 1,
+    RETURN_FALSE_IF_NOT(!cmd.params().empty(),
                         "invalid command, should be in the form of '{}'",
                         query_backup_policy_help);
 
@@ -303,37 +305,32 @@ bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args
     return true;
 }
 
+const std::string disable_backup_policy_help = "<-p|--policy_name str> [-f|--force]";
 bool disable_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
-                                           {0, 0, 0, 0}};
+    const argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+    // TODO(yingchun): make the following code as a function.
+    RETURN_FALSE_IF_NOT(cmd.pos_args().size() == 1 && cmd.pos_args()[0] == "disable_backup_policy",
+                        "invalid command, should be in the form of '{}'",
+                        disable_backup_policy_help);
+    RETURN_FALSE_IF_NOT(cmd.flags().empty() ||
+                            (cmd.flags().size() == 1 &&
+                             (cmd.flags().count("force") == 1 || cmd.flags().count("f") == 1)),
+                        "invalid command, should be in the form of '{}'",
+                        disable_backup_policy_help);
+    RETURN_FALSE_IF_NOT(cmd.params().size() == 1 && (cmd.params().begin()->first == "policy_name" ||
+                                                     cmd.params().begin()->first == "p"),
+                        "invalid command, should be in the form of '{}'",
+                        disable_backup_policy_help);
 
-    std::string policy_name;
-    optind = 0;
-    while (true) {
-        int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "p:", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 'p':
-            policy_name = optarg;
-            break;
-        default:
-            return false;
-        }
-    }
+    const std::string policy_name = cmd({"-p", "--policy_name"}).str();
+    RETURN_FALSE_IF_NOT(!policy_name.empty(), "invalid command, policy_name should not be empty");
 
-    if (policy_name.empty()) {
-        fprintf(stderr, "empty policy name\n");
-        return false;
-    }
+    const bool force = cmd[{"-f", "--force"}];
 
-    ::dsn::error_code ret = sc->ddl_client->disable_backup_policy(policy_name);
-    if (ret != dsn::ERR_OK) {
-        fprintf(stderr, "disable backup policy failed, with err = %s\n", ret.to_string());
-    }
+    const auto ret = sc->ddl_client->disable_backup_policy(policy_name, force);
+    RETURN_FALSE_IF_NOT(
+        ret == dsn::ERR_OK, "disable backup policy failed, with err = {}", ret.to_string());
     return true;
 }
 

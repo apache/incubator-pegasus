@@ -181,7 +181,7 @@ public:
 
     dsn::error_code ls_backup_policy(bool json);
 
-    dsn::error_code disable_backup_policy(const std::string &policy_name);
+    dsn::error_code disable_backup_policy(const std::string &policy_name, bool force);
 
     dsn::error_code enable_backup_policy(const std::string &policy_name);
 

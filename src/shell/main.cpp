@@ -436,7 +436,7 @@ static command_executor commands[] = {
     {
         "disable_backup_policy",
         "stop policy continue backup",
-        "<-p|--policy_name str>",
+        disable_backup_policy_help.c_str(),
         disable_backup_policy,
     },
     {
