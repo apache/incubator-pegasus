@@ -306,7 +306,7 @@ bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args
 const std::string disable_backup_policy_help = "<-p|--policy_name str> [-f|--force]";
 bool disable_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+    const argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
     RETURN_FALSE_IF_NOT(!cmd.params().empty(),
                         "invalid command, should be in the form of '{}'",
                         disable_backup_policy_help);

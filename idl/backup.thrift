@@ -78,7 +78,7 @@ struct configuration_modify_backup_policy_request
     5:optional i32              backup_history_count_to_keep;
     6:optional bool             is_disable;
 
-    // Restrict the start time of each backup, hour:minute
+    // Restrict the start time of each backup, in the form of 'hh:mm', for example '02:05'.
     7:optional string           start_time;
 
     // Force disable the policy, even if the policy is in during backup.
