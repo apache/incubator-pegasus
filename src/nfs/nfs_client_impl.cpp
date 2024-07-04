@@ -26,6 +26,7 @@
 
 #include "nfs_client_impl.h"
 
+#include <cstdint>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <mutex>
 
@@ -33,6 +34,7 @@
 #include "fmt/core.h"
 #include "nfs/nfs_code_definition.h"
 #include "nfs/nfs_node.h"
+#include "nlohmann/json.hpp"
 #include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
