@@ -26,6 +26,7 @@
 
 #include "nfs_client_impl.h"
 
+#include <cstdint>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <mutex>
 
