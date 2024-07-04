@@ -159,7 +159,7 @@ TEST_P(replica_duplicator_test, duplication_progress)
     auto duplicator = create_test_duplicator();
 
     // Start duplication from empty replica.
-    ASSERT_EQ(1, duplicator->progress().last_decree);
+    ASSERT_EQ(0, duplicator->progress().last_decree);
     ASSERT_EQ(invalid_decree, duplicator->progress().confirmed_decree);
 
     duplicator->update_progress(duplicator->progress().set_last_decree(10));
