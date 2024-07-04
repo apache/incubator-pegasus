@@ -129,27 +129,32 @@ std::string command_manager::set_bool(bool &value,
                                       const std::string &name,
                                       const std::vector<std::string> &args)
 {
+    nlohmann::json msg;
+    msg["error"] = "ok";
     // Query.
     if (args.empty()) {
-        return value ? "true" : "false";
+        msg[name] = value ? "true" : "false";
+        return msg.dump(2);
     }
 
     // Invalid arguments size.
     if (args.size() > 1) {
-        return fmt::format("ERR: invalid arguments, only one boolean argument is acceptable");
+        msg["error"] = "ERR: invalid arguments, only one boolean argument is acceptable";
+        return msg.dump(2);
     }
 
     // Invalid argument.
     bool new_value;
     if (!dsn::buf2bool(args[0], new_value, /* ignore_case */ true)) {
-        return fmt::format("ERR: invalid arguments, '{}' is not a boolean", args[0]);
+        msg["error"] = fmt::format("ERR: invalid arguments, '{}' is not a boolean", args[0]);
+        return msg.dump(2);
     }
 
     // Set to a new value.
     value = new_value;
     LOG_INFO("set {} to {} by remote command", name, new_value);
 
-    return "OK";
+    return msg.dump(2);
 }
 
 command_manager::command_manager()
