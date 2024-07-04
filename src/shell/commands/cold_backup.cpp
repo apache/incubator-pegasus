@@ -307,18 +307,28 @@ const std::string disable_backup_policy_help = "<-p|--policy_name str> [-f|--for
 bool disable_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
     const argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
-    RETURN_FALSE_IF_NOT(!cmd.params().empty(),
+    // TODO(yingchun): make the following code as a function.
+    RETURN_FALSE_IF_NOT(cmd.pos_args().size() == 1 && cmd.pos_args()[0] == "disable_backup_policy",
+                        "invalid command, should be in the form of '{}'",
+                        disable_backup_policy_help);
+    RETURN_FALSE_IF_NOT(cmd.flags().empty() ||
+                            (cmd.flags().size() == 1 &&
+                             (cmd.flags().count("force") == 1 || cmd.flags().count("f") == 1)),
+                        "invalid command, should be in the form of '{}'",
+                        disable_backup_policy_help);
+    RETURN_FALSE_IF_NOT(cmd.params().size() == 1 && (cmd.params().begin()->first == "policy_name" ||
+                                                     cmd.params().begin()->first == "p"),
                         "invalid command, should be in the form of '{}'",
                         disable_backup_policy_help);
 
     const std::string policy_name = cmd({"-p", "--policy_name"}).str();
     RETURN_FALSE_IF_NOT(!policy_name.empty(), "invalid command, policy_name should not be empty");
 
-    const bool force = cmd({"-f", "--force"}, false);
+    const bool force = cmd[{"-f", "--force"}];
 
     const auto ret = sc->ddl_client->disable_backup_policy(policy_name, force);
     RETURN_FALSE_IF_NOT(
-        ret == dsn::ERR_OK, "disable backup policy failed, with err ={}", ret.to_string());
+        ret == dsn::ERR_OK, "disable backup policy failed, with err = {}", ret.to_string());
     return true;
 }
 
