@@ -20,6 +20,7 @@
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <getopt.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -31,6 +32,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
