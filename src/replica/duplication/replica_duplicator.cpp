@@ -63,11 +63,26 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it->second == invalid_decree) {
-        // keep current max committed_decree as start point.
-        // todo(jiashuo1) _checkpoint_decree hasn't be ready to persist zk, so if master restart,
-        // the value will be reset 0
-        _checkpoint_decree = _progress.last_decree =
-            std::max(_replica->last_applied_decree(), static_cast<decree>(1));
+        // Ensure that the checkpoint decree is at least 1, otherwise the checkpoint could not be
+        // created thus the remove cluster would inevitably fail to pull the files.
+        //
+        // TODO(jiashuo1): _checkpoint_decree hasn't be ready to persist zk, so if master restart,
+        // the value will be reset to 0.
+        const auto last_applied_decree = _replica->last_applied_decree();
+        _checkpoint_decree = std::max(last_applied_decree, static_cast<decree>(1));
+        _progress.last_decree = last_applied_decree;
+        LOG_INFO_PREFIX("initialize checkpoint decree: checkpoint_decree={}, "
+                        "last_committed_decree={}, last_applied_decree={}, "
+                        "last_flushed_decree={}, last_durable_decree={}, "
+                        "plog_max_decree_on_disk={}, plog_max_commit_on_disk={}",
+                        _checkpoint_decree,
+                        _replica->last_committed_decree(),
+                        last_applied_decree,
+                        _replica->last_flushed_decree(),
+                        _replica->last_durable_decree(),
+                        _replica->private_log()->max_decree_on_disk(),
+                        _replica->private_log()->max_commit_on_disk());
+
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
@@ -86,11 +101,17 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 
 void replica_duplicator::prepare_dup()
 {
-    LOG_INFO_PREFIX("start to make checkpoint: checkpoint_decree={}, "
-                    "last_applied_decree={}, last_durable_decree={}",
+    LOG_INFO_PREFIX("start to trigger checkpoint: checkpoint_decree={}, "
+                    "last_committed_decree={}, last_applied_decree={}, "
+                    "last_flushed_decree={}, last_durable_decree={}, "
+                    "plog_max_decree_on_disk={}, plog_max_commit_on_disk={}",
                     _checkpoint_decree,
+                    _replica->last_committed_decree(),
                     _replica->last_applied_decree(),
-                    _replica->last_durable_decree());
+                    _replica->last_flushed_decree(),
+                    _replica->last_durable_decree(),
+                    _replica->private_log()->max_decree_on_disk(),
+                    _replica->private_log()->max_commit_on_disk());
 
     _replica->async_trigger_manual_emergency_checkpoint(_checkpoint_decree, 0);
 }
@@ -158,8 +179,8 @@ void replica_duplicator::update_status_if_needed(duplication_status::type next_s
         return;
     }
 
-    // DS_PREPARE means replica is checkpointing, it may need trigger multi time to catch
-    // _checkpoint_decree of the plog
+    // DS_PREPARE means this replica is making checkpoint, which might need to be triggered
+    // multiple times to catch up with _checkpoint_decree.
     if (_status == next_status && next_status != duplication_status::DS_PREPARE) {
         return;
     }
