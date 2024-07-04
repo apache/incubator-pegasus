@@ -1079,11 +1079,13 @@ error_with<query_backup_status_response> replication_ddl_client::query_backup(in
     return call_rpc_sync(query_backup_status_rpc(std::move(req), RPC_CM_QUERY_BACKUP_STATUS));
 }
 
-dsn::error_code replication_ddl_client::disable_backup_policy(const std::string &policy_name)
+dsn::error_code replication_ddl_client::disable_backup_policy(const std::string &policy_name,
+                                                              bool force)
 {
     auto req = std::make_shared<configuration_modify_backup_policy_request>();
     req->policy_name = policy_name;
     req->__set_is_disable(true);
+    req->__set_force_disable(force);
 
     auto resp_task = request_meta(RPC_CM_MODIFY_BACKUP_POLICY, req);
 
