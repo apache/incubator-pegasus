@@ -126,5 +126,5 @@ private:
 
     friend class lock_struct;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

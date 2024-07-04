@@ -38,8 +38,8 @@ binary_writer::binary_writer(int reserveBufferSize)
 {
     _total_size = 0;
     _buffers.reserve(1);
-    _reserved_size_per_buffer =
-        (reserveBufferSize == 0) ? _reserved_size_per_buffer_static : reserveBufferSize;
+    _reserved_size_per_buffer = (reserveBufferSize == 0) ? _reserved_size_per_buffer_static
+                                                         : reserveBufferSize;
     _current_buffer = nullptr;
     _current_offset = 0;
     _current_buffer_length = 0;
@@ -200,4 +200,4 @@ bool binary_writer::backup(int count)
     _total_size -= count;
     return true;
 }
-}
+} // namespace dsn

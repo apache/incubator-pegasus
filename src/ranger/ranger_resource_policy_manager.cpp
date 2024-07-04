@@ -207,12 +207,13 @@ void ranger_resource_policy_manager::start()
     CHECK_NOTNULL(_meta_svc, "");
     _ranger_policy_meta_root = dsn::utils::filesystem::concat_path_unix_style(
         _meta_svc->cluster_root(), "ranger_policy_meta_root");
-    tasking::enqueue_timer(LPC_USE_RANGER_ACCESS_CONTROL,
-                           &_tracker,
-                           [this]() { this->update_policies_from_ranger_service(); },
-                           std::chrono::seconds(FLAGS_update_ranger_policy_interval_sec),
-                           0,
-                           std::chrono::milliseconds(1));
+    tasking::enqueue_timer(
+        LPC_USE_RANGER_ACCESS_CONTROL,
+        &_tracker,
+        [this]() { this->update_policies_from_ranger_service(); },
+        std::chrono::seconds(FLAGS_update_ranger_policy_interval_sec),
+        0,
+        std::chrono::milliseconds(1));
 }
 
 access_control_result ranger_resource_policy_manager::allowed(
@@ -499,11 +500,12 @@ void ranger_resource_policy_manager::start_to_dump_and_sync_policies()
             }
             CHECK_EQ(err, dsn::ERR_TIMEOUT);
             LOG_ERROR("Create Ranger policy meta root timeout, retry later.");
-            dsn::tasking::enqueue(LPC_USE_RANGER_ACCESS_CONTROL,
-                                  &_tracker,
-                                  [this]() { start_to_dump_and_sync_policies(); },
-                                  0,
-                                  kLoadRangerPolicyRetryDelayMs);
+            dsn::tasking::enqueue(
+                LPC_USE_RANGER_ACCESS_CONTROL,
+                &_tracker,
+                [this]() { start_to_dump_and_sync_policies(); },
+                0,
+                kLoadRangerPolicyRetryDelayMs);
         });
 }
 
@@ -534,11 +536,12 @@ void ranger_resource_policy_manager::dump_policies_to_remote_storage()
             // The return error code is not 'ERR_TIMEOUT', use assert here.
             CHECK_EQ(e, dsn::ERR_TIMEOUT);
             LOG_ERROR("Dump Ranger policies to remote storage timeout, retry later.");
-            dsn::tasking::enqueue(LPC_USE_RANGER_ACCESS_CONTROL,
-                                  &_tracker,
-                                  [this]() { dump_policies_to_remote_storage(); },
-                                  0,
-                                  kLoadRangerPolicyRetryDelayMs);
+            dsn::tasking::enqueue(
+                LPC_USE_RANGER_ACCESS_CONTROL,
+                &_tracker,
+                [this]() { dump_policies_to_remote_storage(); },
+                0,
+                kLoadRangerPolicyRetryDelayMs);
         });
 }
 

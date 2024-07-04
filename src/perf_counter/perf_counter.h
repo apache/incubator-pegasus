@@ -35,7 +35,8 @@
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_utils.h"
 
-typedef enum dsn_perf_counter_type_t {
+typedef enum dsn_perf_counter_type_t
+{
     COUNTER_TYPE_NUMBER,
     COUNTER_TYPE_VOLATILE_NUMBER, // special kind of NUMBER which will be reset on get
     COUNTER_TYPE_RATE,
@@ -45,7 +46,8 @@ typedef enum dsn_perf_counter_type_t {
 } dsn_perf_counter_type_t;
 USER_DEFINED_ENUM_FORMATTER(dsn_perf_counter_type_t)
 
-typedef enum dsn_perf_counter_percentile_type_t {
+typedef enum dsn_perf_counter_percentile_type_t
+{
     COUNTER_PERCENTILE_50,
     COUNTER_PERCENTILE_90,
     COUNTER_PERCENTILE_95,

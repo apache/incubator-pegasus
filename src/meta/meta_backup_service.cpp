@@ -184,14 +184,15 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
         LOG_ERROR("{}: create file {} failed, restart this backup later",
                   _backup_sig,
                   create_file_req.file_name);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this, app_id]() {
-                             zauto_lock l(_lock);
-                             start_backup_app_meta_unlocked(app_id);
-                         },
-                         0,
-                         _backup_service->backup_option().block_retry_delay_ms);
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this, app_id]() {
+                zauto_lock l(_lock);
+                start_backup_app_meta_unlocked(app_id);
+            },
+            0,
+            _backup_service->backup_option().block_retry_delay_ms);
         return;
     }
     CHECK_NOTNULL(remote_file,
@@ -223,14 +224,15 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                 LOG_WARNING("write {} failed, reason({}), try it later",
                             remote_file->file_name(),
                             resp.err);
-                tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                                 &_tracker,
-                                 [this, app_id]() {
-                                     zauto_lock l(_lock);
-                                     start_backup_app_meta_unlocked(app_id);
-                                 },
-                                 0,
-                                 _backup_service->backup_option().block_retry_delay_ms);
+                tasking::enqueue(
+                    LPC_DEFAULT_CALLBACK,
+                    &_tracker,
+                    [this, app_id]() {
+                        zauto_lock l(_lock);
+                        start_backup_app_meta_unlocked(app_id);
+                    },
+                    0,
+                    _backup_service->backup_option().block_retry_delay_ms);
             }
         },
         &_tracker);
@@ -290,14 +292,15 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
         LOG_ERROR("{}: create file {} failed, restart this backup later",
                   _backup_sig,
                   create_file_req.file_name);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this, app_id, write_callback]() {
-                             zauto_lock l(_lock);
-                             write_backup_app_finish_flag_unlocked(app_id, write_callback);
-                         },
-                         0,
-                         _backup_service->backup_option().block_retry_delay_ms);
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this, app_id, write_callback]() {
+                zauto_lock l(_lock);
+                write_backup_app_finish_flag_unlocked(app_id, write_callback);
+            },
+            0,
+            _backup_service->backup_option().block_retry_delay_ms);
         return;
     }
 
@@ -339,14 +342,15 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
                 LOG_WARNING("write {} failed, reason({}), try it later",
                             remote_file->file_name(),
                             resp.err);
-                tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                                 &_tracker,
-                                 [this, app_id, write_callback]() {
-                                     zauto_lock l(_lock);
-                                     write_backup_app_finish_flag_unlocked(app_id, write_callback);
-                                 },
-                                 0,
-                                 _backup_service->backup_option().block_retry_delay_ms);
+                tasking::enqueue(
+                    LPC_DEFAULT_CALLBACK,
+                    &_tracker,
+                    [this, app_id, write_callback]() {
+                        zauto_lock l(_lock);
+                        write_backup_app_finish_flag_unlocked(app_id, write_callback);
+                    },
+                    0,
+                    _backup_service->backup_option().block_retry_delay_ms);
             }
         });
 }
@@ -406,14 +410,15 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
         LOG_ERROR("{}: create file {} failed, restart this backup later",
                   _backup_sig,
                   create_file_req.file_name);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this, b_info, write_callback]() {
-                             zauto_lock l(_lock);
-                             write_backup_info_unlocked(b_info, write_callback);
-                         },
-                         0,
-                         _backup_service->backup_option().block_retry_delay_ms);
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this, b_info, write_callback]() {
+                zauto_lock l(_lock);
+                write_backup_info_unlocked(b_info, write_callback);
+            },
+            0,
+            _backup_service->backup_option().block_retry_delay_ms);
         return;
     }
 
@@ -446,14 +451,15 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
                 LOG_WARNING("write {} failed, reason({}), try it later",
                             remote_file->file_name(),
                             resp.err);
-                tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                                 &_tracker,
-                                 [this, b_info, write_callback]() {
-                                     zauto_lock l(_lock);
-                                     write_backup_info_unlocked(b_info, write_callback);
-                                 },
-                                 0,
-                                 _backup_service->backup_option().block_retry_delay_ms);
+                tasking::enqueue(
+                    LPC_DEFAULT_CALLBACK,
+                    &_tracker,
+                    [this, b_info, write_callback]() {
+                        zauto_lock l(_lock);
+                        write_backup_info_unlocked(b_info, write_callback);
+                    },
+                    0,
+                    _backup_service->backup_option().block_retry_delay_ms);
             }
         });
 }
@@ -532,14 +538,15 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
         LOG_WARNING("{}: partition {} doesn't have a primary now, retry to backup it later",
                     _backup_sig,
                     pid);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this, pid]() {
-                             zauto_lock l(_lock);
-                             start_backup_partition_unlocked(pid);
-                         },
-                         0,
-                         _backup_service->backup_option().reconfiguration_retry_delay_ms);
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this, pid]() {
+                zauto_lock l(_lock);
+                start_backup_partition_unlocked(pid);
+            },
+            0,
+            _backup_service->backup_option().reconfiguration_retry_delay_ms);
         return;
     }
 
@@ -627,14 +634,15 @@ void policy_context::on_backup_reply(error_code err,
     }
 
     // retry to backup the partition.
-    tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                     &_tracker,
-                     [this, pid]() {
-                         zauto_lock l(_lock);
-                         start_backup_partition_unlocked(pid);
-                     },
-                     0,
-                     _backup_service->backup_option().request_backup_period_ms);
+    tasking::enqueue(
+        LPC_DEFAULT_CALLBACK,
+        &_tracker,
+        [this, pid]() {
+            zauto_lock l(_lock);
+            start_backup_partition_unlocked(pid);
+        },
+        0,
+        _backup_service->backup_option().request_backup_period_ms);
 }
 
 void policy_context::initialize_backup_progress_unlocked()
@@ -709,15 +717,16 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
             LOG_ERROR("{}: sync backup info({}) to remote storage got timeout, retry it later",
                       _policy.policy_name,
                       b_info.backup_id);
-            tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                             &_tracker,
-                             [this, b_info, sync_callback, create_new_node]() {
-                                 zauto_lock l(_lock);
-                                 sync_backup_to_remote_storage_unlocked(
-                                     std::move(b_info), std::move(sync_callback), create_new_node);
-                             },
-                             0,
-                             _backup_service->backup_option().meta_retry_delay_ms);
+            tasking::enqueue(
+                LPC_DEFAULT_CALLBACK,
+                &_tracker,
+                [this, b_info, sync_callback, create_new_node]() {
+                    zauto_lock l(_lock);
+                    sync_backup_to_remote_storage_unlocked(
+                        std::move(b_info), std::move(sync_callback), create_new_node);
+                },
+                0,
+                _backup_service->backup_option().meta_retry_delay_ms);
         } else {
             CHECK(false, "{}: we can't handle this right now, error({})", _backup_sig, err);
         }
@@ -737,14 +746,15 @@ void policy_context::continue_current_backup_unlocked()
     if (_policy.is_disable) {
         LOG_INFO("{}: policy is disabled, ignore this backup and try it later",
                  _policy.policy_name);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this]() {
-                             zauto_lock l(_lock);
-                             issue_new_backup_unlocked();
-                         },
-                         0,
-                         _backup_service->backup_option().issue_backup_interval_ms);
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this]() {
+                zauto_lock l(_lock);
+                issue_new_backup_unlocked();
+            },
+            0,
+            _backup_service->backup_option().issue_backup_interval_ms);
         return;
     }
 
@@ -822,26 +832,28 @@ void policy_context::issue_new_backup_unlocked()
     // before issue new backup, we check whether the policy is dropped
     if (_policy.is_disable) {
         LOG_INFO("{}: policy is disabled, just ignore backup, try it later", _policy.policy_name);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this]() {
-                             zauto_lock l(_lock);
-                             issue_new_backup_unlocked();
-                         },
-                         0,
-                         _backup_service->backup_option().issue_backup_interval_ms);
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this]() {
+                zauto_lock l(_lock);
+                issue_new_backup_unlocked();
+            },
+            0,
+            _backup_service->backup_option().issue_backup_interval_ms);
         return;
     }
 
     if (!should_start_backup_unlocked()) {
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this]() {
-                             zauto_lock l(_lock);
-                             issue_new_backup_unlocked();
-                         },
-                         0,
-                         _backup_service->backup_option().issue_backup_interval_ms);
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this]() {
+                zauto_lock l(_lock);
+                issue_new_backup_unlocked();
+            },
+            0,
+            _backup_service->backup_option().issue_backup_interval_ms);
         LOG_INFO("{}: start issue new backup {}ms later",
                  _policy.policy_name,
                  _backup_service->backup_option().issue_backup_interval_ms.count());
@@ -854,14 +866,15 @@ void policy_context::issue_new_backup_unlocked()
         // TODO: just ignore this backup and wait next backup
         LOG_WARNING("{}: all apps have been dropped, ignore this backup and retry it later",
                     _backup_sig);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this]() {
-                             zauto_lock l(_lock);
-                             issue_new_backup_unlocked();
-                         },
-                         0,
-                         _backup_service->backup_option().issue_backup_interval_ms);
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this]() {
+                zauto_lock l(_lock);
+                issue_new_backup_unlocked();
+            },
+            0,
+            _backup_service->backup_option().issue_backup_interval_ms);
     } else {
         task_ptr continue_to_backup =
             tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this]() {
@@ -1397,7 +1410,7 @@ void backup_service::do_add_policy(dsn::message_ex *req,
     _meta_svc->get_remote_storage()->create_node(
         policy_path,
         LPC_DEFAULT_CALLBACK, // TASK_CODE_EXEC_INLINED,
-        [ this, req, p, hint_msg, policy_name = cur_policy.policy_name ](error_code err) {
+        [this, req, p, hint_msg, policy_name = cur_policy.policy_name](error_code err) {
             if (err == ERR_OK || err == ERR_NODE_ALREADY_EXIST) {
                 configuration_add_backup_policy_response resp;
                 resp.hint_message = hint_msg;

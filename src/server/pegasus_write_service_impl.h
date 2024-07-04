@@ -342,8 +342,8 @@ public:
 
         if (!passed) {
             // check not passed, return proper error code to user
-            resp.error =
-                invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
+            resp.error = invalid_argument ? rocksdb::Status::kInvalidArgument
+                                          : rocksdb::Status::kTryAgain;
         }
 
         return rocksdb::Status::kOk;
@@ -468,8 +468,8 @@ public:
 
         if (!passed) {
             // check not passed, return proper error code to user
-            resp.error =
-                invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
+            resp.error = invalid_argument ? rocksdb::Status::kInvalidArgument
+                                          : rocksdb::Status::kTryAgain;
         }
         return rocksdb::Status::kOk;
     }

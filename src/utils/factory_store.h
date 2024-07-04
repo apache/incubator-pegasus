@@ -157,5 +157,5 @@ private:
         }
     };
 };
-}
-} // end namespace dsn::utils
+} // namespace utils
+} // namespace dsn

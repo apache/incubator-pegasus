@@ -200,4 +200,4 @@ message_parser *message_parser_manager::create_parser(network_header_format fmt)
     else
         return nullptr;
 }
-}
+} // namespace dsn

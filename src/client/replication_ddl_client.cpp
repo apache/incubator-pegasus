@@ -547,7 +547,7 @@ dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_
 
     std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
-    for (const auto & [ hp, type ] : nodes) {
+    for (const auto &[hp, type] : nodes) {
         if (type == dsn::replication::node_status::NS_ALIVE) {
             alive_node_count++;
         }
@@ -809,7 +809,7 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
         tp_nodes.add_column("primary");
         tp_nodes.add_column("secondary");
         tp_nodes.add_column("total");
-        for (const auto & [ hp, pri_and_sec_rep_cnts ] : node_stat) {
+        for (const auto &[hp, pri_and_sec_rep_cnts] : node_stat) {
             tp_nodes.add_row(node_name(hp, resolve_ip));
             tp_nodes.append_data(pri_and_sec_rep_cnts.first);
             tp_nodes.append_data(pri_and_sec_rep_cnts.second);
@@ -1464,7 +1464,6 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
               &_tracker,
               [this, attempt_count, callback](
                   error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-
                   FAIL_POINT_INJECT_NOT_RETURN_F(
                       "ddl_client_request_meta",
                       [&err, this](absl::string_view str) { err = pop_mock_error(); });

@@ -314,9 +314,7 @@ TEST_P(replica_test, query_data_version_test)
         std::string expected_response_json;
     } tests[] = {{"", http_status_code::kBadRequest, "app_id should not be empty"},
                  {"wrong", http_status_code::kBadRequest, "invalid app_id=wrong"},
-                 {"2",
-                  http_status_code::kOk,
-                  R"({"1":{"data_version":"1"}})"},
+                 {"2", http_status_code::kOk, R"({"1":{"data_version":"1"}})"},
                  {"4", http_status_code::kNotFound, "app_id=4 not found"}};
     for (const auto &test : tests) {
         http_request req;
@@ -545,8 +543,8 @@ void replica_test::test_auto_trash(error_code ec)
     }
     ASSERT_EQ(moved_to_err_path, found_err_path);
     ASSERT_FALSE(has_gpid(_pid));
-    ASSERT_EQ(moved_to_err_path, dn->status == disk_status::NORMAL) << moved_to_err_path << ", "
-                                                                    << enum_to_string(dn->status);
+    ASSERT_EQ(moved_to_err_path, dn->status == disk_status::NORMAL)
+        << moved_to_err_path << ", " << enum_to_string(dn->status);
     ASSERT_EQ(!moved_to_err_path, dn->status == disk_status::IO_ERROR)
         << moved_to_err_path << ", " << enum_to_string(dn->status);
 

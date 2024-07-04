@@ -47,19 +47,20 @@ namespace replication {
                 tasking::enqueue(                                                                  \
                     LPC_##op_type##_THROTTLING_DELAY,                                              \
                     &_tracker,                                                                     \
-                    [ this, req = message_ptr(request) ]() { on_client_##op_type(req, true); },    \
+                    [this, req = message_ptr(request)]() { on_client_##op_type(req, true); },      \
                     get_gpid().thread_hash(),                                                      \
                     std::chrono::milliseconds(delay_ms));                                          \
                 METRIC_VAR_INCREMENT(throttling_delayed_##op_type##_requests);                     \
             } else { /** type == utils::throttling_controller::REJECT **/                          \
                 if (delay_ms > 0) {                                                                \
-                    tasking::enqueue(LPC_##op_type##_THROTTLING_DELAY,                             \
-                                     &_tracker,                                                    \
-                                     [ this, req = message_ptr(request) ]() {                      \
-                                         response_client_##op_type(req, ERR_BUSY);                 \
-                                     },                                                            \
-                                     get_gpid().thread_hash(),                                     \
-                                     std::chrono::milliseconds(delay_ms));                         \
+                    tasking::enqueue(                                                              \
+                        LPC_##op_type##_THROTTLING_DELAY,                                          \
+                        &_tracker,                                                                 \
+                        [this, req = message_ptr(request)]() {                                     \
+                            response_client_##op_type(req, ERR_BUSY);                              \
+                        },                                                                         \
+                        get_gpid().thread_hash(),                                                  \
+                        std::chrono::milliseconds(delay_ms));                                      \
                 } else {                                                                           \
                     response_client_##op_type(request, ERR_BUSY);                                  \
                 }                                                                                  \
@@ -89,11 +90,12 @@ bool replica::throttle_backup_request(message_ex *request)
         request->header->client.timeout_ms, 1, delay_ms);
     if (type != utils::throttling_controller::PASS) {
         if (type == utils::throttling_controller::DELAY) {
-            tasking::enqueue(LPC_read_THROTTLING_DELAY,
-                             &_tracker,
-                             [ this, req = message_ptr(request) ]() { on_client_read(req, true); },
-                             get_gpid().thread_hash(),
-                             std::chrono::milliseconds(delay_ms));
+            tasking::enqueue(
+                LPC_read_THROTTLING_DELAY,
+                &_tracker,
+                [this, req = message_ptr(request)]() { on_client_read(req, true); },
+                get_gpid().thread_hash(),
+                std::chrono::milliseconds(delay_ms));
             METRIC_VAR_INCREMENT(throttling_delayed_backup_requests);
         } else { /** type == utils::throttling_controller::REJECT **/
             METRIC_VAR_INCREMENT(throttling_rejected_backup_requests);

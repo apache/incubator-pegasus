@@ -207,5 +207,5 @@ int customized_id_mgr<T>::register_id(const char *name)
     _names2.push_back(std::string(name));
     return code;
 }
-}
-} // end namespace dsn::utils
+} // namespace utils
+} // namespace dsn

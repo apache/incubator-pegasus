@@ -110,9 +110,10 @@ protected:
 
 public:
     worker_fd_test(replication::replica_stub *stub, std::vector<dsn::host_port> &meta_servers)
-        : slave_failure_detector_with_multimaster(meta_servers,
-                                                  [=]() { stub->on_meta_server_disconnected(); },
-                                                  [=]() { stub->on_meta_server_connected(); })
+        : slave_failure_detector_with_multimaster(
+              meta_servers,
+              [=]() { stub->on_meta_server_disconnected(); },
+              [=]() { stub->on_meta_server_connected(); })
     {
         _send_ping_switch = false;
     }
@@ -219,6 +220,7 @@ public:
     }
 
     worker_fd_test *fd() { return _worker_fd; }
+
 private:
     worker_fd_test *_worker_fd;
 };
@@ -257,6 +259,7 @@ public:
     error_code stop(bool) override { return ERR_OK; }
 
     master_fd_test *fd() { return _master_fd; }
+
 private:
     master_fd_test *_master_fd;
     replication::fd_suboptions _opts;

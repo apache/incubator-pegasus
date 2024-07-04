@@ -95,24 +95,27 @@ TEST(async_call, task_call)
     /* task tracking */
     tc = new tracker_class();
     std::vector<task_ptr> test_tasks;
-    t = tasking::enqueue(LPC_TEST_CLIENTLET,
-                         &tc->_tracker,
-                         [=] { tc->callback_function1(); },
-                         0,
-                         std::chrono::seconds(30));
+    t = tasking::enqueue(
+        LPC_TEST_CLIENTLET,
+        &tc->_tracker,
+        [=] { tc->callback_function1(); },
+        0,
+        std::chrono::seconds(30));
     test_tasks.push_back(t);
-    t = tasking::enqueue(LPC_TEST_CLIENTLET,
-                         &tc->_tracker,
-                         [tc] { tc->callback_function1(); },
-                         0,
-                         std::chrono::seconds(30));
+    t = tasking::enqueue(
+        LPC_TEST_CLIENTLET,
+        &tc->_tracker,
+        [tc] { tc->callback_function1(); },
+        0,
+        std::chrono::seconds(30));
     test_tasks.push_back(t);
-    t = tasking::enqueue_timer(LPC_TEST_CLIENTLET,
-                               &tc->_tracker,
-                               [tc] { tc->callback_function1(); },
-                               std::chrono::seconds(20),
-                               0,
-                               std::chrono::seconds(30));
+    t = tasking::enqueue_timer(
+        LPC_TEST_CLIENTLET,
+        &tc->_tracker,
+        [tc] { tc->callback_function1(); },
+        std::chrono::seconds(20),
+        0,
+        std::chrono::seconds(30));
     test_tasks.push_back(t);
 
     delete tc;

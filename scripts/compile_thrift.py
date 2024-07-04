@@ -132,7 +132,7 @@ def compile_thrift_file(thrift_info):
     print(cmd)
 
     # TODO(wutao1): code format files
-    # os.system("clang-format-3.9 -i output/*")
+    # os.system("clang-format-14 -i output/*")
 
     if "include_fix" in thrift_info:
         fix_include(thrift_name, thrift_info["include_fix"])

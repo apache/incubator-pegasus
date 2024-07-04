@@ -354,5 +354,5 @@ void fault_injector::install(service_spec &spec)
 }
 
 fault_injector::fault_injector(const char *name) : toollet(name) {}
-}
-}
+} // namespace tools
+} // namespace dsn

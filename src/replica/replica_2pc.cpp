@@ -383,14 +383,14 @@ void replica::send_prepare_message(const ::dsn::host_port &hp,
         mu->write_to(writer, msg);
     }
 
-    mu->remote_tasks()[hp] =
-        rpc::call(dsn::dns_resolver::instance().resolve_address(hp),
-                  msg,
-                  &_tracker,
-                  [=](error_code err, dsn::message_ex *request, dsn::message_ex *reply) {
-                      on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
-                  },
-                  get_gpid().thread_hash());
+    mu->remote_tasks()[hp] = rpc::call(
+        dsn::dns_resolver::instance().resolve_address(hp),
+        msg,
+        &_tracker,
+        [=](error_code err, dsn::message_ex *request, dsn::message_ex *reply) {
+            on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
+        },
+        get_gpid().thread_hash());
 
     LOG_DEBUG_PREFIX("mutation {} send_prepare_message to {} as {}",
                      mu->name(),

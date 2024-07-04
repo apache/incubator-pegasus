@@ -463,5 +463,5 @@ void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
     // is handled by prepare_list
     // _current_op_count = 0;
 }
-}
-} // namespace end
+} // namespace replication
+} // namespace dsn

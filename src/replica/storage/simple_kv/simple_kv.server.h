@@ -95,6 +95,6 @@ private:
         svc->on_append(pr, reply);
     }
 };
-}
-}
-}
+} // namespace application
+} // namespace replication
+} // namespace dsn

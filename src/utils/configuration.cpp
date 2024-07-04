@@ -438,4 +438,4 @@ bool configuration::has_key(const char *section, const char *key)
     }
     return false;
 }
-}
+} // namespace dsn

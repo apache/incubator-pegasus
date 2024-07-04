@@ -341,7 +341,7 @@ void simple_logger::remove_redundant_files()
     matching_file_mtimes.resize(matching_file_mtimes.size() - max_matches);
 
     // Remove redundant log files.
-    for (const auto & [ _, matching_file ] : matching_file_mtimes) {
+    for (const auto &[_, matching_file] : matching_file_mtimes) {
         if (::remove(matching_file.c_str()) != 0) {
             // If remove failed, just print log and ignore it.
             fmt::print(stderr,

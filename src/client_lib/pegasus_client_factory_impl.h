@@ -45,5 +45,5 @@ private:
     static cluster_to_app_map _cluster_to_clients;
     static ::dsn::zlock *_map_lock;
 };
-}
-} // namespace
+} // namespace client
+} // namespace pegasus

@@ -52,5 +52,5 @@ public:
 
     task *dequeue(/*inout*/ int &batch_size) override;
 };
-}
-}
+} // namespace tools
+} // namespace dsn

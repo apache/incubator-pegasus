@@ -129,4 +129,4 @@ inline void binary_writer::write(const blob &val)
     if (len > 0)
         write((const char *)val.data(), len);
 }
-}
+} // namespace dsn

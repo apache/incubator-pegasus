@@ -37,5 +37,5 @@ std::string job::get_addr_by_index(int index)
 }
 
 void job::set_name(const std::string &_name) { name = _name; }
-}
-} // end namespace
+} // namespace test
+} // namespace pegasus

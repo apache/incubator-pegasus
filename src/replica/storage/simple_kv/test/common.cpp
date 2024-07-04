@@ -325,6 +325,6 @@ void parti_config::convert_from(const partition_configuration &c)
     }
     std::sort(secondaries.begin(), secondaries.end());
 }
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

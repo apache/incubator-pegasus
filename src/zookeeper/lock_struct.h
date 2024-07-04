@@ -122,5 +122,5 @@ private:
 
     thread_access_checker _checker;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

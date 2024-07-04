@@ -174,11 +174,12 @@ public:
         auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
         auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
         dsn::task_tracker tracker;
-        _ms->get_remote_storage()->set_data(app_path,
-                                            json_config,
-                                            LPC_META_STATE_HIGH,
-                                            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
-                                            &tracker);
+        _ms->get_remote_storage()->set_data(
+            app_path,
+            json_config,
+            LPC_META_STATE_HIGH,
+            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+            &tracker);
         tracker.wait_outstanding_tasks();
     }
 
@@ -227,11 +228,12 @@ public:
             auto json_config =
                 dsn::json::json_forwarder<partition_configuration>::encode(partition_config);
             dsn::task_tracker tracker;
-            _ms->get_remote_storage()->set_data(partition_path,
-                                                json_config,
-                                                LPC_META_STATE_HIGH,
-                                                [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
-                                                &tracker);
+            _ms->get_remote_storage()->set_data(
+                partition_path,
+                json_config,
+                LPC_META_STATE_HIGH,
+                [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+                &tracker);
             tracker.wait_outstanding_tasks();
         }
 
@@ -243,11 +245,12 @@ public:
         auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
         auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
         dsn::task_tracker tracker;
-        _ms->get_remote_storage()->set_data(app_path,
-                                            json_config,
-                                            LPC_META_STATE_HIGH,
-                                            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
-                                            &tracker);
+        _ms->get_remote_storage()->set_data(
+            app_path,
+            json_config,
+            LPC_META_STATE_HIGH,
+            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+            &tracker);
         tracker.wait_outstanding_tasks();
     }
 
@@ -269,8 +272,8 @@ public:
             _ms->get_remote_storage()->get_data(
                 partition_path,
                 LPC_META_CALLBACK,
-                [ expected_pid = partition_config.pid,
-                  expected_max_replica_count ](error_code ec, const blob &value) {
+                [expected_pid = partition_config.pid,
+                 expected_max_replica_count](error_code ec, const blob &value) {
                     ASSERT_EQ(ec, ERR_OK);
 
                     partition_configuration partition_config;
@@ -725,10 +728,9 @@ TEST_F(meta_app_operation_test, get_max_replica_count)
             auto partition_index = static_cast<int32_t>(random32(0, partition_count - 1));
             set_partition_max_replica_count(test.app_name, partition_index, 2);
             recover_partition_max_replica_count =
-                [ this, app_name = test.app_name, partition_index ]()
-            {
-                set_partition_max_replica_count(app_name, partition_index, 3);
-            };
+                [this, app_name = test.app_name, partition_index]() {
+                    set_partition_max_replica_count(app_name, partition_index, 3);
+                };
         }
 
         const auto resp = get_max_replica_count(test.app_name);
@@ -878,15 +880,14 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
 
         // recover automatically the original FLAGS_min_live_node_count_for_unfreeze,
         // FLAGS_min_allowed_replica_count and FLAGS_max_allowed_replica_count
-        auto recover = defer([
-            reserved_min_live_node_count_for_unfreeze = FLAGS_min_live_node_count_for_unfreeze,
-            reserved_min_allowed_replica_count = FLAGS_min_allowed_replica_count,
-            reserved_max_allowed_replica_count = FLAGS_max_allowed_replica_count
-        ]() {
-            FLAGS_max_allowed_replica_count = reserved_max_allowed_replica_count;
-            FLAGS_min_allowed_replica_count = reserved_min_allowed_replica_count;
-            FLAGS_min_live_node_count_for_unfreeze = reserved_min_live_node_count_for_unfreeze;
-        });
+        auto recover = defer(
+            [reserved_min_live_node_count_for_unfreeze = FLAGS_min_live_node_count_for_unfreeze,
+             reserved_min_allowed_replica_count = FLAGS_min_allowed_replica_count,
+             reserved_max_allowed_replica_count = FLAGS_max_allowed_replica_count]() {
+                FLAGS_max_allowed_replica_count = reserved_max_allowed_replica_count;
+                FLAGS_min_allowed_replica_count = reserved_min_allowed_replica_count;
+                FLAGS_min_live_node_count_for_unfreeze = reserved_min_live_node_count_for_unfreeze;
+            });
         FLAGS_min_live_node_count_for_unfreeze = test.min_live_node_count_for_unfreeze;
         FLAGS_min_allowed_replica_count = test.min_allowed_replica_count;
         FLAGS_max_allowed_replica_count = test.max_allowed_replica_count;

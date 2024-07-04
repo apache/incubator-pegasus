@@ -71,5 +71,5 @@ uint64_t crc64_concat(uint32_t xy_init,
                       uint64_t y_init,
                       uint64_t y_final,
                       size_t y_size);
-}
-}
+} // namespace utils
+} // namespace dsn

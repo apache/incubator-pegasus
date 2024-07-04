@@ -190,11 +190,12 @@ void backup_engine::backup_app_partition(const gpid &pid)
             "backup_id({}): partition {} doesn't have a primary now, retry to backup it later.",
             _cur_backup.backup_id,
             pid);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this, pid]() { backup_app_partition(pid); },
-                         0,
-                         std::chrono::seconds(10));
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this, pid]() { backup_app_partition(pid); },
+            0,
+            std::chrono::seconds(10));
         return;
     }
 
@@ -243,11 +244,12 @@ inline void backup_engine::handle_replica_backup_failed(const backup_response &r
 
 inline void backup_engine::retry_backup(const dsn::gpid pid)
 {
-    tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                     &_tracker,
-                     [this, pid]() { backup_app_partition(pid); },
-                     0,
-                     std::chrono::seconds(1));
+    tasking::enqueue(
+        LPC_DEFAULT_CALLBACK,
+        &_tracker,
+        [this, pid]() { backup_app_partition(pid); },
+        0,
+        std::chrono::seconds(1));
 }
 
 void backup_engine::on_backup_reply(const error_code err,
@@ -328,11 +330,12 @@ void backup_engine::write_backup_info()
     if (err != ERR_OK) {
         LOG_WARNING("backup_id({}): write backup info failed, retry it later.",
                     _cur_backup.backup_id);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this]() { write_backup_info(); },
-                         0,
-                         std::chrono::seconds(1));
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this]() { write_backup_info(); },
+            0,
+            std::chrono::seconds(1));
         return;
     }
     LOG_INFO("backup_id({}): successfully wrote backup info, backup for app {} completed.",

@@ -78,7 +78,7 @@ void meta_duplication_service::query_duplication_info(const duplication_query_re
         }
 
         response.appid = app->app_id;
-        for (const auto & [ _, dup ] : app->duplications) {
+        for (const auto &[_, dup] : app->duplications) {
             dup->append_if_valid_for_query(*app, response.entry_list);
         }
     }
@@ -259,7 +259,7 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                                                request.app_name,
                                                enum_to_string(app->status));
 
-        for (const auto & [ _, dup_info ] : app->duplications) {
+        for (const auto &[_, dup_info] : app->duplications) {
             if (dup_info->remote_cluster_name == request.remote_cluster_name) {
                 dup = dup_info;
                 break;
@@ -283,13 +283,13 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
                      dup->remote_app_name);
         } else {
             // Check if other apps of this cluster are duplicated to the same remote app.
-            for (const auto & [ app_name, cur_app_state ] : _state->_exist_apps) {
+            for (const auto &[app_name, cur_app_state] : _state->_exist_apps) {
                 if (app_name == request.app_name) {
                     // Skip this app since we want to check other apps.
                     continue;
                 }
 
-                for (const auto & [ _, dup_info ] : cur_app_state->duplications) {
+                for (const auto &[_, dup_info] : cur_app_state->duplications) {
                     LOG_WARNING_DUP_HINT_AND_RETURN_IF_NOT(
                         dup_info->remote_cluster_name != request.remote_cluster_name ||
                             dup_info->remote_app_name != remote_app_name,
@@ -768,7 +768,7 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
     // restore duplication info from json
     _meta_svc->get_meta_storage()->get_data(
         std::string(store_path),
-        [ dup_id, this, app = std::move(app), store_path ](const blob &json) {
+        [dup_id, this, app = std::move(app), store_path](const blob &json) {
             zauto_write_lock l(app_lock());
 
             auto dup = duplication_info::decode_from_blob(dup_id,

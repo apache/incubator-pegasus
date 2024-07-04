@@ -45,4 +45,4 @@ void thread_access_checker::only_one_thread_access()
         _access_thread_id_inited = true;
     }
 }
-}
+} // namespace dsn

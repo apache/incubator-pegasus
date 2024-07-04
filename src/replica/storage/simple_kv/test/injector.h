@@ -40,6 +40,6 @@ public:
     test_injector(const char *name);
     virtual void install(service_spec &spec);
 };
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

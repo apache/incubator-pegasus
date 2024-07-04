@@ -52,7 +52,7 @@ task_ptr async_call_remote(rpc_address remote,
     request->cmd = cmd;
     request->arguments = arguments;
     remote_command_rpc rpc(std::move(request), RPC_CLI_CLI_CALL, timeout);
-    return rpc.call(remote, nullptr, [ cb = std::move(callback), rpc ](error_code ec) {
+    return rpc.call(remote, nullptr, [cb = std::move(callback), rpc](error_code ec) {
         cb(ec, rpc.response());
     });
 }

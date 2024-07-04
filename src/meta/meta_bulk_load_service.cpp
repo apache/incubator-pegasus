@@ -155,10 +155,11 @@ void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
     // avoid possible load balancing
     _meta_svc->set_function_level(meta_function_level::fl_steady);
 
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     _meta_svc->tracker(),
-                     [this, rpc, app]() { do_start_app_bulk_load(std::move(app), std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        _meta_svc->tracker(),
+        [this, rpc, app]() { do_start_app_bulk_load(std::move(app), std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 // ThreadPool: THREAD_POOL_META_SERVER
@@ -372,11 +373,12 @@ bool bulk_load_service::check_partition_status(
     pconfig = app->partitions[pid.get_partition_index()];
     if (!pconfig.hp_primary) {
         LOG_WARNING("app({}) partition({}) primary is invalid, try it later", app_name, pid);
-        tasking::enqueue(LPC_META_STATE_NORMAL,
-                         _meta_svc->tracker(),
-                         [retry_function, app_name, pid]() { retry_function(app_name, pid); },
-                         0,
-                         std::chrono::seconds(1));
+        tasking::enqueue(
+            LPC_META_STATE_NORMAL,
+            _meta_svc->tracker(),
+            [retry_function, app_name, pid]() { retry_function(app_name, pid); },
+            0,
+            std::chrono::seconds(1));
         return false;
     }
 
@@ -398,11 +400,12 @@ bool bulk_load_service::check_partition_status(
                     app_name,
                     pid,
                     dsn::enum_to_string(p_status));
-        tasking::enqueue(LPC_META_STATE_NORMAL,
-                         _meta_svc->tracker(),
-                         [retry_function, app_name, pid]() { retry_function(app_name, pid); },
-                         0,
-                         std::chrono::seconds(1));
+        tasking::enqueue(
+            LPC_META_STATE_NORMAL,
+            _meta_svc->tracker(),
+            [retry_function, app_name, pid]() { retry_function(app_name, pid); },
+            0,
+            std::chrono::seconds(1));
         return false;
     }
     return true;
@@ -1609,13 +1612,13 @@ void bulk_load_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
     response.bulk_load_states.resize(partition_count);
     response.__set_hp_bulk_load_states(
         std::vector<std::map<host_port, partition_bulk_load_state>>(partition_count));
-    for (const auto & [ pid, pbls_by_hps ] : _partitions_bulk_load_state) {
+    for (const auto &[pid, pbls_by_hps] : _partitions_bulk_load_state) {
         if (pid.get_app_id() == app_id) {
             auto pidx = pid.get_partition_index();
             response.hp_bulk_load_states[pidx] = pbls_by_hps;
 
             std::map<rpc_address, partition_bulk_load_state> pbls_by_addrs;
-            for (const auto & [ hp, pbls ] : pbls_by_hps) {
+            for (const auto &[hp, pbls] : pbls_by_hps) {
                 pbls_by_addrs[dsn::dns_resolver::instance().resolve_address(hp)] = pbls;
             }
             response.bulk_load_states[pidx] = pbls_by_addrs;

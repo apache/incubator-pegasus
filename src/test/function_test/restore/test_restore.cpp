@@ -101,10 +101,11 @@ public:
     {
         std::string pegasus_root_dir = global_env::instance()._pegasus_root;
         CHECK_EQ(0, ::chdir(pegasus_root_dir.c_str()));
-        std::string cmd = "cd " + backup_path_ + "; "
-                                                 "ls -c > restore_app_from_backup_test_tmp; "
-                                                 "tail -n 1 restore_app_from_backup_test_tmp; "
-                                                 "rm restore_app_from_backup_test_tmp";
+        std::string cmd = "cd " + backup_path_ +
+                          "; "
+                          "ls -c > restore_app_from_backup_test_tmp; "
+                          "tail -n 1 restore_app_from_backup_test_tmp; "
+                          "rm restore_app_from_backup_test_tmp";
         std::stringstream ss;
         int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
         std::cout << cmd << " output: " << ss.str() << std::endl;

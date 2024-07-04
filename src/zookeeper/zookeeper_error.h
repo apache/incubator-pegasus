@@ -33,4 +33,4 @@ namespace dist {
 
 error_code from_zerror(int zerr);
 }
-}
+} // namespace dsn

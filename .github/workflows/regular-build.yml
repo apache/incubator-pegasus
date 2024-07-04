@@ -38,12 +38,10 @@ jobs:
   lint_cpp:
     name: Lint Cpp
     runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:clang-format-3.9
     steps:
       - uses: actions/checkout@v3
       - name: clang-format
-        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
+        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-14 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
   build_cpp:
     name: Build Cpp

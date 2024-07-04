@@ -116,6 +116,6 @@ private:
 };
 
 void install_checkers();
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

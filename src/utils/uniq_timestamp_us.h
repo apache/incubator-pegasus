@@ -59,4 +59,4 @@ public:
         return _last_ts;
     }
 };
-}
+} // namespace dsn

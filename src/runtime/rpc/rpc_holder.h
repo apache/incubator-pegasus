@@ -168,8 +168,8 @@ public:
         rpc_response_task_ptr t = rpc::create_rpc_response_task(
             dsn_request(),
             tracker,
-            [ cb_fwd = std::forward<TCallback>(callback),
-              rpc = *this ](error_code err, message_ex * req, message_ex * resp) mutable {
+            [cb_fwd = std::forward<TCallback>(callback),
+             rpc = *this](error_code err, message_ex *req, message_ex *resp) mutable {
                 if (err == ERR_OK) {
                     unmarshall(resp, rpc.response());
                 }
@@ -200,8 +200,8 @@ public:
         rpc_response_task_ptr t = rpc::create_rpc_response_task(
             dsn_request(),
             tracker,
-            [ cb_fwd = std::forward<TCallback>(callback),
-              rpc = *this ](error_code err, message_ex * req, message_ex * resp) mutable {
+            [cb_fwd = std::forward<TCallback>(callback),
+             rpc = *this](error_code err, message_ex *req, message_ex *resp) mutable {
                 if (err == ERR_OK) {
                     unmarshall(resp, rpc.response());
                 }

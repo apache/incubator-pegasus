@@ -27,8 +27,8 @@
 #pragma once
 
 #include "replica/replication_service_app.h"
-using ::dsn::replication::replication_service_app;
 using ::dsn::error_code;
+using ::dsn::replication::replication_service_app;
 
 class replication_service_test_app : public replication_service_app
 {
