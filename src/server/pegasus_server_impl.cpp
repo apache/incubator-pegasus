@@ -1817,6 +1817,12 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     std::call_once(flag, [&]() {
         // The timer task will always running even though there is no replicas
         CHECK_NE(kServerStatUpdateTimeSec.count(), 0);
+
+        // TODO(wangdan): _update_server_rdb_stat is server-level, thus it could not be simply
+        // cancelled in the destructor of pegasus_server_impl which is replica-level.
+        //
+        // We should refactor to make _update_server_rdb_stat exit gracefully by
+        // `_update_server_rdb_stat->cancel(true)`.
         _update_server_rdb_stat = dsn::tasking::enqueue_timer(
             LPC_REPLICATION_LONG_COMMON,
             nullptr, // TODO: the tracker is nullptr, we will fix it later
@@ -1869,10 +1875,7 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         _update_replica_rdb_stat->cancel(true);
         _update_replica_rdb_stat = nullptr;
     }
-    if (_update_server_rdb_stat != nullptr) {
-        _update_server_rdb_stat->cancel(true);
-        _update_server_rdb_stat = nullptr;
-    }
+
     _tracker.cancel_outstanding_tasks();
 
     _context_cache.clear();
