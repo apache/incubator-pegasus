@@ -64,9 +64,9 @@ public:
 
     decree last_durable_decree() const { return _replica->last_durable_decree(); }
 
-    decree checkpoint_decree(const std::unique_ptr<replica_duplicator> &dup) const
+    decree min_checkpoint_decree(const std::unique_ptr<replica_duplicator> &dup) const
     {
-        return dup->_checkpoint_decree;
+        return dup->_min_checkpoint_decree;
     }
 
     void test_new_duplicator(const std::string &remote_app_name, bool specify_remote_app_name)
@@ -159,6 +159,7 @@ TEST_P(replica_duplicator_test, duplication_progress)
     auto duplicator = create_test_duplicator();
 
     // Start duplication from empty replica.
+    ASSERT_EQ(1, min_checkpoint_decree(duplicator));
     ASSERT_EQ(0, duplicator->progress().last_decree);
     ASSERT_EQ(invalid_decree, duplicator->progress().confirmed_decree);
 
@@ -177,23 +178,25 @@ TEST_P(replica_duplicator_test, duplication_progress)
                             "last_decree(10) should always larger than confirmed_decree(12)"),
               duplicator->update_progress(duplicator->progress().set_confirmed_decree(12)));
 
-    auto duplicator_for_checkpoint = create_test_duplicator(invalid_decree, 100);
+    replica()->update_last_applied_decree(100);
+    auto duplicator_for_checkpoint = create_test_duplicator();
     ASSERT_FALSE(duplicator_for_checkpoint->progress().checkpoint_has_prepared);
 
-    replica()->update_last_durable_decree(101);
+    replica()->update_last_durable_decree(100);
     duplicator_for_checkpoint->update_progress(duplicator->progress());
     ASSERT_TRUE(duplicator_for_checkpoint->progress().checkpoint_has_prepared);
 }
 
 TEST_P(replica_duplicator_test, prepare_dup)
 {
-    auto duplicator = create_test_duplicator(invalid_decree, 100);
     replica()->update_last_applied_decree(100);
     replica()->update_expect_last_durable_decree(100);
+
+    auto duplicator = create_test_duplicator();
     duplicator->prepare_dup();
     wait_all(duplicator);
 
-    ASSERT_EQ(100, checkpoint_decree(duplicator));
+    ASSERT_EQ(100, min_checkpoint_decree(duplicator));
     ASSERT_EQ(100, last_durable_decree());
 }
 

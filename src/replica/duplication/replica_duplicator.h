@@ -39,12 +39,13 @@ namespace replication {
 class duplication_progress
 {
 public:
-    // check if checkpoint has catch up with `_checkpoint_decree`
+    // Check if checkpoint has covered `_min_checkpoint_decree`.
     bool checkpoint_has_prepared{false};
-    // the maximum decree that's been persisted in meta server
+
+    // The max decree that has been persisted in the meta server.
     decree confirmed_decree{invalid_decree};
 
-    // the maximum decree that's been duplicated to remote.
+    // The max decree that has been duplicated to the remote cluster.
     decree last_decree{invalid_decree};
 
     duplication_progress &set_last_decree(decree d)
@@ -184,7 +185,10 @@ private:
     replica_stub *_stub;
     dsn::task_tracker _tracker;
 
-    decree _checkpoint_decree = invalid_decree;
+    // The min decree that should be covered by the checkpoint which is triggered by the
+    // newly added duplication.
+    decree _min_checkpoint_decree = invalid_decree;
+
     duplication_status::type _status{duplication_status::DS_INIT};
     std::atomic<duplication_fail_mode::type> _fail_mode{duplication_fail_mode::FAIL_SLOW};
 

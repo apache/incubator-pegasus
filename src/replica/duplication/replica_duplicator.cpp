@@ -63,19 +63,19 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it->second == invalid_decree) {
-        // Ensure that the checkpoint decree is at least 1, otherwise the checkpoint could not be
-        // created thus the remove cluster would inevitably fail to pull the files.
+        // Ensure that the checkpoint decree is at least 1, otherwise the checkpoint could not
+        // be created thus the remove cluster would inevitably fail to pull the files.
         //
-        // TODO(jiashuo1): _checkpoint_decree hasn't be ready to persist zk, so if master restart,
-        // the value will be reset to 0.
+        // TODO(jiashuo1): _min_checkpoint_decree hasn't be ready to persist zk, so if master
+        // restart, the value will be reset to 0.
         const auto last_applied_decree = _replica->last_applied_decree();
-        _checkpoint_decree = std::max(last_applied_decree, static_cast<decree>(1));
+        _min_checkpoint_decree = std::max(last_applied_decree, static_cast<decree>(1));
         _progress.last_decree = last_applied_decree;
-        LOG_INFO_PREFIX("initialize checkpoint decree: checkpoint_decree={}, "
+        LOG_INFO_PREFIX("initialize checkpoint decree: min_checkpoint_decree={}, "
                         "last_committed_decree={}, last_applied_decree={}, "
                         "last_flushed_decree={}, last_durable_decree={}, "
                         "plog_max_decree_on_disk={}, plog_max_commit_on_disk={}",
-                        _checkpoint_decree,
+                        _min_checkpoint_decree,
                         _replica->last_committed_decree(),
                         last_applied_decree,
                         _replica->last_flushed_decree(),
@@ -101,11 +101,11 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 
 void replica_duplicator::prepare_dup()
 {
-    LOG_INFO_PREFIX("start to trigger checkpoint: checkpoint_decree={}, "
+    LOG_INFO_PREFIX("start to trigger checkpoint: min_checkpoint_decree={}, "
                     "last_committed_decree={}, last_applied_decree={}, "
                     "last_flushed_decree={}, last_durable_decree={}, "
                     "plog_max_decree_on_disk={}, plog_max_commit_on_disk={}",
-                    _checkpoint_decree,
+                    _min_checkpoint_decree,
                     _replica->last_committed_decree(),
                     _replica->last_applied_decree(),
                     _replica->last_flushed_decree(),
@@ -113,7 +113,7 @@ void replica_duplicator::prepare_dup()
                     _replica->private_log()->max_decree_on_disk(),
                     _replica->private_log()->max_commit_on_disk());
 
-    _replica->async_trigger_manual_emergency_checkpoint(_checkpoint_decree, 0);
+    _replica->async_trigger_manual_emergency_checkpoint(_min_checkpoint_decree, 0);
 }
 
 void replica_duplicator::start_dup_log()
@@ -180,16 +180,16 @@ void replica_duplicator::update_status_if_needed(duplication_status::type next_s
     }
 
     // DS_PREPARE means this replica is making checkpoint, which might need to be triggered
-    // multiple times to catch up with _checkpoint_decree.
+    // multiple times to catch up with _min_checkpoint_decree.
     if (_status == next_status && next_status != duplication_status::DS_PREPARE) {
         return;
     }
 
-    LOG_INFO_PREFIX("update duplication status: {}=>{} [checkpoint_decree={}, "
+    LOG_INFO_PREFIX("update duplication status: {}=>{} [min_checkpoint_decree={}, "
                     "last_committed_decree={}, last_durable_decree={}]",
                     duplication_status_to_string(_status),
                     duplication_status_to_string(next_status),
-                    _checkpoint_decree,
+                    _min_checkpoint_decree,
                     _replica->last_committed_decree(),
                     _replica->last_durable_decree());
 
@@ -237,7 +237,7 @@ error_s replica_duplicator::update_progress(const duplication_progress &p)
     decree last_confirmed_decree = _progress.confirmed_decree;
     _progress.confirmed_decree = std::max(_progress.confirmed_decree, p.confirmed_decree);
     _progress.last_decree = std::max(_progress.last_decree, p.last_decree);
-    _progress.checkpoint_has_prepared = _checkpoint_decree <= _replica->last_durable_decree();
+    _progress.checkpoint_has_prepared = _min_checkpoint_decree <= _replica->last_durable_decree();
 
     if (_progress.confirmed_decree > _progress.last_decree) {
         return FMT_ERR(ERR_INVALID_STATE,
