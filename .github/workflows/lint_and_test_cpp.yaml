@@ -49,19 +49,20 @@ env:
   TEST_OPTS: disk_min_available_space_ratio=5;throttle_test_medium_value_kb=10;throttle_test_large_value_kb=25
 
 jobs:
-  #cpp_clang_format_linter:
-  #  name: Lint
-  #  runs-on: ubuntu-latest
-  #  container:
-  #    image: apache/pegasus:clang-format-3.9
-  #  steps:
-  #    - uses: actions/checkout@v3
-  #    - name: clang-format
-  #      run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
+  cpp_clang_format_linter:
+    name: Lint
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:clang-format-3.9
+    steps:
+      - uses: actions/checkout@v3
+      - name: clang-format
+        #run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
+        run: ls
 
   iwyu:
     name: IWYU
-    #  needs: cpp_clang_format_linter
+      needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
