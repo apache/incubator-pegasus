@@ -102,8 +102,8 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 
     dsn::host_port target_hp;
     std::string err_info;
-    std::string ip_str = cmd({"-d", "--address"}).str();
-    if (!validate_ip(sc, ip_str, target_hp, err_info)) {
+    const auto &target_hp_str = cmd({"-d", "--address"}).str();
+    if (!validate_ip(sc, target_hp_str, target_hp, err_info)) {
         fmt::print(stderr, "{}\n", err_info);
         return false;
     }
@@ -145,7 +145,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
                    app_id,
                    partition_index,
                    hotkey_type,
-                   ip_str);
+                   target_hp_str);
         break;
     case dsn::replication::detect_action::STOP:
         fmt::print("Hotkey detection is stopped now\n");
