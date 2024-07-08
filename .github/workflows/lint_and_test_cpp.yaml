@@ -53,7 +53,8 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:clang-format-3.9
+      #image: apache/pegasus:clang-format-3.9
+      image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v3
       - name: clang-format
