@@ -194,16 +194,17 @@ void replica::on_checkpoint_timer()
                      });
 }
 
-void replica::async_trigger_manual_emergency_checkpoint(decree checkpoint_decree,
+void replica::async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree,
                                                         uint32_t delay_ms,
                                                         trigger_checkpoint_callback callback)
 {
-    CHECK_GT_PREFIX_MSG(checkpoint_decree, 0, "");
+    CHECK_GT_PREFIX_MSG(min_checkpoint_decree, 0, "min_checkpoint_decree should be a number "
+            "greater than 0 which means a new checkpoint must be created");
 
     tasking::enqueue(
         LPC_REPLICATION_COMMON,
         &_tracker,
-        [checkpoint_decree, callback, this]() {
+        [min_checkpoint_decree, callback, this]() {
             _checker.only_one_thread_access();
 
             if (_app == nullptr) {
@@ -214,9 +215,9 @@ void replica::async_trigger_manual_emergency_checkpoint(decree checkpoint_decree
             const auto last_applied_decree = this->last_applied_decree();
             if (last_applied_decree == 0) {
                 LOG_INFO_PREFIX("ready to commit an empty write to trigger checkpoint: "
-                                "checkpoint_decree={}, last_applied_decree={}, "
+                                "min_checkpoint_decree={}, last_applied_decree={}, "
                                 "last_durable_decree={}",
-                                checkpoint_decree,
+                                min_checkpoint_decree,
                                 last_applied_decree,
                                 last_durable_decree());
 
@@ -225,12 +226,12 @@ void replica::async_trigger_manual_emergency_checkpoint(decree checkpoint_decree
                 init_prepare(mu, false);
 
                 async_trigger_manual_emergency_checkpoint(
-                    checkpoint_decree, FLAGS_trigger_checkpoint_retry_interval_ms, callback);
+                    min_checkpoint_decree, FLAGS_trigger_checkpoint_retry_interval_ms, callback);
 
                 return;
             }
 
-            const auto err = trigger_manual_emergency_checkpoint(checkpoint_decree);
+            const auto err = trigger_manual_emergency_checkpoint(min_checkpoint_decree);
             if (callback) {
                 callback(err);
             }
@@ -240,7 +241,7 @@ void replica::async_trigger_manual_emergency_checkpoint(decree checkpoint_decree
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-error_code replica::trigger_manual_emergency_checkpoint(decree checkpoint_decree)
+error_code replica::trigger_manual_emergency_checkpoint(decree min_checkpoint_decree)
 {
     _checker.only_one_thread_access();
 
@@ -250,15 +251,12 @@ error_code replica::trigger_manual_emergency_checkpoint(decree checkpoint_decree
     }
 
     const auto last_durable_decree = this->last_durable_decree();
-    if (checkpoint_decree <= last_durable_decree) {
+    if (min_checkpoint_decree <= last_durable_decree) {
         LOG_INFO_PREFIX(
-            "checkpoint has been completed: checkpoint_decree={}, last_durable_decree={}",
-            checkpoint_decree,
+            "checkpoint has been completed: min_checkpoint_decree={}, last_durable_decree={}",
+            min_checkpoint_decree,
             last_durable_decree);
         _is_manual_emergency_checkpointing = false;
-        if (_stub->_manual_emergency_checkpointing_count > 0) {
-            --_stub->_manual_emergency_checkpointing_count;
-        }
         return ERR_OK;
     }
 

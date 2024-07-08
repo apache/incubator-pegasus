@@ -187,7 +187,7 @@ private:
 
     // The min decree that should be covered by the checkpoint which is triggered by the
     // newly added duplication.
-    decree _min_checkpoint_decree = invalid_decree;
+    decree _min_checkpoint_decree{invalid_decree};
 
     duplication_status::type _status{duplication_status::DS_INIT};
     std::atomic<duplication_fail_mode::type> _fail_mode{duplication_fail_mode::FAIL_SLOW};

@@ -211,13 +211,13 @@ public:
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
 
-    void test_trigger_manual_emergency_checkpoint(const decree checkpoint_decree,
+    void test_trigger_manual_emergency_checkpoint(const decree min_checkpoint_decree,
                                                   const error_code expected_err,
                                                   std::function<void()> callback = {})
     {
         dsn::utils::notify_event op_completed;
         _mock_replica->async_trigger_manual_emergency_checkpoint(
-            checkpoint_decree, 0, [&](error_code actual_err) {
+            min_checkpoint_decree, 0, [&](error_code actual_err) {
                 ASSERT_EQ(expected_err, actual_err);
 
                 if (callback) {
@@ -460,38 +460,34 @@ TEST_P(replica_test, test_trigger_manual_emergency_checkpoint)
     ASSERT_EQ(0, _mock_replica->last_applied_decree());
     ASSERT_EQ(0, _mock_replica->last_durable_decree());
 
+    // Commit at least an empty write to make the replica become non-empty.
     _mock_replica->update_expect_last_durable_decree(1);
     test_trigger_manual_emergency_checkpoint(1, ERR_OK);
     _mock_replica->tracker()->wait_outstanding_tasks();
 
-    // ASSERT_IN_TIME([&] { ASSERT_LE(1, _mock_replica->last_applied_decree()); }, 60);
-
-    // ASSERT_IN_TIME([&] { ASSERT_EQ(1, _mock_replica->last_durable_decree()); }, 60);
-
+    // Committing multiple empty writes (retry multiple times) might make the last
+    // applied decree greater than 1.
     ASSERT_LE(1, _mock_replica->last_applied_decree());
-
     ASSERT_EQ(1, _mock_replica->last_durable_decree());
 
-    _mock_replica->update_last_applied_decree(100);
     test_trigger_manual_emergency_checkpoint(
         100, ERR_OK, [this]() { ASSERT_TRUE(is_checkpointing()); });
     _mock_replica->update_last_durable_decree(100);
 
-    // test no need start checkpoint because `old_decree` <= `last_durable`
+    // There's no need to trigger checkpoint since min_checkpoint_decree <= last_durable_decree.
     test_trigger_manual_emergency_checkpoint(
         100, ERR_OK, [this]() { ASSERT_FALSE(is_checkpointing()); });
 
-    // Test existing running task.
+    // There's already an existing running manual emergency checkpoint task.
     force_update_checkpointing(true);
-    _mock_replica->update_last_applied_decree(101);
     test_trigger_manual_emergency_checkpoint(
         101, ERR_BUSY, [this]() { ASSERT_TRUE(is_checkpointing()); });
 
-    // test running task completed
+    // Wait until the running task is completed.
     _mock_replica->tracker()->wait_outstanding_tasks();
     ASSERT_FALSE(is_checkpointing());
 
-    // test exceed max concurrent count
+    // The number of concurrent tasks exceeds the limit.
     test_trigger_manual_emergency_checkpoint(101, ERR_OK);
     force_update_checkpointing(false);
 
