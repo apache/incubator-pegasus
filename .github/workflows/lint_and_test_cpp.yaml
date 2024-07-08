@@ -62,7 +62,7 @@ jobs:
 
   iwyu:
     name: IWYU
-      needs: cpp_clang_format_linter
+    needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
