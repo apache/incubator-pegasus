@@ -361,6 +361,7 @@ void mutation_log::init_states()
     _private_log_info = {0, 0};
     _plog_max_decree_on_disk = 0;
     _plog_max_commit_on_disk = 0;
+    _cleanable_decree = 0;
 }
 
 error_code mutation_log::open(replay_callback read_callback,
@@ -896,6 +897,18 @@ void mutation_log::update_max_commit_on_disk_no_lock(decree d)
     if (d > _plog_max_commit_on_disk) {
         _plog_max_commit_on_disk = d;
     }
+}
+
+decree mutation_log::get_cleanable_decree() const
+{
+    zauto_lock l(_lock);
+    return _cleanable_decree;
+}
+
+void mutation_log::set_cleanable_decree(decree d)
+{
+    zauto_lock l(_lock);
+    _cleanable_decree = d;
 }
 
 bool mutation_log::get_learn_state(gpid gpid, decree start, /*out*/ learn_state &state) const
