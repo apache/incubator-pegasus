@@ -198,8 +198,10 @@ void replica::async_trigger_manual_emergency_checkpoint(decree min_checkpoint_de
                                                         uint32_t delay_ms,
                                                         trigger_checkpoint_callback callback)
 {
-    CHECK_GT_PREFIX_MSG(min_checkpoint_decree, 0, "min_checkpoint_decree should be a number "
-            "greater than 0 which means a new checkpoint must be created");
+    CHECK_GT_PREFIX_MSG(min_checkpoint_decree,
+                        0,
+                        "min_checkpoint_decree should be a number greater than 0 "
+                        "which means a new checkpoint must be created");
 
     tasking::enqueue(
         LPC_REPLICATION_COMMON,

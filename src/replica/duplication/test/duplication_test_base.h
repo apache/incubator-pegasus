@@ -54,13 +54,13 @@ public:
         return dup_entities[dupid].get();
     }
 
-    std::unique_ptr<replica_duplicator> create_test_duplicator(decree confirmed = invalid_decree)
+    std::unique_ptr<replica_duplicator> create_test_duplicator(decree confirmed_decree = invalid_decree)
     {
         duplication_entry dup_ent;
         dup_ent.dupid = 1;
         dup_ent.remote = "remote_address";
         dup_ent.status = duplication_status::DS_PAUSE;
-        dup_ent.progress[_replica->get_gpid().get_partition_index()] = confirmed;
+        dup_ent.progress[_replica->get_gpid().get_partition_index()] = confirmed_decree;
 
         auto duplicator = std::make_unique<replica_duplicator>(dup_ent, _replica.get());
         return duplicator;
