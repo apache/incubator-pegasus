@@ -54,7 +54,8 @@ public:
         return dup_entities[dupid].get();
     }
 
-    std::unique_ptr<replica_duplicator> create_test_duplicator(decree confirmed_decree = invalid_decree)
+    std::unique_ptr<replica_duplicator>
+    create_test_duplicator(decree confirmed_decree = invalid_decree)
     {
         duplication_entry dup_ent;
         dup_ent.dupid = 1;
