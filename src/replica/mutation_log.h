@@ -404,7 +404,7 @@ private:
     // be less than _plog_max_decree_on_disk.
     decree _plog_max_commit_on_disk;
 
-    decree _cleanable_decree;  // for deal with gc conflict
+    decree _cleanable_decree; // for deal with gc conflict
 };
 
 typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
