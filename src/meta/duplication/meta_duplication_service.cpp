@@ -54,6 +54,7 @@
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/zlocks.h"
+#include "utils/defer.h"
 
 DSN_DECLARE_bool(dup_ignore_other_cluster_ids);
 
@@ -701,6 +702,10 @@ void meta_duplication_service::recover_from_meta_state()
         _meta_svc->get_meta_storage()->get_children(
             get_duplication_path(*app),
             [this, app](bool node_exists, const std::vector<std::string> &dup_id_list) {
+                dsn::defer([this, app]() {
+                    zauto_write_lock l(app_lock());
+                    refresh_duplicating_no_lock(app);
+                });
                 if (!node_exists) {
                     // if there's no duplication
                     return;
