@@ -22,6 +22,7 @@
 
 #include <string_view>
 #include "common/duplication_common.h"
+#include "common/gpid.h"
 #include "duplication_types.h"
 #include "load_from_private_log.h"
 #include "replica/duplication/mutation_batch.h"
@@ -170,7 +171,7 @@ void load_from_private_log::find_log_file_to_start()
             LOG_ERROR_PREFIX("{}", es);
             return;
         }
-        new_file_map.emplace(pr.first, file);
+        new_file_map.emplace(it->first, file);
 
         // next file map may can not open
         gpid pid = get_gpid();
