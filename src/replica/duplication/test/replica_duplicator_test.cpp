@@ -64,9 +64,9 @@ public:
 
     decree last_durable_decree() const { return _replica->last_durable_decree(); }
 
-    decree log_dup_start_decree(const std::unique_ptr<replica_duplicator> &dup) const
+    decree min_checkpoint_decree(const std::unique_ptr<replica_duplicator> &dup) const
     {
-        return dup->_start_point_decree;
+        return dup->_min_checkpoint_decree;
     }
 
     void test_new_duplicator(const std::string &remote_app_name, bool specify_remote_app_name)
@@ -157,39 +157,51 @@ TEST_P(replica_duplicator_test, pause_start_duplication) { test_pause_start_dupl
 TEST_P(replica_duplicator_test, duplication_progress)
 {
     auto duplicator = create_test_duplicator();
-    ASSERT_EQ(duplicator->progress().last_decree, 0); // start duplication from empty plog
-    ASSERT_EQ(duplicator->progress().confirmed_decree, invalid_decree);
 
+    // Start duplication from empty replica.
+    ASSERT_EQ(1, min_checkpoint_decree(duplicator));
+    ASSERT_EQ(0, duplicator->progress().last_decree);
+    ASSERT_EQ(invalid_decree, duplicator->progress().confirmed_decree);
+
+    // Update the max decree that has been duplicated to the remote cluster.
     duplicator->update_progress(duplicator->progress().set_last_decree(10));
-    ASSERT_EQ(duplicator->progress().last_decree, 10);
-    ASSERT_EQ(duplicator->progress().confirmed_decree, invalid_decree);
+    ASSERT_EQ(10, duplicator->progress().last_decree);
+    ASSERT_EQ(invalid_decree, duplicator->progress().confirmed_decree);
 
+    // Update the max decree that has been persisted in the meta server.
     duplicator->update_progress(duplicator->progress().set_confirmed_decree(10));
-    ASSERT_EQ(duplicator->progress().confirmed_decree, 10);
-    ASSERT_EQ(duplicator->progress().last_decree, 10);
+    ASSERT_EQ(10, duplicator->progress().last_decree);
+    ASSERT_EQ(10, duplicator->progress().confirmed_decree);
 
-    ASSERT_EQ(duplicator->update_progress(duplicator->progress().set_confirmed_decree(1)),
-              error_s::make(ERR_INVALID_STATE, "never decrease confirmed_decree: new(1) old(10)"));
+    ASSERT_EQ(error_s::make(ERR_INVALID_STATE, "never decrease confirmed_decree: new(1) old(10)"),
+              duplicator->update_progress(duplicator->progress().set_confirmed_decree(1)));
 
-    ASSERT_EQ(duplicator->update_progress(duplicator->progress().set_confirmed_decree(12)),
-              error_s::make(ERR_INVALID_STATE,
-                            "last_decree(10) should always larger than confirmed_decree(12)"));
+    ASSERT_EQ(error_s::make(ERR_INVALID_STATE,
+                            "last_decree(10) should always larger than confirmed_decree(12)"),
+              duplicator->update_progress(duplicator->progress().set_confirmed_decree(12)));
 
-    auto duplicator_for_checkpoint = create_test_duplicator(invalid_decree, 100);
+    // Test that the checkpoint has not been created.
+    replica()->update_last_applied_decree(100);
+    auto duplicator_for_checkpoint = create_test_duplicator();
     ASSERT_FALSE(duplicator_for_checkpoint->progress().checkpoint_has_prepared);
 
-    replica()->update_last_durable_decree(101);
+    // Test that the checkpoint has been created.
+    replica()->update_last_durable_decree(100);
     duplicator_for_checkpoint->update_progress(duplicator->progress());
     ASSERT_TRUE(duplicator_for_checkpoint->progress().checkpoint_has_prepared);
 }
 
-TEST_P(replica_duplicator_test, prapre_dup)
+TEST_P(replica_duplicator_test, prepare_dup)
 {
-    auto duplicator = create_test_duplicator(invalid_decree, 100);
+    replica()->update_last_applied_decree(100);
     replica()->update_expect_last_durable_decree(100);
+
+    auto duplicator = create_test_duplicator();
     duplicator->prepare_dup();
     wait_all(duplicator);
-    ASSERT_EQ(last_durable_decree(), log_dup_start_decree(duplicator));
+
+    ASSERT_EQ(100, min_checkpoint_decree(duplicator));
+    ASSERT_EQ(100, last_durable_decree());
 }
 
 } // namespace replication
