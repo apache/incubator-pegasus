@@ -63,8 +63,13 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it->second == invalid_decree) {
-        // Ensure that the checkpoint decree is at least 1, otherwise the checkpoint could not
-        // be created thus the remove cluster would inevitably fail to pull the files.
+        // Ensure that the checkpoint decree is at least 1. Otherwise, the checkpoint could not be
+        // created in time for empty replica; in consequence, the remote cluster would inevitably
+        // fail to pull the checkpoint files.
+        //
+        // The max decree in rocksdb memtable (the last applied decree) is considered as the min
+        // decree that should be covered by the checkpoint, which means currently all of the data
+        // in current rocksdb should be included into the created checkpoint.
         //
         // TODO(jiashuo1): _min_checkpoint_decree hasn't be ready to persist zk, so if master
         // restart, the value will be reset to 0.
