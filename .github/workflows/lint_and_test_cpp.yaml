@@ -418,6 +418,8 @@ jobs:
       USE_JEMALLOC: OFF
       BUILD_OPTIONS: -t debug --test --separate_servers
       PACK_OPTIONS: --separate_servers
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     container:
       image: apache/pegasus:thirdparties-bin-centos7-${{ github.base_ref }}
     steps:
