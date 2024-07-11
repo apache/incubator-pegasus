@@ -30,6 +30,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <atomic>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -268,7 +269,24 @@ public:
     //
     // Duplication
     //
-    error_code trigger_manual_emergency_checkpoint(decree old_decree);
+
+    using trigger_checkpoint_callback = std::function<void(error_code)>;
+
+    // Choose a fixed thread from pool to trigger an emergency checkpoint asynchronously.
+    // A new checkpoint would still be created even if the replica is empty (hasn't received
+    // any write operation).
+    //
+    // Parameters:
+    // - `min_checkpoint_decree`: the min decree that should be covered by the triggered
+    // checkpoint. Should be a number greater than 0 which means a new checkpoint must be
+    // created.
+    // - `delay_ms`: the delayed time in milliseconds that the triggering task is put into
+    // the thread pool.
+    // - `callback`: the callback processor handling the error code of triggering checkpoint.
+    void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree,
+                                                   uint32_t delay_ms,
+                                                   trigger_checkpoint_callback callback = {});
+
     void on_query_last_checkpoint(learn_response &response);
     std::shared_ptr<replica_duplicator_manager> get_duplication_manager() const
     {
@@ -470,6 +488,10 @@ private:
     void update_plog_gc_enabled(bool enabled);
     bool is_plog_gc_enabled() const;
     std::string get_plog_gc_enabled_message() const;
+
+    // Trigger an emergency checkpoint for duplication. Once the replica is empty (hasn't
+    // received any write operation), there would be no checkpoint created.
+    error_code trigger_manual_emergency_checkpoint(decree min_checkpoint_decree);
 
     /////////////////////////////////////////////////////////////////
     // cold backup
