@@ -263,10 +263,11 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
     // TODO: check the md5sum
     read_response r;
     create_response.file_handle
-        ->read(read_request{0, -1},
-               TASK_CODE_EXEC_INLINED,
-               [&r](const read_response &resp) { r = resp; },
-               nullptr)
+        ->read(
+            read_request{0, -1},
+            TASK_CODE_EXEC_INLINED,
+            [&r](const read_response &resp) { r = resp; },
+            nullptr)
         ->wait();
 
     if (r.err != dsn::ERR_OK) {
@@ -470,5 +471,5 @@ void replica::update_restore_progress(uint64_t f_size)
                     cur_download_size,
                     cur_porgress);
 }
-}
-}
+} // namespace replication
+} // namespace dsn

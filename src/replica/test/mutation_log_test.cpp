@@ -547,12 +547,13 @@ TEST_P(mutation_log_test, reset_from)
 
     // reset from the tmp log dir.
     std::vector<mutation_ptr> actual;
-    auto err = mlog->reset_from(_log_dir + ".tmp",
-                                [&](int, mutation_ptr &mu) -> bool {
-                                    actual.push_back(mu);
-                                    return true;
-                                },
-                                [](error_code err) { ASSERT_EQ(err, ERR_OK); });
+    auto err = mlog->reset_from(
+        _log_dir + ".tmp",
+        [&](int, mutation_ptr &mu) -> bool {
+            actual.push_back(mu);
+            return true;
+        },
+        [](error_code err) { ASSERT_EQ(err, ERR_OK); });
     ASSERT_EQ(err, ERR_OK);
     ASSERT_EQ(actual.size(), expected.size());
 
@@ -593,12 +594,13 @@ TEST_P(mutation_log_test, reset_from_while_writing)
 
     // reset from the tmp log dir.
     std::vector<mutation_ptr> actual;
-    auto err = mlog->reset_from(_log_dir + ".test",
-                                [&](int, mutation_ptr &mu) -> bool {
-                                    actual.push_back(mu);
-                                    return true;
-                                },
-                                [](error_code err) { ASSERT_EQ(err, ERR_OK); });
+    auto err = mlog->reset_from(
+        _log_dir + ".test",
+        [&](int, mutation_ptr &mu) -> bool {
+            actual.push_back(mu);
+            return true;
+        },
+        [](error_code err) { ASSERT_EQ(err, ERR_OK); });
     ASSERT_EQ(err, ERR_OK);
 
     mlog->flush();

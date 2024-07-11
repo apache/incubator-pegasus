@@ -109,4 +109,4 @@ aio_task_ptr nfs_node::copy_remote_files(std::shared_ptr<remote_copy_request> &r
     call(request, cb);
     return cb;
 }
-}
+} // namespace dsn

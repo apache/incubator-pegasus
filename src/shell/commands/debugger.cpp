@@ -143,8 +143,10 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
     std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex * *requests, int count)>
         callback;
     if (detailed) {
-        callback = [&os, sc](
-            int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count) mutable {
+        callback = [&os, sc](int64_t decree,
+                             int64_t timestamp,
+                             dsn::message_ex **requests,
+                             int count) mutable {
             for (int i = 0; i < count; ++i) {
                 dsn::message_ex *request = requests[i];
                 CHECK_NOTNULL(request, "");
@@ -205,8 +207,8 @@ bool mlog_dump(command_executor *e, shell_context *sc, arguments args)
                 } else if (msg->local_rpc_code == ::dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
                     dsn::apps::check_and_set_request update;
                     dsn::unmarshall(request, update);
-                    auto set_sort_key =
-                        update.set_diff_sort_key ? update.set_sort_key : update.check_sort_key;
+                    auto set_sort_key = update.set_diff_sort_key ? update.set_sort_key
+                                                                 : update.check_sort_key;
                     std::string check_operand;
                     if (pegasus::cas_is_check_operand_needed(update.check_type)) {
                         check_operand = fmt::format(

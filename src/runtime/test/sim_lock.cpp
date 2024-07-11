@@ -86,7 +86,7 @@ namespace dsn {
 namespace test {
 typedef std::function<void()> system_callback;
 }
-}
+} // namespace dsn
 TEST(tools_simulator, scheduler)
 {
     if (dsn::task::get_current_worker() == nullptr)

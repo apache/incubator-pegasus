@@ -121,4 +121,4 @@ CONFIG_FLD(bool,
            false,
            "throttling: whether to enable throttling with virtual queues")
 CONFIG_END
-}
+} // namespace dsn

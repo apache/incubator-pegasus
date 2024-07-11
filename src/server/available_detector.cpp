@@ -260,7 +260,7 @@ void available_detector::report_availability_info()
         std::chrono::minutes(1),
         0,
         std::chrono::minutes(2) // waiting for pegasus finishing start.
-        );
+    );
 }
 
 bool available_detector::generate_hash_keys()
@@ -326,8 +326,9 @@ void available_detector::on_detect(int32_t idx)
     _recent_minute_detect_times.fetch_add(1);
 
     // define async_get callback function.
-    auto async_get_callback = [this, idx](
-        int err, std::string &&_value, pegasus_client::internal_info &&info) {
+    auto async_get_callback = [this, idx](int err,
+                                          std::string &&_value,
+                                          pegasus_client::internal_info &&info) {
         std::atomic<int> &cnt = (*_fail_count[idx]);
         if (err != PERR_OK) {
             int prev = cnt.fetch_add(1);
@@ -350,10 +351,8 @@ void available_detector::on_detect(int32_t idx)
     };
 
     // define async_set callback function.
-    auto async_set_callback =
-        [ this, idx, user_async_get_callback = std::move(async_get_callback) ](
-            int err, pegasus_client::internal_info &&info)
-    {
+    auto async_set_callback = [this, idx, user_async_get_callback = std::move(async_get_callback)](
+                                  int err, pegasus_client::internal_info &&info) {
         std::atomic<int> &cnt = (*_fail_count[idx]);
         if (err != PERR_OK) {
             int prev = cnt.fetch_add(1);

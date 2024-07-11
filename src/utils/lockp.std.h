@@ -93,5 +93,5 @@ public:
 private:
     dsn::utils::semaphore _sema;
 };
-}
-} // end namespace dsn::tools
+} // namespace tools
+} // namespace dsn

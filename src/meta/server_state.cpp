@@ -487,10 +487,11 @@ error_code server_state::sync_apps_to_remote_storage()
     error_code err;
     dist::meta_state_service *storage = _meta_svc->get_remote_storage();
 
-    auto t = storage->create_node(apps_path,
-                                  LPC_META_CALLBACK,
-                                  [&err](error_code ec) { err = ec; },
-                                  blob(lock_state, 0, strlen(lock_state)));
+    auto t = storage->create_node(
+        apps_path,
+        LPC_META_CALLBACK,
+        [&err](error_code ec) { err = ec; },
+        blob(lock_state, 0, strlen(lock_state)));
     t->wait();
 
     if (err != ERR_NODE_ALREADY_EXIST && err != ERR_OK) {
@@ -510,19 +511,19 @@ error_code server_state::sync_apps_to_remote_storage()
               "invalid app status");
         blob value = app->to_json(app_status::AS_CREATING == app->status ? app_status::AS_AVAILABLE
                                                                          : app_status::AS_DROPPED);
-        storage->create_node(path,
-                             LPC_META_CALLBACK,
-                             [&err, path](error_code ec) {
-                                 if (ec != ERR_OK && ec != ERR_NODE_ALREADY_EXIST) {
-                                     LOG_WARNING(
-                                         "create app node failed, path({}) reason({})", path, ec);
-                                     err = ec;
-                                 } else {
-                                     LOG_INFO("create app node {} ok", path);
-                                 }
-                             },
-                             value,
-                             &tracker);
+        storage->create_node(
+            path,
+            LPC_META_CALLBACK,
+            [&err, path](error_code ec) {
+                if (ec != ERR_OK && ec != ERR_NODE_ALREADY_EXIST) {
+                    LOG_WARNING("create app node failed, path({}) reason({})", path, ec);
+                    err = ec;
+                } else {
+                    LOG_INFO("create app node {} ok", path);
+                }
+            },
+            value,
+            &tracker);
     }
     tracker.wait_outstanding_tasks();
 
@@ -534,8 +535,8 @@ error_code server_state::sync_apps_to_remote_storage()
     for (auto &kv : _all_apps) {
         std::shared_ptr<app_state> &app = kv.second;
         for (unsigned int i = 0; i != app->partition_count; ++i) {
-            task_ptr init_callback =
-                tasking::create_task(LPC_META_STATE_HIGH, &tracker, [] {}, sStateHash);
+            task_ptr init_callback = tasking::create_task(
+                LPC_META_STATE_HIGH, &tracker, [] {}, sStateHash);
             init_app_partition_node(app, i, init_callback);
         }
     }
@@ -561,8 +562,9 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
     dsn::task_tracker tracker;
 
     dist::meta_state_service *storage = _meta_svc->get_remote_storage();
-    auto sync_partition = [this, storage, &err, &tracker](
-        std::shared_ptr<app_state> &app, int partition_id, const std::string &partition_path) {
+    auto sync_partition = [this, storage, &err, &tracker](std::shared_ptr<app_state> &app,
+                                                          int partition_id,
+                                                          const std::string &partition_path) {
         storage->get_data(
             partition_path,
             LPC_META_CALLBACK,
@@ -1381,8 +1383,8 @@ void server_state::recall_app(dsn::message_ex *msg)
             if (has_seconds_expired(target_app->expire_second)) {
                 response.err = ERR_APP_NOT_EXIST;
             } else {
-                std::string &new_app_name =
-                    (request.new_app_name == "") ? target_app->app_name : request.new_app_name;
+                std::string &new_app_name = (request.new_app_name == "") ? target_app->app_name
+                                                                         : request.new_app_name;
                 if (_exist_apps.find(new_app_name) != _exist_apps.end()) {
                     response.err = ERR_INVALID_PARAMETERS;
                 } else {
@@ -1722,15 +1724,14 @@ void server_state::on_update_configuration_on_remote_reply(
     CHECK(app->status == app_status::AS_AVAILABLE || app->status == app_status::AS_DROPPING,
           "if app removed, this task should be cancelled");
     if (ec == ERR_TIMEOUT) {
-        cc.pending_sync_task =
-            tasking::enqueue(LPC_META_STATE_HIGH,
-                             tracker(),
-                             [this, config_request, &cc]() mutable {
-                                 cc.pending_sync_task =
-                                     update_configuration_on_remote(config_request);
-                             },
-                             0,
-                             std::chrono::seconds(1));
+        cc.pending_sync_task = tasking::enqueue(
+            LPC_META_STATE_HIGH,
+            tracker(),
+            [this, config_request, &cc]() mutable {
+                cc.pending_sync_task = update_configuration_on_remote(config_request);
+            },
+            0,
+            std::chrono::seconds(1));
     } else if (ec == ERR_OK) {
         update_configuration_locally(*app, config_request);
         cc.pending_sync_task = nullptr;
@@ -2268,8 +2269,9 @@ error_code server_state::construct_partitions(
                     std::ostringstream oss;
                     if (skip_lost_partitions) {
                         oss << "WARNING: partition(" << app->app_id << "."
-                            << pc.pid.get_partition_index() << ") has no replica collected, force "
-                                                               "recover the lost partition to empty"
+                            << pc.pid.get_partition_index()
+                            << ") has no replica collected, force "
+                               "recover the lost partition to empty"
                             << std::endl;
                     } else {
                         oss << "ERROR: partition(" << app->app_id << "."
@@ -2586,9 +2588,8 @@ bool server_state::check_all_partitions()
         if (!add_secondary_proposed[i] && pc.hp_secondaries.empty()) {
             const auto &action = add_secondary_actions[i];
             CHECK(action.hp_node, "");
-            if (_add_secondary_enable_flow_control &&
-                add_secondary_running_nodes[action.hp_node] >=
-                    _add_secondary_max_count_for_one_node) {
+            if (_add_secondary_enable_flow_control && add_secondary_running_nodes[action.hp_node] >=
+                                                          _add_secondary_max_count_for_one_node) {
                 // ignore
                 continue;
             }
@@ -2607,9 +2608,8 @@ bool server_state::check_all_partitions()
             CHECK(action.hp_node, "");
             gpid pid = add_secondary_gpids[i];
             partition_configuration &pc = *get_config(_all_apps, pid);
-            if (_add_secondary_enable_flow_control &&
-                add_secondary_running_nodes[action.hp_node] >=
-                    _add_secondary_max_count_for_one_node) {
+            if (_add_secondary_enable_flow_control && add_secondary_running_nodes[action.hp_node] >=
+                                                          _add_secondary_max_count_for_one_node) {
                 LOG_INFO("do not send {} proposal for gpid({}) for flow control reason, target = "
                          "{}, node = {}",
                          ::dsn::enum_to_string(action.type),
@@ -2754,8 +2754,7 @@ void server_state::do_update_app_info(const std::string &app_path,
 {
     // persistent envs to zookeeper
     blob value = dsn::json::json_forwarder<app_info>::encode(info);
-    auto new_cb = [ this, app_path, info, user_cb = std::move(cb) ](error_code ec)
-    {
+    auto new_cb = [this, app_path, info, user_cb = std::move(cb)](error_code ec) {
         if (ec == ERR_OK) {
             user_cb(ec);
         } else if (ec == ERR_TIMEOUT) {
@@ -3708,21 +3707,21 @@ task_ptr server_state::update_partition_max_replica_count_on_remote(
                     new_ballot);
 
         // NOTICE: pending_sync_task should be reassigned
-        return tasking::enqueue(LPC_META_STATE_HIGH,
-                                tracker(),
-                                [this, app, new_partition_config, on_partition_updated]() mutable {
-                                    const auto &gpid = new_partition_config.pid;
-                                    const auto partition_index = gpid.get_partition_index();
+        return tasking::enqueue(
+            LPC_META_STATE_HIGH,
+            tracker(),
+            [this, app, new_partition_config, on_partition_updated]() mutable {
+                const auto &gpid = new_partition_config.pid;
+                const auto partition_index = gpid.get_partition_index();
 
-                                    zauto_write_lock l(_lock);
+                zauto_write_lock l(_lock);
 
-                                    auto &context = app->helpers->contexts[partition_index];
-                                    context.pending_sync_task =
-                                        update_partition_max_replica_count_on_remote(
-                                            app, new_partition_config, on_partition_updated);
-                                },
-                                server_state::sStateHash,
-                                std::chrono::seconds(1));
+                auto &context = app->helpers->contexts[partition_index];
+                context.pending_sync_task = update_partition_max_replica_count_on_remote(
+                    app, new_partition_config, on_partition_updated);
+            },
+            server_state::sStateHash,
+            std::chrono::seconds(1));
     }
 
     LOG_INFO("request for updating partition-level max_replica_count on remote storage: "
@@ -3776,22 +3775,21 @@ void server_state::on_update_partition_max_replica_count_on_remote_reply(
     auto &context = app->helpers->contexts[partition_index];
     if (ec == ERR_TIMEOUT) {
         // NOTICE: pending_sync_task need to be reassigned
-        context.pending_sync_task =
-            tasking::enqueue(LPC_META_STATE_HIGH,
-                             tracker(),
-                             [this, app, new_partition_config, on_partition_updated]() mutable {
-                                 const auto &gpid = new_partition_config.pid;
-                                 const auto partition_index = gpid.get_partition_index();
+        context.pending_sync_task = tasking::enqueue(
+            LPC_META_STATE_HIGH,
+            tracker(),
+            [this, app, new_partition_config, on_partition_updated]() mutable {
+                const auto &gpid = new_partition_config.pid;
+                const auto partition_index = gpid.get_partition_index();
 
-                                 zauto_write_lock l(_lock);
+                zauto_write_lock l(_lock);
 
-                                 auto &context = app->helpers->contexts[partition_index];
-                                 context.pending_sync_task =
-                                     update_partition_max_replica_count_on_remote(
-                                         app, new_partition_config, on_partition_updated);
-                             },
-                             server_state::sStateHash,
-                             std::chrono::seconds(1));
+                auto &context = app->helpers->contexts[partition_index];
+                context.pending_sync_task = update_partition_max_replica_count_on_remote(
+                    app, new_partition_config, on_partition_updated);
+            },
+            server_state::sStateHash,
+            std::chrono::seconds(1));
         return;
     }
 

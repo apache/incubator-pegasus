@@ -66,13 +66,14 @@ public:
     // 'validator' is used to validate the new value.
     // The value is reset to 'default_value' if passing "DEFAULT" argument.
     template <typename T>
-    WARN_UNUSED_RESULT std::unique_ptr<command_deregister>
-    register_int_command(T &value,
-                         T default_value,
-                         const std::string &command,
-                         const std::string &help,
-                         std::function<bool(int64_t new_value)> validator =
-                             [](int64_t new_value) -> bool { return new_value >= 0; })
+    WARN_UNUSED_RESULT std::unique_ptr<command_deregister> register_int_command(
+        T &value,
+        T default_value,
+        const std::string &command,
+        const std::string &help,
+        std::function<bool(int64_t new_value)> validator = [](int64_t new_value) -> bool {
+            return new_value >= 0;
+        })
     {
         return register_single_command(
             command,

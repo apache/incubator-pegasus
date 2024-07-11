@@ -86,5 +86,5 @@ inline ::dsn::host_port slave_failure_detector_with_multimaster::current_server_
     zauto_lock l(failure_detector::_lock);
     return _meta_servers.group_host_port()->leader();
 }
-}
-} // end namespace
+} // namespace dist
+} // namespace dsn

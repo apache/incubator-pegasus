@@ -113,6 +113,6 @@ private:
     std::string _md5_value;
     bool _has_meta_synced;
 };
-}
-}
-}
+} // namespace block_service
+} // namespace dist
+} // namespace dsn

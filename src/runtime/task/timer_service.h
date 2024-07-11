@@ -67,4 +67,4 @@ private:
     service_node *_node;
 };
 /*@}*/
-} // end namespace
+} // namespace dsn

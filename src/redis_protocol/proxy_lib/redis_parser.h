@@ -44,7 +44,7 @@ class binary_writer;
 namespace apps {
 class rrdb_client;
 }
-}
+} // namespace dsn
 
 class proxy_test;
 
@@ -265,5 +265,5 @@ public:
     redis_parser(proxy_stub *op, dsn::message_ex *first_msg);
     ~redis_parser() override;
 };
-}
-} // namespace
+} // namespace proxy
+} // namespace pegasus

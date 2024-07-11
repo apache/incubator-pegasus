@@ -130,4 +130,4 @@ int raw_message_parser::get_buffers_on_send(message_ex *msg, send_buf *buffers)
     }
     return i;
 }
-}
+} // namespace dsn

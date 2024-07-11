@@ -119,5 +119,5 @@ private:
                                          task_ptr callback,
                                          void *result /*zookeeper_session::zoo_opcontext**/);
 };
-}
-}
+} // namespace dist
+} // namespace dsn

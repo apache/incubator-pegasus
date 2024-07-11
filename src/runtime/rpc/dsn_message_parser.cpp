@@ -211,4 +211,4 @@ int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *b
         return true;
     }
 }
-}
+} // namespace dsn

@@ -341,5 +341,5 @@ meta_server_failure_detector::get_stability_map_for_test()
 {
     return &_stablity;
 }
-}
-}
+} // namespace replication
+} // namespace dsn

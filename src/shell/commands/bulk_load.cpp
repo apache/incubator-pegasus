@@ -165,8 +165,8 @@ bool control_bulk_load_helper(command_executor *e,
         err = dsn::error_s::make(err_resp.get_value().err);
         hint_msg = err_resp.get_value().hint_msg;
     }
-    std::string type_str =
-        type == dsn::replication::bulk_load_control_type::BLC_PAUSE ? "pause" : "restart";
+    std::string type_str = type == dsn::replication::bulk_load_control_type::BLC_PAUSE ? "pause"
+                                                                                       : "restart";
     if (!err.is_ok()) {
         fmt::print(
             stderr, "{} bulk load failed, error={} [hint:\"{}\"]\n", type_str, err, hint_msg);

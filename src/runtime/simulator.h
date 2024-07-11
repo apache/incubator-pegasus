@@ -54,6 +54,7 @@ public:
     virtual void initialize(const std::string &name, const std::vector<service_app *> &apps) = 0;
     virtual void check() = 0;
     const std::string &name() const { return _name; }
+
 protected:
     std::vector<service_app *> _apps;
     std::string _name;
@@ -72,5 +73,5 @@ private:
 };
 
 // ---- inline implementation ------
-}
-} // end namespace dsn::tools
+} // namespace tools
+} // namespace dsn

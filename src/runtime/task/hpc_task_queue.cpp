@@ -80,5 +80,5 @@ task *hpc_concurrent_task_queue::dequeue(int &batch_size)
     } while (count != 0);
     return head;
 }
-}
-}
+} // namespace tools
+} // namespace dsn

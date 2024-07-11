@@ -43,7 +43,8 @@ class TProtocol;
 } // namespace thrift
 } // namespace apache
 
-typedef enum dsn_task_type_t {
+typedef enum dsn_task_type_t
+{
     TASK_TYPE_RPC_REQUEST,  ///< task handling rpc request
     TASK_TYPE_RPC_RESPONSE, ///< task handling rpc response or timeout
     TASK_TYPE_COMPUTE,      ///< async calls or timers
@@ -64,7 +65,8 @@ ENUM_REG(TASK_TYPE_AIO)
 ENUM_REG(TASK_TYPE_CONTINUATION)
 ENUM_END(dsn_task_type_t)
 
-typedef enum dsn_task_priority_t {
+typedef enum dsn_task_priority_t
+{
     TASK_PRIORITY_LOW,
     TASK_PRIORITY_COMMON,
     TASK_PRIORITY_HIGH,

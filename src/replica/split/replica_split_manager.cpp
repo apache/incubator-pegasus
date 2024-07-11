@@ -484,21 +484,21 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
         });
 
     // replay private log
-    ec = mutation_log::replay(plog_files,
-                              [&plist](int log_length, mutation_ptr &mu) {
-                                  decree d = mu->data.header.decree;
-                                  if (d <= plist.last_committed_decree()) {
-                                      return false;
-                                  }
-                                  mutation_ptr origin_mu = plist.get_mutation_by_decree(d);
-                                  if (origin_mu != nullptr &&
-                                      origin_mu->data.header.ballot >= mu->data.header.ballot) {
-                                      return false;
-                                  }
-                                  plist.prepare(mu, partition_status::PS_SECONDARY);
-                                  return true;
-                              },
-                              offset);
+    ec = mutation_log::replay(
+        plog_files,
+        [&plist](int log_length, mutation_ptr &mu) {
+            decree d = mu->data.header.decree;
+            if (d <= plist.last_committed_decree()) {
+                return false;
+            }
+            mutation_ptr origin_mu = plist.get_mutation_by_decree(d);
+            if (origin_mu != nullptr && origin_mu->data.header.ballot >= mu->data.header.ballot) {
+                return false;
+            }
+            plist.prepare(mu, partition_status::PS_SECONDARY);
+            return true;
+        },
+        offset);
     if (ec != ERR_OK) {
         LOG_ERROR_PREFIX(
             "replay private_log files failed, file count={}, app last_committed_decree={}",

@@ -272,8 +272,8 @@ public:
      *
      * Thread-safe (but returned value may immediately be outdated).
      */
-    double available(double rate, double burstSize, double nowInSeconds = defaultClockNow()) const
-        noexcept
+    double
+    available(double rate, double burstSize, double nowInSeconds = defaultClockNow()) const noexcept
     {
         assert(rate > 0);
         assert(burstSize > 0);

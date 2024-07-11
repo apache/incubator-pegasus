@@ -122,7 +122,7 @@ public:
                                          const std::string &key,
                                          /*out*/ std::vector<dsn::host_port> &servers);
 };
-}
-} // namespace
+} // namespace replication
+} // namespace dsn
 
 #endif

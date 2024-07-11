@@ -205,9 +205,9 @@ struct parti_config
         return os << pc.to_string();
     }
 };
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::parti_config);
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::replica_id);

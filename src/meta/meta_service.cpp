@@ -982,10 +982,11 @@ void meta_service::on_add_duplication(duplication_add_rpc rpc)
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     tracker(),
-                     [this, rpc]() { _dup_svc->add_duplication(std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        tracker(),
+        [this, rpc]() { _dup_svc->add_duplication(std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 void meta_service::on_modify_duplication(duplication_modify_rpc rpc)
@@ -998,10 +999,11 @@ void meta_service::on_modify_duplication(duplication_modify_rpc rpc)
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     tracker(),
-                     [this, rpc]() { _dup_svc->modify_duplication(std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        tracker(),
+        [this, rpc]() { _dup_svc->modify_duplication(std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 void meta_service::on_query_duplication_info(duplication_query_rpc rpc)
@@ -1023,16 +1025,17 @@ void meta_service::on_duplication_sync(duplication_sync_rpc rpc)
         return;
     }
 
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     tracker(),
-                     [this, rpc]() {
-                         if (_dup_svc) {
-                             _dup_svc->duplication_sync(std::move(rpc));
-                         } else {
-                             rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
-                         }
-                     },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        tracker(),
+        [this, rpc]() {
+            if (_dup_svc) {
+                _dup_svc->duplication_sync(std::move(rpc));
+            } else {
+                rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+            }
+        },
+        server_state::sStateHash);
 }
 
 void meta_service::recover_duplication_from_meta_state()
@@ -1113,10 +1116,11 @@ void meta_service::on_start_partition_split(start_split_rpc rpc)
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     tracker(),
-                     [this, rpc]() { _split_svc->start_partition_split(std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        tracker(),
+        [this, rpc]() { _split_svc->start_partition_split(std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 void meta_service::on_control_partition_split(control_split_rpc rpc)
@@ -1130,10 +1134,11 @@ void meta_service::on_control_partition_split(control_split_rpc rpc)
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     tracker(),
-                     [this, rpc]() { _split_svc->control_partition_split(std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        tracker(),
+        [this, rpc]() { _split_svc->control_partition_split(std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 void meta_service::on_query_partition_split(query_split_rpc rpc)
@@ -1156,10 +1161,11 @@ void meta_service::on_register_child_on_meta(register_child_rpc rpc)
         return;
     }
 
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     tracker(),
-                     [this, rpc]() { _split_svc->register_child_on_meta(std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        tracker(),
+        [this, rpc]() { _split_svc->register_child_on_meta(std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 void meta_service::on_notify_stop_split(notify_stop_split_rpc rpc)
@@ -1172,10 +1178,11 @@ void meta_service::on_notify_stop_split(notify_stop_split_rpc rpc)
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     tracker(),
-                     [this, rpc]() { _split_svc->notify_stop_split(std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        tracker(),
+        [this, rpc]() { _split_svc->notify_stop_split(std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 void meta_service::on_query_child_state(query_child_state_rpc rpc)
@@ -1216,10 +1223,11 @@ void meta_service::on_control_bulk_load(control_bulk_load_rpc rpc)
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     tracker(),
-                     [this, rpc]() { _bulk_load_svc->on_control_bulk_load(std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        tracker(),
+        [this, rpc]() { _bulk_load_svc->on_control_bulk_load(std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 void meta_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
@@ -1247,10 +1255,11 @@ void meta_service::on_clear_bulk_load(clear_bulk_load_rpc rpc)
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     tracker(),
-                     [this, rpc]() { _bulk_load_svc->on_clear_bulk_load(std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        tracker(),
+        [this, rpc]() { _bulk_load_svc->on_clear_bulk_load(std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 void meta_service::on_start_backup_app(start_backup_app_rpc rpc)

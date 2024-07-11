@@ -453,11 +453,11 @@ void meta_service_test_app::apply_balancer_test()
 
     ss->set_replica_migration_subscriber_for_test(migration_actions);
     while (true) {
-        dsn::task_ptr tsk =
-            dsn::tasking::enqueue(LPC_META_STATE_NORMAL,
-                                  nullptr,
-                                  [&result, ss]() { result = ss->check_all_partitions(); },
-                                  server_state::sStateHash);
+        dsn::task_ptr tsk = dsn::tasking::enqueue(
+            LPC_META_STATE_NORMAL,
+            nullptr,
+            [&result, ss]() { result = ss->check_all_partitions(); },
+            server_state::sStateHash);
         tsk->wait();
         if (result)
             break;

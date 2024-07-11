@@ -388,17 +388,18 @@ TEST_P(aio_test, dsn_file)
     uint64_t offset = 0;
     while (true) {
         aio_result rin;
-        aio_task_ptr tin = file::read(fin,
-                                      kUnitBuffer,
-                                      1024,
-                                      offset,
-                                      LPC_AIO_TEST_READ,
-                                      nullptr,
-                                      [&rin](dsn::error_code err, size_t sz) {
-                                          rin.err = err;
-                                          rin.sz = sz;
-                                      },
-                                      0);
+        aio_task_ptr tin = file::read(
+            fin,
+            kUnitBuffer,
+            1024,
+            offset,
+            LPC_AIO_TEST_READ,
+            nullptr,
+            [&rin](dsn::error_code err, size_t sz) {
+                rin.err = err;
+                rin.sz = sz;
+            },
+            0);
         ASSERT_NE(nullptr, tin);
 
         if (dsn::tools::get_current_tool()->name() != "simulator") {
@@ -420,17 +421,18 @@ TEST_P(aio_test, dsn_file)
         }
 
         aio_result rout;
-        aio_task_ptr tout = file::write(fout,
-                                        kUnitBuffer,
-                                        rin.sz,
-                                        offset,
-                                        LPC_AIO_TEST_WRITE,
-                                        nullptr,
-                                        [&rout](dsn::error_code err, size_t sz) {
-                                            rout.err = err;
-                                            rout.sz = sz;
-                                        },
-                                        0);
+        aio_task_ptr tout = file::write(
+            fout,
+            kUnitBuffer,
+            rin.sz,
+            offset,
+            LPC_AIO_TEST_WRITE,
+            nullptr,
+            [&rout](dsn::error_code err, size_t sz) {
+                rout.err = err;
+                rout.sz = sz;
+            },
+            0);
         ASSERT_NE(nullptr, tout);
         tout->wait();
         ASSERT_EQ(ERR_OK, rout.err);

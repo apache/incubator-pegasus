@@ -138,5 +138,5 @@ private:
     std::unordered_map<int64_t, std::unique_ptr<pegasus_scan_context>> _map;
     ::dsn::utils::ex_lock_nr_spin _lock;
 };
-}
-}
+} // namespace server
+} // namespace pegasus

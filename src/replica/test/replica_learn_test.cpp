@@ -131,7 +131,6 @@ public:
             {0, invalid_decree, 5, 2, invalid_decree, 1},
             // learn_start_decree_for_dup(3) > learn_start_decree_no_dup(2)
             {1, invalid_decree, 5, 2, invalid_decree, 2},
-
         };
 
         int id = 1;
@@ -149,8 +148,8 @@ public:
             auto dup = create_test_duplicator(tt.min_confirmed_decree);
             add_dup(_replica.get(), std::move(dup));
 
-            ASSERT_EQ(_replica->get_learn_start_decree(req), tt.wlearn_start_decree) << "case #"
-                                                                                     << id;
+            ASSERT_EQ(_replica->get_learn_start_decree(req), tt.wlearn_start_decree)
+                << "case #" << id;
             id++;
         }
     }

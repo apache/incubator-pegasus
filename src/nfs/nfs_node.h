@@ -113,4 +113,4 @@ public:
 protected:
     virtual void call(std::shared_ptr<remote_copy_request> rci, aio_task *callback) = 0;
 };
-}
+} // namespace dsn

@@ -425,14 +425,14 @@ void replica::update_configuration_on_meta_server(config_type::type type,
 
     rpc_address target(
         dsn::dns_resolver::instance().resolve_address(_stub->_failure_detector->get_servers()));
-    _primary_states.reconfiguration_task =
-        rpc::call(target,
-                  msg,
-                  &_tracker,
-                  [=](error_code err, dsn::message_ex *reqmsg, dsn::message_ex *response) {
-                      on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
-                  },
-                  get_gpid().thread_hash());
+    _primary_states.reconfiguration_task = rpc::call(
+        target,
+        msg,
+        &_tracker,
+        [=](error_code err, dsn::message_ex *reqmsg, dsn::message_ex *response) {
+            on_update_configuration_on_meta_server_reply(err, reqmsg, response, request);
+        },
+        get_gpid().thread_hash());
 }
 
 void replica::on_update_configuration_on_meta_server_reply(
@@ -464,7 +464,7 @@ void replica::on_update_configuration_on_meta_server_reply(
             _primary_states.reconfiguration_task = tasking::enqueue(
                 LPC_DELAY_UPDATE_CONFIG,
                 &_tracker,
-                [ this, request, req2 = std::move(req) ]() {
+                [this, request, req2 = std::move(req)]() {
                     rpc_address target(dsn::dns_resolver::instance().resolve_address(
                         _stub->_failure_detector->get_servers()));
                     rpc_response_task_ptr t = rpc::create_rpc_response_task(
@@ -1105,9 +1105,8 @@ void replica::on_config_sync(const app_info &info,
 
         if (status() == partition_status::PS_INACTIVE && !_inactive_is_transient) {
             if (config.hp_primary == _stub->primary_host_port() // dead primary
-                ||
-                !config.hp_primary // primary is dead (otherwise let primary remove this)
-                ) {
+                || !config.hp_primary // primary is dead (otherwise let primary remove this)
+            ) {
                 LOG_INFO_PREFIX("downgrade myself as inactive is not transient, remote_config({})",
                                 boost::lexical_cast<std::string>(config));
                 _stub->remove_replica_on_meta_server(_app_info, config);

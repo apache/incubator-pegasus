@@ -51,7 +51,7 @@ app_env_validator::~app_env_validator() { deregister_handler("list"); }
 bool app_env_validator::validate_app_envs(const std::map<std::string, std::string> &envs)
 {
     // only check rocksdb app envs currently
-    for (const auto & [ key, value ] : envs) {
+    for (const auto &[key, value] : envs) {
         if (replica_envs::ROCKSDB_STATIC_OPTIONS.find(key) ==
                 replica_envs::ROCKSDB_STATIC_OPTIONS.end() &&
             replica_envs::ROCKSDB_DYNAMIC_OPTIONS.find(key) ==

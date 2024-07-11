@@ -439,8 +439,8 @@ uint64_t crc64::_crc_table[sizeof(crc64::_crc_table) / sizeof(crc64::_crc_table[
 #undef crc64_POLY
 #undef BIT64
 #undef BIT32
-}
-}
+} // namespace utils
+} // namespace dsn
 
 namespace dsn {
 namespace utils {
@@ -477,5 +477,5 @@ uint64_t crc64_concat(uint32_t xy_init,
     return ::dsn::utils::crc64::concatenate(
         0, x_init, x_final, (uint64_t)x_size, y_init, y_final, (uint64_t)y_size);
 }
-}
-}
+} // namespace utils
+} // namespace dsn

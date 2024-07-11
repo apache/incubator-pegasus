@@ -377,7 +377,7 @@ public:
 
     // `args` are the parameters that are used to construct the object of MetricType.
     template <typename MetricType, typename... Args>
-    ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&... args);
+    ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&...args);
 
     void take_snapshot(metric_json_writer &writer, const metric_filters &filters) const;
 
@@ -890,7 +890,7 @@ public:
 
     // Construct a metric object based on the instance of metric_entity.
     template <typename... Args>
-    ref_ptr<MetricType> instantiate(const metric_entity_ptr &entity, Args &&... args) const
+    ref_ptr<MetricType> instantiate(const metric_entity_ptr &entity, Args &&...args) const
     {
         return entity->find_or_create<MetricType>(this, std::forward<Args>(args)...);
     }
@@ -900,8 +900,7 @@ private:
 };
 
 template <typename MetricType, typename... Args>
-ref_ptr<MetricType> metric_entity::find_or_create(const metric_prototype *prototype,
-                                                  Args &&... args)
+ref_ptr<MetricType> metric_entity::find_or_create(const metric_prototype *prototype, Args &&...args)
 {
     CHECK_STREQ_MSG(prototype->entity_type().data(),
                     _prototype->name(),

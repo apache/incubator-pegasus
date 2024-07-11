@@ -138,5 +138,5 @@ public:
 private:
     semaphore _sema;
 };
-}
-} // end namespace
+} // namespace utils
+} // namespace dsn

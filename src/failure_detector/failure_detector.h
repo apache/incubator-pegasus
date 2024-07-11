@@ -237,5 +237,5 @@ protected:
     // subClass can rewrite these method.
     virtual void send_beacon(const host_port &node, uint64_t time);
 };
-}
-} // end namespace
+} // namespace fd
+} // namespace dsn

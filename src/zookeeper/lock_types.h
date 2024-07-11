@@ -43,5 +43,5 @@ class distributed_lock_service_zookeeper;
 class lock_struct;
 typedef ref_ptr<distributed_lock_service_zookeeper> lock_srv_ptr;
 typedef ref_ptr<lock_struct> lock_struct_ptr;
-}
-}
+} // namespace dist
+} // namespace dsn

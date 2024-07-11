@@ -467,5 +467,5 @@ void zookeeper_session::global_void_completion(int rc, const void *data)
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
 }
-}
-}
+} // namespace dist
+} // namespace dsn

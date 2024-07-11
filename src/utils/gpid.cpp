@@ -43,4 +43,4 @@ const char *gpid::to_string() const
     snprintf(b, bf.get_chunk_size(), "%d.%d", _value.u.app_id, _value.u.partition_index);
     return b;
 }
-}
+} // namespace dsn

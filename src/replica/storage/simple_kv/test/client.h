@@ -68,6 +68,6 @@ private:
     host_port _service_addr;
     dsn::task_tracker _tracker;
 };
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

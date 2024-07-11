@@ -1395,6 +1395,6 @@ void test_case::internal_register_creator(const std::string &name, case_line_cre
     CHECK(_creators.find(name) == _creators.end(), "");
     _creators[name] = creator;
 }
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn
