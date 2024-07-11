@@ -72,6 +72,7 @@ public:
     }
     const dsn::host_port &top() const { return container.front(); }
     bool empty() const { return container.empty(); }
+
 private:
     std::vector<dsn::host_port> container;
     server_load_balancer::node_comparator cmp;

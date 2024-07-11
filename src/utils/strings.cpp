@@ -172,7 +172,7 @@ struct SequenceInserter
     // The new element is constructed through variadic template and appended at the end
     // of the sequence container.
     template <typename SequenceContainer, typename... Args>
-    void emplace(SequenceContainer &container, Args &&... args) const
+    void emplace(SequenceContainer &container, Args &&...args) const
     {
         container.emplace_back(std::forward<Args>(args)...);
     }
@@ -184,7 +184,7 @@ struct AssociativeInserter
     // The new element is constructed through variadic template and inserted into the associative
     // container.
     template <typename AssociativeContainer, typename... Args>
-    void emplace(AssociativeContainer &container, Args &&... args) const
+    void emplace(AssociativeContainer &container, Args &&...args) const
     {
         container.emplace(std::forward<Args>(args)...);
     }

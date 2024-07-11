@@ -107,5 +107,5 @@ private:
 
     dsn::task_tracker _tracker;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

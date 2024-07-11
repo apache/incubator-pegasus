@@ -167,8 +167,8 @@ void mutation_log_private::get_in_memory_mutations(decree start_decree,
         for (auto &mu : issued_write->mutations()) {
             // if start_ballot is invalid or equal to mu.ballot, check decree
             // otherwise check ballot
-            ballot current_ballot =
-                (start_ballot == invalid_ballot) ? invalid_ballot : mu->get_ballot();
+            ballot current_ballot = (start_ballot == invalid_ballot) ? invalid_ballot
+                                                                     : mu->get_ballot();
             if ((mu->get_decree() >= start_decree && start_ballot == current_ballot) ||
                 current_ballot > start_ballot) {
                 mutation_list.push_back(mutation::copy_no_reply(mu));
@@ -179,8 +179,8 @@ void mutation_log_private::get_in_memory_mutations(decree start_decree,
     for (auto &mu : pending_mutations) {
         // if start_ballot is invalid or equal to mu.ballot, check decree
         // otherwise check ballot
-        ballot current_ballot =
-            (start_ballot == invalid_ballot) ? invalid_ballot : mu->get_ballot();
+        ballot current_ballot = (start_ballot == invalid_ballot) ? invalid_ballot
+                                                                 : mu->get_ballot();
         if ((mu->get_decree() >= start_decree && start_ballot == current_ballot) ||
             current_ballot > start_ballot) {
             mutation_list.push_back(mutation::copy_no_reply(mu));
@@ -537,8 +537,8 @@ error_code mutation_log::open(replay_callback read_callback,
         end_offset);
 
     if (ERR_OK == err) {
-        _global_start_offset =
-            _log_files.size() > 0 ? _log_files.begin()->second->start_offset() : 0;
+        _global_start_offset = _log_files.size() > 0 ? _log_files.begin()->second->start_offset()
+                                                     : 0;
         _global_end_offset = end_offset;
         _last_file_index = _log_files.size() > 0 ? _log_files.rbegin()->first : 0;
         _is_opened = true;
@@ -623,22 +623,22 @@ error_code mutation_log::create_new_log_file()
     blk->add(temp_writer.get_buffer());
     _global_end_offset += blk->size();
 
-    logf->commit_log_block(*blk,
-                           _current_log_file->start_offset(),
-                           LPC_WRITE_REPLICATION_LOG_COMMON,
-                           &_tracker,
-                           [this, blk, logf](::dsn::error_code err, size_t sz) {
-                               delete blk;
-                               if (ERR_OK != err) {
-                                   LOG_ERROR(
-                                       "write mutation log file header failed, file = {}, err = {}",
-                                       logf->path(),
-                                       err);
-                                   CHECK(_io_error_callback, "");
-                                   _io_error_callback(err);
-                               }
-                           },
-                           0);
+    logf->commit_log_block(
+        *blk,
+        _current_log_file->start_offset(),
+        LPC_WRITE_REPLICATION_LOG_COMMON,
+        &_tracker,
+        [this, blk, logf](::dsn::error_code err, size_t sz) {
+            delete blk;
+            if (ERR_OK != err) {
+                LOG_ERROR("write mutation log file header failed, file = {}, err = {}",
+                          logf->path(),
+                          err);
+                CHECK(_io_error_callback, "");
+                _io_error_callback(err);
+            }
+        },
+        0);
 
     CHECK_EQ_MSG(_global_end_offset,
                  _current_log_file->start_offset() + sizeof(log_block_header) + header_len,

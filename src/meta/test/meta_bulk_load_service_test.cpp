@@ -498,6 +498,7 @@ public:
     meta_op_status get_op_status() { return _ms->get_op_status(); }
 
     void unlock_meta_op_status() { return _ms->unlock_meta_op_status(); }
+
 public:
     int32_t APP_ID = 1;
     std::string APP_NAME = "bulk_load_test";
@@ -798,7 +799,7 @@ public:
         if (!_resp.__isset.hp_group_bulk_load_state) {
             _resp.__set_hp_group_bulk_load_state({});
         }
-        for (const auto & [ addr_and_hp, state ] : state_by_hosts) {
+        for (const auto &[addr_and_hp, state] : state_by_hosts) {
             _resp.group_bulk_load_state[addr_and_hp.first] = state;
             _resp.hp_group_bulk_load_state[addr_and_hp.second] = state;
         }

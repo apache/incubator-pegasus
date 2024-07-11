@@ -58,4 +58,4 @@ private:
 
     std::vector<parser_factory_info> _factory_vec;
 };
-}
+} // namespace dsn

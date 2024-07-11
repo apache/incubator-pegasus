@@ -187,11 +187,12 @@ void partition_resolver_simple::call(request_context_ptr &&request, bool from_me
 
     // delay 1 second for further config query
     if (from_meta_ack) {
-        tasking::enqueue(LPC_REPLICATION_DELAY_QUERY_CONFIG,
-                         &_tracker,
-                         [ =, req2 = request ]() mutable { call(std::move(req2), false); },
-                         0,
-                         std::chrono::seconds(1));
+        tasking::enqueue(
+            LPC_REPLICATION_DELAY_QUERY_CONFIG,
+            &_tracker,
+            [=, req2 = request]() mutable { call(std::move(req2), false); },
+            0,
+            std::chrono::seconds(1));
         return;
     }
 
@@ -206,12 +207,12 @@ void partition_resolver_simple::call(request_context_ptr &&request, bool from_me
     {
         zauto_lock l(request->lock);
         if (request->timeout_timer == nullptr) {
-            request->timeout_timer =
-                tasking::enqueue(LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
-                                 &_tracker,
-                                 [ =, req2 = request ]() mutable { on_timeout(std::move(req2)); },
-                                 0,
-                                 std::chrono::milliseconds(timeout_ms));
+            request->timeout_timer = tasking::enqueue(
+                LPC_REPLICATION_CLIENT_REQUEST_TIMEOUT,
+                &_tracker,
+                [=, req2 = request]() mutable { on_timeout(std::move(req2)); },
+                0,
+                std::chrono::milliseconds(timeout_ms));
         }
     }
 

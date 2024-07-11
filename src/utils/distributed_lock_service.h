@@ -116,17 +116,17 @@ public:
                                                const lock_options &opt) = 0;
 
     /*
-    * cancel the lock operation that is on pending
-    * cb_code: the task code specifies where to execute the callback
-    * lock_id should be valid, and cb should not be empty
-    *
-    * possible ec:
-    *   ERR_INVALID_PARAMETERS
-    *   ERR_OK, the pending lock is cancelled successfully
-    *   ERR_OBJECT_NOT_FOUND, the caller is not found in pending list, check
-    *   returned owner to see whether it already succeedes
-    *
-    */
+     * cancel the lock operation that is on pending
+     * cb_code: the task code specifies where to execute the callback
+     * lock_id should be valid, and cb should not be empty
+     *
+     * possible ec:
+     *   ERR_INVALID_PARAMETERS
+     *   ERR_OK, the pending lock is cancelled successfully
+     *   ERR_OBJECT_NOT_FOUND, the caller is not found in pending list, check
+     *   returned owner to see whether it already succeedes
+     *
+     */
     virtual task_ptr cancel_pending_lock(const std::string &lock_id,
                                          const std::string &myself_id,
                                          task_code cb_code,
@@ -173,5 +173,5 @@ public:
                                    /*out*/ std::string &owner,
                                    /*out*/ uint64_t &version) = 0;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

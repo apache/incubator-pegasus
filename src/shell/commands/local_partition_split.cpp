@@ -240,11 +240,10 @@ bool split_file(const LocalPartitionSplitContext &lpsc,
         const auto &svalue = iter->value();
         // Skip empty write, see:
         // https://pegasus.apache.org/zh/2018/03/07/last_flushed_decree.html.
-        if (skey.empty() &&
-            pegasus::value_schema_manager::instance()
-                .get_value_schema(pegasus_data_version)
-                ->extract_user_data(svalue.ToString())
-                .empty()) {
+        if (skey.empty() && pegasus::value_schema_manager::instance()
+                                .get_value_schema(pegasus_data_version)
+                                ->extract_user_data(svalue.ToString())
+                                .empty()) {
             continue;
         }
 
@@ -737,8 +736,7 @@ bool local_partition_split(command_executor *e, shell_context *sc, arguments arg
     tp.add_column("key_count");
     for (const auto &ddsr : ddsrs) {
         for (const auto &psr : ddsr.psrs) {
-            for (const auto & [ new_dst_replica_dir, key_count ] :
-                 psr.key_count_by_dst_replica_dirs) {
+            for (const auto &[new_dst_replica_dir, key_count] : psr.key_count_by_dst_replica_dirs) {
                 tp.add_row(psr.src_replica_dir);
                 tp.append_data(new_dst_replica_dir);
                 tp.append_data(psr.success);

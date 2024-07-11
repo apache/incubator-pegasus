@@ -48,5 +48,5 @@ error_code from_zerror(int zerr)
         return ERR_INCONSISTENT_STATE;
     return ERR_ZOOKEEPER_OPERATION;
 }
-}
-}
+} // namespace dist
+} // namespace dsn

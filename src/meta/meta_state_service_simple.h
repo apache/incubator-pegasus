@@ -225,12 +225,12 @@ private:
                 shared_blob.length() - sizeof(log_header);
             return shared_blob;
         }
-        static void write(binary_writer &writer, const Head &head, const Tail &... tail)
+        static void write(binary_writer &writer, const Head &head, const Tail &...tail)
         {
             marshall(writer, head, DSF_THRIFT_BINARY);
             log_struct<op, Tail...>::write(writer, tail...);
         }
-        static void parse(binary_reader &reader, Head &head, Tail &... tail)
+        static void parse(binary_reader &reader, Head &head, Tail &...tail)
         {
             unmarshall(reader, head, DSF_THRIFT_BINARY);
             log_struct<op, Tail...>::parse(reader, tail...);

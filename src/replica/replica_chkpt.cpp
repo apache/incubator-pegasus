@@ -300,11 +300,12 @@ void replica::init_checkpoint(bool is_emergency)
     //
     // we may issue a new task to do backgroup_async_checkpoint
     // even if the old one hasn't finished yet
-    tasking::enqueue(LPC_CHECKPOINT_REPLICA,
-                     &_tracker,
-                     [this, is_emergency] { background_async_checkpoint(is_emergency); },
-                     0,
-                     10_ms);
+    tasking::enqueue(
+        LPC_CHECKPOINT_REPLICA,
+        &_tracker,
+        [this, is_emergency] { background_async_checkpoint(is_emergency); },
+        0,
+        10_ms);
 
     if (is_emergency) {
         METRIC_VAR_INCREMENT(emergency_checkpoints);
@@ -377,11 +378,12 @@ error_code replica::background_async_checkpoint(bool is_emergency)
         LOG_INFO_PREFIX("call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = {}"
                         ", schedule later checkpoint after 10 seconds",
                         used_time);
-        tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                         &_tracker,
-                         [this] { init_checkpoint(false); },
-                         get_gpid().thread_hash(),
-                         std::chrono::seconds(10));
+        tasking::enqueue(
+            LPC_PER_REPLICA_CHECKPOINT_TIMER,
+            &_tracker,
+            [this] { init_checkpoint(false); },
+            get_gpid().thread_hash(),
+            std::chrono::seconds(10));
         return err;
     }
 
@@ -445,11 +447,11 @@ void replica::catch_up_with_private_logs(partition_status::type s)
     auto err = apply_learned_state_from_private_log(state);
 
     if (s == partition_status::PS_POTENTIAL_SECONDARY) {
-        _potential_secondary_states.learn_remote_files_completed_task =
-            tasking::create_task(LPC_CHECKPOINT_REPLICA_COMPLETED,
-                                 &_tracker,
-                                 [this, err]() { this->on_learn_remote_state_completed(err); },
-                                 get_gpid().thread_hash());
+        _potential_secondary_states.learn_remote_files_completed_task = tasking::create_task(
+            LPC_CHECKPOINT_REPLICA_COMPLETED,
+            &_tracker,
+            [this, err]() { this->on_learn_remote_state_completed(err); },
+            get_gpid().thread_hash());
         _potential_secondary_states.learn_remote_files_completed_task->enqueue();
     } else if (s == partition_status::PS_PARTITION_SPLIT) {
         _split_states.async_learn_task = tasking::enqueue(
@@ -458,11 +460,11 @@ void replica::catch_up_with_private_logs(partition_status::type s)
             std::bind(&replica_split_manager::child_catch_up_states, get_split_manager()),
             get_gpid().thread_hash());
     } else {
-        _secondary_states.checkpoint_completed_task =
-            tasking::create_task(LPC_CHECKPOINT_REPLICA_COMPLETED,
-                                 &_tracker,
-                                 [this, err]() { this->on_checkpoint_completed(err); },
-                                 get_gpid().thread_hash());
+        _secondary_states.checkpoint_completed_task = tasking::create_task(
+            LPC_CHECKPOINT_REPLICA_COMPLETED,
+            &_tracker,
+            [this, err]() { this->on_checkpoint_completed(err); },
+            get_gpid().thread_hash());
         _secondary_states.checkpoint_completed_task->enqueue();
     }
 }

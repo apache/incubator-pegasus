@@ -113,5 +113,5 @@ std::string safe_strerror(int err)
     safe_strerror_r(err, buf, sizeof(buf));
     return std::string(buf);
 }
-}
-}
+} // namespace utils
+} // namespace dsn

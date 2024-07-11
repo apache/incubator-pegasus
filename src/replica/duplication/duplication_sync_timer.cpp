@@ -176,12 +176,13 @@ void duplication_sync_timer::start()
 {
     LOG_INFO("run duplication sync periodically in {}s", FLAGS_duplication_sync_period_second);
 
-    _timer_task = tasking::enqueue_timer(LPC_DUPLICATION_SYNC_TIMER,
-                                         &_stub->_tracker,
-                                         [this]() { run(); },
-                                         FLAGS_duplication_sync_period_second * 1_s,
-                                         0,
-                                         FLAGS_duplication_sync_period_second * 1_s);
+    _timer_task = tasking::enqueue_timer(
+        LPC_DUPLICATION_SYNC_TIMER,
+        &_stub->_tracker,
+        [this]() { run(); },
+        FLAGS_duplication_sync_period_second * 1_s,
+        0,
+        FLAGS_duplication_sync_period_second * 1_s);
 }
 
 std::multimap<dupid_t, duplication_sync_timer::replica_dup_state>

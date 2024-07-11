@@ -90,5 +90,5 @@ TEST_F(uri_decoder_test, decode)
     }
 }
 
-} // namespace dsn
 } // namespace uri
+} // namespace dsn

@@ -108,8 +108,9 @@ public:
 
     bool is_valid_alteration(duplication_status::type to_status) const
     {
-        return to_status == _status || (to_status == duplication_status::DS_PREPARE &&
-                                        _status == duplication_status::DS_INIT) ||
+        return to_status == _status ||
+               (to_status == duplication_status::DS_PREPARE &&
+                _status == duplication_status::DS_INIT) ||
                (to_status == duplication_status::DS_APP &&
                 _status == duplication_status::DS_PREPARE) ||
                (to_status == duplication_status::DS_LOG &&
@@ -173,13 +174,13 @@ public:
     bool all_checkpoint_has_prepared()
     {
         int prepared = 0;
-        bool completed =
-            std::all_of(_progress.begin(),
-                        _progress.end(),
-                        [&](std::pair<int, partition_progress> item) -> bool {
-                            prepared = item.second.checkpoint_prepared ? prepared + 1 : prepared;
-                            return item.second.checkpoint_prepared;
-                        });
+        bool completed = std::all_of(_progress.begin(),
+                                     _progress.end(),
+                                     [&](std::pair<int, partition_progress> item) -> bool {
+                                         prepared = item.second.checkpoint_prepared ? prepared + 1
+                                                                                    : prepared;
+                                         return item.second.checkpoint_prepared;
+                                     });
         if (!completed) {
             LOG_WARNING("replica checkpoint still running: {}/{}", prepared, _progress.size());
         }

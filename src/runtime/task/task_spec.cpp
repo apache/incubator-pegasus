@@ -288,4 +288,4 @@ bool threadpool_spec::init(/*out*/ std::vector<threadpool_spec> &specs)
     return true;
 }
 
-} // end namespace
+} // namespace dsn

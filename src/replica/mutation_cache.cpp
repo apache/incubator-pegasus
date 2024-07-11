@@ -147,5 +147,5 @@ mutation_ptr mutation_cache::get_mutation_by_decree(decree decree)
     else
         return _array[(_start_idx + (decree - _start_decree) + _max_count) % _max_count];
 }
-}
-} // namespace end
+} // namespace replication
+} // namespace dsn

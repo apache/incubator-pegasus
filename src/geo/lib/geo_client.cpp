@@ -166,7 +166,7 @@ void geo_client::async_set(const std::string &hash_key,
         hash_key,
         sort_key,
         true,
-        [ this, hash_key, sort_key, value, timeout_ms, ttl_seconds, cb = std::move(callback) ](
+        [this, hash_key, sort_key, value, timeout_ms, ttl_seconds, cb = std::move(callback)](
             int ec_, pegasus_client::internal_info &&info_) {
             if (ec_ != PERR_OK) {
                 cb(ec_, std::move(info_));
@@ -261,7 +261,7 @@ void geo_client::async_get(const std::string &hash_key,
     _common_data_client->async_get(
         hash_key,
         sort_key,
-        [ this, &hash_key, &sort_key, id, cb = std::move(callback) ](
+        [this, &hash_key, &sort_key, id, cb = std::move(callback)](
             int ec_, std::string &&value_, pegasus_client::internal_info &&info_) {
             if (ec_ != PERR_OK) {
                 cb(ec_, id, 0, 0);
@@ -316,7 +316,7 @@ void geo_client::async_del(const std::string &hash_key,
     _common_data_client->async_get(
         hash_key,
         sort_key,
-        [ this, hash_key, sort_key, keep_common_data, timeout_ms, cb = std::move(callback) ](
+        [this, hash_key, sort_key, keep_common_data, timeout_ms, cb = std::move(callback)](
             int ec_, std::string &&value_, pegasus_client::internal_info &&info_) {
             if (ec_ == PERR_NOT_FOUND) {
                 if (cb != nullptr) {
@@ -510,16 +510,15 @@ void geo_client::async_search_radial(const std::string &hash_key,
     _common_data_client->async_get(
         hash_key,
         sort_key,
-        [
-          this,
-          hash_key,
-          sort_key,
-          radius_m,
-          count,
-          sort_type,
-          timeout_ms,
-          cb = std::move(callback)
-        ](int ec_, std::string &&value_, pegasus_client::internal_info &&) mutable {
+        [this,
+         hash_key,
+         sort_key,
+         radius_m,
+         count,
+         sort_type,
+         timeout_ms,
+         cb = std::move(callback)](
+            int ec_, std::string &&value_, pegasus_client::internal_info &&) mutable {
             if (ec_ != PERR_OK) {
                 LOG_ERROR("get failed. hash_key={}, sort_key={}, error={}",
                           utils::redact_sensitive_string(hash_key),
@@ -566,8 +565,8 @@ void geo_client::async_search_radial(const S2LatLng &latlng,
                                 count,
                                 sort_type,
                                 timeout_ms,
-                                [ this, count, sort_type, cb = std::move(callback) ](
-                                    std::list<std::list<SearchResult>> && results_) {
+                                [this, count, sort_type, cb = std::move(callback)](
+                                    std::list<std::list<SearchResult>> &&results_) {
                                     std::list<SearchResult> result;
                                     normalize_result(std::move(results_), count, sort_type, result);
                                     cb(PERR_OK, std::move(result));
@@ -605,13 +604,12 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
     std::shared_ptr<std::atomic<bool>> send_finish = std::make_shared<std::atomic<bool>>(false);
     std::shared_ptr<std::atomic<int>> scan_count = std::make_shared<std::atomic<int>>(0);
     auto single_scan_finish_callback =
-        [ send_finish, scan_count, results, cb = std::move(callback) ]()
-    {
-        // NOTE: make sure fetch_sub is at first of the if expression to make it always execute
-        if (scan_count->fetch_sub(1) == 1 && send_finish->load()) {
-            cb(std::move(*results.get()));
-        }
-    };
+        [send_finish, scan_count, results, cb = std::move(callback)]() {
+            // NOTE: make sure fetch_sub is at first of the if expression to make it always execute
+            if (scan_count->fetch_sub(1) == 1 && send_finish->load()) {
+                cb(std::move(*results.get()));
+            }
+        };
 
     for (const auto &cid : cids) {
         if (cap_ptr->Contains(S2Cell(cid))) {
@@ -873,7 +871,7 @@ void geo_client::start_scan(const std::string &hash_key,
         start_sort_key,
         stop_sort_key,
         options,
-        [ this, cap_ptr, count, cb = std::move(callback), &result ](
+        [this, cap_ptr, count, cb = std::move(callback), &result](
             int error_code, pegasus_client::pegasus_scanner *hash_scanner) mutable {
             if (error_code == PERR_OK) {
                 do_scan(hash_scanner->get_smart_wrapper(), cap_ptr, count, std::move(cb), result);
@@ -890,7 +888,7 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper
                          std::list<SearchResult> &result)
 {
     scanner_wrapper->async_next(
-        [ this, cap_ptr, count, scanner_wrapper, cb = std::move(callback), &result ](
+        [this, cap_ptr, count, scanner_wrapper, cb = std::move(callback), &result](
             int ret,
             std::string &&geo_hash_key,
             std::string &&geo_sort_key,
@@ -984,9 +982,8 @@ void geo_client::async_distance(const std::string &hash_key1,
     std::shared_ptr<int> ret = std::make_shared<int>(PERR_OK);
     std::shared_ptr<std::mutex> mutex = std::make_shared<std::mutex>();
     std::shared_ptr<std::vector<S2LatLng>> get_result = std::make_shared<std::vector<S2LatLng>>();
-    auto async_get_callback = [ =, cb = std::move(callback) ](
-        int ec_, std::string &&value_, pegasus_client::internal_info &&)
-    {
+    auto async_get_callback = [=, cb = std::move(callback)](
+                                  int ec_, std::string &&value_, pegasus_client::internal_info &&) {
         if (ec_ != PERR_OK) {
             LOG_ERROR("get data failed. hash_key1={}, sort_key1={}, hash_key2={}, sort_key2={}, "
                       "error={}",

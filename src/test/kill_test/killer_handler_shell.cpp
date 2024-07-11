@@ -191,5 +191,5 @@ bool killer_handler_shell::check(const std::string &job, int index, const std::s
     // not implement, just return true
     return true;
 }
-}
-} // end namespace
+} // namespace test
+} // namespace pegasus

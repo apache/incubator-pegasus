@@ -218,11 +218,12 @@ void meta_service_test_app::state_sync_test()
         dsn::error_code ec;
         dsn::dist::meta_state_service *storage = svc->get_remote_storage();
         storage
-            ->delete_node(apps_root,
-                          true,
-                          LPC_META_CALLBACK,
-                          [&ec](dsn::error_code error) { ec = error; },
-                          nullptr)
+            ->delete_node(
+                apps_root,
+                true,
+                LPC_META_CALLBACK,
+                [&ec](dsn::error_code error) { ec = error; },
+                nullptr)
             ->wait();
         ASSERT_TRUE(dsn::ERR_OK == ec || dsn::ERR_OBJECT_NOT_FOUND == ec);
     }
@@ -341,11 +342,12 @@ void meta_service_test_app::state_sync_test()
 
         dsn::dist::meta_state_service *storage = svc->get_remote_storage();
         storage
-            ->delete_node(ss2->get_partition_path(dsn::gpid{apps_count, 0}),
-                          false,
-                          LPC_META_CALLBACK,
-                          [&ec](dsn::error_code error) { ec = error; },
-                          nullptr)
+            ->delete_node(
+                ss2->get_partition_path(dsn::gpid{apps_count, 0}),
+                false,
+                LPC_META_CALLBACK,
+                [&ec](dsn::error_code error) { ec = error; },
+                nullptr)
             ->wait();
         ASSERT_EQ(ec, dsn::ERR_OK);
 

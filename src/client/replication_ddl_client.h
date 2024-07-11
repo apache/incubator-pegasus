@@ -299,7 +299,6 @@ private:
                   &_tracker,
                   [this, task](
                       error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-
                       FAIL_POINT_INJECT_NOT_RETURN_F(
                           "ddl_client_request_meta",
                           [&err, this](absl::string_view str) { err = pop_mock_error(); });
@@ -379,10 +378,11 @@ private:
         static constexpr int MAX_RETRY = 2;
         error_code err = ERR_UNKNOWN;
         for (int retry = 0; retry < MAX_RETRY; retry++) {
-            task_ptr task = rpc.call(dsn::dns_resolver::instance().resolve_address(_meta_server),
-                                     &_tracker,
-                                     [&err](error_code code) { err = code; },
-                                     reply_thread_hash);
+            task_ptr task = rpc.call(
+                dsn::dns_resolver::instance().resolve_address(_meta_server),
+                &_tracker,
+                [&err](error_code code) { err = code; },
+                reply_thread_hash);
             task->wait();
             if (err == ERR_OK) {
                 break;

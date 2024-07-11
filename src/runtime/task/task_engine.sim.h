@@ -142,5 +142,5 @@ public:
 private:
     sim_lock_nr_provider _l;
 };
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

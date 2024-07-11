@@ -195,5 +195,5 @@ uint32_t sim_network_provider::net_delay_milliseconds() const
                           FLAGS_max_message_delay_microseconds) /
            1000;
 }
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

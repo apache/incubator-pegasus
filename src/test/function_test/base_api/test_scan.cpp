@@ -177,8 +177,8 @@ TEST_F(scan_test, OVERALL_COUNT_ONLY)
             data_count += kv_count;
             i++;
         }
-        ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
-                                           << client_->get_error_string(ret);
+        ASSERT_EQ(PERR_SCAN_COMPLETE, ret)
+            << "Error occurred when scan. error=" << client_->get_error_string(ret);
         delete scanner;
     }
     LOG_INFO("scan count {}", i);
@@ -206,8 +206,8 @@ TEST_F(scan_test, ALL_SORT_KEY)
         check_and_put(data, expected_hash_key_, sort_key, value);
     }
     delete scanner;
-    ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
-                                       << client_->get_error_string(ret);
+    ASSERT_EQ(PERR_SCAN_COMPLETE, ret)
+        << "Error occurred when scan. error=" << client_->get_error_string(ret);
     ASSERT_NO_FATAL_FAILURE(compare(expect_kvs_[expected_hash_key_], data, expected_hash_key_));
 }
 
@@ -271,8 +271,8 @@ TEST_F(scan_test, BOUND_EXCLUSIVE)
         check_and_put(data, expected_hash_key_, sort_key, value);
     }
     delete scanner;
-    ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
-                                       << client_->get_error_string(ret);
+    ASSERT_EQ(PERR_SCAN_COMPLETE, ret)
+        << "Error occurred when scan. error=" << client_->get_error_string(ret);
     ++it1;
     ASSERT_NO_FATAL_FAILURE(
         compare(data, std::map<std::string, std::string>(it1, it2), expected_hash_key_));
@@ -363,8 +363,8 @@ TEST_F(scan_test, OVERALL)
         while (PERR_OK == (ret = (scanner->next(hash_key, sort_key, value)))) {
             check_and_put(data, hash_key, sort_key, value);
         }
-        ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
-                                           << client_->get_error_string(ret);
+        ASSERT_EQ(PERR_SCAN_COMPLETE, ret)
+            << "Error occurred when scan. error=" << client_->get_error_string(ret);
         delete scanner;
     }
     ASSERT_NO_FATAL_FAILURE(compare(expect_kvs_, data));
@@ -406,8 +406,8 @@ TEST_F(scan_test, REQUEST_EXPIRE_TS)
                 } else if (err == pegasus::PERR_SCAN_COMPLETE) {
                     split_completed.store(true);
                 } else {
-                    ASSERT_TRUE(false) << "Error occurred when scan. error="
-                                       << client_->get_error_string(err);
+                    ASSERT_TRUE(false)
+                        << "Error occurred when scan. error=" << client_->get_error_string(err);
                 }
                 op_completed.notify();
             });

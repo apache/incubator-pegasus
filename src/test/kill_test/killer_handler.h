@@ -73,5 +73,5 @@ private:
         return new T();
     }
 };
-}
-} // end namespace
+} // namespace test
+} // namespace pegasus

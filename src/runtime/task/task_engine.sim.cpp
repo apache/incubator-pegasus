@@ -247,5 +247,5 @@ void sim_lock_nr_provider::unlock()
     _current_holder = -1;
     _sema.signal(1);
 }
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

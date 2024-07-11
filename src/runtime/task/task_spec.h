@@ -61,7 +61,8 @@ ENUM_REG(TASK_STATE_FINISHED)
 ENUM_REG(TASK_STATE_CANCELLED)
 ENUM_END(task_state)
 
-typedef enum grpc_mode_t {
+typedef enum grpc_mode_t
+{
     GRPC_TO_LEADER, // the rpc is sent to the leader (if exist)
     GRPC_TO_ALL,    // the rpc is sent to all
     GRPC_TO_ANY,    // the rpc is sent to one of the group member
@@ -76,7 +77,8 @@ ENUM_REG(GRPC_TO_ALL)
 ENUM_REG(GRPC_TO_ANY)
 ENUM_END(grpc_mode_t)
 
-typedef enum throttling_mode_t {
+typedef enum throttling_mode_t
+{
     TM_NONE,   // no throttling applied
     TM_REJECT, // reject the incoming request
     TM_DELAY,  // delay network receive ops to reducing incoming rate
@@ -91,7 +93,8 @@ ENUM_REG(TM_REJECT)
 ENUM_REG(TM_DELAY)
 ENUM_END(throttling_mode_t)
 
-typedef enum dsn_msg_serialize_format {
+typedef enum dsn_msg_serialize_format
+{
     DSF_INVALID = 0,
     DSF_THRIFT_BINARY = 1,
     DSF_THRIFT_COMPACT = 2,
@@ -317,4 +320,4 @@ CONFIG_FLD(bool,
            "greater than its timeout value")
 CONFIG_END
 
-} // end namespace
+} // namespace dsn

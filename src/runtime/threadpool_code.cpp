@@ -50,4 +50,4 @@ const char *threadpool_code::to_string() const
 {
     return dsn::utils::customized_id_mgr<dsn::threadpool_code>::instance().get_name(_internal_code);
 }
-}
+} // namespace dsn

@@ -126,11 +126,12 @@ void replica_backup_manager::on_clear_cold_backup(const backup_clear_request &re
                 "{}: delay clearing obsoleted cold backup context, cause backup_status == "
                 "ColdBackupCheckpointing",
                 backup_context->name);
-            tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
-                             &_replica->_tracker,
-                             [this, request]() { on_clear_cold_backup(request); },
-                             get_gpid().thread_hash(),
-                             std::chrono::seconds(100));
+            tasking::enqueue(
+                LPC_REPLICATION_COLD_BACKUP,
+                &_replica->_tracker,
+                [this, request]() { on_clear_cold_backup(request); },
+                get_gpid().thread_hash(),
+                std::chrono::seconds(100));
             return;
         }
 
@@ -143,12 +144,12 @@ void replica_backup_manager::on_clear_cold_backup(const backup_clear_request &re
 void replica_backup_manager::start_collect_backup_info()
 {
     if (_collect_info_timer == nullptr) {
-        _collect_info_timer =
-            tasking::enqueue_timer(LPC_PER_REPLICA_COLLECT_INFO_TIMER,
-                                   &_replica->_tracker,
-                                   [this]() { collect_backup_info(); },
-                                   std::chrono::milliseconds(FLAGS_gc_interval_ms),
-                                   get_gpid().thread_hash());
+        _collect_info_timer = tasking::enqueue_timer(
+            LPC_PER_REPLICA_COLLECT_INFO_TIMER,
+            &_replica->_tracker,
+            [this]() { collect_backup_info(); },
+            std::chrono::milliseconds(FLAGS_gc_interval_ms),
+            get_gpid().thread_hash());
     }
 }
 
@@ -192,11 +193,12 @@ void replica_backup_manager::background_clear_backup_checkpoint(const std::strin
     LOG_INFO_PREFIX("schedule to clear all checkpoint dirs of policy({}) after {} minutes",
                     policy_name,
                     FLAGS_cold_backup_checkpoint_reserve_minutes);
-    tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP,
-                     &_replica->_tracker,
-                     [this, policy_name]() { clear_backup_checkpoint(policy_name); },
-                     get_gpid().thread_hash(),
-                     std::chrono::minutes(FLAGS_cold_backup_checkpoint_reserve_minutes));
+    tasking::enqueue(
+        LPC_BACKGROUND_COLD_BACKUP,
+        &_replica->_tracker,
+        [this, policy_name]() { clear_backup_checkpoint(policy_name); },
+        get_gpid().thread_hash(),
+        std::chrono::minutes(FLAGS_cold_backup_checkpoint_reserve_minutes));
 }
 
 // clear all checkpoint dirs of the policy

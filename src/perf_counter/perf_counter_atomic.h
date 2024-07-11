@@ -432,4 +432,4 @@ private:
 };
 
 #pragma pack(pop)
-} // namespace
+} // namespace dsn

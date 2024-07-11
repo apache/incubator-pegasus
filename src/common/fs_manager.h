@@ -191,5 +191,5 @@ private:
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
 };
-} // replication
-} // dsn
+} // namespace replication
+} // namespace dsn

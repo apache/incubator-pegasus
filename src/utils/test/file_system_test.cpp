@@ -195,14 +195,17 @@ TEST(filesystem_test, glob_test)
     ASSERT_TRUE(create_directory(kTestDir));
     std::vector<std::string> filenames = {"fuzz", "fuzzy", "fuzzyiest", "buzz"};
     std::vector<std::pair<std::string, size_t>> matchers = {
-        {"file", 0}, {"fuzz", 1}, {"fuzz*", 3}, {"?uzz", 2},
+        {"file", 0},
+        {"fuzz", 1},
+        {"fuzz*", 3},
+        {"?uzz", 2},
     };
 
     for (const auto &name : filenames) {
         ASSERT_TRUE(create_file(path_combine(kTestDir, name)));
     }
 
-    for (const auto & [ path_pattern, matched_count ] : matchers) {
+    for (const auto &[path_pattern, matched_count] : matchers) {
         std::vector<std::string> matches;
         ASSERT_TRUE(glob(path_combine(kTestDir, path_pattern), matches)) << path_pattern;
         ASSERT_EQ(matched_count, matches.size()) << path_pattern;

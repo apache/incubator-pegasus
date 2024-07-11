@@ -1031,8 +1031,8 @@ void replica_bulk_loader::report_group_cleaned_up(bulk_load_response &response)
     for (const auto &target_hp : _replica->_primary_states.membership.hp_secondaries) {
         const auto &secondary_state =
             _replica->_primary_states.secondary_bulk_load_states[target_hp];
-        bool is_cleaned_up =
-            secondary_state.__isset.is_cleaned_up ? secondary_state.is_cleaned_up : false;
+        bool is_cleaned_up = secondary_state.__isset.is_cleaned_up ? secondary_state.is_cleaned_up
+                                                                   : false;
         LOG_INFO_PREFIX(
             "secondary = {}, bulk load states cleaned_up = {}", target_hp, is_cleaned_up);
         SET_VALUE_FROM_HOST_PORT(response, group_bulk_load_state, target_hp, secondary_state);

@@ -120,6 +120,6 @@ private:
     simple_kv _store;
     int64_t _last_durable_decree;
 };
-}
-}
-} // namespace
+} // namespace application
+} // namespace replication
+} // namespace dsn

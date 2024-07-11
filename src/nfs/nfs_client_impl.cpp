@@ -151,12 +151,13 @@ void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rc
     req->nfs_task = nfs_task;
     req->is_finished = false;
 
-    async_nfs_get_file_size(req->file_size_req,
-                            [=](error_code err, get_file_size_response &&resp) {
-                                end_get_file_size(err, std::move(resp), req);
-                            },
-                            std::chrono::milliseconds(FLAGS_rpc_timeout_ms),
-                            req->file_size_req.source);
+    async_nfs_get_file_size(
+        req->file_size_req,
+        [=](error_code err, get_file_size_response &&resp) {
+            end_get_file_size(err, std::move(resp), req);
+        },
+        std::chrono::milliseconds(FLAGS_rpc_timeout_ms),
+        req->file_size_req.source);
 }
 
 void nfs_client_impl::end_get_file_size(::dsn::error_code err,
@@ -230,7 +231,8 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
             _copy_requests_low.push(std::move(copy_requests));
     }
 
-    tasking::enqueue(LPC_NFS_COPY_FILE, nullptr, [this]() { continue_copy(); }, 0);
+    tasking::enqueue(
+        LPC_NFS_COPY_FILE, nullptr, [this]() { continue_copy(); }, 0);
 }
 
 void nfs_client_impl::continue_copy()
@@ -305,20 +307,20 @@ void nfs_client_impl::continue_copy()
                 copy_req.is_last = req->is_last;
                 copy_req.__set_source_disk_tag(ureq->file_size_req.source_disk_tag);
                 copy_req.__set_pid(ureq->file_size_req.pid);
-                req->remote_copy_task =
-                    async_nfs_copy(copy_req,
-                                   [=](error_code err, copy_response &&resp) {
-                                       end_copy(err, std::move(resp), req);
-                                       // reset task to release memory quickly.
-                                       // should do this after end_copy() done.
-                                       if (req->is_ready_for_write) {
-                                           ::dsn::task_ptr tsk;
-                                           zauto_lock l(req->lock);
-                                           tsk = std::move(req->remote_copy_task);
-                                       }
-                                   },
-                                   std::chrono::milliseconds(FLAGS_rpc_timeout_ms),
-                                   req->file_ctx->user_req->file_size_req.source);
+                req->remote_copy_task = async_nfs_copy(
+                    copy_req,
+                    [=](error_code err, copy_response &&resp) {
+                        end_copy(err, std::move(resp), req);
+                        // reset task to release memory quickly.
+                        // should do this after end_copy() done.
+                        if (req->is_ready_for_write) {
+                            ::dsn::task_ptr tsk;
+                            zauto_lock l(req->lock);
+                            tsk = std::move(req->remote_copy_task);
+                        }
+                    },
+                    std::chrono::milliseconds(FLAGS_rpc_timeout_ms),
+                    req->file_ctx->user_req->file_size_req.source);
             } else {
                 --ureq->concurrent_copy_count;
                 --_concurrent_copy_request_count;

@@ -249,7 +249,7 @@ public:
     static void set_tls_dsn_context(
         service_node *node, // cannot be null
         task_worker *worker // null for io or timer threads if they are not worker threads
-        );
+    );
 
 protected:
     void enqueue(task_worker_pool *pool);
@@ -392,13 +392,13 @@ public:
     }
     virtual void exec() override { absl::apply(_cb, std::move(_values)); }
 
-    void enqueue_with(const First &t, const Remaining &... r, int delay_ms = 0)
+    void enqueue_with(const First &t, const Remaining &...r, int delay_ms = 0)
     {
         _values = std::make_tuple(t, r...);
         set_delay(delay_ms);
         enqueue();
     }
-    void enqueue_with(First &&t, Remaining &&... r, int delay_ms = 0)
+    void enqueue_with(First &&t, Remaining &&...r, int delay_ms = 0)
     {
         _values = std::make_tuple(std::move(t), std::forward<Remaining>(r)...);
         set_delay(delay_ms);

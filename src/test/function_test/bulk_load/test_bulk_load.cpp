@@ -147,8 +147,9 @@ protected:
 
             // Find the generated files.
             std::vector<std::string> src_files;
-            ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(
-                partition_path, src_files, /* recursive */ false));
+            ASSERT_TRUE(dsn::utils::filesystem::get_subfiles(partition_path,
+                                                             src_files,
+                                                             /* recursive */ false));
             ASSERT_FALSE(src_files.empty());
 
             bulk_load_metadata blm;

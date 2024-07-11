@@ -108,4 +108,4 @@ public:
     /*@}*/
 };
 /*@}*/
-} // end namespace
+} // namespace dsn

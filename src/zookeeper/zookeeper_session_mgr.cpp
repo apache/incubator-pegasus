@@ -57,5 +57,5 @@ zookeeper_session *zookeeper_session_mgr::get_session(const service_app_info &in
     }
     return ans;
 }
-}
-}
+} // namespace dist
+} // namespace dsn

@@ -266,12 +266,13 @@ void pegasus_client_impl::pegasus_scanner_impl::_next_batch()
 
     CHECK(!_rpc_started, "");
     _rpc_started = true;
-    _client->scan(req,
-                  [this](::dsn::error_code err,
-                         dsn::message_ex *req,
-                         dsn::message_ex *resp) mutable { _on_scan_response(err, req, resp); },
-                  std::chrono::milliseconds(_options.timeout_ms),
-                  _hash);
+    _client->scan(
+        req,
+        [this](::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) mutable {
+            _on_scan_response(err, req, resp);
+        },
+        std::chrono::milliseconds(_options.timeout_ms),
+        _hash);
 }
 
 void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
@@ -393,13 +394,13 @@ void pegasus_client_impl::pegasus_scanner_impl_wrapper::async_next(
     async_scan_next_callback_t &&callback)
 {
     // wrap shared_ptr _p with callback
-    _p->async_next([ __p = _p, user_callback = std::move(callback) ](int error_code,
-                                                                     std::string &&hash_key,
-                                                                     std::string &&sort_key,
-                                                                     std::string &&value,
-                                                                     internal_info &&info,
-                                                                     uint32_t expire_ts_seconds,
-                                                                     int32_t kv_count) {
+    _p->async_next([__p = _p, user_callback = std::move(callback)](int error_code,
+                                                                   std::string &&hash_key,
+                                                                   std::string &&sort_key,
+                                                                   std::string &&value,
+                                                                   internal_info &&info,
+                                                                   uint32_t expire_ts_seconds,
+                                                                   int32_t kv_count) {
         user_callback(error_code,
                       std::move(hash_key),
                       std::move(sort_key),

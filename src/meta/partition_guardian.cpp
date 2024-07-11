@@ -601,7 +601,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
                     "gpid({}) refuse to use selected node({}) as it is in black list", gpid, node);
             }
             newly_partitions *min_server_np = nullptr;
-            for (auto & [ _, ns ] : *view.nodes) {
+            for (auto &[_, ns] : *view.nodes) {
                 if (!ns.alive() || is_member(pc, ns.host_port()) || in_black_list(ns.host_port())) {
                     continue;
                 }

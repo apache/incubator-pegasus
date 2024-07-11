@@ -110,7 +110,11 @@ public:
         // invalid argument
 
         std::string test_cases_2[] = {
-            "20m*delay*100", "20B*delay*100", "20KB*delay*100", "20Mb*delay*100", "20MB*delay*100",
+            "20m*delay*100",
+            "20B*delay*100",
+            "20KB*delay*100",
+            "20Mb*delay*100",
+            "20MB*delay*100",
         };
         for (const std::string &tc : test_cases_2) {
             ASSERT_FALSE(cntl.parse_from_env(tc, 4, parse_err, env_changed, old_value));

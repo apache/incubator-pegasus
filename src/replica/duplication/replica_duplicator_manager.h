@@ -90,7 +90,7 @@ public:
 
         writer.Key("duplications");
         writer.StartArray();
-        for (const auto & [ _, dup ] : _duplications) {
+        for (const auto &[_, dup] : _duplications) {
             dup->encode_progress(writer);
         }
         writer.EndArray();

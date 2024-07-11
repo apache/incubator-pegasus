@@ -375,7 +375,8 @@ inline void scan_multi_data_next(scan_data_context *context)
                             context->sema.wait();
 
                             auto callback = [context](
-                                int err, pegasus::pegasus_client::internal_info &&info) {
+                                                int err,
+                                                pegasus::pegasus_client::internal_info &&info) {
                                 if (err != pegasus::PERR_OK) {
                                     if (!context->split_completed.exchange(true)) {
                                         fprintf(stderr,
@@ -454,28 +455,29 @@ inline void scan_data_next(scan_data_context *context)
                         if (ts_expired) {
                             scan_data_next(context);
                         } else if (context->no_overwrite) {
-                            auto callback = [context](
-                                int err,
-                                pegasus::pegasus_client::check_and_set_results &&results,
-                                pegasus::pegasus_client::internal_info &&info) {
-                                if (err != pegasus::PERR_OK) {
-                                    if (!context->split_completed.exchange(true)) {
-                                        fprintf(stderr,
+                            auto callback =
+                                [context](int err,
+                                          pegasus::pegasus_client::check_and_set_results &&results,
+                                          pegasus::pegasus_client::internal_info &&info) {
+                                    if (err != pegasus::PERR_OK) {
+                                        if (!context->split_completed.exchange(true)) {
+                                            fprintf(
+                                                stderr,
                                                 "ERROR: split[%d] async check and set failed: %s\n",
                                                 context->split_id,
                                                 context->client->get_error_string(err));
-                                        context->error_occurred->store(true);
+                                            context->error_occurred->store(true);
+                                        }
+                                    } else {
+                                        if (results.set_succeed) {
+                                            context->split_rows++;
+                                        }
+                                        scan_data_next(context);
                                     }
-                                } else {
-                                    if (results.set_succeed) {
-                                        context->split_rows++;
-                                    }
-                                    scan_data_next(context);
-                                }
-                                // should put "split_request_count--" at end of the scope,
-                                // to prevent that split_request_count becomes 0 in the middle.
-                                context->split_request_count--;
-                            };
+                                    // should put "split_request_count--" at end of the scope,
+                                    // to prevent that split_request_count becomes 0 in the middle.
+                                    context->split_request_count--;
+                                };
                             pegasus::pegasus_client::check_and_set_options options;
                             options.set_value_ttl_seconds = ttl_seconds;
                             context->client->async_check_and_set(
@@ -824,7 +826,7 @@ public:
 
 #define DEF_CALC_CREATOR(name)                                                                     \
     template <typename T, typename... Args>                                                        \
-    void create_##name(Args &&... args)                                                            \
+    void create_##name(Args &&...args)                                                             \
     {                                                                                              \
         _##name = std::make_unique<T>(std::forward<Args>(args)...);                                \
     }
@@ -1472,7 +1474,7 @@ inline dsn::metric_filters row_data_filters(int32_t table_id)
 
 #define BIND_ROW(metric_name, member)                                                              \
     {                                                                                              \
-        #metric_name, &row.member                                                                  \
+#metric_name, &row.member                                                                  \
     }
 
 inline stat_var_map create_sums(row_data &row)
@@ -1572,7 +1574,9 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
     for (auto &row : rows) {
         const std::vector<std::pair<table_stat_map *, std::function<stat_var_map(row_data &)>>>
             processors = {
-                {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
+                {&sums, create_sums},
+                {&increases, create_increases},
+                {&rates, create_rates},
             };
         for (auto &processor : processors) {
             // Put both dimensions of table id and metric name into filters for each kind of
@@ -1624,7 +1628,9 @@ create_partition_aggregate_stats_calcs(const int32_t table_id,
 
         const std::vector<std::pair<partition_stat_map *, std::function<stat_var_map(row_data &)>>>
             processors = {
-                {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
+                {&sums, create_sums},
+                {&increases, create_increases},
+                {&rates, create_rates},
             };
         for (auto &processor : processors) {
             // Put all dimensions of table id, partition_id,  and metric name into filters for

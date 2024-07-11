@@ -162,9 +162,10 @@ mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r), _replic
         r->get_gpid(), std::string("mutation_batch@") + r->replica_name(), r->app_name());
     _mutation_buffer = std::make_unique<mutation_buffer>(
         &base, 0, PREPARE_LIST_NUM_ENTRIES, [this](mutation_ptr &mu) {
-            // The committer for the prepare list, used for duplicating to add the committed
-            // mutations to the loading list, which would be shipped to the remote cluster
-            // later.
+            // The committer for the prepare list, used for
+            // duplicating to add the committed mutations to the
+            // loading list, which would be shipped to the remote
+            // cluster later.
             add_mutation_if_valid(mu, _start_decree);
         });
 

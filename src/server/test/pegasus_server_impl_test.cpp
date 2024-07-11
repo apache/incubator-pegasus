@@ -104,7 +104,8 @@ public:
             std::string env_value;
             std::string expect_value;
         } tests[] = {
-            {"rocksdb.num_levels", "5", "5"}, {"rocksdb.write_buffer_size", "33554432", "33554432"},
+            {"rocksdb.num_levels", "5", "5"},
+            {"rocksdb.write_buffer_size", "33554432", "33554432"},
         };
 
         std::map<std::string, std::string> all_test_envs;

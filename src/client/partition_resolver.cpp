@@ -67,9 +67,8 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
 
     rpc_response_handler old_callback;
     t->fetch_current_handler(old_callback);
-    auto new_callback = [ this, deadline_ms, oc = std::move(old_callback) ](
-        dsn::error_code err, dsn::message_ex * req, dsn::message_ex * resp)
-    {
+    auto new_callback = [this, deadline_ms, oc = std::move(old_callback)](
+                            dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) {
         if (req->header->gpid.value() != 0 && err != ERR_OK && error_retry(err)) {
             on_access_failure(req->header->gpid.get_partition_index(), err);
             // still got time, retry
@@ -92,11 +91,12 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                       enum_to_string(ctask->state()));
 
                 // sleep gap milliseconds before retry
-                tasking::enqueue(LPC_RPC_DELAY_CALL,
-                                 nullptr,
-                                 [r, ctask]() { r->call_task(ctask); },
-                                 0,
-                                 std::chrono::milliseconds(gap));
+                tasking::enqueue(
+                    LPC_RPC_DELAY_CALL,
+                    nullptr,
+                    [r, ctask]() { r->call_task(ctask); },
+                    0,
+                    std::chrono::milliseconds(gap));
                 return;
             } else {
                 LOG_ERROR("service access failed ({}), no more time for further tries, set error "
@@ -112,27 +112,27 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
     };
     t->replace_callback(std::move(new_callback));
 
-    resolve(hdr.client.partition_hash,
-            [t](resolve_result &&result) mutable {
-                if (result.err != ERR_OK) {
-                    t->enqueue(result.err, nullptr);
-                    return;
-                }
+    resolve(
+        hdr.client.partition_hash,
+        [t](resolve_result &&result) mutable {
+            if (result.err != ERR_OK) {
+                t->enqueue(result.err, nullptr);
+                return;
+            }
 
-                // update gpid when necessary
-                auto &hdr = *(t->get_request()->header);
-                if (hdr.gpid.value() != result.pid.value()) {
-                    if (hdr.client.thread_hash == 0 // thread_hash is not assigned by applications
-                        ||
-                        hdr.gpid.value() != 0 // requests set to child redirect to parent
-                        ) {
-                        hdr.client.thread_hash = result.pid.thread_hash();
-                    }
-                    hdr.gpid = result.pid;
+            // update gpid when necessary
+            auto &hdr = *(t->get_request()->header);
+            if (hdr.gpid.value() != result.pid.value()) {
+                if (hdr.client.thread_hash == 0 // thread_hash is not assigned by applications
+                    || hdr.gpid.value() != 0    // requests set to child redirect to parent
+                ) {
+                    hdr.client.thread_hash = result.pid.thread_hash();
                 }
-                dsn_rpc_call(dns_resolver::instance().resolve_address(result.hp), t.get());
-            },
-            hdr.client.timeout_ms);
+                hdr.gpid = result.pid;
+            }
+            dsn_rpc_call(dns_resolver::instance().resolve_address(result.hp), t.get());
+        },
+        hdr.client.timeout_ms);
 }
 } // namespace replication
 } // namespace dsn

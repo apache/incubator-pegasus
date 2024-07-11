@@ -67,7 +67,7 @@ void task_code_mgr::register_commands()
             return ss.str();
         }));
 }
-}
+} // namespace utils
 
 /*static*/
 int task_code::max() { return task_code_mgr::instance().max_value(); }
@@ -123,4 +123,4 @@ const char *task_code::to_string() const
 {
     return task_code_mgr::instance().get_name(_internal_code);
 }
-}
+} // namespace dsn

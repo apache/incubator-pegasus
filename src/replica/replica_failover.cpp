@@ -121,5 +121,5 @@ void replica::on_meta_server_disconnected()
         set_inactive_state_transient(true);
     }
 }
-}
-} // namespace
+} // namespace replication
+} // namespace dsn

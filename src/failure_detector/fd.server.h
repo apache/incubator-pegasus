@@ -55,5 +55,5 @@ public:
 
     void close_service() { this->unregister_rpc_handler(RPC_FD_FAILURE_DETECTOR_PING); }
 };
-}
-}
+} // namespace fd
+} // namespace dsn

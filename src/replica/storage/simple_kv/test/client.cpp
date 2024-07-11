@@ -141,11 +141,12 @@ void simple_kv_client_app::begin_write(int id,
     ctx->req.value = value;
     ctx->timeout_ms = timeout_ms;
     auto &req = ctx->req;
-    _simple_kv_client->write(req,
-                             [ctx](error_code err, int32_t resp) {
-                                 test_case::instance().on_end_write(ctx->id, err, resp);
-                             },
-                             std::chrono::milliseconds(timeout_ms));
+    _simple_kv_client->write(
+        req,
+        [ctx](error_code err, int32_t resp) {
+            test_case::instance().on_end_write(ctx->id, err, resp);
+        },
+        std::chrono::milliseconds(timeout_ms));
 }
 
 void simple_kv_client_app::send_config_to_meta(const host_port &receiver,
@@ -183,11 +184,12 @@ void simple_kv_client_app::begin_read(int id, const std::string &key, int timeou
     ctx->id = id;
     ctx->key = key;
     ctx->timeout_ms = timeout_ms;
-    _simple_kv_client->read(key,
-                            [ctx](error_code err, std::string &&resp) {
-                                test_case::instance().on_end_read(ctx->id, err, resp);
-                            },
-                            std::chrono::milliseconds(timeout_ms));
+    _simple_kv_client->read(
+        key,
+        [ctx](error_code err, std::string &&resp) {
+            test_case::instance().on_end_read(ctx->id, err, resp);
+        },
+        std::chrono::milliseconds(timeout_ms));
 }
 } // namespace test
 } // namespace replication

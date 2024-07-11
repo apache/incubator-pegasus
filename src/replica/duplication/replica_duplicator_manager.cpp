@@ -66,7 +66,7 @@ replica_duplicator_manager::get_duplication_confirms_to_update() const
     zauto_lock l(_lock);
 
     std::vector<duplication_confirm_entry> updates;
-    for (const auto & [ _, dup ] : _duplications) {
+    for (const auto &[_, dup] : _duplications) {
         // There are two conditions when we should send confirmed decrees to meta server to update
         // the progress:
         //

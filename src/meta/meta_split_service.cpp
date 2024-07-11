@@ -284,15 +284,15 @@ void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
         (ec == ERR_NODE_ALREADY_EXIST && create_new)) { // retry register child on remote storage
         bool retry_create_new = (ec == ERR_TIMEOUT) ? create_new : false;
         int delay = (ec == ERR_TIMEOUT) ? 1 : 0;
-        parent_context.pending_sync_task =
-            tasking::enqueue(LPC_META_STATE_HIGH,
-                             nullptr,
-                             [this, parent_context, rpc, retry_create_new]() mutable {
-                                 parent_context.pending_sync_task =
-                                     add_child_on_remote_storage(rpc, retry_create_new);
-                             },
-                             0,
-                             std::chrono::seconds(delay));
+        parent_context.pending_sync_task = tasking::enqueue(
+            LPC_META_STATE_HIGH,
+            nullptr,
+            [this, parent_context, rpc, retry_create_new]() mutable {
+                parent_context.pending_sync_task =
+                    add_child_on_remote_storage(rpc, retry_create_new);
+            },
+            0,
+            std::chrono::seconds(delay));
         return;
     }
     CHECK_EQ_MSG(ec, ERR_OK, "we can't handle this right now");
@@ -405,8 +405,8 @@ void meta_split_service::do_control_single(std::shared_ptr<app_state> app, contr
 
     auto iter = app->helpers->split_states.status.find(parent_pidx);
     if (iter == app->helpers->split_states.status.end()) {
-        response.err =
-            control_type == split_control_type::PAUSE ? ERR_CHILD_REGISTERED : ERR_INVALID_STATE;
+        response.err = control_type == split_control_type::PAUSE ? ERR_CHILD_REGISTERED
+                                                                 : ERR_INVALID_STATE;
         response.__set_hint_msg(fmt::format("partition[{}] is not splitting", parent_pidx));
         LOG_ERROR("{} split for app({}) failed, {}",
                   control_type_str(control_type),

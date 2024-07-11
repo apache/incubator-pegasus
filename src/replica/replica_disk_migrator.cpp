@@ -56,7 +56,6 @@ void replica_disk_migrator::on_migrate_replica(replica_disk_migrate_rpc rpc)
         LPC_REPLICATION_COMMON,
         _replica->tracker(),
         [=]() {
-
             if (!check_migration_args(rpc)) {
                 return;
             }

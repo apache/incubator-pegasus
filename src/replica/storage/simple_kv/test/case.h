@@ -511,9 +511,9 @@ private:
     int _null_loop_count;
     dsn::zsemaphore _client_sema;
 };
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::case_line);
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::event);

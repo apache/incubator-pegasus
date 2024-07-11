@@ -32,4 +32,4 @@ pegasus_client *pegasus_client_factory::get_client(const char *cluster_name, con
     return client::pegasus_client_factory_impl::get_client(cluster_name, app_name);
 }
 
-} // namespace
+} // namespace pegasus

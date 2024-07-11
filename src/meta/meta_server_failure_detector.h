@@ -154,5 +154,5 @@ public:
     void set_leader_for_test(const host_port &leader_host_port, bool is_myself_leader);
     stability_map *get_stability_map_for_test();
 };
-}
-}
+} // namespace replication
+} // namespace dsn

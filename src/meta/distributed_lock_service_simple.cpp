@@ -162,12 +162,13 @@ distributed_lock_service_simple::lock(const std::string &lock_id,
     }
 
     if (is_new) {
-        tasking::enqueue_timer(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE,
-                               &_tracker,
-                               [=]() { random_lock_lease_expire(lock_id); },
-                               std::chrono::minutes(5),
-                               0,
-                               std::chrono::seconds(1));
+        tasking::enqueue_timer(
+            LPC_DIST_LOCK_SVC_RANDOM_EXPIRE,
+            &_tracker,
+            [=]() { random_lock_lease_expire(lock_id); },
+            std::chrono::minutes(5),
+            0,
+            std::chrono::seconds(1));
     }
 
     if (err != ERR_IO_PENDING) {
@@ -300,5 +301,5 @@ error_code distributed_lock_service_simple::query_cache(const std::string &lock_
     }
     return err;
 }
-}
-}
+} // namespace dist
+} // namespace dsn
