@@ -27,7 +27,7 @@ jobs:
     name: Module Labeler
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Assign GitHub labels
         uses: actions/labeler@v4
         with:

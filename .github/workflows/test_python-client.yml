@@ -46,7 +46,7 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - uses: "./.github/actions/build_pegasus"
       - uses: "./.github/actions/upload_artifact"
@@ -58,7 +58,7 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

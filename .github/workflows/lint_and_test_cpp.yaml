@@ -53,7 +53,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: clang-format
         run: ./scripts/run-clang-format.py --clang-format-executable clang-format-14 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
@@ -66,7 +66,7 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
@@ -97,7 +97,7 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
       - name: Clone code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Rebuild thirdparty if needed
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: Build Pegasus
@@ -162,7 +162,7 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Run server tests
@@ -179,7 +179,7 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Rebuild thirdparty if needed
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: Build Pegasus
@@ -246,7 +246,7 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Run server tests
@@ -266,7 +266,7 @@ jobs:
 #    container:
 #      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
 #    steps:
-#      - uses: actions/checkout@v3
+#      - uses: actions/checkout@v4
 #      - name: Rebuild thirdparty if needed
 #        uses: "./.github/actions/rebuild_thirdparty_if_needed"
 #      - name: Build Pegasus
@@ -329,7 +329,7 @@ jobs:
 #      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
 #      options: --cap-add=SYS_PTRACE
 #    steps:
-#      - uses: actions/checkout@v3
+#      - uses: actions/checkout@v4
 #      - name: Download artifact
 #        uses: "./.github/actions/download_artifact"
 #      - name: Run server tests
@@ -346,7 +346,7 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Rebuild thirdparty if needed
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       # TODO(yingchun): Append "-m dsn_utils_tests" to the command if not needed to pack server or tools, for example, the dependencies are static linked.
@@ -370,7 +370,7 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Run server tests
@@ -386,7 +386,7 @@ jobs:
           # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-12-Readme.md
           brew install ccache
           brew install openssl@1.1
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup cache
         uses: actions/cache@v3
         with:
