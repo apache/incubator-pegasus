@@ -68,6 +68,12 @@ jobs:
 
   build_push_bin_docker_images:
     runs-on: ubuntu-latest
+    env:
+      # The glibc version on ubuntu1804 and centos7 is lower than the node20 required, so
+      # we need to force the node version to 16.
+      # See more details: https://github.com/actions/checkout/issues/1809
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     needs: build_push_src_docker_images
     strategy:
       fail-fast: false
@@ -104,6 +110,12 @@ jobs:
 
   build_push_bin_jemalloc_docker_images:
     runs-on: ubuntu-latest
+    env:
+      # The glibc version on ubuntu1804 and centos7 is lower than the node20 required, so
+      # we need to force the node version to 16.
+      # See more details: https://github.com/actions/checkout/issues/1809
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     needs: build_push_src_docker_images
     strategy:
       fail-fast: false
