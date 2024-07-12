@@ -39,7 +39,7 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v1
         with:
           java-version: 8
@@ -57,7 +57,7 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - uses: "./.github/actions/build_pegasus"
       - uses: "./.github/actions/upload_artifact"
@@ -73,7 +73,7 @@ jobs:
       matrix:
         java: [ '8', '11']
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/cache@v2
         with:
           path: ~/.m2/repository
@@ -89,9 +89,9 @@ jobs:
           source /github/home/.sdkman/bin/sdkman-init.sh
           sdk install sbt
           sbt -V
-      - name: Recompile thrift
+      - name: Download thrift
         working-directory: ./java-client/scripts
-        run: ./recompile_thrift.sh
+        run: ./download_thrift.sh
       - name: Build Java client
         working-directory: ./java-client
         run: |
