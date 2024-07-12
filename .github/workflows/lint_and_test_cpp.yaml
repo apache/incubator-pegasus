@@ -424,7 +424,7 @@ jobs:
       image: apache/pegasus:thirdparties-bin-centos7-${{ github.base_ref }}
     steps:
       - name: Clone code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
       - name: Rebuild thirdparty if needed
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: Build Pegasus
