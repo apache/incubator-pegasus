@@ -26,30 +26,32 @@
 #include "utils/error_code.h"
 
 bool validate_ip(shell_context *sc,
-                 const std::string &ip_str,
+                 const std::string &target_hp_str,
                  dsn::host_port &target_hp,
                  std::string &err_info)
 {
-    target_hp = dsn::host_port::from_string(ip_str);
+    target_hp = dsn::host_port::from_string(target_hp_str);
     if (!target_hp) {
-        err_info = fmt::format("invalid ip:port={}, can't transform it into host_port", ip_str);
+        err_info =
+            fmt::format("invalid host:port '{}', can't transform it into host_port", target_hp_str);
         return false;
     }
 
-    std::map<dsn::host_port, dsn::replication::node_status::type> nodes;
-    auto error = sc->ddl_client->list_nodes(dsn::replication::node_status::NS_INVALID, nodes);
+    std::map<dsn::host_port, dsn::replication::node_status::type> ns_by_nodes;
+    const auto error =
+        sc->ddl_client->list_nodes(dsn::replication::node_status::NS_INVALID, ns_by_nodes);
     if (error != dsn::ERR_OK) {
-        err_info = fmt::format("list nodes failed, error={}", error.to_string());
+        err_info = fmt::format("list nodes failed, error={}", error);
         return false;
     }
 
-    for (const auto &node : nodes) {
-        if (target_hp == node.first) {
+    for (const auto &[node, _] : ns_by_nodes) {
+        if (target_hp == node) {
             return true;
         }
     }
 
-    err_info = fmt::format("invalid ip:port={}, can't find it in the cluster", ip_str);
+    err_info = fmt::format("invalid host:port '{}', can't find it in the cluster", target_hp_str);
     return false;
 }
 

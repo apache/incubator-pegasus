@@ -118,7 +118,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
         for (std::string &token : tokens) {
             const auto node = dsn::host_port::from_string(token);
             if (!node) {
-                fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
+                fprintf(stderr, "parse %s as a host:port node failed\n", token.c_str());
                 return true;
             }
             node_list.push_back(node);
@@ -140,7 +140,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
             const auto node = dsn::host_port::from_string(str);
             if (!node) {
                 fprintf(stderr,
-                        "parse %s at file %s line %d as ip:port failed\n",
+                        "parse %s at file %s line %d as host:port failed\n",
                         str.c_str(),
                         node_list_file.c_str(),
                         lineno);
