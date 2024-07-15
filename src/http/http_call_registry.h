@@ -20,6 +20,7 @@
 #include "utils/fmt_logging.h"
 #include "http_server.h"
 #include "utils/errors.h"
+#include "utils/map_util.h"
 #include "utils/singleton.h"
 
 namespace dsn {
@@ -35,11 +36,8 @@ public:
     std::shared_ptr<http_call> find(const std::string &path) const
     {
         std::lock_guard<std::mutex> guard(_mu);
-        const auto &iter = _call_map.find(path);
-        if (iter == _call_map.end()) {
-            return nullptr;
-        }
-        return iter->second;
+        const auto *hc = FindOrNull(_call_map, path);
+        return hc == nullptr ? nullptr : *hc;
     }
 
     void remove(const std::string &path)

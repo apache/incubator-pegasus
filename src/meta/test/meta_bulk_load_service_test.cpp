@@ -382,14 +382,11 @@ public:
              &partition_bulk_load_info_map,
              &pinfo_map]() {
                 for (const auto app_id : app_id_set) {
-                    auto app_iter = app_bulk_load_info_map.find(app_id);
-                    auto partition_iter = partition_bulk_load_info_map.find(app_id);
-                    if (app_iter != app_bulk_load_info_map.end()) {
+                    const auto *app = FindOrNull(app_bulk_load_info_map, app_id);
+                    const auto *partition = FindOrNull(partition_bulk_load_info_map, app_id);
+                    if (app != nullptr) {
                         mock_app_bulk_load_info_on_remote_storage(
-                            app_iter->second,
-                            partition_iter == partition_bulk_load_info_map.end()
-                                ? pinfo_map
-                                : partition_iter->second);
+                            *app, partition == nullptr ? pinfo_map : *partition);
                     }
                 }
             });
@@ -492,7 +489,7 @@ public:
 
     bool is_app_bulk_load_states_reset(int32_t app_id)
     {
-        return bulk_svc()._bulk_load_app_id.find(app_id) == bulk_svc()._bulk_load_app_id.end();
+        return !ContainsKey(bulk_svc()._bulk_load_app_id, app_id);
     }
 
     meta_op_status get_op_status() { return _ms->get_op_status(); }

@@ -27,6 +27,7 @@
 #include "metadata_types.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/map_util.h"
 
 DSN_DEFINE_bool(meta_server, balancer_in_turn, false, "balance the apps one-by-one/concurrently");
 DSN_DEFINE_bool(meta_server, only_primary_balancer, false, "only try to make the primary balanced");
@@ -162,7 +163,7 @@ bool copy_secondary_operation::can_select(gpid pid, migration_list *result)
     }
 
     // if the pid have been used
-    if (result->find(pid) != result->end()) {
+    if (ContainsKey(*result, pid)) {
         LOG_DEBUG("{}: skip gpid({}.{}) coz it is already copyed",
                   _app->get_logname(),
                   pid.get_app_id(),

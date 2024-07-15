@@ -104,13 +104,13 @@ void meta_duplication_service::modify_duplication(duplication_modify_rpc rpc)
         return;
     }
 
-    auto it = app->duplications.find(dupid);
-    if (it == app->duplications.end()) {
+    const auto *dup_ptr = FindOrNull(app->duplications, dupid);
+    if (dup_ptr == nullptr) {
         response.err = ERR_OBJECT_NOT_FOUND;
         return;
     }
 
-    duplication_info_s_ptr dup = it->second;
+    duplication_info_s_ptr dup = *dup_ptr;
     auto to_status = request.__isset.status ? request.status : dup->status();
     auto to_fail_mode = request.__isset.fail_mode ? request.fail_mode : dup->fail_mode();
     response.err = dup->alter_status(to_status, to_fail_mode);
