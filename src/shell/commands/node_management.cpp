@@ -24,11 +24,11 @@
 #include <nlohmann/json_fwd.hpp>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 #include <algorithm>
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <chrono>
 #include <fstream>
+#include <initializer_list>
 #include <iostream>
 #include <map>
 #include <memory>
