@@ -76,7 +76,9 @@ jobs:
         working-directory: /root/incubator-pegasus
     steps:
       - name: Clone Apache Pegasus Source
-        uses: actions/checkout@v4
+        # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
+        # we need to force to use actions/checkout@v3.
+        uses: actions/checkout@v3
       - name: Unpack prebuilt third-parties
         uses: "./.github/actions/unpack_prebuilt_thirdparties"
       - name: Build Pegasus

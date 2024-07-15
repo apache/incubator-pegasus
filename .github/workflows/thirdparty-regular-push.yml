@@ -84,7 +84,9 @@ jobs:
           - ubuntu2204
           - centos7
     steps:
-      - uses: actions/checkout@v4
+      # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
+      # we need to force to use actions/checkout@v3.
+      - uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -126,7 +128,9 @@ jobs:
           - ubuntu2204
           - centos7
     steps:
-      - uses: actions/checkout@v4
+      # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
+      # we need to force to use actions/checkout@v3.
+      - uses: actions/checkout@v3
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
