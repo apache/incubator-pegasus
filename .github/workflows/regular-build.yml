@@ -140,9 +140,11 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
+      - name: Download thrift
+        working-directory: ./java-client/scripts
+        run: ./download_thrift.sh
       - name: Build
         working-directory: ./java-client
         run: |
-          cd scripts && bash recompile_thrift.sh && cd -
           mvn spotless:apply
           mvn clean package -DskipTests
