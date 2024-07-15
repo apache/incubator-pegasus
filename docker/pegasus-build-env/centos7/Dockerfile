@@ -19,10 +19,16 @@ FROM centos:7.5.1804
 
 LABEL maintainer=wutao
 
-RUN yum -y install centos-release-scl \
+RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
+    sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && \
+    sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo && \
+    yum -y install centos-release-scl \
                    scl-utils \
-                   epel-release; \
-                   yum -y install devtoolset-7-gcc \
+                   epel-release && \
+    sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
+    sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && \
+    sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo && \
+    yum -y install devtoolset-7-gcc \
                    devtoolset-7-gcc-c++ \
                    java-1.8.0-openjdk-devel.x86_64 \
                    python3 \
@@ -48,10 +54,10 @@ RUN yum -y install centos-release-scl \
                    flex \
                    krb5-devel \
                    cyrus-sasl-devel \
-                   patch; \
-                   yum -y install ca-certificates; \
-                   yum clean all; \
-                   rm -rf /var/cache/yum;
+                   patch && \
+    yum -y install ca-certificates && \
+    yum clean all && \
+    rm -rf /var/cache/yum;
 
 ENV PATH="/opt/rh/devtoolset-7/root/bin/:${PATH}"
 
