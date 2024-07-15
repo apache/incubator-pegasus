@@ -23,19 +23,20 @@
 #include <ostream>
 #include <vector>
 
-#include "http/builtin_http_calls.h"
 #include "fmt/core.h"
-#include "http/http_method.h"
+#include "gutil/map_util.h"
+#include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_message_parser.h"
+#include "http/http_method.h"
 #include "http/http_server_impl.h"
+#include "http/uri_decoder.h"
 #include "nodejs/http_parser.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/tool_api.h"
-#include "http/uri_decoder.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
@@ -250,8 +251,7 @@ void http_server::serve(message_ex *msg)
             if (sep + 1 < arg_val.size()) {
                 value = arg_val.substr(sep + 1, arg_val.size() - sep);
             }
-            auto iter = ret.query_args.find(name);
-            if (iter != ret.query_args.end()) {
+            if (gutil::ContainsKey(ret.query_args, name)) {
                 return FMT_ERR(ERR_INVALID_PARAMETERS, "duplicate parameter: {}", name);
             }
             ret.query_args.emplace(std::move(name), std::move(value));
