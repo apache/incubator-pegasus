@@ -638,7 +638,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         for (std::string &token : tokens) {
             const auto node = dsn::host_port::from_string(token);
             if (!node) {
-                fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
+                fprintf(stderr, "parse %s as a host:port node failed\n", token.c_str());
                 return true;
             }
             node_list.emplace_back("user-specified", node);

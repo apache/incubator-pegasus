@@ -66,7 +66,7 @@ inline bool validate_cmd(const argh::parser &cmd,
 }
 
 bool validate_ip(shell_context *sc,
-                 const std::string &ip_str,
+                 const std::string &host_port_str,
                  /*out*/ dsn::host_port &target_hp,
                  /*out*/ std::string &err_info);
 
