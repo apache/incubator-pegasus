@@ -125,7 +125,7 @@ public:
     dsn::error_code list_app(const std::string &app_name,
                              int32_t &app_id,
                              int32_t &partition_count,
-                             std::vector<partition_configuration> &partitions);
+                             std::vector<partition_configuration> &pcs);
 
     dsn::replication::configuration_meta_control_response
     control_meta_function_level(meta_function_level::type level);

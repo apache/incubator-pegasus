@@ -58,7 +58,7 @@ void replica::handle_local_failure(error_code error)
     }
 
     if (status() == partition_status::PS_PRIMARY) {
-        _stub->remove_replica_on_meta_server(_app_info, _primary_states.membership);
+        _stub->remove_replica_on_meta_server(_app_info, _primary_states.pc);
     }
 
     update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
@@ -88,7 +88,7 @@ void replica::handle_remote_failure(partition_status::type st,
             configuration_update_request request;
             SET_IP_AND_HOST_PORT_BY_DNS(request, node, node);
             request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
-            request.config = _primary_states.membership;
+            request.config = _primary_states.pc;
             downgrade_to_inactive_on_primary(request);
         }
         break;

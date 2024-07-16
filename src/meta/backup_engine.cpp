@@ -182,7 +182,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
             _is_backup_failed = true;
             return;
         }
-        partition_primary = app->partitions[pid.get_partition_index()].hp_primary;
+        partition_primary = app->pcs[pid.get_partition_index()].hp_primary;
     }
 
     if (!partition_primary) {

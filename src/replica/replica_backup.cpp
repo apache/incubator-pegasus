@@ -256,10 +256,10 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
 
 void replica::send_backup_request_to_secondary(const backup_request &request)
 {
-    for (const auto &target_address : _primary_states.membership.secondaries) {
+    for (const auto &secondary : _primary_states.pc.secondaries) {
         // primary will send backup_request to secondary periodically
         // so, we shouldn't handle the response
-        rpc::call_one_way_typed(target_address, RPC_COLD_BACKUP, request, get_gpid().thread_hash());
+        rpc::call_one_way_typed(secondary, RPC_COLD_BACKUP, request, get_gpid().thread_hash());
     }
 }
 

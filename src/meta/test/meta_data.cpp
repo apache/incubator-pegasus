@@ -109,7 +109,7 @@ static bool vec_equal(const std::vector<dropped_replica> &vec1,
 
 TEST(meta_data, collect_replica)
 {
-    app_mapper app;
+    app_mapper apps;
     node_mapper nodes;
 
     dsn::app_info info;
@@ -120,16 +120,16 @@ TEST(meta_data, collect_replica)
     info.app_type = "test";
     info.max_replica_count = 3;
     info.partition_count = 1024;
-    std::shared_ptr<app_state> the_app = app_state::create(info);
-    app.emplace(the_app->app_id, the_app);
-    meta_view view = {&app, &nodes};
+    std::shared_ptr<app_state> app = app_state::create(info);
+    apps.emplace(app->app_id, app);
+    meta_view view = {&apps, &nodes};
 
     replica_info rep;
     rep.app_type = "test";
     rep.pid = dsn::gpid(1, 0);
 
-    dsn::partition_configuration &pc = *get_config(app, rep.pid);
-    config_context &cc = *get_config_context(app, rep.pid);
+    auto &pc = *get_config(apps, rep.pid);
+    auto &cc = *get_config_context(apps, rep.pid);
 
     std::vector<dsn::host_port> node_list;
     generate_node_list(node_list, 10, 10);
@@ -352,7 +352,7 @@ TEST(meta_data, collect_replica)
 
 TEST(meta_data, construct_replica)
 {
-    app_mapper app;
+    app_mapper apps;
     node_mapper nodes;
 
     dsn::app_info info;
@@ -363,16 +363,16 @@ TEST(meta_data, construct_replica)
     info.app_type = "test";
     info.max_replica_count = 3;
     info.partition_count = 1024;
-    std::shared_ptr<app_state> the_app = app_state::create(info);
-    app.emplace(the_app->app_id, the_app);
-    meta_view view = {&app, &nodes};
+    std::shared_ptr<app_state> app = app_state::create(info);
+    apps.emplace(app->app_id, app);
+    meta_view view = {&apps, &nodes};
 
     replica_info rep;
     rep.app_type = "test";
     rep.pid = dsn::gpid(1, 0);
 
-    dsn::partition_configuration &pc = *get_config(app, rep.pid);
-    config_context &cc = *get_config_context(app, rep.pid);
+    dsn::partition_configuration &pc = *get_config(apps, rep.pid);
+    config_context &cc = *get_config_context(apps, rep.pid);
 
     std::vector<dsn::host_port> node_list;
     generate_node_list(node_list, 10, 10);

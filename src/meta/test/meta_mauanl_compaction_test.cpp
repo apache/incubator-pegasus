@@ -51,7 +51,7 @@ public:
     {
         create_app(APP_NAME, PARTITION_COUNT);
         auto app = find_app(APP_NAME);
-        app->partitions.resize(PARTITION_COUNT);
+        app->pcs.resize(PARTITION_COUNT);
         app->helpers->contexts.resize(PARTITION_COUNT);
         for (auto i = 0; i < PARTITION_COUNT; ++i) {
             serving_replica rep;

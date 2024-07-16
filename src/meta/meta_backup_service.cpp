@@ -532,7 +532,7 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
                 pid, cold_backup_constant::PROGRESS_FINISHED, dsn::host_port());
             return;
         }
-        partition_primary = app->partitions[pid.get_partition_index()].hp_primary;
+        partition_primary = app->pcs[pid.get_partition_index()].hp_primary;
     }
     if (!partition_primary) {
         LOG_WARNING("{}: partition {} doesn't have a primary now, retry to backup it later",
@@ -670,7 +670,7 @@ void policy_context::initialize_backup_progress_unlocked()
             // unfinished_partitions_per_app & partition_progress & app_chkpt_size
             _progress.unfinished_partitions_per_app[app_id] = app->partition_count;
             std::map<int, int64_t> partition_chkpt_size;
-            for (const partition_configuration &pc : app->partitions) {
+            for (const auto &pc : app->pcs) {
                 _progress.partition_progress[pc.pid] = 0;
                 partition_chkpt_size[pc.pid.get_app_id()] = 0;
             }

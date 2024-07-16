@@ -1454,7 +1454,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
 }
 
 void replica_stub::remove_replica_on_meta_server(const app_info &info,
-                                                 const partition_configuration &config)
+                                                 const partition_configuration &pc)
 {
     if (FLAGS_fd_disabled) {
         return;
@@ -1464,12 +1464,12 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
 
     std::shared_ptr<configuration_update_request> request(new configuration_update_request);
     request->info = info;
-    request->config = config;
+    request->config = pc;
     request->config.ballot++;
     SET_IP_AND_HOST_PORT(*request, node, primary_address(), _primary_host_port);
     request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
 
-    if (_primary_host_port == config.hp_primary) {
+    if (_primary_host_port == pc.hp_primary) {
         RESET_IP_AND_HOST_PORT(request->config, primary);
     } else if (replica_helper::remove_node(primary_address(), request->config.secondaries) &&
                replica_helper::remove_node(_primary_host_port, request->config.hp_secondaries)) {

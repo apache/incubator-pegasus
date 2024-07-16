@@ -49,11 +49,11 @@ private:
         std::unordered_map<host_port, std::string> node_disk;
 
         partition_node_info() {}
-        partition_node_info(const partition_configuration &config, const config_context &cc)
+        partition_node_info(const partition_configuration &pc, const config_context &cc)
         {
-            create(config, cc);
+            create(pc, cc);
         }
-        void create(const partition_configuration &config, const config_context &cc);
+        void create(const partition_configuration &pc, const config_context &cc);
     };
 
     struct node_context
@@ -77,7 +77,7 @@ private:
         void decrease(const std::string &disk_tag);
     };
 
-    bool try_partition_ingestion(const partition_configuration &config, const config_context &cc);
+    bool try_partition_ingestion(const partition_configuration &pc, const config_context &cc);
     bool check_node_ingestion(const host_port &node, const std::string &disk_tag);
     void add_partition(const partition_node_info &info);
     void remove_partition(const gpid &pid);

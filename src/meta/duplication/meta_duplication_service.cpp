@@ -547,10 +547,10 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                           const host_port secondary1("localhost", 34802);
                           const host_port secondary2("localhost", 34803);
 
-                          partition_configuration p;
-                          SET_IP_AND_HOST_PORT_BY_DNS(p, primary, primary);
-                          SET_IPS_AND_HOST_PORTS_BY_DNS(p, secondaries, secondary1, secondary2);
-                          resp.partitions.emplace_back(p);
+                          partition_configuration pc;
+                          SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
+                          SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, secondary1, secondary2);
+                          resp.partitions.emplace_back(pc);
                       }
                   });
 
@@ -561,18 +561,18 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                       if (resp.partitions.size() != dup->partition_count) {
                           query_err = ERR_INCONSISTENT_STATE;
                       } else {
-                          for (const auto &partition : resp.partitions) {
-                              if (!partition.hp_primary) {
+                          for (const auto &pc : resp.partitions) {
+                              if (!pc.hp_primary) {
                                   query_err = ERR_INACTIVE_STATE;
                                   break;
                               }
 
-                              if (partition.hp_secondaries.empty()) {
+                              if (pc.hp_secondaries.empty()) {
                                   query_err = ERR_NOT_ENOUGH_MEMBER;
                                   break;
                               }
 
-                              for (const auto &secondary : partition.hp_secondaries) {
+                              for (const auto &secondary : pc.hp_secondaries) {
                                   if (!secondary) {
                                       query_err = ERR_INACTIVE_STATE;
                                       break;

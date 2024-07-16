@@ -150,7 +150,7 @@ private:
     void parent_send_register_request(const register_child_request &request);
 
     // child partition has been registered on meta_server, could be active
-    void child_partition_active(const partition_configuration &config);
+    void child_partition_active(const partition_configuration &pc);
 
     // return true if parent status is valid
     bool parent_check_states();

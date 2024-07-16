@@ -250,8 +250,8 @@ void server_state::on_query_restore_status(configuration_query_restore_rpc rpc)
     response.restore_status.resize(app->partition_count, ERR_OK);
     for (int32_t i = 0; i < app->partition_count; i++) {
         const auto &r_state = app->helpers->restore_states[i];
-        const auto &p = app->partitions[i];
-        if (p.hp_primary || !p.hp_secondaries.empty()) {
+        const auto &pc = app->pcs[i];
+        if (pc.hp_primary || !pc.hp_secondaries.empty()) {
             // already have primary, restore succeed
             continue;
         }

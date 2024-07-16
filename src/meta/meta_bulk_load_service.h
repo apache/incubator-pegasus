@@ -189,7 +189,7 @@ private:
         const gpid &pid,
         bool always_unhealthy_check,
         const std::function<void(const std::string &, const gpid &)> &retry_function,
-        /*out*/ partition_configuration &pconfig);
+        /*out*/ partition_configuration &pc);
 
     void partition_bulk_load(const std::string &app_name, const gpid &pid);
 
@@ -200,15 +200,15 @@ private:
     // if app is still in bulk load, resend bulk_load_request to primary after interval seconds
     void try_resend_bulk_load_request(const std::string &app_name, const gpid &pid);
 
-    void handle_app_downloading(const bulk_load_response &response, const host_port &primary_addr);
+    void handle_app_downloading(const bulk_load_response &response, const host_port &primary);
 
-    void handle_app_ingestion(const bulk_load_response &response, const host_port &primary_addr);
+    void handle_app_ingestion(const bulk_load_response &response, const host_port &primary);
 
     // when app status is `succeed, `failed`, `canceled`, meta and replica should cleanup bulk load
     // states
-    void handle_bulk_load_finish(const bulk_load_response &response, const host_port &primary_addr);
+    void handle_bulk_load_finish(const bulk_load_response &response, const host_port &primary);
 
-    void handle_app_pausing(const bulk_load_response &response, const host_port &primary_addr);
+    void handle_app_pausing(const bulk_load_response &response, const host_port &primary);
 
     // app not existed or not available during bulk load
     void handle_app_unavailable(int32_t app_id, const std::string &app_name);
@@ -223,20 +223,20 @@ private:
 
     void send_ingestion_request(const std::string &app_name,
                                 const gpid &pid,
-                                const host_port &primary_addr,
+                                const host_port &primary,
                                 const ballot &meta_ballot);
 
     void on_partition_ingestion_reply(error_code err,
                                       const ingestion_response &&resp,
                                       const std::string &app_name,
                                       const gpid &pid,
-                                      const host_port &primary_addr);
+                                      const host_port &primary);
 
     // Called by `partition_ingestion`
     // - true : this partition has ever executed ingestion succeed, no need to send ingestion
     // request
     // - false: this partition has not executed ingestion or executed ingestion failed
-    bool check_ever_ingestion_succeed(const partition_configuration &config,
+    bool check_ever_ingestion_succeed(const partition_configuration &pc,
                                       const std::string &app_name,
                                       const gpid &pid);
 
@@ -252,9 +252,9 @@ private:
     ///
     /// ingestion_context functions
     ///
-    bool try_partition_ingestion(const partition_configuration &config, const config_context &cc)
+    bool try_partition_ingestion(const partition_configuration &pc, const config_context &cc)
     {
-        return _ingestion_context->try_partition_ingestion(config, cc);
+        return _ingestion_context->try_partition_ingestion(pc, cc);
     }
 
     void finish_ingestion(const gpid &pid) { _ingestion_context->remove_partition(pid); }

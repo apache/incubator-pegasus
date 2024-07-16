@@ -165,8 +165,9 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
 
 dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
 {
-    if (pinfo.config.hp_last_drops.size() < 2)
+    if (pinfo.config.hp_last_drops.size() < 2) {
         return dsn::host_port();
+    }
 
     std::vector<dsn::host_port> last_two_nodes(pinfo.config.hp_last_drops.end() - 2,
                                                pinfo.config.hp_last_drops.end());
@@ -290,11 +291,13 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             << "last_committed(" << pinfo.config.last_committed_decree << ")" << std::endl;
         out << "    ----" << std::endl;
         dsn::host_port latest_dropped, secondary_latest_dropped;
-        if (pinfo.config.hp_last_drops.size() > 0)
+        if (pinfo.config.hp_last_drops.size() > 0) {
             latest_dropped = pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 1];
-        if (pinfo.config.hp_last_drops.size() > 1)
+        }
+        if (pinfo.config.hp_last_drops.size() > 1) {
             secondary_latest_dropped =
                 pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 2];
+        }
         int j = 0;
         for (const ddd_node_info &n : pinfo.dropped) {
             dsn::host_port hp_node;

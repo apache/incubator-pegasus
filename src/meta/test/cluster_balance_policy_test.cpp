@@ -119,7 +119,7 @@ TEST(cluster_balance_policy, get_app_migration_info)
     info.app_name = appname;
     info.partition_count = 1;
     auto app = std::make_shared<app_state>(info);
-    SET_IP_AND_HOST_PORT_BY_DNS(app->partitions[0], primary, hp);
+    SET_IP_AND_HOST_PORT_BY_DNS(app->pcs[0], primary, hp);
 
     node_state ns;
     ns.set_hp(hp);
@@ -129,14 +129,14 @@ TEST(cluster_balance_policy, get_app_migration_info)
 
     cluster_balance_policy::app_migration_info migration_info;
     {
-        app->partitions[0].max_replica_count = 100;
+        app->pcs[0].max_replica_count = 100;
         auto res =
             policy.get_app_migration_info(app, nodes, balance_type::COPY_PRIMARY, migration_info);
         ASSERT_FALSE(res);
     }
 
     {
-        app->partitions[0].max_replica_count = 1;
+        app->pcs[0].max_replica_count = 1;
         auto res =
             policy.get_app_migration_info(app, nodes, balance_type::COPY_PRIMARY, migration_info);
         ASSERT_TRUE(res);
@@ -162,15 +162,15 @@ TEST(cluster_balance_policy, get_node_migration_info)
     info.app_name = appname;
     info.partition_count = 1;
     auto app = std::make_shared<app_state>(info);
-    SET_IP_AND_HOST_PORT_BY_DNS(app->partitions[0], primary, hp);
+    SET_IP_AND_HOST_PORT_BY_DNS(app->pcs[0], primary, hp);
     serving_replica sr;
     sr.node = hp;
     std::string disk_tag = "disk1";
     sr.disk_tag = disk_tag;
     config_context context;
-    context.config_owner = new partition_configuration();
-    auto cleanup = dsn::defer([&context]() { delete context.config_owner; });
-    context.config_owner->pid = gpid(appid, 0);
+    context.pc = new partition_configuration();
+    auto cleanup = dsn::defer([&context]() { delete context.pc; });
+    context.pc->pid = gpid(appid, 0);
     context.serving.emplace_back(std::move(sr));
     app->helpers->contexts.emplace_back(std::move(context));
 
@@ -517,8 +517,8 @@ TEST(cluster_balance_policy, calc_potential_moving)
     partition_configuration pc;
     SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, hp1);
     SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, hp2, hp3);
-    app->partitions[0] = pc;
-    app->partitions[1] = pc;
+    app->pcs[0] = pc;
+    app->pcs[1] = pc;
 
     app_mapper apps;
     apps[app_id] = app;

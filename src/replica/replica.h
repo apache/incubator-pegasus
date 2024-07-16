@@ -188,7 +188,7 @@ public:
     //
     void on_config_proposal(configuration_update_request &proposal);
     void on_config_sync(const app_info &info,
-                        const partition_configuration &config,
+                        const partition_configuration &pc,
                         split_status::type meta_split_status);
     void on_cold_backup(const backup_request &request, /*out*/ backup_response &response);
 
@@ -444,7 +444,7 @@ private:
     void remove(configuration_update_request &proposal);
     void update_configuration_on_meta_server(config_type::type type,
                                              const host_port &node,
-                                             partition_configuration &new_config);
+                                             partition_configuration &new_pc);
     void
     on_update_configuration_on_meta_server_reply(error_code err,
                                                  dsn::message_ex *request,
@@ -458,7 +458,7 @@ private:
     void update_app_envs_internal(const std::map<std::string, std::string> &envs);
     void query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
 
-    bool update_configuration(const partition_configuration &config);
+    bool update_configuration(const partition_configuration &pc);
     bool update_local_configuration(const replica_configuration &config, bool same_ballot = false);
     error_code update_init_info_ballot_and_decree();
 

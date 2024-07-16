@@ -302,26 +302,24 @@ void partition_resolver_simple::query_config_reply(error_code err,
             _app_partition_count = resp.partition_count;
             _app_is_stateful = resp.is_stateful;
 
-            for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it) {
-                auto &new_config = *it;
-
+            for (const auto &new_pc : resp.partitions) {
                 LOG_DEBUG_PREFIX("query config reply, gpid = {}, ballot = {}, primary = {}",
-                                 new_config.pid,
-                                 new_config.ballot,
-                                 FMT_HOST_PORT_AND_IP(new_config, primary));
+                                 new_pc.pid,
+                                 new_pc.ballot,
+                                 FMT_HOST_PORT_AND_IP(new_pc, primary));
 
-                auto it2 = _config_cache.find(new_config.pid.get_partition_index());
+                auto it2 = _config_cache.find(new_pc.pid.get_partition_index());
                 if (it2 == _config_cache.end()) {
-                    std::unique_ptr<partition_info> pi(new partition_info);
+                    auto pi = std::make_unique<partition_info>();
                     pi->timeout_count = 0;
-                    pi->config = new_config;
-                    _config_cache.emplace(new_config.pid.get_partition_index(), std::move(pi));
-                } else if (_app_is_stateful && it2->second->config.ballot < new_config.ballot) {
+                    pi->pc = new_pc;
+                    _config_cache.emplace(new_pc.pid.get_partition_index(), std::move(pi));
+                } else if (_app_is_stateful && it2->second->pc.ballot < new_pc.ballot) {
                     it2->second->timeout_count = 0;
-                    it2->second->config = new_config;
+                    it2->second->pc = new_pc;
                 } else if (!_app_is_stateful) {
                     it2->second->timeout_count = 0;
-                    it2->second->config = new_config;
+                    it2->second->pc = new_pc;
                 } else {
                     // nothing to do
                 }
@@ -413,32 +411,30 @@ void partition_resolver_simple::handle_pending_requests(std::deque<request_conte
 }
 
 /*search in cache*/
-host_port partition_resolver_simple::get_host_port(const partition_configuration &config) const
+host_port partition_resolver_simple::get_host_port(const partition_configuration &pc) const
 {
     if (_app_is_stateful) {
-        return config.hp_primary;
+        return pc.hp_primary;
     }
 
-    if (config.hp_last_drops.empty()) {
+    if (pc.hp_last_drops.empty()) {
         return host_port();
     }
 
-    return config.hp_last_drops[rand::next_u32(0, config.last_drops.size() - 1)];
+    return pc.hp_last_drops[rand::next_u32(0, pc.last_drops.size() - 1)];
 }
 
 error_code partition_resolver_simple::get_host_port(int partition_index, /*out*/ host_port &hp)
 {
-    // partition_configuration config;
     {
         zauto_read_lock l(_config_lock);
         auto it = _config_cache.find(partition_index);
         if (it != _config_cache.end()) {
-            // config = it->second->config;
-            if (it->second->config.ballot < 0) {
+            if (it->second->pc.ballot < 0) {
                 // client query config for splitting app, child partition is not ready
                 return ERR_CHILD_NOT_READY;
             }
-            hp = get_host_port(it->second->config);
+            hp = get_host_port(it->second->pc);
             if (!hp) {
                 return ERR_IO_PENDING;
             } else {

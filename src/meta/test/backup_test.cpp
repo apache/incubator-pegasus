@@ -504,7 +504,7 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
 
             app_state *app = state->_all_apps[3].get();
             app->status = dsn::app_status::AS_AVAILABLE;
-            for (partition_configuration &pc : app->partitions) {
+            for (auto &pc : app->pcs) {
                 SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, node_list[0]);
                 SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, node_list[1], node_list[2]);
             }

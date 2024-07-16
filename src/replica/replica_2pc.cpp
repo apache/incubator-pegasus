@@ -200,8 +200,8 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         LOG_INFO_PREFIX("receive bulk load ingestion request");
 
         // bulk load ingestion request requires that all secondaries should be alive
-        if (static_cast<int>(_primary_states.membership.hp_secondaries.size()) + 1 <
-            _primary_states.membership.max_replica_count) {
+        if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
+            _primary_states.pc.max_replica_count) {
             response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
             return;
         }
@@ -209,7 +209,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         _bulk_load_ingestion_start_time_ms = dsn_now_ms();
     }
 
-    if (static_cast<int>(_primary_states.membership.hp_secondaries.size()) + 1 <
+    if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
         _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
         response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
         return;
@@ -269,8 +269,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             break;
         }
         LOG_INFO_PREFIX("try to prepare bulk load mutation({})", mu->name());
-        if (static_cast<int>(_primary_states.membership.hp_secondaries.size()) + 1 <
-            _primary_states.membership.max_replica_count) {
+        if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
+            _primary_states.pc.max_replica_count) {
             err = ERR_NOT_ENOUGH_MEMBER;
             break;
         }
@@ -282,7 +282,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // stop prepare if there are too few replicas unless it's a reconciliation
     // for reconciliation, we should ensure every prepared mutation to be committed
     // please refer to PacificA paper
-    if (static_cast<int>(_primary_states.membership.hp_secondaries.size()) + 1 <
+    if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
             _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count) &&
         !reconciliation) {
         err = ERR_NOT_ENOUGH_MEMBER;
@@ -300,8 +300,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // remote prepare
     mu->set_prepare_ts();
     mu->set_left_secondary_ack_count(
-        (unsigned int)_primary_states.membership.hp_secondaries.size());
-    for (const auto &secondary : _primary_states.membership.hp_secondaries) {
+        static_cast<unsigned int>(_primary_states.pc.hp_secondaries.size()));
+    for (const auto &secondary : _primary_states.pc.hp_secondaries) {
         send_prepare_message(secondary,
                              partition_status::PS_SECONDARY,
                              mu,

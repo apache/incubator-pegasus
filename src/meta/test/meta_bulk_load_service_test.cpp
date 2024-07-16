@@ -174,16 +174,16 @@ public:
     gpid before_check_partition_status(bulk_load_status::type status)
     {
         std::shared_ptr<app_state> app = find_app(APP_NAME);
-        partition_configuration config;
-        config.pid = gpid(app->app_id, 0);
-        config.max_replica_count = 3;
-        config.ballot = BALLOT;
-        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, PRIMARY_HP);
-        SET_IPS_AND_HOST_PORTS_BY_DNS(config, secondaries, SECONDARY1_HP, SECONDARY2_HP);
-        app->partitions.clear();
-        app->partitions.emplace_back(config);
+        partition_configuration pc;
+        pc.pid = gpid(app->app_id, 0);
+        pc.max_replica_count = 3;
+        pc.ballot = BALLOT;
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, PRIMARY_HP);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, SECONDARY1_HP, SECONDARY2_HP);
+        app->pcs.clear();
+        app->pcs.emplace_back(pc);
         mock_meta_bulk_load_context(app->app_id, app->partition_count, status);
-        return config.pid;
+        return pc.pid;
     }
 
     bool check_partition_status(const std::string name,
@@ -194,18 +194,18 @@ public:
     {
         std::shared_ptr<app_state> app = find_app(name);
         if (mock_primary_invalid) {
-            RESET_IP_AND_HOST_PORT(app->partitions[pid.get_partition_index()], primary);
+            RESET_IP_AND_HOST_PORT(app->pcs[pid.get_partition_index()], primary);
         }
         if (mock_lack_secondary) {
-            CLEAR_IP_AND_HOST_PORT(app->partitions[pid.get_partition_index()], secondaries);
+            CLEAR_IP_AND_HOST_PORT(app->pcs[pid.get_partition_index()], secondaries);
         }
-        partition_configuration pconfig;
+        partition_configuration pc;
         bool flag = bulk_svc().check_partition_status(
             name,
             pid,
             always_unhealthy_check,
             std::bind(&bulk_load_service_test::mock_partition_bulk_load, this, name, pid),
-            pconfig);
+            pc);
         wait_all();
         return flag;
     }
@@ -233,22 +233,22 @@ public:
                                    bool same)
     {
         set_partition_bulk_load_info(pid, ever_ingest_succeed);
-        partition_configuration config;
-        config.pid = pid;
-        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, PRIMARY_HP);
+        partition_configuration pc;
+        pc.pid = pid;
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, PRIMARY_HP);
         if (same) {
-            ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY1_HP);
-            ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY2_HP);
+            ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY1_HP);
+            ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY2_HP);
         } else {
-            ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY1_HP);
+            ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY1_HP);
             if (secondary_count == 2) {
-                ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY3_HP);
+                ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY3_HP);
             } else if (secondary_count >= 3) {
-                ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY2_HP);
-                ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY3_HP);
+                ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY2_HP);
+                ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY3_HP);
             }
         }
-        auto flag = bulk_svc().check_ever_ingestion_succeed(config, APP_NAME, pid);
+        auto flag = bulk_svc().check_ever_ingestion_succeed(pc, APP_NAME, pid);
         wait_all();
         return flag;
     }
@@ -315,9 +315,9 @@ public:
         fail::cfg("ingestion_try_partition_ingestion", "return()");
         config_context cc;
         for (auto i = 0; i < count; i++) {
-            partition_configuration config;
-            config.pid = gpid(app_id, i);
-            bulk_svc().try_partition_ingestion(config, cc);
+            partition_configuration pc;
+            pc.pid = gpid(app_id, i);
+            bulk_svc().try_partition_ingestion(pc, cc);
         }
     }
 
@@ -452,11 +452,11 @@ public:
             [this, &info]() {
                 LOG_INFO("create app({}) app_id={}, dir succeed", info.app_name, info.app_id);
                 for (int i = 0; i < info.partition_count; ++i) {
-                    partition_configuration config;
-                    config.max_replica_count = 3;
-                    config.pid = gpid(info.app_id, i);
-                    config.ballot = BALLOT;
-                    blob v = json::json_forwarder<partition_configuration>::encode(config);
+                    partition_configuration pc;
+                    pc.max_replica_count = 3;
+                    pc.pid = gpid(info.app_id, i);
+                    pc.ballot = BALLOT;
+                    blob v = json::json_forwarder<partition_configuration>::encode(pc);
                     _ms->get_meta_storage()->create_node(
                         _app_root + "/" + boost::lexical_cast<std::string>(info.app_id) + "/" +
                             boost::lexical_cast<std::string>(i),

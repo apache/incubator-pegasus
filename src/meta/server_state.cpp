@@ -285,7 +285,7 @@ error_code server_state::dump_app_states(const char *local_path,
         binary_writer writer;
         dsn::marshall(writer, *app, DSF_THRIFT_BINARY);
         file->append_buffer(writer.get_buffer());
-        for (const partition_configuration &pc : app->partitions) {
+        for (const auto &pc : app->pcs) {
             binary_writer pc_writer;
             dsn::marshall(pc_writer, pc, DSF_THRIFT_BINARY);
             file->append_buffer(pc_writer.get_buffer());
@@ -372,8 +372,8 @@ error_code server_state::restore_from_local_storage(const char *local_path)
             ans = file->read_next_buffer(data);
             binary_reader pc_reader(data);
             CHECK_EQ_MSG(ans, 1, "unexpect read buffer");
-            unmarshall(pc_reader, app->partitions[i], DSF_THRIFT_BINARY);
-            CHECK_EQ_MSG(app->partitions[i].pid.get_partition_index(),
+            unmarshall(pc_reader, app->pcs[i], DSF_THRIFT_BINARY);
+            CHECK_EQ_MSG(app->pcs[i].pid.get_partition_index(),
                          i,
                          "uncorrect partition data, gpid({}.{}), appname({})",
                          app->app_id,
@@ -585,9 +585,10 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                           "invalid partition config");
                     {
                         zauto_write_lock l(_lock);
-                        app->partitions[partition_id] = pc;
-                        for (const auto &hp : pc.hp_last_drops) {
-                            app->helpers->contexts[partition_id].record_drop_history(hp);
+                        app->pcs[partition_id] = pc;
+                        CHECK(pc.__isset.hp_last_drops, "");
+                        for (const auto &last_drop : pc.hp_last_drops) {
+                            app->helpers->contexts[partition_id].record_drop_history(last_drop);
                         }
 
                         if (app->status == app_status::AS_CREATING &&
@@ -624,8 +625,8 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                         app->helpers->split_states.status[partition_id - app->partition_count / 2] =
                             split_status::SPLITTING;
                         app->helpers->split_states.splitting_count++;
-                        app->partitions[partition_id].ballot = invalid_ballot;
-                        app->partitions[partition_id].pid = gpid(app->app_id, partition_id);
+                        app->pcs[partition_id].ballot = invalid_ballot;
+                        app->pcs[partition_id].pid = gpid(app->app_id, partition_id);
                         process_one_partition(app);
                     }
 
@@ -730,15 +731,15 @@ void server_state::initialize_node_state()
     zauto_write_lock l(_lock);
     for (auto &app_pair : _all_apps) {
         app_state &app = *(app_pair.second);
-        for (partition_configuration &pc : app.partitions) {
+        for (const auto &pc : app.pcs) {
             if (pc.hp_primary) {
                 node_state *ns = get_node_state(_nodes, pc.hp_primary, true);
                 ns->put_partition(pc.pid, true);
             }
 
-            for (auto &ep : pc.hp_secondaries) {
-                CHECK(ep, "invalid secondary address, addr = {}", ep);
-                node_state *ns = get_node_state(_nodes, ep, true);
+            for (const auto &secondary : pc.hp_secondaries) {
+                CHECK(secondary, "invalid secondary: {}", secondary);
+                node_state *ns = get_node_state(_nodes, secondary, true);
                 ns->put_partition(pc.pid, false);
             }
         }
@@ -748,7 +749,7 @@ void server_state::initialize_node_state()
     }
     for (auto &app_pair : _all_apps) {
         app_state &app = *(app_pair.second);
-        for (const partition_configuration &pc : app.partitions) {
+        for (const auto &pc : app.pcs) {
             check_consistency(pc.pid);
         }
     }
@@ -843,7 +844,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                 }
 
                 response.partitions[i].info = *app;
-                response.partitions[i].config = app->partitions[pid.get_partition_index()];
+                response.partitions[i].config = app->pcs[pid.get_partition_index()];
                 response.partitions[i].host_node = request.node;
                 // set meta_split_status
                 const split_state &app_split_states = app->helpers->split_states;
@@ -957,12 +958,12 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
 }
 
 bool server_state::query_configuration_by_gpid(dsn::gpid id,
-                                               /*out*/ partition_configuration &config)
+                                               /*out*/ partition_configuration &pc)
 {
     zauto_read_lock l(_lock);
-    const partition_configuration *pc = get_config(_all_apps, id);
-    if (pc != nullptr) {
-        config = *pc;
+    const auto *ppc = get_config(_all_apps, id);
+    if (ppc != nullptr) {
+        pc = *ppc;
         return true;
     }
     return false;
@@ -1005,11 +1006,13 @@ void server_state::query_configuration_by_index(const query_cfg_request &request
     response.is_stateful = app->is_stateful;
 
     for (const int32_t &index : request.partition_indices) {
-        if (index >= 0 && index < app->partitions.size())
-            response.partitions.push_back(app->partitions[index]);
+        if (index >= 0 && index < app->pcs.size()) {
+            response.partitions.push_back(app->pcs[index]);
+        }
     }
-    if (response.partitions.empty())
-        response.partitions = app->partitions;
+    if (response.partitions.empty()) {
+        response.partitions = app->pcs;
+    }
 }
 
 void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
@@ -1046,8 +1049,7 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
     };
 
     std::string app_partition_path = get_partition_path(*app, pidx);
-    dsn::blob value =
-        dsn::json::json_forwarder<partition_configuration>::encode(app->partitions[pidx]);
+    dsn::blob value = dsn::json::json_forwarder<partition_configuration>::encode(app->pcs[pidx]);
     _meta_svc->get_remote_storage()->create_node(
         app_partition_path, LPC_META_STATE_HIGH, on_create_app_partition, value);
 }
@@ -1457,65 +1459,66 @@ void server_state::send_proposal(const configuration_proposal_action &action,
     send_proposal(target, request);
 }
 
-void server_state::request_check(const partition_configuration &old,
+void server_state::request_check(const partition_configuration &old_pc,
                                  const configuration_update_request &request)
 {
-    const partition_configuration &new_config = request.config;
+    const auto &new_pc = request.config;
     switch (request.type) {
     case config_type::CT_ASSIGN_PRIMARY:
         if (request.__isset.hp_node) {
-            CHECK_NE(old.hp_primary, request.hp_node);
-            CHECK(!utils::contains(old.hp_secondaries, request.hp_node), "");
+            CHECK_NE(old_pc.hp_primary, request.hp_node);
+            CHECK(!utils::contains(old_pc.hp_secondaries, request.hp_node), "");
         } else {
-            CHECK_NE(old.primary, request.node);
-            CHECK(!utils::contains(old.secondaries, request.node), "");
+            CHECK_NE(old_pc.primary, request.node);
+            CHECK(!utils::contains(old_pc.secondaries, request.node), "");
         }
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
         if (request.__isset.hp_node) {
-            CHECK_NE(old.hp_primary, request.hp_node);
-            CHECK(utils::contains(old.hp_secondaries, request.hp_node), "");
+            CHECK_NE(old_pc.hp_primary, request.hp_node);
+            CHECK(utils::contains(old_pc.hp_secondaries, request.hp_node), "");
         } else {
-            CHECK_NE(old.primary, request.node);
-            CHECK(utils::contains(old.secondaries, request.node), "");
+            CHECK_NE(old_pc.primary, request.node);
+            CHECK(utils::contains(old_pc.secondaries, request.node), "");
         }
         break;
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
         if (request.__isset.hp_node) {
-            CHECK_EQ(old.hp_primary, request.hp_node);
-            CHECK(!utils::contains(old.hp_secondaries, request.hp_node), "");
+            CHECK_EQ(old_pc.hp_primary, request.hp_node);
+            CHECK(!utils::contains(old_pc.hp_secondaries, request.hp_node), "");
         } else {
-            CHECK_EQ(old.primary, request.node);
-            CHECK(!utils::contains(old.secondaries, request.node), "");
+            CHECK_EQ(old_pc.primary, request.node);
+            CHECK(!utils::contains(old_pc.secondaries, request.node), "");
         }
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
     case config_type::CT_REMOVE:
         if (request.__isset.hp_node) {
-            CHECK(old.hp_primary == request.hp_node ||
-                      utils::contains(old.hp_secondaries, request.hp_node),
+            CHECK(old_pc.hp_primary == request.hp_node ||
+                      utils::contains(old_pc.hp_secondaries, request.hp_node),
                   "");
         } else {
-            CHECK(old.primary == request.node || utils::contains(old.secondaries, request.node),
+            CHECK(old_pc.primary == request.node ||
+                      utils::contains(old_pc.secondaries, request.node),
                   "");
         }
         break;
     case config_type::CT_UPGRADE_TO_SECONDARY:
         if (request.__isset.hp_node) {
-            CHECK_NE(old.hp_primary, request.hp_node);
-            CHECK(!utils::contains(old.hp_secondaries, request.hp_node), "");
+            CHECK_NE(old_pc.hp_primary, request.hp_node);
+            CHECK(!utils::contains(old_pc.hp_secondaries, request.hp_node), "");
         } else {
-            CHECK_NE(old.primary, request.node);
-            CHECK(!utils::contains(old.secondaries, request.node), "");
+            CHECK_NE(old_pc.primary, request.node);
+            CHECK(!utils::contains(old_pc.secondaries, request.node), "");
         }
         break;
     case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT: {
         if (request.__isset.hp_node) {
-            CHECK_EQ(old.hp_primary, new_config.hp_primary);
-            CHECK(old.hp_secondaries == new_config.hp_secondaries, "");
+            CHECK_EQ(old_pc.hp_primary, new_pc.hp_primary);
+            CHECK(old_pc.hp_secondaries == new_pc.hp_secondaries, "");
         } else {
-            CHECK_EQ(old.primary, new_config.primary);
-            CHECK(old.secondaries == new_config.secondaries, "");
+            CHECK_EQ(old_pc.primary, new_pc.primary);
+            CHECK(old_pc.secondaries == new_pc.secondaries, "");
         }
         break;
     }
@@ -1528,22 +1531,22 @@ void server_state::update_configuration_locally(
     app_state &app, std::shared_ptr<configuration_update_request> &config_request)
 {
     dsn::gpid &gpid = config_request->config.pid;
-    partition_configuration &old_cfg = app.partitions[gpid.get_partition_index()];
-    partition_configuration &new_cfg = config_request->config;
+    partition_configuration &old_pc = app.pcs[gpid.get_partition_index()];
+    partition_configuration &new_pc = config_request->config;
 
     int min_2pc_count =
         _meta_svc->get_options().app_mutation_2pc_min_replica_count(app.max_replica_count);
-    health_status old_health_status = partition_health_status(old_cfg, min_2pc_count);
-    health_status new_health_status = partition_health_status(new_cfg, min_2pc_count);
+    health_status old_health_status = partition_health_status(old_pc, min_2pc_count);
+    health_status new_health_status = partition_health_status(new_pc, min_2pc_count);
 
     host_port node;
     GET_HOST_PORT(*config_request, node, node);
 
     if (app.is_stateful) {
-        CHECK(old_cfg.ballot == invalid_ballot || old_cfg.ballot + 1 == new_cfg.ballot,
+        CHECK(old_pc.ballot == invalid_ballot || old_pc.ballot + 1 == new_pc.ballot,
               "invalid configuration update request, old ballot {}, new ballot {}",
-              old_cfg.ballot,
-              new_cfg.ballot);
+              old_pc.ballot,
+              new_pc.ballot);
 
         node_state *ns = nullptr;
         if (config_request->type != config_type::CT_DROP_PARTITION) {
@@ -1551,7 +1554,7 @@ void server_state::update_configuration_locally(
             CHECK_NOTNULL(ns, "invalid node: {}", node);
         }
 #ifndef NDEBUG
-        request_check(old_cfg, *config_request);
+        request_check(old_pc, *config_request);
 #endif
         switch (config_request->type) {
         case config_type::CT_ASSIGN_PRIMARY:
@@ -1575,14 +1578,15 @@ void server_state::update_configuration_locally(
         case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:
             break;
 
-        case config_type::CT_DROP_PARTITION:
-            for (const auto &node : new_cfg.hp_last_drops) {
-                ns = get_node_state(_nodes, node, false);
-                if (ns != nullptr)
+        case config_type::CT_DROP_PARTITION: {
+            for (const auto &last_drop : new_pc.hp_last_drops) {
+                ns = get_node_state(_nodes, last_drop, false);
+                if (ns != nullptr) {
                     ns->remove_partition(gpid, false);
+                }
             }
             break;
-
+        }
         case config_type::CT_ADD_SECONDARY:
         case config_type::CT_ADD_SECONDARY_FOR_LB:
             CHECK(false, "invalid execution work flow");
@@ -1592,7 +1596,7 @@ void server_state::update_configuration_locally(
             // TODO(yingchun): optimize the duplicate loops.
             if (config_request->config.__isset.hp_secondaries) {
                 for (const auto &secondary : config_request->config.hp_secondaries) {
-                    auto secondary_node = get_node_state(_nodes, secondary, false);
+                    auto *secondary_node = get_node_state(_nodes, secondary, false);
                     secondary_node->put_partition(gpid, false);
                 }
             } else {
@@ -1617,12 +1621,12 @@ void server_state::update_configuration_locally(
             break;
         }
     } else {
-        CHECK_EQ(old_cfg.ballot, new_cfg.ballot);
+        CHECK_EQ(old_pc.ballot, new_pc.ballot);
         const auto host_node = host_port::from_address(config_request->host_node);
         // The non-stateful app is just for testing, so just check the host_node is resolvable.
         CHECK(host_node, "'{}' can not be reverse resolved", config_request->host_node);
-        new_cfg = old_cfg;
-        partition_configuration_stateless pcs(new_cfg);
+        new_pc = old_pc;
+        partition_configuration_stateless pcs(new_pc);
         if (config_request->type == config_type::type::CT_ADD_SECONDARY) {
             pcs.hosts().emplace_back(host_node);
             pcs.workers().emplace_back(node);
@@ -1645,8 +1649,8 @@ void server_state::update_configuration_locally(
 
     // we assume config in config_request stores the proper new config
     // as we sync to remote storage according to it
-    std::string old_config_str = boost::lexical_cast<std::string>(old_cfg);
-    old_cfg = config_request->config;
+    std::string old_config_str = boost::lexical_cast<std::string>(old_pc);
+    old_pc = config_request->config;
     auto find_name = _config_type_VALUES_TO_NAMES.find(config_request->type);
     if (find_name != _config_type_VALUES_TO_NAMES.end()) {
         LOG_INFO("meta update config ok: type({}), old_config={}, {}",
@@ -1777,7 +1781,7 @@ void server_state::recall_partition(std::shared_ptr<app_state> &app, int pidx)
     auto on_recall_partition = [this, app, pidx](dsn::error_code error) mutable {
         if (error == dsn::ERR_OK) {
             zauto_write_lock l(_lock);
-            app->partitions[pidx].partition_flags &= (~pc_flags::dropped);
+            app->pcs[pidx].partition_flags &= (~pc_flags::dropped);
             process_one_partition(app);
         } else if (error == dsn::ERR_TIMEOUT) {
             tasking::enqueue(LPC_META_STATE_HIGH,
@@ -1790,7 +1794,7 @@ void server_state::recall_partition(std::shared_ptr<app_state> &app, int pidx)
         }
     };
 
-    partition_configuration &pc = app->partitions[pidx];
+    partition_configuration &pc = app->pcs[pidx];
     CHECK((pc.partition_flags & pc_flags::dropped), "");
 
     pc.partition_flags = 0;
@@ -1802,7 +1806,7 @@ void server_state::recall_partition(std::shared_ptr<app_state> &app, int pidx)
 
 void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
 {
-    partition_configuration &pc = app->partitions[pidx];
+    partition_configuration &pc = app->pcs[pidx];
     config_context &cc = app->helpers->contexts[pidx];
 
     std::shared_ptr<configuration_update_request> req =
@@ -1814,11 +1818,11 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     SET_OBJ_IP_AND_HOST_PORT(request, node, pc, primary);
 
     request.config = pc;
-    for (auto &node : pc.hp_secondaries) {
-        maintain_drops(request.config.hp_last_drops, node, request.type);
+    for (const auto &secondary : pc.hp_secondaries) {
+        maintain_drops(request.config.hp_last_drops, secondary, request.type);
     }
-    for (auto &node : pc.secondaries) {
-        maintain_drops(request.config.last_drops, node, request.type);
+    for (const auto &secondary : pc.secondaries) {
+        maintain_drops(request.config.last_drops, secondary, request.type);
     }
     if (pc.hp_primary) {
         maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);
@@ -1855,7 +1859,7 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
 
 void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app, int pidx)
 {
-    partition_configuration &pc = app->partitions[pidx];
+    partition_configuration &pc = app->pcs[pidx];
     config_context &cc = app->helpers->contexts[pidx];
 
     if (config_status::pending_remote_sync == cc.stage) {
@@ -1900,7 +1904,7 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
                                                    int pidx,
                                                    const host_port &node)
 {
-    partition_configuration &pc = app->partitions[pidx];
+    partition_configuration &pc = app->pcs[pidx];
     config_context &cc = app->helpers->contexts[pidx];
 
     CHECK(pc.hp_primary, "this shouldn't be called if the primary is invalid");
@@ -1923,31 +1927,31 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
 
 void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
                                              int pidx,
-                                             const host_port &address)
+                                             const host_port &node)
 {
-    std::shared_ptr<configuration_update_request> req =
-        std::make_shared<configuration_update_request>();
+    auto req = std::make_shared<configuration_update_request>();
     req->info = *app;
     req->type = config_type::CT_REMOVE;
-    req->host_node = dsn::dns_resolver::instance().resolve_address(address);
+    req->host_node = dsn::dns_resolver::instance().resolve_address(node);
     RESET_IP_AND_HOST_PORT(*req, node);
-    req->config = app->partitions[pidx];
+    req->config = app->pcs[pidx];
 
     config_context &cc = app->helpers->contexts[pidx];
     partition_configuration &pc = req->config;
 
     unsigned i = 0;
     for (; i < pc.hp_secondaries.size(); ++i) {
-        if (pc.hp_secondaries[i] == address) {
+        if (pc.hp_secondaries[i] == node) {
             SET_OBJ_IP_AND_HOST_PORT(*req, node, pc, last_drops[i]);
             break;
         }
     }
-    host_port node;
-    GET_HOST_PORT(*req, node, node);
-    CHECK(node, "invalid node: {}", node);
+    host_port req_node;
+    GET_HOST_PORT(*req, node, req_node);
+    CHECK(req_node, "invalid node: {}", req_node);
     // remove host_node & node from secondaries/last_drops, as it will be sync to remote
     // storage
+    CHECK(pc.__isset.hp_secondaries, "hp_secondaries not set");
     for (++i; i < pc.hp_secondaries.size(); ++i) {
         pc.secondaries[i - 1] = pc.secondaries[i];
         pc.last_drops[i - 1] = pc.last_drops[i];
@@ -1964,7 +1968,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
                     "removing host({}) worker({})",
                     pc.pid,
                     req->host_node,
-                    node);
+                    req_node);
         cc.cancel_sync();
     }
     cc.stage = config_status::pending_remote_sync;
@@ -1980,7 +1984,7 @@ void server_state::on_update_configuration(
     zauto_write_lock l(_lock);
     dsn::gpid &gpid = cfg_request->config.pid;
     std::shared_ptr<app_state> app = get_app(gpid.get_app_id());
-    partition_configuration &pc = app->partitions[gpid.get_partition_index()];
+    partition_configuration &pc = app->pcs[gpid.get_partition_index()];
     config_context &cc = app->helpers->contexts[gpid.get_partition_index()];
     configuration_update_response response;
     response.err = ERR_IO_PENDING;
@@ -2044,53 +2048,61 @@ void server_state::on_update_configuration(
 
 void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
                                           int pidx,
-                                          const dsn::host_port &address)
+                                          const dsn::host_port &node)
 {
-    partition_configuration &pc = app->partitions[pidx];
-    if (app->is_stateful) {
-        if (is_primary(pc, address))
-            downgrade_primary_to_inactive(app, pidx);
-        else if (is_secondary(pc, address)) {
-            if (pc.hp_primary)
-                downgrade_secondary_to_inactive(app, pidx, address);
-            else if (is_secondary(pc, address)) {
-                LOG_INFO("gpid({}): secondary({}) is down, ignored it due to no primary for this "
-                         "partition available",
-                         pc.pid,
-                         address);
-            } else {
-                CHECK(false, "no primary/secondary on this node, node address = {}", address);
-            }
-        }
-    } else {
-        downgrade_stateless_nodes(app, pidx, address);
+    const auto &pc = app->pcs[pidx];
+    if (!app->is_stateful) {
+        downgrade_stateless_nodes(app, pidx, node);
+        return;
     }
+
+    if (is_primary(pc, node)) {
+        downgrade_primary_to_inactive(app, pidx);
+        return;
+    }
+
+    if (!is_secondary(pc, node)) {
+        return;
+    }
+
+    if (pc.hp_primary) {
+        downgrade_secondary_to_inactive(app, pidx, node);
+        return;
+    }
+
+    CHECK(is_secondary(pc, node), "");
+    LOG_INFO("gpid({}): secondary({}) is down, ignored it due to no primary for this partition "
+             "available",
+             pc.pid,
+             node);
 }
 
 void server_state::on_change_node_state(const host_port &node, bool is_alive)
 {
     LOG_DEBUG("change node({}) state to {}", node, is_alive ? "alive" : "dead");
     zauto_write_lock l(_lock);
-    if (!is_alive) {
-        auto iter = _nodes.find(node);
-        if (iter == _nodes.end()) {
-            LOG_INFO("node({}) doesn't exist in the node state, just ignore", node);
-        } else {
-            node_state &ns = iter->second;
-            ns.set_alive(false);
-            ns.set_replicas_collect_flag(false);
-            ns.for_each_partition([&, this](const dsn::gpid &pid) {
-                std::shared_ptr<app_state> app = get_app(pid.get_app_id());
-                CHECK(app != nullptr && app->status != app_status::AS_DROPPED,
-                      "invalid app, app_id = {}",
-                      pid.get_app_id());
-                on_partition_node_dead(app, pid.get_partition_index(), node);
-                return true;
-            });
-        }
-    } else {
+    if (is_alive) {
         get_node_state(_nodes, node, true)->set_alive(true);
+        return;
     }
+
+    auto iter = _nodes.find(node);
+    if (iter == _nodes.end()) {
+        LOG_INFO("node({}) doesn't exist in the node state, just ignore", node);
+        return;
+    }
+
+    node_state &ns = iter->second;
+    ns.set_alive(false);
+    ns.set_replicas_collect_flag(false);
+    ns.for_each_partition([&, this](const dsn::gpid &pid) {
+        std::shared_ptr<app_state> app = get_app(pid.get_app_id());
+        CHECK(app != nullptr && app->status != app_status::AS_DROPPED,
+              "invalid app, app_id = {}",
+              pid.get_app_id());
+        on_partition_node_dead(app, pid.get_partition_index(), node);
+        return true;
+    });
 }
 
 void server_state::on_propose_balancer(const configuration_balancer_request &request,
@@ -2100,19 +2112,21 @@ void server_state::on_propose_balancer(const configuration_balancer_request &req
     std::shared_ptr<app_state> app = get_app(request.gpid.get_app_id());
     if (app == nullptr || app->status != app_status::AS_AVAILABLE ||
         request.gpid.get_partition_index() < 0 ||
-        request.gpid.get_partition_index() >= app->partition_count)
+        request.gpid.get_partition_index() >= app->partition_count) {
         response.err = ERR_INVALID_PARAMETERS;
-    else {
-        if (request.force) {
-            partition_configuration &pc = *get_config(_all_apps, request.gpid);
-            for (const configuration_proposal_action &act : request.action_list) {
-                send_proposal(act, pc, *app);
-            }
-            response.err = ERR_OK;
-        } else {
-            _meta_svc->get_balancer()->register_proposals({&_all_apps, &_nodes}, request, response);
-        }
+        return;
     }
+
+    if (request.force) {
+        const auto &pc = *get_config(_all_apps, request.gpid);
+        for (const auto &act : request.action_list) {
+            send_proposal(act, pc, *app);
+        }
+        response.err = ERR_OK;
+        return;
+    }
+
+    _meta_svc->get_balancer()->register_proposals({&_all_apps, &_nodes}, request, response);
 }
 
 error_code
@@ -2245,7 +2259,7 @@ error_code server_state::construct_partitions(
         if (app->status == app_status::AS_DROPPING) {
             LOG_INFO("ignore constructing partitions for dropping app({})", app->app_id);
         } else {
-            for (partition_configuration &pc : app->partitions) {
+            for (const auto &pc : app->pcs) {
                 bool is_succeed =
                     construct_replica({&_all_apps, &_nodes}, pc.pid, app->max_replica_count);
                 if (is_succeed) {
@@ -2254,12 +2268,12 @@ error_code server_state::construct_partitions(
                              pc.pid.get_partition_index(),
                              boost::lexical_cast<std::string>(pc));
                     if (pc.hp_last_drops.size() + 1 < pc.max_replica_count) {
-                        std::ostringstream oss;
-                        oss << "WARNING: partition(" << app->app_id << "."
-                            << pc.pid.get_partition_index() << ") only collects "
-                            << (pc.hp_last_drops.size() + 1) << "/" << pc.max_replica_count
-                            << " of replicas, may lost data" << std::endl;
-                        hint_message += oss.str();
+                        hint_message += fmt::format("WARNING: partition({}.{}) only collects {}/{} "
+                                                    "of replicas, may lost data",
+                                                    app->app_id,
+                                                    pc.pid.get_partition_index(),
+                                                    pc.hp_last_drops.size() + 1,
+                                                    pc.max_replica_count);
                     }
                     succeed_count++;
                 } else {
@@ -2496,8 +2510,9 @@ void server_state::update_partition_metrics()
 
         int min_2pc_count =
             _meta_svc->get_options().app_mutation_2pc_min_replica_count(app->max_replica_count);
-        for (unsigned int i = 0; i != app->partition_count; ++i) {
-            health_status st = partition_health_status(app->partitions[i], min_2pc_count);
+        CHECK_EQ(app->partition_count, app->pcs.size());
+        for (const auto &pc : app->pcs) {
+            health_status st = partition_health_status(pc, min_2pc_count);
             counters[st]++;
         }
 
@@ -2551,8 +2566,8 @@ bool server_state::check_all_partitions()
             continue;
         }
         for (unsigned int i = 0; i != app->partition_count; ++i) {
-            partition_configuration &pc = app->partitions[i];
-            config_context &cc = app->helpers->contexts[i];
+            const auto &pc = app->pcs[i];
+            const auto &cc = app->helpers->contexts[i];
             // partition is under re-configuration or is child partition
             if (cc.stage != config_status::pending_remote_sync && pc.ballot != invalid_ballot) {
                 configuration_proposal_action action;
@@ -2584,8 +2599,8 @@ bool server_state::check_all_partitions()
     // assign secondary for urgent
     for (int i = 0; i < add_secondary_actions.size(); ++i) {
         gpid &pid = add_secondary_gpids[i];
-        partition_configuration &pc = *get_config(_all_apps, pid);
-        if (!add_secondary_proposed[i] && pc.hp_secondaries.empty()) {
+        const auto *pc = get_config(_all_apps, pid);
+        if (!add_secondary_proposed[i] && pc->hp_secondaries.empty()) {
             const auto &action = add_secondary_actions[i];
             CHECK(action.hp_node, "");
             if (_add_secondary_enable_flow_control && add_secondary_running_nodes[action.hp_node] >=
@@ -2594,7 +2609,7 @@ bool server_state::check_all_partitions()
                 continue;
             }
             std::shared_ptr<app_state> app = get_app(pid.get_app_id());
-            send_proposal(action, pc, *app);
+            send_proposal(action, *pc, *app);
             send_proposal_count++;
             add_secondary_proposed[i] = true;
             add_secondary_running_nodes[action.hp_node]++;
@@ -2607,19 +2622,19 @@ bool server_state::check_all_partitions()
             const auto &action = add_secondary_actions[i];
             CHECK(action.hp_node, "");
             gpid pid = add_secondary_gpids[i];
-            partition_configuration &pc = *get_config(_all_apps, pid);
+            const auto *pc = get_config(_all_apps, pid);
             if (_add_secondary_enable_flow_control && add_secondary_running_nodes[action.hp_node] >=
                                                           _add_secondary_max_count_for_one_node) {
                 LOG_INFO("do not send {} proposal for gpid({}) for flow control reason, target = "
                          "{}, node = {}",
                          ::dsn::enum_to_string(action.type),
-                         pc.pid,
+                         pc->pid,
                          FMT_HOST_PORT_AND_IP(action, target),
                          FMT_HOST_PORT_AND_IP(action, node));
                 continue;
             }
             std::shared_ptr<app_state> app = get_app(pid.get_app_id());
-            send_proposal(action, pc, *app);
+            send_proposal(action, *pc, *app);
             send_proposal_count++;
             add_secondary_proposed[i] = true;
             add_secondary_running_nodes[action.hp_node]++;
@@ -2704,33 +2719,33 @@ void server_state::check_consistency(const dsn::gpid &gpid)
     auto iter = _all_apps.find(gpid.get_app_id());
     CHECK(iter != _all_apps.end(), "invalid gpid({})", gpid);
 
-    app_state &app = *(iter->second);
-    partition_configuration &config = app.partitions[gpid.get_partition_index()];
+    auto &app = *(iter->second);
+    auto &pc = app.pcs[gpid.get_partition_index()];
 
     if (app.is_stateful) {
-        if (config.hp_primary) {
-            auto it = _nodes.find(config.hp_primary);
-            CHECK(it != _nodes.end(), "invalid primary address, address = {}", config.hp_primary);
+        if (pc.hp_primary) {
+            const auto it = _nodes.find(pc.hp_primary);
+            CHECK(it != _nodes.end(), "invalid primary: {}", pc.hp_primary);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_PRIMARY);
-            CHECK(!utils::contains(config.hp_last_drops, config.hp_primary),
-                  "primary shouldn't appear in last_drops, address = {}",
-                  config.hp_primary);
+            CHECK(!utils::contains(pc.hp_last_drops, pc.hp_primary),
+                  "primary({}) shouldn't appear in last_drops",
+                  pc.hp_primary);
         }
 
-        for (auto &ep : config.hp_secondaries) {
-            auto it = _nodes.find(ep);
-            CHECK(it != _nodes.end(), "invalid secondary address, address = {}", ep);
+        for (const auto &secondary : pc.hp_secondaries) {
+            const auto it = _nodes.find(secondary);
+            CHECK(it != _nodes.end(), "invalid secondary: {}", secondary);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
-            CHECK(!utils::contains(config.hp_last_drops, ep),
-                  "secondary shouldn't appear in last_drops, address = {}",
-                  ep);
+            CHECK(!utils::contains(pc.hp_last_drops, secondary),
+                  "secondary({}) shouldn't appear in last_drops",
+                  secondary);
         }
     } else {
-        partition_configuration_stateless pcs(config);
+        partition_configuration_stateless pcs(pc);
         CHECK_EQ(pcs.hosts().size(), pcs.workers().size());
-        for (auto &ep : pcs.hosts()) {
-            auto it = _nodes.find(ep);
-            CHECK(it != _nodes.end(), "invalid host, address = {}", ep);
+        for (const auto &secondary : pcs.hosts()) {
+            auto it = _nodes.find(secondary);
+            CHECK(it != _nodes.end(), "invalid secondary: {}", secondary);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
         }
     }
@@ -3244,18 +3259,17 @@ template <typename Response>
 bool server_state::check_max_replica_count_consistent(const std::shared_ptr<app_state> &app,
                                                       Response &response) const
 {
-    for (int i = 0; i < static_cast<int>(app->partitions.size()); ++i) {
-        const auto &partition_config = app->partitions[i];
-        if (partition_config.max_replica_count == app->max_replica_count) {
+    for (const auto &pc : app->pcs) {
+        if (pc.max_replica_count == app->max_replica_count) {
             continue;
         }
 
         response.err = ERR_INCONSISTENT_STATE;
         response.hint_message = fmt::format("partition_max_replica_count({}) != "
                                             "app_max_replica_count({}) for partition {}",
-                                            partition_config.max_replica_count,
+                                            pc.max_replica_count,
                                             app->max_replica_count,
-                                            i);
+                                            pc.pid);
         return false;
     }
 
@@ -3627,8 +3641,8 @@ void server_state::update_partition_max_replica_count(std::shared_ptr<app_state>
                  app->partition_count,
                  new_max_replica_count);
 
-    const auto &old_partition_config = app->partitions[partition_index];
-    const auto old_max_replica_count = old_partition_config.max_replica_count;
+    const auto &old_pc = app->pcs[partition_index];
+    const auto old_max_replica_count = old_pc.max_replica_count;
 
     if (new_max_replica_count == old_max_replica_count) {
         LOG_WARNING("partition-level max_replica_count has been updated: app_name={}, "
@@ -3675,23 +3689,23 @@ void server_state::update_partition_max_replica_count(std::shared_ptr<app_state>
     context.pending_sync_request.reset();
     context.msg = nullptr;
 
-    auto new_partition_config = old_partition_config;
-    new_partition_config.max_replica_count = new_max_replica_count;
-    ++(new_partition_config.ballot);
-    context.pending_sync_task = update_partition_max_replica_count_on_remote(
-        app, new_partition_config, on_partition_updated);
+    auto new_pc = old_pc;
+    new_pc.max_replica_count = new_max_replica_count;
+    ++(new_pc.ballot);
+    context.pending_sync_task =
+        update_partition_max_replica_count_on_remote(app, new_pc, on_partition_updated);
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
-task_ptr server_state::update_partition_max_replica_count_on_remote(
-    std::shared_ptr<app_state> &app,
-    const partition_configuration &new_partition_config,
-    partition_callback on_partition_updated)
+task_ptr
+server_state::update_partition_max_replica_count_on_remote(std::shared_ptr<app_state> &app,
+                                                           const partition_configuration &new_pc,
+                                                           partition_callback on_partition_updated)
 {
-    const auto &gpid = new_partition_config.pid;
+    const auto &gpid = new_pc.pid;
     const auto partition_index = gpid.get_partition_index();
-    const auto new_max_replica_count = new_partition_config.max_replica_count;
-    const auto new_ballot = new_partition_config.ballot;
+    const auto new_max_replica_count = new_pc.max_replica_count;
+    const auto new_ballot = new_pc.ballot;
 
     const auto level = _meta_svc->get_function_level();
     if (level <= meta_function_level::fl_blind) {
@@ -3710,15 +3724,15 @@ task_ptr server_state::update_partition_max_replica_count_on_remote(
         return tasking::enqueue(
             LPC_META_STATE_HIGH,
             tracker(),
-            [this, app, new_partition_config, on_partition_updated]() mutable {
-                const auto &gpid = new_partition_config.pid;
+            [this, app, new_pc, on_partition_updated]() mutable {
+                const auto &gpid = new_pc.pid;
                 const auto partition_index = gpid.get_partition_index();
 
                 zauto_write_lock l(_lock);
 
                 auto &context = app->helpers->contexts[partition_index];
-                context.pending_sync_task = update_partition_max_replica_count_on_remote(
-                    app, new_partition_config, on_partition_updated);
+                context.pending_sync_task =
+                    update_partition_max_replica_count_on_remote(app, new_pc, on_partition_updated);
             },
             server_state::sStateHash,
             std::chrono::seconds(1));
@@ -3733,8 +3747,7 @@ task_ptr server_state::update_partition_max_replica_count_on_remote(
              new_ballot);
 
     auto partition_path = get_partition_path(gpid);
-    auto json_config =
-        dsn::json::json_forwarder<partition_configuration>::encode(new_partition_config);
+    auto json_config = dsn::json::json_forwarder<partition_configuration>::encode(new_pc);
     return _meta_svc->get_remote_storage()->set_data(
         partition_path,
         json_config,
@@ -3743,7 +3756,7 @@ task_ptr server_state::update_partition_max_replica_count_on_remote(
                   this,
                   std::placeholders::_1,
                   app,
-                  new_partition_config,
+                  new_pc,
                   on_partition_updated),
         tracker());
 }
@@ -3752,13 +3765,13 @@ task_ptr server_state::update_partition_max_replica_count_on_remote(
 void server_state::on_update_partition_max_replica_count_on_remote_reply(
     error_code ec,
     std::shared_ptr<app_state> &app,
-    const partition_configuration &new_partition_config,
+    const partition_configuration &new_pc,
     partition_callback on_partition_updated)
 {
-    const auto &gpid = new_partition_config.pid;
+    const auto &gpid = new_pc.pid;
     const auto partition_index = gpid.get_partition_index();
-    const auto new_max_replica_count = new_partition_config.max_replica_count;
-    const auto new_ballot = new_partition_config.ballot;
+    const auto new_max_replica_count = new_pc.max_replica_count;
+    const auto new_ballot = new_pc.ballot;
 
     zauto_write_lock l(_lock);
 
@@ -3778,15 +3791,15 @@ void server_state::on_update_partition_max_replica_count_on_remote_reply(
         context.pending_sync_task = tasking::enqueue(
             LPC_META_STATE_HIGH,
             tracker(),
-            [this, app, new_partition_config, on_partition_updated]() mutable {
-                const auto &gpid = new_partition_config.pid;
+            [this, app, new_pc, on_partition_updated]() mutable {
+                const auto &gpid = new_pc.pid;
                 const auto partition_index = gpid.get_partition_index();
 
                 zauto_write_lock l(_lock);
 
                 auto &context = app->helpers->contexts[partition_index];
-                context.pending_sync_task = update_partition_max_replica_count_on_remote(
-                    app, new_partition_config, on_partition_updated);
+                context.pending_sync_task =
+                    update_partition_max_replica_count_on_remote(app, new_pc, on_partition_updated);
             },
             server_state::sStateHash,
             std::chrono::seconds(1));
@@ -3798,7 +3811,7 @@ void server_state::on_update_partition_max_replica_count_on_remote_reply(
         return;
     }
 
-    update_partition_max_replica_count_locally(app, new_partition_config);
+    update_partition_max_replica_count_locally(app, new_pc);
 
     context.pending_sync_task = nullptr;
     context.pending_sync_request.reset();
@@ -3809,17 +3822,17 @@ void server_state::on_update_partition_max_replica_count_on_remote_reply(
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
-void server_state::update_partition_max_replica_count_locally(
-    std::shared_ptr<app_state> &app, const partition_configuration &new_partition_config)
+void server_state::update_partition_max_replica_count_locally(std::shared_ptr<app_state> &app,
+                                                              const partition_configuration &new_pc)
 {
-    const auto &gpid = new_partition_config.pid;
+    const auto &gpid = new_pc.pid;
     const auto partition_index = gpid.get_partition_index();
-    const auto new_max_replica_count = new_partition_config.max_replica_count;
-    const auto new_ballot = new_partition_config.ballot;
+    const auto new_max_replica_count = new_pc.max_replica_count;
+    const auto new_ballot = new_pc.ballot;
 
-    auto &old_partition_config = app->partitions[gpid.get_partition_index()];
-    const auto old_max_replica_count = old_partition_config.max_replica_count;
-    const auto old_ballot = old_partition_config.ballot;
+    auto &old_pc = app->pcs[gpid.get_partition_index()];
+    const auto old_max_replica_count = old_pc.max_replica_count;
+    const auto old_ballot = old_pc.ballot;
 
     CHECK_EQ_MSG(old_ballot + 1,
                  new_ballot,
@@ -3834,14 +3847,14 @@ void server_state::update_partition_max_replica_count_locally(
                  old_ballot,
                  new_ballot);
 
-    std::string old_config_str(boost::lexical_cast<std::string>(old_partition_config));
-    std::string new_config_str(boost::lexical_cast<std::string>(new_partition_config));
+    std::string old_config_str(boost::lexical_cast<std::string>(old_pc));
+    std::string new_config_str(boost::lexical_cast<std::string>(new_pc));
 
-    old_partition_config = new_partition_config;
+    old_pc = new_pc;
 
     LOG_INFO("local partition-level max_replica_count has been changed successfully: ",
-             "app_name={}, app_id={}, partition_id={}, old_partition_config={}, "
-             "new_partition_config={}",
+             "app_name={}, app_id={}, partition_id={}, old_pc={}, "
+             "new_pc={}",
              app->app_name,
              app->app_id,
              partition_index,
@@ -3910,7 +3923,7 @@ void server_state::recover_all_partitions_max_replica_count(std::shared_ptr<app_
     for (int i = 0; i < app->partition_count; ++i) {
         zauto_read_lock l(_lock);
 
-        auto new_pc = app->partitions[i];
+        auto new_pc = app->pcs[i];
         if (new_pc.max_replica_count == new_max_replica_count) {
             LOG_WARNING("no need to recover partition-level max_replica_count since it has been "
                         "updated before: app_name={}, app_id={}, partition_index={}, "
@@ -3944,7 +3957,7 @@ void server_state::recover_all_partitions_max_replica_count(std::shared_ptr<app_
             [this, app, i, new_pc](error_code ec) mutable {
                 zauto_write_lock l(_lock);
 
-                auto &old_pc = app->partitions[i];
+                auto &old_pc = app->pcs[i];
                 std::string old_pc_str(boost::lexical_cast<std::string>(old_pc));
                 std::string new_pc_str(boost::lexical_cast<std::string>(new_pc));
 

@@ -341,7 +341,7 @@ private:
     void on_node_query_reply_scatter(replica_stub_ptr this_,
                                      const configuration_update_request &config);
     void on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id);
-    void remove_replica_on_meta_server(const app_info &info, const partition_configuration &config);
+    void remove_replica_on_meta_server(const app_info &info, const partition_configuration &pc);
     task_ptr begin_open_replica(const app_info &app,
                                 gpid id,
                                 const std::shared_ptr<group_check_request> &req,

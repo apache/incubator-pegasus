@@ -60,7 +60,7 @@ private:
     std::string _master_cluster_name;
     std::string _master_app_name;
     std::vector<host_port> _master_meta_list;
-    partition_configuration _master_replica_config;
+    partition_configuration _pc;
 
     bool need_duplicate{false};
 
@@ -78,11 +78,8 @@ private:
     std::string master_replica_name()
     {
         std::string app_info = fmt::format("{}.{}", _master_cluster_name, _master_app_name);
-        if (_master_replica_config.hp_primary) {
-            return fmt::format("{}({}|{})",
-                               app_info,
-                               FMT_HOST_PORT_AND_IP(_master_replica_config, primary),
-                               _master_replica_config.pid);
+        if (_pc.hp_primary) {
+            return fmt::format("{}({}|{})", app_info, FMT_HOST_PORT_AND_IP(_pc, primary), _pc.pid);
         }
         return app_info;
     }
