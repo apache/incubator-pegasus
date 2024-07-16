@@ -20,6 +20,7 @@
 #include "available_detector.h"
 
 #include <fmt/core.h>
+#include <fmt/std.h> // IWYU pragma: keep
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <pegasus/error.h>
 #include <stdlib.h>
@@ -31,12 +32,11 @@
 #include <type_traits>
 #include <utility>
 
-#include <fmt/std.h> // IWYU pragma: keep
-
 #include "base/pegasus_key_schema.h"
 #include "client/replication_ddl_client.h"
 #include "common/common.h"
 #include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
 #include "pegasus/client.h"
 #include "perf_counter/perf_counter.h"
 #include "result_writer.h"
