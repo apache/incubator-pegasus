@@ -25,7 +25,6 @@
 #include <string>
 #include <vector>
 
-#include "dsn.layer2_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
