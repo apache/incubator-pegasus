@@ -143,6 +143,7 @@ public:
     //
     // initialization
     //
+    void load_replicas(replicas &reps);
     void initialize(const replication_options &opts, bool clear = false);
     void initialize(bool clear = false);
     void set_options(const replication_options &opts) { _options = opts; }
