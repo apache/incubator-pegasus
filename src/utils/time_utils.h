@@ -155,6 +155,8 @@ public:
         return now - _start_time_ns;
     }
 
+    inline uint64_t duration_ms() const { return duration_ns() / 1'000'000; }
+
 private:
     uint64_t _start_time_ns;
 
