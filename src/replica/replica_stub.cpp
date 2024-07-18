@@ -80,6 +80,7 @@
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/rand.h"
+#include "utils/simple_concurrent_queue.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #ifdef DSN_ENABLE_GPERF
@@ -266,12 +267,10 @@ DSN_DEFINE_uint64(replication,
                   "The max number of replicas that are allowed to be loaded simultaneously "
                   "for each disk dir.");
 
-/*
 DSN_DEFINE_uint64(replication,
                   load_replicas_retry_interval_ms,
-                  50,
+                  10,
                   "The retry interval after max_replicas_on_load_for_each_disk has been reached.");
- */
 
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
@@ -471,76 +470,106 @@ void replica_stub::load_replicas(replicas &reps)
         disks.emplace_back(dn.get(), std::move(sub_dirs));
     }
 
-    utils::ex_lock reps_lock;
-    std::vector<std::deque<task_ptr>> load_tasks;
-    load_tasks.reserve(disks.size());
-
-    std::vector<std::thread> threads;
-
-    std::atomic<int> task_hash(0);
+    std::vector<std::unique_ptr<simple_concurrent_queue<task_ptr>>> load_disk_queues;
+    load_disk_queues.reserve(disks.size());
     for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
-        load_tasks.emplace_back();
-
-        threads.emplace_back(
-            [this, &reps, &reps_lock, &task_hash, &load_tasks, &disks, disk_index]() mutable {
-                const auto &[dn, dirs] = disks[disk_index];
-
-                auto &disk_tasks = load_tasks[disk_index];
-                for (size_t dir_index = 0; dir_index < dirs.size();) {
-                    if (disk_tasks.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
-                        // std::this_thread::sleep_for(
-                        //     std::chrono::milliseconds(FLAGS_load_replicas_retry_interval_ms));
-                        disk_tasks.front()->wait();
-                        disk_tasks.pop_front();
-                        continue;
-                    }
-
-                    const auto &dir = dirs[dir_index++];
-                    if (dsn::replication::is_data_dir_invalid(dir)) {
-                        LOG_WARNING("ignore dir {}", dir);
-                        continue;
-                    }
-
-                    disk_tasks.push_back(tasking::create_task(
-                        // Ensure that the thread pool is non-partitioned.
-                        LPC_REPLICATION_INIT_LOAD,
-                        &_tracker,
-                        [this, dn, dir, &reps, &reps_lock] {
-                            LOG_INFO("process dir {}", dir);
-
-                            auto r = load_replica(dn, dir.c_str());
-                            if (r == nullptr) {
-                                return;
-                            }
-                            LOG_INFO("{}@{}: load replica '{}' success, <durable, "
-                                     "commit> = <{}, {}>, last_prepared_decree = {}",
-                                     r->get_gpid(),
-                                     dsn_primary_host_port(),
-                                     dir,
-                                     r->last_durable_decree(),
-                                     r->last_committed_decree(),
-                                     r->last_prepared_decree());
-
-                            utils::auto_lock<utils::ex_lock> l(reps_lock);
-                            CHECK(reps.find(r->get_gpid()) == reps.end(),
-                                  "conflict replica dir: {} <--> {}",
-                                  r->dir(),
-                                  reps[r->get_gpid()]->dir());
-
-                            reps[r->get_gpid()] = r;
-                        },
-                        task_hash.fetch_add(1, std::memory_order_relaxed)));
-                    disk_tasks.back()->enqueue();
-                }
-
-                for (auto &disk_task : disk_tasks) {
-                    disk_task->wait();
-                }
-            });
+        load_disk_queues.push_back(std::make_unique<simple_concurrent_queue<task_ptr>>());
     }
 
-    for (auto &t : threads) {
-        t.join();
+    std::vector<std::thread> threads;
+    for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
+        threads.emplace_back([&load_disk_queues, &disks, disk_index]() mutable {
+            auto &load_disk_queue = load_disk_queues[disk_index];
+            while (true) {
+                task_ptr load_replica_task;
+                load_disk_queue->pop(load_replica_task);
+                if (load_replica_task == nullptr) {
+                    break;
+                }
+
+                load_replica_task->wait();
+            }
+        });
+    }
+
+    utils::ex_lock reps_lock;
+    std::vector<size_t> dir_indexes(disks.size(), 0);
+
+    while (true) {
+        size_t finished_disks = 0;
+        size_t throttling_disks = 0;
+
+        for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
+            auto &load_disk_queue = load_disk_queues[disk_index];
+            auto &dir_index = dir_indexes[disk_index];
+            const auto &[dn, dirs] = disks[disk_index];
+
+            if (dir_index >= dirs.size()) {
+                ++finished_disks;
+                continue;
+            }
+
+            if (load_disk_queue->size() >= FLAGS_max_replicas_on_load_for_each_disk) {
+                ++throttling_disks;
+                continue;
+            }
+
+            const auto &dir = dirs[dir_index++];
+            if (dsn::replication::is_data_dir_invalid(dir)) {
+                LOG_WARNING("ignore dir {}", dir);
+                continue;
+            }
+
+            auto load_replica_task = tasking::create_task(
+                // Ensure that the thread pool is non-partitioned.
+                LPC_REPLICATION_INIT_LOAD,
+                &_tracker,
+                [this, dn, dir, &reps, &reps_lock] {
+                    LOG_INFO("process dir {}", dir);
+
+                    auto r = load_replica(dn, dir.c_str());
+                    if (r == nullptr) {
+                        return;
+                    }
+
+                    LOG_INFO("{}@{}: load replica '{}' success, <durable, "
+                             "commit> = <{}, {}>, last_prepared_decree = {}",
+                             r->get_gpid(),
+                             dsn_primary_host_port(),
+                             dir,
+                             r->last_durable_decree(),
+                             r->last_committed_decree(),
+                             r->last_prepared_decree());
+
+                    utils::auto_lock<utils::ex_lock> l(reps_lock);
+                    CHECK(reps.find(r->get_gpid()) == reps.end(),
+                          "conflict replica dir: {} <--> {}",
+                          r->dir(),
+                          reps[r->get_gpid()]->dir());
+
+                    reps[r->get_gpid()] = r;
+                });
+
+            load_replica_task->enqueue();
+            load_disk_queue->push(std::move(load_replica_task));
+        }
+
+        if (finished_disks >= disks.size()) {
+            break;
+        }
+
+        if (throttling_disks >= disks.size()) {
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(FLAGS_load_replicas_retry_interval_ms));
+        }
+    }
+
+    for (auto &load_disk_queue : load_disk_queues) {
+        load_disk_queue->push(task_ptr());
+    }
+
+    for (auto &thread : threads) {
+        thread.join();
     }
 }
 
