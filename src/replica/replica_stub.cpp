@@ -478,7 +478,7 @@ void replica_stub::load_replicas(replicas &reps)
         load_disk_queues.push_back(std::make_unique<simple_concurrent_queue<task_ptr>>());
     } */
 
-    /* 
+    /*
     const auto &service_info = service_app::current_service_app_info();
 
     std::vector<std::thread> threads;
