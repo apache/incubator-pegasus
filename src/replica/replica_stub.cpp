@@ -35,9 +35,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
-#include <queue>
 #include <iterator>
 #include <mutex>
+#include <queue>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -80,7 +80,6 @@
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/rand.h"
-#include "utils/simple_concurrent_queue.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
