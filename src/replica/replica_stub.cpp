@@ -478,7 +478,7 @@ void replica_stub::load_replicas(replicas &reps)
 
     std::vector<std::thread> threads;
     for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
-        threads.emplace_back([&load_disk_queues, &disks, disk_index]() mutable {
+        threads.emplace_back([&load_disk_queues, disk_index]() mutable {
             auto &load_disk_queue = load_disk_queues[disk_index];
             while (true) {
                 task_ptr load_replica_task;
@@ -500,15 +500,14 @@ void replica_stub::load_replicas(replicas &reps)
         size_t throttling_disks = 0;
 
         for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
-            auto &load_disk_queue = load_disk_queues[disk_index];
             auto &dir_index = dir_indexes[disk_index];
-            const auto &[dn, dirs] = disks[disk_index];
-
+            const auto &dirs = disks[disk_index].second;
             if (dir_index >= dirs.size()) {
                 ++finished_disks;
                 continue;
             }
 
+            auto &load_disk_queue = load_disk_queues[disk_index];
             if (load_disk_queue->size() >= FLAGS_max_replicas_on_load_for_each_disk) {
                 ++throttling_disks;
                 continue;
@@ -520,6 +519,16 @@ void replica_stub::load_replicas(replicas &reps)
                 continue;
             }
 
+            // Structured bindings can be captured by closures in g++, while not supported
+            // well by clang. Thus we do not use following statement to bind both variables
+            // until clang has been upgraded to version 16 which could support that well:
+            //
+            //     const auto &[dn, dirs] = disks[disk_index];
+            //
+            // For the docs of clang 16 please see:
+            //
+            // https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#c-20-feature-support:
+            const auto &dn = disks[disk_index].first;
             auto load_replica_task = tasking::create_task(
                 // Ensure that the thread pool is non-partitioned.
                 LPC_REPLICATION_INIT_LOAD,
