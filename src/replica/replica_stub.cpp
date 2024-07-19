@@ -35,7 +35,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
-#include <deque>
+#include <queue>
 #include <iterator>
 #include <mutex>
 #include <set>
@@ -83,6 +83,7 @@
 #include "utils/simple_concurrent_queue.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
+#include "utils/time_utils.h"
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
 #elif defined(DSN_USE_JEMALLOC)
@@ -268,7 +269,7 @@ DSN_DEFINE_uint64(replication,
                   "for each disk dir.");
 
 DSN_DEFINE_uint64(replication,
-                  load_replicas_retry_interval_ms,
+                  wait_load_replica_ms,
                   10,
                   "The retry interval after max_replicas_on_load_for_each_disk has been reached.");
 
@@ -464,40 +465,52 @@ void replica_stub::load_replicas(replicas &reps)
         }
 
         std::vector<std::string> sub_dirs;
+        LOG_INFO("full dir {}", dn->full_dir);
         CHECK(dsn::utils::filesystem::get_subdirectories(dn->full_dir, sub_dirs, false),
               "failed to get sub_directories in {}",
               dn->full_dir);
         disks.emplace_back(dn.get(), std::move(sub_dirs));
     }
 
-    std::vector<std::unique_ptr<simple_concurrent_queue<task_ptr>>> load_disk_queues;
-    load_disk_queues.reserve(disks.size());
+    std::vector<std::queue<task_ptr>> load_disk_queues(disks.size());
+    /* load_disk_queues.reserve(disks.size());
     for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
         load_disk_queues.push_back(std::make_unique<simple_concurrent_queue<task_ptr>>());
-    }
+    } */
+
+    /* 
+    const auto &service_info = service_app::current_service_app_info();
 
     std::vector<std::thread> threads;
     for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
-        threads.emplace_back([&load_disk_queues, disk_index]() mutable {
+        threads.emplace_back([&service_info, &load_disk_queues, disk_index]() mutable {
+            // Initialize non-dsn thread.
+            LOG_INFO("role_name={}, index={}",service_info.role_name.c_str(), service_info.index);
+            dsn_mimic_app(service_info.role_name.c_str(), service_info.index);
+
             auto &load_disk_queue = load_disk_queues[disk_index];
             while (true) {
                 task_ptr load_replica_task;
+                LOG_INFO("to pop");
                 load_disk_queue->pop(load_replica_task);
                 if (load_replica_task == nullptr) {
+                LOG_INFO("load_replica_task null");
                     break;
                 }
+                LOG_INFO("load_replica_task not null");
 
                 load_replica_task->wait();
+                LOG_INFO("after wait");
             }
         });
     }
+ */
 
     utils::ex_lock reps_lock;
     std::vector<size_t> dir_indexes(disks.size(), 0);
 
     while (true) {
         size_t finished_disks = 0;
-        size_t throttling_disks = 0;
 
         for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
             auto &dir_index = dir_indexes[disk_index];
@@ -508,12 +521,15 @@ void replica_stub::load_replicas(replicas &reps)
             }
 
             auto &load_disk_queue = load_disk_queues[disk_index];
-            if (load_disk_queue->size() >= FLAGS_max_replicas_on_load_for_each_disk) {
-                ++throttling_disks;
+            if (load_disk_queue.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
+                if (load_disk_queue.front()->wait(FLAGS_wait_load_replica_ms)) {
+                    load_disk_queue.pop();
+                }
                 continue;
             }
 
             const auto &dir = dirs[dir_index++];
+            LOG_INFO("load dir {}", dir);
             if (dsn::replication::is_data_dir_invalid(dir)) {
                 LOG_WARNING("ignore dir {}", dir);
                 continue;
@@ -529,7 +545,7 @@ void replica_stub::load_replicas(replicas &reps)
             //
             // https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#c-20-feature-support:
             const auto &dn = disks[disk_index].first;
-            auto load_replica_task = tasking::create_task(
+            load_disk_queue.push(tasking::create_task(
                 // Ensure that the thread pool is non-partitioned.
                 LPC_REPLICATION_INIT_LOAD,
                 &_tracker,
@@ -538,6 +554,7 @@ void replica_stub::load_replicas(replicas &reps)
 
                     auto r = load_replica(dn, dir.c_str());
                     if (r == nullptr) {
+                        LOG_INFO("process dir null");
                         return;
                     }
 
@@ -557,29 +574,35 @@ void replica_stub::load_replicas(replicas &reps)
                           reps[r->get_gpid()]->dir());
 
                     reps[r->get_gpid()] = r;
-                });
+                }));
 
-            load_replica_task->enqueue();
-            load_disk_queue->push(std::move(load_replica_task));
+            load_disk_queue.back()->enqueue();
         }
 
+        LOG_INFO("finished disks: {}, disk size = {}", finished_disks, disks.size());
         if (finished_disks >= disks.size()) {
             break;
-        }
-
-        if (throttling_disks >= disks.size()) {
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(FLAGS_load_replicas_retry_interval_ms));
         }
     }
 
     for (auto &load_disk_queue : load_disk_queues) {
+        while (!load_disk_queue.empty()) {
+            CHECK_TRUE(load_disk_queue.front()->wait());
+            load_disk_queue.pop();
+        }
+    }
+
+    /*
+    for (auto &load_disk_queue : load_disk_queues) {
         load_disk_queue->push(task_ptr());
     }
 
+    LOG_INFO("notify finish");
     for (auto &thread : threads) {
         thread.join();
     }
+    LOG_INFO("load done");
+  */
 }
 
 void replica_stub::initialize(const replication_options &opts, bool clear /* = false*/)
@@ -2124,6 +2147,8 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
     FAIL_POINT_INJECT_F("mock_replica_load",
                         [&](std::string_view) -> replica * { return nullptr; });
 
+    LOG_INFO("{}: begin validate replica", dir);
+
     app_info ai;
     gpid pid;
     std::string hint_message;
@@ -2135,7 +2160,9 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
     // The replica's directory must exist when creating a replica.
     CHECK_EQ(dir, dn->replica_dir(ai.app_type, pid));
     auto *rep = new replica(this, pid, ai, dn, false);
+    LOG_INFO("{}: begin load replica", rep->name());
     const auto err = rep->initialize_on_load();
+    LOG_INFO("{}: end load replica", rep->name());
     if (err != ERR_OK) {
         LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
         rep->close();
