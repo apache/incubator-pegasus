@@ -268,9 +268,9 @@ DSN_DEFINE_uint64(replication,
                   "for each disk dir.");
 
 DSN_DEFINE_uint64(replication,
-                  wait_load_replica_ms,
+                  load_replica_max_wait_time_ms,
                   10,
-                  "The retry interval after max_replicas_on_load_for_each_disk has been reached.");
+                  "The max waiting time for replica loading to complete.");
 
 DSN_DEFINE_bool(replication,
                 deny_client_on_start,
@@ -464,49 +464,15 @@ void replica_stub::load_replicas(replicas &reps)
         }
 
         std::vector<std::string> sub_dirs;
-        LOG_INFO("full dir {}", dn->full_dir);
         CHECK(dsn::utils::filesystem::get_subdirectories(dn->full_dir, sub_dirs, false),
               "failed to get sub_directories in {}",
               dn->full_dir);
         disks.emplace_back(dn.get(), std::move(sub_dirs));
     }
 
-    std::vector<std::queue<task_ptr>> load_disk_queues(disks.size());
-    /* load_disk_queues.reserve(disks.size());
-    for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
-        load_disk_queues.push_back(std::make_unique<simple_concurrent_queue<task_ptr>>());
-    } */
-
-    /*
-    const auto &service_info = service_app::current_service_app_info();
-
-    std::vector<std::thread> threads;
-    for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
-        threads.emplace_back([&service_info, &load_disk_queues, disk_index]() mutable {
-            // Initialize non-dsn thread.
-            LOG_INFO("role_name={}, index={}",service_info.role_name.c_str(), service_info.index);
-            dsn_mimic_app(service_info.role_name.c_str(), service_info.index);
-
-            auto &load_disk_queue = load_disk_queues[disk_index];
-            while (true) {
-                task_ptr load_replica_task;
-                LOG_INFO("to pop");
-                load_disk_queue->pop(load_replica_task);
-                if (load_replica_task == nullptr) {
-                LOG_INFO("load_replica_task null");
-                    break;
-                }
-                LOG_INFO("load_replica_task not null");
-
-                load_replica_task->wait();
-                LOG_INFO("after wait");
-            }
-        });
-    }
- */
-
-    utils::ex_lock reps_lock;
     std::vector<size_t> dir_indexes(disks.size(), 0);
+    std::vector<std::queue<task_ptr>> load_disk_queues(disks.size());
+    utils::ex_lock reps_lock;
 
     while (true) {
         size_t finished_disks = 0;
@@ -521,14 +487,13 @@ void replica_stub::load_replicas(replicas &reps)
 
             auto &load_disk_queue = load_disk_queues[disk_index];
             if (load_disk_queue.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
-                if (load_disk_queue.front()->wait(FLAGS_wait_load_replica_ms)) {
+                if (load_disk_queue.front()->wait(FLAGS_load_replica_max_wait_time_ms)) {
                     load_disk_queue.pop();
                 }
                 continue;
             }
 
             const auto &dir = dirs[dir_index++];
-            LOG_INFO("load dir {}", dir);
             if (dsn::replication::is_data_dir_invalid(dir)) {
                 LOG_WARNING("ignore dir {}", dir);
                 continue;
@@ -551,34 +516,32 @@ void replica_stub::load_replicas(replicas &reps)
                 [this, dn, dir, &reps, &reps_lock] {
                     LOG_INFO("process dir {}", dir);
 
-                    auto r = load_replica(dn, dir.c_str());
-                    if (r == nullptr) {
-                        LOG_INFO("process dir null");
+                    auto rep = load_replica(dn, dir.c_str());
+                    if (rep == nullptr) {
                         return;
                     }
 
                     LOG_INFO("{}@{}: load replica '{}' success, <durable, "
                              "commit> = <{}, {}>, last_prepared_decree = {}",
-                             r->get_gpid(),
+                             rep->get_gpid(),
                              dsn_primary_host_port(),
                              dir,
-                             r->last_durable_decree(),
-                             r->last_committed_decree(),
-                             r->last_prepared_decree());
+                             rep->last_durable_decree(),
+                             rep->last_committed_decree(),
+                             rep->last_prepared_decree());
 
                     utils::auto_lock<utils::ex_lock> l(reps_lock);
-                    CHECK(reps.find(r->get_gpid()) == reps.end(),
+                    CHECK(reps.find(rep->get_gpid()) == reps.end(),
                           "conflict replica dir: {} <--> {}",
-                          r->dir(),
-                          reps[r->get_gpid()]->dir());
+                          rep->dir(),
+                          reps[rep->get_gpid()]->dir());
 
-                    reps[r->get_gpid()] = r;
+                    reps[rep->get_gpid()] = rep;
                 }));
 
             load_disk_queue.back()->enqueue();
         }
 
-        LOG_INFO("finished disks: {}, disk size = {}", finished_disks, disks.size());
         if (finished_disks >= disks.size()) {
             break;
         }
@@ -590,18 +553,6 @@ void replica_stub::load_replicas(replicas &reps)
             load_disk_queue.pop();
         }
     }
-
-    /*
-    for (auto &load_disk_queue : load_disk_queues) {
-        load_disk_queue->push(task_ptr());
-    }
-
-    LOG_INFO("notify finish");
-    for (auto &thread : threads) {
-        thread.join();
-    }
-    LOG_INFO("load done");
-  */
 }
 
 void replica_stub::initialize(const replication_options &opts, bool clear /* = false*/)
