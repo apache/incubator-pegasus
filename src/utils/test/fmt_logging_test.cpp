@@ -27,13 +27,14 @@
 #include <fmt/core.h>
 #include <memory>
 
+#include "absl/strings/string_view.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"
 #include "runtime/task/task_code.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "absl/strings/string_view.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
