@@ -186,10 +186,9 @@ TEST(cluster_balance_policy, get_node_migration_info)
     policy.get_node_migration_info(ns, all_apps, migration_info);
 
     ASSERT_EQ(migration_info.hp, hp);
-    const auto *ps = FindOrNull(migration_info.partitions, disk_tag);
-    ASSERT_TRUE(ps != nullptr);
-    ASSERT_EQ(ps->size(), 1);
-    ASSERT_EQ(*ps->begin(), pid);
+    ASSERT_NE(migration_info.partitions.find(disk_tag), migration_info.partitions.end());
+    ASSERT_EQ(migration_info.partitions.at(disk_tag).size(), 1);
+    ASSERT_EQ(*migration_info.partitions.at(disk_tag).begin(), pid);
 }
 
 TEST(cluster_balance_policy, get_min_max_set)

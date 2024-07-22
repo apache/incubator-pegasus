@@ -23,17 +23,16 @@
 
 #include "rrdb/rrdb_types.h"
 #include "utils/fmt_utils.h"
-#include "utils/map_util.h"
 
 namespace pegasus {
 
 inline std::string cas_check_type_to_string(dsn::apps::cas_check_type::type type)
 {
-    const auto *name = dsn::FindOrNull(dsn::apps::_cas_check_type_VALUES_TO_NAMES, type);
-    if (name == nullptr) {
-        return fmt::format("INVALID={}", type);
+    auto it = dsn::apps::_cas_check_type_VALUES_TO_NAMES.find(type);
+    if (it == dsn::apps::_cas_check_type_VALUES_TO_NAMES.end()) {
+        return std::string("INVALID=") + std::to_string(int(type));
     }
-    return *name;
+    return it->second;
 }
 
 inline bool cas_is_check_operand_needed(dsn::apps::cas_check_type::type type)

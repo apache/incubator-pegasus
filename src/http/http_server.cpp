@@ -250,7 +250,8 @@ void http_server::serve(message_ex *msg)
             if (sep + 1 < arg_val.size()) {
                 value = arg_val.substr(sep + 1, arg_val.size() - sep);
             }
-            if (ContainsKey(ret.query_args, name)) {
+            auto iter = ret.query_args.find(name);
+            if (iter != ret.query_args.end()) {
                 return FMT_ERR(ERR_INVALID_PARAMETERS, "duplicate parameter: {}", name);
             }
             ret.query_args.emplace(std::move(name), std::move(value));

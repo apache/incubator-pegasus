@@ -52,7 +52,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/long_adder.h"
 #include "utils/macros.h"
-#include "utils/map_util.h"
 #include "utils/nth_element.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
@@ -1747,13 +1746,13 @@ inline error_s parse_metric_attribute(const metric_entity::attr_map &attrs,
                                       const std::string &name,
                                       TAttrValue &value)
 {
-    const auto *value_ptr = FindOrNull(attrs, name);
-    if (dsn_unlikely(value_ptr == nullptr)) {
+    const auto &iter = attrs.find(name);
+    if (dsn_unlikely(iter == attrs.end())) {
         return FMT_ERR(dsn::ERR_INVALID_DATA, "{} field was not found", name);
     }
 
-    if (dsn_unlikely(!dsn::buf2numeric(*value_ptr, value))) {
-        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid {}: {}", name, *value_ptr);
+    if (dsn_unlikely(!dsn::buf2numeric(iter->second, value))) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid {}: {}", name, iter->second);
     }
 
     return dsn::error_s::ok();

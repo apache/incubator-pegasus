@@ -39,7 +39,6 @@
 #include "runtime/rpc/rpc_message.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
-#include "utils/map_util.h"
 #include "utils/rand.h"
 #include "utils/strings.h"
 #include "utils/test/nth_element_utils.h"
@@ -247,7 +246,7 @@ TEST(metrics_test, create_entity)
         auto attrs = entity->attributes();
         ASSERT_EQ(attrs, test.entity_attrs);
 
-        ASSERT_TRUE(!ContainsKey(entities, test.entity_id));
+        ASSERT_EQ(entities.find(test.entity_id), entities.end());
         entities[test.entity_id] = entity;
     }
 
@@ -316,14 +315,18 @@ TEST(metrics_test, create_metric)
 
         ASSERT_EQ(my_metric->value(), test.value);
 
-        auto iter = LookupOrInsert(&expected_entities, test.entity.get(), {});
-        iter.emplace(test.prototype, my_metric);
+        auto iter = expected_entities.find(test.entity.get());
+        if (iter == expected_entities.end()) {
+            expected_entities[test.entity.get()] = {{test.prototype, my_metric}};
+        } else {
+            iter->second[test.prototype] = my_metric;
+        }
     }
 
     entity_map actual_entities;
     auto entities = metric_registry::instance().entities();
     for (const auto &entity : entities) {
-        if (ContainsKey(expected_entities, entity.second.get())) {
+        if (expected_entities.find(entity.second.get()) != expected_entities.end()) {
             actual_entities[entity.second.get()] = entity.second->metrics();
         }
     }
@@ -775,7 +778,7 @@ void run_percentile(const metric_entity_ptr &my_entity,
     std::vector<T> actual_elements;
     for (const auto &kth : kAllKthPercentileTypes) {
         T value;
-        if (!ContainsKey(kth_percentiles, kth)) {
+        if (kth_percentiles.find(kth) == kth_percentiles.end()) {
             ASSERT_FALSE(my_metric->get(kth, value));
             checker(value, 0);
         } else {
@@ -1096,7 +1099,8 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         filters.with_metric_fields = metric_fields;                                                \
                                                                                                    \
         metric_value_map<value_type> expected_value_map;                                           \
-        if (ContainsKey(expected_metric_fields, kMetricSingleValueField)) {                        \
+        if (expected_metric_fields.find(kMetricSingleValueField) !=                                \
+            expected_metric_fields.end()) {                                                        \
             expected_value_map[kMetricSingleValueField] = test.expected_value;                     \
         }                                                                                          \
                                                                                                    \
@@ -1279,7 +1283,7 @@ void generate_metric_value_map(MetricType *my_metric,
     for (const auto &type : kth_percentiles) {
         auto name = kth_percentile_to_name(type);
         // Only add the chosen fields to the expected value map.
-        if (ContainsKey(expected_metric_fields, name)) {
+        if (expected_metric_fields.find(name) != expected_metric_fields.end()) {
             value_map[name] = *value;
         }
         ++value;
@@ -2867,11 +2871,13 @@ TEST(metrics_test, http_get_metrics)
     for (const auto &test : tests) {
         entity_container expected_entities;
         for (const auto &entity_pair : test.expected_entity_metrics) {
-            const auto *entity = FindOrNull(entities, entity_pair.first);
-            ASSERT_NE(entity, nullptr);
-            expected_entities.emplace((*entity)->id(),
-                                      entity_properties{(*entity)->prototype()->name(),
-                                                        (*entity)->attributes(),
+            const auto &iter = entities.find(entity_pair.first);
+            ASSERT_NE(entities.end(), iter);
+
+            const auto &entity = iter->second;
+            expected_entities.emplace(entity->id(),
+                                      entity_properties{entity->prototype()->name(),
+                                                        entity->attributes(),
                                                         entity_pair.second});
         }
 
@@ -3125,11 +3131,11 @@ void scoped_entity::test_survival_immediately_after_initialization() const
     // Use internal member directly instead of calling entities(). We don't want to have
     // any reference which may affect the test results.
     const auto &entities = metric_registry::instance()._entities;
-    const auto *entity = FindOrNull(entities, _my_entity_id);
-    ASSERT_NE(entity, nullptr);
-    ASSERT_EQ(_expected_my_entity_raw_ptr, entity->get());
+    const auto &iter = entities.find(_my_entity_id);
+    ASSERT_NE(entities.end(), iter);
+    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->second.get());
 
-    const auto &actual_surviving_metrics = get_actual_surviving_metrics(*entity);
+    const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
     ASSERT_EQ(_expected_all_metrics, actual_surviving_metrics);
 }
 
@@ -3143,18 +3149,18 @@ void scoped_entity::test_survival_after_retirement() const
     // Use internal member directly instead of calling entities(). We don't want to have
     // any reference which may affect the test results.
     const auto &entities = metric_registry::instance()._entities;
-    const auto *iter = FindOrNull(entities, _my_entity_id);
+    const auto &iter = entities.find(_my_entity_id);
     if (_my_entity == nullptr) {
         // The entity has been retired.
-        ASSERT_EQ(iter, nullptr);
+        ASSERT_EQ(entities.end(), iter);
         ASSERT_TRUE(_expected_surviving_metrics.empty());
         return;
     }
 
-    ASSERT_NE(iter, nullptr);
-    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->get());
+    ASSERT_NE(entities.end(), iter);
+    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->second.get());
 
-    const auto &actual_surviving_metrics = get_actual_surviving_metrics(*iter);
+    const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
     ASSERT_EQ(_expected_surviving_metrics, actual_surviving_metrics);
 }
 
