@@ -71,7 +71,10 @@ protected:
 
     static logging_provider *create_default_instance();
 
+    logging_provider(log_level_t stderr_start_level) : _stderr_start_level(stderr_start_level) {}
+
     std::vector<std::unique_ptr<command_deregister>> _cmds;
+    const log_level_t _stderr_start_level;
 };
 
 void set_log_prefixed_message_func(std::function<std::string()> func);

@@ -44,7 +44,7 @@ namespace tools {
 class screen_logger : public logging_provider
 {
 public:
-    explicit screen_logger(const char *, const char *) : _short_header(true) {}
+    explicit screen_logger(const char *, const char *);
     ~screen_logger() override = default;
 
     void log(const char *file,
@@ -56,12 +56,12 @@ public:
     virtual void flush();
 
 private:
-    static void print_header(log_level_t log_level);
+    void print_header(log_level_t log_level);
     void print_long_header(const char *file,
                            const char *function,
                            const int line,
                            log_level_t log_level);
-    static void print_body(const char *body, log_level_t log_level);
+    void print_body(const char *body, log_level_t log_level);
 
     ::dsn::utils::ex_lock_nr _lock;
     const bool _short_header;
@@ -119,7 +119,6 @@ private:
     FILE *_log;
     // The byte size of the current log file.
     uint64_t _file_bytes;
-    const log_level_t _stderr_start_level;
 };
 } // namespace tools
 } // namespace dsn

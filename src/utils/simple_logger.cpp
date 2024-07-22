@@ -79,6 +79,15 @@ DSN_DEFINE_uint64(
 DSN_DEFINE_validator(max_number_of_log_files_on_disk,
                      [](int32_t value) -> bool { return value > 0; });
 
+DSN_DEFINE_string(tools.screen_logger,
+                  stderr_start_level_on_stdout,
+                  "LOG_LEVEL_WARNING",
+                  "The lowest level of log messages to be copied to stderr in addition to stdout");
+DSN_DEFINE_validator(stderr_start_level_on_stdout, [](const char *value) -> bool {
+    const auto level = enum_from_string(value, LOG_LEVEL_INVALID);
+    return LOG_LEVEL_DEBUG <= level && level <= LOG_LEVEL_FATAL;
+});
+
 DSN_DEFINE_string(
     tools.simple_logger,
     stderr_start_level,
@@ -169,9 +178,15 @@ inline void process_fatal_log(log_level_t log_level)
 
 } // anonymous namespace
 
+screen_logger::screen_logger(const char *, const char *)
+    : logging_provider(enum_from_string(FLAGS_stderr_start_level_on_stdout, LOG_LEVEL_INVALID)),
+      _short_header(true)
+{
+}
+
 void screen_logger::print_header(log_level_t log_level)
 {
-    ::dsn::tools::print_header(stdout, LOG_LEVEL_COUNT, log_level);
+    ::dsn::tools::print_header(stdout, _stderr_start_level, log_level);
 }
 
 void screen_logger::print_long_header(const char *file,
@@ -180,12 +195,12 @@ void screen_logger::print_long_header(const char *file,
                                       log_level_t log_level)
 {
     ::dsn::tools::print_long_header(
-        stdout, file, function, line, _short_header, LOG_LEVEL_COUNT, log_level);
+        stdout, file, function, line, _short_header, _stderr_start_level, log_level);
 }
 
 void screen_logger::print_body(const char *body, log_level_t log_level)
 {
-    ::dsn::tools::print_body(stdout, body, LOG_LEVEL_COUNT, log_level);
+    ::dsn::tools::print_body(stdout, body, _stderr_start_level, log_level);
 }
 
 void screen_logger::log(
@@ -206,10 +221,10 @@ void screen_logger::log(
 void screen_logger::flush() { ::fflush(stdout); }
 
 simple_logger::simple_logger(const char *log_dir, const char *role_name)
-    : _log_dir(std::string(log_dir)),
+    : logging_provider(enum_from_string(FLAGS_stderr_start_level, LOG_LEVEL_INVALID)),
+      _log_dir(std::string(log_dir)),
       _log(nullptr),
-      _file_bytes(0),
-      _stderr_start_level(enum_from_string(FLAGS_stderr_start_level, LOG_LEVEL_INVALID))
+      _file_bytes(0)
 {
     // Use 'role_name' if it is specified, otherwise use 'base_name'.
     const std::string symlink_name(
