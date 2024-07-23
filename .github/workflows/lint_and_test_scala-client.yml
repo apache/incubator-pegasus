@@ -23,6 +23,7 @@ on:
       - 'v[0-9]+.*' # release branch
     paths:
       - .github/workflows/lint_and_test_scala-client.yml
+      - idl/**
       - scala-client/**
 
   workflow_dispatch:

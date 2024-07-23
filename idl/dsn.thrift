@@ -25,9 +25,6 @@
  */
 
 namespace cpp dsn
-namespace go base
-namespace java org.apache.pegasus.base
-namespace py pypegasus.base
 
 // place holder
 struct rpc_address

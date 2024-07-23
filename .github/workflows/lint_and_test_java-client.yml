@@ -26,6 +26,7 @@ on:
         - '*dev'      # developing branch
     paths:
       - .github/workflows/lint_and_test_java-client.yml
+      - idl/**
       - java-client/**
 
   workflow_dispatch:

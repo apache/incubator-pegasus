@@ -25,6 +25,7 @@ on:
         - '*dev'      # developing branch
     paths:
       - .github/workflows/test_nodejs-client.yml
+      - idl/**
       - nodejs-client/**
 
   workflow_dispatch:
