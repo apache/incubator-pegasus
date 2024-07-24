@@ -404,9 +404,9 @@ TYPED_TEST_P(MapUtilIntIntTest, FindOrDieTest)
     Map m;
     m[10] = 15;
     EXPECT_EQ(15, FindOrDie(m, 10));
-    ASSERT_DEATH(FindOrDie(m, 8), ""); // Map key not found: 8
+    ASSERT_DEATH(FindOrDie(m, 8), "Map key not found: 8");
     EXPECT_EQ(15, FindOrDieNoPrint(m, 10));
-    ASSERT_DEATH(FindOrDieNoPrint(m, 8), ""); // Map key not found
+    ASSERT_DEATH(FindOrDieNoPrint(m, 8), "Map key not found");
 
     // Make sure the non-const reference returning version works.
     FindOrDie(m, 10) = 20;
@@ -423,7 +423,7 @@ TYPED_TEST_P(MapUtilIntIntTest, InsertOrDieTest)
     Map m;
     InsertOrDie(&m, 1, 2);
     EXPECT_EQ(m[1], 2);
-    ASSERT_DEATH(InsertOrDie(&m, 1, 3), ""); // duplicate
+    ASSERT_DEATH(InsertOrDie(&m, 1, 3), "duplicate");
 }
 
 TYPED_TEST_P(MapUtilIntIntTest, InsertKeyOrDieTest)
@@ -434,7 +434,7 @@ TYPED_TEST_P(MapUtilIntIntTest, InsertKeyOrDieTest)
     EXPECT_EQ(m[1], 0);
     v = 2;
     EXPECT_EQ(m[1], 2);
-    ASSERT_DEATH(InsertKeyOrDie(&m, 1), ""); // duplicate
+    ASSERT_DEATH(InsertKeyOrDie(&m, 1), "duplicate");
 }
 
 TYPED_TEST_P(MapUtilIntIntPtrTest, EraseKeyReturnValuePtrTest)
