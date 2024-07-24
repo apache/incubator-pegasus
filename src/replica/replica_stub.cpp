@@ -2059,6 +2059,27 @@ replica *replica_stub::new_replica(gpid gpid,
     return rep;
 }
 
+/*static*/ std::string replica_stub::get_replica_dir_name(const std::string &dir)
+{
+    static const char splitters[] = {'\\', '/', 0};
+    return utils::get_last_component(dir, splitters);
+}
+
+/* static */ bool
+replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type)
+{
+    int32_t app_id, partition_id;
+    char app_type_buf[128] = {0};
+    if (3 != sscanf(dir_name.c_str(), "%d.%d.%s", &app_id, &partition_id, app_type_buf)) {
+        return false;
+    }
+
+    pid.set_app_id(app_id);
+    pid.set_partition_index(partition_id);
+    app_type = app_type_buf;
+    return true;
+}
+
 bool replica_stub::validate_replica_dir(const std::string &dir,
                                         app_info &ai,
                                         gpid &pid,
@@ -2069,21 +2090,18 @@ bool replica_stub::validate_replica_dir(const std::string &dir,
         return false;
     }
 
-    char splitters[] = {'\\', '/', 0};
-    const auto name = utils::get_last_component(dir, splitters);
-    if (name.empty()) {
+    const auto &dir_name = get_replica_dir_name(dir);
+    if (dir_name.empty()) {
         hint_message = fmt::format("invalid replica dir '{}'", dir);
         return false;
     }
 
-    char app_type[128] = {0};
-    int32_t app_id, pidx;
-    if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
+    std::string app_type;
+    if (!parse_replica_dir_name(dir_name, pid, app_type)) {
         hint_message = fmt::format("invalid replica dir '{}'", dir);
         return false;
     }
 
-    pid = gpid(app_id, pidx);
     replica_app_info rai(&ai);
     const auto ai_path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
     const auto err = rai.load(ai_path);
@@ -2100,7 +2118,7 @@ bool replica_stub::validate_replica_dir(const std::string &dir,
     // When the online partition split function aborted, the garbage partitions are with pidx in
     // the range of [ai.partition_count, 2 * ai.partition_count), which means the partitions with
     // pidx >= ai.partition_count are garbage partitions.
-    if (ai.partition_count <= pidx) {
+    if (ai.partition_count <= pid.get_partition_index()) {
         hint_message = fmt::format(
             "partition[{}], count={}, this replica may be partition split garbage partition, "
             "ignore it",
@@ -2112,12 +2130,10 @@ bool replica_stub::validate_replica_dir(const std::string &dir,
     return true;
 }
 
-replica *replica_stub::load_replica(dir_node *dn, const char *dir)
+replica_ptr replica_stub::load_replica(dir_node *dn, const char *dir)
 {
     FAIL_POINT_INJECT_F("mock_replica_load",
                         [&](std::string_view) -> replica * { return nullptr; });
-
-    LOG_INFO("{}: begin validate replica", dir);
 
     app_info ai;
     gpid pid;
@@ -2130,12 +2146,9 @@ replica *replica_stub::load_replica(dir_node *dn, const char *dir)
     // The replica's directory must exist when creating a replica.
     CHECK_EQ(dir, dn->replica_dir(ai.app_type, pid));
     auto *rep = new replica(this, pid, ai, dn, false);
-    LOG_INFO("{}: begin load replica", rep->name());
     const auto err = rep->initialize_on_load();
-    LOG_INFO("{}: end load replica", rep->name());
     if (err != ERR_OK) {
         LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
-        rep->close();
         delete rep;
         rep = nullptr;
 
