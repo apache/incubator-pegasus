@@ -28,6 +28,7 @@
 
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
+#include <algorithm>
 #include <atomic>
 #include <functional>
 #include <map>
@@ -69,6 +70,12 @@
 #include "utils/fmt_utils.h"
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
+
+namespace dsn {
+namespace utils {
+class ex_lock;
+} // namespace utils
+} // namespace dsn
 
 DSN_DECLARE_uint32(max_concurrent_manual_emergency_checkpointing_count);
 
@@ -339,6 +346,10 @@ private:
     using disk_dirs = std::vector<std::pair<dir_node *, std::vector<std::string>>>;
     disk_dirs get_all_disk_dirs() const;
 
+    static std::string get_replica_dir_name(const std::string &dir);
+    static bool
+    parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type);
+
     void
     load_replica(dir_node *dn, const std::string &dir, utils::ex_lock &reps_lock, replicas &reps);
     void load_replicas(replicas &reps);
@@ -367,7 +378,7 @@ private:
                          bool is_duplication_follower,
                          const std::string &parent_dir = "");
     // Load an existing replica which is located in 'dn' with 'dir' directory.
-    replica *load_replica(dir_node *dn, const char *dir);
+    virtual replica_ptr load_replica(dir_node *dn, const char *dir);
     // Clean up the memory state and on disk data if creating replica failed.
     void clear_on_failure(replica *rep);
     task_ptr begin_close_replica(replica_ptr r);
@@ -451,7 +462,7 @@ private:
     friend class replica_follower;
     friend class replica_follower_test;
     friend class replica_http_service_test;
-    friend class load_replicas_test;
+    friend class LoadReplicasTest;
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
     FRIEND_TEST(replica_test, test_clear_on_failure);
