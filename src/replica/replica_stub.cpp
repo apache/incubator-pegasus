@@ -454,9 +454,9 @@ void replica_stub::initialize(bool clear /* = false*/)
     _access_controller = std::make_unique<dsn::security::access_controller>();
 }
 
-void replica_stub::load_replicas(replicas &reps)
+replica_stub::disk_dirs replica_stub::get_all_disk_dirs() const
 {
-    std::vector<std::pair<dir_node *, std::vector<std::string>>> disks;
+    disk_dirs disks;
     for (const auto &dn : _fs_manager.get_dir_nodes()) {
         // Skip dir node with IO error.
         if (dsn_unlikely(dn->status == disk_status::IO_ERROR)) {
@@ -469,6 +469,43 @@ void replica_stub::load_replicas(replicas &reps)
               dn->full_dir);
         disks.emplace_back(dn.get(), std::move(sub_dirs));
     }
+
+    return disks;
+}
+
+void replica_stub::load_replica(dir_node *dn,
+                                const std::string &dir,
+                                utils::ex_lock &reps_lock,
+                                replicas &reps)
+{
+    LOG_INFO("process dir {}", dir);
+
+    auto rep = load_replica(dn, dir.c_str());
+    if (rep == nullptr) {
+        return;
+    }
+
+    LOG_INFO("{}@{}: load replica '{}' success, <durable, "
+             "commit> = <{}, {}>, last_prepared_decree = {}",
+             rep->get_gpid(),
+             dsn_primary_host_port(),
+             dir,
+             rep->last_durable_decree(),
+             rep->last_committed_decree(),
+             rep->last_prepared_decree());
+
+    utils::auto_lock<utils::ex_lock> l(reps_lock);
+    CHECK(reps.find(rep->get_gpid()) == reps.end(),
+          "conflict replica dir: {} <--> {}",
+          rep->dir(),
+          reps[rep->get_gpid()]->dir());
+
+    reps[rep->get_gpid()] = rep;
+}
+
+void replica_stub::load_replicas(replicas &reps)
+{
+    const auto &disks = get_all_disk_dirs();
 
     std::vector<size_t> dir_indexes(disks.size(), 0);
     std::vector<std::queue<task_ptr>> load_disk_queues(disks.size());
@@ -513,31 +550,14 @@ void replica_stub::load_replicas(replicas &reps)
                 // Ensure that the thread pool is non-partitioned.
                 LPC_REPLICATION_INIT_LOAD,
                 &_tracker,
-                [this, dn, dir, &reps, &reps_lock] {
-                    LOG_INFO("process dir {}", dir);
-
-                    auto rep = load_replica(dn, dir.c_str());
-                    if (rep == nullptr) {
-                        return;
-                    }
-
-                    LOG_INFO("{}@{}: load replica '{}' success, <durable, "
-                             "commit> = <{}, {}>, last_prepared_decree = {}",
-                             rep->get_gpid(),
-                             dsn_primary_host_port(),
-                             dir,
-                             rep->last_durable_decree(),
-                             rep->last_committed_decree(),
-                             rep->last_prepared_decree());
-
-                    utils::auto_lock<utils::ex_lock> l(reps_lock);
-                    CHECK(reps.find(rep->get_gpid()) == reps.end(),
-                          "conflict replica dir: {} <--> {}",
-                          rep->dir(),
-                          reps[rep->get_gpid()]->dir());
-
-                    reps[rep->get_gpid()] = rep;
-                }));
+                std::bind(static_cast<void (replica_stub::*)(
+                              dir_node *, const std::string &, utils::ex_lock &, replicas &)>(
+                              &replica_stub::load_replica),
+                          this,
+                          dn,
+                          dir,
+                          std::ref(reps_lock),
+                          std::ref(reps))));
 
             load_disk_queue.back()->enqueue();
         }
