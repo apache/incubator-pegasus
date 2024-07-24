@@ -143,7 +143,6 @@ public:
     //
     // initialization
     //
-    void load_replicas(replicas &reps);
     void initialize(const replication_options &opts, bool clear = false);
     void initialize(bool clear = false);
     void set_options(const replication_options &opts) { _options = opts; }
@@ -337,6 +336,13 @@ private:
         RL_closed
     };
 
+    using disk_dirs = std::vector<std::pair<dir_node *, std::vector<std::string>>>;
+    disk_dirs get_all_disk_dirs() const;
+
+    void
+    load_replica(dir_node *dn, const std::string &dir, utils::ex_lock &reps_lock, replicas &reps);
+    void load_replicas(replicas &reps);
+
     void initialize_start();
     void query_configuration_by_node();
     void on_meta_server_disconnected_scatter(replica_stub_ptr this_, gpid id);
@@ -445,6 +451,7 @@ private:
     friend class replica_follower;
     friend class replica_follower_test;
     friend class replica_http_service_test;
+    friend class load_replicas_test;
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
     FRIEND_TEST(replica_test, test_clear_on_failure);
