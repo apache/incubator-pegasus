@@ -543,18 +543,14 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
         return;
     }
     file_meta f_meta;
-    bool get_f_meta = true;
     {
         zauto_read_lock l(_lock);
         if (file_index < _metadata.files.size()) {
             f_meta = _metadata.files[file_index];
-        } else {
-            get_f_meta = false;
         }
     }
-    if (!get_f_meta) {
-        LOG_WARNING_PREFIX("sst file index {} exceeds number of bulkload sst files, Cancel "
-                           "download_sst_file task.",
+    if (f_meta.name.empty()) {
+        LOG_WARNING_PREFIX("Cannot get file_meta of {}, cancel download_sst_file task.",
                            file_index);
         return;
     }
@@ -613,16 +609,13 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
     METRIC_VAR_INCREMENT_BY(bulk_load_download_file_bytes, f_size);
 
     // download next file
-    get_f_meta = true;
     {
         zauto_read_lock l(_lock);
         if (file_index + 1 < _metadata.files.size()) {
             f_meta = _metadata.files[file_index + 1];
-        } else {
-            get_f_meta = false;
         }
     }
-    if (get_f_meta) {
+    if (!f_meta.name.empty()) {
         _download_files_task[f_meta.name] =
             tasking::enqueue(LPC_BACKGROUND_BULK_LOAD,
                              tracker(),
