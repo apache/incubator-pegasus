@@ -15,15 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
 #include <map>
+#include <memory>
+#include <mutex>
+#include <set>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "common/fs_manager.h"
 #include "common/gpid.h"
+#include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
+#include "replica/replica.h"
 #include "replica/replica_stub.h"
+#include "replica/replication_app_base.h"
 #include "replica/test/mock_utils.h"
+#include "utils/autoref_ptr.h"
 #include "utils/filesystem.h"
 
 namespace dsn {
@@ -82,6 +93,13 @@ public:
         ASSERT_EQ(_expected_pids, actual_pids);
     }
 
+    void remove_disk_dirs()
+    {
+        for (const auto &dn : _fs_manager.get_dir_nodes()) {
+            ASSERT_TRUE(utils::filesystem::remove_path(dn->full_dir));
+        }
+    }
+
 private:
     void load_replica_for_test(dir_node *dn, const char *dir, replica_ptr &rep)
     {
@@ -126,12 +144,57 @@ TEST_P(LoadReplicasTest, LoadReplicas)
     const auto &load_case = GetParam();
     initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
     test_load_replicas();
+    remove_disk_dirs();
 }
 
-const std::vector<load_replicas_case> load_replicas_tests = {
-    {{{"data0", "disk0"}}, {{"data0", {{1, 2}, {2, 5}}}}}};
+load_replicas_case generate_load_replicas_case(const std::vector<size_t> &replicas_per_disk)
+{
+    static const int32_t kNumPartitions = 8;
 
-INSTANTIATE_TEST_SUITE_P(ReplicaStubTest, LoadReplicasTest, testing::ValuesIn(load_replicas_tests));
+    std::map<std::string, std::string> dirs_by_tag;
+    for (size_t disk_index = 0; disk_index < replicas_per_disk.size(); ++disk_index) {
+        dirs_by_tag.emplace(fmt::format("data{}", disk_index), fmt::format("disk{}", disk_index));
+    }
+
+    int32_t app_id = 1;
+    int32_t partition_id = 0;
+    std::map<std::string, std::vector<gpid>> replicas_by_tag;
+    for (size_t disk_index = 0; disk_index < replicas_per_disk.size(); ++disk_index) {
+        std::vector<gpid> pids;
+        pids.reserve(replicas_per_disk[disk_index]);
+
+        for (size_t replica_index = 0; replica_index < replicas_per_disk[disk_index];
+             ++replica_index) {
+            pids.emplace_back(app_id, partition_id);
+            if (++partition_id >= kNumPartitions) {
+                ++app_id;
+                partition_id = 0;
+            }
+        }
+
+        replicas_by_tag.emplace(fmt::format("data{}", disk_index), pids);
+    }
+
+    return {dirs_by_tag, replicas_by_tag};
+}
+
+std::vector<load_replicas_case> generate_load_replicas_cases()
+{
+    return std::vector<load_replicas_case>({
+        // at least 1 disk dir
+        generate_load_replicas_case({0}),
+        generate_load_replicas_case({0, 0}),
+        generate_load_replicas_case({1}),
+        generate_load_replicas_case({1, 0}),
+        generate_load_replicas_case({2}),
+        generate_load_replicas_case({1, 0, 2}),
+        generate_load_replicas_case({50, 30, 100, 200, 80}),
+    });
+}
+
+INSTANTIATE_TEST_SUITE_P(ReplicaStubTest,
+                         LoadReplicasTest,
+                         testing::ValuesIn(generate_load_replicas_cases()));
 
 } // namespace replication
 } // namespace dsn
