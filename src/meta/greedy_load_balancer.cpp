@@ -104,7 +104,7 @@ std::string greedy_load_balancer::get_balance_operation_count(const std::vector<
     } else {
         info["error"] = fmt::format("invalid arguments");
     }
-    return info.dump(2);
+    return info.dump();
 }
 
 void greedy_load_balancer::score(meta_view view, double &primary_stddev, double &total_stddev)
