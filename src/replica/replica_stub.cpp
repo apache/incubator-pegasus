@@ -270,6 +270,11 @@ DSN_DEFINE_uint64(replication,
                   256,
                   "The max number of replicas that are allowed to be loaded simultaneously "
                   "for each disk dir.");
+DSN_TAG_VARIABLE(max_replicas_on_load_for_each_disk, FT_MUTABLE);
+DSN_DEFINE_validator(max_replicas_on_load_for_each_disk,
+                     [](uint64_t max_replicas_on_load_for_each_disk) -> bool {
+                         return max_replicas_on_load_for_each_disk > 0;
+                     });
 
 DSN_DEFINE_uint64(replication,
                   load_replica_max_wait_time_ms,
@@ -534,7 +539,8 @@ void replica_stub::load_replicas(replicas &reps)
             }
 
             auto &load_disk_queue = load_disk_queues[disk_index];
-            if (load_disk_queue.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
+            if (!load_disk_queue.empty() &&
+                load_disk_queue.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
                 if (load_disk_queue.front()->wait(FLAGS_load_replica_max_wait_time_ms)) {
                     load_disk_queue.pop();
                 }
