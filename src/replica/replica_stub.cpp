@@ -69,6 +69,9 @@
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/task/task_worker.h"
 #include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/command_manager.h"
@@ -82,6 +85,7 @@
 #include "utils/rand.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
+#include "utils/threadpool_spec.h"
 #include "utils/time_utils.h"
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
@@ -448,6 +452,13 @@ void replica_stub::load_replica(dir_node *dn,
                                 replicas &reps)
 {
     LOG_INFO("process dir {}", dir);
+
+    const auto *const worker = task::get_current_worker2();
+    if (worker != nullptr) {
+        CHECK(!(worker->pool()->spec().partitioned),
+              "The thread pool for loading replicas must not be partitioned since load balancing "
+              "is required among multiple threads");
+    }
 
     auto rep = load_replica(dn, dir.c_str());
     if (rep == nullptr) {

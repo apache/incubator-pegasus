@@ -16,6 +16,8 @@
 // under the License.
 
 #include <fmt/core.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -34,6 +36,8 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica/test/mock_utils.h"
+#include "runtime/task/task.h"
+#include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/filesystem.h"
 
@@ -49,7 +53,9 @@ struct load_replicas_case
 class LoadReplicasTest : public replica_stub, public testing::TestWithParam<load_replicas_case>
 {
 public:
-    LoadReplicasTest() {}
+    static const int32_t kAppId;
+
+    LoadReplicasTest() = default;
 
     ~LoadReplicasTest() override = default;
 
@@ -80,8 +86,11 @@ public:
         }
     }
 
-    void test_load_replicas()
+    void test_load_replicas(bool test_load_order)
     {
+        PRESERVE_VAR(allow_inline, dsn::task_spec::get(LPC_REPLICATION_INIT_LOAD)->allow_inline);
+        dsn::task_spec::get(LPC_REPLICATION_INIT_LOAD)->allow_inline = test_load_order;
+
         replicas reps;
         load_replicas(reps);
         ASSERT_EQ(_loaded_replicas, reps);
@@ -100,6 +109,8 @@ public:
         }
     }
 
+    void TearDown() override { remove_disk_dirs(); }
+
 private:
     void load_replica_for_test(dir_node *dn, const char *dir, replica_ptr &rep)
     {
@@ -112,17 +123,24 @@ private:
         ASSERT_TRUE(parse_replica_dir_name(dir_name, pid, app_type));
         ASSERT_STREQ("pegasus", app_type.c_str());
 
+        printf("worker=%d\n", task::get_current_worker_index());
+        ASSERT_EQ(LPC_REPLICATION_INIT_LOAD, task::get_current_task()->spec().code);
+        if (task::get_current_task()->spec().allow_inline) {
+            ASSERT_EQ(gpid(kAppId, _partition_id++), pid);
+        }
+
         // Check full dir.
         ASSERT_EQ(dn->replica_dir("pegasus", pid), dir);
-
-        std::lock_guard<std::mutex> guard(_mtx);
-
-        ASSERT_TRUE(_loaded_replicas.find(pid) == _loaded_replicas.end());
 
         app_info ai;
         ai.app_type = "pegasus";
         rep = new replica(this, pid, ai, dn, false);
         rep->_app = std::make_unique<replication::mock_replication_app_base>(rep);
+
+        std::lock_guard<std::mutex> guard(_mtx);
+
+        ASSERT_TRUE(_loaded_replicas.find(pid) == _loaded_replicas.end());
+
         _loaded_replicas[pid] = rep;
     }
 
@@ -134,45 +152,54 @@ private:
     }
 
     std::set<gpid> _expected_pids;
+    int32_t _partition_id{0};
 
     mutable std::mutex _mtx;
     replicas _loaded_replicas;
 };
 
+const int32_t LoadReplicasTest::kAppId = 1;
+
 TEST_P(LoadReplicasTest, LoadReplicas)
 {
     const auto &load_case = GetParam();
     initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
-    test_load_replicas();
-    remove_disk_dirs();
+    test_load_replicas(false);
+}
+
+TEST_P(LoadReplicasTest, LoadOrder)
+{
+    const auto &load_case = GetParam();
+    initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
+    test_load_replicas(true);
 }
 
 load_replicas_case generate_load_replicas_case(const std::vector<size_t> &replicas_per_disk)
 {
-    static const int32_t kNumPartitions = 8;
-
     std::map<std::string, std::string> dirs_by_tag;
     for (size_t disk_index = 0; disk_index < replicas_per_disk.size(); ++disk_index) {
         dirs_by_tag.emplace(fmt::format("data{}", disk_index), fmt::format("disk{}", disk_index));
     }
 
-    int32_t app_id = 1;
     int32_t partition_id = 0;
     std::map<std::string, std::vector<gpid>> replicas_by_tag;
-    for (size_t disk_index = 0; disk_index < replicas_per_disk.size(); ++disk_index) {
-        std::vector<gpid> pids;
-        pids.reserve(replicas_per_disk[disk_index]);
 
-        for (size_t replica_index = 0; replica_index < replicas_per_disk[disk_index];
-             ++replica_index) {
-            pids.emplace_back(app_id, partition_id);
-            if (++partition_id >= kNumPartitions) {
-                ++app_id;
-                partition_id = 0;
+    while (true) {
+        size_t finished_disks = 0;
+
+        for (size_t disk_index = 0; disk_index < replicas_per_disk.size(); ++disk_index) {
+            auto &replica_list = replicas_by_tag[fmt::format("data{}", disk_index)];
+            if (replica_list.size() >= replicas_per_disk[disk_index]) {
+                ++finished_disks;
+                continue;
             }
+
+            replica_list.emplace_back(LoadReplicasTest::kAppId, partition_id++);
         }
 
-        replicas_by_tag.emplace(fmt::format("data{}", disk_index), pids);
+        if (finished_disks >= replicas_per_disk.size()) {
+            break;
+        }
     }
 
     return {dirs_by_tag, replicas_by_tag};
