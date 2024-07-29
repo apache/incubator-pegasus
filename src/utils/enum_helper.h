@@ -58,7 +58,8 @@ class enum_helper_xxx;
 #define ENUM_END2(type, name)                                                                      \
     return helper;                                                                                 \
     }                                                                                              \
-    inline type enum_from_string(const char *s, type invalid_value)                                \
+    inline type enum_from_string(const char *s,                                                    \
+                                 type invalid_value) /* NOLINT(misc-unused-parameters) */          \
     {                                                                                              \
         return ::dsn::enum_helper_xxx<type>::instance(RegisterEnu_##name).parse(s);                \
     }                                                                                              \
