@@ -343,17 +343,6 @@ private:
         RL_closed
     };
 
-    using disk_dirs = std::vector<std::pair<dir_node *, std::vector<std::string>>>;
-    disk_dirs get_all_disk_dirs() const;
-
-    static std::string get_replica_dir_name(const std::string &dir);
-    static bool
-    parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type);
-
-    void
-    load_replica(dir_node *dn, const std::string &dir, utils::ex_lock &reps_lock, replicas &reps);
-    void load_replicas(replicas &reps);
-
     void initialize_start();
     void query_configuration_by_node();
     void on_meta_server_disconnected_scatter(replica_stub_ptr this_, gpid id);
@@ -377,8 +366,36 @@ private:
                          bool restore_if_necessary,
                          bool is_duplication_follower,
                          const std::string &parent_dir = "");
-    // Load an existing replica which is located in 'dn' with 'dir' directory.
+
+    using disk_dirs = std::vector<std::pair<dir_node *, std::vector<std::string>>>;
+
+    // Get the absolute dirs of all replicas for all disks.
+    disk_dirs get_all_disk_dirs() const;
+
+    // Get the dir name for a replica from a potentially longer path (both absolute and
+    // relative paths are possible).
+    static std::string get_replica_dir_name(const std::string &dir);
+
+    // Parse app id, partition id and app type from the dir name of a replica.
+    static bool
+    parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type);
+
+    // Load an existing replica which is located in `dn` with `dir`. Usually each different
+    // `dn` represents a unique disk. `dir` is the absolute path of the directory for a
+    // replica.
     virtual replica_ptr load_replica(dir_node *dn, const char *dir);
+
+    // The same as the above `load_replica` function, except that this function is to load
+    // each replica to `reps` with protection from `reps_lock`.
+    void
+    load_replica(dir_node *dn, const std::string &dir, utils::ex_lock &reps_lock, replicas &reps);
+
+    // Load all replicas synchronously from all disks to `reps`. This function would ensure
+    // that data on each disk is loaded more evenly, rather than that a disk would begin to
+    // be loaded only after another has been finished, in case that there are too many replicas
+    // on a disk and other disks cannot start loading until this disk is finished.
+    void load_replicas(replicas &reps);
+
     // Clean up the memory state and on disk data if creating replica failed.
     void clear_on_failure(replica *rep);
     task_ptr begin_close_replica(replica_ptr r);

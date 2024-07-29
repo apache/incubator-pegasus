@@ -467,8 +467,8 @@ replica_stub::disk_dirs replica_stub::get_all_disk_dirs() const
 {
     disk_dirs disks;
     for (const auto &dn : _fs_manager.get_dir_nodes()) {
-        // Skip dir node with IO error.
         if (dsn_unlikely(dn->status == disk_status::IO_ERROR)) {
+            // Skip disks with IO errors.
             continue;
         }
 
@@ -530,10 +530,13 @@ void replica_stub::load_replicas(replicas &reps)
     while (true) {
         size_t finished_disks = 0;
 
+        // For each round, start loading one replica for each disk in case there are too many
+        // replicas in a disk, except that all of the replicas of this disk are being loaded.
         for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
             auto &dir_index = dir_indexes[disk_index];
             const auto &dirs = disks[disk_index].second;
             if (dir_index >= dirs.size()) {
+                // All of the replicas for the disk `disks[disk_index]` have begun to be loaded.
                 ++finished_disks;
                 continue;
             }
@@ -541,10 +544,20 @@ void replica_stub::load_replicas(replicas &reps)
             auto &load_disk_queue = load_disk_queues[disk_index];
             if (!load_disk_queue.empty() &&
                 load_disk_queue.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
+                // Loading replicas should be throttled in case that disk IO is saturated.
                 if (load_disk_queue.front()->wait(FLAGS_load_replica_max_wait_time_ms)) {
                     load_disk_queue.pop();
+                } else {
+                    // There might be too many replicas that are being loaded which lead to
+                    // slow disk IO.
+                    continue;
                 }
-                continue;
+
+                // Continue to load a replica since we are within the limit now.
+                if (dsn_unlikely(load_disk_queue.size() >=
+                                 FLAGS_max_replicas_on_load_for_each_disk)) {
+                    continue;
+                }
             }
 
             const auto &dir = dirs[dir_index++];
@@ -580,10 +593,12 @@ void replica_stub::load_replicas(replicas &reps)
         }
 
         if (finished_disks >= disks.size()) {
+            // All replicas of all disks have begun to be loaded.
             break;
         }
     }
 
+    // All loading tasks have been in the queue. Just wait all tasks to be finished.
     for (auto &load_disk_queue : load_disk_queues) {
         while (!load_disk_queue.empty()) {
             CHECK_TRUE(load_disk_queue.front()->wait());
@@ -678,6 +693,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     LOG_INFO("start to load replicas");
 
     replicas reps;
+
     utils::chronograph chrono;
     load_replicas(reps);
 
@@ -2085,7 +2101,7 @@ replica *replica_stub::new_replica(gpid gpid,
 /* static */ bool
 replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type)
 {
-    int32_t app_id, partition_id;
+    int32_t app_id = 0, partition_id = 0;
     char app_type_buf[128] = {0};
     if (3 != sscanf(dir_name.c_str(), "%d.%d.%s", &app_id, &partition_id, app_type_buf)) {
         return false;
