@@ -43,6 +43,7 @@
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 
 DSN_DECLARE_uint64(max_replicas_on_load_for_each_disk);
 
@@ -197,21 +198,21 @@ TEST_P(LoadReplicasTest, LoadReplicas)
 {
     const auto &load_case = GetParam();
     initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
-    test_load_replicas(false, FLAGS_max_replicas_on_load_for_each_disk);
+    test_load_replicas(false, 256);
 }
 
 TEST_P(LoadReplicasTest, LoadOrder)
 {
     const auto &load_case = GetParam();
     initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
-    test_load_replicas(true, FLAGS_max_replicas_on_load_for_each_disk);
+    test_load_replicas(true, 256);
 }
 
 TEST_P(LoadReplicasTest, LoadThrottling)
 {
     const auto &load_case = GetParam();
     initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
-    test_load_replicas(false, 1);
+    test_load_replicas(false, 5);
 }
 
 load_replicas_case generate_load_replicas_case(const std::vector<size_t> &disk_replicas)
@@ -253,15 +254,32 @@ load_replicas_case generate_load_replicas_case(const std::vector<size_t> &disk_r
 
 std::vector<load_replicas_case> generate_load_replicas_cases()
 {
+    // At least 1 disk should be included (otherwise it would lead to core dump), thus do
+    // not generate the empty case (i.e. {}).
     return std::vector<load_replicas_case>({
-        // at least 1 disk dir
+        // There is only one disk which has none of replica.
         generate_load_replicas_case({0}),
+        // There are two disks both of which have none of replica.
         generate_load_replicas_case({0, 0}),
+        // There is only one disk which has one replica.
         generate_load_replicas_case({1}),
+        // There are two disks one of which has one replica, and another has none.
         generate_load_replicas_case({1, 0}),
+        generate_load_replicas_case({0, 1}),
+        // There is only one disk which has two replicas.
         generate_load_replicas_case({2}),
+        // There are two disks one of which has two replicas, and another has none.
+        generate_load_replicas_case({2, 0}),
+        generate_load_replicas_case({0, 2}),
+        // There are at least three disks.
         generate_load_replicas_case({1, 0, 2}),
-        generate_load_replicas_case({50, 30, 100, 200, 80}),
+        generate_load_replicas_case({8, 25, 16}),
+        generate_load_replicas_case({17, 96, 56, 127}),
+        generate_load_replicas_case({22, 38, 0, 16}),
+        generate_load_replicas_case({82, 75, 36, 118, 65}),
+        // There are many replicas for some disks.
+        generate_load_replicas_case({156, 367, 309, 58, 404, 298, 512, 82}),
+        generate_load_replicas_case({167, 28, 898, 516, 389, 422, 682, 265, 596}),
     });
 }
 
