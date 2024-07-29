@@ -19,7 +19,6 @@
 
 #include "server/hashkey_transform.h"
 
-#include <fmt/core.h>
 #include <rocksdb/comparator.h>
 #include <string>
 

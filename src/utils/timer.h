@@ -22,12 +22,14 @@
 #include "utils/api_utilities.h"
 #include "utils/chrono_literals.h"
 #include "utils/fmt_logging.h"
+#include "spdlog/common.h"
+#include "spdlog/spdlog.h"
 
 /// These macros are inspired by Apache Kudu
 /// https://github.com/apache/kudu/blob/1.17.0/src/kudu/util/stopwatch.h.
 
 // Macro for logging timing of a block. Usage:
-//   LOG_TIMING_PREFIX_IF(INFO, FLAGS_should_record_time, "Tablet X: ", "doing some task") {
+//   LOG_TIMING_PREFIX_IF(info, FLAGS_should_record_time, "Tablet X: ", "doing some task") {
 //     ... some task which takes some time
 //   }
 // If FLAGS_should_record_time is true, yields a log like:
@@ -39,7 +41,7 @@
     for (dsn::timer_internal::LogTiming _l(__FILENAME__,                                           \
                                            __FUNCTION__,                                           \
                                            __LINE__,                                               \
-                                           LOG_LEVEL_##severity,                                   \
+                                           spdlog::level::severity,                                \
                                            prefix,                                                 \
                                            fmt::format(__VA_ARGS__),                               \
                                            -1,                                                     \
@@ -63,7 +65,7 @@
     dsn::timer_internal::LogTiming VARNAME_LINENUM(_log_timing)(__FILENAME__,                      \
                                                                 __FUNCTION__,                      \
                                                                 __LINE__,                          \
-                                                                LOG_LEVEL_##severity,              \
+                                                                spdlog::level::severity,           \
                                                                 "",                                \
                                                                 fmt::format(__VA_ARGS__),          \
                                                                 -1,                                \
@@ -74,7 +76,7 @@
     dsn::timer_internal::LogTiming VARNAME_LINENUM(_log_timing)(__FILENAME__,                      \
                                                                 __FUNCTION__,                      \
                                                                 __LINE__,                          \
-                                                                LOG_LEVEL_##severity,              \
+                                                                spdlog::level::severity,           \
                                                                 "",                                \
                                                                 fmt::format(__VA_ARGS__),          \
                                                                 max_expected_millis,               \
@@ -85,14 +87,14 @@
     dsn::timer_internal::LogTiming VARNAME_LINENUM(_log_timing)(__FILENAME__,                      \
                                                                 __FUNCTION__,                      \
                                                                 __LINE__,                          \
-                                                                LOG_LEVEL_##severity,              \
+                                                                spdlog::level::severity,           \
                                                                 prefix,                            \
                                                                 fmt::format(__VA_ARGS__),          \
                                                                 max_expected_millis,               \
                                                                 true)
 
 // Macro for logging timing of a block. Usage:
-//   LOG_SLOW_EXECUTION(INFO, 5, "doing some task") {
+//   LOG_SLOW_EXECUTION(info, 5, "doing some task") {
 //     ... some task which takes some time
 //   }
 // when slower than 5 milliseconds, yields a log like:
@@ -102,7 +104,7 @@
     for (dsn::timer_internal::LogTiming _l(__FILENAME__,                                           \
                                            __FUNCTION__,                                           \
                                            __LINE__,                                               \
-                                           LOG_LEVEL_##severity,                                   \
+                                           spdlog::level::severity,                                \
                                            "",                                                     \
                                            fmt::format(__VA_ARGS__),                               \
                                            max_expected_millis,                                    \
@@ -158,7 +160,7 @@ public:
     LogTiming(const char *file,
               const char *function,
               int line,
-              log_level_t severity,
+              spdlog::level::level_enum severity,
               std::string prefix,
               std::string description,
               int64_t max_expected_millis,
@@ -196,7 +198,7 @@ private:
     const char *file_;
     const char *function_;
     const int line_;
-    const log_level_t severity_;
+    const spdlog::level::level_enum severity_;
     const std::string prefix_;
     const std::string description_;
     const int64_t max_expected_millis_;
@@ -210,15 +212,12 @@ private:
         stopwatch_.stop();
         auto ms = stopwatch_.m_elapsed();
         if (max_expected_millis < 0 || ms.count() > max_expected_millis) {
-            global_log(file_,
-                       function_,
-                       line_,
-                       severity_,
-                       fmt::format("{}ime spent {}: {}ms",
-                                   prefix_.empty() ? "T" : fmt::format("{} t", prefix_),
-                                   description_,
-                                   ms.count())
-                           .c_str());
+            spdlog::log(spdlog::source_loc{file_, line_, function_},
+                        severity_,
+                        "{}ime spent {}: {}ms",
+                        prefix_.empty() ? "T" : fmt::format("{} t", prefix_),
+                        description_,
+                        ms.count());
         }
     }
 };
