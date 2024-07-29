@@ -17,10 +17,10 @@
  * under the License.
  */
 
-#include <fmt/core.h>
 #include <stdint.h>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "common/fs_manager.h"
@@ -39,7 +39,6 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include <string_view>
 
 namespace pegasus {
 namespace server {

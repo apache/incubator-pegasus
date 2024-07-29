@@ -17,7 +17,6 @@
  * under the License.
  */
 
-#include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <stdint.h>
 #include <memory>

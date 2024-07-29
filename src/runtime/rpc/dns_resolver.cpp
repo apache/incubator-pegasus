@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <memory>
 #include <set>
+#include <type_traits>
 #include <utility>
 
 #include <string_view>

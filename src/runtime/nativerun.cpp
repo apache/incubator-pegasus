@@ -78,9 +78,6 @@ void nativerun::install(service_spec &spec)
         }
     }
 
-    if (spec.logging_factory_name == "")
-        spec.logging_factory_name = "dsn::tools::simple_logger";
-
     if (spec.lock_factory_name == "")
         spec.lock_factory_name = ("dsn::tools::std_lock_provider");
 

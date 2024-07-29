@@ -41,7 +41,6 @@
 #include "http/http_server.h"
 #include "http/http_status_code.h"
 #include "runtime/api_layer1.h"
-#include "utils/api_utilities.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
 #include "utils/fmt_logging.h"
@@ -98,7 +97,7 @@ static bool has_ext(const std::string &name, const std::string &ext)
 static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_map,
                                        const lib_info &lib_info)
 {
-    SCOPED_LOG_TIMING(INFO, "load {}", lib_info.path);
+    SCOPED_LOG_TIMING(info, "load {}", lib_info.path);
     std::string cmd = "nm -C -p ";
     cmd.append(lib_info.path);
     std::stringstream ss;
@@ -195,7 +194,7 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
 
 static void load_symbols()
 {
-    SCOPED_LOG_TIMING(INFO, "load all symbols");
+    SCOPED_LOG_TIMING(info, "load all symbols");
     auto fp = fopen("/proc/self/maps", "r");
     if (fp == nullptr) {
         return;
@@ -267,7 +266,7 @@ static void load_symbols()
     extract_symbols_from_binary(symbol_map, info);
 
     size_t num_removed = 0;
-    LOG_TIMING_IF(INFO, num_removed > 0, "removed {} entries", num_removed);
+    LOG_TIMING_IF(info, num_removed > 0, "removed {} entries", num_removed);
     bool last_is_empty = false;
     for (auto it = symbol_map.begin(); it != symbol_map.end();) {
         if (it->second.empty()) {

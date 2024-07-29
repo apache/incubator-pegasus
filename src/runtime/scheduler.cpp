@@ -29,7 +29,6 @@
 #include <chrono>
 #include <random>
 #include <thread>
-#include <type_traits>
 #include <utility>
 
 #include "runtime/node_scoper.h"

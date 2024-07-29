@@ -52,7 +52,6 @@ Component providers define the interface for the local components (e.g., network
 // providers
 #include "utils/factory_store.h"
 #include "utils/join_point.h"
-#include "utils/logging_provider.h" // IWYU pragma: keep
 
 namespace dsn {
 class service_node;

@@ -17,12 +17,12 @@
  * under the License.
  */
 
-#include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <stdint.h>
 #include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "gtest/gtest.h"
 #include "pegasus_key_schema.h"
@@ -34,7 +34,6 @@
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
 #include "utils/fail_point.h"
-#include <string_view>
 
 namespace pegasus {
 namespace server {

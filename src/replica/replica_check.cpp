@@ -27,6 +27,7 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -58,7 +59,6 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include <string_view>
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 

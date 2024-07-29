@@ -26,7 +26,6 @@
 
 #include "runtime/rpc/rpc_holder.h"
 
-#include <fmt/core.h>
 #include <string>
 
 #include "common/gpid.h"
