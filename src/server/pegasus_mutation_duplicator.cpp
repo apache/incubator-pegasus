@@ -19,7 +19,6 @@
 
 #include "pegasus_mutation_duplicator.h"
 
-#include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
 #include <chrono>

@@ -42,8 +42,9 @@ set(MY_PROJ_LIBS
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
-# Extra files that will be installed
-set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
+set(MY_BINPLACES
+        "${CMAKE_CURRENT_SOURCE_DIR}/config.ini"
+        "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/config-dup-key.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/config-dup-section.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/config-empty.ini"
@@ -53,8 +54,7 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/config-sample.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/config-unmatch-section.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
-        "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
-        )
+        "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh")
 add_subdirectory(nth_element_bench)
 add_definitions(-Wno-dangling-else)
 dsn_add_test()

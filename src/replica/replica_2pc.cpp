@@ -63,12 +63,12 @@
 #include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
 #include "security/access_controller.h"
+#include "spdlog/common.h"
 #include "split/replica_split_manager.h"
 #include "task/async_calls.h"
 #include "task/task.h"
 #include "task/task_code.h"
 #include "task/task_spec.h"
-#include "utils/api_utilities.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
@@ -332,13 +332,13 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     const auto request_count = mu->client_requests.size();
     mu->data.header.last_committed_decree = last_committed_decree();
 
-    log_level_t level = LOG_LEVEL_DEBUG;
+    spdlog::level::level_enum level = spdlog::level::debug;
     if (mu->data.header.decree == invalid_decree) {
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
         // print a debug log if necessary
         if (FLAGS_prepare_decree_gap_for_debug_logging > 0 &&
             mu->get_decree() % FLAGS_prepare_decree_gap_for_debug_logging == 0) {
-            level = LOG_LEVEL_INFO;
+            level = spdlog::level::info;
         }
         mu->set_timestamp(static_cast<int64_t>(_uniq_timestamp_us.next()));
     } else {

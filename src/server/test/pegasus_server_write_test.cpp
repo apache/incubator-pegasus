@@ -17,9 +17,8 @@
  * under the License.
  */
 
-#include <fmt/core.h>
 #include <rocksdb/write_batch.h>
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>

@@ -24,74 +24,81 @@
  * THE SOFTWARE.
  */
 
-#include <iostream>
+#include <spdlog/logger.h>
+#include <memory>
 #include <string>
-#include <utility>
 
 #include "gtest/gtest.h"
-#include "utils/api_utilities.h"
-#include "utils/fail_point.h"
+#include "spdlog/common.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/timer.h"
 
-TEST(LoggingTest, GlobalLog)
-{
-    std::cout << "logging start level = " << enum_to_string(get_log_start_level()) << std::endl;
-    global_log(__FILENAME__, __FUNCTION__, __LINE__, LOG_LEVEL_INFO, "in TEST(core, logging)");
-}
+TEST(LoggingTest, LOG) { LOG(spdlog::level::info, "in TEST(LoggingTest, GlobalLog)"); }
 
-TEST(LoggingTest, GlobalLogBig)
+DSN_DEFINE_int32(test,
+                 logging_test_simple_benchmark_loops,
+                 10,
+                 "The loop times for LoggingTest.SimpleBenchmark test case");
+
+TEST(LoggingTest, LOGWithBigString)
 {
     std::string big_str(128000, 'x');
-    global_log(__FILENAME__, __FUNCTION__, __LINE__, LOG_LEVEL_INFO, big_str.c_str());
+    LOG(spdlog::level::info, big_str.c_str());
 }
 
 TEST(LoggingTest, LogMacro)
 {
-    struct test_case
-    {
-        log_level_t level;
-        std::string str;
-    } tests[] = {{LOG_LEVEL_DEBUG, "This is a test"},
-                 {LOG_LEVEL_DEBUG, "\\x00%d\\x00\\x01%n/nm"},
-                 {LOG_LEVEL_INFO, "\\x00%d\\x00\\x01%n/nm"},
-                 {LOG_LEVEL_WARNING, "\\x00%d\\x00\\x01%n/nm"},
-                 {LOG_LEVEL_ERROR, "\\x00%d\\x00\\x01%n/nm"},
-                 {LOG_LEVEL_FATAL, "\\x00%d\\x00\\x01%n/nm"}};
+    std::string str1 = "This is a test";
+    std::string str2 = R"(\x00%d\x00\x01%n/nm)";
 
-    dsn::fail::setup();
-    dsn::fail::cfg("coredump_for_fatal_log", "void(false)");
-
-    for (auto test : tests) {
-        // Test logging_provider::log.
-        LOG(test.level, "LOG: sortkey = {}", test.str);
-    }
-
-    dsn::fail::teardown();
+    LOG_DEBUG("LOG: sortkey = {}", str1);
+    LOG_DEBUG("LOG: sortkey = {}", str2);
+    LOG_INFO("LOG: sortkey = {}", str2);
+    LOG_WARNING("LOG: sortkey = {}", str2);
+    LOG_ERROR("LOG: sortkey = {}", str2);
+    ASSERT_DEATH(LOG_FATAL("LOG: sortkey = {}", str2), "LOG: sortkey =");
 }
 
 TEST(LoggingTest, TestLogTiming)
 {
-    LOG_TIMING_PREFIX_IF(INFO, true, "prefix", "foo test{}", 0) {}
-    LOG_TIMING_IF(INFO, true, "no_prefix foo test{}", 1) {}
-    LOG_TIMING_PREFIX(INFO, "prefix", "foo test{}", 2) {}
-    LOG_TIMING(INFO, "foo test{}", 3){}
+    LOG_INFO("common info log");
+    LOG_TIMING_PREFIX_IF(info, true, "prefix", "foo test{}", 0) {}
+    LOG_TIMING_IF(info, true, "no_prefix foo test{}", 1) {}
+    LOG_TIMING_PREFIX(info, "prefix", "foo test{}", 2) {}
+    LOG_TIMING(info, "foo test{}", 3){}
     {
-        SCOPED_LOG_TIMING(INFO, "bar {}", 0);
-        SCOPED_LOG_SLOW_EXECUTION(INFO, 1, "bar {}", 1);
-        SCOPED_LOG_SLOW_EXECUTION_PREFIX(INFO, 1, "prefix", "bar {}", 1);
+        SCOPED_LOG_TIMING(info, "bar {}", 0);
+        SCOPED_LOG_SLOW_EXECUTION(info, 1, "bar {}", 1);
+        SCOPED_LOG_SLOW_EXECUTION_PREFIX(info, 1, "prefix", "bar {}", 1);
     }
-    LOG_SLOW_EXECUTION(INFO, 1, "baz {}", 0) {}
+    LOG_SLOW_EXECUTION(info, 1, "baz {}", 0) {}
 
     // Previous implementations of the above macro confused clang-tidy's use-after-move
     // check and generated false positives.
     std::string s1 = "hello";
     std::string s2;
-    LOG_SLOW_EXECUTION(INFO, 1, "baz")
+    LOG_SLOW_EXECUTION(info, 1, "baz")
     {
         LOG_INFO(s1);
-        s2 = std::move(s1);
+        s2 = s1;
     }
+    LOG_INFO("common info log");
 
     ASSERT_EQ("hello", s2);
+}
+
+TEST(LoggingTest, SimpleBenchmark)
+{
+    g_stderr_logger->set_level(spdlog::level::critical);
+    g_file_logger->set_level(spdlog::level::debug);
+    SCOPED_LOG_TIMING(info,
+                      "LoggingTest.SimpleBenchmark loop {} times",
+                      FLAGS_logging_test_simple_benchmark_loops);
+    for (int i = 0; i < FLAGS_logging_test_simple_benchmark_loops; i++) {
+        LOG_DEBUG("abc {}, {}, {}", i, 1.0, "hello 1");
+        LOG_INFO("abc {}, {}, {}", i + 1, 2.0, "hello 2");
+        LOG_WARNING("abc {}, {}, {}", i + 2, 3.0, "hello 3");
+        LOG_ERROR("abc {}, {}, {}", i + 3, 4.0, "hello 4");
+    }
 }
