@@ -66,7 +66,7 @@ public:
     void initialize(const std::map<std::string, std::string> &dirs_by_tag,
                     const std::map<std::string, std::vector<gpid>> &replicas_by_tag)
     {
-        //
+        // Get dirs and tags to initialize fs_manager.
         std::vector<std::string> dirs;
         std::vector<std::string> tags;
         for (const auto &[tag, dir] : dirs_by_tag) {
@@ -74,13 +74,14 @@ public:
             tags.push_back(tag);
         }
 
+        // Generate the replicas which are expected after loading.
         for (const auto &[tag, reps] : replicas_by_tag) {
             for (const auto &pid : reps) {
                 ASSERT_TRUE(_expected_loaded_replica_pids.insert(pid).second);
             }
         }
 
-        //
+        // Initialize fs_manager.
         _fs_manager.initialize(dirs, tags);
 
         _disk_tags_for_order.clear();
@@ -144,14 +145,14 @@ private:
         ASSERT_EQ(LPC_REPLICATION_INIT_LOAD, task::get_current_task()->spec().code);
         if (task::get_current_task()->spec().allow_inline) {
             size_t finished_disks = 0;
-            while (finished_disks < _disk_tags_for_order.size() &&
-                   _disk_loaded_replicas_for_order[_disk_index_for_order] >=
-                       _disk_replicas_for_order[_disk_index_for_order]) {
+            while (_disk_loaded_replicas_for_order[_disk_index_for_order] >=
+                   _disk_replicas_for_order[_disk_index_for_order]) {
+                //
                 ++finished_disks;
+                ASSERT_GT(_disk_tags_for_order.size(), finished_disks);
+
                 _disk_index_for_order = (_disk_index_for_order + 1) % _disk_tags_for_order.size();
             }
-
-            ASSERT_GT(_disk_tags_for_order.size(), finished_disks);
 
             ASSERT_EQ(_disk_tags_for_order[_disk_index_for_order], dn->tag);
             ASSERT_EQ(_disk_dirs_for_order[_disk_index_for_order], dn->full_dir);
