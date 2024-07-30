@@ -760,11 +760,11 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             std::chrono::seconds(FLAGS_disk_stat_interval_seconds));
     }
 
-    // attach reps
+    // Attach `reps`.
     _replicas = std::move(reps);
     METRIC_VAR_INCREMENT_BY(total_replicas, _replicas.size());
-    for (const auto &kv : _replicas) {
-        _fs_manager.add_replica(kv.first, kv.second->dir());
+    for (const auto &[pid, rep] : _replicas) {
+        _fs_manager.add_replica(pid, rep->dir());
     }
 
     _nfs = dsn::nfs_node::create();
