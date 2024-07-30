@@ -141,27 +141,38 @@ private:
         ASSERT_TRUE(parse_replica_dir_name(dir_name, pid, app_type));
         ASSERT_STREQ("pegasus", app_type.c_str());
 
-        // printf("worker=%d\n", task::get_current_worker_index());
         ASSERT_EQ(LPC_REPLICATION_INIT_LOAD, task::get_current_task()->spec().code);
+
         if (task::get_current_task()->spec().allow_inline) {
+            // Once the task is `allow_inline`, it would be executed in place immediately rather
+            // than pushed into the queue. Thus we could test the expected order in which the
+            // tasks are pushed into the queue.
             size_t finished_disks = 0;
             while (_disk_loaded_replicas_for_order[_disk_index_for_order] >=
                    _disk_replicas_for_order[_disk_index_for_order]) {
-                //
+                // Since current task has not been executed, it is not possible that all disks
+                // are finished.
                 ++finished_disks;
                 ASSERT_GT(_disk_tags_for_order.size(), finished_disks);
 
+                // Skip to next disk since all of the replicas of this disk have been loaded.
                 _disk_index_for_order = (_disk_index_for_order + 1) % _disk_tags_for_order.size();
             }
 
+            // Only check if the processed order of the disk the replica belongs to, rather than
+            // the order of the replica itself, for the reason that the order of the dirs returned
+            // by the underlying call varies with different systems.
             ASSERT_EQ(_disk_tags_for_order[_disk_index_for_order], dn->tag);
             ASSERT_EQ(_disk_dirs_for_order[_disk_index_for_order], dn->full_dir);
 
+            // Current replica has been loaded, move forward to the next replica of this disk.
             ++_disk_loaded_replicas_for_order[_disk_index_for_order];
+
+            // Turn to next disks if some of them still have some replicas that are not loaded.
             _disk_index_for_order = (_disk_index_for_order + 1) % _disk_tags_for_order.size();
         }
 
-        // Check full dir.
+        // Check the absolute dir of this replica.
         ASSERT_EQ(dn->replica_dir("pegasus", pid), dir);
 
         app_info ai;
@@ -176,6 +187,7 @@ private:
         _expected_loaded_replicas[pid] = rep;
     }
 
+    // Mock the process of loading a replica.
     replica_ptr load_replica(dir_node *dn, const char *dir) override
     {
         replica_ptr rep;
@@ -185,6 +197,7 @@ private:
 
     std::set<gpid> _expected_loaded_replica_pids;
 
+    // Only for testing the order of the loading tasks.
     size_t _disk_index_for_order{0};
     std::vector<std::string> _disk_tags_for_order;
     std::vector<std::string> _disk_dirs_for_order;
@@ -223,7 +236,7 @@ load_replicas_case generate_load_replicas_case(const std::vector<size_t> &disk_r
         dirs_by_tag.emplace(fmt::format("data{}", disk_index), fmt::format("disk{}", disk_index));
     }
 
-    static int32_t kNumPartitions = 8;
+    static const int32_t kNumPartitions = 8;
     int32_t partition_id = 0;
     int32_t app_id = 1;
     std::map<std::string, std::vector<gpid>> replicas_by_tag;
@@ -278,6 +291,7 @@ std::vector<load_replicas_case> generate_load_replicas_cases()
         generate_load_replicas_case({17, 96, 56, 127}),
         generate_load_replicas_case({22, 38, 0, 16}),
         generate_load_replicas_case({82, 75, 36, 118, 65}),
+        generate_load_replicas_case({0, 92, 17, 68, 25}),
         // There are many replicas for some disks.
         generate_load_replicas_case({156, 367, 309, 58, 404, 298, 512, 82}),
         generate_load_replicas_case({167, 28, 898, 516, 389, 422, 682, 265, 596}),
