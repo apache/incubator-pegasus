@@ -536,7 +536,8 @@ void replica_stub::load_replicas(replicas &reps)
             auto &dir_index = dir_indexes[disk_index];
             const auto &dirs = disks[disk_index].second;
             if (dir_index >= dirs.size()) {
-                // All of the replicas for the disk `disks[disk_index]` have begun to be loaded.
+                // All of the replicas for the disk `disks[disk_index]` have begun to be loaded,
+                // thus just skip.
                 ++finished_disks;
                 continue;
             }
