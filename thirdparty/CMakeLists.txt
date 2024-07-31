@@ -473,3 +473,19 @@ ExternalProject_Add(http-parser
         DOWNLOAD_NO_PROGRESS true
 )
 
+ExternalProject_Add(spdlog
+        URL https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz
+        URL_MD5 f2c3f15c20e67b261836ff7bfda302cf
+        PATCH_COMMAND ""
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DSPDLOG_ENABLE_PCH=ON
+        -DSPDLOG_BUILD_PIC=ON
+        -DSPDLOG_FMT_EXTERNAL=ON
+        -DSPDLOG_NO_EXCEPTIONS=ON
+        -Dfmt_DIR=${TP_OUTPUT}/lib/cmake/fmt
+        BUILD_COMMAND make -j${PARALLEL}
+        INSTALL_COMMAND make install
+        DEPENDS fmt
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
