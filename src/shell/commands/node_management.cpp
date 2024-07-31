@@ -232,6 +232,39 @@ dsn::metric_filters rw_requests_filters()
     return filters;
 }
 
+dsn::metric_filters server_stat_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"server"};
+    filters.entity_metrics = {"virtual_mem_usage_mb", "resident_mem_usage_mb"};
+    return filters;
+}
+
+struct meta_server_stats
+{
+};
+
+std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes)
+{
+    const auto &query_string = server_stat_filters().to_query_string();
+    const auto &results_start = get_metrics(nodes, query_string);
+    std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
+    const auto &results_end = get_metrics(nodes, query_string);
+}
+
+std::vector<std::pair<bool, std::string>> call_nodes(shell_context *sc,
+                                                     const std::vector<node_desc> &nodes,
+                                                     const std::string &command,
+                                                     const std::vector<std::string> &arguments)
+{
+    if (command == "server_stat") {
+        return get_server_stats();
+    }
+
+    return call_remote_command(sc, nodes, command, arguments);
+}
+
 } // anonymous namespace
 
 bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
@@ -652,10 +685,12 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
 
     nlohmann::json info;
     info["command"] = fmt::format("{} {}", command, fmt::join(pos_args, " "));
-    const auto results = call_remote_command(sc, nodes, command, pos_args);
+
+    const auto &results = call_nodes(sc, nodes, command, pos_args);
+    CHECK_EQ(results.size(), nodes.size());
+
     int succeed = 0;
     int failed = 0;
-    CHECK_EQ(results.size(), nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
         nlohmann::json node_info;
         node_info["role"] = nodes[i].desc;

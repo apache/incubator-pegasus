@@ -850,6 +850,11 @@ public:
     {
         DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
 
+        return aggregate_metrics(query_snapshot);
+    }
+
+    dsn::error_s aggregate_metrics(const dsn::metric_query_brief_value_snapshot &query_snapshot)
+    {
         CALC_ACCUM_STATS(query_snapshot.entities);
 
         return dsn::error_s::ok();
@@ -862,6 +867,13 @@ public:
         DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
             json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
 
+        return aggregate_metrics(query_snapshot_start, query_snapshot_end);
+    }
+
+    dsn::error_s
+    aggregate_metrics(const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
+                      const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
+    {
         // Apply ending sample to the accum aggregations.
         CALC_ACCUM_STATS(query_snapshot_end.entities);
 
