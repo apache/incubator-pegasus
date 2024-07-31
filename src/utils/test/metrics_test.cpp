@@ -39,6 +39,7 @@
 #include "runtime/rpc/rpc_message.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
+#include "gutil/map_util.h"
 #include "utils/rand.h"
 #include "utils/strings.h"
 #include "utils/test/nth_element_utils.h"
@@ -246,7 +247,7 @@ TEST(metrics_test, create_entity)
         auto attrs = entity->attributes();
         ASSERT_EQ(attrs, test.entity_attrs);
 
-        ASSERT_EQ(entities.find(test.entity_id), entities.end());
+        ASSERT_TRUE(!gutil::ContainsKey(entities, test.entity_id));
         entities[test.entity_id] = entity;
     }
 
@@ -313,25 +314,21 @@ TEST(metrics_test, create_metric)
             my_metric = test.prototype->instantiate(test.entity, test.value);
         }
 
-        ASSERT_EQ(my_metric->value(), test.value);
+        ASSERT_EQ(test.value, my_metric->value());
 
-        auto iter = expected_entities.find(test.entity.get());
-        if (iter == expected_entities.end()) {
-            expected_entities[test.entity.get()] = {{test.prototype, my_metric}};
-        } else {
-            iter->second[test.prototype] = my_metric;
-        }
+        auto &iter = gutil::LookupOrInsert(&expected_entities, test.entity.get(), {});
+        iter.emplace(test.prototype, my_metric);
     }
 
     entity_map actual_entities;
-    auto entities = metric_registry::instance().entities();
-    for (const auto &entity : entities) {
-        if (expected_entities.find(entity.second.get()) != expected_entities.end()) {
-            actual_entities[entity.second.get()] = entity.second->metrics();
+    const auto entities = metric_registry::instance().entities();
+    for (const auto &[_, entity] : entities) {
+        if (gutil::ContainsKey(expected_entities, entity.get())) {
+            actual_entities[entity.get()] = entity->metrics();
         }
     }
 
-    ASSERT_EQ(actual_entities, expected_entities);
+    ASSERT_EQ(expected_entities, actual_entities);
 }
 
 TEST(metrics_test, recreate_metric)
@@ -778,7 +775,7 @@ void run_percentile(const metric_entity_ptr &my_entity,
     std::vector<T> actual_elements;
     for (const auto &kth : kAllKthPercentileTypes) {
         T value;
-        if (kth_percentiles.find(kth) == kth_percentiles.end()) {
+        if (!gutil::ContainsKey(kth_percentiles, kth)) {
             ASSERT_FALSE(my_metric->get(kth, value));
             checker(value, 0);
         } else {
@@ -1099,8 +1096,7 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         filters.with_metric_fields = metric_fields;                                                \
                                                                                                    \
         metric_value_map<value_type> expected_value_map;                                           \
-        if (expected_metric_fields.find(kMetricSingleValueField) !=                                \
-            expected_metric_fields.end()) {                                                        \
+        if (gutil::ContainsKey(expected_metric_fields, kMetricSingleValueField)) {                 \
             expected_value_map[kMetricSingleValueField] = test.expected_value;                     \
         }                                                                                          \
                                                                                                    \
@@ -1283,7 +1279,7 @@ void generate_metric_value_map(MetricType *my_metric,
     for (const auto &type : kth_percentiles) {
         auto name = kth_percentile_to_name(type);
         // Only add the chosen fields to the expected value map.
-        if (expected_metric_fields.find(name) != expected_metric_fields.end()) {
+        if (gutil::ContainsKey(expected_metric_fields, name)) {
             value_map[name] = *value;
         }
         ++value;
@@ -2871,13 +2867,11 @@ TEST(metrics_test, http_get_metrics)
     for (const auto &test : tests) {
         entity_container expected_entities;
         for (const auto &entity_pair : test.expected_entity_metrics) {
-            const auto &iter = entities.find(entity_pair.first);
-            ASSERT_NE(entities.end(), iter);
-
-            const auto &entity = iter->second;
-            expected_entities.emplace(entity->id(),
-                                      entity_properties{entity->prototype()->name(),
-                                                        entity->attributes(),
+            const auto *entity = gutil::FindOrNull(entities, entity_pair.first);
+            ASSERT_NE(entity, nullptr);
+            expected_entities.emplace((*entity)->id(),
+                                      entity_properties{(*entity)->prototype()->name(),
+                                                        (*entity)->attributes(),
                                                         entity_pair.second});
         }
 
@@ -3131,11 +3125,11 @@ void scoped_entity::test_survival_immediately_after_initialization() const
     // Use internal member directly instead of calling entities(). We don't want to have
     // any reference which may affect the test results.
     const auto &entities = metric_registry::instance()._entities;
-    const auto &iter = entities.find(_my_entity_id);
-    ASSERT_NE(entities.end(), iter);
-    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->second.get());
+    const auto *entity = gutil::FindOrNull(entities, _my_entity_id);
+    ASSERT_NE(entity, nullptr);
+    ASSERT_EQ(_expected_my_entity_raw_ptr, entity->get());
 
-    const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
+    const auto &actual_surviving_metrics = get_actual_surviving_metrics(*entity);
     ASSERT_EQ(_expected_all_metrics, actual_surviving_metrics);
 }
 
@@ -3149,18 +3143,18 @@ void scoped_entity::test_survival_after_retirement() const
     // Use internal member directly instead of calling entities(). We don't want to have
     // any reference which may affect the test results.
     const auto &entities = metric_registry::instance()._entities;
-    const auto &iter = entities.find(_my_entity_id);
+    const auto *iter = gutil::FindOrNull(entities, _my_entity_id);
     if (_my_entity == nullptr) {
         // The entity has been retired.
-        ASSERT_EQ(entities.end(), iter);
+        ASSERT_EQ(iter, nullptr);
         ASSERT_TRUE(_expected_surviving_metrics.empty());
         return;
     }
 
-    ASSERT_NE(entities.end(), iter);
-    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->second.get());
+    ASSERT_NE(iter, nullptr);
+    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->get());
 
-    const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
+    const auto &actual_surviving_metrics = get_actual_surviving_metrics(*iter);
     ASSERT_EQ(_expected_surviving_metrics, actual_surviving_metrics);
 }
 
