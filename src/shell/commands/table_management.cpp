@@ -459,7 +459,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
                                            {"only_usage", no_argument, 0, 'u'},
                                            {"json", no_argument, 0, 'j'},
                                            {"output", required_argument, 0, 'o'},
-                                           {"sample_interval_ms", required_argument, 0, 't'},
+                                           {"sample_interval_ms", required_argument, 0, 'i'},
                                            {0, 0, 0, 0}};
 
     std::string app_name;
@@ -472,7 +472,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c = getopt_long(args.argc, args.argv, "a:qujo:t:", long_options, &option_index);
+        int c = getopt_long(args.argc, args.argv, "a:qujo:i:", long_options, &option_index);
         if (c == -1) {
             // -1 means all command-line options have been parsed.
             break;
@@ -494,7 +494,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             out_file = optarg;
             break;
-        case 't':
+        case 'i':
             RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
             break;
         default:
