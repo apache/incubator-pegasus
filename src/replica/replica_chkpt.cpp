@@ -171,6 +171,7 @@ void replica::on_checkpoint_timer()
         }
     }
 
+    _private_log->set_cleanable_decree(cleanable_decree);
     tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
                      &_tracker,
                      [this, plog, cleanable_decree, valid_start_offset] {
