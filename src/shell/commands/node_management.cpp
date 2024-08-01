@@ -245,21 +245,43 @@ struct meta_server_stats
 {
 };
 
-std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes)
+std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
+                                                           uint32_t sample_interval_ms)
 {
     const auto &query_string = server_stat_filters().to_query_string();
     const auto &results_start = get_metrics(nodes, query_string);
     std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
     const auto &results_end = get_metrics(nodes, query_string);
+
+    std::vector<std::pair<bool, std::string>> command_results;
+    command_results.reserve(nodes.size());
+    for (size_t i = 0; i < nodes.size(); ++i) {
+#define PROCESS_GET_METRICS_RESULT(result, what, ...)                                              \
+    do {                                                                                           \
+        auto command_result = process_get_metrics_result(result, nodes[i], what, ##__VA_ARGS__);   \
+        if (!command_result.first) {                                                               \
+            command_results.push_back(std::move(command_result));                                  \
+            continue;                                                                              \
+        }                                                                                          \
+    } while (0)
+
+        PROCESS_GET_METRICS_RESULT(results_start[i], "starting server stats");
+        PROCESS_GET_METRICS_RESULT(results_end[i], "ending server stats");
+
+#undef PROCESS_GET_METRICS_RESULT
+    }
+
+    return command_results;
 }
 
 std::vector<std::pair<bool, std::string>> call_nodes(shell_context *sc,
                                                      const std::vector<node_desc> &nodes,
                                                      const std::string &command,
-                                                     const std::vector<std::string> &arguments)
+                                                     const std::vector<std::string> &arguments,
+                                                     uint32_t sample_interval_ms)
 {
     if (command == "server_stat") {
-        return get_server_stats();
+        return get_server_stats(nodes, sample_interval_ms);
     }
 
     return call_remote_command(sc, nodes, command, arguments);
@@ -276,7 +298,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
                                            {"json", no_argument, 0, 'j'},
                                            {"status", required_argument, 0, 's'},
                                            {"output", required_argument, 0, 'o'},
-                                           {"sample_interval_ms", required_argument, 0, 't'},
+                                           {"sample_interval_ms", required_argument, 0, 'i'},
                                            {0, 0, 0, 0}};
 
     std::string status;
@@ -292,7 +314,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c = getopt_long(args.argc, args.argv, "druqjs:o:t:", long_options, &option_index);
+        int c = getopt_long(args.argc, args.argv, "druqjs:o:i:", long_options, &option_index);
         if (c == -1) {
             // -1 means all command-line options have been parsed.
             break;
@@ -321,7 +343,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             output_file = optarg;
             break;
-        case 't':
+        case 'i':
             RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
             break;
         default:
@@ -601,6 +623,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     //                                            [-t all|meta-server|replica-server]
     //                                            [-r|--resolve_ip]
     //                                            [-l host:port,host:port...]
+    //                                            [-i|--sample_interval_ms num]
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
     std::string command;
@@ -626,9 +649,8 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
 
         // Initialize the command.
-        const std::map<std::string, std::string> kCmdsMapping({{"server_info", "server-info"},
-                                                               {"server_stat", "server-stat"},
-                                                               {"flush_log", "flush-log"}});
+        const std::map<std::string, std::string> kCmdsMapping(
+            {{"server_info", "server-info"}, {"flush_log", "flush-log"}});
         const auto &it = kCmdsMapping.find(pos_arg.str());
         if (it != kCmdsMapping.end()) {
             // Use the mapped command.
@@ -686,7 +708,11 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     nlohmann::json info;
     info["command"] = fmt::format("{} {}", command, fmt::join(pos_args, " "));
 
-    const auto &results = call_nodes(sc, nodes, command, pos_args);
+    uint32_t sample_interval_ms = 0;
+    PARSE_OPT_UINT(
+        sample_interval_ms, FLAGS_nodes_sample_interval_ms, {"-i", "--sample_interval_ms"});
+
+    const auto &results = call_nodes(sc, nodes, command, pos_args, sample_interval_ms);
     CHECK_EQ(results.size(), nodes.size());
 
     int succeed = 0;

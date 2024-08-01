@@ -709,19 +709,38 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
     return results;
 }
 
+template <typename... Args>
+inline std::pair<bool, std::string> process_get_metrics_result(const dsn::http_result &result,
+                                                               const node_desc &node,
+                                                               const char *what,
+                                                               Args &&...args)
+{
+    if (dsn_unlikely(!result.error())) {
+        return std::make_pair(false,
+                              fmt::format("ERROR: query {} metrics from node {} failed, msg={}",
+                                          fmt::format(what, std::forward<Args>(args)...),
+                                          node.hp,
+                                          result.error()));
+    }
+
+    if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {
+        return std::make_pair(
+            false,
+            fmt::format("ERROR: query {} metrics from node {} failed, http_status={}, msg={}",
+                        fmt::format(what, std::forward<Args>(args)...),
+                        node.hp,
+                        dsn::get_http_status_message(result.status()),
+                        result.body()));
+    }
+
+    return std::make_pair(true, std::string());
+}
+
 #define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what, ...)                                \
     do {                                                                                           \
-        if (dsn_unlikely(!result.error())) {                                                       \
-            std::cout << "ERROR: send http request to query " << fmt::format(what, ##__VA_ARGS__)  \
-                      << " metrics from node " << node.hp << " failed: " << result.error()         \
-                      << std::endl;                                                                \
-            return true;                                                                           \
-        }                                                                                          \
-        if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {                         \
-            std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
-                      << node.hp << " failed: " << dsn::get_http_status_message(result.status())   \
-                      << std::endl                                                                 \
-                      << result.body() << std::endl;                                               \
+        const auto &_result = process_get_metrics_result(result, node, what, ##__VA_ARGS__);       \
+        if (dsn_unlikely(!_result.first)) {                                                        \
+            fmt::println(_result.second);                                                          \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
