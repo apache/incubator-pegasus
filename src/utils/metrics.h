@@ -1712,7 +1712,7 @@ inline error_s deserialize_metric_snapshot(const std::string &json_string,
     return error_s::ok();
 }
 
-#define DESERIALIZE_METRIC_SNAPSHOT(json_string, query_snapshot)                \
+#define DESERIALIZE_METRIC_SNAPSHOT(json_string, query_snapshot)                                   \
     do {                                                                                           \
         const auto &res = deserialize_metric_snapshot(json_string, query_snapshot);                \
         if (dsn_unlikely(!res)) {                                                                  \
@@ -1726,9 +1726,9 @@ inline error_s deserialize_metric_snapshot(const std::string &json_string,
 
 template <typename TMetricSnapshot>
 inline error_s deserialize_metric_2_samples(const std::string &json_string_start,
-                                                        const std::string &json_string_end,
-                                                        TMetricSnapshot &snapshot_start,
-                                                        TMetricSnapshot &snapshot_end)
+                                            const std::string &json_string_end,
+                                            TMetricSnapshot &snapshot_start,
+                                            TMetricSnapshot &snapshot_end)
 {
     DESERIALIZE_METRIC_SNAPSHOT(json_string_start, snapshot_start);
     DESERIALIZE_METRIC_SNAPSHOT(json_string_end, snapshot_end);
@@ -1737,35 +1737,37 @@ inline error_s deserialize_metric_2_samples(const std::string &json_string_start
 
 template <typename TMetricQuerySnapshot>
 inline error_s deserialize_metric_query_2_samples(const std::string &json_string_start,
-                                                        const std::string &json_string_end,
-                                                        TMetricQuerySnapshot &snapshot_start,
-                                                        TMetricQuerySnapshot &snapshot_end)
+                                                  const std::string &json_string_end,
+                                                  TMetricQuerySnapshot &snapshot_start,
+                                                  TMetricQuerySnapshot &snapshot_end)
 {
-    const auto &res = deserialize_metric_2_samples(json_string_start, json_string_end, snapshot_start, snapshot_end);
+    const auto &res = deserialize_metric_2_samples(
+        json_string_start, json_string_end, snapshot_start, snapshot_end);
     if (!res) {
         return res;
     }
 
-        if (snapshot_end.timestamp_ns <= snapshot_start.timestamp_ns) {                
-            return FMT_ERR(dsn::ERR_INVALID_DATA,                                                  
-                           "duration for metric samples should be > 0: timestamp_ns_start={}, "    
-                           "timestamp_ns_end={}",                                                  
-                           snapshot_start.timestamp_ns,                                      
-                           snapshot_end.timestamp_ns);                                       
-        }                                                                                          
+    if (snapshot_end.timestamp_ns <= snapshot_start.timestamp_ns) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA,
+                       "duration for metric samples should be > 0: timestamp_ns_start={}, "
+                       "timestamp_ns_end={}",
+                       snapshot_start.timestamp_ns,
+                       snapshot_end.timestamp_ns);
+    }
 
-        return error_s::ok();
+    return error_s::ok();
 }
 
 // Currently only Gauge and Counter are considered to have "increase" and "rate", which means
 // samples are needed. Thus brief `value` field is enough.
 #define DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(                                                  \
     json_string_start, json_string_end, query_snapshot_start, query_snapshot_end)                  \
-    dsn::metric_query_brief_value_snapshot query_snapshot_start;                                     \
+    dsn::metric_query_brief_value_snapshot query_snapshot_start;                                   \
     dsn::metric_query_brief_value_snapshot query_snapshot_end;                                     \
                                                                                                    \
     do {                                                                                           \
-        const auto &res = deserialize_metric_query_2_samples(json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);                \
+        const auto &res = deserialize_metric_query_2_samples(                                      \
+            json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);         \
         if (dsn_unlikely(!res)) {                                                                  \
             return res;                                                                            \
         }                                                                                          \

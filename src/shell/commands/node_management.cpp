@@ -243,6 +243,18 @@ dsn::metric_filters server_stat_filters()
 
 struct meta_server_stats
 {
+    double virt_mem_mb;
+    double res_mem_mb;
+
+    DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
+};
+
+struct replica_server_stats
+{
+    double virt_mem_mb;
+    double res_mem_mb;
+
+    DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
 };
 
 std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
@@ -256,19 +268,35 @@ std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<nod
     std::vector<std::pair<bool, std::string>> command_results;
     command_results.reserve(nodes.size());
     for (size_t i = 0; i < nodes.size(); ++i) {
-#define PROCESS_GET_METRICS_RESULT(result, what, ...)                                              \
-    do {                                                                                           \
-        auto command_result = process_get_metrics_result(result, nodes[i], what, ##__VA_ARGS__);   \
-        if (!command_result.first) {                                                               \
-            command_results.push_back(std::move(command_result));                                  \
-            continue;                                                                              \
-        }                                                                                          \
-    } while (0)
+#define SKIP_IF_PROCESS_RESULT_FALSE()                                                             \
+    if (!command_result.first) {                                                                   \
+        command_results.push_back(std::move(command_result));                                      \
+        continue;                                                                                  \
+    }
 
-        PROCESS_GET_METRICS_RESULT(results_start[i], "starting server stats");
-        PROCESS_GET_METRICS_RESULT(results_end[i], "ending server stats");
+#define PROCESS_GET_METRICS_RESULT(result, what, ...)                                              \
+    {                                                                                              \
+        auto command_result = process_get_metrics_result(result, nodes[i], what, ##__VA_ARGS__);   \
+        SKIP_IF_PROCESS_RESULT_FALSE()                                                             \
+    }
+
+        PROCESS_GET_METRICS_RESULT(results_start[i], "starting server stats")
+        PROCESS_GET_METRICS_RESULT(results_end[i], "ending server stats")
 
 #undef PROCESS_GET_METRICS_RESULT
+
+        dsn::metric_query_brief_value_snapshot query_snapshot_start;
+        dsn::metric_query_brief_value_snapshot query_snapshot_end;
+        {
+            auto command_result = process_parse_metrics_result(
+                deserialize_metric_query_2_samples(results_start[i].body(),
+                                                   results_end[i].body(),
+                                                   query_snapshot_start,
+                                                   query_snapshot_end),
+                nodes[i],
+                "server stats");
+            SKIP_IF_PROCESS_RESULT_FALSE()
+        }
     }
 
     return command_results;

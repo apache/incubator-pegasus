@@ -738,20 +738,36 @@ inline std::pair<bool, std::string> process_get_metrics_result(const dsn::http_r
 
 #define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what, ...)                                \
     do {                                                                                           \
-        const auto &_result = process_get_metrics_result(result, node, what, ##__VA_ARGS__);       \
-        if (dsn_unlikely(!_result.first)) {                                                        \
-            fmt::println(_result.second);                                                          \
+        const auto &res = process_get_metrics_result(result, node, what, ##__VA_ARGS__);           \
+        if (dsn_unlikely(!res.first)) {                                                            \
+            fmt::println(res.second);                                                              \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
 
+template <typename... Args>
+inline std::pair<bool, std::string> process_parse_metrics_result(const dsn::error_s &result,
+                                                                 const node_desc &node,
+                                                                 const char *what,
+                                                                 Args &&...args)
+{
+    if (dsn_unlikely(!result)) {
+        return std::make_pair(
+            false,
+            fmt::format("ERROR: parse {} metrics response from node {} failed, msg={}",
+                        fmt::format(what, std::forward<Args>(args)...),
+                        node.hp,
+                        result));
+    }
+
+    return std::make_pair(true, std::string());
+}
+
 #define RETURN_SHELL_IF_PARSE_METRICS_FAILED(expr, node, what, ...)                                \
     do {                                                                                           \
-        const auto &res = (expr);                                                                  \
-        if (dsn_unlikely(!res)) {                                                                  \
-            std::cout << "ERROR: parse " << fmt::format(what, ##__VA_ARGS__)                       \
-                      << " metrics response from node " << node.hp << " failed: " << res           \
-                      << std::endl;                                                                \
+        const auto &res = process_parse_metrics_result(expr, node, what, ##__VA_ARGS__);           \
+        if (dsn_unlikely(!res.first)) {                                                            \
+            fmt::println(res.second);                                                              \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
