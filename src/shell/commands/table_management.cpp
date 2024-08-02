@@ -312,7 +312,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             parse_sst_stat(results[i].body(), count_map[nodes[i].hp], disk_map[nodes[i].hp]),
             nodes[i],
-            "sst");
+            "parse sst stats");
     }
 
     ::dsn::utils::table_printer tp_general("result");

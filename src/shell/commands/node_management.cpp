@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "client/replication_ddl_client.h"
+#include "common/json_helper.h"
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
@@ -243,11 +244,34 @@ dsn::metric_filters server_stat_filters()
 
 struct meta_server_stats
 {
-    double virt_mem_mb;
-    double res_mem_mb;
+    meta_server_stats() = default;
+
+    double virt_mem_mb{0.0};
+    double res_mem_mb{0.0};
 
     DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
 };
+
+std::pair<bool, std::string>
+aggregate_meta_server_stats(const node_desc &node,
+                            const dsn::metric_query_brief_value_snapshot &query_snapshot)
+{
+    aggregate_stats_calcs calcs;
+    meta_server_stats stats;
+    calcs.create_assignments<total_aggregate_stats>(
+        "server",
+        stat_var_map({{"virtual_mem_usage_mb", &stats.virt_mem_mb},
+                      {"resident_mem_usage_mb", &stats.res_mem_mb}}));
+
+    auto command_result = process_parse_metrics_result(
+        calcs.aggregate_metrics(query_snapshot), node, "aggregate meta server stats");
+    if (!command_result.first) {
+        return command_result;
+    }
+
+    return std::make_pair(true,
+                          dsn::json::json_forwarder<meta_server_stats>::encode(stats).to_string());
+}
 
 struct replica_server_stats
 {
@@ -256,6 +280,29 @@ struct replica_server_stats
 
     DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
 };
+
+std::pair<bool, std::string>
+aggregate_replica_server_stats(const node_desc &node,
+                               const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
+                               const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
+{
+    aggregate_stats_calcs calcs;
+    meta_server_stats stats;
+    calcs.create_assignments<total_aggregate_stats>(
+        "server",
+        stat_var_map({{"virtual_mem_usage_mb", &stats.virt_mem_mb},
+                      {"resident_mem_usage_mb", &stats.res_mem_mb}}));
+
+    auto command_result = process_parse_metrics_result(
+        calcs.aggregate_metrics(query_snapshot_start, query_snapshot_end),
+        node,
+        "aggregate replica server stats");
+    if (!command_result.first) {
+        return command_result;
+    }
+
+    return std::make_pair(true, json::json_forwarder<meta_server_stats>::encode(stats).to_string());
+}
 
 std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
                                                            uint32_t sample_interval_ms)
@@ -268,6 +315,7 @@ std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<nod
     std::vector<std::pair<bool, std::string>> command_results;
     command_results.reserve(nodes.size());
     for (size_t i = 0; i < nodes.size(); ++i) {
+
 #define SKIP_IF_PROCESS_RESULT_FALSE()                                                             \
     if (!command_result.first) {                                                                   \
         command_results.push_back(std::move(command_result));                                      \
@@ -294,9 +342,25 @@ std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<nod
                                                    query_snapshot_start,
                                                    query_snapshot_end),
                 nodes[i],
-                "server stats");
+                "deserialize server stats");
             SKIP_IF_PROCESS_RESULT_FALSE()
         }
+
+#undef SKIP_IF_PROCESS_RESULT_FALSE
+
+        if (query_snapshot_end.role == "meta") {
+            command_results.push_back(aggregate_meta_server_stats(nodes[i], query_snapshot_end));
+            continue;
+        }
+
+        if (query_snapshot_end.role == "replica") {
+            command_results.push_back(
+                aggregate_replica_server_stats(nodes[i], query_snapshot_start, query_snapshot_end));
+            continue;
+        }
+
+        command_results.emplace_back(
+            false, fmt::format("role {} is unsupported", query_snapshot_end.role));
     }
 
     return command_results;
@@ -471,7 +535,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
             auto &stat = tmp_it->second;
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
-                parse_resource_usage(results[i].body(), stat), nodes[i], "resource");
+                parse_resource_usage(results[i].body(), stat), nodes[i], "parse resource usage");
         }
     }
 
@@ -513,7 +577,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
                 calcs.aggregate_metrics(results_start[i].body(), results_end[i].body()),
                 nodes[i],
-                "rw requests");
+                "aggregate rw requests");
         }
     }
 
@@ -535,8 +599,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "profiler latency");
 
             auto &stat = tmp_it->second;
-            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
-                parse_profiler_latency(results[i].body(), stat), nodes[i], "profiler latency");
+            RETURN_SHELL_IF_PARSE_METRICS_FAILED(parse_profiler_latency(results[i].body(), stat),
+                                                 nodes[i],
+                                                 "parse profiler latency");
         }
     }
 

@@ -752,12 +752,11 @@ inline std::pair<bool, std::string> process_parse_metrics_result(const dsn::erro
                                                                  Args &&...args)
 {
     if (dsn_unlikely(!result)) {
-        return std::make_pair(
-            false,
-            fmt::format("ERROR: parse {} metrics response from node {} failed, msg={}",
-                        fmt::format(what, std::forward<Args>(args)...),
-                        node.hp,
-                        result));
+        return std::make_pair(false,
+                              fmt::format("ERROR: {} metrics response from node {} failed, msg={}",
+                                          fmt::format(what, std::forward<Args>(args)...),
+                                          node.hp,
+                                          result));
     }
 
     return std::make_pair(true, std::string());
@@ -867,11 +866,19 @@ public:
     }
 
     // Create the aggregations as needed.
+    DEF_CALC_CREATOR(assignments)
     DEF_CALC_CREATOR(sums)
     DEF_CALC_CREATOR(increases)
     DEF_CALC_CREATOR(rates)
 
 #undef DEF_CALC_CREATOR
+
+#define CALC_ASSIGNMENT_STATS(entities)                                                            \
+    do {                                                                                           \
+        if (_assignments) {                                                                        \
+            RETURN_NOT_OK(_assignments->assign(entities));                                         \
+        }                                                                                          \
+    } while (0)
 
 #define CALC_ACCUM_STATS(entities)                                                                 \
     do {                                                                                           \
@@ -890,6 +897,7 @@ public:
 
     dsn::error_s aggregate_metrics(const dsn::metric_query_brief_value_snapshot &query_snapshot)
     {
+        CALC_ASSIGNMENT_STATS(query_snapshot.entities);
         CALC_ACCUM_STATS(query_snapshot.entities);
 
         return dsn::error_s::ok();
@@ -909,7 +917,8 @@ public:
     aggregate_metrics(const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
                       const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
     {
-        // Apply ending sample to the accum aggregations.
+        // Apply ending sample to the assignment and accum aggregations.
+        CALC_ASSIGNMENT_STATS(query_snapshot_end.entities);
         CALC_ACCUM_STATS(query_snapshot_end.entities);
 
         const std::array deltas_list = {&_increases, &_rates};
@@ -931,9 +940,12 @@ public:
 
 #undef CALC_ACCUM_STATS
 
+#undef CALC_ASSIGNMENT_STATS
+
 private:
     DISALLOW_COPY_AND_ASSIGN(aggregate_stats_calcs);
 
+    std::unique_ptr<aggregate_stats> _assignments;
     std::unique_ptr<aggregate_stats> _sums;
     std::unique_ptr<aggregate_stats> _increases;
     std::unique_ptr<aggregate_stats> _rates;
@@ -1987,7 +1999,7 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
-            "row data requests");
+            "aggregate row data requests");
     }
 
     return true;
@@ -2037,7 +2049,7 @@ inline bool get_partition_stats(shell_context *sc,
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
-            "row data requests for table(id={})",
+            "aggregate row data requests for table(id={})",
             table_id);
     }
 
