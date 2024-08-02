@@ -709,6 +709,8 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
     return results;
 }
 
+// Adapt the result returned by `get_metrics` into the structure that could be processed by
+// `remote_command`.
 template <typename... Args>
 inline std::pair<bool, std::string> process_get_metrics_result(const dsn::http_result &result,
                                                                const node_desc &node,
@@ -745,6 +747,8 @@ inline std::pair<bool, std::string> process_get_metrics_result(const dsn::http_r
         }                                                                                          \
     } while (0)
 
+// Adapt the result of some parsing operations on the metrics returned by `get_metrics` into the
+// structure that could be processed by `remote_command`.
 template <typename... Args>
 inline std::pair<bool, std::string> process_parse_metrics_result(const dsn::error_s &result,
                                                                  const node_desc &node,
@@ -887,7 +891,7 @@ public:
         }                                                                                          \
     } while (0)
 
-    // Perform the chosen accum aggregations on the fetched metrics.
+    // Perform the chosen aggregations (both assignment and accum) on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string)
     {
         DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
@@ -903,7 +907,7 @@ public:
         return dsn::error_s::ok();
     }
 
-    // Perform all of the chosen aggregations (both accum and delta) on the fetched metrics.
+    // Perform the chosen aggregations (assignement, accum, delta and rate) on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string_start,
                                    const std::string &json_string_end)
     {

@@ -1701,6 +1701,7 @@ DEF_ALL_METRIC_BRIEF_SNAPSHOTS(value);
 
 DEF_ALL_METRIC_BRIEF_SNAPSHOTS(p99);
 
+// Deserialize the json string into the snapshot.
 template <typename TMetricSnapshot>
 inline error_s deserialize_metric_snapshot(const std::string &json_string,
                                            TMetricSnapshot &snapshot)
@@ -1721,10 +1722,13 @@ inline error_s deserialize_metric_snapshot(const std::string &json_string,
         }                                                                                          \
     } while (0)
 
+// Deserialize the json string into the snapshot specially for metric query which is declared
+// internally.
 #define DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(field, json_string, query_snapshot)                \
     dsn::metric_query_brief_##field##_snapshot query_snapshot;                                     \
     DESERIALIZE_METRIC_SNAPSHOT(json_string, query_snapshot)
 
+// Deserialize both json string samples into respective snapshots.
 template <typename TMetricSnapshot>
 inline error_s deserialize_metric_2_samples(const std::string &json_string_start,
                                             const std::string &json_string_end,
@@ -1736,6 +1740,7 @@ inline error_s deserialize_metric_2_samples(const std::string &json_string_start
     return error_s::ok();
 }
 
+// Deserialize both json string samples into respective snapshots specially for metric queries.
 template <typename TMetricQuerySnapshot>
 inline error_s deserialize_metric_query_2_samples(const std::string &json_string_start,
                                                   const std::string &json_string_end,
@@ -1759,6 +1764,9 @@ inline error_s deserialize_metric_query_2_samples(const std::string &json_string
     return error_s::ok();
 }
 
+// Deserialize both json string samples into respective snapshots specially for metric queries
+// which are declared internally.
+//
 // Currently only Gauge and Counter are considered to have "increase" and "rate", which means
 // samples are needed. Thus brief `value` field is enough.
 #define DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(                                                  \
