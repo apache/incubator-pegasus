@@ -38,7 +38,6 @@
 #include "utils/api_utilities.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
-#include "utils/logging_provider.h"
 #include "utils/simple_logger.h"
 #include "utils/test_macros.h"
 
@@ -51,23 +50,11 @@ class logger_test : public testing::Test
 public:
     void SetUp() override
     {
-        // Deregister commands to avoid re-register error.
-        dsn::logging_provider::instance()->deregister_commands();
-    }
-};
-
-class simple_logger_test : public logger_test
-{
-public:
-    void SetUp() override
-    {
-        logger_test::SetUp();
-
         std::string cwd;
         ASSERT_TRUE(dsn::utils::filesystem::get_current_directory(cwd));
         // NOTE: Don't name the dir with "test", otherwise the whole utils test dir would be
         // removed.
-        test_dir = dsn::utils::filesystem::path_combine(cwd, "simple_logger_test");
+        test_dir = dsn::utils::filesystem::path_combine(cwd, "logger_test");
 
         NO_FATALS(prepare_test_dir());
         std::set<std::string> files;
@@ -154,7 +141,7 @@ TEST_F(logger_test, screen_logger_test)
     logger->flush();
 }
 
-TEST_F(simple_logger_test, redundant_log_test)
+TEST_F(logger_test, redundant_log_test)
 {
     // Create redundant log files to test if their number could be restricted.
     for (unsigned int i = 0; i < FLAGS_max_number_of_log_files_on_disk + 10; ++i) {

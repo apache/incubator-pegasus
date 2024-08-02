@@ -28,17 +28,16 @@
 
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdint.h>
 #include <functional>
 #include <map>
 #include <memory>
-#include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <vector>
 
-#include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
@@ -47,7 +46,6 @@
 #include "utils/synchronize.h"
 
 namespace dsn {
-
 class command_deregister;
 
 class command_manager : public ::dsn::utils::singleton<command_manager>
@@ -85,7 +83,7 @@ public:
             });
     }
 
-    // Register a single 'command' with the 'help' description, its arguments are describe in
+    // Register a single 'command' with the 'help' description, its arguments are described in
     // 'args'.
     std::unique_ptr<command_deregister>
     register_single_command(const std::string &command,
@@ -93,13 +91,16 @@ public:
                             const std::string &args,
                             command_handler handler) WARN_UNUSED_RESULT;
 
-    // Register multiple 'commands' with the 'help' description, their arguments are describe in
+    // Register multiple 'commands' with the 'help' description, their arguments are described in
     // 'args'.
     std::unique_ptr<command_deregister>
     register_multiple_commands(const std::vector<std::string> &commands,
                                const std::string &help,
                                const std::string &args,
                                command_handler handler) WARN_UNUSED_RESULT;
+
+    // Register a global command which is not associated with any objects.
+    void add_global_cmd(std::unique_ptr<command_deregister> cmd);
 
     bool run_command(const std::string &cmd,
                      const std::vector<std::string> &args,
@@ -112,7 +113,7 @@ private:
     command_manager();
     ~command_manager();
 
-    struct command_instance : public ref_counter
+    struct commands_handler
     {
         std::vector<std::string> commands;
         std::string help;
@@ -126,7 +127,7 @@ private:
                      const std::string &args,
                      command_handler handler) WARN_UNUSED_RESULT;
 
-    void deregister_command(uintptr_t handle);
+    void deregister_command(uintptr_t cmd_id);
 
     static std::string
     set_bool(bool &value, const std::string &name, const std::vector<std::string> &args);
@@ -177,9 +178,8 @@ private:
         return msg.dump(2);
     }
 
-    typedef ref_ptr<command_instance> command_instance_ptr;
     utils::rw_lock_nr _lock;
-    std::map<std::string, command_instance_ptr> _handlers;
+    std::map<std::string, std::shared_ptr<commands_handler>> _handler_by_cmd;
 
     std::vector<std::unique_ptr<command_deregister>> _cmds;
 };

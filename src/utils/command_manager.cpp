@@ -29,12 +29,16 @@
 #include <fmt/format.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdlib.h>
+#include <algorithm>
 #include <chrono>
 #include <limits>
 #include <sstream> // IWYU pragma: keep
 #include <thread>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
+
+#include "gutil/map_util.h"
 
 namespace dsn {
 
@@ -44,19 +48,19 @@ command_manager::register_command(const std::vector<std::string> &commands,
                                   const std::string &args,
                                   command_handler handler)
 {
-    auto *c = new command_instance();
-    c->commands = commands;
-    c->help = help;
-    c->args = args;
-    c->handler = std::move(handler);
+    auto ch = std::make_shared<commands_handler>();
+    ch->commands = commands;
+    ch->help = help;
+    ch->args = args;
+    ch->handler = std::move(handler);
 
     utils::auto_write_lock l(_lock);
     for (const auto &cmd : commands) {
         CHECK(!cmd.empty(), "should not register empty command");
-        CHECK(_handlers.emplace(cmd, c).second, "command '{}' already registered", cmd);
+        gutil::InsertOrDie(&_handler_by_cmd, cmd, ch);
     }
 
-    return std::make_unique<command_deregister>(reinterpret_cast<uintptr_t>(c));
+    return std::make_unique<command_deregister>(reinterpret_cast<uintptr_t>(ch.get()));
 }
 
 std::unique_ptr<command_deregister> command_manager::register_bool_command(
@@ -94,35 +98,39 @@ command_manager::register_multiple_commands(const std::vector<std::string> &comm
                             handler);
 }
 
-void command_manager::deregister_command(uintptr_t handle)
+void command_manager::deregister_command(uintptr_t cmd_id)
 {
-    auto c = reinterpret_cast<command_instance *>(handle);
-    CHECK_NOTNULL(c, "cannot deregister a null handle");
+    const auto ch = reinterpret_cast<commands_handler *>(cmd_id);
+    CHECK_NOTNULL(ch, "cannot deregister a null command id");
     utils::auto_write_lock l(_lock);
-    for (const std::string &cmd : c->commands) {
-        _handlers.erase(cmd);
+    for (const auto &cmd : ch->commands) {
+        _handler_by_cmd.erase(cmd);
     }
+}
+
+void command_manager::add_global_cmd(std::unique_ptr<command_deregister> cmd)
+{
+    utils::auto_write_lock l(_lock);
+    _cmds.push_back(std::move(cmd));
 }
 
 bool command_manager::run_command(const std::string &cmd,
                                   const std::vector<std::string> &args,
                                   /*out*/ std::string &output)
 {
-    command_instance *h = nullptr;
+    std::shared_ptr<commands_handler> ch;
     {
         utils::auto_read_lock l(_lock);
-        auto it = _handlers.find(cmd);
-        if (it != _handlers.end())
-            h = it->second;
+        ch = gutil::FindPtrOrNull(_handler_by_cmd, cmd);
     }
 
-    if (h == nullptr) {
-        output = std::string("unknown command '") + cmd + "'";
+    if (!ch) {
+        output = fmt::format("unknown command '{}'", cmd);
         return false;
-    } else {
-        output = h->handler(args);
-        return true;
     }
+
+    output = ch->handler(args);
+    return true;
 }
 
 std::string command_manager::set_bool(bool &value,
@@ -159,36 +167,34 @@ std::string command_manager::set_bool(bool &value,
 
 command_manager::command_manager()
 {
-    _cmds.emplace_back(
-        register_multiple_commands({"help", "h", "H", "Help"},
-                                   "Display help information",
-                                   "[command]",
-                                   [this](const std::vector<std::string> &args) {
-                                       std::stringstream ss;
-                                       if (args.empty()) {
-                                           std::unordered_set<command_instance *> cmds;
-                                           utils::auto_read_lock l(_lock);
-                                           for (const auto &c : this->_handlers) {
-                                               // Multiple commands with the same handler are print
-                                               // only once.
-                                               if (cmds.insert(c.second.get()).second) {
-                                                   ss << c.second->help << std::endl;
-                                               }
-                                           }
-                                       } else {
-                                           utils::auto_read_lock l(_lock);
-                                           auto it = _handlers.find(args[0]);
-                                           if (it == _handlers.end()) {
-                                               ss << "cannot find command '" << args[0] << "'";
-                                           } else {
-                                               ss.width(6);
-                                               ss << std::left << it->second->help << std::endl
-                                                  << it->second->args << std::endl;
-                                           }
-                                       }
+    _cmds.emplace_back(register_multiple_commands(
+        {"help", "h", "H", "Help"},
+        "Display help information",
+        "[command]",
+        [this](const std::vector<std::string> &args) {
+            std::stringstream ss;
+            if (args.empty()) {
+                std::unordered_set<commands_handler *> chs;
+                utils::auto_read_lock l(_lock);
+                for (const auto &[_, ch] : _handler_by_cmd) {
+                    // Multiple commands with the same handler are print only once.
+                    if (gutil::InsertIfNotPresent(&chs, ch.get())) {
+                        ss << ch->help << std::endl;
+                    }
+                }
+            } else {
+                utils::auto_read_lock l(_lock);
+                const auto ch = gutil::FindPtrOrNull(_handler_by_cmd, args[0]);
+                if (!ch) {
+                    ss << "cannot find command '" << args[0] << "'";
+                } else {
+                    ss.width(6);
+                    ss << std::left << ch->help << std::endl << ch->args << std::endl;
+                }
+            }
 
-                                       return ss.str();
-                                   }));
+            return ss.str();
+        }));
 
     _cmds.emplace_back(register_multiple_commands(
         {"repeat", "r", "R", "Repeat"},
@@ -241,10 +247,10 @@ command_manager::command_manager()
 command_manager::~command_manager()
 {
     _cmds.clear();
-    CHECK(_handlers.empty(),
+    CHECK(_handler_by_cmd.empty(),
           "All commands must be deregistered before command_manager is destroyed, however '{}' is "
           "still registered",
-          _handlers.begin()->first);
+          _handler_by_cmd.begin()->first);
 }
 
 } // namespace dsn
