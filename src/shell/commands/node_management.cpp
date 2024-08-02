@@ -267,6 +267,7 @@ aggregate_meta_server_stats(const node_desc &node,
     auto command_result = process_parse_metrics_result(
         calcs.aggregate_metrics(query_snapshot), node, "aggregate meta server stats");
     if (!command_result.first) {
+        // Metrics failed to be aggregated.
         return command_result;
     }
 
@@ -276,8 +277,10 @@ aggregate_meta_server_stats(const node_desc &node,
 
 struct replica_server_stats
 {
-    double virt_mem_mb;
-    double res_mem_mb;
+    replica_server_stats() = default;
+
+    double virt_mem_mb{0.0};
+    double res_mem_mb{0.0};
 
     DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
 };
@@ -299,6 +302,7 @@ aggregate_replica_server_stats(const node_desc &node,
         node,
         "aggregate replica server stats");
     if (!command_result.first) {
+        // Metrics failed to be aggregated.
         return command_result;
     }
 
@@ -309,6 +313,7 @@ aggregate_replica_server_stats(const node_desc &node,
 std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
                                                            uint32_t sample_interval_ms)
 {
+    // Ask target node (meta or replica server) for the metrics of server stats.
     const auto &query_string = server_stat_filters().to_query_string();
     const auto &results_start = get_metrics(nodes, query_string);
     std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
@@ -330,6 +335,7 @@ std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<nod
         SKIP_IF_PROCESS_RESULT_FALSE()                                                             \
     }
 
+        // Skip the metrics that failed to be fetched.
         PROCESS_GET_METRICS_RESULT(results_start[i], "starting server stats")
         PROCESS_GET_METRICS_RESULT(results_end[i], "ending server stats")
 
@@ -338,6 +344,7 @@ std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<nod
         dsn::metric_query_brief_value_snapshot query_snapshot_start;
         dsn::metric_query_brief_value_snapshot query_snapshot_end;
         {
+            // Skip the metrics that failed to be deserialized.
             auto command_result = process_parse_metrics_result(
                 deserialize_metric_query_2_samples(results_start[i].body(),
                                                    results_end[i].body(),
