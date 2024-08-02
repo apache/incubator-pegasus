@@ -197,10 +197,11 @@ function(dsn_setup_compiler_flags)
     add_definitions(-O2)
     add_definitions(-DDSN_BUILD_TYPE=Release)
   endif()
-  # Reduce the target size when build on GitHub Actions.
+  # Reduce the target size when build on GitHub actions.
   if("$ENV{GITHUB_ACTION}" STREQUAL "")
     add_definitions(-g)
   else()
+    message(WARNING "Running GitHub actions, the target size will be reduced!")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables -flto")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-s -Wl,-Bsymbolic -Wl,--gc-sections")
   endif()
