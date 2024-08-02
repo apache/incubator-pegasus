@@ -28,7 +28,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -47,6 +46,8 @@
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
 #include "runtime/api_layer1.h"
+#include "runtime/rpc/dns_resolver.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/env.h"
@@ -256,10 +257,15 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
 
 void replica::send_backup_request_to_secondary(const backup_request &request)
 {
-    for (const auto &secondary : _primary_states.pc.secondaries) {
+    std::vector<dsn::host_port> secondaries;
+    GET_HOST_PORTS(_primary_states.pc, secondaries, secondaries);
+    for (const auto &secondary : secondaries) {
         // primary will send backup_request to secondary periodically
         // so, we shouldn't handle the response
-        rpc::call_one_way_typed(secondary, RPC_COLD_BACKUP, request, get_gpid().thread_hash());
+        rpc::call_one_way_typed(dsn::dns_resolver::instance().resolve_address(secondary),
+                                RPC_COLD_BACKUP,
+                                request,
+                                get_gpid().thread_hash());
     }
 }
 

@@ -178,7 +178,9 @@ error_code replica_follower::update_master_replica_config(error_code err, query_
         return ERR_INCONSISTENT_STATE;
     }
 
-    if (dsn_unlikely(!resp.partitions[0].hp_primary)) {
+    dsn::host_port primary;
+    GET_HOST_PORT(resp.partitions[0], primary, primary);
+    if (dsn_unlikely(!primary)) {
         LOG_ERROR_PREFIX("master[{}] partition address is invalid", master_replica_name());
         return ERR_INVALID_STATE;
     }
@@ -203,9 +205,14 @@ void replica_follower::copy_master_replica_checkpoint()
     dsn::message_ex *msg =
         dsn::message_ex::create_request(RPC_QUERY_LAST_CHECKPOINT_INFO, 0, _pc.pid.thread_hash());
     dsn::marshall(msg, request);
-    rpc::call(_pc.primary, msg, &_tracker, [&](error_code err, learn_response &&resp) mutable {
-        nfs_copy_checkpoint(err, std::move(resp));
-    });
+    dsn::host_port primary;
+    GET_HOST_PORT(_pc, primary, primary);
+    rpc::call(dsn::dns_resolver::instance().resolve_address(primary),
+              msg,
+              &_tracker,
+              [&](error_code err, learn_response &&resp) mutable {
+                  nfs_copy_checkpoint(err, std::move(resp));
+              });
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT

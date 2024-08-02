@@ -165,12 +165,13 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
 
 dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
 {
-    if (pinfo.config.hp_last_drops.size() < 2) {
+    std::vector<dsn::host_port> last_drops;
+    GET_HOST_PORTS(pinfo.config, last_drops, last_drops);
+    if (last_drops.size() < 2) {
         return dsn::host_port();
     }
 
-    std::vector<dsn::host_port> last_two_nodes(pinfo.config.hp_last_drops.end() - 2,
-                                               pinfo.config.hp_last_drops.end());
+    std::vector<dsn::host_port> last_two_nodes(last_drops.end() - 2, last_drops.end());
     std::vector<ddd_node_info> last_dropped;
     for (auto &node : last_two_nodes) {
         auto it = std::find_if(pinfo.dropped.begin(),
@@ -291,12 +292,13 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             << "last_committed(" << pinfo.config.last_committed_decree << ")" << std::endl;
         out << "    ----" << std::endl;
         dsn::host_port latest_dropped, secondary_latest_dropped;
-        if (pinfo.config.hp_last_drops.size() > 0) {
-            latest_dropped = pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 1];
+        std::vector<dsn::host_port> last_drops;
+        GET_HOST_PORTS(pinfo.config, last_drops, last_drops);
+        if (last_drops.size() > 0) {
+            latest_dropped = last_drops[last_drops.size() - 1];
         }
-        if (pinfo.config.hp_last_drops.size() > 1) {
-            secondary_latest_dropped =
-                pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 2];
+        if (last_drops.size() > 1) {
+            secondary_latest_dropped = last_drops[last_drops.size() - 2];
         }
         int j = 0;
         for (const ddd_node_info &n : pinfo.dropped) {
@@ -320,12 +322,12 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         }
         out << "    ----" << std::endl;
         j = 0;
-        for (const auto &r : pinfo.config.hp_last_drops) {
+        for (const auto &r : last_drops) {
             out << "    last_drops[" << j++ << "]: "
                 << "node(" << r.to_string() << ")";
-            if (j == (int)pinfo.config.hp_last_drops.size() - 1)
+            if (j == (int)last_drops.size() - 1)
                 out << "  <== the secondary latest";
-            else if (j == (int)pinfo.config.hp_last_drops.size())
+            else if (j == (int)last_drops.size())
                 out << "  <== the latest";
             out << std::endl;
         }
