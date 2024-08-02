@@ -301,7 +301,8 @@ aggregate_replica_server_stats(const node_desc &node,
         return command_result;
     }
 
-    return std::make_pair(true, json::json_forwarder<meta_server_stats>::encode(stats).to_string());
+    return std::make_pair(true,
+                          dsn::json::json_forwarder<meta_server_stats>::encode(stats).to_string());
 }
 
 std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
