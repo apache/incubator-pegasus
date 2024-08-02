@@ -50,6 +50,7 @@
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"
+#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
