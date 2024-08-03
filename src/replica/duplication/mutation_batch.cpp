@@ -196,10 +196,8 @@ void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree
         }
 
         blob bb;
-        if (update.data.buffer() != nullptr) {
+        if (update.data.buffer()) {
             bb = std::move(update.data);
-        } else {
-            bb = blob::create_from_bytes(update.data.data(), update.data.length());
         }
 
         _total_bytes += bb.length();

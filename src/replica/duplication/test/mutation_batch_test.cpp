@@ -31,6 +31,7 @@
 #include "gtest/gtest.h"
 #include "replica/duplication/mutation_batch.h"
 #include "replica/duplication/mutation_duplicator.h"
+#include "replica/duplication/replica_duplicator.h"
 #include "replica/mutation.h"
 #include "replica/prepare_list.h"
 #include "runtime/task/task_code.h"
