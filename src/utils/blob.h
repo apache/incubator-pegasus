@@ -33,6 +33,7 @@
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/protocol/TProtocol.h>
 
+#include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"
 #include "utils.h"
 
@@ -48,14 +49,6 @@ public:
 
     blob(std::shared_ptr<char> buffer, unsigned int length)
         : _holder(std::move(buffer)), _buffer(_holder.get()), _data(_holder.get()), _length(length)
-    {
-    }
-
-    blob(std::shared_ptr<char> buffer, int offset, unsigned int length)
-        : _holder(std::move(buffer)),
-          _buffer(_holder.get()),
-          _data(_holder.get() + offset),
-          _length(length)
     {
     }
 
@@ -119,9 +112,11 @@ public:
     /// NOTE: this operation is not efficient since it involves a memory copy.
     static blob create_from_bytes(const char *s, size_t len)
     {
+        CHECK_NOTNULL(s, "null source pointer would lead to undefined behaviour");
+
         std::shared_ptr<char> s_arr(new char[len], std::default_delete<char[]>());
         memcpy(s_arr.get(), s, len);
-        return blob(std::move(s_arr), 0, static_cast<unsigned int>(len));
+        return blob(std::move(s_arr), static_cast<unsigned int>(len));
     }
 
     /// Create shared buffer without copying data.
@@ -129,7 +124,7 @@ public:
     {
         auto s = new std::string(std::move(bytes));
         std::shared_ptr<char> buf(const_cast<char *>(s->data()), [s](char *) { delete s; });
-        return blob(std::move(buf), 0, static_cast<unsigned int>(s->length()));
+        return blob(std::move(buf), static_cast<unsigned int>(s->length()));
     }
 
     void assign(const std::shared_ptr<char> &buffer, int offset, unsigned int length)
@@ -143,8 +138,8 @@ public:
     void assign(std::shared_ptr<char> &&buffer, int offset, unsigned int length)
     {
         _holder = std::move(buffer);
-        _buffer = (_holder.get());
-        _data = (_holder.get() + offset);
+        _buffer = _holder.get();
+        _data = _holder.get() + offset;
         _length = length;
     }
 
@@ -203,8 +198,10 @@ public:
 
     std::string to_string() const
     {
-        if (_length == 0)
-            return {};
+        if (_length == 0) {
+            return std::string();
+        }
+
         return std::string(_data, _length);
     }
 
