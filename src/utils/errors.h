@@ -72,10 +72,7 @@ public:
     error_s(error_s &&rhs) noexcept = default;
     error_s &operator=(error_s &&) noexcept = default;
 
-    static error_s make(error_code code, std::string_view reason)
-    {
-        return error_s(code, reason);
-    } // NOLINT
+    static error_s make(error_code code, std::string_view reason) { return error_s(code, reason); }
 
     static error_s make(error_code code)
     {
