@@ -116,10 +116,26 @@ TEST_P(mutation_batch_test, prepare_mutation)
     check_mutation_contents({"first mutation", "abcde", "hello world", "foo bar", "5th mutation"});
 }
 
+TEST_P(mutation_batch_test, add_null_mutation)
+{
+    auto mu = create_test_mutation(1, nullptr);
+    _batcher.add_mutation_if_valid(mu, 0);
+
+    check_mutation_contents({""});
+}
+
+TEST_P(mutation_batch_test, add_empty_mutation)
+{
+    auto mu = create_test_mutation(1, "");
+    _batcher.add_mutation_if_valid(mu, 0);
+
+    check_mutation_contents({""});
+}
+
 TEST_P(mutation_batch_test, add_a_valid_mutation)
 {
-    auto mu1 = create_test_mutation(1, "hello");
-    _batcher.add_mutation_if_valid(mu1, 0);
+    auto mu = create_test_mutation(1, "hello");
+    _batcher.add_mutation_if_valid(mu, 0);
 
     check_mutation_contents({"hello"});
 }

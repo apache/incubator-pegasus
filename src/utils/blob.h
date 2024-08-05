@@ -67,6 +67,54 @@ public:
     {
     }
 
+    blob(const blob &rhs) noexcept
+        : _holder(rhs._holder), _buffer(rhs._buffer), _data(rhs._data), _length(rhs._length)
+    {
+    }
+
+    blob &operator=(const blob &rhs) noexcept
+    {
+        if (this == &rhs) {
+            return *this;
+        }
+
+        _holder = rhs._holder;
+        _buffer = rhs._buffer;
+        _data = rhs._data;
+        _length = rhs._length;
+
+        return *this;
+    }
+
+    blob(blob &&rhs) noexcept
+        : _holder(std::move(rhs._holder)),
+          _buffer(rhs._buffer),
+          _data(rhs._data),
+          _length(rhs._length)
+    {
+        rhs._buffer = nullptr;
+        rhs._data = nullptr;
+        rhs._length = 0;
+    }
+
+    blob &operator=(blob &&rhs) noexcept
+    {
+        if (this == &rhs) {
+            return *this;
+        }
+
+        _holder = std::move(rhs._holder);
+        _buffer = rhs._buffer;
+        _data = rhs._data;
+        _length = rhs._length;
+
+        rhs._buffer = nullptr;
+        rhs._data = nullptr;
+        rhs._length = 0;
+
+        return *this;
+    }
+
     /// Create shared buffer from allocated raw bytes.
     /// NOTE: this operation is not efficient since it involves a memory copy.
     static blob create_from_bytes(const char *s, size_t len)
