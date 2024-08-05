@@ -105,7 +105,7 @@ int binary_reader::inner_read(blob &blob, int len)
         if (!blob.buffer_ptr()) {
             std::shared_ptr<char> buffer(::dsn::utils::make_shared_array<char>(len));
             memcpy(buffer.get(), blob.data(), blob.length());
-            blob = ::dsn::blob(buffer, 0, blob.length());
+            blob = ::dsn::blob(buffer, blob.length());
         }
 
         _ptr += len;

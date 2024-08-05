@@ -83,7 +83,7 @@ static message_ex *virtual_send_message(message_ex *msg)
         tmp += buf.length();
     }
 
-    blob bb(buffer, 0, msg->header->body_length + sizeof(message_header));
+    blob bb(buffer, msg->header->body_length + sizeof(message_header));
     message_ex *recv_msg = message_ex::create_receive_message(bb);
     recv_msg->to_address = msg->to_address;
     recv_msg->to_host_port = msg->to_host_port;
