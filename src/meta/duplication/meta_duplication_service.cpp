@@ -484,43 +484,43 @@ void meta_duplication_service::create_follower_app_for_duplication(
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_CREATE_APP);
     dsn::marshall(msg, request);
-    rpc::call(
-        dsn::dns_resolver::instance().resolve_address(meta_servers),
-        msg,
-        _meta_svc->tracker(),
-        [=](error_code err, configuration_create_app_response &&resp) mutable {
-            FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
-                                           [&](std::string_view s) -> void { err = ERR_OK; });
-            error_code create_err = err == ERR_OK ? resp.err : err;
-            error_code update_err = ERR_NO_NEED_OPERATE;
+    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
+              msg,
+              _meta_svc->tracker(),
+              [=](error_code err, configuration_create_app_response &&resp) mutable {
+                  FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
+                                                 [&](std::string_view s) -> void { err = ERR_OK; });
+                  error_code create_err = err == ERR_OK ? resp.err : err;
+                  error_code update_err = ERR_NO_NEED_OPERATE;
 
-            FAIL_POINT_INJECT_NOT_RETURN_F(
-                "persist_dup_status_failed",
-                [&](std::string_view s) -> void { create_err = ERR_OK; });
-            if (create_err == ERR_OK) {
-                update_err = dup->alter_status(duplication_status::DS_APP);
-            }
+                  FAIL_POINT_INJECT_NOT_RETURN_F(
+                      "persist_dup_status_failed",
+                      [&](std::string_view s) -> void { create_err = ERR_OK; });
+                  if (create_err == ERR_OK) {
+                      update_err = dup->alter_status(duplication_status::DS_APP);
+                  }
 
-            FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                [&](std::string_view s) -> void { return; });
-            if (update_err == ERR_OK) {
-                blob value = dup->to_json_blob();
-                // Note: this function is `async`, it may not be persisted completed
-                // after executing, now using `_is_altering` to judge whether `updating` or
-                // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
-                _meta_svc->get_meta_storage()->set_data(std::string(dup->store_path),
-                                                        std::move(value),
-                                                        [=]() { dup->persist_status(); });
-            } else {
-                LOG_ERROR("created follower app[{}.{}] to trigger duplicate checkpoint failed: "
+                  FAIL_POINT_INJECT_F("persist_dup_status_failed",
+                                      [&](std::string_view s) -> void { return; });
+                  if (update_err == ERR_OK) {
+                      blob value = dup->to_json_blob();
+                      // Note: this function is `async`, it may not be persisted completed
+                      // after executing, now using `_is_altering` to judge whether `updating` or
+                      // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
+                      _meta_svc->get_meta_storage()->set_data(std::string(dup->store_path),
+                                                              std::move(value),
+                                                              [=]() { dup->persist_status(); });
+                  } else {
+                      LOG_ERROR(
+                          "created follower app[{}.{}] to trigger duplicate checkpoint failed: "
                           "duplication_status = {}, create_err = {}, update_err = {}",
                           dup->remote_cluster_name,
                           dup->app_name,
                           duplication_status_to_string(dup->status()),
                           create_err,
                           update_err);
-            }
-        });
+                  }
+              });
 }
 
 void meta_duplication_service::check_follower_app_if_create_completed(

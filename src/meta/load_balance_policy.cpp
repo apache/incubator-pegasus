@@ -146,8 +146,7 @@ generate_balancer_request(const app_mapper &apps,
                           const host_port &from,
                           const host_port &to)
 {
-    FAIL_POINT_INJECT_F("generate_balancer_request",
-                        [](std::string_view name) { return nullptr; });
+    FAIL_POINT_INJECT_F("generate_balancer_request", [](std::string_view name) { return nullptr; });
 
     configuration_balancer_request result;
     result.gpid = pc.pid;

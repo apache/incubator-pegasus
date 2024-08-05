@@ -2716,8 +2716,7 @@ void replica_stub::split_replica_error_handler(gpid pid, local_execution handler
 dsn::error_code
 replica_stub::split_replica_exec(dsn::task_code code, gpid pid, local_execution handler)
 {
-    FAIL_POINT_INJECT_F("replica_stub_split_replica_exec",
-                        [](std::string_view) { return ERR_OK; });
+    FAIL_POINT_INJECT_F("replica_stub_split_replica_exec", [](std::string_view) { return ERR_OK; });
     replica_ptr replica = pid.get_app_id() == 0 ? nullptr : get_replica(pid);
     if (replica && handler) {
         tasking::enqueue(
