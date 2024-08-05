@@ -162,11 +162,12 @@ public:
 
     const char *buffer_ptr() const { return _holder.get(); }
 
-    // offset can be negative for buffer dereference
+    // `offset` can be negative for buffer dereference.
     blob range(int offset) const
     {
-        // offset cannot exceed the current length value
-        assert(offset <= static_cast<int>(_length));
+        CHECK_LE_MSG(offset,
+                     static_cast<int>(_length),
+                     "the required offset cannot exceed the current length");
 
         blob temp = *this;
         temp._data += offset;
@@ -176,23 +177,24 @@ public:
 
     blob range(int offset, unsigned int len) const
     {
-        // offset cannot exceed the current length value
-        assert(offset <= static_cast<int>(_length));
+        CHECK_LE_MSG(offset,
+                     static_cast<int>(_length),
+                     "the required offset cannot exceed the current length");
 
         blob temp = *this;
         temp._data += offset;
         temp._length -= offset;
 
-        // buffer length must exceed the required length
-        assert(temp._length >= len);
+        CHECK_LE_MSG(
+            len, temp._length, "the required length cannot exceed remaining buffer length");
+
         temp._length = len;
         return temp;
     }
 
     bool operator==(const blob &r) const
     {
-        // not implemented
-        assert(false);
+        CHECK(false, "not implemented");
         return false;
     }
 
