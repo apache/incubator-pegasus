@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <string_view>
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
@@ -23,7 +22,7 @@
 #include <prometheus/metric_type.h>
 #include <algorithm>
 #include <iterator>
-#include <type_traits>
+#include <string_view>
 #include <utility>
 
 #include "block_service/block_service.h"

@@ -24,10 +24,10 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include <string_view>
 #include "common/json_helper.h"
 #include "compaction_filter_rule.h"
 #include "utils/blob.h"

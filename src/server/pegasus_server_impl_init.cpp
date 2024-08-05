@@ -17,7 +17,6 @@
  * under the License.
  */
 
-#include <string_view>
 #include <fmt/core.h>
 #include <rocksdb/cache.h>
 #include <rocksdb/filter_policy.h>
@@ -27,12 +26,12 @@
 #include <rocksdb/table.h>
 #include <rocksdb/write_buffer_manager.h>
 #include <stdio.h>
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
