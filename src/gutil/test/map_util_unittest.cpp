@@ -17,7 +17,7 @@
 #include "gutil/map_util.h"
 
 #include <absl/hash/hash.h>
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 #include <stdint.h>
 #include <algorithm>
@@ -73,7 +73,7 @@ TEST(MapUtil, HeterogeneousLookup)
 
     // Verify that I can use a key type that's appropriate for heterogeneous
     // lookup, such as string_view -> string.
-    constexpr absl::string_view kLookupKey = "foo";
+    constexpr std::string_view kLookupKey = "foo";
     EXPECT_EQ(FindWithDefault(m, kLookupKey), "");
     EXPECT_EQ(FindWithDefault(const_m, kLookupKey), "");
 

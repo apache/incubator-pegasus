@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <thrift/transport/TTransportException.h>

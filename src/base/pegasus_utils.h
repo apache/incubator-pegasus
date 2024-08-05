@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/flags.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
@@ -122,9 +122,9 @@ const std::string &redact_sensitive_string(const T &src)
     }
 }
 
-inline absl::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
+inline std::string_view to_string_view(rocksdb::Slice s) { return {s.data(), s.size()}; }
 
-inline rocksdb::Slice to_rocksdb_slice(absl::string_view s) { return {s.data(), s.size()}; }
+inline rocksdb::Slice to_rocksdb_slice(std::string_view s) { return {s.data(), s.size()}; }
 
 } // namespace utils
 } // namespace pegasus

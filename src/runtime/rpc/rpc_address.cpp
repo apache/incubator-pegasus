@@ -35,7 +35,7 @@
 #include <sys/socket.h>
 #include <string>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "runtime/rpc/group_address.h"
 #include "utils/error_code.h"
 #include "utils/fixed_size_buffer_pool.h"
@@ -143,7 +143,7 @@ bool rpc_address::is_site_local_address(uint32_t ip_net)
 /*static*/
 bool rpc_address::is_docker_netcard(const char *netcard_interface, uint32_t ip_net)
 {
-    if (absl::string_view(netcard_interface).find("docker") != absl::string_view::npos) {
+    if (std::string_view(netcard_interface).find("docker") != std::string_view::npos) {
         return true;
     }
     uint32_t iphost = ntohl(ip_net);

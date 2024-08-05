@@ -17,7 +17,7 @@
 
 #include "duplication_pipeline.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <stddef.h>
 #include <algorithm>
 #include <functional>
@@ -47,7 +47,7 @@ namespace replication {
 //                     //
 
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
-    replica_base *, absl::string_view /*remote cluster*/, absl::string_view /*app*/)>
+    replica_base *, std::string_view /*remote cluster*/, std::string_view /*app*/)>
     mutation_duplicator::creator;
 
 //               //

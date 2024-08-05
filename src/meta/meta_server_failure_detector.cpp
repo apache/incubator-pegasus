@@ -30,7 +30,7 @@
 #include <thread>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "fd_types.h"
 #include "meta/meta_options.h"
 #include "meta/meta_service.h"
@@ -107,7 +107,7 @@ void meta_server_failure_detector::on_worker_connected(const host_port &node)
 
 bool meta_server_failure_detector::get_leader(host_port *leader)
 {
-    FAIL_POINT_INJECT_F("meta_server_failure_detector_get_leader", [leader](absl::string_view str) {
+    FAIL_POINT_INJECT_F("meta_server_failure_detector_get_leader", [leader](std::string_view str) {
         /// the format of str is : true#{ip}:{port} or false#{ip}:{port}
         auto pos = str.find("#");
         // get leader host_port

@@ -56,9 +56,9 @@ struct time_tag_field : public value_field
 
 struct user_data_field : public value_field
 {
-    explicit user_data_field(absl::string_view data) : user_data(data) {}
+    explicit user_data_field(std::string_view data) : user_data(data) {}
     value_field_type type() { return value_field_type::USER_DATA; }
 
-    absl::string_view user_data;
+    std::string_view user_data;
 };
 } // namespace pegasus

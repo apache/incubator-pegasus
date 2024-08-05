@@ -19,7 +19,7 @@
 
 #include "server/pegasus_mutation_duplicator.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>

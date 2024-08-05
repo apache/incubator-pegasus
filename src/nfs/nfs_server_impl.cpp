@@ -32,7 +32,7 @@
 #include <mutex>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "fmt/core.h" // IWYU pragma: keep
 #include "gutil/map_util.h"
 #include "nfs/nfs_code_definition.h"

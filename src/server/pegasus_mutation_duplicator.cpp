@@ -19,7 +19,7 @@
 
 #include "pegasus_mutation_duplicator.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
@@ -75,9 +75,9 @@ DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
 
 /// static definition of mutation_duplicator::creator.
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
-    replica_base *, absl::string_view, absl::string_view)>
+    replica_base *, std::string_view, std::string_view)>
     mutation_duplicator::creator =
-        [](replica_base *r, absl::string_view remote, absl::string_view app) {
+        [](replica_base *r, std::string_view remote, std::string_view app) {
             return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
         };
 
@@ -116,8 +116,8 @@ using namespace dsn::literals::chrono_literals;
 }
 
 pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::replica_base *r,
-                                                         absl::string_view remote_cluster,
-                                                         absl::string_view app)
+                                                         std::string_view remote_cluster,
+                                                         std::string_view app)
     : mutation_duplicator(r),
       _remote_cluster(remote_cluster),
       METRIC_VAR_INIT_replica(dup_shipped_successful_requests),

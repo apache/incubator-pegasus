@@ -40,7 +40,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
@@ -694,7 +694,7 @@ bool replica::is_same_ballot_status_change_allowed(partition_status::type olds,
 bool replica::update_local_configuration(const replica_configuration &config,
                                          bool same_ballot /* = false*/)
 {
-    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](absl::string_view) -> bool {
+    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](std::string_view) -> bool {
         auto old_status = status();
         _config = config;
         LOG_INFO_PREFIX(

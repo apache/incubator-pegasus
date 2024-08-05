@@ -39,7 +39,7 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 namespace pegasus {
 namespace server {
@@ -60,12 +60,12 @@ public:
         _rocksdb_wrapper = _server_write->_write_svc->_impl->_rocksdb_wrapper.get();
 
         pegasus::pegasus_generate_key(
-            _raw_key, absl::string_view("hash_key"), absl::string_view("sort_key"));
+            _raw_key, std::string_view("hash_key"), std::string_view("sort_key"));
     }
 
     void single_set(db_write_context write_ctx,
                     dsn::blob raw_key,
-                    absl::string_view user_value,
+                    std::string_view user_value,
                     int32_t expire_ts_seconds)
     {
         ASSERT_EQ(_rocksdb_wrapper->write_batch_put_ctx(
@@ -93,7 +93,7 @@ public:
         SetUp();
     }
 
-    uint64_t read_timestamp_from(absl::string_view raw_value)
+    uint64_t read_timestamp_from(std::string_view raw_value)
     {
         uint64_t local_timetag =
             pegasus_extract_timetag(_rocksdb_wrapper->_pegasus_data_version, raw_value);

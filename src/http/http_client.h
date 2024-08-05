@@ -27,7 +27,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "http/http_method.h"
 #include "http/http_status_code.h"
 #include "utils/enum_helper.h"
@@ -199,8 +199,8 @@ public:
 
     // Operations for the header fields.
     void clear_header_fields();
-    void set_accept(absl::string_view val);
-    void set_content_type(absl::string_view val);
+    void set_accept(std::string_view val);
+    void set_content_type(std::string_view val);
 
     // Submit request to remote http service, with response processed by callback function.
     //
@@ -235,7 +235,7 @@ private:
     dsn::error_s set_method(http_method method);
 
     void free_header_list();
-    void set_header_field(absl::string_view key, absl::string_view val);
+    void set_header_field(std::string_view key, std::string_view val);
     dsn::error_s process_header();
 
     // The size of a buffer that is used by libcurl to store human readable

@@ -21,7 +21,7 @@
 #include <queue>
 #include <type_traits>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "common//duplication_common.h"
 #include "common/common.h"
 #include "common/gpid.h"
@@ -490,19 +490,19 @@ void meta_duplication_service::create_follower_app_for_duplication(
         _meta_svc->tracker(),
         [=](error_code err, configuration_create_app_response &&resp) mutable {
             FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
-                                           [&](absl::string_view s) -> void { err = ERR_OK; });
+                                           [&](std::string_view s) -> void { err = ERR_OK; });
             error_code create_err = err == ERR_OK ? resp.err : err;
             error_code update_err = ERR_NO_NEED_OPERATE;
 
             FAIL_POINT_INJECT_NOT_RETURN_F(
                 "persist_dup_status_failed",
-                [&](absl::string_view s) -> void { create_err = ERR_OK; });
+                [&](std::string_view s) -> void { create_err = ERR_OK; });
             if (create_err == ERR_OK) {
                 update_err = dup->alter_status(duplication_status::DS_APP);
             }
 
             FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                [&](absl::string_view s) -> void { return; });
+                                [&](std::string_view s) -> void { return; });
             if (update_err == ERR_OK) {
                 blob value = dup->to_json_blob();
                 // Note: this function is `async`, it may not be persisted completed
@@ -539,7 +539,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
               msg,
               _meta_svc->tracker(),
               [=](error_code err, query_cfg_response &&resp) mutable {
-                  FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](absl::string_view s) -> void {
+                  FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](std::string_view s) -> void {
                       err = ERR_OK;
                       int count = dup->partition_count;
                       while (count-- > 0) {
@@ -588,7 +588,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                   }
 
                   FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                      [&](absl::string_view s) -> void { return; });
+                                      [&](std::string_view s) -> void { return; });
                   if (update_err == ERR_OK) {
                       blob value = dup->to_json_blob();
                       // Note: this function is `async`, it may not be persisted completed

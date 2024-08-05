@@ -22,7 +22,7 @@
 #include <set>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "runtime/rpc/dns_resolver.h"

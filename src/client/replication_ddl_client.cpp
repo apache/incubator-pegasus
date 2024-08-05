@@ -1457,7 +1457,7 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
                   error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
                   FAIL_POINT_INJECT_NOT_RETURN_F(
                       "ddl_client_request_meta",
-                      [&err, this](absl::string_view str) { err = pop_mock_error(); });
+                      [&err, this](std::string_view str) { err = pop_mock_error(); });
 
                   end_meta_request(callback, attempt_count + 1, err, request, response);
               });

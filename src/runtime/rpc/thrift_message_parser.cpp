@@ -46,7 +46,7 @@
 #include "utils/endians.h"
 #include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/strings.h"
 
 namespace dsn {
@@ -340,7 +340,7 @@ void thrift_message_parser::prepare_on_send(message_ex *msg)
     // first total length, but we don't know the length, so firstly we put a placeholder
     header_proto.writeI32(0);
     // then the error_message
-    header_proto.writeString(absl::string_view(header->server.error_name));
+    header_proto.writeString(std::string_view(header->server.error_name));
     // then the thrift message begin
     header_proto.writeMessageBegin(
         header->rpc_name, ::apache::thrift::protocol::T_REPLY, header->id);

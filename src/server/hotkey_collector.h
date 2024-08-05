@@ -29,7 +29,7 @@
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/blob.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 namespace pegasus {
 namespace server {
@@ -50,7 +50,7 @@ struct detect_hotkey_result
     }
 };
 
-extern int get_bucket_id(absl::string_view data, int bucket_num);
+extern int get_bucket_id(std::string_view data, int bucket_num);
 extern bool
 find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index);
 

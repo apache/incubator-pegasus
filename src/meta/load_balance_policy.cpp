@@ -29,7 +29,7 @@
 #include <mutex>
 #include <ostream>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
@@ -147,7 +147,7 @@ generate_balancer_request(const app_mapper &apps,
                           const host_port &to)
 {
     FAIL_POINT_INJECT_F("generate_balancer_request",
-                        [](absl::string_view name) { return nullptr; });
+                        [](std::string_view name) { return nullptr; });
 
     configuration_balancer_request result;
     result.gpid = pc.pid;

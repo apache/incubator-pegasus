@@ -17,7 +17,7 @@
 
 #include "replica_backup_manager.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <stdint.h>
 #include <algorithm>
 #include <chrono>

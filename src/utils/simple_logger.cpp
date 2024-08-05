@@ -41,7 +41,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "runtime/api_layer1.h"
 #include "utils/command_manager.h"
 #include "utils/errors.h"
@@ -165,7 +165,7 @@ inline void process_fatal_log(log_level_t log_level)
     }
 
     bool coredump = true;
-    FAIL_POINT_INJECT_NOT_RETURN_F("coredump_for_fatal_log", [&coredump](absl::string_view str) {
+    FAIL_POINT_INJECT_NOT_RETURN_F("coredump_for_fatal_log", [&coredump](std::string_view str) {
         CHECK(buf2bool(str, coredump),
               "invalid coredump toggle for fatal log, should be true or false: {}",
               str);

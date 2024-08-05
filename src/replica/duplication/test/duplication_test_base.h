@@ -34,7 +34,7 @@ class duplication_test_base : public replica_test_base
 public:
     duplication_test_base()
     {
-        mutation_duplicator::creator = [](replica_base *r, absl::string_view, absl::string_view) {
+        mutation_duplicator::creator = [](replica_base *r, std::string_view, std::string_view) {
             return std::make_unique<mock_mutation_duplicator>(r);
         };
         stub->_duplication_sync_timer = std::make_unique<duplication_sync_timer>(stub.get());

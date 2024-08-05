@@ -19,7 +19,7 @@
 
 #include "capacity_unit_calculator.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <rocksdb/status.h>
 #include <sys/param.h>
 #include <cmath>

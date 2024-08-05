@@ -61,11 +61,11 @@ struct fail_point
         Void,
     };
 
-    void set_action(absl::string_view action);
+    void set_action(std::string_view action);
 
     const std::string *eval();
 
-    explicit fail_point(absl::string_view name) : _name(name) {}
+    explicit fail_point(std::string_view name) : _name(name) {}
 
     /// for test only
     fail_point(task_type t, std::string arg, int freq, int max_cnt)
@@ -76,7 +76,7 @@ struct fail_point
     /// for test only
     fail_point() = default;
 
-    bool parse_from_string(absl::string_view action);
+    bool parse_from_string(std::string_view action);
 
     friend inline bool operator==(const fail_point &p1, const fail_point &p2)
     {
@@ -103,7 +103,7 @@ USER_DEFINED_ENUM_FORMATTER(fail_point::task_type)
 
 struct fail_point_registry
 {
-    fail_point &create_if_not_exists(absl::string_view name)
+    fail_point &create_if_not_exists(std::string_view name)
     {
         std::lock_guard<std::mutex> guard(_mu);
 
@@ -111,7 +111,7 @@ struct fail_point_registry
         return it->second;
     }
 
-    fail_point *try_get(absl::string_view name)
+    fail_point *try_get(std::string_view name)
     {
         std::lock_guard<std::mutex> guard(_mu);
 
