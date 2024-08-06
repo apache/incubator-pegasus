@@ -21,7 +21,6 @@
 
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <string_view>

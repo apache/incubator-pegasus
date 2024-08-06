@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <iterator>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "block_service/block_service.h"
