@@ -33,7 +33,6 @@
 #include "runtime/tool_api.h"
 #include "simple_logger.h"
 #include "utils/api_utilities.h"
-#include "utils/command_manager.h"
 #include "utils/factory_store.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
