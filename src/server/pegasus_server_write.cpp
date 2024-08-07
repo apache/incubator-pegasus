@@ -17,11 +17,10 @@
  * under the License.
  */
 
-#include <string_view>
-#include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <thrift/transport/TTransportException.h>
 #include <algorithm>
+#include <string_view>
 #include <utility>
 
 #include "base/pegasus_key_schema.h"
