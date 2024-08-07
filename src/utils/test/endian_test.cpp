@@ -21,7 +21,6 @@
 
 #include "gtest/gtest.h"
 #include "utils/endians.h"
-#include "utils/enum_helper.h"
 
 using namespace dsn;
 

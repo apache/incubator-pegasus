@@ -19,7 +19,6 @@
 
 #include "available_detector.h"
 
-#include <fmt/core.h>
 #include <fmt/std.h> // IWYU pragma: keep
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <pegasus/error.h>

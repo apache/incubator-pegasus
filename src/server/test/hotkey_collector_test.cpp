@@ -17,9 +17,8 @@
 
 #include "server/hotkey_collector.h"
 
-#include <string_view>
-#include <fmt/core.h>
 #include <chrono>
+#include <string_view>
 #include <thread>
 
 #include "base/pegasus_key_schema.h"

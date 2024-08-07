@@ -216,6 +216,12 @@ function(dsn_setup_compiler_flags)
   if(${BUILD_TEST})
     add_definitions(-DMOCK_TEST)
   endif()
+  # Use external fmt library instead of spdlog bundled.
+  add_definitions(-DSPDLOG_FMT_EXTERNAL)
+  # Define the compile time lowest log level to be active.
+  add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
+  # Compile with -fno-exceptions. Call abort() on any spdlog exceptions.
+  add_definitions(-DSPDLOG_NO_EXCEPTIONS=ON)
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -gdwarf-4" CACHE STRING "" FORCE)
 
