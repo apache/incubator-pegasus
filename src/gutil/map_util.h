@@ -406,7 +406,7 @@ void InsertOrDieNoPrint(M *m, const MapUtilInitT<M> &value)
 template <typename M>
 void InsertOrDie(M *m, const MapUtilKeyT<M> &key, const MapUtilMappedT<M> &data)
 {
-    CHECK(InsertIfNotPresent(m, key, data), "duplicate key: ", key);
+    CHECK(InsertIfNotPresent(m, key, data), "duplicate key: {}", key);
 }
 
 // Same as above except doesn't log the key on error.
@@ -427,7 +427,7 @@ auto InsertKeyOrDie(M *m, const MapUtilKeyT<M> &key) ->
     typename std::enable_if<internal_map_util::HasTryEmplace<M>::value, MapUtilMappedT<M> &>::type
 {
     auto res = m->try_emplace(key);
-    CHECK(res.second, "duplicate key: ", key);
+    CHECK(res.second, "duplicate key: {}", key);
     return gutil::subtle::GetMapped(*res.first);
 }
 
@@ -437,7 +437,7 @@ auto InsertKeyOrDie(M *m, const MapUtilKeyT<M> &key) ->
     typename std::enable_if<!internal_map_util::HasTryEmplace<M>::value, MapUtilMappedT<M> &>::type
 {
     auto res = m->insert(MapUtilValueT<M>(key, MapUtilMappedT<M>()));
-    CHECK(res.second, "duplicate key: ", key);
+    CHECK(res.second, "duplicate key: {}", key);
     return res.first->second;
 }
 
