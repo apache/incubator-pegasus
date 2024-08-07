@@ -136,7 +136,6 @@ static std::map<log_level_t, spdlog::level::level_enum> to_spdlog_levels = {
     {LOG_LEVEL_WARNING, spdlog::level::warn},
     {LOG_LEVEL_ERROR, spdlog::level::err},
     {LOG_LEVEL_FATAL, spdlog::level::critical}};
-static std::vector<std::unique_ptr<dsn::command_deregister>> log_cmds;
 
 static void log_on_sys_exit(::dsn::sys_exit_type)
 {
@@ -183,35 +182,36 @@ void dsn_log_init(const std::string &log_dir, const std::string &role_name)
     }
     spdlog::set_formatter(std::move(formatter));
 
-    // TODO(yingchun): simple_logger is destroyed after command_manager, so will cause crash like
-    //  "assertion expression: [_handlers.empty()] All commands must be deregistered before
-    //  command_manager is destroyed, however 'flush-log' is still registered".
-    //  We need to fix it.
-    log_cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
-        "flush-log", "Flush log to stderr or file", "", [](const std::vector<std::string> &args) {
-            g_stderr_logger->flush();
-            g_file_logger->flush();
-            return "Flush done.";
-        }));
+    ::dsn::command_manager::instance().add_global_cmd(
+        ::dsn::command_manager::instance().register_single_command(
+            "flush-log",
+            "Flush log to stderr or file",
+            "",
+            [](const std::vector<std::string> &args) {
+                g_stderr_logger->flush();
+                g_file_logger->flush();
+                return "Flush done.";
+            }));
 
-    log_cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
-        "reset-log-start-level",
-        "Reset the log start level",
-        "[DEBUG | INFO | WARNING | ERROR | FATAL]",
-        [](const std::vector<std::string> &args) {
-            log_level_t start_level;
-            if (args.empty()) {
-                start_level = enum_from_string(FLAGS_logging_start_level, LOG_LEVEL_INVALID);
-            } else {
-                std::string level_str = "LOG_LEVEL_" + args[0];
-                start_level = enum_from_string(level_str.c_str(), LOG_LEVEL_INVALID);
-                if (start_level == LOG_LEVEL_INVALID) {
-                    return "ERROR: invalid level '" + args[0] + "'";
+    ::dsn::command_manager::instance().add_global_cmd(
+        ::dsn::command_manager::instance().register_single_command(
+            "reset-log-start-level",
+            "Reset the log start level",
+            "[DEBUG | INFO | WARNING | ERROR | FATAL]",
+            [](const std::vector<std::string> &args) {
+                log_level_t start_level;
+                if (args.empty()) {
+                    start_level = enum_from_string(FLAGS_logging_start_level, LOG_LEVEL_INVALID);
+                } else {
+                    std::string level_str = "LOG_LEVEL_" + args[0];
+                    start_level = enum_from_string(level_str.c_str(), LOG_LEVEL_INVALID);
+                    if (start_level == LOG_LEVEL_INVALID) {
+                        return "ERROR: invalid level '" + args[0] + "'";
+                    }
                 }
-            }
-            g_file_logger->set_level(to_spdlog_levels[start_level]);
-            return std::string("OK, current level is ") + enum_to_string(start_level);
-        }));
+                g_file_logger->set_level(to_spdlog_levels[start_level]);
+                return std::string("OK, current level is ") + enum_to_string(start_level);
+            }));
 }
 
 std::string log_prefixed_message_func()
