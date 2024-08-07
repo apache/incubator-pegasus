@@ -79,7 +79,7 @@ public:
         }
 
         if (!_user_specified_operations.empty()) {
-            absl::string_view value_view = utils::to_string_view(existing_value);
+            std::string_view value_view = utils::to_string_view(existing_value);
             if (*value_changed) {
                 value_view = *new_value;
             }
@@ -92,7 +92,7 @@ public:
     }
 
     bool user_specified_operation_filter(const rocksdb::Slice &key,
-                                         absl::string_view existing_value,
+                                         std::string_view existing_value,
                                          std::string *new_value,
                                          bool *value_changed) const
     {

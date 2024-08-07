@@ -43,7 +43,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "backup/replica_backup_server.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
@@ -1810,7 +1810,7 @@ void replica_stub::open_replica(
                 dsn::utils::filesystem::rename_path(origin_tmp_dir, origin_dir);
                 rep = load_replica(origin_dn, origin_dir.c_str());
 
-                FAIL_POINT_INJECT_F("mock_replica_load", [&](absl::string_view) -> void {});
+                FAIL_POINT_INJECT_F("mock_replica_load", [&](std::string_view) -> void {});
             }
         }
     }
@@ -1999,7 +1999,7 @@ bool replica_stub::validate_replica_dir(const std::string &dir,
 replica *replica_stub::load_replica(dir_node *dn, const char *dir)
 {
     FAIL_POINT_INJECT_F("mock_replica_load",
-                        [&](absl::string_view) -> replica * { return nullptr; });
+                        [&](std::string_view) -> replica * { return nullptr; });
 
     app_info ai;
     gpid pid;
@@ -2671,7 +2671,7 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
                                                             const std::string &parent_dir)
 {
     FAIL_POINT_INJECT_F(
-        "replica_stub_create_child_replica_if_not_found", [=](absl::string_view) -> replica_ptr {
+        "replica_stub_create_child_replica_if_not_found", [=](std::string_view) -> replica_ptr {
             const auto dn =
                 _fs_manager.create_child_replica_dir(app->app_type, child_pid, parent_dir);
             CHECK_NOTNULL(dn, "");
@@ -2716,8 +2716,7 @@ void replica_stub::split_replica_error_handler(gpid pid, local_execution handler
 dsn::error_code
 replica_stub::split_replica_exec(dsn::task_code code, gpid pid, local_execution handler)
 {
-    FAIL_POINT_INJECT_F("replica_stub_split_replica_exec",
-                        [](absl::string_view) { return ERR_OK; });
+    FAIL_POINT_INJECT_F("replica_stub_split_replica_exec", [](std::string_view) { return ERR_OK; });
     replica_ptr replica = pid.get_app_id() == 0 ? nullptr : get_replica(pid);
     if (replica && handler) {
         tasking::enqueue(

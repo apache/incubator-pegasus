@@ -58,7 +58,7 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
@@ -82,7 +82,7 @@ namespace replication {
 
 void replica::init_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_init_group_check", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_init_group_check", [](std::string_view) {});
 
     _checker.only_one_thread_access();
 
@@ -102,7 +102,7 @@ void replica::init_group_check()
 
 void replica::broadcast_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](std::string_view) {});
 
     CHECK_NOTNULL(_primary_states.group_check_task, "");
 

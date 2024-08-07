@@ -32,7 +32,7 @@
 #include <list>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "message_parser_manager.h"
 #include "runtime/api_task.h"
 #include "runtime/rpc/rpc_address.h"

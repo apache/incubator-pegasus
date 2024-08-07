@@ -30,7 +30,7 @@
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <mutex>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "fmt/core.h"
 #include "nfs/nfs_code_definition.h"
 #include "nfs/nfs_node.h"

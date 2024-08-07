@@ -19,7 +19,7 @@
 
 #include "pegasus_manual_compact_service.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <limits.h>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>

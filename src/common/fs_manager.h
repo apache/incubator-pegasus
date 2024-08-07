@@ -31,7 +31,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/metrics.h"
 #include "utils/ports.h"
 #include "utils/zlocks.h"
@@ -105,7 +105,7 @@ public:
     uint64_t replicas_count() const;
     // Construct the replica dir for the given 'app_type' and 'pid'.
     // NOTE: Just construct the string, the directory will not be created.
-    std::string replica_dir(absl::string_view app_type, const dsn::gpid &pid) const;
+    std::string replica_dir(std::string_view app_type, const dsn::gpid &pid) const;
     bool has(const dsn::gpid &pid) const;
     uint64_t remove(const dsn::gpid &pid);
     void update_disk_stat();
@@ -133,18 +133,18 @@ public:
     // dir_nodes.
     // NOTE: only used in test.
     void specify_dir_for_new_replica_for_test(dir_node *specified_dn,
-                                              absl::string_view app_type,
+                                              std::string_view app_type,
                                               const dsn::gpid &pid) const;
     void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
     // Find the replica instance directory.
-    dir_node *find_replica_dir(absl::string_view app_type, gpid pid);
+    dir_node *find_replica_dir(std::string_view app_type, gpid pid);
     // Similar to the above, but it will create a new directory if not found.
-    dir_node *create_replica_dir_if_necessary(absl::string_view app_type, gpid pid);
+    dir_node *create_replica_dir_if_necessary(std::string_view app_type, gpid pid);
     // Similar to the above, and will create a directory for the child on the same dir_node
     // of parent.
     // During partition split, we should guarantee child replica and parent replica share the
     // same data dir.
-    dir_node *create_child_replica_dir(absl::string_view app_type,
+    dir_node *create_child_replica_dir(std::string_view app_type,
                                        gpid child_pid,
                                        const std::string &parent_dir);
     void remove_replica(const dsn::gpid &pid);

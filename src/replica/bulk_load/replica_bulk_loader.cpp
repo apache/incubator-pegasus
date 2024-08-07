@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "block_service/block_service_manager.h"
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
@@ -487,7 +487,7 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
                                          const std::string &remote_dir,
                                          const std::string &local_dir)
 {
-    FAIL_POINT_INJECT_F("replica_bulk_loader_download_files", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_bulk_loader_download_files", [](std::string_view) {});
 
     LOG_INFO_PREFIX("start to download files");
     dist::block_service::block_filesystem *fs =

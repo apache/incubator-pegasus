@@ -66,7 +66,7 @@ public:
         fill_buffers();
     }
 
-    // TODO(wutao1): use absl::string_view instead of using blob.
+    // TODO(wutao1): use std::string_view instead of using blob.
     // WARNING: the resulted blob is not guaranteed to be reference counted.
     // possible error_code:
     //  ERR_OK                      result would always size as expected

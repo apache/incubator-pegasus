@@ -17,7 +17,7 @@
 
 #include "server/hotkey_collector.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 #include <chrono>
 #include <thread>
@@ -70,7 +70,7 @@ TEST(hotkey_collector_public_func_test, get_bucket_id_test)
 {
     int bucket_id = -1;
     for (int i = 0; i < 1000000; i++) {
-        bucket_id = get_bucket_id(absl::string_view(generate_hash_key_by_random(false)),
+        bucket_id = get_bucket_id(std::string_view(generate_hash_key_by_random(false)),
                                   FLAGS_hotkey_buckets_num);
         ASSERT_GE(bucket_id, 0);
         ASSERT_LT(bucket_id, FLAGS_hotkey_buckets_num);

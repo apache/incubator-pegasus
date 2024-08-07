@@ -59,7 +59,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
@@ -301,7 +301,7 @@ private:
                       error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
                       FAIL_POINT_INJECT_NOT_RETURN_F(
                           "ddl_client_request_meta",
-                          [&err, this](absl::string_view str) { err = pop_mock_error(); });
+                          [&err, this](std::string_view str) { err = pop_mock_error(); });
 
                       end_meta_request(std::move(task), 1, err, request, response);
                   });
@@ -342,7 +342,7 @@ private:
 
             FAIL_POINT_INJECT_NOT_RETURN_F(
                 "ddl_client_request_meta",
-                [&resp, this](absl::string_view str) { resp.err = pop_mock_error(); });
+                [&resp, this](std::string_view str) { resp.err = pop_mock_error(); });
 
             LOG_INFO("received response from meta server: rpc_code={}, err={}, attempt_count={}, "
                      "max_attempt_count={}",

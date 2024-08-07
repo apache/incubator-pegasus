@@ -23,7 +23,7 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 DSN_DECLARE_string(service_fqdn);
 DSN_DECLARE_string(service_name);
@@ -33,7 +33,7 @@ namespace security {
 
 error_s sasl_server_wrapper::init()
 {
-    FAIL_POINT_INJECT_F("sasl_server_wrapper_init", [](absl::string_view str) {
+    FAIL_POINT_INJECT_F("sasl_server_wrapper_init", [](std::string_view str) {
         error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
         return error_s::make(err);
     });
@@ -45,7 +45,7 @@ error_s sasl_server_wrapper::init()
 
 error_s sasl_server_wrapper::start(const std::string &mechanism, const blob &input, blob &output)
 {
-    FAIL_POINT_INJECT_F("sasl_server_wrapper_start", [](absl::string_view str) {
+    FAIL_POINT_INJECT_F("sasl_server_wrapper_start", [](std::string_view str) {
         error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
         return error_s::make(err);
     });
@@ -61,7 +61,7 @@ error_s sasl_server_wrapper::start(const std::string &mechanism, const blob &inp
 
 error_s sasl_server_wrapper::step(const blob &input, blob &output)
 {
-    FAIL_POINT_INJECT_F("sasl_server_wrapper_step", [](absl::string_view str) {
+    FAIL_POINT_INJECT_F("sasl_server_wrapper_step", [](std::string_view str) {
         error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
         return error_s::make(err);
     });

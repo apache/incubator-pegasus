@@ -40,7 +40,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "common/json_helper.h"
 #include "http/http_server.h"
 #include "utils/alloc.h"
@@ -853,22 +853,22 @@ class metric_prototype
 public:
     struct ctor_args
     {
-        const absl::string_view entity_type;
+        const std::string_view entity_type;
         const metric_type type;
-        const absl::string_view name;
+        const std::string_view name;
         const metric_unit unit;
-        const absl::string_view desc;
+        const std::string_view desc;
     };
 
-    absl::string_view entity_type() const { return _args.entity_type; }
+    std::string_view entity_type() const { return _args.entity_type; }
 
     metric_type type() const { return _args.type; }
 
-    absl::string_view name() const { return _args.name; }
+    std::string_view name() const { return _args.name; }
 
     metric_unit unit() const { return _args.unit; }
 
-    absl::string_view description() const { return _args.desc; }
+    std::string_view description() const { return _args.desc; }
 
 protected:
     explicit metric_prototype(const ctor_args &args);

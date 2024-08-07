@@ -36,7 +36,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/macros.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_error_replica_interval_seconds,
@@ -148,7 +148,7 @@ bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &t
     }
 
     const auto ok =
-        dsn::buf2uint64(absl::string_view(name.data() + begin_idx, length), timestamp_us);
+        dsn::buf2uint64(std::string_view(name.data() + begin_idx, length), timestamp_us);
     return ok ? timestamp_us > MIN_TIMESTAMP_US : false;
 }
 

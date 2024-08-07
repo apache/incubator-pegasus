@@ -34,7 +34,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "failure_detector/fd.code.definition.h"
 #include "fd_types.h"
 #include "fmt/core.h"

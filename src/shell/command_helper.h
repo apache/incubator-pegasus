@@ -56,7 +56,7 @@
 #include "runtime/task/async_calls.h"
 #include "tools/mutation_log_tool.h"
 #include "utils/fmt_utils.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"
@@ -286,7 +286,7 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
         if (value.length() < filter_pattern.length())
             return false;
         if (filter_type == pegasus::pegasus_client::FT_MATCH_ANYWHERE) {
-            return absl::string_view(value).find(filter_pattern) != absl::string_view::npos;
+            return std::string_view(value).find(filter_pattern) != std::string_view::npos;
         } else if (filter_type == pegasus::pegasus_client::FT_MATCH_PREFIX) {
             return dsn::utils::mequals(
                 value.data(), filter_pattern.data(), filter_pattern.length());

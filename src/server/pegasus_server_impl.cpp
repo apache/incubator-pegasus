@@ -44,7 +44,7 @@
 #include <ostream>
 #include <set>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "base/idl_utils.h" // IWYU pragma: keep
 #include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
@@ -2354,7 +2354,7 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
             return false;
         if (filter_type == ::dsn::apps::filter_type::FT_MATCH_ANYWHERE) {
             return value.to_string_view().find(filter_pattern.to_string_view()) !=
-                   absl::string_view::npos;
+                   std::string_view::npos;
         } else if (filter_type == ::dsn::apps::filter_type::FT_MATCH_PREFIX) {
             return dsn::utils::mequals(
                 value.data(), filter_pattern.data(), filter_pattern.length());
