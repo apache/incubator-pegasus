@@ -64,8 +64,6 @@ public:
 
     virtual void flush() = 0;
 
-    void deregister_commands() { _cmds.clear(); }
-
 protected:
     static std::unique_ptr<logging_provider> _logger;
 
@@ -73,7 +71,6 @@ protected:
 
     logging_provider(log_level_t stderr_start_level) : _stderr_start_level(stderr_start_level) {}
 
-    std::vector<std::unique_ptr<command_deregister>> _cmds;
     const log_level_t _stderr_start_level;
 };
 
