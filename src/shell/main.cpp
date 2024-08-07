@@ -101,7 +101,7 @@ static command_executor commands[] = {
         "get the node status for this cluster",
         "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage] "
         "[-o|--output file_name] [-s|--status all|alive|unalive] [-q|--qps] "
-        "[-t|--sample_interval_ms num]",
+        "[-i|--sample_interval_ms num]",
         ls_nodes,
     },
     {
@@ -372,8 +372,8 @@ static command_executor commands[] = {
     {
         "remote_command",
         "send remote command to servers",
-        "[-t all|meta-server|replica-server] [-r|--resolve_ip] [-l host:port,host:port...]"
-        " <command> [arguments...]",
+        "[-t all|meta-server|replica-server] [-r|--resolve_ip] [-l host:port,host:port...] "
+        "[-i|--sample_interval_ms num] <command> [arguments...]",
         remote_command,
     },
     {
@@ -385,14 +385,15 @@ static command_executor commands[] = {
     {
         "server_stat",
         "get stat of servers",
-        "[-t all|meta-server|replica-server] [-l host:port,host:port...] [-r|--resolve_ip]",
+        "[-t all|meta-server|replica-server] [-l host:port,host:port...] [-r|--resolve_ip] "
+        "[-i|--sample_interval_ms num]",
         server_stat,
     },
     {
         "app_stat",
         "get stat of apps",
         "[-a|--app_name str] [-q|--only_qps] [-u|--only_usage] [-j|--json] "
-        "[-o|--output file_name] [-t|--sample_interval_ms num]",
+        "[-o|--output file_name] [-i|--sample_interval_ms num]",
         app_stat,
     },
     {
