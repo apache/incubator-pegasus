@@ -74,7 +74,7 @@ jobs:
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: clang-tidy
         run: |
-          git config --global --add safe.directory /__w/pegasus/pegasus
+          git config --global --add safe.directory $(pwd)
           ./run.sh build --test --compiler clang-14,clang++-14 -t debug --skip_thirdparty -c --cmake_only
           ./scripts/clang_tidy.py --rev-range $(git log origin/${{ github.base_ref }} -n1 --format=format:"%H")
         shell: bash
