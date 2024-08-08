@@ -545,19 +545,19 @@ void meta_duplication_service::check_follower_app_if_create_completed(
         _meta_svc->tracker(),
         [dup, this](error_code err, query_cfg_response &&resp) mutable {
             FAIL_POINT_INJECT_NOT_RETURN_F(
-                "create_app_ok", [dup, &err, &resp](std::string_view num_secondaries_str) -> void {
+                "create_app_ok",
+                [dup, &err, &resp](std::string_view remote_replica_count_str) -> void {
                     const host_port primary("localhost", 34801);
 
-                    int32_t num_secondaries = 0;
-                    CHECK_TRUE(buf2int32(num_secondaries_str, num_secondaries));
+                    int32_t remote_replica_count = 0;
+                    CHECK_TRUE(buf2int32(remote_replica_count_str, remote_replica_count));
+                    CHECK_GT(remote_replica_count, 0);
+                    CHECK_EQ(dup->remote_replica_count, remote_replica_count);
 
                     std::vector<host_port> secondaries;
-                    for (int32_t i = 0; i < num_secondaries; ++i) {
+                    for (int32_t i = 0; i < remote_replica_count - 1; ++i) {
                         secondaries.emplace_back("localhost", static_cast<uint16_t>(34802 + i));
                     }
-
-                    const int32_t remote_replica_count = 1 + secondaries.size();
-                    CHECK_EQ(dup->remote_replica_count, remote_replica_count);
 
                     for (int32_t i = 0; i < dup->partition_count; ++i) {
                         partition_configuration pc;
