@@ -573,8 +573,9 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                             break;
                         }
 
-                        if (1 + pc.hp_secondaries.size() < dup->remote_replica_count &&
-                            pc.hp_secondaries.empty()) {
+                        // if (1 + pc.hp_secondaries.size() < pc.max_replica_count &&
+                        //    pc.hp_secondaries.empty()) {
+                        if (pc.hp_secondaries.empty()) {
                             query_err = ERR_NOT_ENOUGH_MEMBER;
                             break;
                         }
@@ -596,6 +597,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
 
             FAIL_POINT_INJECT_F("persist_dup_status_failed",
                                 [](std::string_view) -> void { return; });
+
             if (update_err == ERR_OK) {
                 blob value = dup->to_json_blob();
                 // Note: this function is `async`, it may not be persisted completed

@@ -963,24 +963,34 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
 {
     struct test_case
     {
+        int32_t replica_count;
         std::vector<std::string> fail_cfg_name;
         std::vector<std::string> fail_cfg_action;
         bool is_altering;
         duplication_status::type cur_status;
         duplication_status::type next_status;
-    } test_cases[] = {{{"create_app_ok"},
+    } test_cases[] = {{3,
+                       {"create_app_ok"},
+                       {"void()"},
+                       false,
+                       duplication_status::DS_LOG,
+                       duplication_status::DS_INIT},
+                      {1,
+                       {"create_app_ok"},
                        {"void()"},
                        false,
                        duplication_status::DS_LOG,
                        duplication_status::DS_INIT},
                       // the case just `palace holder`, actually
                       // `check_follower_app_if_create_completed` is failed by default in unit test
-                      {{"create_app_failed"},
+                      {3,
+                       {"create_app_failed"},
                        {"off()"},
                        false,
                        duplication_status::DS_APP,
                        duplication_status::DS_INIT},
-                      {{"create_app_ok", "persist_dup_status_failed"},
+                      {3,
+                       {"create_app_ok", "persist_dup_status_failed"},
                        {"void()", "return()"},
                        true,
                        duplication_status::DS_APP,
@@ -988,7 +998,7 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
 
     for (const auto &test : test_cases) {
         const auto test_app = fmt::format("{}{}", test.fail_cfg_name[0], test.fail_cfg_name.size());
-        create_app(test_app);
+        create_app(test_app, 8, test.replica_count);
         auto app = find_app(test_app);
 
         auto dup_add_resp = create_dup(test_app);
