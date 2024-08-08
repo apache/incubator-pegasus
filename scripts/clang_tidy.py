@@ -88,5 +88,5 @@ if __name__ == "__main__":
     clang_output = run_tidy(args.rev, args.rev_range)
     print("Clang output")
     print(clang_output)
-    sys.exit(None != re.match(r'(warning|error): ', clang_output, flags=0))
+    sys.exit(None == re.match(r'(warning|error): ', clang_output))
 
