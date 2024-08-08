@@ -41,7 +41,6 @@
 #include <utility>
 #include <vector>
 
-
 #include <string_view>
 #include "runtime/api_layer1.h"
 #include "utils/command_manager.h"
