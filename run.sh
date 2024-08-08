@@ -114,6 +114,7 @@ function usage_build()
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
     echo "   --test                whether to build test binaries"
     echo "   --iwyu                specify the binary path of 'include-what-you-use' when build with IWYU"
+    echo "   --cmake_only          whether to run cmake only, default no"
 }
 
 function exit_if_fail() {
@@ -131,6 +132,7 @@ function run_build()
     C_COMPILER="gcc"
     CXX_COMPILER="g++"
     BUILD_TYPE="release"
+    # TODO(yingchun): some boolean variables are using YES/NO, some are using ON/OFF, should be unified.
     CLEAR=NO
     CLEAR_THIRDPARTY=NO
     JOB_NUM=8
@@ -145,6 +147,7 @@ function run_build()
     BUILD_TEST=OFF
     IWYU=""
     BUILD_MODULES=""
+    CMAKE_ONLY=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -219,6 +222,9 @@ function run_build()
             --iwyu)
                 IWYU="$2"
                 shift
+                ;;
+            --cmake_only)
+                CMAKE_ONLY=YES
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -352,6 +358,11 @@ function run_build()
     # rebuild link
     rm -f ${BUILD_LATEST_DIR}
     ln -s ${BUILD_DIR} ${BUILD_LATEST_DIR}
+
+    if [ "$CMAKE_ONLY" == "YES" ]; then
+        echo "CMake only, exit"
+        return
+    fi
 
     echo "[$(date)] Building Pegasus ..."
     pushd $BUILD_DIR
