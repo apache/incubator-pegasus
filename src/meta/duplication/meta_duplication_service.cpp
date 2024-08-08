@@ -336,10 +336,12 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
     _meta_svc->get_meta_storage()->create_node_recursively(
         std::move(nodes), std::move(value), [app, this, dup, rpc, resp_err]() mutable {
-            LOG_INFO("[{}] add duplication successfully [app_name: {}, remote_cluster_name: {}]",
+            LOG_INFO("[{}] add duplication successfully [app_name: {}, remote_cluster_name: {}, "
+                     "remote_app_name: {}]",
                      dup->log_prefix(),
                      app->app_name,
-                     dup->remote_cluster_name);
+                     dup->remote_cluster_name,
+                     dup->remote_app_name);
 
             // The duplication starts only after it's been persisted.
             dup->persist_status();
@@ -484,43 +486,45 @@ void meta_duplication_service::create_follower_app_for_duplication(
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_CREATE_APP);
     dsn::marshall(msg, request);
-    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
-              msg,
-              _meta_svc->tracker(),
-              [=](error_code err, configuration_create_app_response &&resp) mutable {
-                  FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
-                                                 [&](std::string_view s) -> void { err = ERR_OK; });
-                  error_code create_err = err == ERR_OK ? resp.err : err;
-                  error_code update_err = ERR_NO_NEED_OPERATE;
+    rpc::call(
+        dsn::dns_resolver::instance().resolve_address(meta_servers),
+        msg,
+        _meta_svc->tracker(),
+        [dup, this](error_code err, configuration_create_app_response &&resp) mutable {
+            FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
+                                           [&err](std::string_view) -> void { err = ERR_OK; });
 
-                  FAIL_POINT_INJECT_NOT_RETURN_F(
-                      "persist_dup_status_failed",
-                      [&](std::string_view s) -> void { create_err = ERR_OK; });
-                  if (create_err == ERR_OK) {
-                      update_err = dup->alter_status(duplication_status::DS_APP);
-                  }
+            error_code create_err = err == ERR_OK ? resp.err : err;
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "persist_dup_status_failed",
+                [&create_err](std::string_view) -> void { create_err = ERR_OK; });
 
-                  FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                      [&](std::string_view s) -> void { return; });
-                  if (update_err == ERR_OK) {
-                      blob value = dup->to_json_blob();
-                      // Note: this function is `async`, it may not be persisted completed
-                      // after executing, now using `_is_altering` to judge whether `updating` or
-                      // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
-                      _meta_svc->get_meta_storage()->set_data(std::string(dup->store_path),
-                                                              std::move(value),
-                                                              [=]() { dup->persist_status(); });
-                  } else {
-                      LOG_ERROR(
-                          "created follower app[{}.{}] to trigger duplicate checkpoint failed: "
+            error_code update_err = ERR_NO_NEED_OPERATE;
+            if (create_err == ERR_OK) {
+                update_err = dup->alter_status(duplication_status::DS_APP);
+            }
+
+            FAIL_POINT_INJECT_F("persist_dup_status_failed",
+                                [](std::string_view) -> void { return; });
+
+            if (update_err == ERR_OK) {
+                blob value = dup->to_json_blob();
+                // Note: this function is `async`, it may not be persisted completed
+                // after executing, now using `_is_altering` to judge whether `updating` or
+                // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
+                _meta_svc->get_meta_storage()->set_data(std::string(dup->store_path),
+                                                        std::move(value),
+                                                        [dup]() { dup->persist_status(); });
+            } else {
+                LOG_ERROR("create follower app[{}.{}] to trigger duplicate checkpoint failed: "
                           "duplication_status = {}, create_err = {}, update_err = {}",
                           dup->remote_cluster_name,
-                          dup->app_name,
+                          dup->remote_app_name,
                           duplication_status_to_string(dup->status()),
                           create_err,
                           update_err);
-                  }
-              });
+            }
+        });
 }
 
 void meta_duplication_service::check_follower_app_if_create_completed(
@@ -535,79 +539,81 @@ void meta_duplication_service::check_follower_app_if_create_completed(
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     dsn::marshall(msg, meta_config_request);
-    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
-              msg,
-              _meta_svc->tracker(),
-              [=](error_code err, query_cfg_response &&resp) mutable {
-                  FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](std::string_view s) -> void {
-                      err = ERR_OK;
-                      int count = dup->partition_count;
-                      while (count-- > 0) {
-                          const host_port primary("localhost", 34801);
-                          const host_port secondary1("localhost", 34802);
-                          const host_port secondary2("localhost", 34803);
+    rpc::call(
+        dsn::dns_resolver::instance().resolve_address(meta_servers),
+        msg,
+        _meta_svc->tracker(),
+        [dup, this](error_code err, query_cfg_response &&resp) mutable {
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "create_app_ok", [dup, &err, &resp](std::string_view) -> void {
+                    err = ERR_OK;
+                    int count = dup->partition_count;
+                    while (count-- > 0) {
+                        const host_port primary("localhost", 34801);
+                        const host_port secondary1("localhost", 34802);
+                        const host_port secondary2("localhost", 34803);
 
-                          partition_configuration pc;
-                          SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
-                          SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, secondary1, secondary2);
-                          resp.partitions.emplace_back(pc);
-                      }
-                  });
+                        partition_configuration pc;
+                        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
+                        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, secondary1, secondary2);
+                        resp.partitions.emplace_back(pc);
+                    }
+                });
 
-                  // - ERR_INCONSISTENT_STATE: partition count of response isn't equal with local
-                  // - ERR_INACTIVE_STATE: the follower table hasn't been healthy
-                  error_code query_err = err == ERR_OK ? resp.err : err;
-                  if (query_err == ERR_OK) {
-                      if (resp.partitions.size() != dup->partition_count) {
-                          query_err = ERR_INCONSISTENT_STATE;
-                      } else {
-                          for (const auto &pc : resp.partitions) {
-                              if (!pc.hp_primary) {
-                                  query_err = ERR_INACTIVE_STATE;
-                                  break;
-                              }
+            // - ERR_INCONSISTENT_STATE: partition count of response isn't equal with local
+            // - ERR_INACTIVE_STATE: the follower table hasn't been healthy
+            error_code query_err = err == ERR_OK ? resp.err : err;
+            if (query_err == ERR_OK) {
+                if (resp.partitions.size() != dup->partition_count) {
+                    query_err = ERR_INCONSISTENT_STATE;
+                } else {
+                    for (const auto &pc : resp.partitions) {
+                        if (!pc.hp_primary) {
+                            query_err = ERR_INACTIVE_STATE;
+                            break;
+                        }
 
-                              if (pc.hp_secondaries.empty()) {
-                                  query_err = ERR_NOT_ENOUGH_MEMBER;
-                                  break;
-                              }
+                        if (1 + pc.hp_secondaries.size() < dup->remote_replica_count &&
+                            pc.hp_secondaries.empty()) {
+                            query_err = ERR_NOT_ENOUGH_MEMBER;
+                            break;
+                        }
 
-                              for (const auto &secondary : pc.hp_secondaries) {
-                                  if (!secondary) {
-                                      query_err = ERR_INACTIVE_STATE;
-                                      break;
-                                  }
-                              }
-                          }
-                      }
-                  }
+                        for (const auto &secondary : pc.hp_secondaries) {
+                            if (!secondary) {
+                                query_err = ERR_INACTIVE_STATE;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
 
-                  error_code update_err = ERR_NO_NEED_OPERATE;
-                  if (query_err == ERR_OK) {
-                      update_err = dup->alter_status(duplication_status::DS_LOG);
-                  }
+            error_code update_err = ERR_NO_NEED_OPERATE;
+            if (query_err == ERR_OK) {
+                update_err = dup->alter_status(duplication_status::DS_LOG);
+            }
 
-                  FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                      [&](std::string_view s) -> void { return; });
-                  if (update_err == ERR_OK) {
-                      blob value = dup->to_json_blob();
-                      // Note: this function is `async`, it may not be persisted completed
-                      // after executing, now using `_is_altering` to judge whether `updating` or
-                      // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
-                      _meta_svc->get_meta_storage()->set_data(std::string(dup->store_path),
-                                                              std::move(value),
-                                                              [dup]() { dup->persist_status(); });
-                  } else {
-                      LOG_ERROR(
-                          "query follower app[{}.{}] replica configuration completed, result: "
+            FAIL_POINT_INJECT_F("persist_dup_status_failed",
+                                [](std::string_view) -> void { return; });
+            if (update_err == ERR_OK) {
+                blob value = dup->to_json_blob();
+                // Note: this function is `async`, it may not be persisted completed
+                // after executing, now using `_is_altering` to judge whether `updating` or
+                // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
+                _meta_svc->get_meta_storage()->set_data(std::string(dup->store_path),
+                                                        std::move(value),
+                                                        [dup]() { dup->persist_status(); });
+            } else {
+                LOG_ERROR("query follower app[{}.{}] replica configuration completed, result: "
                           "duplication_status = {}, query_err = {}, update_err = {}",
                           dup->remote_cluster_name,
                           dup->remote_app_name,
                           duplication_status_to_string(dup->status()),
                           query_err,
                           update_err);
-                  }
-              });
+            }
+        });
 }
 
 void meta_duplication_service::do_update_partition_confirmed(
