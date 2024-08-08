@@ -16,6 +16,7 @@
 // under the License.
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
