@@ -75,20 +75,6 @@ def run_tidy(sha="HEAD", is_rev_range=False):
         pool.join()
 
 
-def split_warnings(clang_output):
-    accumulated = ""
-    for l in clang_output.splitlines():
-        if l == "" or l == "No relevant changes found.":
-            continue
-        if l.startswith(ROOT) and re.search(r'(warning|error): ', l):
-            if accumulated:
-                yield accumulated
-            accumulated = ""
-        accumulated += l + "\n"
-    if accumulated:
-        yield accumulated
-
-
 if __name__ == "__main__":
     # Basic setup and argument parsing.
     parser = argparse.ArgumentParser(description="Run clang-tidy on a patch")
@@ -102,4 +88,5 @@ if __name__ == "__main__":
     clang_output = run_tidy(args.rev, args.rev_range)
     print("Clang output")
     print(clang_output)
-    sys.exit(None != re.match("warning: |error: ", clang_output, flags=0))
+    sys.exit(None != re.match(r'(warning|error): ', clang_output, flags=0))
+
