@@ -17,6 +17,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# Most of the code are inspired by https://github.com/apache/kudu/blob/856fa3404b00ee02bd3bc1d77d414ede2b2cd02e/build-support/clang_tidy_gerrit.py
+
 import argparse
 import collections
 import json
@@ -86,7 +88,10 @@ if __name__ == "__main__":
 
     # Run clang-tidy and parse the output.
     clang_output = run_tidy(args.rev, args.rev_range)
-    print("Clang output")
-    print(clang_output)
-    sys.exit(None == re.match(r'(warning|error): ', clang_output))
+    parsed = re.match(r'.+(warning|error): .+', clang_output, re.MULTILINE | re.DOTALL)
+    print(clang_output, file=sys.stderr)
+    if not parsed:
+        print("No warnings", file=sys.stderr)
+        sys.exit(0)
+    sys.exit(1)
 
