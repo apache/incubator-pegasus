@@ -545,19 +545,33 @@ void meta_duplication_service::check_follower_app_if_create_completed(
         _meta_svc->tracker(),
         [dup, this](error_code err, query_cfg_response &&resp) mutable {
             FAIL_POINT_INJECT_NOT_RETURN_F(
-                "create_app_ok", [dup, &err, &resp](std::string_view) -> void {
-                    err = ERR_OK;
-                    int count = dup->partition_count;
-                    while (count-- > 0) {
-                        const host_port primary("localhost", 34801);
-                        const host_port secondary1("localhost", 34802);
-                        const host_port secondary2("localhost", 34803);
+                "create_app_ok", [dup, &err, &resp](std::string_view num_secondaries_str) -> void {
+                    const host_port primary("localhost", 34801);
 
-                        partition_configuration pc;
-                        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
-                        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, secondary1, secondary2);
-                        resp.partitions.emplace_back(pc);
+                    int32_t num_secondaries = 0;
+                    CHECK_TRUE(buf2int32(num_secondaries_str, num_secondaries));
+
+                    std::vector<host_port> secondaries;
+                    for (int32_t i = 0; i < num_secondaries; ++i) {
+                        secondaries.emplace_back("localhost", static_cast<uint16_t>(34802 + i));
                     }
+
+                    const int32_t remote_replica_count = 1 + secondaries.size();
+                    CHECK_EQ(dup->remote_replica_count, remote_replica_count);
+
+                    for (int32_t i = 0; i < dup->partition_count; ++i) {
+                        partition_configuration pc;
+                        pc.max_replica_count = remote_replica_count;
+
+                        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
+                        for (const auto &secondary : secondaries) {
+                            ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, secondary);
+                        }
+
+                        resp.partitions.push_back(std::move(pc));
+                    }
+
+                    err = ERR_OK;
                 });
 
             // - ERR_INCONSISTENT_STATE: partition count of response isn't equal with local

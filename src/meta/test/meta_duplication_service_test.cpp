@@ -119,6 +119,12 @@ public:
         return create_dup(app_name, remote_cluster, app_name, remote_replica_count);
     }
 
+    duplication_add_response create_dup(const std::string &app_name,
+                                        const int32_t remote_replica_count)
+    {
+        return create_dup(app_name, kTestRemoteClusterName, remote_replica_count);
+    }
+
     duplication_add_response create_dup(const std::string &app_name)
     {
         return create_dup(app_name, kTestRemoteClusterName, kTestRemoteReplicaCount);
@@ -963,7 +969,7 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
 {
     struct test_case
     {
-        int32_t replica_count;
+        int32_t remote_replica_count;
         std::vector<std::string> fail_cfg_name;
         std::vector<std::string> fail_cfg_action;
         bool is_altering;
@@ -971,13 +977,13 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
         duplication_status::type next_status;
     } test_cases[] = {{3,
                        {"create_app_ok"},
-                       {"void()"},
+                       {"void(3)"},
                        false,
                        duplication_status::DS_LOG,
                        duplication_status::DS_INIT},
                       {1,
                        {"create_app_ok"},
-                       {"void()"},
+                       {"void(1)"},
                        false,
                        duplication_status::DS_LOG,
                        duplication_status::DS_INIT},
@@ -991,17 +997,18 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
                        duplication_status::DS_INIT},
                       {3,
                        {"create_app_ok", "persist_dup_status_failed"},
-                       {"void()", "return()"},
+                       {"void(3)", "return()"},
                        true,
                        duplication_status::DS_APP,
                        duplication_status::DS_LOG}};
 
+    size_t i = 0;
     for (const auto &test : test_cases) {
-        const auto test_app = fmt::format("{}{}", test.fail_cfg_name[0], test.fail_cfg_name.size());
-        create_app(test_app, 8, test.replica_count);
-        auto app = find_app(test_app);
+        const auto &app_name = fmt::format("check_follower_app_if_create_completed_test_{}", i++);
+        create_app(app_name);
+        auto app = find_app(app_name);
 
-        auto dup_add_resp = create_dup(test_app);
+        auto dup_add_resp = create_dup(app_name, test.remote_replica_count);
         auto dup = app->duplications[dup_add_resp.dupid];
         // 'check_follower_app_if_create_completed' must execute under duplication_status::DS_APP,
         // so force update it
