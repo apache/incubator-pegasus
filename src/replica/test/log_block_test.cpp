@@ -112,7 +112,8 @@ TEST_P(log_appender_test, log_block_full)
 {
     log_appender appender(10);
     for (int i = 0; i < 1024; i++) { // more than DEFAULT_MAX_BLOCK_BYTES
-        appender.append_mutation(create_test_mutation(1 + i, std::string(1024, 'a')), nullptr);
+        appender.append_mutation(create_test_mutation(1 + i, std::string(1024, 'a').c_str()),
+                                 nullptr);
     }
     ASSERT_EQ(appender.mutations().size(), 1024);
     // two log_block_header blobs
@@ -136,7 +137,8 @@ TEST_P(log_appender_test, read_log_block)
 {
     log_appender appender(10);
     for (int i = 0; i < 1024; i++) { // more than DEFAULT_MAX_BLOCK_BYTES
-        appender.append_mutation(create_test_mutation(1 + i, std::string(1024, 'a')), nullptr);
+        appender.append_mutation(create_test_mutation(1 + i, std::string(1024, 'a').c_str()),
+                                 nullptr);
     }
     ASSERT_EQ(appender.all_blocks().size(), 2);
 

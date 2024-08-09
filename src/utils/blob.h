@@ -33,6 +33,7 @@
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/protocol/TProtocol.h>
 
+#include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"
 #include "utils.h"
 
@@ -51,14 +52,6 @@ public:
     {
     }
 
-    blob(std::shared_ptr<char> buffer, int offset, unsigned int length)
-        : _holder(std::move(buffer)),
-          _buffer(_holder.get()),
-          _data(_holder.get() + offset),
-          _length(length)
-    {
-    }
-
     /// NOTE: Use std::string_view whenever possible.
     /// blob is designed for shared buffer, never use it as constant view.
     /// Maybe we could deprecate this function in the future.
@@ -67,13 +60,63 @@ public:
     {
     }
 
+    blob(const blob &rhs) noexcept
+        : _holder(rhs._holder), _buffer(rhs._buffer), _data(rhs._data), _length(rhs._length)
+    {
+    }
+
+    blob &operator=(const blob &rhs) noexcept
+    {
+        if (this == &rhs) {
+            return *this;
+        }
+
+        _holder = rhs._holder;
+        _buffer = rhs._buffer;
+        _data = rhs._data;
+        _length = rhs._length;
+
+        return *this;
+    }
+
+    blob(blob &&rhs) noexcept
+        : _holder(std::move(rhs._holder)),
+          _buffer(rhs._buffer),
+          _data(rhs._data),
+          _length(rhs._length)
+    {
+        rhs._buffer = nullptr;
+        rhs._data = nullptr;
+        rhs._length = 0;
+    }
+
+    blob &operator=(blob &&rhs) noexcept
+    {
+        if (this == &rhs) {
+            return *this;
+        }
+
+        _holder = std::move(rhs._holder);
+        _buffer = rhs._buffer;
+        _data = rhs._data;
+        _length = rhs._length;
+
+        rhs._buffer = nullptr;
+        rhs._data = nullptr;
+        rhs._length = 0;
+
+        return *this;
+    }
+
     /// Create shared buffer from allocated raw bytes.
     /// NOTE: this operation is not efficient since it involves a memory copy.
     static blob create_from_bytes(const char *s, size_t len)
     {
+        CHECK_NOTNULL(s, "null source pointer would lead to undefined behaviour");
+
         std::shared_ptr<char> s_arr(new char[len], std::default_delete<char[]>());
         memcpy(s_arr.get(), s, len);
-        return blob(std::move(s_arr), 0, static_cast<unsigned int>(len));
+        return blob(std::move(s_arr), static_cast<unsigned int>(len));
     }
 
     /// Create shared buffer without copying data.
@@ -81,7 +124,7 @@ public:
     {
         auto s = new std::string(std::move(bytes));
         std::shared_ptr<char> buf(const_cast<char *>(s->data()), [s](char *) { delete s; });
-        return blob(std::move(buf), 0, static_cast<unsigned int>(s->length()));
+        return blob(std::move(buf), static_cast<unsigned int>(s->length()));
     }
 
     void assign(const std::shared_ptr<char> &buffer, int offset, unsigned int length)
@@ -95,8 +138,8 @@ public:
     void assign(std::shared_ptr<char> &&buffer, int offset, unsigned int length)
     {
         _holder = std::move(buffer);
-        _buffer = (_holder.get());
-        _data = (_holder.get() + offset);
+        _buffer = _holder.get();
+        _data = _holder.get() + offset;
         _length = length;
     }
 
@@ -119,11 +162,12 @@ public:
 
     const char *buffer_ptr() const { return _holder.get(); }
 
-    // offset can be negative for buffer dereference
+    // `offset` can be negative for buffer dereference.
     blob range(int offset) const
     {
-        // offset cannot exceed the current length value
-        assert(offset <= static_cast<int>(_length));
+        CHECK_LE_MSG(offset,
+                     static_cast<int>(_length),
+                     "the required offset cannot exceed the current length");
 
         blob temp = *this;
         temp._data += offset;
@@ -133,30 +177,33 @@ public:
 
     blob range(int offset, unsigned int len) const
     {
-        // offset cannot exceed the current length value
-        assert(offset <= static_cast<int>(_length));
+        CHECK_LE_MSG(offset,
+                     static_cast<int>(_length),
+                     "the required offset cannot exceed the current length");
 
         blob temp = *this;
         temp._data += offset;
         temp._length -= offset;
 
-        // buffer length must exceed the required length
-        assert(temp._length >= len);
+        CHECK_LE_MSG(
+            len, temp._length, "the required length cannot exceed remaining buffer length");
+
         temp._length = len;
         return temp;
     }
 
     bool operator==(const blob &r) const
     {
-        // not implemented
-        assert(false);
+        CHECK(false, "not implemented");
         return false;
     }
 
     std::string to_string() const
     {
-        if (_length == 0)
-            return {};
+        if (_length == 0) {
+            return std::string();
+        }
+
         return std::string(_data, _length);
     }
 

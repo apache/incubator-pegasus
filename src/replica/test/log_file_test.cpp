@@ -81,7 +81,8 @@ TEST_P(log_file_test, commit_log_blocks)
     size_t written_sz = appender->size();
     appender = std::make_shared<log_appender>(_start_offset + written_sz);
     for (int i = 0; i < 1024; i++) { // more than DEFAULT_MAX_BLOCK_BYTES
-        appender->append_mutation(create_test_mutation(1 + i, std::string(1024, 'a')), nullptr);
+        appender->append_mutation(create_test_mutation(1 + i, std::string(1024, 'a').c_str()),
+                                  nullptr);
     }
     ASSERT_GT(appender->all_blocks().size(), 1);
     tsk = _logf->commit_log_blocks(

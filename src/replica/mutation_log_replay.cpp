@@ -94,7 +94,7 @@ namespace replication {
         return error_s::make(err, "failed to read log block");
     }
 
-    reader = std::make_unique<binary_reader>(bb);
+    reader = std::make_unique<binary_reader>(std::move(bb));
     end_offset += sizeof(log_block_header);
 
     // The first block is log_file_header.

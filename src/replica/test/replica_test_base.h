@@ -62,7 +62,7 @@ public:
     }
 
     virtual mutation_ptr
-    create_test_mutation(int64_t decree, int64_t last_committed_decree, const std::string &data)
+    create_test_mutation(int64_t decree, int64_t last_committed_decree, const char *data)
     {
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
@@ -75,7 +75,9 @@ public:
         mu->data.updates.emplace_back(mutation_update());
         mu->data.updates.back().code =
             RPC_COLD_BACKUP; // whatever code it is, but never be WRITE_EMPTY
-        mu->data.updates.back().data = blob::create_from_bytes(std::string(data));
+        if (data != nullptr) {
+            mu->data.updates.back().data = blob::create_from_bytes(data);
+        }
         mu->client_requests.push_back(nullptr);
 
         // replica_duplicator always loads from hard disk,
@@ -85,7 +87,7 @@ public:
         return mu;
     }
 
-    virtual mutation_ptr create_test_mutation(int64_t decree, const std::string &data)
+    virtual mutation_ptr create_test_mutation(int64_t decree, const char *data)
     {
         return replica_test_base::create_test_mutation(decree, decree - 1, data);
     }
