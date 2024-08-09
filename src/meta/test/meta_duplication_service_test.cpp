@@ -119,6 +119,12 @@ public:
         return create_dup(app_name, remote_cluster, app_name, remote_replica_count);
     }
 
+    duplication_add_response create_dup(const std::string &app_name,
+                                        const int32_t remote_replica_count)
+    {
+        return create_dup(app_name, kTestRemoteClusterName, remote_replica_count);
+    }
+
     duplication_add_response create_dup(const std::string &app_name)
     {
         return create_dup(app_name, kTestRemoteClusterName, kTestRemoteReplicaCount);
@@ -963,39 +969,99 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
 {
     struct test_case
     {
+        int32_t remote_replica_count;
         std::vector<std::string> fail_cfg_name;
         std::vector<std::string> fail_cfg_action;
         bool is_altering;
         duplication_status::type cur_status;
         duplication_status::type next_status;
-    } test_cases[] = {{{"create_app_ok"},
-                       {"void()"},
+    } test_cases[] = {// 3 remote replicas with both primary and secondaries valid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,2,0)"},
                        false,
                        duplication_status::DS_LOG,
                        duplication_status::DS_INIT},
-                      // the case just `palace holder`, actually
-                      // `check_follower_app_if_create_completed` is failed by default in unit test
-                      {{"create_app_failed"},
+                      // 3 remote replicas with primary invalid and all secondaries valid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(false,2,0)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // 3 remote replicas with primary valid and only one secondary present
+                      // and valid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,1,0)"},
+                       false,
+                       duplication_status::DS_LOG,
+                       duplication_status::DS_INIT},
+                      // 3 remote replicas with primary valid and one secondary invalid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,1,1)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // 3 remote replicas with primary valid and only one secondary present
+                      // and invalid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,0,1)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // 3 remote replicas with primary valid and both secondaries absent.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,0,0)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // 1 remote replicas with primary valid.
+                      {1,
+                       {"create_app_ok"},
+                       {"void(true,0,0)"},
+                       false,
+                       duplication_status::DS_LOG,
+                       duplication_status::DS_INIT},
+                      // 1 remote replicas with primary invalid.
+                      {1,
+                       {"create_app_ok"},
+                       {"void(false,0,0)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // The case is just a "palace holder", actually
+                      // `check_follower_app_if_create_completed` would fail by default
+                      // in unit test.
+                      {3,
+                       {"create_app_failed"},
                        {"off()"},
                        false,
                        duplication_status::DS_APP,
                        duplication_status::DS_INIT},
-                      {{"create_app_ok", "persist_dup_status_failed"},
-                       {"void()", "return()"},
+                      {3,
+                       {"create_app_ok", "persist_dup_status_failed"},
+                       {"void(true,2,0)", "return()"},
                        true,
                        duplication_status::DS_APP,
                        duplication_status::DS_LOG}};
 
+    size_t i = 0;
     for (const auto &test : test_cases) {
-        const auto test_app = fmt::format("{}{}", test.fail_cfg_name[0], test.fail_cfg_name.size());
-        create_app(test_app);
-        auto app = find_app(test_app);
+        const auto &app_name = fmt::format("check_follower_app_if_create_completed_test_{}", i++);
+        create_app(app_name);
 
-        auto dup_add_resp = create_dup(test_app);
+        auto app = find_app(app_name);
+        auto dup_add_resp = create_dup(app_name, test.remote_replica_count);
         auto dup = app->duplications[dup_add_resp.dupid];
+
         // 'check_follower_app_if_create_completed' must execute under duplication_status::DS_APP,
-        // so force update it
+        // so force update it.
         force_update_dup_status(dup, duplication_status::DS_APP);
+
         fail::setup();
         for (int i = 0; i < test.fail_cfg_name.size(); i++) {
             fail::cfg(test.fail_cfg_name[i], test.fail_cfg_action[i]);
@@ -1003,6 +1069,7 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
         check_follower_app_if_create_completed(dup);
         wait_all();
         fail::teardown();
+
         ASSERT_EQ(dup->is_altering(), test.is_altering);
         ASSERT_EQ(next_status(dup), test.next_status);
         ASSERT_EQ(dup->status(), test.cur_status);

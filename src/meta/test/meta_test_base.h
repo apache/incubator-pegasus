@@ -57,8 +57,13 @@ public:
 
     std::vector<host_port> ensure_enough_alive_nodes(int min_node_count);
 
-    // create an app for test with specified name and specified partition count
-    void create_app(const std::string &name, uint32_t partition_count);
+    // Create an app for test with specified name, partition count and replica count.
+    void create_app(const std::string &name, int32_t partition_count, int32_t replica_count);
+
+    void create_app(const std::string &name, int32_t partition_count)
+    {
+        create_app(name, partition_count, 3);
+    }
 
     void create_app(const std::string &name) { create_app(name, 8); }
 
