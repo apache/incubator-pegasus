@@ -196,10 +196,14 @@ void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree
         }
 
         blob bb;
-        if (dsn_likely(update.data.buffer())) {
+        if (update.data.buffer()) {
             // ATTENTION: instead of copy, move could optimize the performance. However, this
             // would nullify the elements of mu->data.updates.
             bb = std::move(update.data);
+        } else {
+            if (dsn_likely(update.data.data() != nullptr)) {
+                bb = blob::create_from_bytes(update.data.data(), update.data.length());
+            }
         }
 
         _total_bytes += bb.length();
