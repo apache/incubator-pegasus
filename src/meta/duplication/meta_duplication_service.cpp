@@ -612,9 +612,8 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                             break;
                         }
 
-                        // if (1 + pc.hp_secondaries.size() < pc.max_replica_count &&
-                        //    pc.hp_secondaries.empty()) {
-                        if (pc.hp_secondaries.empty()) {
+                        if (1 + pc.hp_secondaries.size() < pc.max_replica_count &&
+                            pc.hp_secondaries.empty()) {
                             query_err = ERR_NOT_ENOUGH_MEMBER;
                             break;
                         }
