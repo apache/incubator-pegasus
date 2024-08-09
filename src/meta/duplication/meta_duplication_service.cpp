@@ -527,6 +527,56 @@ void meta_duplication_service::create_follower_app_for_duplication(
         });
 }
 
+namespace {
+
+void mock_create_app(std::string_view replica_state_str,
+                     const std::shared_ptr<duplication_info> &dup,
+                     dsn::query_cfg_response &resp,
+                     dsn::error_code &err)
+{
+    std::vector<std::string> strs;
+    utils::split_args(replica_state_str.data(), strs, ',');
+    CHECK_EQ(strs.size(), 3);
+
+    bool has_primary = 0;
+    CHECK_TRUE(buf2bool(strs[0], has_primary));
+
+    uint32_t valid_secondaries = 0;
+    CHECK_TRUE(buf2uint32(strs[1], valid_secondaries));
+
+    uint32_t invalid_secondaries = 0;
+    CHECK_TRUE(buf2uint32(strs[2], invalid_secondaries));
+
+    std::vector<host_port> nodes;
+    if (has_primary) {
+        nodes.emplace_back("localhost", 34801);
+    } else {
+        nodes.emplace_back();
+    }
+    for (uint32_t i = 0; i < valid_secondaries; ++i) {
+        nodes.emplace_back("localhost", static_cast<uint16_t>(34802 + i));
+    }
+    for (uint32_t i = 0; i < invalid_secondaries; ++i) {
+        nodes.emplace_back();
+    }
+
+    for (int32_t i = 0; i < dup->partition_count; ++i) {
+        partition_configuration pc;
+        pc.max_replica_count = dup->remote_replica_count;
+
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
+        for (size_t j = 1; j < nodes.size(); ++j) {
+            ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, nodes[j]);
+        }
+
+        resp.partitions.push_back(std::move(pc));
+    }
+
+    err = ERR_OK;
+}
+
+} // anonymous namespace
+
 void meta_duplication_service::check_follower_app_if_create_completed(
     const std::shared_ptr<duplication_info> &dup)
 {
@@ -546,33 +596,8 @@ void meta_duplication_service::check_follower_app_if_create_completed(
         [dup, this](error_code err, query_cfg_response &&resp) mutable {
             FAIL_POINT_INJECT_NOT_RETURN_F(
                 "create_app_ok",
-                [dup, &err, &resp](std::string_view remote_replica_count_str) -> void {
-                    const host_port primary("localhost", 34801);
-
-                    int32_t remote_replica_count = 0;
-                    CHECK_TRUE(buf2int32(remote_replica_count_str, remote_replica_count));
-                    CHECK_GT(remote_replica_count, 0);
-                    CHECK_EQ(dup->remote_replica_count, remote_replica_count);
-
-                    std::vector<host_port> secondaries;
-                    for (int32_t i = 0; i < remote_replica_count - 1; ++i) {
-                        secondaries.emplace_back("localhost", static_cast<uint16_t>(34802 + i));
-                    }
-
-                    for (int32_t i = 0; i < dup->partition_count; ++i) {
-                        partition_configuration pc;
-                        pc.max_replica_count = remote_replica_count;
-
-                        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
-                        for (const auto &secondary : secondaries) {
-                            ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, secondary);
-                        }
-
-                        resp.partitions.push_back(std::move(pc));
-                    }
-
-                    err = ERR_OK;
-                });
+                std::bind(
+                    mock_create_app, std::placeholders::_1, dup, std::ref(resp), std::ref(err)));
 
             // - ERR_INCONSISTENT_STATE: partition count of response isn't equal with local
             // - ERR_INACTIVE_STATE: the follower table hasn't been healthy
@@ -599,6 +624,9 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                                 query_err = ERR_INACTIVE_STATE;
                                 break;
                             }
+                        }
+                        if (query_err != ERR_OK) {
+                            break;
                         }
                     }
                 }
