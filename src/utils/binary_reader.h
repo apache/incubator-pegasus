@@ -43,9 +43,9 @@ public:
     binary_reader(blob &&blob);
 
     // or delayed init
-    binary_reader() {}
+    binary_reader() = default;
 
-    virtual ~binary_reader() {}
+    virtual ~binary_reader() = default;
 
     void init(const blob &bb);
     void init(blob &&bb);
