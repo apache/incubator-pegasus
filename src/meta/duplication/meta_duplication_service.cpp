@@ -15,13 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
+#include <stddef.h>
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <queue>
+#include <string_view>
 #include <type_traits>
 
-#include <string_view>
 #include "common//duplication_common.h"
 #include "common/common.h"
 #include "common/gpid.h"
@@ -54,6 +57,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
+#include "utils/strings.h"
 #include "utils/zlocks.h"
 
 DSN_DECLARE_bool(dup_ignore_other_cluster_ids);
@@ -529,6 +533,12 @@ void meta_duplication_service::create_follower_app_for_duplication(
 
 namespace {
 
+// The format of `replica_state_str` is "<has_primary>,<valid_secondaries>,<invalid_secondaries>":
+//
+//         <has_primary>:   bool, true means if the address of primary replica is valid,
+//                          otherwise false.
+//   <valid_secondaries>:   uint32_t, the number of secondaries whose address are valid.
+// <invalid_secondaries>:   uint32_t, the number of secondaries whose address are invalid.
 void mock_create_app(std::string_view replica_state_str,
                      const std::shared_ptr<duplication_info> &dup,
                      dsn::query_cfg_response &resp,
@@ -608,10 +618,13 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                 } else {
                     for (const auto &pc : resp.partitions) {
                         if (!pc.hp_primary) {
+                            // Fail once the primary replica is unavailable.
                             query_err = ERR_INACTIVE_STATE;
                             break;
                         }
 
+                        // Once replica count is more than 1, at least one secondary replica
+                        // is required.
                         if (1 + pc.hp_secondaries.size() < pc.max_replica_count &&
                             pc.hp_secondaries.empty()) {
                             query_err = ERR_NOT_ENOUGH_MEMBER;
@@ -620,6 +633,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
 
                         for (const auto &secondary : pc.hp_secondaries) {
                             if (!secondary) {
+                                // Fail once any secondary replica is unavailable.
                                 query_err = ERR_INACTIVE_STATE;
                                 break;
                             }
