@@ -59,35 +59,34 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
       _stub(r->get_replica_stub()),
       METRIC_VAR_INIT_replica(dup_confirmed_mutations)
 {
+    // Ensure that the checkpoint decree is at least 1. Otherwise, the checkpoint could not be
+    // created in time for empty replica; in consequence, the remote cluster would inevitably
+    // fail to pull the checkpoint files.
+    //
+    // The max decree in rocksdb memtable (the last applied decree) is considered as the min
+    // decree that should be covered by the checkpoint, which means currently all of the data
+    // in current rocksdb should be included into the created checkpoint.
+    const auto last_applied_decree = _replica->last_applied_decree();
+    _min_checkpoint_decree = std::max(last_applied_decree, static_cast<decree>(1));
+    LOG_INFO_PREFIX("initialize checkpoint decree: min_checkpoint_decree={}, "
+                    "last_committed_decree={}, last_applied_decree={}, "
+                    "last_flushed_decree={}, last_durable_decree={}, "
+                    "plog_max_decree_on_disk={}, plog_max_commit_on_disk={}",
+                    _min_checkpoint_decree,
+                    _replica->last_committed_decree(),
+                    last_applied_decree,
+                    _replica->last_flushed_decree(),
+                    _replica->last_durable_decree(),
+                    _replica->private_log()->max_decree_on_disk(),
+                    _replica->private_log()->max_commit_on_disk());
+
     _status = ent.status;
 
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it->second == invalid_decree) {
-        // Ensure that the checkpoint decree is at least 1. Otherwise, the checkpoint could not be
-        // created in time for empty replica; in consequence, the remote cluster would inevitably
-        // fail to pull the checkpoint files.
-        //
-        // The max decree in rocksdb memtable (the last applied decree) is considered as the min
-        // decree that should be covered by the checkpoint, which means currently all of the data
-        // in current rocksdb should be included into the created checkpoint.
-        //
         // TODO(jiashuo1): _min_checkpoint_decree hasn't be ready to persist zk, so if master
         // restart, the value will be reset to 0.
-        const auto last_applied_decree = _replica->last_applied_decree();
-        _min_checkpoint_decree = std::max(last_applied_decree, static_cast<decree>(1));
         _progress.last_decree = last_applied_decree;
-        LOG_INFO_PREFIX("initialize checkpoint decree: min_checkpoint_decree={}, "
-                        "last_committed_decree={}, last_applied_decree={}, "
-                        "last_flushed_decree={}, last_durable_decree={}, "
-                        "plog_max_decree_on_disk={}, plog_max_commit_on_disk={}",
-                        _min_checkpoint_decree,
-                        _replica->last_committed_decree(),
-                        last_applied_decree,
-                        _replica->last_flushed_decree(),
-                        _replica->last_durable_decree(),
-                        _replica->private_log()->max_decree_on_disk(),
-                        _replica->private_log()->max_commit_on_disk());
-
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
@@ -264,14 +263,15 @@ void replica_duplicator::verify_start_decree(decree start_decree)
     decree confirmed_decree = progress().confirmed_decree;
     decree last_decree = progress().last_decree;
     decree max_gced_decree = get_max_gced_decree();
-    CHECK_LT_MSG(max_gced_decree,
-                 start_decree,
-                 "the logs haven't yet duplicated were accidentally truncated "
-                 "[max_gced_decree: {}, start_decree: {}, confirmed_decree: {}, last_decree: {}]",
-                 max_gced_decree,
-                 start_decree,
-                 confirmed_decree,
-                 last_decree);
+    CHECK_LT_PREFIX_MSG(
+        max_gced_decree,
+        start_decree,
+        "the logs haven't yet duplicated were accidentally truncated "
+        "[max_gced_decree: {}, start_decree: {}, confirmed_decree: {}, last_decree: {}]",
+        max_gced_decree,
+        start_decree,
+        confirmed_decree,
+        last_decree);
 }
 
 decree replica_duplicator::get_max_gced_decree() const

@@ -157,8 +157,8 @@ public:
 
         {
             zauto_read_lock l(_lock);
-            JSON_ENCODE_OBJ(writer, confirmed_decree, _progress.last_decree);
-            JSON_ENCODE_OBJ(writer, persisted_decree, _progress.confirmed_decree);
+            JSON_ENCODE_OBJ(writer, replica_confirmed_decree, _progress.last_decree);
+            JSON_ENCODE_OBJ(writer, meta_persisted_decree, _progress.confirmed_decree);
         }
 
         writer.EndObject();
