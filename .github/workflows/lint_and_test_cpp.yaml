@@ -30,13 +30,13 @@ on:
       - .github/actions
       - .github/workflows/lint_and_test_cpp.yaml
       - .github/workflows/thirdparty-regular-push.yml
+      - build_tools/pack_server.sh
+      - build_tools/pack_tools.sh
       - docker/thirdparties-bin/**
       - docker/thirdparties-src/**
       - CMakeLists.txt
       - cmake_modules/**
       - run.sh
-      - build_tools/pack_server.sh
-      - build_tools/pack_tools.sh
       - src/**
       - thirdparty/**
 

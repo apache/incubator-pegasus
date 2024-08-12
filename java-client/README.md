@@ -24,7 +24,7 @@ under the License.
 ### 1. Prepare
 
 ```
-cd build_tools && bash download_thrift.sh
+cd scripts && bash download_thrift.sh
 ```
 
 ### 2. Format the code
@@ -60,7 +60,7 @@ mvn clean package -Dtest=TestPing
 ### Install
 
 ```
-cd build_tools && bash recompile_thrift.sh && cd -
+cd scripts && bash download_thrift.sh && cd -
 mvn clean install -DskipTests
 ```
 
