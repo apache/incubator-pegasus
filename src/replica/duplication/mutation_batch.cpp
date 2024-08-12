@@ -202,9 +202,11 @@ void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree
             // would nullify the elements of mu->data.updates.
             bb = std::move(update.data);
         } else {
-            // TODO(wangdan): once update.data.buffer() is nullptr, the blob object must have
-            // been used as `string_view`. Once `string_view` function is removed from blob,
-            // consider dropping following statements.
+            // TODO(wangdan): if update.data.buffer() is nullptr, the blob object must have
+            // been used as `string_view`.
+            //
+            // Once `string_view` function is removed from blob, consider dropping following
+            // statements.
             if (dsn_likely(update.data.data() != nullptr && !update.data.empty())) {
                 bb = blob::create_from_bytes(update.data.data(), update.data.length());
             }

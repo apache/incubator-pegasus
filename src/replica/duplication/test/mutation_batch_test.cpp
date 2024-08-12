@@ -132,6 +132,17 @@ TEST_P(mutation_batch_test, add_empty_mutation)
     check_mutation_contents({""});
 }
 
+// TODO(wangdan): once `string_view` function is removed from blob, drop this test.
+TEST_P(mutation_batch_test, add_string_view_mutation)
+{
+    auto mu = create_test_mutation(1, nullptr);
+    const char data[] = "hello";
+    mu->data.updates.back().data = blob(data, 0, sizeof(data) - 1);
+    _batcher.add_mutation_if_valid(mu, 0);
+
+    check_mutation_contents({"hello"});
+}
+
 TEST_P(mutation_batch_test, add_a_valid_mutation)
 {
     auto mu = create_test_mutation(1, "hello");
@@ -142,8 +153,8 @@ TEST_P(mutation_batch_test, add_a_valid_mutation)
 
 TEST_P(mutation_batch_test, add_multiple_valid_mutations)
 {
-    // The mutation could not be reused, since in add_mutation_if_valid update.data
-    // would be by "bb = std::move(update.data);".
+    // The mutation could not be reused, since in mutation_batch::add_mutation_if_valid
+    // the elements of mutation::data::updates would be moved and nullified.
     auto mu1 = create_test_mutation(1, "hello");
     _batcher.add_mutation_if_valid(mu1, 0);
 

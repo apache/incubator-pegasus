@@ -22,6 +22,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -38,7 +39,7 @@
 #include "utils/errors.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
-#include <string_view>
+#include "utils/ports.h"
 
 namespace dsn {
 namespace replication {
