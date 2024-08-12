@@ -72,6 +72,43 @@ namespace replication {
     return err.code();
 }
 
+namespace {
+
+dsn::error_s read_block(dsn::replication::log_file_ptr &log,
+                        size_t start_offset,
+                        int64_t &end_offset,
+                        std::unique_ptr<dsn::binary_reader> &reader)
+{
+    log->reset_stream(start_offset); // Start reading from given offset.
+    int64_t global_start_offset = start_offset + log->start_offset();
+    end_offset = global_start_offset; // Reset end_offset to the start.
+
+    {
+        // Read the entire block into memory.
+        blob bb;
+        const auto err = log->read_next_log_block(bb);
+        if (dsn_unlikely(err != dsn::ERR_OK)) {
+            return FMT_ERR(err, "failed to read log block");
+        }
+        reader = std::make_unique<dsn::binary_reader>(std::move(bb));
+    }
+
+    end_offset += sizeof(dsn::replication::log_block_header);
+
+    // The first block is log_file_header.
+    if (global_start_offset == log->start_offset()) {
+        end_offset += log->read_file_header(*reader);
+        if (!log->is_right_header()) {
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "failed to read log file header");
+        }
+        // Continue to parsing the data block.
+    }
+
+    return dsn::error_s::ok();
+}
+
+} // anonymous namespace
+
 /*static*/ error_s mutation_log::replay_block(log_file_ptr &log,
                                               replay_callback &callback,
                                               size_t start_offset,
@@ -81,30 +118,8 @@ namespace replication {
         return error_s::make(ERR_INCOMPLETE_DATA, "mutation_log_replay_block");
     });
 
-    blob bb;
     std::unique_ptr<binary_reader> reader;
-
-    log->reset_stream(start_offset); // start reading from given offset
-    int64_t global_start_offset = start_offset + log->start_offset();
-    end_offset = global_start_offset; // reset end_offset to the start.
-
-    // reads the entire block into memory
-    error_code err = log->read_next_log_block(bb);
-    if (err != ERR_OK) {
-        return error_s::make(err, "failed to read log block");
-    }
-
-    reader = std::make_unique<binary_reader>(std::move(bb));
-    end_offset += sizeof(log_block_header);
-
-    // The first block is log_file_header.
-    if (global_start_offset == log->start_offset()) {
-        end_offset += log->read_file_header(*reader);
-        if (!log->is_right_header()) {
-            return error_s::make(ERR_INVALID_DATA, "failed to read log file header");
-        }
-        // continue to parsing the data block
-    }
+    RETURN_NOT_OK(read_block(log, start_offset, end_offset, reader));
 
     while (!reader->is_eof()) {
         auto old_size = reader->get_remaining_size();

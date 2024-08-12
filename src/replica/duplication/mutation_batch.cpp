@@ -17,23 +17,24 @@
 
 #include <functional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
 
-#include <string_view>
 #include "common/replication.codes.h"
 #include "consensus_types.h"
 #include "metadata_types.h"
 #include "mutation_batch.h"
-#include "replica_duplicator.h"
 #include "replica/replica.h"
+#include "replica_duplicator.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 METRIC_DEFINE_gauge_int64(replica,
                           dup_recent_lost_mutations,
@@ -201,7 +202,10 @@ void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree
             // would nullify the elements of mu->data.updates.
             bb = std::move(update.data);
         } else {
-            if (dsn_likely(update.data.data() != nullptr)) {
+            // TODO(wangdan): once update.data.buffer() is nullptr, the blob object must have
+            // been used as `string_view`. Once `string_view` function is removed from blob,
+            // consider dropping following statements.
+            if (dsn_likely(update.data.data() != nullptr && !update.data.empty())) {
                 bb = blob::create_from_bytes(update.data.data(), update.data.length());
             }
         }
