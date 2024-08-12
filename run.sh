@@ -324,8 +324,8 @@ function run_build()
     if [ ! -f "${ROOT}/src/common/serialization_helper/dsn.layer2_types.h" ]; then
         echo "Gen thrift"
         # TODO(yingchun): should be optimized
-        python3 $ROOT/scripts/compile_thrift.py
-        sh ${ROOT}/scripts/recompile_thrift.sh
+        python3 $ROOT/build_tools/compile_thrift.py
+        sh ${ROOT}/build_tools/recompile_thrift.sh
     fi
 
     if [ ! -d "$BUILD_DIR" ]; then
@@ -656,7 +656,7 @@ function run_start_zk()
         fi
     fi
 
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/admin_tools/start_zk.sh
 }
 
 #####################
@@ -693,7 +693,7 @@ function run_stop_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $ROOT/scripts/stop_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/admin_tools/stop_zk.sh
 }
 
 #####################
@@ -730,7 +730,7 @@ function run_clear_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $ROOT/scripts/clear_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/admin_tools/clear_zk.sh
 }
 
 #####################
@@ -853,7 +853,7 @@ function run_start_onebox()
         exit 1
     fi
 
-    source "${ROOT}"/scripts/config_hdfs.sh
+    source "${ROOT}"/admin_tools/config_hdfs.sh
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
@@ -1097,7 +1097,7 @@ function run_start_onebox_instance()
         esac
         shift
     done
-    source "${ROOT}"/scripts/config_hdfs.sh
+    source "${ROOT}"/admin_tools/config_hdfs.sh
     if [ $META_ID = "0" -a $REPLICA_ID = "0" -a $COLLECTOR_ID = "0" ]; then
         echo "ERROR: no meta_id or replica_id or collector set"
         exit 1
@@ -1887,9 +1887,9 @@ function run_migrate_node()
     cd ${ROOT}
     echo "------------------------------"
     if [ "$CLUSTER" != "" ]; then
-        ./scripts/migrate_node.sh $CLUSTER $NODE "$APP" $TYPE
+        ./admin_tools/migrate_node.sh $CLUSTER $NODE "$APP" $TYPE
     else
-        ./scripts/migrate_node.sh $CONFIG $NODE "$APP" $TYPE -f
+        ./admin_tools/migrate_node.sh $CONFIG $NODE "$APP" $TYPE -f
     fi
     echo "------------------------------"
     echo
@@ -1995,9 +1995,9 @@ function run_downgrade_node()
     cd ${ROOT}
     echo "------------------------------"
     if [ "$CLUSTER" != "" ]; then
-        ./scripts/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
+        ./admin_tools/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
     else
-        ./scripts/downgrade_node.sh $CONFIG $NODE "$APP" $TYPE -f
+        ./admin_tools/downgrade_node.sh $CONFIG $NODE "$APP" $TYPE -f
     fi
     echo "------------------------------"
     echo
@@ -2105,19 +2105,19 @@ case $cmd in
         ;;
     pack_server)
         shift
-        PEGASUS_ROOT=$ROOT ./scripts/pack_server.sh $*
+        PEGASUS_ROOT=$ROOT ./build_tools/pack_server.sh $*
         ;;
     pack_client)
         shift
-        PEGASUS_ROOT=$ROOT ./scripts/pack_client.sh $*
+        PEGASUS_ROOT=$ROOT ./build_tools/pack_client.sh $*
         ;;
     pack_tools)
         shift
-        PEGASUS_ROOT=$ROOT ./scripts/pack_tools.sh $*
+        PEGASUS_ROOT=$ROOT ./build_tools/pack_tools.sh $*
         ;;
     bump_version)
         shift
-        ./scripts/bump_version.sh $*
+        ./build_tools/bump_version.sh $*
         ;;
     *)
         echo "ERROR: unknown command $cmd"

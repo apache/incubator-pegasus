@@ -72,7 +72,7 @@ pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
 
-source ./scripts/minos_common.sh
+source ./admin_tools/minos_common.sh
 find_cluster $cluster
 if [ $? -ne 0 ]; then
   echo "ERROR: cluster \"$cluster\" not found"
@@ -338,7 +338,7 @@ fi
 
 if [ "$rebalance_cluster_after_rolling" == "true" ]; then
   echo "Start to rebalance cluster..."
-  ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list $rebalance_only_move_primary
+  ./admin_tools/pegasus_rebalance_cluster.sh $cluster $meta_list $rebalance_only_move_primary
 fi
 
 echo "Finish time: `date`"

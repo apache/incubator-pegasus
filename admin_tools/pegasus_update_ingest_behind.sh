@@ -327,7 +327,7 @@ echo
 
 if [ "$rebalance_cluster_after_rolling" == "true" ]; then
   echo "Start to rebalance cluster..."
-  ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list $rebalance_only_move_primary
+  ./admin_tools/pegasus_rebalance_cluster.sh $cluster $meta_list $rebalance_only_move_primary
 fi
 
 echo "Finish time: `date`"
