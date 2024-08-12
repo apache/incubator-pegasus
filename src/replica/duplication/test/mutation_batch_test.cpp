@@ -36,6 +36,7 @@
 #include "replica/prepare_list.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 
 namespace dsn {
 namespace replication {
