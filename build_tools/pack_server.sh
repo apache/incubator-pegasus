@@ -130,10 +130,10 @@ fi
 copy_file ${THIRDPARTY_ROOT}/output/lib/libboost*.so.1.69.0 ${pack}/bin
 copy_file ${THIRDPARTY_ROOT}/output/lib/libhdfs* ${pack}/bin
 copy_file ${THIRDPARTY_ROOT}/output/lib/librocksdb.so.8 ${pack}/bin
-copy_file ./scripts/sendmail.sh ${pack}/bin
+copy_file ./admin_tools/config_hdfs.sh ${pack}/bin
+copy_file ./admin_tools/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 copy_file ./src/server/config.min.ini ${pack}/bin
-copy_file ./scripts/config_hdfs.sh ${pack}/bin
 
 copy_file "$(get_stdcpp_lib $custom_gcc $separate_servers)" "${pack}/bin"
 

@@ -118,7 +118,7 @@ def generate_code_in_command_helper_header(replica_counter):
 
 
 # python3 ./collector_table_counter_gen.py counter1,counter2
-# please use `./scripts/format_files.sh` to format after generate code
+# please use `./build_tools/format_files.sh` to format after generate code
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("python3 ./collector_table_counter_gen.py {counter1,counter2..}")
