@@ -165,9 +165,9 @@ public:
     // `offset` can be negative for buffer dereference.
     blob range(int offset) const
     {
-        CHECK_LE_MSG(offset,
-                     static_cast<int>(_length),
-                     "the required offset cannot exceed the current length");
+        DCHECK_LE_MSG(offset,
+                      static_cast<int>(_length),
+                      "the required offset cannot exceed the current length");
 
         blob temp = *this;
         temp._data += offset;
@@ -177,15 +177,15 @@ public:
 
     blob range(int offset, unsigned int len) const
     {
-        CHECK_LE_MSG(offset,
-                     static_cast<int>(_length),
-                     "the required offset cannot exceed the current length");
+        DCHECK_LE_MSG(offset,
+                      static_cast<int>(_length),
+                      "the required offset cannot exceed the current length");
 
         blob temp = *this;
         temp._data += offset;
         temp._length -= offset;
 
-        CHECK_LE_MSG(
+        DCHECK_LE_MSG(
             len, temp._length, "the required length cannot exceed remaining buffer length");
 
         temp._length = len;

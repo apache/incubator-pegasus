@@ -38,17 +38,17 @@ public:
         expected_str = test_case.expected_str;
     }
 
-    void check_blob_value(const blob &bb)
+    void check_blob_value(const blob &obj)
     {
-        EXPECT_EQ(expected_str, bb.to_string());
+        EXPECT_EQ(expected_str, obj.to_string());
 
-        EXPECT_EQ(expected_str.size(), bb.length());
-        EXPECT_EQ(expected_str.size(), bb.size());
+        EXPECT_EQ(expected_str.size(), obj.length());
+        EXPECT_EQ(expected_str.size(), obj.size());
 
         if (expected_str.empty()) {
-            EXPECT_TRUE(bb.empty());
+            EXPECT_TRUE(obj.empty());
         } else {
-            EXPECT_FALSE(bb.empty());
+            EXPECT_FALSE(obj.empty());
         }
     }
 
@@ -68,14 +68,14 @@ class BlobCreateTest : public BlobBaseTest
 
 TEST_P(BlobCreateTest, CreateFromCString)
 {
-    const auto &bb = blob::create_from_bytes(expected_str.data(), expected_str.size());
-    check_blob_value(bb);
+    const auto &obj = blob::create_from_bytes(expected_str.data(), expected_str.size());
+    check_blob_value(obj);
 }
 
 TEST_P(BlobCreateTest, CreateFromString)
 {
-    const auto &bb = blob::create_from_bytes(std::string(expected_str));
-    check_blob_value(bb);
+    const auto &obj = blob::create_from_bytes(std::string(expected_str));
+    check_blob_value(obj);
 }
 
 INSTANTIATE_TEST_SUITE_P(BlobTest, BlobCreateTest, testing::ValuesIn(blob_base_tests));
@@ -88,35 +88,35 @@ public:
 
 TEST_P(BlobInitTest, CopyConstructor)
 {
-    const auto &bb = create();
+    const auto &obj = create();
 
-    blob copy(bb);
+    blob copy(obj);
     check_blob_value(copy);
 }
 
 TEST_P(BlobInitTest, CopyAssignment)
 {
-    const auto &bb = create();
+    const auto &obj = create();
 
     blob copy;
-    copy = bb;
+    copy = obj;
     check_blob_value(copy);
 }
 
 TEST_P(BlobInitTest, MoveConstructor)
 {
-    const auto &bb = create();
+    auto obj = create();
 
-    blob move(std::move(bb));
+    blob move(std::move(obj));
     check_blob_value(move);
 }
 
 TEST_P(BlobInitTest, MoveAssignment)
 {
-    const auto &bb = create();
+    auto obj = create();
 
     blob move;
-    move = std::move(bb);
+    move = std::move(obj);
     check_blob_value(move);
 }
 

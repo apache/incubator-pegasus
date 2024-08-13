@@ -63,7 +63,8 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                    "-checks=-cppcoreguidelines-pro-type-union-access,-modernize-use-trailing-return-type",
                    "-extra-arg=-language=c++",
                    "-extra-arg=-std=c++17",
-                   "-extra-arg=-Ithirdparty/output/include"]
+                   "-extra-arg=-Ithirdparty/output/include",
+                   "-checks=-fuchsia-default-arguments-calls,-readability-identifier-length"]
         return subprocess.check_output(
             cmdline,
             stdin=open(patch_file.name),
