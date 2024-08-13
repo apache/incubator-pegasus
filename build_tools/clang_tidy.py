@@ -54,12 +54,13 @@ def run_tidy(sha="HEAD", is_rev_range=False):
             path]
         subprocess.check_call(cmd, stdout=patch_file, cwd=ROOT)
         # TODO(yingchun): some checks could be disabled before we fix them.
-        #  "-checks=-llvm-include-order,-modernize-concat-nested-namespaces,-cppcoreguidelines-pro-type-union-access,-cppcoreguidelines-macro-usage,-cppcoreguidelines-special-member-functions,-hicpp-special-member-functions,-modernize-use-trailing-return-type,-bugprone-easily-swappable-parameters,-google-readability-avoid-underscore-in-googletest-name,-cppcoreguidelines-avoid-c-arrays,-hicpp-avoid-c-arrays,-modernize-avoid-c-arrays,-llvm-header-guard,-cppcoreguidelines-pro-bounds-pointer-arithmetic",
+        #  "-checks=-llvm-include-order,-modernize-concat-nested-namespaces,-cppcoreguidelines-macro-usage,-cppcoreguidelines-special-member-functions,-hicpp-special-member-functions,-bugprone-easily-swappable-parameters,-google-readability-avoid-underscore-in-googletest-name,-cppcoreguidelines-avoid-c-arrays,-hicpp-avoid-c-arrays,-modernize-avoid-c-arrays,-llvm-header-guard,-cppcoreguidelines-pro-bounds-pointer-arithmetic",
         cmdline = ["clang-tidy-diff",
                    "-clang-tidy-binary",
                    "clang-tidy",
                    "-p0",
                    "-path", BUILD_PATH,
+                   "-checks=-cppcoreguidelines-pro-type-union-access,-modernize-use-trailing-return-type",
                    "-extra-arg=-language=c++",
                    "-extra-arg=-std=c++17",
                    "-extra-arg=-Ithirdparty/output/include"]

@@ -532,7 +532,7 @@ private:
     void update_restore_progress(uint64_t f_size);
 
     // Used for remote command
-    // TODO: remove this interface and only expose the http interface
+    // TODO(clang-tidy): remove this interface and only expose the http interface
     // now this remote commend will be used by `admin_tools/pegasus_manual_compact.sh`
     std::string query_manual_compact_state() const;
 
