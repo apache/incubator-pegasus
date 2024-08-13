@@ -155,7 +155,7 @@ pack_tools_lib ssl $separate_servers
 
 chmod -x ${pack}/lib/*
 
-mkdir -p ${pack}/scripts
+mkdir -p ${pack}/admin_tools
 copy_file ./admin_tools/* ${pack}/admin_tools/
 chmod +x ${pack}/admin_tools/*.sh
 
