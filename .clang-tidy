@@ -18,7 +18,7 @@
 # https://releases.llvm.org/14.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html
 
 CheckOptions: []
-Checks: 'abseil-*,boost-*,bugprone-*,cert-*,clang-analyzer-*,concurrency-*,cppcoreguidelines-*,darwin-*,fuchsia-*,google-*,hicpp-*,linuxkernel-*,llvm-*,misc-*,modernize-*,performance-*,portability-*,readability-*,-fuchsia-default-arguments-calls,-readability-identifier-length,-readability-function-cognitive-complexity'
+Checks: 'abseil-*,boost-*,bugprone-*,cert-*,clang-analyzer-*,concurrency-*,cppcoreguidelines-*,darwin-*,fuchsia-*,google-*,hicpp-*,linuxkernel-*,llvm-*,misc-*,modernize-*,performance-*,portability-*,readability-*,-modernize-use-trailing-return-type,-readability-function-cognitive-complexity,cert-err58-cpp,-readability-identifier-length,-fuchsia-default-arguments-calls'
 ExtraArgs:
 ExtraArgsBefore: []
 FormatStyle: none

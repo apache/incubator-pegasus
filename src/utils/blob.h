@@ -201,10 +201,10 @@ public:
     std::string to_string() const
     {
         if (_length == 0) {
-            return std::string();
+            return {};
         }
 
-        return std::string(_data, _length);
+        return {_data, _length};
     }
 
     friend std::ostream &operator<<(std::ostream &os, const blob &bb)

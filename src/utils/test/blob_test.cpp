@@ -38,7 +38,7 @@ public:
         expected_str = test_case.expected_str;
     }
 
-    void check_blob_value(const blob &obj)
+    void check_blob_value(const blob &obj) const
     {
         EXPECT_EQ(expected_str, obj.to_string());
 
