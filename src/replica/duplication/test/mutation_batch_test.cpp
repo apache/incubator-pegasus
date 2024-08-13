@@ -137,8 +137,8 @@ TEST_P(mutation_batch_test, add_empty_mutation)
 TEST_P(mutation_batch_test, add_string_view_mutation)
 {
     auto mu = create_test_mutation(1, nullptr);
-    const char data[] = "hello";
-    mu->data.updates.back().data = blob(data, 0, sizeof(data) - 1);
+    const std::string data("hello");
+    mu->data.updates.back().data = blob(data.data(), 0, data.size());
     _batcher.add_mutation_if_valid(mu, 0);
 
     check_mutation_contents({"hello"});

@@ -18,7 +18,7 @@
 # https://releases.llvm.org/14.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html
 
 CheckOptions: []
-Checks: 'abseil-*,boost-*,bugprone-*,cert-*,clang-analyzer-*,concurrency-*,cppcoreguidelines-*,darwin-*,fuchsia-*,google-*,hicpp-*,linuxkernel-*,llvm-*,misc-*,modernize-*,performance-*,portability-*,readability-*,-modernize-use-trailing-return-type,-readability-function-cognitive-complexity,cert-err58-cpp,-readability-identifier-length,-fuchsia-default-arguments-calls'
+Checks: 'abseil-*,boost-*,bugprone-*,cert-*,clang-analyzer-*,concurrency-*,cppcoreguidelines-*,darwin-*,fuchsia-*,google-*,hicpp-*,linuxkernel-*,llvm-*,misc-*,modernize-*,performance-*,portability-*,readability-*,-modernize-use-trailing-return-type,-cppcoreguidelines-avoid-non-const-global-variables,-readability-function-cognitive-complexity,-cert-err58-cpp,-readability-identifier-length,-fuchsia-default-arguments-calls,-google-readability-avoid-underscore-in-googletest-name'
 ExtraArgs:
 ExtraArgsBefore: []
 FormatStyle: none

@@ -64,7 +64,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                    "-extra-arg=-language=c++",
                    "-extra-arg=-std=c++17",
                    "-extra-arg=-Ithirdparty/output/include",
-                   "-checks=-modernize-use-trailing-return-type,-readability-function-cognitive-complexity,cert-err58-cpp,-readability-identifier-length,-fuchsia-default-arguments-calls"]
+                   "-checks=-modernize-use-trailing-return-type,-cppcoreguidelines-avoid-non-const-global-variables,-readability-function-cognitive-complexity,-cert-err58-cpp,-readability-identifier-length,-fuchsia-default-arguments-calls,-google-readability-avoid-underscore-in-googletest-name"]
         return subprocess.check_output(
             cmdline,
             stdin=open(patch_file.name),
