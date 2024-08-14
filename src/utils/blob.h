@@ -192,11 +192,7 @@ public:
         return temp;
     }
 
-    bool operator==(const blob &) const
-    {
-        CHECK(false, "not implemented");
-        return false;
-    }
+    bool operator==(const blob &) const = delete;
 
     [[nodiscard]] std::string to_string() const
     {
@@ -212,10 +208,7 @@ public:
         return os << bb.to_string();
     }
 
-    [[nodiscard]] std::string_view to_string_view() const
-    {
-        return std::string_view(_data, _length);
-    }
+    [[nodiscard]] std::string_view to_string_view() const { return {_data, _length}; }
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
