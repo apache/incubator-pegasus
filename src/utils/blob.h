@@ -60,10 +60,7 @@ public:
     {
     }
 
-    blob(const blob &rhs) noexcept
-        : _holder(rhs._holder), _buffer(rhs._buffer), _data(rhs._data), _length(rhs._length)
-    {
-    }
+    blob(const blob &rhs) noexcept = default;
 
     blob &operator=(const blob &rhs) noexcept
     {
@@ -114,7 +111,7 @@ public:
     {
         CHECK_NOTNULL(s, "null source pointer would lead to undefined behaviour");
 
-        std::shared_ptr<char> s_arr(new char[len], std::default_delete<char[]>());
+        std::shared_ptr<char[]> s_arr(new char[len], std::default_delete<char[]>());
         memcpy(s_arr.get(), s, len);
         return {std::move(s_arr), static_cast<unsigned int>(len)};
     }
@@ -122,7 +119,7 @@ public:
     /// Create shared buffer without copying data.
     [[nodiscard]] static blob create_from_bytes(std::string &&bytes)
     {
-        auto s = new std::string(std::move(bytes));
+        auto *s = new std::string(std::move(bytes));
         std::shared_ptr<char> buf(const_cast<char *>(s->data()), [s](char *) { delete s; });
         return {std::move(buf), static_cast<unsigned int>(s->length())};
     }

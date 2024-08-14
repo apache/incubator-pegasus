@@ -80,7 +80,7 @@ dsn::error_s read_block(dsn::replication::log_file_ptr &log,
                         std::unique_ptr<dsn::binary_reader> &reader)
 {
     log->reset_stream(start_offset); // Start reading from given offset.
-    int64_t global_start_offset = start_offset + log->start_offset();
+    int64_t global_start_offset = static_cast<int64_t>(start_offset) + log->start_offset();
     end_offset = global_start_offset; // Reset end_offset to the start.
 
     {
