@@ -110,7 +110,7 @@ public:
 
     /// Create shared buffer from allocated raw bytes.
     /// NOTE: this operation is not efficient since it involves a memory copy.
-    static blob create_from_bytes(const char *s, size_t len)
+    [[nodiscard]] static blob create_from_bytes(const char *s, size_t len)
     {
         CHECK_NOTNULL(s, "null source pointer would lead to undefined behaviour");
 
@@ -120,7 +120,7 @@ public:
     }
 
     /// Create shared buffer without copying data.
-    static blob create_from_bytes(std::string &&bytes)
+    [[nodiscard]] static blob create_from_bytes(std::string &&bytes)
     {
         auto s = new std::string(std::move(bytes));
         std::shared_ptr<char> buf(const_cast<char *>(s->data()), [s](char *) { delete s; });
@@ -152,15 +152,15 @@ public:
         _length = length;
     }
 
-    const char *data() const noexcept { return _data; }
+    [[nodiscard]] const char *data() const noexcept { return _data; }
 
-    unsigned int length() const noexcept { return _length; }
-    unsigned int size() const noexcept { return _length; }
-    bool empty() const noexcept { return _length == 0; }
+    [[nodiscard]] unsigned int length() const noexcept { return _length; }
+    [[nodiscard]] unsigned int size() const noexcept { return _length; }
+    [[nodiscard]] bool empty() const noexcept { return _length == 0; }
 
-    std::shared_ptr<char> buffer() const { return _holder; }
+    [[nodiscard]] std::shared_ptr<char> buffer() const { return _holder; }
 
-    const char *buffer_ptr() const { return _holder.get(); }
+    [[nodiscard]] const char *buffer_ptr() const { return _holder.get(); }
 
     // `offset` can be negative for buffer dereference.
     [[nodiscard]] blob range(int offset) const
@@ -212,7 +212,10 @@ public:
         return os << bb.to_string();
     }
 
-    std::string_view to_string_view() const { return std::string_view(_data, _length); }
+    [[nodiscard]] std::string_view to_string_view() const
+    {
+        return std::string_view(_data, _length);
+    }
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;

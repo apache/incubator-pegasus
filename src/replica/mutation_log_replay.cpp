@@ -41,8 +41,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 /*static*/ error_code mutation_log::replay(log_file_ptr log,
                                            replay_callback callback,
@@ -234,5 +233,4 @@ dsn::error_s read_block(dsn::replication::log_file_ptr &log,
     return err;
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

@@ -38,8 +38,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class mutation_batch_test : public duplication_test_base
 {
@@ -206,5 +205,4 @@ TEST_P(mutation_batch_test, mutation_buffer_commit)
     ASSERT_EQ(14, _batcher.last_decree());
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
