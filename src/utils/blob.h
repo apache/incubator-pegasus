@@ -192,7 +192,13 @@ public:
         return temp;
     }
 
-    bool operator==(const blob &) const = delete;
+    // Could NOT be declared with "= delete", since many thrift-generated classes would
+    // access this in their own `operator==`.
+    bool operator==(const blob &) const
+    {
+        CHECK(false, "not implemented");
+        return false;
+    }
 
     [[nodiscard]] std::string to_string() const
     {
