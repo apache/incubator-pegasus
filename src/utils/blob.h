@@ -116,7 +116,7 @@ public:
 
         std::shared_ptr<char> s_arr(new char[len], std::default_delete<char[]>());
         memcpy(s_arr.get(), s, len);
-        return blob(std::move(s_arr), static_cast<unsigned int>(len));
+        return {std::move(s_arr), static_cast<unsigned int>(len)};
     }
 
     /// Create shared buffer without copying data.
@@ -124,7 +124,7 @@ public:
     {
         auto s = new std::string(std::move(bytes));
         std::shared_ptr<char> buf(const_cast<char *>(s->data()), [s](char *) { delete s; });
-        return blob(std::move(buf), static_cast<unsigned int>(s->length()));
+        return {std::move(buf), static_cast<unsigned int>(s->length())};
     }
 
     void assign(const std::shared_ptr<char> &buffer, int offset, unsigned int length)
@@ -163,7 +163,7 @@ public:
     const char *buffer_ptr() const { return _holder.get(); }
 
     // `offset` can be negative for buffer dereference.
-    blob range(int offset) const
+    [[nodiscard]] blob range(int offset) const
     {
         DCHECK_LE_MSG(offset,
                       static_cast<int>(_length),
@@ -175,7 +175,7 @@ public:
         return temp;
     }
 
-    blob range(int offset, unsigned int len) const
+    [[nodiscard]] blob range(int offset, unsigned int len) const
     {
         DCHECK_LE_MSG(offset,
                       static_cast<int>(_length),
@@ -192,13 +192,13 @@ public:
         return temp;
     }
 
-    bool operator==(const blob &r) const
+    bool operator==(const blob &) const
     {
         CHECK(false, "not implemented");
         return false;
     }
 
-    std::string to_string() const
+    [[nodiscard]] std::string to_string() const
     {
         if (_length == 0) {
             return {};

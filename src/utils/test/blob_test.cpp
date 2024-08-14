@@ -35,24 +35,25 @@ public:
     void SetUp() override
     {
         const auto &test_case = GetParam();
-        expected_str = test_case.expected_str;
+        _expected_str = test_case.expected_str;
     }
 
     void check_blob_value(const blob &obj) const
     {
-        EXPECT_EQ(expected_str, obj.to_string());
+        EXPECT_EQ(_expected_str, obj.to_string());
 
-        EXPECT_EQ(expected_str.size(), obj.length());
-        EXPECT_EQ(expected_str.size(), obj.size());
+        EXPECT_EQ(_expected_str.size(), obj.length());
+        EXPECT_EQ(_expected_str.size(), obj.size());
 
-        if (expected_str.empty()) {
+        if (_expected_str.empty()) {
             EXPECT_TRUE(obj.empty());
         } else {
             EXPECT_FALSE(obj.empty());
         }
     }
 
-    std::string expected_str;
+protected:
+    std::string _expected_str;
 };
 
 const std::vector<blob_base_case> blob_base_tests = {
@@ -68,13 +69,13 @@ class BlobCreateTest : public BlobBaseTest
 
 TEST_P(BlobCreateTest, CreateFromCString)
 {
-    const auto &obj = blob::create_from_bytes(expected_str.data(), expected_str.size());
+    const auto &obj = blob::create_from_bytes(_expected_str.data(), _expected_str.size());
     check_blob_value(obj);
 }
 
 TEST_P(BlobCreateTest, CreateFromString)
 {
-    const auto &obj = blob::create_from_bytes(std::string(expected_str));
+    const auto &obj = blob::create_from_bytes(std::string(_expected_str));
     check_blob_value(obj);
 }
 
@@ -83,7 +84,7 @@ INSTANTIATE_TEST_SUITE_P(BlobTest, BlobCreateTest, testing::ValuesIn(blob_base_t
 class BlobInitTest : public BlobBaseTest
 {
 public:
-    blob create() { return blob::create_from_bytes(std::string(expected_str)); }
+    blob create() { return blob::create_from_bytes(std::string(_expected_str)); }
 };
 
 TEST_P(BlobInitTest, CopyConstructor)
