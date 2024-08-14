@@ -514,7 +514,7 @@ RESULTING FROM THE USE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 
-scripts/run-clang-format.py - MIT License
+build_tools/run-clang-format.py - MIT License
 
 MIT License
 

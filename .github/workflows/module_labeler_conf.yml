@@ -42,7 +42,8 @@ thrift:
 docs:
   - '**/*.md'
 scripts:
-  - 'scripts/**/*'
+  - 'admin_tools/**/*'
+  - 'build_tools/**/*'
   - '**/*.sh'
 build:
   - 'cmake_modules/**/*'

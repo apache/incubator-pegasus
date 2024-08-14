@@ -41,7 +41,7 @@ if [ "$check_type" != "add_node_list" -a "$check_type" != "offline_node_list" ];
   exit 1
 fi
 
-source ./scripts/minos_common.sh
+source ./admin_tools/minos_common.sh
 find_cluster $cluster
 if [ $? -ne 0 ]; then
   echo "ERROR: cluster \"$cluster\" not found"

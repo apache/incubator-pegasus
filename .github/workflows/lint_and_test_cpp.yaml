@@ -30,13 +30,13 @@ on:
       - .github/actions
       - .github/workflows/lint_and_test_cpp.yaml
       - .github/workflows/thirdparty-regular-push.yml
+      - build_tools/pack_server.sh
+      - build_tools/pack_tools.sh
       - docker/thirdparties-bin/**
       - docker/thirdparties-src/**
       - CMakeLists.txt
       - cmake_modules/**
       - run.sh
-      - scripts/pack_server.sh
-      - scripts/pack_tools.sh
       - src/**
       - thirdparty/**
 
@@ -55,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: clang-format
-        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-14 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
+        run: ./build_tools/run-clang-format.py --clang-format-executable clang-format-14 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
   cpp_clang_tidy_linter:
     name: Tidy
@@ -76,7 +76,7 @@ jobs:
         run: |
           git config --global --add safe.directory $(pwd)
           ./run.sh build --test --compiler clang-14,clang++-14 -t debug --skip_thirdparty -c --cmake_only
-          ./scripts/clang_tidy.py --rev-range $(git log origin/${{ github.base_ref }} -n1 --format=format:"%H")
+          ./build_tools/clang_tidy.py --rev-range $(git log origin/${{ github.base_ref }} -n1 --format=format:"%H")
         shell: bash
 
   iwyu:

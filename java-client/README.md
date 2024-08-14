@@ -60,7 +60,7 @@ mvn clean package -Dtest=TestPing
 ### Install
 
 ```
-cd scripts && bash recompile_thrift.sh && cd -
+cd scripts && bash download_thrift.sh && cd -
 mvn clean install -DskipTests
 ```
 

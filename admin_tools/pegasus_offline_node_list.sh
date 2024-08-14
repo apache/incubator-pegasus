@@ -52,7 +52,7 @@ shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
 
 echo "Check the argument..."
-source ./scripts/pegasus_check_arguments.sh offline_node_list $cluster $meta_list $replica_task_id_list
+source ./admin_tools/pegasus_check_arguments.sh offline_node_list $cluster $meta_list $replica_task_id_list
 
 if [ $? -ne 0 ]; then
     echo "ERROR: the argument check failed"
@@ -93,7 +93,7 @@ echo
 for id in $id_list
 do
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-  ./scripts/pegasus_offline_node.sh $cluster $meta_list $id
+  ./admin_tools/pegasus_offline_node.sh $cluster $meta_list $id
   if [ $? -ne 0 ]; then
     echo "ERROR: offline replica task $id failed"
     exit 1

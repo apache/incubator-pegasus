@@ -52,7 +52,7 @@ shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
 
 echo "Check the argument..."
-source ./scripts/pegasus_check_arguments.sh add_node_list $cluster $meta_list $replica_task_id_list
+source ./admin_tools/pegasus_check_arguments.sh add_node_list $cluster $meta_list $replica_task_id_list
 
 if [ $? -ne 0 ]; then
     echo "ERROR: the argument check failed"
@@ -78,7 +78,7 @@ do
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 done
 
-./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list true $nfs_rate_megabytes_per_disk
+./admin_tools/pegasus_rebalance_cluster.sh $cluster $meta_list true $nfs_rate_megabytes_per_disk
 
 echo "Finish time: `date`"
 add_node_finish_time=$((`date +%s`))
