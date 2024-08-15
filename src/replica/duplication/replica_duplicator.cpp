@@ -66,6 +66,9 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     // The max decree in rocksdb memtable (the last applied decree) is considered as the min
     // decree that should be covered by the checkpoint, which means currently all of the data
     // in current rocksdb should be included into the created checkpoint.
+    //
+    // _min_checkpoint_decree is not persisted into zk, so if replica server was restarted,
+    // it would be reset to the decree that is applied most recently.
     const auto last_applied_decree = _replica->last_applied_decree();
     _min_checkpoint_decree = std::max(last_applied_decree, static_cast<decree>(1));
     LOG_INFO_PREFIX("initialize checkpoint decree: min_checkpoint_decree={}, "
@@ -82,18 +85,33 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 
     _status = ent.status;
 
-    auto it = ent.progress.find(get_gpid().get_partition_index());
+    const auto it = ent.progress.find(get_gpid().get_partition_index());
+    CHECK_PREFIX_MSG(it != ent.progress.end(),
+                     "partition({}) not found in duplication progress: "
+                     "app_name={}, dup_id={}, remote_cluster_name={}, remote_app_name={}",
+                     get_gpid(),
+                     r->get_app_info()->app_name,
+                     id(),
+                     _remote_cluster_name,
+                     _remote_app_name);
     if (it->second == invalid_decree) {
-        // TODO(jiashuo1): _min_checkpoint_decree hasn't be ready to persist zk, so if master
-        // restart, the value will be reset to 0.
         _progress.last_decree = last_applied_decree;
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
-    LOG_INFO_PREFIX("initialize replica_duplicator[{}] [dupid:{}, meta_confirmed_decree:{}]",
-                    duplication_status_to_string(_status),
+
+    LOG_INFO_PREFIX("initialize replica_duplicator: app_name={}, dup_id={}, "
+                    "remote_cluster_name={}, remote_app_name={}, status={}, "
+                    "replica_confirmed_decree={}, meta_persisted_decree={}/{}",
+                    r->get_app_info()->app_name,
                     id(),
-                    it->second);
+                    _remote_cluster_name,
+                    _remote_app_name,
+                    duplication_status_to_string(_status),
+                    _progress.last_decree,
+                    it->second,
+                    _progress.confirmed_decree);
+
     thread_pool(LPC_REPLICATION_LOW).task_tracker(tracker()).thread_hash(get_gpid().thread_hash());
 
     if (_status == duplication_status::DS_PREPARE) {
@@ -122,7 +140,8 @@ void replica_duplicator::prepare_dup()
 
 void replica_duplicator::start_dup_log()
 {
-    LOG_INFO_PREFIX("starting duplication {} [last_decree: {}, confirmed_decree: {}]",
+    LOG_INFO_PREFIX("starting duplication: {}, replica_confirmed_decree={}, "
+                    "meta_persisted_decree={}",
                     to_string(),
                     _progress.last_decree,
                     _progress.confirmed_decree);
@@ -265,11 +284,11 @@ void replica_duplicator::verify_start_decree(decree start_decree)
         max_gced_decree,
         start_decree,
         "the logs haven't yet duplicated were accidentally truncated [max_gced_decree: {}, "
-        "start_decree: {}, confirmed_decree: {}, last_decree: {}]",
+        "start_decree: {}, replica_confirmed_decree: {}, meta_persisted_decree: {}]",
         max_gced_decree,
         start_decree,
-        progress().confirmed_decree,
-        progress().last_decree);
+        progress().last_decree,
+        progress().confirmed_decree);
 }
 
 decree replica_duplicator::get_max_gced_decree() const
