@@ -52,7 +52,8 @@ public:
         static const std::string kTestRemoteAppName = "temp";
 
         // replica: {app_id:2, partition_id:1, duplications:{}}
-        stub->add_primary_replica(2, 1);
+        auto *rep = stub->add_primary_replica(2, 1);
+        rep->init_private_log(rep->dir());
         ASSERT_NE(stub->find_replica(2, 1), nullptr);
 
         // appid:2 -> dupid:1
@@ -82,15 +83,16 @@ public:
     {
         int total_app_num = 4;
         for (int appid = 1; appid <= total_app_num; appid++) {
-            auto r = stub->add_non_primary_replica(appid, 1);
+            auto *rep = stub->add_non_primary_replica(appid, 1);
+            rep->init_private_log(rep->dir());
 
             // trigger duplication sync on partition 1
             duplication_entry ent;
             ent.dupid = 1;
-            ent.progress[r->get_gpid().get_partition_index()] = 1000;
+            ent.progress[rep->get_gpid().get_partition_index()] = 1000;
             ent.status = duplication_status::DS_PAUSE;
-            auto dup = std::make_unique<replica_duplicator>(ent, r);
-            add_dup(r, std::move(dup));
+            auto dup = std::make_unique<replica_duplicator>(ent, rep);
+            add_dup(rep, std::move(dup));
         }
 
         RPC_MOCKING(duplication_sync_rpc)
@@ -164,7 +166,8 @@ public:
         std::map<int32_t, std::map<dupid_t, duplication_entry>> dup_map;
         for (int32_t appid = 1; appid <= 10; appid++) {
             for (int partition_id = 0; partition_id < 3; partition_id++) {
-                stub->add_primary_replica(appid, partition_id);
+                auto *rep = stub->add_primary_replica(appid, partition_id);
+                rep->init_private_log(rep->dir());
             }
         }
 
@@ -254,19 +257,20 @@ public:
     void test_update_confirmed_points()
     {
         for (int32_t appid = 1; appid <= 10; appid++) {
-            stub->add_primary_replica(appid, 1);
+            auto *rep = stub->add_primary_replica(appid, 1);
+            rep->init_private_log(rep->dir());
         }
 
         for (int appid = 1; appid <= 3; appid++) {
-            auto r = stub->find_replica(appid, 1);
+            auto *rep = stub->find_replica(appid, 1);
 
             duplication_entry ent;
             ent.dupid = 1;
             ent.status = duplication_status::DS_PAUSE;
-            ent.progress[r->get_gpid().get_partition_index()] = 0;
-            auto dup = std::make_unique<replica_duplicator>(ent, r);
+            ent.progress[rep->get_gpid().get_partition_index()] = 0;
+            auto dup = std::make_unique<replica_duplicator>(ent, rep);
             dup->update_progress(dup->progress().set_last_decree(3).set_confirmed_decree(1));
-            add_dup(r, std::move(dup));
+            add_dup(rep, std::move(dup));
         }
 
         duplication_entry ent;
@@ -280,8 +284,8 @@ public:
         dup_sync->on_duplication_sync_reply(ERR_OK, resp);
 
         for (int appid = 1; appid <= 3; appid++) {
-            auto r = stub->find_replica(appid, 1);
-            auto dup = find_dup(r, 1);
+            auto *rep = stub->find_replica(appid, 1);
+            auto dup = find_dup(rep, 1);
 
             ASSERT_EQ(3, dup->progress().confirmed_decree);
         }
@@ -294,7 +298,8 @@ public:
         // 10 primaries
         int appid = 1;
         for (int partition_id = 0; partition_id < 10; partition_id++) {
-            stub->add_primary_replica(appid, partition_id);
+            auto *r = stub->add_primary_replica(appid, partition_id);
+            r->init_private_log(r->dir());
         }
 
         duplication_entry ent;
@@ -353,7 +358,8 @@ public:
     // there must be some internal problems.
     void test_receive_illegal_duplication_status()
     {
-        stub->add_primary_replica(1, 0);
+        auto *rep = stub->add_primary_replica(1, 0);
+        rep->init_private_log(rep->dir());
 
         duplication_entry ent;
         ent.dupid = 2;

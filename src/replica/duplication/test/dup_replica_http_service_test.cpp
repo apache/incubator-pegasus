@@ -43,6 +43,7 @@ INSTANTIATE_TEST_SUITE_P(, dup_replica_http_service_test, ::testing::Values(fals
 TEST_P(dup_replica_http_service_test, query_duplication_handler)
 {
     auto pri = stub->add_primary_replica(1, 1);
+    pri->init_private_log(pri->dir());
 
     // primary confirmed_decree
     duplication_entry ent;
