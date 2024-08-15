@@ -173,6 +173,7 @@ void duplication_info::persist_status()
 
     _is_altering = false;
     _status = _next_status;
+    // Now we don't know what exactly is the next status, thus set DS_INIT temporarily.
     _next_status = duplication_status::DS_INIT;
     _fail_mode = _next_fail_mode;
 }
