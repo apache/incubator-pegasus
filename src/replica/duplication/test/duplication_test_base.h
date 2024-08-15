@@ -75,16 +75,15 @@ public:
         return log_file_map;
     }
 
-    mutation_ptr create_test_mutation(int64_t decree,
-                                      int64_t last_committed_decree,
-                                      const std::string &data) override
+    mutation_ptr
+    create_test_mutation(int64_t decree, int64_t last_committed_decree, const char *data) override
     {
         auto mut = replica_test_base::create_test_mutation(decree, last_committed_decree, data);
         mut->data.updates[0].code = RPC_DUPLICATION_IDEMPOTENT_WRITE; // must be idempotent write
         return mut;
     }
 
-    mutation_ptr create_test_mutation(int64_t decree, const std::string &data) override
+    mutation_ptr create_test_mutation(int64_t decree, const char *data) override
     {
         return duplication_test_base::create_test_mutation(decree, decree - 1, data);
     }

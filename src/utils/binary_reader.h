@@ -39,13 +39,13 @@ class binary_reader
 {
 public:
     // given bb on ctor
-    binary_reader(const blob &blob);
-    binary_reader(blob &&blob);
+    explicit binary_reader(const blob &blob);
+    explicit binary_reader(blob &&blob);
 
     // or delayed init
-    binary_reader() {}
+    binary_reader() = default;
 
-    virtual ~binary_reader() {}
+    virtual ~binary_reader() = default;
 
     void init(const blob &bb);
     void init(blob &&bb);
