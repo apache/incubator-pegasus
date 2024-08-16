@@ -42,7 +42,7 @@ namespace dsn::replication {
 
 class mutation_batch_test : public duplication_test_base
 {
-public:
+protected:
     mutation_batch_test()
     {
         _replica->init_private_log(_replica->dir());
@@ -50,19 +50,19 @@ public:
         _batcher = std::make_unique<mutation_batch>(_duplicator.get());
     }
 
-    void reset_buffer(const decree last_commit, const decree start, const decree end)
+    void reset_buffer(const decree last_commit, const decree start, const decree end) const
     {
         _batcher->_mutation_buffer->reset(last_commit);
         _batcher->_mutation_buffer->_start_decree = start;
         _batcher->_mutation_buffer->_end_decree = end;
     }
 
-    void commit_buffer(const decree current_decree)
+    void commit_buffer(const decree current_decree) const
     {
         _batcher->_mutation_buffer->commit(current_decree, COMMIT_TO_DECREE_HARD);
     }
 
-    void check_mutation_contents(const std::vector<std::string> &expected_mutations)
+    void check_mutation_contents(const std::vector<std::string> &expected_mutations) const
     {
         const auto all_mutations = _batcher->move_all_mutations();
 

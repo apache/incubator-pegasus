@@ -285,7 +285,7 @@ public:
 
         for (int appid = 1; appid <= 3; appid++) {
             auto *rep = stub->find_replica(appid, 1);
-            auto dup = find_dup(rep, 1);
+            auto *dup = find_dup(rep, 1);
 
             ASSERT_EQ(3, dup->progress().confirmed_decree);
         }
