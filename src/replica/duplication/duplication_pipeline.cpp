@@ -50,8 +50,6 @@ namespace dsn {
 
 namespace replication {
 
-using namespace literals::chrono_literals;
-
 //                     //
 // mutation_duplicator //
 //                     //
@@ -73,6 +71,7 @@ void load_mutation::run()
     const auto max_plog_committed_decree =
         std::min(_replica->private_log()->max_decree_on_disk(), _replica->last_applied_decree());
     if (_start_decree > max_plog_committed_decree) {
+        using namespace literals::chrono_literals;
         // Wait for a while if no mutation was added.
         repeat(FLAGS_dup_no_mutation_load_delay_ms * 1_ms);
         return;
