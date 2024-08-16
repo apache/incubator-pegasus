@@ -34,6 +34,7 @@
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/mutation.h"
 #include "replica/prepare_list.h"
+#include "replica/test/mock_utils.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"

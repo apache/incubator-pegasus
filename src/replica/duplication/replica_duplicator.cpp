@@ -67,7 +67,7 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     // decree that should be covered by the checkpoint, which means currently all of the data
     // in current rocksdb should be included into the created checkpoint.
     //
-    // _min_checkpoint_decree is not persisted into zk, so if replica server was restarted,
+    // `_min_checkpoint_decree` is not persisted into zk. Once replica server was restarted,
     // it would be reset to the decree that is applied most recently.
     const auto last_applied_decree = _replica->last_applied_decree();
     _min_checkpoint_decree = std::max(last_applied_decree, static_cast<decree>(1));
@@ -94,8 +94,15 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
                      id(),
                      _remote_cluster_name,
                      _remote_app_name);
+
+    // Initial progress would be `invalid_decree` which was synced from meta server
+    // immediately after the duplication was created.
+    // See `init_progress()` in `meta_duplication_service::new_dup_from_init()`.
+    //
+    // _progress.last_decree would be used to update the state in meta server.
+    // See `replica_duplicator_manager::get_duplication_confirms_to_update()`.
     if (it->second == invalid_decree) {
-        _progress.last_decree = last_applied_decree;
+        _progress.last_decree = _min_checkpoint_decree;
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
