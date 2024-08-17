@@ -17,11 +17,14 @@
 
 #include "duplication_pipeline.h"
 
-#include <string_view>
 #include <stddef.h>
 #include <algorithm>
+#include <chrono>
+#include <cstdint>
 #include <functional>
+#include <ratio>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "load_from_private_log.h"
