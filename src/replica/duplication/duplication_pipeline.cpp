@@ -33,7 +33,6 @@
 #include "replica/replica.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "utils/autoref_ptr.h"
-#include "utils/chrono_literals.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -52,8 +51,6 @@ METRIC_DEFINE_counter(replica,
 namespace dsn {
 
 namespace replication {
-
-using literals::chrono_literals::operator"" _ms;
 
 //                     //
 // mutation_duplicator //
