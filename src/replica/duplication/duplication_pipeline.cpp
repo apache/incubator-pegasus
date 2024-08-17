@@ -17,9 +17,9 @@
 
 #include "duplication_pipeline.h"
 
-#include <stddef.h>
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <ratio>
@@ -53,7 +53,7 @@ namespace dsn {
 
 namespace replication {
 
-using namespace literals::chrono_literals; // NOLINT(google-build-using-namespace)
+using literals::chrono_literals::operator"" _ms;
 
 //                     //
 // mutation_duplicator //
