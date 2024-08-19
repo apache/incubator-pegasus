@@ -1663,7 +1663,7 @@ private:
     struct metric_brief_##field##_snapshot                                                         \
     {                                                                                              \
         std::string name;                                                                          \
-        double field;                                                                              \
+        double field{0.0};                                                                         \
                                                                                                    \
         DEFINE_JSON_SERIALIZATION(name, field)                                                     \
     }

@@ -454,13 +454,13 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
 bool app_stat(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
-                                           {"only_qps", no_argument, 0, 'q'},
-                                           {"only_usage", no_argument, 0, 'u'},
-                                           {"json", no_argument, 0, 'j'},
-                                           {"output", required_argument, 0, 'o'},
-                                           {"sample_interval_ms", required_argument, 0, 'i'},
-                                           {0, 0, 0, 0}};
+    static struct option long_options[] = {{"app_name", required_argument, nullptr, 'a'},
+                                           {"only_qps", no_argument, nullptr, 'q'},
+                                           {"only_usage", no_argument, nullptr, 'u'},
+                                           {"json", no_argument, nullptr, 'j'},
+                                           {"output", required_argument, nullptr, 'o'},
+                                           {"sample_interval_ms", required_argument, nullptr, 'i'},
+                                           {nullptr, 0, nullptr, 0}};
 
     std::string app_name;
     std::string out_file;

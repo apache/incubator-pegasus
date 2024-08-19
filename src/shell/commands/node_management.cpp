@@ -390,17 +390,17 @@ std::vector<std::pair<bool, std::string>> call_nodes(shell_context *sc,
 
 } // anonymous namespace
 
-bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
+bool ls_nodes(command_executor *, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
-                                           {"resolve_ip", no_argument, 0, 'r'},
-                                           {"resource_usage", no_argument, 0, 'u'},
-                                           {"qps", no_argument, 0, 'q'},
-                                           {"json", no_argument, 0, 'j'},
-                                           {"status", required_argument, 0, 's'},
-                                           {"output", required_argument, 0, 'o'},
-                                           {"sample_interval_ms", required_argument, 0, 'i'},
-                                           {0, 0, 0, 0}};
+    static struct option long_options[] = {{"detailed", no_argument, nullptr, 'd'},
+                                           {"resolve_ip", no_argument, nullptr, 'r'},
+                                           {"resource_usage", no_argument, nullptr, 'u'},
+                                           {"qps", no_argument, nullptr, 'q'},
+                                           {"json", no_argument, nullptr, 'j'},
+                                           {"status", required_argument, nullptr, 's'},
+                                           {"output", required_argument, nullptr, 'o'},
+                                           {"sample_interval_ms", required_argument, nullptr, 'i'},
+                                           {nullptr, 0, nullptr, 0}};
 
     std::string status;
     std::string output_file;
@@ -415,6 +415,8 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     optind = 0;
     while (true) {
         int option_index = 0;
+        // TODO(wangdan): getopt_long() is not thread-safe (clang-tidy[concurrency-mt-unsafe]),
+        // could use https://github.com/p-ranav/argparse instead.
         int c = getopt_long(args.argc, args.argv, "druqjs:o:i:", long_options, &option_index);
         if (c == -1) {
             // -1 means all command-line options have been parsed.
