@@ -62,6 +62,8 @@ inline bool is_duplication_status_invalid(duplication_status::type status)
 /// The returned cluster id of get_duplication_cluster_id("wuhan-mi-srv-ad") is 3.
 extern error_with<uint8_t> get_duplication_cluster_id(const std::string &cluster_name);
 
+extern error_with<uint8_t> make_reloading_duplication_config(std::string &config_file);
+
 extern uint8_t get_current_dup_cluster_id_or_default();
 
 extern uint8_t get_current_dup_cluster_id();

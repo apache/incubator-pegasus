@@ -39,6 +39,12 @@ DSN_DECLARE_bool(dup_ignore_other_cluster_ids);
 namespace dsn {
 namespace replication {
 
+std::string config_file = "config-test.ini";
+std::string unkown_file = "unknown.ini";
+std::string err_config_file = "err-config-test.ini";
+std::string new_config_file = "new-config-test.ini";
+
+
 TEST(duplication_common, get_duplication_cluster_id)
 {
     ASSERT_EQ(1, get_duplication_cluster_id("master-cluster").get_value());
@@ -80,6 +86,48 @@ TEST(duplication_common, dup_ignore_other_cluster_ids)
     for (uint8_t id = 0; id < 4; ++id) {
         ASSERT_TRUE(is_dup_cluster_id_configured(id));
     }
+}
+
+TEST(duplication_common, reload_config_file){
+    ASSERT_EQ(make_reloading_duplication_config(unkown_file).get_error().code(), ERR_OBJECT_NOT_FOUND);
+    ASSERT_EQ(make_reloading_duplication_config(err_config_file).get_error().code(), ERR_INVALID_PARAMETERS);
+}
+
+
+TEST(duplication_common, reload_get_duplication_cluster_id)
+{
+    make_reloading_duplication_config(config_file);
+    ASSERT_EQ(get_duplication_cluster_id("master-cluster").get_value(), 1);
+    ASSERT_EQ(get_duplication_cluster_id("slave-cluster").get_value(), 2);
+    ASSERT_EQ(get_duplication_cluster_id("strange-cluster").get_error().code(), ERR_OBJECT_NOT_FOUND);
+
+    make_reloading_duplication_config(new_config_file);
+    ASSERT_EQ(get_duplication_cluster_id("master-cluster").get_value(), 1);
+    ASSERT_EQ(get_duplication_cluster_id("slave-cluster").get_value(), 2);
+    ASSERT_EQ(get_duplication_cluster_id("strange-cluster").get_value(), 3);
+}
+
+TEST(duplication_common, reload_get_meta_list)
+{
+    make_reloading_duplication_config(config_file);
+    replica_helper replica;
+    std::vector<dsn::rpc_address> addr_vec;
+    replica.load_meta_servers(addr_vec,"pegasus.clusters","strange-cluster");
+    ASSERT_EQ(addr_vec.size(), 0);
+    addr_vec.clear();
+
+    make_reloading_duplication_config(new_config_file);
+    replica.load_meta_servers(addr_vec,"pegasus.clusters","strange-cluster");
+    ASSERT_EQ(addr_vec.size(), 2);
+
+    std::string addr0 = addr_vec[0].to_string();
+    std::string addr1 = addr_vec[1].to_string();
+    ASSERT_EQ(addr0, "127.0.0.1:37001");
+    ASSERT_EQ(addr1, "127.0.0.2:37001");
+
+    addr_vec.clear();
+    replica.load_meta_servers(addr_vec,"pegasus.clusters","unknow-cluster");
+    ASSERT_EQ(addr_vec.size(), 0);
 }
 
 } // namespace replication

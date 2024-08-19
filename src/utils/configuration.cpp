@@ -40,8 +40,7 @@ namespace dsn {
 
 configuration::configuration() { _warning = false; }
 
-configuration::~configuration()
-{
+void configuration::clear_configs(){
     for (auto &section_kv : _configs) {
         auto &section = section_kv.second;
         for (auto &kv : section) {
@@ -49,6 +48,20 @@ configuration::~configuration()
         }
     }
     _configs.clear();
+}
+
+void configuration::copy_configs(const config_map& source){
+    for (auto &section_kv : source) {
+        auto &section = section_kv.second;
+        for (auto &kv : section) {
+            _configs[section_kv.first][kv.first] = new conf(*kv.second);
+        }
+    }
+}
+
+configuration::~configuration()
+{
+    clear_configs();
 }
 
 // arguments: k1=v1;k2=v2;k3=v3; ...

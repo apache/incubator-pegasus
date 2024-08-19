@@ -63,6 +63,10 @@
 /// the function is not thread safe.
 bool dsn_config_load(const char *file, const char *arguments);
 
+bool dsn_config_reload(const char *file, const char *arguments, dsn::configuration& old_config);
+
+void dsn_config_rollback(dsn::configuration& old_config);
+
 /// dump the global configuration
 void dsn_config_dump(std::ostream &os);
 
