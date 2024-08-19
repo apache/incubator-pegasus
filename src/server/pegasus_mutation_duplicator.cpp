@@ -250,6 +250,9 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             // Because DUPLICATE comes from other clusters should not be forwarded to any other
             // destinations. A DUPLICATE is meant to be targeting only one cluster.
             continue;
+        } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
+            LOG_DEBUG_PREFIX("Ignore sending bulkload rpc when doing duplication");
+            continue;
         } else {
             dsn::apps::duplicate_entry entry;
             entry.__set_raw_message(raw_message);
