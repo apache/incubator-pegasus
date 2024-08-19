@@ -74,7 +74,7 @@ void load_mutation::run()
         std::min(_replica->private_log()->max_decree_on_disk(), _replica->last_applied_decree());
     if (_start_decree > max_plog_committed_decree) {
         // Wait for a while if no mutation was added.
-        repeat(FLAGS_dup_no_mutation_load_delay_ms * 1_ms);
+        repeat(std::chrono::milliseconds(FLAGS_dup_no_mutation_load_delay_ms));
         return;
     }
 
