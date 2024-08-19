@@ -452,7 +452,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-bool app_stat(command_executor *e, shell_context *sc, arguments args)
+bool app_stat(command_executor *, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"app_name", required_argument, nullptr, 'a'},
                                            {"only_qps", no_argument, nullptr, 'q'},
