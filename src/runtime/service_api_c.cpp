@@ -44,6 +44,7 @@
 #include <gperftools/malloc_extension.h>
 #endif
 
+#include "common/duplication_common.h"
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "perf_counter/perf_counters.h"
@@ -70,6 +71,7 @@
 #include "utils/config_api.h"
 #include "utils/coredump.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/factory_store.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
@@ -81,7 +83,6 @@
 #include "utils/strings.h"
 #include "utils/sys_exit_hook.h"
 #include "utils/threadpool_spec.h"
-#include "common/duplication_common.h"
 
 DSN_DEFINE_bool(
     core,
@@ -119,6 +120,7 @@ static struct _all_info_
 } dsn_all;
 
 std::unique_ptr<dsn::command_deregister> dump_log_cmd;
+std::unique_ptr<dsn::command_deregister> reload_log_cmd;
 
 volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
 {
@@ -230,6 +232,7 @@ bool dsn_run_config(const char *config, bool is_server)
 [[noreturn]] void dsn_exit(int code)
 {
     dump_log_cmd.reset();
+    reload_log_cmd.reset();
 
     printf("dsn exit with code %d\n", code);
     fflush(stdout);
@@ -586,7 +589,7 @@ bool run(const char *config_file,
             return oss.str();
         });
 
-    dsn::command_manager::instance().register_command({"dup-config-reload"},
+    dump_log_cmd = dsn::command_manager::instance().register_single_command({"dup-config-reload"},
                                                       "dup-config-reload - reload the new config file on every server",
                                                       "dup-config-reload  [empty OR reload-this-config-file]. To dynamic update duplication parameter "
                                                       "1.Put new config on every server.(Include replica server and meta server)"
@@ -613,7 +616,6 @@ bool run(const char *config_file,
                                                               << std::endl;
                                                           return oss.str();
                                                       });
-
 
     // invoke customized init after apps are created
     dsn::tools::sys_init_after_app_created.execute();

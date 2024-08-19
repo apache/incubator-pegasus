@@ -18,6 +18,7 @@
 #include "duplication_common.h"
 
 #include <nlohmann/json.hpp>
+#include <cmath>
 #include <cstdint>
 #include <map>
 #include <utility>
@@ -28,6 +29,7 @@
 #include "nlohmann/detail/json_ref.hpp"
 #include "nlohmann/json_fwd.hpp"
 #include "utils/config_api.h"
+#include "utils/configuration.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/singleton.h"

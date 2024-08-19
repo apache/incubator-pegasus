@@ -31,6 +31,10 @@
 #include <string>
 #include <vector>
 
+namespace dsn {
+    class configuration;
+}  // namespace dsn
+
 /// load a ini configuration file, and replace specific strings in file with arguments.
 ///
 /// the rules of replacement is as follows:

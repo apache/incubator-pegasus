@@ -35,6 +35,7 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "string_conv.h"
@@ -43,6 +44,26 @@ namespace dsn {
 
 class configuration
 {
+private:
+    struct conf
+    {
+        std::string section;
+        std::string key;
+        std::string value;
+        int line;
+
+        bool present;
+        std::string dsptr;
+    };
+
+    typedef std::map<std::string, std::map<std::string, conf *>> config_map;
+    std::mutex _lock;
+    config_map _configs;
+
+    std::string _file_name;
+    std::string _file_data;
+    bool _warning;
+
 public:
     configuration();
 
@@ -134,26 +155,6 @@ private:
                                    const char *default_value,
                                    const char **ov,
                                    const char *dsptr);
-
-private:
-    struct conf
-    {
-        std::string section;
-        std::string key;
-        std::string value;
-        int line;
-
-        bool present;
-        std::string dsptr;
-    };
-
-    typedef std::map<std::string, std::map<std::string, conf *>> config_map;
-    std::mutex _lock;
-    config_map _configs;
-
-    std::string _file_name;
-    std::string _file_data;
-    bool _warning;
 };
 
 template <>

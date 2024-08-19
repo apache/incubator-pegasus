@@ -27,6 +27,7 @@
 #include "utils/config_api.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "utils/configuration.h"
 

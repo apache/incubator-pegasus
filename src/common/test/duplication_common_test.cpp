@@ -24,12 +24,17 @@
  * THE SOFTWARE.
  */
 
-#include "common//duplication_common.h"
+#include "common/duplication_common.h"
 
 #include <cstdint>
+#include <memory>
+#include <vector>
 
+#include "common/replication_other_types.h"
 #include "gtest/gtest.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "test_util/test_util.h"
+#include "utils/config_api.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 
@@ -111,22 +116,26 @@ TEST(duplication_common, reload_get_meta_list)
 {
     make_reloading_duplication_config(config_file);
     replica_helper replica;
-    std::vector<dsn::rpc_address> addr_vec;
-    replica.load_meta_servers(addr_vec,"pegasus.clusters","strange-cluster");
+    std::vector<dsn::host_port> addr_vec;
+    //replica.load_meta_servers(addr_vec,"pegasus.clusters","strange-cluster");
+    const char *strange_cluster_server_list = dsn_config_get_value_string("pegasus.clusters","strange-cluster", "", "");
+    dsn::replication::replica_helper::parse_server_list(strange_cluster_server_list, addr_vec);
     ASSERT_EQ(addr_vec.size(), 0);
     addr_vec.clear();
 
     make_reloading_duplication_config(new_config_file);
-    replica.load_meta_servers(addr_vec,"pegasus.clusters","strange-cluster");
+    const char *new_strange_cluster_server_list = dsn_config_get_value_string("pegasus.clusters","strange-cluster", "", "");
+    dsn::replication::replica_helper::parse_server_list(new_strange_cluster_server_list,addr_vec);
     ASSERT_EQ(addr_vec.size(), 2);
 
     std::string addr0 = addr_vec[0].to_string();
     std::string addr1 = addr_vec[1].to_string();
-    ASSERT_EQ(addr0, "127.0.0.1:37001");
-    ASSERT_EQ(addr1, "127.0.0.2:37001");
+    ASSERT_EQ(addr0, "localhost.test1:37001");
+    ASSERT_EQ(addr1, "localhost.test2:37001");
 
     addr_vec.clear();
-    replica.load_meta_servers(addr_vec,"pegasus.clusters","unknow-cluster");
+    const char *unkonw_cluster_server_list = dsn_config_get_value_string("pegasus.clusters","unknow-cluster", "", "");
+    dsn::replication::replica_helper::parse_server_list(unkonw_cluster_server_list,addr_vec);
     ASSERT_EQ(addr_vec.size(), 0);
 }
 
