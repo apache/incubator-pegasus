@@ -39,6 +39,7 @@ DSN_DEFINE_uint64(
     dup_no_mutation_load_delay_ms,
     100,
     "The duration of the delay until the next execution if there is no mutation to be loaded.");
+DSN_TAG_VARIABLE(dup_no_mutation_load_delay_ms, FT_MUTABLE);
 
 METRIC_DEFINE_counter(replica,
                       dup_shipped_bytes,
