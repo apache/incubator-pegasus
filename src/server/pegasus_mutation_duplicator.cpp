@@ -245,13 +245,20 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         dsn::blob raw_message = std::get<2>(mut);
         auto dreq = std::make_unique<dsn::apps::duplicate_request>();
 
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
-            // ignore if it is a DUPLICATE
-            // Because DUPLICATE comes from other clusters should not be forwarded to any other
-            // destinations. A DUPLICATE is meant to be targeting only one cluster.
-            continue;
-        } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
-            LOG_DEBUG_PREFIX("Ignore sending bulkload rpc when doing duplication");
+        // ignore if it is a DUPLICATE or BULKLOAD
+        // Because DUPLICATE comes from other clusters should not be forwarded to any other
+        // destinations. A DUPLICATE is meant to be targeting only one cluster.
+        if (ingnored_rpc_code.find(rpc_code) != ingnored_rpc_code.end()) {
+            // It it do not recommend to use bulkload and normal writing in the same app,
+            // it may also cause inconsistency between actual data and expected data
+            // And duplication will not dup the data of bulkload to backup clusters,
+            // if you want to force use it, you can permit this risk in you own way on the clusters
+            // you maintenance. For example, you can do bulkload both on master-clusters and
+            // backup-cluster (with duplication enable) at the same time, but this will inevitably
+            // cause data inconsistency problems.
+            if (rpc_code == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
+                LOG_DEBUG_PREFIX("Ignore sending bulkload rpc when doing duplication");
+            }
             continue;
         } else {
             dsn::apps::duplicate_entry entry;
