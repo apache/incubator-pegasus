@@ -32,8 +32,8 @@
 #include <vector>
 
 namespace dsn {
-    class configuration;
-}  // namespace dsn
+class configuration;
+} // namespace dsn
 
 /// load a ini configuration file, and replace specific strings in file with arguments.
 ///
@@ -67,9 +67,9 @@ namespace dsn {
 /// the function is not thread safe.
 bool dsn_config_load(const char *file, const char *arguments);
 
-bool dsn_config_reload(const char *file, const char *arguments, dsn::configuration& old_config);
+bool dsn_config_reload(const char *file, const char *arguments, dsn::configuration &old_config);
 
-void dsn_config_rollback(dsn::configuration& old_config);
+void dsn_config_rollback(dsn::configuration &old_config);
 
 /// dump the global configuration
 void dsn_config_dump(std::ostream &os);

@@ -71,25 +71,27 @@ public:
 
     void clear_configs();
 
-    void copy_configs(const config_map&);
+    void copy_configs(const config_map &);
 
-    configuration(const configuration& conf)
+    configuration(const configuration &conf)
     {
         _lock.lock();
         copy_configs(conf._configs);
         _lock.unlock();
     }
 
-    configuration(const configuration&& conf)
+    configuration(const configuration &&conf)
     {
         _lock.lock();
         _configs = std::move(conf._configs);
         _lock.unlock();
     }
 
-    configuration& operator=(configuration& conf){
+    configuration &operator=(configuration &conf)
+    {
         // deal with self assignment
-        if(this == &conf) return *this;
+        if (this == &conf)
+            return *this;
         _lock.lock();
         clear_configs();
         copy_configs(conf._configs);
@@ -97,8 +99,10 @@ public:
         return *this;
     }
 
-    configuration& operator=(configuration&& conf){
-        if(this == &conf) return *this;
+    configuration &operator=(configuration &&conf)
+    {
+        if (this == &conf)
+            return *this;
         _lock.lock();
         clear_configs();
         _configs = std::move(conf._configs);

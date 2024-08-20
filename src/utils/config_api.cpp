@@ -40,11 +40,13 @@ bool dsn_config_load(const char *file, const char *arguments)
 
 void dsn_config_dump(std::ostream &os) { g_config.dump(os); }
 
-bool dsn_config_reload(const char *file, const char *arguments, /*out*/dsn::configuration &old_config)
+bool dsn_config_reload(const char *file,
+                       const char *arguments,
+                       /*out*/ dsn::configuration &old_config)
 {
     old_config = g_config;
     dsn::configuration temp_config;
-    if(!temp_config.load(file, arguments)){
+    if (!temp_config.load(file, arguments)) {
         // todo gns: add some error log
         return false;
     }
@@ -53,9 +55,7 @@ bool dsn_config_reload(const char *file, const char *arguments, /*out*/dsn::conf
     return true;
 }
 
-void dsn_config_rollback(dsn::configuration &old_config){
-    g_config = std::move(old_config);
-}
+void dsn_config_rollback(dsn::configuration &old_config) { g_config = std::move(old_config); }
 
 const char *dsn_config_get_value_string(const char *section,
                                         const char *key,

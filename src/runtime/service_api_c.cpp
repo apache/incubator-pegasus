@@ -589,33 +589,35 @@ bool run(const char *config_file,
             return oss.str();
         });
 
-    dump_log_cmd = dsn::command_manager::instance().register_single_command({"dup-config-reload"},
-                                                      "dup-config-reload - reload the new config file on every server",
-                                                      "dup-config-reload  [empty OR reload-this-config-file]. To dynamic update duplication parameter "
-                                                      "1.Put new config on every server.(Include replica server and meta server)"
-                                                      "2.Use this remote command reload config to memory, and get duplication parameter to dup object",
-                                                      [](const std::vector<std::string> &args) {
-                                                          std::ostringstream oss;
-                                                          std::string file_name  = "config.ini";
-                                                          // choose another file to reload
-                                                          if (args.size() > 0) {
-                                                              file_name = args[0];
-                                                          }
+    dump_log_cmd = dsn::command_manager::instance().register_single_command(
+        {"dup-config-reload"},
+        "dup-config-reload - reload the new config file on every server",
+        "dup-config-reload  [empty OR reload-this-config-file]. To dynamic update duplication "
+        "parameter "
+        "1.Put new config on every server.(Include replica server and meta server)"
+        "2.Use this remote command reload config to memory, and get duplication parameter to dup "
+        "object",
+        [](const std::vector<std::string> &args) {
+            std::ostringstream oss;
+            std::string file_name = "config.ini";
+            // choose another file to reload
+            if (args.size() > 0) {
+                file_name = args[0];
+            }
 
-                                                          auto reload_influence_lines = dsn::replication::make_reloading_duplication_config(file_name);
-                                                          if (!reload_influence_lines.is_ok()) {
-                                                              oss << "ERR_INVALID_PARAMETERS. Reload duplication config file, error:{"
-                                                                  << reload_influence_lines.get_error() << "}"
-                                                                  << std::endl;
+            auto reload_influence_lines =
+                dsn::replication::make_reloading_duplication_config(file_name);
+            if (!reload_influence_lines.is_ok()) {
+                oss << "ERR_INVALID_PARAMETERS. Reload duplication config file, error:{"
+                    << reload_influence_lines.get_error() << "}" << std::endl;
 
-                                                              return oss.str();
-                                                          }
+                return oss.str();
+            }
 
-                                                          oss << "ERR_OK. Reload duplication config success, reload_influence_lines:{"
-                                                              << std::to_string(reload_influence_lines.get_value()) << "}"
-                                                              << std::endl;
-                                                          return oss.str();
-                                                      });
+            oss << "ERR_OK. Reload duplication config success, reload_influence_lines:{"
+                << std::to_string(reload_influence_lines.get_value()) << "}" << std::endl;
+            return oss.str();
+        });
 
     // invoke customized init after apps are created
     dsn::tools::sys_init_after_app_created.execute();
