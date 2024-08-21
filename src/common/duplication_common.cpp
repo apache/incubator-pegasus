@@ -105,8 +105,6 @@ public:
     }
 
     const std::set<uint8_t> &get_distinct_cluster_id_set() { return _distinct_cids; }
-    void clear_duplication_group() { _group.clear(); }
-    void set_duplication_group(std::map<std::string, uint8_t> old_group) { _group = old_group; }
     error_with<uint8_t> reload_duplication_config(std::string config_file)
     {
         if (config_file.length() == 0) {
