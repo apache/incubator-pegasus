@@ -264,15 +264,15 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
                 LOG_DEBUG_PREFIX("Ignore sending bulkload rpc when doing duplication");
             }
             continue;
-        } else {
-            dsn::apps::duplicate_entry entry;
-            entry.__set_raw_message(raw_message);
-            entry.__set_task_code(rpc_code);
-            entry.__set_timestamp(std::get<0>(mut));
-            entry.__set_cluster_id(dsn::replication::get_current_dup_cluster_id());
-            batch_request->entries.emplace_back(std::move(entry));
-            batch_bytes += raw_message.length();
         }
+
+        dsn::apps::duplicate_entry entry;
+        entry.__set_raw_message(raw_message);
+        entry.__set_task_code(rpc_code);
+        entry.__set_timestamp(std::get<0>(mut));
+        entry.__set_cluster_id(dsn::replication::get_current_dup_cluster_id());
+        batch_request->entries.emplace_back(std::move(entry));
+        batch_bytes += raw_message.length();
 
         if (batch_count == muts.size() || batch_bytes >= FLAGS_duplicate_log_batch_bytes ||
             batch_bytes >= dsn::replication::FLAGS_dup_max_allowed_write_size) {
