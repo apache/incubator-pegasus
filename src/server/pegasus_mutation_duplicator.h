@@ -97,9 +97,5 @@ private:
 // Decodes the binary `request_data` into write request in thrift struct, and
 // calculates the hash value from the write's hash key.
 extern uint64_t get_hash_from_request(dsn::task_code rpc_code, const dsn::blob &request_data);
-
-const std::set<int> ingnored_rpc_code = {dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
-                                         dsn::apps::RPC_RRDB_RRDB_BULK_LOAD};
-
 } // namespace server
 } // namespace pegasus

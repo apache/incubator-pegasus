@@ -35,6 +35,7 @@
 #include "common/common.h"
 #include "common/duplication_common.h"
 #include "duplication_internal_types.h"
+#include "gutil/map_util.h"
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"
 #include "rpc/rpc_message.h"
@@ -238,6 +239,9 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
     auto batch_request = std::make_unique<dsn::apps::duplicate_request>();
     uint batch_count = 0;
     uint batch_bytes = 0;
+    const static std::set<int> ingnored_rpc_code = {dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
+                                                    dsn::apps::RPC_RRDB_RRDB_BULK_LOAD};
+
     for (auto mut : muts) {
         // mut: 0=timestamp, 1=rpc_code, 2=raw_message
         batch_count++;
@@ -248,7 +252,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         // ignore if it is a DUPLICATE or BULKLOAD
         // Because DUPLICATE comes from other clusters should not be forwarded to any other
         // destinations. A DUPLICATE is meant to be targeting only one cluster.
-        if (ingnored_rpc_code.find(rpc_code) != ingnored_rpc_code.end()) {
+        if (gutil::ContainsKey(ingnored_rpc_code, rpc_code)) {
             // It it do not recommend to use bulkload and normal writing in the same app,
             // it may also cause inconsistency between actual data and expected data
             // And duplication will not dup the data of bulkload to backup clusters,
