@@ -22,6 +22,7 @@
 #include <map>
 #include <ostream>
 #include <string>
+#include <vector>
 
 #include "bulk_load_types.h"
 #include "common/replication_other_types.h"

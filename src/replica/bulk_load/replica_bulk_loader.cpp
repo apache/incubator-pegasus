@@ -16,7 +16,9 @@
 // under the License.
 
 #include <fmt/core.h>
+#include <algorithm>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <string_view>
 #include <unordered_map>
@@ -474,12 +476,11 @@ error_code replica_bulk_loader::start_download(const std::string &remote_dir,
 
     // start download
     _is_downloading.store(true);
-    _download_task =
-        tasking::enqueue(LPC_BACKGROUND_BULK_LOAD,
-                         tracker(),
-                         [this, remote_dir, local_dir, download_file_metas, fs] {
-                             download_sst_file(remote_dir, local_dir, download_file_metas, fs);
-                         });
+    _download_task = tasking::enqueue(
+        LPC_BACKGROUND_BULK_LOAD,
+        tracker(),
+        std::bind(
+            &replica_bulk_loader::download_files, this, provider_name, remote_dir, local_dir));
     return ERR_OK;
 }
 
@@ -528,15 +529,12 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
                   std::back_inserter(download_file_metas));
     }
     if (!download_file_metas.empty()) {
-        _download_files_task[download_file_metas.back().name] =
-            tasking::enqueue(LPC_BACKGROUND_BULK_LOAD,
-                             tracker(),
-                             std::bind(&replica_bulk_loader::download_sst_file,
-                                       this,
-                                       remote_dir,
-                                       local_dir,
-                                       download_file_metas,
-                                       fs));
+        _download_files_task[download_file_metas.back().name] = tasking::enqueue(
+            LPC_BACKGROUND_BULK_LOAD,
+            tracker(),
+            [this, remote_dir, local_dir, download_file_metas, fs]() mutable {
+                this->download_sst_file(remote_dir, local_dir, download_file_metas, fs);
+            });
     }
 }
 
@@ -610,12 +608,12 @@ void replica_bulk_loader::download_sst_file(
 
     // download next file
     if (!download_file_metas.empty()) {
-        _download_files_task[download_file_metas.back().name] =
-            tasking::enqueue(LPC_BACKGROUND_BULK_LOAD,
-                             tracker(),
-                             [this, remote_dir, local_dir, download_file_metas, fs] {
-                                 download_sst_file(remote_dir, local_dir, download_file_metas, fs);
-                             });
+        _download_files_task[download_file_metas.back().name] = tasking::enqueue(
+            LPC_BACKGROUND_BULK_LOAD,
+            tracker(),
+            [this, remote_dir, local_dir, download_file_metas, fs]() mutable {
+                this->download_sst_file(remote_dir, local_dir, download_file_metas, fs);
+            });
     }
 }
 
