@@ -71,20 +71,16 @@ public:
 
     void clear_configs();
 
-    void copy_configs(const config_map &);
+    void copy_configs(configuration &);
 
-    configuration(const configuration &conf)
+    configuration(configuration &conf)
     {
-        _lock.lock();
-        copy_configs(conf._configs);
-        _lock.unlock();
+        copy_configs(conf);
     }
 
     configuration(const configuration &&conf)
     {
-        _lock.lock();
         _configs = std::move(conf._configs);
-        _lock.unlock();
     }
 
     configuration &operator=(configuration &conf)
@@ -94,7 +90,7 @@ public:
             return *this;
         _lock.lock();
         clear_configs();
-        copy_configs(conf._configs);
+        copy_configs(conf);
         _lock.unlock();
         return *this;
     }

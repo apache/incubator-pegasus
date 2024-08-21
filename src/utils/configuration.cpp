@@ -51,14 +51,16 @@ void configuration::clear_configs()
     _configs.clear();
 }
 
-void configuration::copy_configs(const config_map &source)
+void configuration::copy_configs(configuration &source_conf)
 {
-    for (auto &section_kv : source) {
+    source_conf._lock.lock();
+    for (auto &section_kv : source_conf._configs) {
         auto &section = section_kv.second;
         for (auto &kv : section) {
             _configs[section_kv.first][kv.first] = new conf(*kv.second);
         }
     }
+    source_conf._lock.unlock();
 }
 
 configuration::~configuration() { clear_configs(); }

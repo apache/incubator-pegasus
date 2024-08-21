@@ -115,10 +115,11 @@ public:
         const char *config_file_cstr = config_file.c_str();
 
         std::map<std::string, uint8_t> new_group;
+        std::set<uint8_t> new_distinct_cids;
         dsn::configuration old_config;
 
         // reload default config.ini, user can point to another config file. update g_config here
-        if (!dsn_config_reload(config_file_cstr, nullptr, old_config)) {
+        if (!dsn_config_reload(config_file_cstr, nullptr, &old_config)) {
             LOG_ERROR("Fail to reload config file {} \n", config_file_cstr);
             return error_s::make(
                 ERR_OBJECT_NOT_FOUND,
@@ -137,6 +138,7 @@ public:
             // gns : do not dassert, just rolling it back and log error
             if (cluster_id < 128 && cluster_id > 0) {
                 new_group.emplace(cluster, static_cast<uint8_t>(cluster_id));
+                new_distinct_cids.emplace(cluster_id);
             } else {
                 LOG_ERROR(
                     "cluster_id({}) for {} should be in [1, 127]", cluster_id, cluster.data());
@@ -155,6 +157,7 @@ public:
         }
 
         swap(new_group, _group);
+        swap(new_distinct_cids, _distinct_cids);
         return influented_clusters;
     }
 

@@ -42,9 +42,9 @@ void dsn_config_dump(std::ostream &os) { g_config.dump(os); }
 
 bool dsn_config_reload(const char *file,
                        const char *arguments,
-                       /*out*/ dsn::configuration &old_config)
+                       /*out*/ dsn::configuration *old_config)
 {
-    old_config = g_config;
+    *old_config = g_config;
     dsn::configuration temp_config;
     if (!temp_config.load(file, arguments)) {
         // todo gns: add some error log
