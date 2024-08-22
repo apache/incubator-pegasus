@@ -712,37 +712,36 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
 // Adapt the result returned by `get_metrics` into the structure that could be processed by
 // `remote_command`.
 template <typename... Args>
-inline std::pair<bool, std::string> process_get_metrics_result(const dsn::http_result &result,
-                                                               const node_desc &node,
-                                                               const char *what,
-                                                               Args &&...args)
+inline dsn::error_s process_get_metrics_result(const dsn::http_result &result,
+                                               const node_desc &node,
+                                               const char *what,
+                                               Args &&...args)
 {
     if (dsn_unlikely(!result.error())) {
-        return std::make_pair(false,
-                              fmt::format("ERROR: query {} metrics from node {} failed, msg={}",
-                                          fmt::format(what, std::forward<Args>(args)...),
-                                          node.hp,
-                                          result.error()));
+        return FMT_ERR(result.error().code(),
+                       "ERROR: query {} metrics from node {} failed, msg={}",
+                       fmt::format(what, std::forward<Args>(args)...),
+                       node.hp,
+                       result.error());
     }
 
     if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {
-        return std::make_pair(
-            false,
-            fmt::format("ERROR: query {} metrics from node {} failed, http_status={}, msg={}",
-                        fmt::format(what, std::forward<Args>(args)...),
-                        node.hp,
-                        dsn::get_http_status_message(result.status()),
-                        result.body()));
+        return FMT_ERR(dsn::ERR_HTTP_ERROR,
+                       "ERROR: query {} metrics from node {} failed, http_status={}, msg={}",
+                       fmt::format(what, std::forward<Args>(args)...),
+                       node.hp,
+                       dsn::get_http_status_message(result.status()),
+                       result.body());
     }
 
-    return std::make_pair(true, std::string());
+    return dsn::error_s::ok();
 }
 
 #define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what, ...)                                \
     do {                                                                                           \
         const auto &res = process_get_metrics_result(result, node, what, ##__VA_ARGS__);           \
-        if (dsn_unlikely(!res.first)) {                                                            \
-            fmt::println(res.second);                                                              \
+        if (dsn_unlikely(!res)) {                                                                  \
+            fmt::println(res.description());                                                       \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
@@ -750,27 +749,27 @@ inline std::pair<bool, std::string> process_get_metrics_result(const dsn::http_r
 // Adapt the result of some parsing operations on the metrics returned by `get_metrics` into the
 // structure that could be processed by `remote_command`.
 template <typename... Args>
-inline std::pair<bool, std::string> process_parse_metrics_result(const dsn::error_s &result,
-                                                                 const node_desc &node,
-                                                                 const char *what,
-                                                                 Args &&...args)
+inline dsn::error_s process_parse_metrics_result(const dsn::error_s &result,
+                                                 const node_desc &node,
+                                                 const char *what,
+                                                 Args &&...args)
 {
     if (dsn_unlikely(!result)) {
-        return std::make_pair(false,
-                              fmt::format("ERROR: {} metrics response from node {} failed, msg={}",
-                                          fmt::format(what, std::forward<Args>(args)...),
-                                          node.hp,
-                                          result));
+        return FMT_ERR(result.code(),
+                       "ERROR: {} metrics response from node {} failed, msg={}",
+                       fmt::format(what, std::forward<Args>(args)...),
+                       node.hp,
+                       result);
     }
 
-    return std::make_pair(true, std::string());
+    return dsn::error_s::ok();
 }
 
 #define RETURN_SHELL_IF_PARSE_METRICS_FAILED(expr, node, what, ...)                                \
     do {                                                                                           \
         const auto &res = process_parse_metrics_result(expr, node, what, ##__VA_ARGS__);           \
-        if (dsn_unlikely(!res.first)) {                                                            \
-            fmt::println(res.second);                                                              \
+        if (dsn_unlikely(!res)) {                                                                  \
+            fmt::println(res.description());                                                       \
             return true;                                                                           \
         }                                                                                          \
     } while (0)

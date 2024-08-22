@@ -266,9 +266,9 @@ aggregate_meta_server_stats(const node_desc &node,
 
     auto command_result = process_parse_metrics_result(
         calcs.aggregate_metrics(query_snapshot), node, "aggregate meta server stats");
-    if (!command_result.first) {
+    if (!command_result) {
         // Metrics failed to be aggregated.
-        return command_result;
+        return std::make_pair(false, command_result.description());
     }
 
     return std::make_pair(true,
@@ -301,9 +301,9 @@ aggregate_replica_server_stats(const node_desc &node,
         calcs.aggregate_metrics(query_snapshot_start, query_snapshot_end),
         node,
         "aggregate replica server stats");
-    if (!command_result.first) {
+    if (!command_result) {
         // Metrics failed to be aggregated.
-        return command_result;
+        return std::make_pair(false, command_result.description());
     }
 
     return std::make_pair(true,
@@ -324,8 +324,8 @@ std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<nod
     for (size_t i = 0; i < nodes.size(); ++i) {
 
 #define SKIP_IF_PROCESS_RESULT_FALSE()                                                             \
-    if (!command_result.first) {                                                                   \
-        command_results.push_back(std::move(command_result));                                      \
+    if (!command_result) {                                                                         \
+        command_results.emplace_back(command_result, command_result.description());                \
         continue;                                                                                  \
     }
 
