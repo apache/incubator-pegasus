@@ -239,6 +239,10 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
     auto batch_request = std::make_unique<dsn::apps::duplicate_request>();
     uint batch_count = 0;
     uint batch_bytes = 0;
+    // The rpc codes should be ignored:
+    // - RPC_RRDB_RRDB_DUPLICATE: Now not supports duplicating the deuplicate mutations to the
+    // remote cluster.
+    // - RPC_RRDB_RRDB_BULK_LOAD: Now not supports the control flow RPC.
     const static std::set<int> ingnored_rpc_code = {dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
                                                     dsn::apps::RPC_RRDB_RRDB_BULK_LOAD};
 
@@ -249,9 +253,6 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         dsn::blob raw_message = std::get<2>(mut);
         auto dreq = std::make_unique<dsn::apps::duplicate_request>();
 
-        // ignore if it is a DUPLICATE or BULKLOAD
-        // Because DUPLICATE comes from other clusters should not be forwarded to any other
-        // destinations. A DUPLICATE is meant to be targeting only one cluster.
         if (gutil::ContainsKey(ingnored_rpc_code, rpc_code)) {
             // It it do not recommend to use bulkload and normal writing in the same app,
             // it may also cause inconsistency between actual data and expected data
