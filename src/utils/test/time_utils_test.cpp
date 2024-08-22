@@ -87,15 +87,46 @@ TEST(time_utils, get_current_physical_time_ns)
     ASSERT_LT(get_current_physical_time_ns() - ts_ns, 1e7); // < 10 ms
 }
 
-TEST(time_utils, time_ms_to_string)
+template <typename T>
+void test_time_ms_to_string(T &str)
+{
+    time_ms_to_string(1605091506036, str);
+
+    std::string actual_str(str);
+
+    // Time differs between time zones.
+    //
+    // The real time 2020-11-11 18:45:06.036 (UTC+8)
+    // so it must be 2020-11-1x xx:45:06.036.
+    ASSERT_EQ(std::string("2020-11-1"), actual_str.substr(0, 9));
+    ASSERT_EQ(std::string(":45:06.036"), actual_str.substr(13, 10));
+}
+
+TEST(time_utils, time_ms_to_buf)
 {
     char buf[64] = {0};
-    time_ms_to_string(1605091506136, buf);
-    // time differ between time zones,
-    // the real time 2020-11-11 18:45:06.136 (UTC+8)
-    // so it must be 2020-11-1x xx:45:06.136
-    ASSERT_EQ(std::string(buf).substr(0, 9), "2020-11-1");
-    ASSERT_EQ(std::string(buf).substr(13, 10), ":45:06.136");
+    test_time_ms_to_string(buf);
+}
+
+TEST(time_utils, time_ms_to_str)
+{
+    std::string str;
+    test_time_ms_to_string(str);
+}
+
+TEST(time_utils, time_ms_to_sequent_str)
+{
+    std::string str;
+    time_ms_to_sequent_string(1605091506036, str);
+
+    std::string actual_str(str);
+
+    // Time differs between time zones.
+    //
+    // The real time 20201111_184506_036 (UTC+8)
+    // so it must be 2020111x_xx4506_036.
+    ASSERT_EQ(std::string("2020111"), actual_str.substr(0, 7));
+    ASSERT_EQ(std::string("4506_036"), actual_str.substr(11, 8));
 }
 
 } // namespace utils

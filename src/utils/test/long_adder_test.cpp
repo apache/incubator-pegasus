@@ -150,7 +150,7 @@ public:
 
         // Define runner to time each case
         auto runner = [num_operations, num_threads](
-            const char *name, std::function<void(int64_t &)> func, int64_t &result) {
+                          const char *name, std::function<void(int64_t &)> func, int64_t &result) {
             uint64_t start = dsn_now_ns();
             func(result);
             uint64_t end = dsn_now_ns();

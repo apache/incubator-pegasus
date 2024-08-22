@@ -29,6 +29,7 @@
 #include <utility>
 
 #include <boost/algorithm/string.hpp>
+#include <fmt/color.h>
 #include <fmt/ostream.h>
 #include <rocksdb/db.h>
 #include <rocksdb/env.h>
@@ -55,7 +56,7 @@
 #include "runtime/task/async_calls.h"
 #include "tools/mutation_log_tool.h"
 #include "utils/fmt_utils.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"
@@ -64,15 +65,31 @@
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
 
-using namespace dsn::replication;
+#define SHELL_PRINTLN_ERROR(msg, ...)                                                              \
+    fmt::print(stderr,                                                                             \
+               fmt::emphasis::bold | fmt::fg(fmt::color::red),                                     \
+               "ERROR: {}\n",                                                                      \
+               fmt::format(msg, ##__VA_ARGS__))
 
-#define STR_I(var) #var
-#define STR(var) STR_I(var)
-#ifndef DSN_BUILD_TYPE
-#define PEGASUS_BUILD_TYPE ""
-#else
-#define PEGASUS_BUILD_TYPE STR(DSN_BUILD_TYPE)
-#endif
+#define SHELL_PRINT_WARNING_BASE(msg, ...)                                                         \
+    fmt::print(stdout,                                                                             \
+               fmt::emphasis::bold | fmt::fg(fmt::color::yellow),                                  \
+               "WARNING: {}",                                                                      \
+               fmt::format(msg, ##__VA_ARGS__))
+
+#define SHELL_PRINT_WARNING(msg, ...) SHELL_PRINT_WARNING_BASE(msg, ##__VA_ARGS__)
+
+#define SHELL_PRINTLN_WARNING(msg, ...)                                                            \
+    SHELL_PRINT_WARNING_BASE("{}\n", fmt::format(msg, ##__VA_ARGS__))
+
+#define SHELL_PRINT_OK_BASE(msg, ...)                                                              \
+    fmt::print(stdout, fmt::emphasis::bold | fmt::fg(fmt::color::green), msg, ##__VA_ARGS__)
+
+#define SHELL_PRINT_OK(msg, ...) SHELL_PRINT_OK_BASE(msg, ##__VA_ARGS__)
+
+#define SHELL_PRINTLN_OK(msg, ...) SHELL_PRINT_OK_BASE("{}\n", fmt::format(msg, ##__VA_ARGS__))
+
+using namespace dsn::replication;
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_GET_METRICS, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
@@ -269,7 +286,7 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
         if (value.length() < filter_pattern.length())
             return false;
         if (filter_type == pegasus::pegasus_client::FT_MATCH_ANYWHERE) {
-            return absl::string_view(value).find(filter_pattern) != absl::string_view::npos;
+            return std::string_view(value).find(filter_pattern) != std::string_view::npos;
         } else if (filter_type == pegasus::pegasus_client::FT_MATCH_PREFIX) {
             return dsn::utils::mequals(
                 value.data(), filter_pattern.data(), filter_pattern.length());
@@ -358,7 +375,8 @@ inline void scan_multi_data_next(scan_data_context *context)
                             context->sema.wait();
 
                             auto callback = [context](
-                                int err, pegasus::pegasus_client::internal_info &&info) {
+                                                int err,
+                                                pegasus::pegasus_client::internal_info &&info) {
                                 if (err != pegasus::PERR_OK) {
                                     if (!context->split_completed.exchange(true)) {
                                         fprintf(stderr,
@@ -437,28 +455,29 @@ inline void scan_data_next(scan_data_context *context)
                         if (ts_expired) {
                             scan_data_next(context);
                         } else if (context->no_overwrite) {
-                            auto callback = [context](
-                                int err,
-                                pegasus::pegasus_client::check_and_set_results &&results,
-                                pegasus::pegasus_client::internal_info &&info) {
-                                if (err != pegasus::PERR_OK) {
-                                    if (!context->split_completed.exchange(true)) {
-                                        fprintf(stderr,
+                            auto callback =
+                                [context](int err,
+                                          pegasus::pegasus_client::check_and_set_results &&results,
+                                          pegasus::pegasus_client::internal_info &&info) {
+                                    if (err != pegasus::PERR_OK) {
+                                        if (!context->split_completed.exchange(true)) {
+                                            fprintf(
+                                                stderr,
                                                 "ERROR: split[%d] async check and set failed: %s\n",
                                                 context->split_id,
                                                 context->client->get_error_string(err));
-                                        context->error_occurred->store(true);
+                                            context->error_occurred->store(true);
+                                        }
+                                    } else {
+                                        if (results.set_succeed) {
+                                            context->split_rows++;
+                                        }
+                                        scan_data_next(context);
                                     }
-                                } else {
-                                    if (results.set_succeed) {
-                                        context->split_rows++;
-                                    }
-                                    scan_data_next(context);
-                                }
-                                // should put "split_request_count--" at end of the scope,
-                                // to prevent that split_request_count becomes 0 in the middle.
-                                context->split_request_count--;
-                            };
+                                    // should put "split_request_count--" at end of the scope,
+                                    // to prevent that split_request_count becomes 0 in the middle.
+                                    context->split_request_count--;
+                                };
                             pegasus::pegasus_client::check_and_set_options options;
                             options.set_value_ttl_seconds = ttl_seconds;
                             context->client->async_check_and_set(
@@ -625,20 +644,21 @@ inline void scan_data_next(scan_data_context *context)
 struct node_desc
 {
     std::string desc;
-    dsn::rpc_address address;
-    node_desc(const std::string &s, const dsn::rpc_address &n) : desc(s), address(n) {}
+    dsn::host_port hp;
+    node_desc(const std::string &s, const dsn::host_port &n) : desc(s), hp(n) {}
 };
+
 // type: all | replica-server | meta-server
 inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<node_desc> &nodes)
 {
     if (type == "all" || type == "meta-server") {
-        for (auto &addr : sc->meta_list) {
-            nodes.emplace_back("meta-server", addr);
+        for (const auto &hp : sc->meta_list) {
+            nodes.emplace_back("meta-server", hp);
         }
     }
 
     if (type == "all" || type == "replica-server") {
-        std::map<dsn::rpc_address, dsn::replication::node_status::type> rs_nodes;
+        std::map<dsn::host_port, dsn::replication::node_status::type> rs_nodes;
         ::dsn::error_code err =
             sc->ddl_client->list_nodes(dsn::replication::node_status::NS_ALIVE, rs_nodes);
         if (err != ::dsn::ERR_OK) {
@@ -674,8 +694,8 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
         }                                                                                          \
     } while (0)
 
-                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(host, nodes[i].address.ipv4_str());
-                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(port, nodes[i].address.port());
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(host, nodes[i].hp.host().c_str());
+                SET_RESULT_AND_RETURN_IF_URL_NOT_OK(port, nodes[i].hp.port());
                 SET_RESULT_AND_RETURN_IF_URL_NOT_OK(
                     path, dsn::metrics_http_service::kMetricsQueryPath.c_str());
                 SET_RESULT_AND_RETURN_IF_URL_NOT_OK(query, query_string.c_str());
@@ -693,14 +713,14 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
     do {                                                                                           \
         if (dsn_unlikely(!result.error())) {                                                       \
             std::cout << "ERROR: send http request to query " << fmt::format(what, ##__VA_ARGS__)  \
-                      << " metrics from node " << node.address << " failed: " << result.error()    \
+                      << " metrics from node " << node.hp << " failed: " << result.error()         \
                       << std::endl;                                                                \
             return true;                                                                           \
         }                                                                                          \
         if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {                         \
             std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
-                      << node.address                                                              \
-                      << " failed: " << dsn::get_http_status_message(result.status()) << std::endl \
+                      << node.hp << " failed: " << dsn::get_http_status_message(result.status())   \
+                      << std::endl                                                                 \
                       << result.body() << std::endl;                                               \
             return true;                                                                           \
         }                                                                                          \
@@ -711,7 +731,7 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
         const auto &res = (expr);                                                                  \
         if (dsn_unlikely(!res)) {                                                                  \
             std::cout << "ERROR: parse " << fmt::format(what, ##__VA_ARGS__)                       \
-                      << " metrics response from node " << node.address << " failed: " << res      \
+                      << " metrics response from node " << node.hp << " failed: " << res           \
                       << std::endl;                                                                \
             return true;                                                                           \
         }                                                                                          \
@@ -806,7 +826,7 @@ public:
 
 #define DEF_CALC_CREATOR(name)                                                                     \
     template <typename T, typename... Args>                                                        \
-    void create_##name(Args &&... args)                                                            \
+    void create_##name(Args &&...args)                                                             \
     {                                                                                              \
         _##name = std::make_unique<T>(std::forward<Args>(args)...);                                \
     }
@@ -890,6 +910,100 @@ private:
             return err;                                                                            \
         }                                                                                          \
     } while (0)
+
+// A helper macro to parse command argument, the result is filled in a string vector variable named
+// 'container'.
+#define PARSE_STRS(container)                                                                      \
+    do {                                                                                           \
+        const auto param = cmd(param_index++).str();                                               \
+        ::dsn::utils::split_args(param.c_str(), container, ',');                                   \
+        if (container.empty()) {                                                                   \
+            fmt::print(stderr,                                                                     \
+                       "invalid command, '{}' should be in the form of 'val1,val2,val3' and "      \
+                       "should not be empty\n",                                                    \
+                       param);                                                                     \
+            return false;                                                                          \
+        }                                                                                          \
+        std::set<std::string> str_set(container.begin(), container.end());                         \
+        if (str_set.size() != container.size()) {                                                  \
+            fmt::print(stderr, "invalid command, '{}' has duplicate values\n", param);             \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+#define PARSE_OPT_STRS(container, def_val, ...)                                                    \
+    do {                                                                                           \
+        const auto param = cmd(__VA_ARGS__, (def_val)).str();                                      \
+        ::dsn::utils::split_args(param.c_str(), container, ',');                                   \
+    } while (false)
+
+// A helper macro to parse command argument, the result is filled in an uint32_t variable named
+// 'value'.
+#define PARSE_UINT(value)                                                                          \
+    do {                                                                                           \
+        const auto param = cmd(param_index++).str();                                               \
+        if (!::dsn::buf2uint32(param, value)) {                                                    \
+            fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", param);    \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+// A helper macro to parse an optional command argument, the result is filled in an uint32_t
+// variable 'value'.
+//
+// Variable arguments are `name` or `init_list` of argh::parser::operator(). See argh::parser
+// for details.
+#define PARSE_OPT_UINT(value, def_val, ...)                                                        \
+    do {                                                                                           \
+        const auto param = cmd(__VA_ARGS__, (def_val)).str();                                      \
+        if (!::dsn::buf2uint32(param, value)) {                                                    \
+            fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", param);    \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+// A helper macro to parse command argument, the result is filled in an uint32_t vector variable
+// 'container'.
+#define PARSE_UINTS(container)                                                                     \
+    do {                                                                                           \
+        std::vector<std::string> strs;                                                             \
+        PARSE_STRS(strs);                                                                          \
+        container.clear();                                                                         \
+        for (const auto &str : strs) {                                                             \
+            uint32_t v;                                                                            \
+            if (!::dsn::buf2uint32(str, v)) {                                                      \
+                fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", str);  \
+                return false;                                                                      \
+            }                                                                                      \
+            container.insert(v);                                                                   \
+        }                                                                                          \
+    } while (false)
+
+#define RETURN_FALSE_IF_NOT(expr, ...)                                                             \
+    do {                                                                                           \
+        if (dsn_unlikely(!(expr))) {                                                               \
+            fmt::print(stderr, "{}\n", fmt::format(__VA_ARGS__));                                  \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+#define RETURN_FALSE_IF_NON_OK(expr, ...)                                                          \
+    do {                                                                                           \
+        const auto _ec = (expr);                                                                   \
+        if (dsn_unlikely(_ec != dsn::ERR_OK)) {                                                    \
+            fmt::print(stderr, "{}: {}\n", _ec, fmt::format(__VA_ARGS__));                         \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
+#define RETURN_FALSE_IF_NON_RDB_OK(expr, ...)                                                      \
+    do {                                                                                           \
+        const auto _s = (expr);                                                                    \
+        if (dsn_unlikely(!_s.ok())) {                                                              \
+            fmt::print(stderr, "{}: {}\n", _s.ToString(), fmt::format(__VA_ARGS__));               \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
 
 // Total aggregation over the fetched metrics. The only dimension is the metric name, which
 // is also the key of `stat_var_map`.
@@ -1071,7 +1185,11 @@ call_remote_command(shell_context *sc,
             }
         };
         tasks[i] = dsn::dist::cmd::async_call_remote(
-            nodes[i].address, cmd, arguments, callback, std::chrono::milliseconds(5000));
+            dsn::dns_resolver::instance().resolve_address(nodes[i].hp),
+            cmd,
+            arguments,
+            callback,
+            std::chrono::milliseconds(5000));
     }
     for (int i = 0; i < nodes.size(); ++i) {
         tasks[i]->wait();
@@ -1362,7 +1480,7 @@ inline dsn::metric_filters row_data_filters(int32_t table_id)
 
 #define BIND_ROW(metric_name, member)                                                              \
     {                                                                                              \
-        #metric_name, &row.member                                                                  \
+#metric_name, &row.member                                                                  \
     }
 
 inline stat_var_map create_sums(row_data &row)
@@ -1450,8 +1568,8 @@ inline stat_var_map create_rates(row_data &row)
 // Given all tables, create all aggregations needed for the table-level stats. All selected
 // partitions should have their primary replicas on this node.
 inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs(
-    const std::map<int32_t, std::vector<dsn::partition_configuration>> &table_partitions,
-    const dsn::rpc_address &node,
+    const std::map<int32_t, std::vector<dsn::partition_configuration>> &pcs_by_appid,
+    const dsn::host_port &node,
     const std::string &entity_type,
     std::vector<row_data> &rows)
 {
@@ -1462,7 +1580,9 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
     for (auto &row : rows) {
         const std::vector<std::pair<table_stat_map *, std::function<stat_var_map(row_data &)>>>
             processors = {
-                {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
+                {&sums, create_sums},
+                {&increases, create_increases},
+                {&rates, create_rates},
             };
         for (auto &processor : processors) {
             // Put both dimensions of table id and metric name into filters for each kind of
@@ -1470,18 +1590,18 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
             processor.first->emplace(row.app_id, processor.second(row));
         }
 
-        const auto &table = table_partitions.find(row.app_id);
-        CHECK(table != table_partitions.end(),
-              "table could not be found in table_partitions: table_id={}",
+        const auto &iter = pcs_by_appid.find(row.app_id);
+        CHECK(iter != pcs_by_appid.end(),
+              "table could not be found in pcs_by_appid: table_id={}",
               row.app_id);
 
-        for (const auto &partition : table->second) {
-            if (partition.primary != node) {
+        for (const auto &pc : iter->second) {
+            if (pc.hp_primary != node) {
                 // Ignore once the replica of the metrics is not the primary of the partition.
                 continue;
             }
 
-            partitions.insert(partition.pid);
+            partitions.insert(pc.pid);
         }
     }
 
@@ -1496,25 +1616,27 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
 // stats. All selected partitions should have their primary replicas on this node.
 inline std::unique_ptr<aggregate_stats_calcs>
 create_partition_aggregate_stats_calcs(const int32_t table_id,
-                                       const std::vector<dsn::partition_configuration> &partitions,
-                                       const dsn::rpc_address &node,
+                                       const std::vector<dsn::partition_configuration> &pcs,
+                                       const dsn::host_port &node,
                                        const std::string &entity_type,
                                        std::vector<row_data> &rows)
 {
-    CHECK_EQ(rows.size(), partitions.size());
+    CHECK_EQ(rows.size(), pcs.size());
 
     partition_stat_map sums;
     partition_stat_map increases;
     partition_stat_map rates;
     for (size_t i = 0; i < rows.size(); ++i) {
-        if (partitions[i].primary != node) {
+        if (pcs[i].hp_primary != node) {
             // Ignore once the replica of the metrics is not the primary of the partition.
             continue;
         }
 
         const std::vector<std::pair<partition_stat_map *, std::function<stat_var_map(row_data &)>>>
             processors = {
-                {&sums, create_sums}, {&increases, create_increases}, {&rates, create_rates},
+                {&sums, create_sums},
+                {&increases, create_increases},
+                {&rates, create_rates},
             };
         for (auto &processor : processors) {
             // Put all dimensions of table id, partition_id,  and metric name into filters for
@@ -1679,13 +1801,13 @@ inline bool get_apps_and_nodes(shell_context *sc,
 inline bool
 get_app_partitions(shell_context *sc,
                    const std::vector<::dsn::app_info> &apps,
-                   std::map<int32_t, std::vector<dsn::partition_configuration>> &app_partitions)
+                   std::map<int32_t, std::vector<dsn::partition_configuration>> &pcs_by_appid)
 {
     for (const ::dsn::app_info &app : apps) {
         int32_t app_id = 0;
         int32_t partition_count = 0;
         dsn::error_code err = sc->ddl_client->list_app(
-            app.app_name, app_id, partition_count, app_partitions[app.app_id]);
+            app.app_name, app_id, partition_count, pcs_by_appid[app.app_id]);
         if (err != ::dsn::ERR_OK) {
             LOG_ERROR("list app {} failed, error = {}", app.app_name, err);
             return false;
@@ -1696,24 +1818,22 @@ get_app_partitions(shell_context *sc,
     return true;
 }
 
-inline bool decode_node_perf_counter_info(const dsn::rpc_address &node_addr,
+inline bool decode_node_perf_counter_info(const dsn::host_port &hp,
                                           const std::pair<bool, std::string> &result,
                                           dsn::perf_counter_info &info)
 {
     if (!result.first) {
-        LOG_ERROR("query perf counter info from node {} failed", node_addr);
+        LOG_ERROR("query perf counter info from node {} failed", hp);
         return false;
     }
     dsn::blob bb(result.second.data(), 0, result.second.size());
     if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-        LOG_ERROR(
-            "decode perf counter info from node {} failed, result = {}", node_addr, result.second);
+        LOG_ERROR("decode perf counter info from node {} failed, result = {}", hp, result.second);
         return false;
     }
     if (info.result != "OK") {
-        LOG_ERROR("query perf counter info from node {} returns error, error = {}",
-                  node_addr,
-                  info.result);
+        LOG_ERROR(
+            "query perf counter info from node {} returns error, error = {}", hp, info.result);
         return false;
     }
     return true;
@@ -1740,8 +1860,8 @@ inline bool get_app_partition_stat(shell_context *sc,
     }
 
     // get app_id --> partitions
-    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
-    if (!get_app_partitions(sc, apps, app_partitions)) {
+    std::map<int32_t, std::vector<dsn::partition_configuration>> pcs_by_appid;
+    if (!get_app_partitions(sc, apps, pcs_by_appid)) {
         return false;
     }
 
@@ -1752,7 +1872,7 @@ inline bool get_app_partition_stat(shell_context *sc,
     for (int i = 0; i < nodes.size(); ++i) {
         // decode info of perf-counters on node i
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(nodes[i].address, results[i], info)) {
+        if (!decode_node_perf_counter_info(nodes[i].hp, results[i], info)) {
             return false;
         }
 
@@ -1765,9 +1885,9 @@ inline bool get_app_partition_stat(shell_context *sc,
             if (parse_app_pegasus_perf_counter_name(
                     m.name, app_id_x, partition_index_x, counter_name)) {
                 // only primary partition will be counted
-                auto find = app_partitions.find(app_id_x);
-                if (find != app_partitions.end() &&
-                    find->second[partition_index_x].primary == nodes[i].address) {
+                const auto find = pcs_by_appid.find(app_id_x);
+                if (find != pcs_by_appid.end() &&
+                    find->second[partition_index_x].hp_primary == nodes[i].hp) {
                     row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
                     row.row_name = std::to_string(partition_index_x);
                     row.app_id = app_id_x;
@@ -1804,8 +1924,8 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
     std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
     const auto &results_end = get_metrics(nodes, query_string);
 
-    std::map<int32_t, std::vector<dsn::partition_configuration>> table_partitions;
-    if (!get_app_partitions(sc, apps, table_partitions)) {
+    std::map<int32_t, std::vector<dsn::partition_configuration>> pcs_by_appid;
+    if (!get_app_partitions(sc, apps, pcs_by_appid)) {
         return false;
     }
 
@@ -1819,15 +1939,14 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
             row.partition_count = app.partition_count;
             return row;
         });
-    CHECK_EQ(rows.size(), table_partitions.size());
+    CHECK_EQ(rows.size(), pcs_by_appid.size());
 
     for (size_t i = 0; i < nodes.size(); ++i) {
         RETURN_SHELL_IF_GET_METRICS_FAILED(
             results_start[i], nodes[i], "starting row data requests");
         RETURN_SHELL_IF_GET_METRICS_FAILED(results_end[i], nodes[i], "ending row data requests");
 
-        auto calcs =
-            create_table_aggregate_stats_calcs(table_partitions, nodes[i].address, "replica", rows);
+        auto calcs = create_table_aggregate_stats_calcs(pcs_by_appid, nodes[i].hp, "replica", rows);
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
@@ -1851,13 +1970,13 @@ inline bool get_partition_stats(shell_context *sc,
 
     int32_t table_id = 0;
     int32_t partition_count = 0;
-    std::vector<dsn::partition_configuration> partitions;
-    const auto &err = sc->ddl_client->list_app(table_name, table_id, partition_count, partitions);
+    std::vector<dsn::partition_configuration> pcs;
+    const auto &err = sc->ddl_client->list_app(table_name, table_id, partition_count, pcs);
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR("list app {} failed, error = {}", table_name, err);
         return false;
     }
-    CHECK_EQ(partitions.size(), partition_count);
+    CHECK_EQ(pcs.size(), partition_count);
 
     const auto &query_string = row_data_filters(table_id).to_query_string();
     const auto &results_start = get_metrics(nodes, query_string);
@@ -1876,8 +1995,8 @@ inline bool get_partition_stats(shell_context *sc,
         RETURN_SHELL_IF_GET_METRICS_FAILED(
             results_end[i], nodes[i], "ending row data requests for table(id={})", table_id);
 
-        auto calcs = create_partition_aggregate_stats_calcs(
-            table_id, partitions, nodes[i].address, "replica", rows);
+        auto calcs =
+            create_partition_aggregate_stats_calcs(table_id, pcs, nodes[i].hp, "replica", rows);
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
@@ -1938,14 +2057,14 @@ inline bool get_capacity_unit_stat(shell_context *sc,
 
     nodes_stat.resize(nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
-        dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
+        if (!decode_node_perf_counter_info(nodes[i].hp, results[i], info)) {
+            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", nodes[i].hp);
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
-        nodes_stat[i].node_address = node_addr.to_string();
+        nodes_stat[i].node_address =
+            dsn::dns_resolver::instance().resolve_address(nodes[i].hp).to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
             int32_t app_id, pidx;
             std::string counter_name;
@@ -1987,17 +2106,16 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         return false;
     }
 
-    std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
-    if (!get_app_partitions(sc, apps, app_partitions)) {
+    std::map<int32_t, std::vector<dsn::partition_configuration>> pcs_by_appid;
+    if (!get_app_partitions(sc, apps, pcs_by_appid)) {
         LOG_ERROR("get app partitions failed");
         return false;
     }
-    for (auto &kv : app_partitions) {
-        auto &v = kv.second;
-        for (auto &c : v) {
+    for (auto &[_, pcs] : pcs_by_appid) {
+        for (auto &pc : pcs) {
             // use partition_flags to record if this partition's storage size is calculated,
-            // because `app_partitions' is a temporary variable, so we can re-use partition_flags.
-            c.partition_flags = 0;
+            // because `pcs_by_appid' is a temporary variable, so we can re-use partition_flags.
+            pc.partition_flags = 0;
         }
     }
 
@@ -2005,10 +2123,9 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         sc, nodes, "perf-counters-by-prefix", {"replica*app.pegasus*disk.storage.sst(MB)"});
 
     for (int i = 0; i < nodes.size(); ++i) {
-        dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
-        if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", node_addr);
+        if (!decode_node_perf_counter_info(nodes[i].hp, results[i], info)) {
+            LOG_WARNING("decode perf counter from node({}) failed, just ignore it", nodes[i].hp);
             continue;
         }
         for (dsn::perf_counter_metric &m : info.counters) {
@@ -2019,11 +2136,11 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
             CHECK(parse_ret, "name = {}", m.name);
             if (counter_name != "disk.storage.sst(MB)")
                 continue;
-            auto find = app_partitions.find(app_id_x);
-            if (find == app_partitions.end()) // app id not found
+            auto find = pcs_by_appid.find(app_id_x);
+            if (find == pcs_by_appid.end()) // app id not found
                 continue;
-            dsn::partition_configuration &pc = find->second[partition_index_x];
-            if (pc.primary != node_addr) // not primary replica
+            auto &pc = find->second[partition_index_x];
+            if (pc.hp_primary != nodes[i].hp) // not primary replica
                 continue;
             if (pc.partition_flags != 0) // already calculated
                 continue;
@@ -2041,15 +2158,4 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
     dsn::utils::time_ms_to_date_time(dsn_now_ms(), buf, sizeof(buf));
     st_stat.timestamp = buf;
     return true;
-}
-
-inline configuration_proposal_action new_proposal_action(const dsn::rpc_address &target,
-                                                         const dsn::rpc_address &node,
-                                                         config_type::type type)
-{
-    configuration_proposal_action act;
-    act.__set_target(target);
-    act.__set_node(node);
-    act.__set_type(type);
-    return act;
 }

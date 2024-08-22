@@ -32,8 +32,8 @@
 #include "utils/process_utils.h"
 #include "utils/time_utils.h"
 
-using std::ios_base;
 using std::ifstream;
+using std::ios_base;
 using std::string;
 
 namespace dsn {
@@ -114,5 +114,5 @@ const char *process_start_date_time_mills()
 {
     return record_process_start_time::s_instance.date_time_mills;
 }
-}
-}
+} // namespace utils
+} // namespace dsn

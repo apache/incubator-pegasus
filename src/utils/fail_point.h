@@ -36,7 +36,7 @@
 #include <string>
 
 #include "utils/ports.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 // The only entry to define a fail point with `return` function: lambda function must be
 // return non-void type. When a fail point is defined, it's referenced via the name.
@@ -75,14 +75,14 @@
 namespace dsn {
 namespace fail {
 
-extern const std::string *eval(absl::string_view name);
+extern const std::string *eval(std::string_view name);
 
 /// Set new actions to a fail point at runtime.
 /// The format of an action is `[p%][cnt*]task[(arg)]`. `p%` is the expected probability that
 /// the action is triggered, and `cnt*` is the max times the action can be triggered.
 /// For example, `20%3*print(still alive!)` means the fail point has 20% chance to print a
 /// message "still alive!". And the message will be printed at most 3 times.
-extern void cfg(absl::string_view name, absl::string_view action);
+extern void cfg(std::string_view name, std::string_view action);
 
 extern void setup();
 

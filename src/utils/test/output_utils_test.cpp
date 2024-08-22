@@ -32,9 +32,9 @@
 
 #include "gtest/gtest.h"
 
-using std::vector;
-using std::string;
 using dsn::utils::table_printer;
+using std::string;
+using std::vector;
 
 namespace dsn {
 

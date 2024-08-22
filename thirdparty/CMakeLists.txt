@@ -233,20 +233,6 @@ ExternalProject_Add(fmt
         DOWNLOAD_NO_PROGRESS true
 )
 
-# civetweb is one of the dependencies of promemetheus-cpp, do not build & install
-ExternalProject_Add(civetweb
-        URL ${OSS_URL_PREFIX}/civetweb-1.11.tar.gz
-        https://codeload.github.com/civetweb/civetweb/tar.gz/v1.11
-        URL_MD5 b6d2175650a27924bccb747cbe084cd4
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-        INSTALL_COMMAND ""
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-        DOWNLOAD_NO_PROGRESS true
-)
-ExternalProject_Get_property(civetweb SOURCE_DIR)
-set(civetweb_SRC ${SOURCE_DIR})
-
 set(CURL_OPTIONS
         --disable-dict
         --disable-file
@@ -263,7 +249,8 @@ set(CURL_OPTIONS
         --disable-smtp
         --disable-telnet
         --disable-tftp
-        --without-libidn
+        --without-brotli
+        --without-libidn2
         --without-librtmp
         --without-libssh2
         --without-ssl
@@ -275,15 +262,13 @@ if (APPLE)
     set(CURL_OPTIONS
             ${CURL_OPTIONS}
             --without-nghttp2
-            --without-libidn2
-            --without-brotli
             )
 endif ()
 ExternalProject_Add(curl
         URL ${OSS_URL_PREFIX}/curl-8.4.0.tar.gz
         http://curl.haxx.se/download/curl-8.4.0.tar.gz
         URL_MD5 533e8a3b1228d5945a6a512537bea4c7
-        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+        CONFIGURE_COMMAND CFLAGS=-fPIC CPPFLAGS=-fPIC ./configure --prefix=${TP_OUTPUT}
         ${CURL_OPTIONS}
         BUILD_IN_SOURCE 1
         DOWNLOAD_EXTRACT_TIMESTAMP true
@@ -291,13 +276,13 @@ ExternalProject_Add(curl
 )
 
 ExternalProject_Add(prometheus-cpp
-        URL ${OSS_URL_PREFIX}/prometheus-cpp-0.7.0.tar.gz
-        https://codeload.github.com/jupp0r/prometheus-cpp/tar.gz/v0.7.0
-        URL_MD5 dc75c31ceaefd160e978365bdca8eb01
-        DEPENDS civetweb curl
-        # TODO(yingchun): replace the submodule
-        PATCH_COMMAND rm -rf 3rdparty/civetweb && cp -R ${civetweb_SRC} 3rdparty/civetweb && patch -p0 < ${TP_DIR}/fix_prometheus-cpp_limits.patch
+        URL ${OSS_URL_PREFIX}/prometheus-cpp-with-submodules-1.2.4.tar.gz
+        https://github.com/jupp0r/prometheus-cpp/releases/download/v1.2.4/prometheus-cpp-with-submodules.tar.gz
+        URL_MD5 cdb515e802aa9aaaf1f6dde1271a20a2
+        DEPENDS curl
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_C_FLAGS=-fPIC
+        -DCMAKE_CXX_FLAGS=-fPIC
         -DENABLE_TESTING=OFF
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -488,3 +473,19 @@ ExternalProject_Add(http-parser
         DOWNLOAD_NO_PROGRESS true
 )
 
+ExternalProject_Add(spdlog
+        URL https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz
+        URL_MD5 f2c3f15c20e67b261836ff7bfda302cf
+        PATCH_COMMAND ""
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DSPDLOG_ENABLE_PCH=ON
+        -DSPDLOG_BUILD_PIC=ON
+        -DSPDLOG_FMT_EXTERNAL=ON
+        -DSPDLOG_NO_EXCEPTIONS=ON
+        -Dfmt_DIR=${TP_OUTPUT}/lib/cmake/fmt
+        BUILD_COMMAND make -j${PARALLEL}
+        INSTALL_COMMAND make install
+        DEPENDS fmt
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)

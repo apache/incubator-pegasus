@@ -32,11 +32,24 @@ namespace cpp dsn.replication
 
 struct mutation_header
 {
+    // The partition that this mutation belongs to.
     1:dsn.gpid             pid;
+
+    // The ID of the membership configuration that this mutation belongs to,
+    // increasing monotonically.
     2:i64                  ballot;
+
+    // The decree of this mutation.
     3:i64                  decree;
+
+    // The start offset of this mutation in the whole mutation log.
     4:i64                  log_offset;
+
+    // The max of the decrees that have been committed before this mutation
+    // is prepared.
     5:i64                  last_committed_decree;
+
+    // The unique timestamp that increases monotonically in microsecond.
     6:i64                  timestamp;
 }
 
@@ -132,30 +145,32 @@ enum learner_status
 
 struct learn_request
 {
-    1:dsn.gpid pid;
-    2:dsn.rpc_address     learner; // learner's address
-    3:i64                 signature; // learning signature
-    4:i64                 last_committed_decree_in_app; // last committed decree of learner's app
-    5:i64                 last_committed_decree_in_prepare_list; // last committed decree of learner's prepare list
-    6:dsn.blob            app_specific_learn_request; // learning request data by app.prepare_learn_request()
+    1:dsn.gpid                   pid;
+    2:dsn.rpc_address            learner; // learner's address
+    3:i64                        signature; // learning signature
+    4:i64                        last_committed_decree_in_app; // last committed decree of learner's app
+    5:i64                        last_committed_decree_in_prepare_list; // last committed decree of learner's prepare list
+    6:dsn.blob                   app_specific_learn_request; // learning request data by app.prepare_learn_request()
 
     // Used by duplication to determine if learner has enough logs on disk to
     // be duplicated (ie. max_gced_decree < confirmed_decree), if not,
     // learnee will copy the missing logs.
-    7:optional i64        max_gced_decree;
+    7:optional i64               max_gced_decree;
+    8:optional dsn.host_port     hp_learner;
 }
 
 struct learn_response
 {
-    1:dsn.error_code        err; // error code
+    1:dsn.error_code                 err; // error code
     2:metadata.replica_configuration config; // learner's replica config
-    3:i64                   last_committed_decree; // learnee's last committed decree
-    4:i64                   prepare_start_decree; // prepare start decree
-    5:learn_type            type = learn_type.LT_INVALID; // learning type: CACHE, LOG, APP
-    6:learn_state           state; // learning data, including memory data and files
-    7:dsn.rpc_address       address; // learnee's address
-    8:string                base_local_dir; // base dir of files on learnee
-    9:optional string replica_disk_tag; // the disk tag of learnee located
+    3:i64                            last_committed_decree; // learnee's last committed decree
+    4:i64                            prepare_start_decree; // prepare start decree
+    5:learn_type                     type = learn_type.LT_INVALID; // learning type: CACHE, LOG, APP
+    6:learn_state                    state; // learning data, including memory data and files
+    7:dsn.rpc_address                learnee; // learnee's address
+    8:string                         base_local_dir; // base dir of files on learnee
+    9:optional string                replica_disk_tag; // the disk tag of learnee located
+    10:optional dsn.host_port        hp_learnee; // learnee's host_port
 }
 
 struct learn_notify_response
@@ -167,33 +182,35 @@ struct learn_notify_response
 
 struct group_check_request
 {
-    1:dsn.layer2.app_info   app;
-    2:dsn.rpc_address       node;
+    1:dsn.layer2.app_info            app;
+    2:dsn.rpc_address                node;
     3:metadata.replica_configuration config;
-    4:i64                   last_committed_decree;
+    4:i64                            last_committed_decree;
 
     // Used to sync duplication progress between primaries
     // and secondaries, so that secondaries can be allowed to GC
     // their WALs after this decree.
-    5:optional i64          confirmed_decree;
+    5:optional i64                   confirmed_decree;
 
     // Used to deliver child gpid and meta_split_status during partition split
-    6:optional dsn.gpid     child_gpid;
+    6:optional dsn.gpid              child_gpid;
     7:optional metadata.split_status meta_split_status;
+    8:optional dsn.host_port         hp_node;
 }
 
 struct group_check_response
 {
-    1:dsn.gpid pid;
-    2:dsn.error_code      err;
-    3:i64                 last_committed_decree_in_app;
-    4:i64                 last_committed_decree_in_prepare_list;
-    5:learner_status      learner_status_ = learner_status.LearningInvalid;
-    6:i64                 learner_signature;
-    7:dsn.rpc_address     node;
+    1:dsn.gpid                      pid;
+    2:dsn.error_code                err;
+    3:i64                           last_committed_decree_in_app;
+    4:i64                           last_committed_decree_in_prepare_list;
+    5:learner_status                learner_status_ = learner_status.LearningInvalid;
+    6:i64                           learner_signature;
+    7:dsn.rpc_address               node;
     // Used for pause or cancel partition split
     // if secondary pause or cancel split succeed, is_split_stopped = true
-    8:optional bool       is_split_stopped;
+    8:optional bool                 is_split_stopped;
     9:optional metadata.disk_status disk_status = metadata.disk_status.NORMAL;
+    10:optional dsn.host_port       hp_node;
 }
 

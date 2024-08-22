@@ -102,10 +102,10 @@ int binary_reader::inner_read(blob &blob, int len)
         blob = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
 
         // optimization: zero-copy
-        if (!blob.buffer_ptr()) {
+        if (!blob.buffer()) {
             std::shared_ptr<char> buffer(::dsn::utils::make_shared_array<char>(len));
             memcpy(buffer.get(), blob.data(), blob.length());
-            blob = ::dsn::blob(buffer, 0, blob.length());
+            blob = ::dsn::blob(buffer, blob.length());
         }
 
         _ptr += len;

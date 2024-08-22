@@ -20,10 +20,25 @@
 #include "common/common.h"
 
 #include "gtest/gtest.h"
+#include "test_util/test_util.h"
+#include "utils/flags.h"
+
+DSN_DECLARE_string(dup_cluster_name);
 
 namespace dsn {
+
 TEST(duplication_common, get_current_cluster_name)
 {
-    ASSERT_STREQ(get_current_cluster_name(), "master-cluster");
+    ASSERT_STREQ("master-cluster", get_current_cluster_name());
 }
+
+TEST(duplication_common, get_current_dup_cluster_name)
+{
+    ASSERT_STREQ("master-cluster", get_current_dup_cluster_name());
+
+    PRESERVE_FLAG(dup_cluster_name);
+    FLAGS_dup_cluster_name = "slave-cluster";
+    ASSERT_STREQ("slave-cluster", get_current_dup_cluster_name());
+}
+
 } // namespace dsn

@@ -39,7 +39,7 @@ class rrdb_client
 public:
     rrdb_client() {}
     explicit rrdb_client(const char *cluster_name,
-                         const std::vector<dsn::rpc_address> &meta_list,
+                         const std::vector<dsn::host_port> &meta_list,
                          const char *app_name)
     {
         _resolver =

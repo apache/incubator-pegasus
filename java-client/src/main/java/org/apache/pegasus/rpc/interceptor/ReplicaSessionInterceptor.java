@@ -18,13 +18,17 @@
  */
 package org.apache.pegasus.rpc.interceptor;
 
+import java.io.Closeable;
 import org.apache.pegasus.rpc.async.ReplicaSession;
 
-public interface ReplicaSessionInterceptor {
+public interface ReplicaSessionInterceptor extends Closeable {
   // The behavior when a rpc session is connected.
   void onConnected(ReplicaSession session);
 
   // The behavior when rpc session is sending a message.
   // @returns false if this message shouldn't be sent.
   boolean onSendMessage(ReplicaSession session, final ReplicaSession.RequestEntry entry);
+
+  @Override
+  void close();
 }

@@ -50,17 +50,19 @@
 #include "failure_detector/failure_detector_multimaster.h"
 #include "metadata_types.h"
 #include "partition_split_types.h"
+#include "ranger/access_type.h"
 #include "replica.h"
 #include "replica/mutation_log.h"
 #include "replica_admin_types.h"
-#include "ranger/access_type.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_holder.h"
-#include "security/access_controller.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
+#include "security/access_controller.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
@@ -113,8 +115,9 @@ class cold_backup_context;
 class replica_split_manager;
 
 typedef std::unordered_map<gpid, replica_ptr> replicas;
-typedef std::function<void(
-    ::dsn::rpc_address /*from*/, const replica_configuration & /*new_config*/, bool /*is_closing*/)>
+typedef std::function<void(const ::dsn::host_port & /*from*/,
+                           const replica_configuration & /*new_config*/,
+                           bool /*is_closing*/)>
     replica_state_subscriber;
 
 class replica_stub;
@@ -193,12 +196,21 @@ public:
     //
     // common routines for inquiry
     //
+    std::vector<replica_ptr> get_all_replicas() const;
+    std::vector<replica_ptr> get_all_primaries() const;
     replica_ptr get_replica(gpid id) const;
     replication_options &options() { return _options; }
     const replication_options &options() const { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
-    virtual rpc_address get_meta_server_address() const { return _failure_detector->get_servers(); }
-    rpc_address primary_address() const { return _primary_address; }
+    virtual rpc_address get_meta_server_address() const
+    {
+        return dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
+    }
+    rpc_address primary_address() const
+    {
+        return dsn::dns_resolver::instance().resolve_address(_primary_host_port);
+    }
+    const host_port &primary_host_port() const { return _primary_host_port; }
 
     //
     // helper methods
@@ -218,7 +230,7 @@ public:
     //
 
     // called by parent partition, executed by child partition
-    void create_child_replica(dsn::rpc_address primary_address,
+    void create_child_replica(const dsn::host_port &primary_address,
                               app_info app,
                               ballot init_ballot,
                               gpid child_gpid,
@@ -299,6 +311,11 @@ public:
     void on_nfs_get_file_size(const ::dsn::service::get_file_size_request &request,
                               ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply);
 
+    static bool validate_replica_dir(const std::string &dir,
+                                     app_info &ai,
+                                     gpid &pid,
+                                     std::string &hint_message);
+
 private:
     enum replica_node_state
     {
@@ -324,7 +341,7 @@ private:
     void on_node_query_reply_scatter(replica_stub_ptr this_,
                                      const configuration_update_request &config);
     void on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id);
-    void remove_replica_on_meta_server(const app_info &info, const partition_configuration &config);
+    void remove_replica_on_meta_server(const app_info &info, const partition_configuration &pc);
     task_ptr begin_open_replica(const app_info &app,
                                 gpid id,
                                 const std::shared_ptr<group_check_request> &req,
@@ -441,8 +458,9 @@ private:
     closing_replicas _closing_replicas;
     closed_replicas _closed_replicas;
 
-    ::dsn::rpc_address _primary_address;
-    char _primary_address_str[64];
+    ::dsn::host_port _primary_host_port;
+    // The stringify of '_primary_host_port', used by logging usually.
+    std::string _primary_host_port_cache;
 
     std::shared_ptr<dsn::dist::slave_failure_detector_with_multimaster> _failure_detector;
     mutable zlock _state_lock;

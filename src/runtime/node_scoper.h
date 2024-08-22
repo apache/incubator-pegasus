@@ -47,5 +47,5 @@ private:
 };
 
 // ---- inline implementation ------
-}
-} // end namespace dsn::tools
+} // namespace tools
+} // namespace dsn

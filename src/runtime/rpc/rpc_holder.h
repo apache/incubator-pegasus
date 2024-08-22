@@ -97,7 +97,7 @@ public:
                std::chrono::milliseconds timeout = 0_ms,
                uint64_t partition_hash = 0,
                int thread_hash = 0)
-        : _i(new internal(req, code, timeout, partition_hash, thread_hash))
+        : _i(new internal(std::move(req), code, timeout, partition_hash, thread_hash))
     {
     }
 
@@ -168,8 +168,8 @@ public:
         rpc_response_task_ptr t = rpc::create_rpc_response_task(
             dsn_request(),
             tracker,
-            [ cb_fwd = std::forward<TCallback>(callback),
-              rpc = *this ](error_code err, message_ex * req, message_ex * resp) mutable {
+            [cb_fwd = std::forward<TCallback>(callback),
+             rpc = *this](error_code err, message_ex *req, message_ex *resp) mutable {
                 if (err == ERR_OK) {
                     unmarshall(resp, rpc.response());
                 }
@@ -200,8 +200,8 @@ public:
         rpc_response_task_ptr t = rpc::create_rpc_response_task(
             dsn_request(),
             tracker,
-            [ cb_fwd = std::forward<TCallback>(callback),
-              rpc = *this ](error_code err, message_ex * req, message_ex * resp) mutable {
+            [cb_fwd = std::forward<TCallback>(callback),
+             rpc = *this](error_code err, message_ex *req, message_ex *resp) mutable {
                 if (err == ERR_OK) {
                     unmarshall(resp, rpc.response());
                 }
@@ -285,7 +285,7 @@ private:
             unmarshall(req, *thrift_request);
         }
 
-        internal(std::unique_ptr<TRequest> &req,
+        internal(std::unique_ptr<TRequest> req,
                  task_code code,
                  std::chrono::milliseconds timeout,
                  uint64_t partition_hash,

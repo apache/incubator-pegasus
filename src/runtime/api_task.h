@@ -70,7 +70,7 @@ class raw_task;
 class rpc_request_task;
 class rpc_response_task;
 class aio_task;
-}
+} // namespace dsn
 /*!
 apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
 the length of a vitual queue (bound to current code + hash) to

@@ -38,7 +38,7 @@
 #include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
 #include "meta_service_test_app.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"
@@ -121,9 +121,9 @@ void meta_test_base::set_node_live_percentage_threshold_for_update(int32_t perce
     _ms->_node_live_percentage_threshold_for_update = percentage_threshold;
 }
 
-std::vector<rpc_address> meta_test_base::get_alive_nodes() const
+std::vector<host_port> meta_test_base::get_alive_nodes() const
 {
-    std::vector<dsn::rpc_address> nodes;
+    std::vector<dsn::host_port> nodes;
 
     zauto_read_lock l(_ss->_lock);
 
@@ -136,13 +136,13 @@ std::vector<rpc_address> meta_test_base::get_alive_nodes() const
     return nodes;
 }
 
-std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_count)
+std::vector<host_port> meta_test_base::ensure_enough_alive_nodes(int min_node_count)
 {
     if (min_node_count < 1) {
-        return std::vector<dsn::rpc_address>();
+        return std::vector<dsn::host_port>();
     }
 
-    std::vector<dsn::rpc_address> nodes(get_alive_nodes());
+    std::vector<dsn::host_port> nodes(get_alive_nodes());
     if (!nodes.empty()) {
         auto node_count = static_cast<int>(nodes.size());
         CHECK_GE_MSG(node_count,
@@ -166,7 +166,7 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
 
     while (true) {
         {
-            std::vector<dsn::rpc_address> alive_nodes(get_alive_nodes());
+            std::vector<dsn::host_port> alive_nodes(get_alive_nodes());
             if (static_cast<int>(alive_nodes.size()) >= min_node_count) {
                 break;
             }
@@ -182,14 +182,16 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
     return nodes;
 }
 
-void meta_test_base::create_app(const std::string &name, uint32_t partition_count)
+void meta_test_base::create_app(const std::string &name,
+                                int32_t partition_count,
+                                int32_t replica_count)
 {
     configuration_create_app_request req;
     configuration_create_app_response resp;
     req.app_name = name;
     req.options.app_type = "simple_kv";
     req.options.partition_count = partition_count;
-    req.options.replica_count = 3;
+    req.options.replica_count = replica_count;
     req.options.success_if_exist = false;
     req.options.is_stateful = true;
     req.options.envs["value_version"] = "1";
@@ -199,7 +201,7 @@ void meta_test_base::create_app(const std::string &name, uint32_t partition_coun
 
     auto result = fake_create_app(_ss.get(), req);
     fake_wait_rpc(result, resp);
-    ASSERT_EQ(resp.err, ERR_OK) << resp.err << " " << name;
+    ASSERT_EQ(ERR_OK, resp.err) << name;
 
     // wait for the table to create
     ASSERT_TRUE(_ss->spin_wait_staging(30));
@@ -242,7 +244,7 @@ meta_test_base::update_app_envs(const std::string &app_name,
     return rpc.response();
 }
 
-void meta_test_base::mock_node_state(const rpc_address &addr, const node_state &node)
+void meta_test_base::mock_node_state(const host_port &addr, const node_state &node)
 {
     _ss->_nodes[addr] = node;
 }

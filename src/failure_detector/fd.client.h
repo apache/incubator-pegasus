@@ -83,5 +83,5 @@ public:
 private:
     ::dsn::rpc_address _server;
 };
-}
-}
+} // namespace fd
+} // namespace dsn

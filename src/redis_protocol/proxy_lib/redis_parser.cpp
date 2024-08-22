@@ -32,12 +32,13 @@
 #include <chrono>
 #include <cstdint>
 
+#include <string_view>
 #include "common/common.h"
 #include "common/replication_other_types.h"
 #include "pegasus/client.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/serialization.h"
 #include "utils/api_utilities.h"
 #include "utils/binary_writer.h"
@@ -45,7 +46,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 
@@ -96,9 +96,9 @@ redis_parser::redis_parser(proxy_stub *op, dsn::message_ex *first_msg)
 {
     ::dsn::apps::rrdb_client *r;
     if (op) {
-        std::vector<dsn::rpc_address> meta_list;
-        dsn::replication::replica_helper::load_meta_servers(
-            meta_list, dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(), op->get_cluster());
+        std::vector<dsn::host_port> meta_list;
+        dsn::replication::replica_helper::load_servers_from_config(
+            dsn::PEGASUS_CLUSTER_SECTION_NAME, op->get_cluster(), meta_list);
         r = new ::dsn::apps::rrdb_client(op->get_cluster(), meta_list, op->get_app());
         if (!dsn::utils::is_empty(op->get_geo_app())) {
             _geo_client = std::make_unique<geo::geo_client>(
@@ -207,7 +207,7 @@ void redis_parser::eat_all(char *dest, size_t length)
 bool redis_parser::end_array_size()
 {
     int32_t count = 0;
-    if (dsn_unlikely(!dsn::buf2int32(absl::string_view(_current_size), count))) {
+    if (dsn_unlikely(!dsn::buf2int32(std::string_view(_current_size), count))) {
         LOG_ERROR_PREFIX("invalid size string \"{}\"", _current_size);
         return false;
     }
@@ -242,7 +242,7 @@ void redis_parser::append_current_bulk_string()
 bool redis_parser::end_bulk_string_size()
 {
     int32_t length = 0;
-    if (dsn_unlikely(!dsn::buf2int32(absl::string_view(_current_size), length))) {
+    if (dsn_unlikely(!dsn::buf2int32(std::string_view(_current_size), length))) {
         LOG_ERROR_PREFIX("invalid size string \"{}\"", _current_size);
         return false;
     }
@@ -446,8 +446,9 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
         // with a reference to prevent the object from being destroyed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         LOG_DEBUG_PREFIX("send SET command({})", entry.sequence_id);
-        auto on_set_reply = [ref_this, this, &entry](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
+        auto on_set_reply = [ref_this, this, &entry](::dsn::error_code ec,
+                                                     dsn::message_ex *,
+                                                     dsn::message_ex *response) {
             // when the "is_session_reset" flag is set, the socket may be broken.
             // so continue to reply the message is not necessary
             if (_is_session_reset.load(std::memory_order_acquire)) {
@@ -551,8 +552,9 @@ void redis_parser::setex(message_entry &entry)
         }
 
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
-        auto on_setex_reply = [ref_this, this, &entry](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
+        auto on_setex_reply = [ref_this, this, &entry](::dsn::error_code ec,
+                                                       dsn::message_ex *,
+                                                       dsn::message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
                 LOG_INFO_PREFIX("SETEX command seqid({}) got reply, but session has reset",
                                 entry.sequence_id);
@@ -599,8 +601,9 @@ void redis_parser::get(message_entry &entry)
     } else {
         LOG_DEBUG_PREFIX("send GET command seqid({})", entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
-        auto on_get_reply = [ref_this, this, &entry](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
+        auto on_get_reply = [ref_this, this, &entry](::dsn::error_code ec,
+                                                     dsn::message_ex *,
+                                                     dsn::message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
                 LOG_INFO_PREFIX("GET command({}) got reply, but session has reset",
                                 entry.sequence_id);
@@ -653,8 +656,9 @@ void redis_parser::del_internal(message_entry &entry)
     } else {
         LOG_DEBUG_PREFIX("send DEL command seqid({})", entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
-        auto on_del_reply = [ref_this, this, &entry](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
+        auto on_del_reply = [ref_this, this, &entry](::dsn::error_code ec,
+                                                     dsn::message_ex *,
+                                                     dsn::message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
                 LOG_INFO_PREFIX("DEL command seqid({}) got reply, but session has reset",
                                 entry.sequence_id);
@@ -738,8 +742,9 @@ void redis_parser::ttl(message_entry &entry)
     } else {
         LOG_DEBUG_PREFIX("send PTTL/TTL command seqid({})", entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
-        auto on_ttl_reply = [ref_this, this, &entry, is_ttl](
-            ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
+        auto on_ttl_reply = [ref_this, this, &entry, is_ttl](::dsn::error_code ec,
+                                                             dsn::message_ex *,
+                                                             dsn::message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
                 LOG_INFO_PREFIX("TTL/PTTL command seqid({}) got reply, but session has reset",
                                 entry.sequence_id);
@@ -832,7 +837,7 @@ void redis_parser::geo_radius(message_entry &entry)
 
     std::shared_ptr<proxy_session> ref_this = shared_from_this();
     auto search_callback = [ref_this, this, &entry, unit, WITHCOORD, WITHDIST, WITHHASH](
-        int ec, std::list<geo::SearchResult> &&results) {
+                               int ec, std::list<geo::SearchResult> &&results) {
         process_geo_radius_result(
             entry, unit, WITHCOORD, WITHDIST, WITHHASH, ec, std::move(results));
     };
@@ -886,7 +891,7 @@ void redis_parser::geo_radius_by_member(message_entry &entry)
 
     std::shared_ptr<proxy_session> ref_this = shared_from_this();
     auto search_callback = [ref_this, this, &entry, unit, WITHCOORD, WITHDIST, WITHHASH](
-        int ec, std::list<geo::SearchResult> &&results) {
+                               int ec, std::list<geo::SearchResult> &&results) {
         process_geo_radius_result(
             entry, unit, WITHCOORD, WITHDIST, WITHHASH, ec, std::move(results));
     };
@@ -945,7 +950,7 @@ void redis_parser::counter_internal(message_entry &entry)
 
     std::shared_ptr<proxy_session> ref_this = shared_from_this();
     auto on_incr_reply = [ref_this, this, command, &entry](
-        ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
+                             ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
         if (_is_session_reset.load(std::memory_order_acquire)) {
             LOG_WARNING_PREFIX("command {} seqid({}) got reply, but session has reset",
                                command,
@@ -1143,7 +1148,7 @@ void redis_parser::geo_add(message_entry &entry)
         std::make_shared<std::atomic<int32_t>>(member_count);
     std::shared_ptr<redis_integer> result(new redis_integer());
     auto set_latlng_callback = [ref_this, this, &entry, result, set_count](
-        int error_code, pegasus_client::internal_info &&info) {
+                                   int error_code, pegasus_client::internal_info &&info) {
         if (_is_session_reset.load(std::memory_order_acquire)) {
             LOG_INFO_PREFIX("GEOADD command seqid({}) got reply, but session has reset",
                             entry.sequence_id);
@@ -1243,8 +1248,10 @@ void redis_parser::geo_pos(message_entry &entry)
         std::make_shared<std::atomic<int32_t>>(member_count);
     std::shared_ptr<redis_array> result(new redis_array());
     result->resize(member_count);
-    auto get_latlng_callback = [ref_this, this, &entry, result, get_count](
-        int error_code, int index, double lat_degrees, double lng_degrees) {
+    auto get_latlng_callback = [ref_this, this, &entry, result, get_count](int error_code,
+                                                                           int index,
+                                                                           double lat_degrees,
+                                                                           double lng_degrees) {
         if (_is_session_reset.load(std::memory_order_acquire)) {
             LOG_INFO_PREFIX("GEOPOS command seqid({}) got reply, but session has reset",
                             entry.sequence_id);

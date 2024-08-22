@@ -120,5 +120,5 @@ private:
 };
 
 //------------- inline implementation ----------
-}
-} // end namespace dsn::utils
+} // namespace utils
+} // namespace dsn

@@ -24,4 +24,4 @@
 # THE SOFTWARE.
 
 
-rm -rf dsn.utils.tests.xml log*.txt
+rm -rf dsn.utils.tests.xml pegasus*.txt

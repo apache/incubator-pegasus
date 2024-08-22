@@ -25,7 +25,7 @@
 #include "meta/meta_service.h" // IWYU pragma: keep
 
 namespace dsn {
-class rpc_address;
+class host_port;
 
 namespace replication {
 
@@ -55,10 +55,15 @@ public:
 
     void set_node_live_percentage_threshold_for_update(int32_t percentage_threshold);
 
-    std::vector<rpc_address> ensure_enough_alive_nodes(int min_node_count);
+    std::vector<host_port> ensure_enough_alive_nodes(int min_node_count);
 
-    // create an app for test with specified name and specified partition count
-    void create_app(const std::string &name, uint32_t partition_count);
+    // Create an app for test with specified name, partition count and replica count.
+    void create_app(const std::string &name, int32_t partition_count, int32_t replica_count);
+
+    void create_app(const std::string &name, int32_t partition_count)
+    {
+        create_app(name, partition_count, 3);
+    }
 
     void create_app(const std::string &name) { create_app(name, 8); }
 
@@ -69,7 +74,7 @@ public:
                                                           const std::vector<std::string> &env_keys,
                                                           const std::vector<std::string> &env_vals);
 
-    void mock_node_state(const rpc_address &addr, const node_state &node);
+    void mock_node_state(const host_port &addr, const node_state &node);
 
     std::shared_ptr<app_state> find_app(const std::string &name);
 
@@ -84,7 +89,7 @@ public:
     std::string _app_root;
 
 private:
-    std::vector<rpc_address> get_alive_nodes() const;
+    std::vector<host_port> get_alive_nodes() const;
 };
 
 } // namespace replication

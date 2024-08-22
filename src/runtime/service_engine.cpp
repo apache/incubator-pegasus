@@ -26,13 +26,15 @@
 
 #include "service_engine.h"
 
-#include <stdlib.h>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <functional>
 #include <list>
 #include <unordered_map>
 #include <utility>
 
 #include "common/gpid.h"
+#include "fmt/core.h"
+#include "nlohmann/json.hpp"
 #include "runtime/node_scoper.h"
 #include "runtime/rpc/rpc_engine.h"
 #include "runtime/rpc/rpc_message.h"
@@ -44,6 +46,7 @@
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 
 using namespace dsn::utils;
@@ -76,7 +79,7 @@ error_code service_node::init_rpc_engine()
 dsn::error_code service_node::start_app()
 {
     CHECK(_entity, "entity hasn't initialized");
-    _entity->set_address(rpc()->primary_address());
+    _entity->set_host_port(rpc()->primary_host_port());
 
     std::vector<std::string> args;
     utils::split_args(spec().arguments.c_str(), args);
@@ -144,22 +147,19 @@ error_code service_node::start()
     return err;
 }
 
-void service_node::get_runtime_info(const std::string &indent,
-                                    const std::vector<std::string> &args,
-                                    /*out*/ std::stringstream &ss)
+std::string service_node::get_runtime_info(const std::vector<std::string> &args) const
 {
-    ss << indent << full_name() << ":" << std::endl;
-
-    std::string indent2 = indent + "\t";
-    _computation->get_runtime_info(indent2, args, ss);
+    nlohmann::json info;
+    info[full_name()] = _computation->get_runtime_info(args);
+    return info.dump(2);
 }
 
-void service_node::get_queue_info(
-    /*out*/ std::stringstream &ss)
+nlohmann::json service_node::get_queue_info() const
 {
-    ss << "{\"app_name\":\"" << full_name() << "\",\n\"thread_pool\":[\n";
-    _computation->get_queue_info(ss);
-    ss << "]}";
+    nlohmann::json info;
+    info["app_name"] = full_name();
+    info["thread_pool"] = _computation->get_queue_info();
+    return info;
 }
 
 rpc_request_task *service_node::generate_intercepted_request_task(message_ex *req)
@@ -189,16 +189,18 @@ service_engine::service_engine()
 {
     _env = nullptr;
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"engine"},
-        "engine - get engine internal information",
-        "engine [app-id]",
+    _cmds.emplace_back(dsn::command_manager::instance().register_single_command(
+        "engine",
+        "Get engine internal information, including threadpools and threads and queues in each "
+        "threadpool",
+        "[app-id]",
         &service_engine::get_runtime_info));
 
-    _cmds.emplace_back(dsn::command_manager::instance().register_command(
-        {"system.queue"},
-        "system.queue - get queue internal information",
+    _cmds.emplace_back(dsn::command_manager::instance().register_single_command(
         "system.queue",
+        "Get queue internal information, including the threadpool each queue belongs to, and the "
+        "queue name and size",
+        "",
         &service_engine::get_queue_info));
 }
 
@@ -243,39 +245,47 @@ void service_engine::start_node(service_app_spec &app_spec)
 
 std::string service_engine::get_runtime_info(const std::vector<std::string> &args)
 {
-    std::stringstream ss;
-    if (args.size() == 0) {
-        ss << "" << service_engine::instance()._nodes_by_app_id.size()
-           << " nodes available:" << std::endl;
-        for (auto &kv : service_engine::instance()._nodes_by_app_id) {
-            ss << "\t" << kv.second->id() << "." << kv.second->full_name() << std::endl;
+    // Overview.
+    if (args.empty()) {
+        nlohmann::json overview;
+        nlohmann::json nodes;
+        for (const auto &nodes_by_app_id : service_engine::instance()._nodes_by_app_id) {
+            nodes.emplace_back(fmt::format(
+                "{}.{}", nodes_by_app_id.second->id(), nodes_by_app_id.second->full_name()));
         }
-    } else {
-        std::string indent = "";
-        int id = atoi(args[0].c_str());
-        auto it = service_engine::instance()._nodes_by_app_id.find(id);
-        if (it != service_engine::instance()._nodes_by_app_id.end()) {
-            auto args2 = args;
-            args2.erase(args2.begin());
-            it->second->get_runtime_info(indent, args2, ss);
-        } else {
-            ss << "cannot find node with given app id";
-        }
+        overview["available_nodes"] = nodes;
+        return overview.dump(2);
     }
-    return ss.str();
+
+    // Invalid argument.
+    int id;
+    if (!dsn::buf2int32(args[0], id)) {
+        nlohmann::json err_msg;
+        err_msg["error"] = "invalid argument, only one integer argument is acceptable";
+        return err_msg.dump(2);
+    }
+
+    // The query id is not found.
+    const auto &it = service_engine::instance()._nodes_by_app_id.find(id);
+    if (it == service_engine::instance()._nodes_by_app_id.end()) {
+        nlohmann::json err_msg;
+        err_msg["error"] = fmt::format("cannot find node with given app id({})", id);
+        return err_msg.dump(2);
+    }
+
+    // Query a special id.
+    auto tmp_args = args;
+    tmp_args.erase(tmp_args.begin());
+    return it->second->get_runtime_info(tmp_args);
 }
 
 std::string service_engine::get_queue_info(const std::vector<std::string> &args)
 {
-    std::stringstream ss;
-    ss << "[";
-    for (auto &it : service_engine::instance()._nodes_by_app_id) {
-        if (it.first != service_engine::instance()._nodes_by_app_id.begin()->first)
-            ss << ",";
-        it.second->get_queue_info(ss);
+    nlohmann::json info;
+    for (const auto &nodes_by_app_id : service_engine::instance()._nodes_by_app_id) {
+        info.emplace_back(nodes_by_app_id.second->get_queue_info());
     }
-    ss << "]";
-    return ss.str();
+    return info.dump(2);
 }
 
 bool service_engine::is_simulator() const { return _simulator; }

@@ -26,7 +26,7 @@
 
 #include "task_queue.h"
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "fmt/core.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_engine.h"

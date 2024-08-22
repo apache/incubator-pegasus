@@ -40,7 +40,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "common/json_helper.h"
 #include "http/http_server.h"
 #include "utils/alloc.h"
@@ -52,12 +52,14 @@
 #include "utils/fmt_logging.h"
 #include "utils/long_adder.h"
 #include "utils/macros.h"
+#include "gutil/map_util.h"
 #include "utils/nth_element.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
 #include "utils/string_conv.h"
 #include "utils/synchronize.h"
 #include "utils/time_utils.h"
+#include "utils/utils.h"
 
 namespace boost {
 namespace system {
@@ -376,7 +378,7 @@ public:
 
     // `args` are the parameters that are used to construct the object of MetricType.
     template <typename MetricType, typename... Args>
-    ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&... args);
+    ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&...args);
 
     void take_snapshot(metric_json_writer &writer, const metric_filters &filters) const;
 
@@ -469,7 +471,7 @@ struct metric_filters
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
         // Will use `bool operator==(const string &lhs, const char *rhs);` to compare each element
         // in `white_list` with `candidate`.
-        return std::find(white_list.begin(), white_list.end(), candidate) != white_list.end();
+        return utils::contains(white_list, candidate);
     }
 
     static inline bool match(const std::string &candidate,
@@ -851,22 +853,22 @@ class metric_prototype
 public:
     struct ctor_args
     {
-        const absl::string_view entity_type;
+        const std::string_view entity_type;
         const metric_type type;
-        const absl::string_view name;
+        const std::string_view name;
         const metric_unit unit;
-        const absl::string_view desc;
+        const std::string_view desc;
     };
 
-    absl::string_view entity_type() const { return _args.entity_type; }
+    std::string_view entity_type() const { return _args.entity_type; }
 
     metric_type type() const { return _args.type; }
 
-    absl::string_view name() const { return _args.name; }
+    std::string_view name() const { return _args.name; }
 
     metric_unit unit() const { return _args.unit; }
 
-    absl::string_view description() const { return _args.desc; }
+    std::string_view description() const { return _args.desc; }
 
 protected:
     explicit metric_prototype(const ctor_args &args);
@@ -889,7 +891,7 @@ public:
 
     // Construct a metric object based on the instance of metric_entity.
     template <typename... Args>
-    ref_ptr<MetricType> instantiate(const metric_entity_ptr &entity, Args &&... args) const
+    ref_ptr<MetricType> instantiate(const metric_entity_ptr &entity, Args &&...args) const
     {
         return entity->find_or_create<MetricType>(this, std::forward<Args>(args)...);
     }
@@ -899,8 +901,7 @@ private:
 };
 
 template <typename MetricType, typename... Args>
-ref_ptr<MetricType> metric_entity::find_or_create(const metric_prototype *prototype,
-                                                  Args &&... args)
+ref_ptr<MetricType> metric_entity::find_or_create(const metric_prototype *prototype, Args &&...args)
 {
     CHECK_STREQ_MSG(prototype->entity_type().data(),
                     _prototype->name(),
@@ -1746,13 +1747,13 @@ inline error_s parse_metric_attribute(const metric_entity::attr_map &attrs,
                                       const std::string &name,
                                       TAttrValue &value)
 {
-    const auto &iter = attrs.find(name);
-    if (dsn_unlikely(iter == attrs.end())) {
+    const auto *value_ptr = gutil::FindOrNull(attrs, name);
+    if (dsn_unlikely(value_ptr == nullptr)) {
         return FMT_ERR(dsn::ERR_INVALID_DATA, "{} field was not found", name);
     }
 
-    if (dsn_unlikely(!dsn::buf2numeric(iter->second, value))) {
-        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid {}: {}", name, iter->second);
+    if (dsn_unlikely(!dsn::buf2numeric(*value_ptr, value))) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid {}: {}", name, *value_ptr);
     }
 
     return dsn::error_s::ok();

@@ -38,7 +38,7 @@
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
@@ -52,7 +52,6 @@
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
-#include "utils/utils.h"
 
 DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
 DSN_DEFINE_validator(tables_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
@@ -286,15 +285,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     int32_t app_id = 0;
     int32_t partition_count = 0;
     int32_t max_replica_count = 0;
-    std::vector<dsn::partition_configuration> partitions;
+    std::vector<dsn::partition_configuration> pcs;
 
-    dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
+    dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, pcs);
     if (err != ::dsn::ERR_OK) {
         std::cout << "ERROR: list app " << app_name << " failed, error=" << err << std::endl;
         return true;
     }
-    if (!partitions.empty()) {
-        max_replica_count = partitions[0].max_replica_count;
+    if (!pcs.empty()) {
+        max_replica_count = pcs[0].max_replica_count;
     }
 
     std::vector<node_desc> nodes;
@@ -305,16 +304,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
     const auto &results = get_metrics(nodes, sst_stat_filters(app_id).to_query_string());
 
-    std::map<dsn::rpc_address, std::map<int32_t, double>> disk_map;
-    std::map<dsn::rpc_address, std::map<int32_t, double>> count_map;
+    std::map<dsn::host_port, std::map<int32_t, double>> disk_map;
+    std::map<dsn::host_port, std::map<int32_t, double>> count_map;
     for (size_t i = 0; i < nodes.size(); ++i) {
         RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "sst");
 
-        RETURN_SHELL_IF_PARSE_METRICS_FAILED(parse_sst_stat(results[i].body(),
-                                                            count_map[nodes[i].address],
-                                                            disk_map[nodes[i].address]),
-                                             nodes[i],
-                                             "sst");
+        RETURN_SHELL_IF_PARSE_METRICS_FAILED(
+            parse_sst_stat(results[i].body(), count_map[nodes[i].hp], disk_map[nodes[i].hp]),
+            nodes[i],
+            "sst");
     }
 
     ::dsn::utils::table_printer tp_general("result");
@@ -335,27 +333,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     int primary_replicas_count = 0;
     double disk_used_for_all_replicas = 0;
     int all_replicas_count = 0;
-    for (int i = 0; i < partitions.size(); i++) {
-        const dsn::partition_configuration &p = partitions[i];
-        int replica_count = 0;
-        if (!p.primary.is_invalid()) {
-            replica_count++;
-        }
-        replica_count += p.secondaries.size();
-        std::string replica_count_str;
-        {
-            std::stringstream oss;
-            oss << replica_count << "/" << p.max_replica_count;
-            replica_count_str = oss.str();
-        }
+    for (const auto &pc : pcs) {
         std::string primary_str("-");
-        if (!p.primary.is_invalid()) {
+        if (pc.hp_primary) {
             bool disk_found = false;
             double disk_value = 0;
-            auto f1 = disk_map.find(p.primary);
+            auto f1 = disk_map.find(pc.hp_primary);
             if (f1 != disk_map.end()) {
                 auto &sub_map = f1->second;
-                auto f2 = sub_map.find(p.pid.get_partition_index());
+                auto f2 = sub_map.find(pc.pid.get_partition_index());
                 if (f2 != sub_map.end()) {
                     disk_found = true;
                     disk_value = f2->second;
@@ -367,23 +353,17 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             }
             bool count_found = false;
             double count_value = 0;
-            auto f3 = count_map.find(p.primary);
+            auto f3 = count_map.find(pc.hp_primary);
             if (f3 != count_map.end()) {
                 auto &sub_map = f3->second;
-                auto f3 = sub_map.find(p.pid.get_partition_index());
-                if (f3 != sub_map.end()) {
+                auto f4 = sub_map.find(pc.pid.get_partition_index());
+                if (f4 != sub_map.end()) {
                     count_found = true;
-                    count_value = f3->second;
+                    count_value = f4->second;
                 }
             }
             std::stringstream oss;
-            std::string hostname;
-            std::string ip = p.primary.to_string();
-            if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
-                oss << hostname << "(";
-            } else {
-                oss << p.primary << "(";
-            };
+            oss << replication_ddl_client::node_name(pc.hp_primary, resolve_ip) << "(";
             if (disk_found)
                 oss << disk_value;
             else
@@ -400,15 +380,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         {
             std::stringstream oss;
             oss << "[";
-            for (int j = 0; j < p.secondaries.size(); j++) {
+            for (int j = 0; j < pc.hp_secondaries.size(); j++) {
                 if (j != 0)
                     oss << ",";
                 bool found = false;
                 double value = 0;
-                auto f1 = disk_map.find(p.secondaries[j]);
+                auto f1 = disk_map.find(pc.hp_secondaries[j]);
                 if (f1 != disk_map.end()) {
                     auto &sub_map = f1->second;
-                    auto f2 = sub_map.find(p.pid.get_partition_index());
+                    auto f2 = sub_map.find(pc.pid.get_partition_index());
                     if (f2 != sub_map.end()) {
                         found = true;
                         value = f2->second;
@@ -418,23 +398,17 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
                 bool count_found = false;
                 double count_value = 0;
-                auto f3 = count_map.find(p.secondaries[j]);
+                auto f3 = count_map.find(pc.hp_secondaries[j]);
                 if (f3 != count_map.end()) {
                     auto &sub_map = f3->second;
-                    auto f3 = sub_map.find(p.pid.get_partition_index());
+                    auto f3 = sub_map.find(pc.pid.get_partition_index());
                     if (f3 != sub_map.end()) {
                         count_found = true;
                         count_value = f3->second;
                     }
                 }
 
-                std::string hostname;
-                std::string ip = p.secondaries[j].to_string();
-                if (resolve_ip && dsn::utils::hostname_from_ip_port(ip.c_str(), &hostname)) {
-                    oss << hostname << "(";
-                } else {
-                    oss << p.secondaries[j] << "(";
-                };
+                oss << replication_ddl_client::node_name(pc.hp_secondaries[j], resolve_ip) << "(";
                 if (found)
                     oss << value;
                 else
@@ -451,9 +425,10 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         }
 
         if (detailed) {
-            tp_details.add_row(std::to_string(p.pid.get_partition_index()));
-            tp_details.append_data(p.ballot);
-            tp_details.append_data(replica_count_str);
+            tp_details.add_row(std::to_string(pc.pid.get_partition_index()));
+            tp_details.append_data(pc.ballot);
+            tp_details.append_data(fmt::format(
+                "{}/{}", pc.hp_secondaries.size() + (pc.hp_primary ? 1 : 0), pc.max_replica_count));
             tp_details.append_data(primary_str);
             tp_details.append_data(secondary_str);
         }

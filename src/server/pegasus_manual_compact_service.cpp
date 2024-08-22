@@ -19,16 +19,17 @@
 
 #include "pegasus_manual_compact_service.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <limits.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <rocksdb/options.h>
 #include <list>
-#include <ostream>
 #include <set>
 #include <utility>
 
-#include "common/replication.codes.h"
 #include "common/replica_envs.h"
+#include "common/replication.codes.h"
 #include "pegasus_server_impl.h"
 #include "runtime/api_layer1.h"
 #include "runtime/task/async_calls.h"
@@ -59,11 +60,6 @@ namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_MANUAL_COMPACT, TASK_PRIORITY_COMMON, THREAD_POOL_COMPACT)
-
-const std::string
-    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE("force");
-const std::string
-    pegasus_manual_compact_service::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP("skip");
 
 pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_impl *app)
     : replica_base(*app),
@@ -259,9 +255,9 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
     find = envs.find(key_prefix + dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION);
     if (find != envs.end()) {
         const std::string &argv = find->second;
-        if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
+        if (argv == dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE) {
             options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
-        } else if (argv == MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
+        } else if (argv == dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP) {
             options.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kSkip;
         } else {
             LOG_WARNING_PREFIX(
@@ -269,7 +265,7 @@ void pegasus_manual_compact_service::extract_manual_compact_opts(
                 find->first,
                 find->second,
                 // NOTICE associate with options.bottommost_level_compaction's default value above
-                MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP);
+                dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP);
         }
     }
 }
@@ -339,31 +335,16 @@ std::string pegasus_manual_compact_service::query_compact_state() const
     uint64_t start_time_ms = _manual_compact_start_running_time_ms.load();
     uint64_t last_finish_time_ms = _manual_compact_last_finish_time_ms.load();
     uint64_t last_time_used_ms = _manual_compact_last_time_used_ms.load();
-    std::stringstream state;
-    if (last_finish_time_ms > 0) {
-        char str[24] = {0};
-        dsn::utils::time_ms_to_string(last_finish_time_ms, str);
-        state << "last finish at [" << str << "]";
-    } else {
-        state << "last finish at [-]";
-    }
 
-    if (last_time_used_ms > 0) {
-        state << ", last used " << last_time_used_ms << " ms";
-    }
-
-    if (enqueue_time_ms > 0) {
-        char str[24] = {0};
-        dsn::utils::time_ms_to_string(enqueue_time_ms, str);
-        state << ", recent enqueue at [" << str << "]";
-    }
-
-    if (start_time_ms > 0) {
-        char str[24] = {0};
-        dsn::utils::time_ms_to_string(start_time_ms, str);
-        state << ", recent start at [" << str << "]";
-    }
-    return state.str();
+    nlohmann::json info;
+    info["recent_enqueue_at"] =
+        enqueue_time_ms > 0 ? dsn::utils::time_s_to_date_time(enqueue_time_ms / 1000) : "-";
+    info["recent_start_at"] =
+        start_time_ms > 0 ? dsn::utils::time_s_to_date_time(start_time_ms / 1000) : "-";
+    info["last_finish"] =
+        last_finish_time_ms > 0 ? dsn::utils::time_s_to_date_time(last_finish_time_ms / 1000) : "-";
+    info["last_used_ms"] = last_time_used_ms > 0 ? std::to_string(last_time_used_ms) : "-";
+    return info.dump();
 }
 
 dsn::replication::manual_compaction_status::type

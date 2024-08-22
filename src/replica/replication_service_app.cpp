@@ -40,7 +40,8 @@ namespace replication {
 
 void replication_service_app::register_all()
 {
-    dsn::service_app::register_factory<replication_service_app>("replica");
+    dsn::service_app::register_factory<replication_service_app>(
+        replication_options::kReplicaAppType.c_str());
 }
 
 replication_service_app::replication_service_app(const service_app_info *info) : service_app(info)

@@ -31,7 +31,7 @@
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -52,20 +52,24 @@ class duplication_info
 public:
     /// \see meta_duplication_service::new_dup_from_init
     /// \see duplication_info::decode_from_blob
-    duplication_info(dupid_t dupid,
-                     int32_t appid,
-                     std::string app_name,
+    duplication_info(dupid_t dup_id,
+                     int32_t app_id,
+                     const std::string &app_name,
                      int32_t partition_count,
+                     int32_t remote_replica_count,
                      uint64_t create_now_ms,
-                     std::string follower_cluster_name,
-                     std::vector<rpc_address> &&follower_cluster_metas,
-                     std::string meta_store_path)
-        : id(dupid),
-          app_id(appid),
-          app_name(std::move(app_name)),
+                     const std::string &remote_cluster_name,
+                     const std::string &remote_app_name,
+                     std::vector<host_port> &&remote_cluster_metas,
+                     const std::string &meta_store_path)
+        : id(dup_id),
+          app_id(app_id),
+          app_name(app_name),
           partition_count(partition_count),
-          follower_cluster_name(std::move(follower_cluster_name)),
-          follower_cluster_metas(std::move(follower_cluster_metas)),
+          remote_replica_count(remote_replica_count),
+          remote_cluster_name(remote_cluster_name),
+          remote_app_name(remote_app_name),
+          remote_cluster_metas(std::move(remote_cluster_metas)),
           store_path(std::move(meta_store_path)),
           create_timestamp_ms(create_now_ms),
           prefix_for_log(fmt::format("a{}d{}", app_id, id))
@@ -82,7 +86,7 @@ public:
         }
         LOG_WARNING("you now create duplication[{}[{}.{}]] without duplicating checkpoint",
                     id,
-                    follower_cluster_name,
+                    remote_cluster_name,
                     app_name);
         return alter_status(duplication_status::DS_LOG);
     }
@@ -104,8 +108,9 @@ public:
 
     bool is_valid_alteration(duplication_status::type to_status) const
     {
-        return to_status == _status || (to_status == duplication_status::DS_PREPARE &&
-                                        _status == duplication_status::DS_INIT) ||
+        return to_status == _status ||
+               (to_status == duplication_status::DS_PREPARE &&
+                _status == duplication_status::DS_INIT) ||
                (to_status == duplication_status::DS_APP &&
                 _status == duplication_status::DS_PREPARE) ||
                (to_status == duplication_status::DS_LOG &&
@@ -137,7 +142,8 @@ public:
                                                    int32_t app_id,
                                                    const std::string &app_name,
                                                    int32_t partition_count,
-                                                   std::string store_path,
+                                                   int32_t replica_count,
+                                                   const std::string &store_path,
                                                    const blob &json);
 
     // duplication_query_rpc is handled in THREAD_POOL_META_SERVER,
@@ -150,9 +156,11 @@ public:
         duplication_entry entry;
         entry.dupid = id;
         entry.create_ts = create_timestamp_ms;
-        entry.remote = follower_cluster_name;
+        entry.remote = remote_cluster_name;
         entry.status = _status;
         entry.__set_fail_mode(_fail_mode);
+        entry.__set_remote_app_name(remote_app_name);
+        entry.__set_remote_replica_count(remote_replica_count);
         entry.__isset.progress = true;
         for (const auto &kv : _progress) {
             if (!kv.second.is_inited) {
@@ -166,13 +174,13 @@ public:
     bool all_checkpoint_has_prepared()
     {
         int prepared = 0;
-        bool completed =
-            std::all_of(_progress.begin(),
-                        _progress.end(),
-                        [&](std::pair<int, partition_progress> item) -> bool {
-                            prepared = item.second.checkpoint_prepared ? prepared + 1 : prepared;
-                            return item.second.checkpoint_prepared;
-                        });
+        bool completed = std::all_of(_progress.begin(),
+                                     _progress.end(),
+                                     [&](std::pair<int, partition_progress> item) -> bool {
+                                         prepared = item.second.checkpoint_prepared ? prepared + 1
+                                                                                    : prepared;
+                                         return item.second.checkpoint_prepared;
+                                     });
         if (!completed) {
             LOG_WARNING("replica checkpoint still running: {}/{}", prepared, _progress.size());
         }
@@ -236,8 +244,15 @@ private:
         duplication_status::type status;
         int64_t create_timestamp_ms;
         duplication_fail_mode::type fail_mode;
+        std::string remote_app_name;
+        int32_t remote_replica_count{0};
 
-        DEFINE_JSON_SERIALIZATION(remote, status, create_timestamp_ms, fail_mode);
+        // Since there is no remote_cluster_name for old versions(< v2.6.0), remote_app_name
+        // and remote_replica_count are optional. Following deserialization functions could
+        // be compatible with the situations where remote_app_name and remote_replica_count
+        // are missing.
+        DEFINE_JSON_SERIALIZATION(
+            remote, status, create_timestamp_ms, fail_mode, remote_app_name, remote_replica_count);
     };
 
 public:
@@ -245,9 +260,11 @@ public:
     const int32_t app_id{0};
     const std::string app_name;
     const int32_t partition_count{0};
+    const int32_t remote_replica_count{0};
 
-    const std::string follower_cluster_name;
-    const std::vector<rpc_address> follower_cluster_metas;
+    const std::string remote_cluster_name;
+    const std::string remote_app_name;
+    const std::vector<host_port> remote_cluster_metas;
     const std::string store_path; // store path on meta service = get_duplication_path(app, dupid)
     const uint64_t create_timestamp_ms{0}; // the time when this dup is created.
     const std::string prefix_for_log;

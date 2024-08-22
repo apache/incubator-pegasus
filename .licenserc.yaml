@@ -42,10 +42,12 @@ header:
     - '**/*.pdf'
     # Special files for golang.
     - '**/go.sum'
-    # TODO(wangdan): Generated files for go client, could generate dynamically?
-    - 'go-client/idl/base/GoUnusedProtection__.go'
-    - 'go-client/idl/base/dsn_err_string.go'
-    - 'go-client/idl/base/rocskdb_err_string.go'
+    - 'go-client/idl/admin/**'
+    - 'go-client/idl/base/**'
+    - 'go-client/idl/cmd/**'
+    - 'go-client/idl/radmin/**'
+    - 'go-client/idl/replication/**'
+    - 'go-client/idl/rrdb/**'
     # Special files for nodejs.
     - '**/.npmigonre'
     # Special files for python.
@@ -69,7 +71,6 @@ header:
     # Used for patches for thirdparties.
     - 'thirdparty/fix_jemalloc_for_m1_on_macos.patch'
     - 'thirdparty/fix_libevent_for_macos.patch'
-    - 'thirdparty/fix_prometheus-cpp_limits.patch'
     - 'thirdparty/fix_rocksdb-cmake-PORTABLE-option.patch'
     - 'thirdparty/fix_snappy-Wsign-compare-warning.patch'
     - 'thirdparty/fix_s2_build_with_absl_and_gtest.patch'
@@ -109,8 +110,10 @@ header:
     - 'cmake_modules/FindRT.cmake'
     - 'cmake_modules/FindDL.cmake'
     # Copyright (c) 2017 Guillaume Papin
-    - 'scripts/run-clang-format.py'
+    - 'build_tools/run-clang-format.py'
     # The MIT License (MIT), Copyright (c) 2015 Microsoft Corporation
+    - 'admin_tools/learn_stat.py'
+    - 'build_tools/compile_thrift.py'
     - 'cmake_modules/BaseFunctions.cmake'
     - 'docs/rdsn-README.md'
     - 'idl/command.thrift'
@@ -119,8 +122,6 @@ header:
     - 'idl/metadata.thrift'
     - 'idl/meta_admin.thrift'
     - 'idl/replica_admin.thrift'
-    - 'scripts/compile_thrift.py'
-    - 'scripts/learn_stat.py'
     - 'src/runtime/api_layer1.h'
     - 'src/runtime/api_task.h'
     - 'src/utils/api_utilities.h'
@@ -666,5 +667,13 @@ header:
     - 'src/zookeeper/zookeeper_session.h'
     - 'src/zookeeper/zookeeper_session_mgr.cpp'
     - 'src/zookeeper/zookeeper_session_mgr.h'
+    # Apache License, Version 2.0, Copyright 2018 Google LLC
+    - 'src/gutil/test/map_traits_test.cpp'
+    - 'src/gutil/test/map_util_test.h'
+    - 'src/gutil/test/map_util_unittest.cpp'
+    - 'src/gutil/test/no_destructor_test.cpp'
+    - 'src/gutil/map_traits.h'
+    - 'src/gutil/map_util.h'
+    - 'src/gutil/no_destructor.h'
 
   comment: on-failure

@@ -41,5 +41,5 @@ public:
 private:
     static void on_worker_start(task_worker *worker);
 };
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

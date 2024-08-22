@@ -20,7 +20,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <fmt/core.h>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
@@ -56,7 +56,6 @@ void replica_disk_migrator::on_migrate_replica(replica_disk_migrate_rpc rpc)
         LPC_REPLICATION_COMMON,
         _replica->tracker(),
         [=]() {
-
             if (!check_migration_args(rpc)) {
                 return;
             }
@@ -165,7 +164,7 @@ void replica_disk_migrator::migrate_replica(const replica_disk_migrate_request &
 // THREAD_POOL_REPLICATION_LONG
 bool replica_disk_migrator::init_target_dir(const replica_disk_migrate_request &req)
 {
-    FAIL_POINT_INJECT_F("init_target_dir", [this](absl::string_view) -> bool {
+    FAIL_POINT_INJECT_F("init_target_dir", [this](std::string_view) -> bool {
         reset_status();
         return false;
     });
@@ -211,7 +210,7 @@ bool replica_disk_migrator::init_target_dir(const replica_disk_migrate_request &
 // THREAD_POOL_REPLICATION_LONG
 bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrate_request &req)
 {
-    FAIL_POINT_INJECT_F("migrate_replica_checkpoint", [this](absl::string_view) -> bool {
+    FAIL_POINT_INJECT_F("migrate_replica_checkpoint", [this](std::string_view) -> bool {
         reset_status();
         return false;
     });
@@ -247,7 +246,7 @@ bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrat
 // THREAD_POOL_REPLICATION_LONG
 bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_request &req)
 {
-    FAIL_POINT_INJECT_F("migrate_replica_app_info", [this](absl::string_view) -> bool {
+    FAIL_POINT_INJECT_F("migrate_replica_app_info", [this](std::string_view) -> bool {
         reset_status();
         return false;
     });
@@ -266,7 +265,7 @@ bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_
 
     const auto &store_info_err = _replica->store_app_info(
         _replica->_app_info,
-        utils::filesystem::path_combine(_target_replica_dir, replica::kAppInfo));
+        utils::filesystem::path_combine(_target_replica_dir, replica_app_info::kAppInfo));
     if (store_info_err != ERR_OK) {
         LOG_ERROR_PREFIX("disk migration(origin={}, target={}) stores app info failed({})",
                          req.origin_disk,

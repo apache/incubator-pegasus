@@ -30,4 +30,4 @@ namespace dsn {
 namespace tools {
 extern void register_common_providers();
 }
-}
+} // namespace dsn

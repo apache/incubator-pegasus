@@ -297,5 +297,5 @@ void scheduler::schedule()
 
     _is_scheduling = false;
 }
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

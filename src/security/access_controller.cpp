@@ -32,6 +32,11 @@ DSN_DEFINE_string(security,
                   super_users,
                   "",
                   "super users for access controller, comma-separated list of user names");
+DSN_DEFINE_string(security,
+                  encryption_cluster_key_name,
+                  "pegasus_cluster_key",
+                  "Name of the cluster key that is used to encrypt server encryption keys as"
+                  "stored in Ranger KMS.");
 
 namespace dsn {
 namespace security {

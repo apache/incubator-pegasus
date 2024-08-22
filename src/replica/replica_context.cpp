@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <algorithm>
 #include <atomic>
 #include <vector>
 
@@ -34,7 +33,9 @@
 #include "replica.h"
 #include "replica_context.h"
 #include "replica_stub.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
+#include "utils/utils.h"
 
 namespace dsn {
 namespace replication {
@@ -66,7 +67,7 @@ void primary_context::cleanup(bool clean_pending_mutations)
     }
     group_bulk_load_pending_replies.clear();
 
-    membership.ballot = 0;
+    pc.ballot = 0;
 
     cleanup_bulk_load_states();
 
@@ -90,25 +91,26 @@ void primary_context::do_cleanup_pending_mutations(bool clean_pending_mutations)
     }
 }
 
-void primary_context::reset_membership(const partition_configuration &config, bool clear_learners)
+void primary_context::reset_membership(const partition_configuration &new_pc, bool clear_learners)
 {
     statuses.clear();
     if (clear_learners) {
         learners.clear();
     }
 
-    if (config.ballot > membership.ballot)
-        next_learning_version = (((uint64_t)config.ballot) << 32) + 1;
-    else
+    if (new_pc.ballot > pc.ballot) {
+        next_learning_version = (((uint64_t)new_pc.ballot) << 32) + 1;
+    } else {
         ++next_learning_version;
-
-    membership = config;
-
-    if (membership.primary.is_invalid() == false) {
-        statuses[membership.primary] = partition_status::PS_PRIMARY;
     }
 
-    for (auto it = config.secondaries.begin(); it != config.secondaries.end(); ++it) {
+    pc = new_pc;
+
+    if (pc.hp_primary) {
+        statuses[pc.hp_primary] = partition_status::PS_PRIMARY;
+    }
+
+    for (auto it = new_pc.hp_secondaries.begin(); it != new_pc.hp_secondaries.end(); ++it) {
         statuses[*it] = partition_status::PS_SECONDARY;
         learners.erase(*it);
     }
@@ -122,21 +124,20 @@ void primary_context::get_replica_config(partition_status::type st,
                                          /*out*/ replica_configuration &config,
                                          uint64_t learner_signature /*= invalid_signature*/)
 {
-    config.pid = membership.pid;
-    config.primary = membership.primary;
-    config.ballot = membership.ballot;
+    config.pid = pc.pid;
+    SET_OBJ_IP_AND_HOST_PORT(config, primary, pc, primary);
+    config.ballot = pc.ballot;
     config.status = st;
     config.learner_signature = learner_signature;
 }
 
-bool primary_context::check_exist(::dsn::rpc_address node, partition_status::type st)
+bool primary_context::check_exist(const ::dsn::host_port &node, partition_status::type st)
 {
     switch (st) {
     case partition_status::PS_PRIMARY:
-        return membership.primary == node;
+        return pc.hp_primary == node;
     case partition_status::PS_SECONDARY:
-        return std::find(membership.secondaries.begin(), membership.secondaries.end(), node) !=
-               membership.secondaries.end();
+        return utils::contains(pc.hp_secondaries, node);
     case partition_status::PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
     default:
@@ -145,7 +146,7 @@ bool primary_context::check_exist(::dsn::rpc_address node, partition_status::typ
     }
 }
 
-void primary_context::reset_node_bulk_load_states(const rpc_address &node)
+void primary_context::reset_node_bulk_load_states(const host_port &node)
 {
     secondary_bulk_load_states[node].__set_download_progress(0);
     secondary_bulk_load_states[node].__set_download_status(ERR_OK);
@@ -176,7 +177,7 @@ bool primary_context::secondary_disk_abnormal() const
     for (const auto &kv : secondary_disk_status) {
         if (kv.second != disk_status::NORMAL) {
             LOG_INFO("partition[{}] secondary[{}] disk space is {}",
-                     membership.pid,
+                     pc.pid,
                      kv.first,
                      enum_to_string(kv.second));
             return true;

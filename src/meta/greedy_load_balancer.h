@@ -31,14 +31,14 @@
 #include <vector>
 
 #include "meta/meta_data.h"
-#include "meta_admin_types.h"
 #include "server_load_balancer.h"
+#include "utils/fmt_utils.h"
 
 namespace dsn {
 class command_deregister;
-class rpc_address;
 
 namespace replication {
+class configuration_proposal_action;
 class load_balance_policy;
 class meta_service;
 
@@ -72,6 +72,7 @@ private:
     migration_list *t_migration_result;
     int t_alive_nodes;
     int t_operation_counters[MAX_COUNT];
+    bool _all_replca_infos_collected;
 
     std::unique_ptr<load_balance_policy> _app_balance_policy;
     std::unique_ptr<load_balance_policy> _cluster_balance_policy;
@@ -83,15 +84,7 @@ private:
     bool all_replica_infos_collected(const node_state &ns);
 };
 
-inline configuration_proposal_action
-new_proposal_action(const rpc_address &target, const rpc_address &node, config_type::type type)
-{
-    configuration_proposal_action act;
-    act.__set_target(target);
-    act.__set_node(node);
-    act.__set_type(type);
-    return act;
-}
-
 } // namespace replication
 } // namespace dsn
+
+USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::configuration_proposal_action);

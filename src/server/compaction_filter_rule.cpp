@@ -22,14 +22,14 @@
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/strings.h"
 
 namespace pegasus {
 namespace server {
-bool string_pattern_match(absl::string_view value,
+bool string_pattern_match(std::string_view value,
                           string_match_type type,
-                          absl::string_view filter_pattern)
+                          std::string_view filter_pattern)
 {
     if (filter_pattern.empty())
         return false;
@@ -38,7 +38,7 @@ bool string_pattern_match(absl::string_view value,
 
     switch (type) {
     case string_match_type::SMT_MATCH_ANYWHERE:
-        return value.find(filter_pattern) != absl::string_view::npos;
+        return value.find(filter_pattern) != std::string_view::npos;
     case string_match_type::SMT_MATCH_PREFIX:
         return dsn::utils::mequals(value.data(), filter_pattern.data(), filter_pattern.length());
     case string_match_type::SMT_MATCH_POSTFIX:
@@ -53,27 +53,27 @@ bool string_pattern_match(absl::string_view value,
 
 hashkey_pattern_rule::hashkey_pattern_rule(uint32_t data_version) {}
 
-bool hashkey_pattern_rule::match(absl::string_view hash_key,
-                                 absl::string_view sort_key,
-                                 absl::string_view existing_value) const
+bool hashkey_pattern_rule::match(std::string_view hash_key,
+                                 std::string_view sort_key,
+                                 std::string_view existing_value) const
 {
     return string_pattern_match(hash_key, match_type, pattern);
 }
 
 sortkey_pattern_rule::sortkey_pattern_rule(uint32_t data_version) {}
 
-bool sortkey_pattern_rule::match(absl::string_view hash_key,
-                                 absl::string_view sort_key,
-                                 absl::string_view existing_value) const
+bool sortkey_pattern_rule::match(std::string_view hash_key,
+                                 std::string_view sort_key,
+                                 std::string_view existing_value) const
 {
     return string_pattern_match(sort_key, match_type, pattern);
 }
 
 ttl_range_rule::ttl_range_rule(uint32_t data_version) : data_version(data_version) {}
 
-bool ttl_range_rule::match(absl::string_view hash_key,
-                           absl::string_view sort_key,
-                           absl::string_view existing_value) const
+bool ttl_range_rule::match(std::string_view hash_key,
+                           std::string_view sort_key,
+                           std::string_view existing_value) const
 {
     uint32_t expire_ts = pegasus_extract_expire_ts(data_version, existing_value);
     // if start_ttl and stop_ttl = 0, it means we want to delete keys which have no ttl

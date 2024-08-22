@@ -112,17 +112,9 @@ double dsn_config_get_value_double(const char *section,
 /// this function is not thread safe if dsn_config_set is concurrently called
 void dsn_config_get_all_sections(/*out*/ std::vector<std::string> &sections);
 
-/// get the names of all sections
-/// this function is not thread safe if dsn_config_set is concurrently called
-void dsn_config_get_all_sections(/*out*/ std::vector<const char *> &sections);
-
 /// get all keys in some specific section
 /// this function is not thread safe if dsn_config_set is concurrently called
 void dsn_config_get_all_keys(const char *section, /*out*/ std::vector<std::string> &keys);
-
-/// get all keys in some specific section
-/// this function is not thread safe if dsn_config_set is concurrently called
-void dsn_config_get_all_keys(const char *section, /*out*/ std::vector<const char *> &keys);
 
 /// set value for a key of some section.
 /// if the section doesn't exsit, a new one will be created.

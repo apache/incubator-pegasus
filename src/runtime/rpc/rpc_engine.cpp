@@ -36,6 +36,7 @@
 #include "runtime/api_layer1.h"
 #include "runtime/global_config.h"
 #include "runtime/rpc/group_address.h"
+#include "runtime/rpc/group_host_port.h"
 #include "runtime/rpc/network.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/service_engine.h"
@@ -149,6 +150,9 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
             case GRPC_TO_LEADER:
                 if (req->server_address.group_address()->is_update_leader_automatically()) {
                     req->server_address.group_address()->set_leader(addr);
+                    const auto hp = host_port::from_address(addr);
+                    CHECK(hp, "'{}' can not be reverse resolved", addr);
+                    req->server_host_port.group_host_port()->set_leader(hp);
                 }
                 break;
             default:
@@ -177,6 +181,9 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
                         req->server_address.group_address()->is_update_leader_automatically()) {
                         req->server_address.group_address()->set_leader(
                             reply->header->from_address);
+                        const auto hp = host_port::from_address(reply->header->from_address);
+                        CHECK(hp, "'{}' can not be reverse resolved", reply->header->from_address);
+                        req->server_host_port.group_host_port()->set_leader(hp);
                     }
                     break;
                 default:
@@ -517,9 +524,12 @@ error_code rpc_engine::start(const service_app_spec &aspec)
 
     _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
     _local_primary_address.set_port(aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id);
+    _local_primary_host_port = host_port::from_address(_local_primary_address);
+    CHECK(_local_primary_host_port, "'{}' can not be reverse resolved", _local_primary_address);
 
-    LOG_INFO("=== service_node=[{}], primary_address=[{}] ===",
+    LOG_INFO("=== service_node=[{}], primary_address=[{}({})] ===",
              _node->full_name(),
+             _local_primary_host_port,
              _local_primary_address);
 
     _is_running = true;
@@ -616,7 +626,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
 void rpc_engine::call(message_ex *request, const rpc_response_task_ptr &call)
 {
     auto &hdr = *request->header;
-    hdr.from_address = primary_address();
+    hdr.from_address = _local_primary_address;
     hdr.trace_id = rand::next_u64(std::numeric_limits<decltype(hdr.trace_id)>::min(),
                                   std::numeric_limits<decltype(hdr.trace_id)>::max());
 
@@ -654,8 +664,7 @@ void rpc_engine::call_ip(rpc_address addr,
 {
     DCHECK_EQ_MSG(addr.type(), HOST_TYPE_IPV4, "only IPV4 is now supported");
     DCHECK_GT_MSG(addr.port(), MAX_CLIENT_PORT, "only server address can be called");
-    CHECK(!request->header->from_address.is_invalid(),
-          "from address must be set before call call_ip");
+    CHECK(request->header->from_address, "from address must be set before call call_ip");
 
     while (!request->dl.is_alone()) {
         LOG_WARNING("msg request {} (trace_id = {:#018x}) is in sending queue, try to pick out ...",
@@ -668,6 +677,7 @@ void rpc_engine::call_ip(rpc_address addr,
     }
 
     request->to_address = addr;
+    request->to_host_port = host_port::from_address(addr);
 
     auto sp = task_spec::get(request->local_rpc_code);
     auto &hdr = *request->header;
@@ -729,7 +739,7 @@ void rpc_engine::reply(message_ex *response, error_code err)
     // when a message doesn't need to reply, we don't do the on_rpc_reply hooks to avoid mistakes
     // for example, the profiler may be mistakenly calculated
     auto s = response->io_session.get();
-    if (s == nullptr && response->to_address.is_invalid()) {
+    if (s == nullptr && !response->to_address) {
         LOG_DEBUG("rpc reply {} is dropped (invalid to-address), trace_id = {:#018x}",
                   response->header->rpc_name,
                   response->header->trace_id);
@@ -833,7 +843,7 @@ void rpc_engine::forward(message_ex *request, rpc_address address)
           task_spec::get(request->local_rpc_code)->name,
           request->header->trace_id);
     CHECK_NE_MSG(address,
-                 primary_address(),
+                 _local_primary_address,
                  "cannot forward msg {} (trace_id = {:#018x}) to the local node",
                  task_spec::get(request->local_rpc_code)->name,
                  request->header->trace_id);

@@ -48,7 +48,8 @@ class TProtocol;
 } // namespace thrift
 } // namespace apache
 
-typedef enum dsn_host_type_t {
+typedef enum dsn_host_type_t
+{
     HOST_TYPE_INVALID = 0,
     HOST_TYPE_IPV4 = 1,
     HOST_TYPE_GROUP = 2,
@@ -64,8 +65,6 @@ class rpc_group_address;
 class rpc_address
 {
 public:
-    static const rpc_address s_invalid_address;
-
     // Convert IPv4:port to rpc_address, e.g. "192.168.0.1:12345" or "localhost:54321".
     // NOTE:
     //   - IP address without port (e.g. "127.0.0.1") is considered as invalid.
@@ -122,8 +121,7 @@ public:
         return (rpc_group_address *)(uintptr_t)_addr.group.group;
     }
 
-    bool is_invalid() const { return _addr.v4.type == HOST_TYPE_INVALID; }
-    operator bool() const { return !is_invalid(); }
+    operator bool() const { return _addr.v4.type != HOST_TYPE_INVALID; }
 
     // before you assign new value, must call set_invalid() to release original value
     // and you MUST ensure that _addr is INITIALIZED before you call this function
@@ -141,7 +139,7 @@ public:
 
         switch (type()) {
         case HOST_TYPE_IPV4:
-            return ip() == r.ip() && _addr.v4.port == r.port();
+            return ip() == r.ip() && port() == r.port();
         case HOST_TYPE_GROUP:
             return _addr.group.group == r._addr.group.group;
         default:
@@ -176,7 +174,12 @@ public:
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
 
 private:
+    friend class rpc_group_address;
     friend class test_client;
+    template <typename TResponse>
+    friend class rpc_replier;
+
+    static const rpc_address s_invalid_address;
 
     union
     {

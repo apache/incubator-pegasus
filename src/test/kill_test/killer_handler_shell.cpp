@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <sstream> // IWYU pragma: keep
 
+#include "common/replication_common.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"
@@ -82,14 +83,15 @@ bool killer_handler_shell::kill_meta(int index)
 
 bool killer_handler_shell::kill_replica(int index)
 {
-    std::string cmd = generate_cmd(index, "replica", "stop");
+    std::string cmd =
+        generate_cmd(index, dsn::replication::replication_options::kReplicaAppType, "stop");
     int res = system(cmd.c_str());
     LOG_INFO("kill replica command: {}", cmd);
     if (res != 0) {
         LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
-    return check("replica", index, "stop");
+    return check(dsn::replication::replication_options::kReplicaAppType, index, "stop");
 }
 
 bool killer_handler_shell::kill_zookeeper(int index)
@@ -112,7 +114,8 @@ bool killer_handler_shell::start_meta(int index)
 
 bool killer_handler_shell::start_replica(int index)
 {
-    std::string cmd = generate_cmd(index, "replica", "start");
+    std::string cmd =
+        generate_cmd(index, dsn::replication::replication_options::kReplicaAppType, "start");
 
     int res = system(cmd.c_str());
     LOG_INFO("start replica command: {}", cmd);
@@ -175,7 +178,7 @@ killer_handler_shell::generate_cmd(int index, const std::string &job, const std:
         res << " stop_onebox_instance ";
     else
         res << " start_onebox_instance ";
-    if (job == "replica")
+    if (job == dsn::replication::replication_options::kReplicaAppType)
         res << "-r " << index;
     else
         res << "-m " << index;
@@ -188,5 +191,5 @@ bool killer_handler_shell::check(const std::string &job, int index, const std::s
     // not implement, just return true
     return true;
 }
-}
-} // end namespace
+} // namespace test
+} // namespace pegasus

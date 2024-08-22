@@ -20,14 +20,14 @@
 #include "gtest/gtest.h"
 
 namespace dsn {
-namespace replication {
+namespace utils {
 
 class throttling_controller_test : public ::testing::Test
 {
 public:
     void test_parse_env_basic()
     {
-        throttling_controller cntl;
+        utils::throttling_controller cntl;
         std::string parse_err;
         bool env_changed = false;
         std::string old_value;
@@ -77,7 +77,7 @@ public:
 
     void test_parse_env_multiplier()
     {
-        throttling_controller cntl;
+        utils::throttling_controller cntl;
         std::string parse_err;
         bool env_changed = false;
         std::string old_value;
@@ -85,18 +85,16 @@ public:
         struct test_case_1
         {
             std::string env;
-
             int64_t delay_units;
             int64_t delay_ms;
             int64_t reject_units;
             int64_t reject_ms;
         } test_cases_1[] = {
-            {"20K*delay*100", 5000 + 1, 100, 0, 0},
-            {"20M*delay*100", 5000 * 1000 + 1, 100, 0, 0},
-            {"20M*delay*100,20M*reject*100", 5000 * 1000 + 1, 100, 5000 * 1000 + 1, 100},
-
+            {"20K*delay*100", (5 << 10) + 1, 100, 0, 0},
+            {"20M*delay*100", (5 << 20) + 1, 100, 0, 0},
+            {"20M*delay*100,20M*reject*100", (5 << 20) + 1, 100, (5 << 20) + 1, 100},
             // throttling size exceeds int32_t max value
-            {"80000M*delay*100", int64_t(20) * 1000 * 1000 * 1000 + 1, 100, 0, 0},
+            {"80000M*delay*100", (20000ULL << 20) + 1, 100, 0, 0},
         };
         for (const auto &tc : test_cases_1) {
             ASSERT_TRUE(cntl.parse_from_env(tc.env, 4, parse_err, env_changed, old_value));
@@ -112,7 +110,11 @@ public:
         // invalid argument
 
         std::string test_cases_2[] = {
-            "20m*delay*100", "20B*delay*100", "20KB*delay*100", "20Mb*delay*100", "20MB*delay*100",
+            "20m*delay*100",
+            "20B*delay*100",
+            "20KB*delay*100",
+            "20Mb*delay*100",
+            "20MB*delay*100",
         };
         for (const std::string &tc : test_cases_2) {
             ASSERT_FALSE(cntl.parse_from_env(tc, 4, parse_err, env_changed, old_value));
@@ -127,5 +129,5 @@ TEST_F(throttling_controller_test, parse_env_basic) { test_parse_env_basic(); }
 
 TEST_F(throttling_controller_test, parse_env_multiplier) { test_parse_env_multiplier(); }
 
-} // namespace replication
+} // namespace utils
 } // namespace dsn

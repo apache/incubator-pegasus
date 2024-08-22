@@ -198,6 +198,6 @@ void test_injector::install(service_spec &svc_spec)
 }
 
 test_injector::test_injector(const char *name) : toollet(name) {}
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

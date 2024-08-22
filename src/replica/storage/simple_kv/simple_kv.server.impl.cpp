@@ -329,6 +329,6 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
         }
     }
 }
-}
-}
-} // namespace
+} // namespace application
+} // namespace replication
+} // namespace dsn

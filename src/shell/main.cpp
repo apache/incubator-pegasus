@@ -60,10 +60,16 @@ bool help_info(command_executor *e, shell_context *sc, arguments args)
 
 static command_executor commands[] = {
     {
-        "help", "print help info", "", help_info,
+        "help",
+        "print help info",
+        "",
+        help_info,
     },
     {
-        "version", "get the shell version", "", version,
+        "version",
+        "get the shell version",
+        "",
+        version,
     },
     {
         "cluster_info",
@@ -106,13 +112,22 @@ static command_executor commands[] = {
         create_app,
     },
     {
-        "drop", "drop an app", "<app_name> [-r|--reserve_seconds num]", drop_app,
+        "drop",
+        "drop an app",
+        "<app_name> [-r|--reserve_seconds num]",
+        drop_app,
     },
     {
-        "recall", "recall an app", "<app_id> [new_app_name]", recall_app,
+        "recall",
+        "recall an app",
+        "<app_id> [new_app_name]",
+        recall_app,
     },
     {
-        "rename", "rename an app", "<old_app_name> <new_app_name>", rename_app,
+        "rename",
+        "rename an app",
+        "<old_app_name> <new_app_name>",
+        rename_app,
     },
     {
         "set_meta_level",
@@ -121,7 +136,10 @@ static command_executor commands[] = {
         set_meta_level,
     },
     {
-        "get_meta_level", "get the meta function level", "", get_meta_level,
+        "get_meta_level",
+        "get the meta function level",
+        "",
+        get_meta_level,
     },
     {
         "balance",
@@ -145,7 +163,10 @@ static command_executor commands[] = {
         use_app_as_current,
     },
     {
-        "cc", "change to the specified cluster", "[cluster_name]", cc_command,
+        "cc",
+        "change to the specified cluster",
+        "[cluster_name]",
+        cc_command,
     },
     {
         "escape_all",
@@ -166,7 +187,10 @@ static command_executor commands[] = {
         calculate_hash_value,
     },
     {
-        "set", "set value", "<hash_key> <sort_key> <value> [ttl_in_seconds]", data_operations,
+        "set",
+        "set value",
+        "<hash_key> <sort_key> <value> [ttl_in_seconds]",
+        data_operations,
     },
     {
         "multi_set",
@@ -175,7 +199,10 @@ static command_executor commands[] = {
         data_operations,
     },
     {
-        "get", "get value", "<hash_key> <sort_key>", data_operations,
+        "get",
+        "get value",
+        "<hash_key> <sort_key>",
+        data_operations,
     },
     {
         "multi_get",
@@ -200,7 +227,10 @@ static command_executor commands[] = {
         data_operations,
     },
     {
-        "del", "delete a key", "<hash_key> <sort_key>", data_operations,
+        "del",
+        "delete a key",
+        "<hash_key> <sort_key>",
+        data_operations,
     },
     {
         "multi_del",
@@ -254,13 +284,22 @@ static command_executor commands[] = {
         data_operations,
     },
     {
-        "exist", "check value exist", "<hash_key> <sort_key>", data_operations,
+        "exist",
+        "check value exist",
+        "<hash_key> <sort_key>",
+        data_operations,
     },
     {
-        "count", "get sort key count for a single hash key", "<hash_key>", data_operations,
+        "count",
+        "get sort key count for a single hash key",
+        "<hash_key>",
+        data_operations,
     },
     {
-        "ttl", "query ttl for a specific key", "<hash_key> <sort_key>", data_operations,
+        "ttl",
+        "query ttl for a specific key",
+        "<hash_key> <sort_key>",
+        data_operations,
     },
     {
         "hash_scan",
@@ -333,20 +372,20 @@ static command_executor commands[] = {
     {
         "remote_command",
         "send remote command to servers",
-        "[-t all|meta-server|replica-server] [-r|--resolve_ip] [-l ip:port,ip:port...]"
-        "<command> [arguments...]",
+        "[-t all|meta-server|replica-server] [-r|--resolve_ip] [-l host:port,host:port...]"
+        " <command> [arguments...]",
         remote_command,
     },
     {
         "server_info",
         "get info of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] [-r|--resolve_ip]",
+        "[-t all|meta-server|replica-server] [-l host:port,host:port...] [-r|--resolve_ip]",
         server_info,
     },
     {
         "server_stat",
         "get stat of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] [-r|--resolve_ip]",
+        "[-t all|meta-server|replica-server] [-l host:port,host:port...] [-r|--resolve_ip]",
         server_stat,
     },
     {
@@ -359,11 +398,14 @@ static command_executor commands[] = {
     {
         "flush_log",
         "flush log of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...][-r|--resolve_ip]",
+        "[-t all|meta-server|replica-server] [-l host:port,host:port...][-r|--resolve_ip]",
         flush_log,
     },
     {
-        "local_get", "get value from local db", "<db_path> <hash_key> <sort_key>", local_get,
+        "local_get",
+        "get value from local db",
+        "<db_path> <hash_key> <sort_key>",
+        local_get,
     },
     {
         "rdb_key_str2hex",
@@ -413,11 +455,16 @@ static command_executor commands[] = {
         "<-c|--backup_history_cnt num>",
         add_backup_policy,
     },
-    {"ls_backup_policy", "list the names of the subsistent backup policies", "", ls_backup_policy},
+    {
+        "ls_backup_policy",
+        "list the names of the subsistent backup policies",
+        "[-j|--json]",
+        ls_backup_policy,
+    },
     {
         "query_backup_policy",
         "query subsistent backup policy and last backup infos",
-        "<-p|--policy_name p1,p2...> [-b|--backup_info_cnt num]",
+        "<-p|--policy_name p1,p2...> [-b|--backup_info_cnt num] [-j|--json]",
         query_backup_policy,
     },
     {
@@ -431,7 +478,7 @@ static command_executor commands[] = {
     {
         "disable_backup_policy",
         "stop policy continue backup",
-        "<-p|--policy_name str>",
+        disable_backup_policy_help.c_str(),
         disable_backup_policy,
     },
     {
@@ -445,7 +492,8 @@ static command_executor commands[] = {
         "restore app from backup media",
         "<-c|--old_cluster_name str> <-p|--old_policy_name str> <-a|--old_app_name str> "
         "<-i|--old_app_id id> <-t|--timestamp/backup_id timestamp> "
-        "<-b|--backup_provider_type str> [-n|--new_app_name str] [-s|--skip_bad_partition]",
+        "<-b|--backup_provider_type str> [-n|--new_app_name str] [-s|--skip_bad_partition] "
+        "[-r|--restore_path str]",
         restore,
     },
     {
@@ -455,16 +503,28 @@ static command_executor commands[] = {
         query_restore_status,
     },
     {
-        "get_app_envs", "get current app envs", "[-j|--json]", get_app_envs,
+        "get_app_envs",
+        "get current app envs",
+        "[-j|--json]",
+        get_app_envs,
     },
     {
-        "set_app_envs", "set current app envs", "<key> <value> [key value...]", set_app_envs,
+        "set_app_envs",
+        "set current app envs",
+        "<key> <value> [key value...]",
+        set_app_envs,
     },
     {
-        "del_app_envs", "delete current app envs", "<key> [key...]", del_app_envs,
+        "del_app_envs",
+        "delete current app envs",
+        "<key> [key...]",
+        del_app_envs,
     },
     {
-        "clear_app_envs", "clear current app envs", "[-a|--all] [-p|--prefix str]", clear_app_envs,
+        "clear_app_envs",
+        "clear current app envs",
+        "[-a|--all] [-p|--prefix str]",
+        clear_app_envs,
     },
     {
         "ddd_diagnose",
@@ -473,7 +533,11 @@ static command_executor commands[] = {
         "[-s|--skip_prompt] [-o|--output file_name]",
         ddd_diagnose,
     },
-    {"add_dup", "add duplication", "<app_name> <remote_cluster_name> [-s|--sst]", add_dup},
+    {"add_dup",
+     "add duplication",
+     "<app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str] "
+     "[-r|--remote_replica_count num]",
+     add_dup},
     {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
@@ -496,10 +560,16 @@ static command_executor commands[] = {
         query_bulk_load_status,
     },
     {
-        "pause_bulk_load", "pause app bulk load", "<-a --app_name str>", pause_bulk_load,
+        "pause_bulk_load",
+        "pause app bulk load",
+        "<-a --app_name str>",
+        pause_bulk_load,
     },
     {
-        "restart_bulk_load", "restart app bulk load", "<-a --app_name str>", restart_bulk_load,
+        "restart_bulk_load",
+        "restart app bulk load",
+        "<-a --app_name str>",
+        restart_bulk_load,
     },
     {
         "cancel_bulk_load",
@@ -508,7 +578,10 @@ static command_executor commands[] = {
         cancel_bulk_load,
     },
     {
-        "clear_bulk_load", "clear app bulk load result", "<-a --app_name str>", clear_bulk_load,
+        "clear_bulk_load",
+        "clear app bulk load result",
+        "<-a --app_name str>",
+        clear_bulk_load,
     },
     {
         "detect_hotkey",
@@ -533,10 +606,47 @@ static command_executor commands[] = {
         set_max_replica_count,
     },
     {
-        "exit", "exit shell", "", exit_shell,
+        "local_partition_split",
+        "Split the local partitions offline. It's helpful to split the table which has large "
+        "amount of data but with a few partitions into more partitions to improve the throughput "
+        "and lower latency. Note:\n"
+        "  * Make sure the table to be split is in HEALTH status\n"
+        "  * Stop the replica servers before executing this command\n"
+        "  * Execute this tool on all replica servers which have the partitions of the "
+        "    <src_app_id>\n"
+        "  * <src_data_dirs> and <dst_data_dirs> are ',' split data directories, and have the same "
+        "    size\n"
+        "  * <src_app_id> is the app id to be split\n"
+        "  * <dst_app_id> is the new app id after splitting, make sure it's not exist in the "
+        "    cluster\n"
+        "  * <src_partition_ids> is the partitions to be split, it's allowed to specify partial "
+        "    partition ids on a single replica server once, but make sure the union set is all "
+        "    the partitions of the <src_app_id> among all replica servers using this tool\n"
+        "  * <src_partition_count> is the partition count of the <src_app_id>\n"
+        "  * <dst_partition_count> is the partition count of the <dst_app_id>, it must be 2^n "
+        "    times of <src_app_id> where n > 1\n"
+        "  * <dst_app_name> is the new app name after splitting\n"
+        "  * --post_full_compact indicate whether do the post full compact for the new partitions\n"
+        "  * --post_count indicate whether do the post data counting for the new partitions\n"
+        "  * --threads_per_data_dir indicate the threads count for each data directory\n"
+        "  * --threads_per_partition indicate the threads count for each partition\n"
+        "  * Use 'recover' tool to build the metadata of the new table on Zookeeper after "
+        "    splitting\n"
+        "  * Use 'rename' tool to rename the tables if needed\n",
+        local_partition_split_help.c_str(),
+        local_partition_split,
     },
     {
-        nullptr, nullptr, nullptr, nullptr,
+        "exit",
+        "exit shell",
+        "",
+        exit_shell,
+    },
+    {
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
     }};
 
 void print_help(command_executor *e, size_t name_width, size_t option_width)
@@ -664,9 +774,8 @@ static void freeHintsCallback(void *ptr) { sdsfree((sds)ptr); }
                                     "",
                                     "");
 
-    dsn::replication::replica_helper::load_meta_servers(s_global_context.meta_list,
-                                                        dsn::PEGASUS_CLUSTER_SECTION_NAME.c_str(),
-                                                        cluster_name.c_str());
+    dsn::replication::replica_helper::load_servers_from_config(
+        dsn::PEGASUS_CLUSTER_SECTION_NAME, cluster_name, s_global_context.meta_list);
     s_global_context.ddl_client =
         std::make_unique<dsn::replication::replication_ddl_client>(s_global_context.meta_list);
 

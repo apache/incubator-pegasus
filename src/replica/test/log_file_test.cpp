@@ -63,14 +63,15 @@ TEST_P(log_file_test, commit_log_blocks)
     for (int i = 0; i < 5; i++) {
         appender->append_mutation(create_test_mutation(1 + i, "test"), nullptr);
     }
-    auto tsk = _logf->commit_log_blocks(*appender,
-                                        LPC_WRITE_REPLICATION_LOG_PRIVATE,
-                                        nullptr,
-                                        [&](error_code err, size_t sz) {
-                                            ASSERT_EQ(err, ERR_OK);
-                                            ASSERT_EQ(sz, appender->size());
-                                        },
-                                        0);
+    auto tsk = _logf->commit_log_blocks(
+        *appender,
+        LPC_WRITE_REPLICATION_LOG_PRIVATE,
+        nullptr,
+        [&](error_code err, size_t sz) {
+            ASSERT_EQ(err, ERR_OK);
+            ASSERT_EQ(sz, appender->size());
+        },
+        0);
     tsk->wait();
     ASSERT_EQ(tsk->get_aio_context()->buffer_size, appender->size());
     ASSERT_EQ(tsk->get_aio_context()->file_offset,
@@ -80,17 +81,19 @@ TEST_P(log_file_test, commit_log_blocks)
     size_t written_sz = appender->size();
     appender = std::make_shared<log_appender>(_start_offset + written_sz);
     for (int i = 0; i < 1024; i++) { // more than DEFAULT_MAX_BLOCK_BYTES
-        appender->append_mutation(create_test_mutation(1 + i, std::string(1024, 'a')), nullptr);
+        appender->append_mutation(create_test_mutation(1 + i, std::string(1024, 'a').c_str()),
+                                  nullptr);
     }
     ASSERT_GT(appender->all_blocks().size(), 1);
-    tsk = _logf->commit_log_blocks(*appender,
-                                   LPC_WRITE_REPLICATION_LOG_PRIVATE,
-                                   nullptr,
-                                   [&](error_code err, size_t sz) {
-                                       ASSERT_EQ(err, ERR_OK);
-                                       ASSERT_EQ(sz, appender->size());
-                                   },
-                                   0);
+    tsk = _logf->commit_log_blocks(
+        *appender,
+        LPC_WRITE_REPLICATION_LOG_PRIVATE,
+        nullptr,
+        [&](error_code err, size_t sz) {
+            ASSERT_EQ(err, ERR_OK);
+            ASSERT_EQ(sz, appender->size());
+        },
+        0);
     tsk->wait();
     ASSERT_EQ(tsk->get_aio_context()->buffer_size, appender->size());
     ASSERT_EQ(tsk->get_aio_context()->file_offset, appender->start_offset() - _start_offset);

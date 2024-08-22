@@ -24,8 +24,12 @@
  * THE SOFTWARE.
  */
 
+#include <fmt/core.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <string.h>
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <type_traits>
@@ -42,7 +46,7 @@
 #include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_data.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/command_manager.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -63,6 +67,7 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : server_load_bal
 {
     _app_balance_policy = std::make_unique<app_balance_policy>(_svc);
     _cluster_balance_policy = std::make_unique<cluster_balance_policy>(_svc);
+    _all_replca_infos_collected = false;
 
     ::memset(t_operation_counters, 0, sizeof(t_operation_counters));
 }
@@ -71,39 +76,35 @@ greedy_load_balancer::~greedy_load_balancer() {}
 
 void greedy_load_balancer::register_ctrl_commands()
 {
-    _get_balance_operation_count = dsn::command_manager::instance().register_command(
-        {"meta.lb.get_balance_operation_count"},
-        "meta.lb.get_balance_operation_count [total | move_pri | copy_pri | copy_sec | detail]",
-        "get balance operation count",
+    _get_balance_operation_count = dsn::command_manager::instance().register_single_command(
+        "meta.lb.get_balance_operation_count",
+        "Get balance operation count",
+        "[total | move_pri | copy_pri | copy_sec | detail]",
         [this](const std::vector<std::string> &args) { return get_balance_operation_count(args); });
 }
 
 std::string greedy_load_balancer::get_balance_operation_count(const std::vector<std::string> &args)
 {
-    if (args.empty()) {
-        return std::string("total=" + std::to_string(t_operation_counters[ALL_COUNT]));
+    nlohmann::json info;
+    if (args.size() > 1) {
+        info["error"] = fmt::format("invalid arguments");
+    } else if (args.empty() || args[0] == "total") {
+        info["total"] = t_operation_counters[ALL_COUNT];
+    } else if (args[0] == "move_pri") {
+        info["move_pri"] = t_operation_counters[MOVE_PRI_COUNT];
+    } else if (args[0] == "copy_pri") {
+        info["copy_pri"] = t_operation_counters[COPY_PRI_COUNT];
+    } else if (args[0] == "copy_sec") {
+        info["copy_sec"] = t_operation_counters[COPY_SEC_COUNT];
+    } else if (args[0] == "detail") {
+        info["move_pri"] = t_operation_counters[MOVE_PRI_COUNT];
+        info["copy_pri"] = t_operation_counters[COPY_PRI_COUNT];
+        info["copy_sec"] = t_operation_counters[COPY_SEC_COUNT];
+        info["total"] = t_operation_counters[ALL_COUNT];
+    } else {
+        info["error"] = fmt::format("invalid arguments");
     }
-
-    if (args[0] == "total") {
-        return std::string("total=" + std::to_string(t_operation_counters[ALL_COUNT]));
-    }
-
-    std::string result("unknown");
-    if (args[0] == "move_pri")
-        result = std::string("move_pri=" + std::to_string(t_operation_counters[MOVE_PRI_COUNT]));
-    else if (args[0] == "copy_pri")
-        result = std::string("copy_pri=" + std::to_string(t_operation_counters[COPY_PRI_COUNT]));
-    else if (args[0] == "copy_sec")
-        result = std::string("copy_sec=" + std::to_string(t_operation_counters[COPY_SEC_COUNT]));
-    else if (args[0] == "detail")
-        result = std::string("move_pri=" + std::to_string(t_operation_counters[MOVE_PRI_COUNT]) +
-                             ",copy_pri=" + std::to_string(t_operation_counters[COPY_PRI_COUNT]) +
-                             ",copy_sec=" + std::to_string(t_operation_counters[COPY_SEC_COUNT]) +
-                             ",total=" + std::to_string(t_operation_counters[ALL_COUNT]));
-    else
-        result = std::string("ERR: invalid arguments");
-
-    return result;
+    return info.dump(2);
 }
 
 void greedy_load_balancer::score(meta_view view, double &primary_stddev, double &total_stddev)
@@ -144,7 +145,7 @@ void greedy_load_balancer::score(meta_view view, double &primary_stddev, double 
 
 bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
 {
-    dsn::rpc_address n = ns.addr();
+    const auto &n = ns.host_port();
     return ns.for_each_partition([this, n](const dsn::gpid &pid) {
         config_context &cc = *get_config_context(*(t_global_view->apps), pid);
         if (cc.find_from_serving(n) == cc.serving.end()) {
@@ -162,7 +163,8 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 
     for (auto &kv : *(t_global_view->nodes)) {
         node_state &ns = kv.second;
-        if (!all_replica_infos_collected(ns)) {
+        _all_replca_infos_collected = all_replica_infos_collected(ns);
+        if (!_all_replca_infos_collected) {
             return;
         }
     }
@@ -233,6 +235,13 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
         default:
             CHECK(false, "");
         }
+    }
+
+    if (!_all_replca_infos_collected) {
+        counters[ALL_COUNT] = -1;
+        LOG_DEBUG(
+            "balance checker operation count = {}, due to meta server hasn't collected all replica",
+            counters[ALL_COUNT]);
     }
 
     ::memcpy(t_operation_counters, counters, sizeof(counters));

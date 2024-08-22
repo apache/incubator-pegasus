@@ -23,6 +23,7 @@
 #include <string>
 
 #include "common//duplication_common.h"
+#include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
 #include "replica/replica_base.h"
@@ -38,12 +39,13 @@ namespace replication {
 class duplication_progress
 {
 public:
-    // check if checkpoint has catch up with `_start_point_decree`
+    // Check if checkpoint has covered `_min_checkpoint_decree`.
     bool checkpoint_has_prepared{false};
-    // the maximum decree that's been persisted in meta server
+
+    // The max decree that has been persisted in the meta server.
     decree confirmed_decree{invalid_decree};
 
-    // the maximum decree that's been duplicated to remote.
+    // The max decree that has been duplicated to the remote cluster.
     decree last_decree{invalid_decree};
 
     duplication_progress &set_last_decree(decree d)
@@ -102,6 +104,8 @@ public:
 
     const std::string &remote_cluster_name() const { return _remote_cluster_name; }
 
+    const std::string &remote_app_name() const { return _remote_app_name; }
+
     // Thread-safe
     duplication_progress progress() const
     {
@@ -137,7 +141,28 @@ public:
     // For metric "dup.pending_mutations_count"
     uint64_t get_pending_mutations_count() const;
 
-    duplication_status::type status() const { return _status; };
+    duplication_status::type status() const { return _status; }
+
+    void set_duplication_plog_checking(bool checking);
+
+    // Encode current progress of this duplication into json.
+    template <typename TWriter>
+    void encode_progress(TWriter &writer) const
+    {
+        writer.StartObject();
+
+        JSON_ENCODE_OBJ(writer, dupid, _id);
+        JSON_ENCODE_OBJ(writer, remote_cluster_name, _remote_cluster_name);
+        JSON_ENCODE_OBJ(writer, remote_app_name, _remote_app_name);
+
+        {
+            zauto_read_lock l(_lock);
+            JSON_ENCODE_OBJ(writer, replica_confirmed_decree, _progress.last_decree);
+            JSON_ENCODE_OBJ(writer, meta_persisted_decree, _progress.confirmed_decree);
+        }
+
+        writer.EndObject();
+    }
 
 private:
     friend class duplication_test_base;
@@ -146,6 +171,7 @@ private:
     friend class load_from_private_log_test;
     friend class ship_mutation_test;
 
+    friend class mutation_batch;
     friend class load_mutation;
     friend class ship_mutation;
 
@@ -153,12 +179,16 @@ private:
 
     const dupid_t _id;
     const std::string _remote_cluster_name;
+    const std::string _remote_app_name;
 
     replica *_replica;
     replica_stub *_stub;
     dsn::task_tracker _tracker;
 
-    decree _start_point_decree = invalid_decree;
+    // The min decree that should be covered by the checkpoint which is triggered by the
+    // newly added duplication.
+    decree _min_checkpoint_decree{invalid_decree};
+
     duplication_status::type _status{duplication_status::DS_INIT};
     std::atomic<duplication_fail_mode::type> _fail_mode{duplication_fail_mode::FAIL_SLOW};
 

@@ -36,6 +36,8 @@
 #include "consensus_types.h"
 #include "replica_admin_types.h"
 #include "common/replication_enums.h"
+#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 
 namespace dsn {
 namespace replication {
@@ -49,14 +51,25 @@ typedef int64_t decree;
 #define invalid_offset (-1LL)
 #define invalid_signature 0
 
+inline bool is_primary(const partition_configuration &pc, const host_port &node)
+{
+    return node && pc.hp_primary == node;
+}
 inline bool is_primary(const partition_configuration &pc, const rpc_address &node)
 {
-    return !node.is_invalid() && pc.primary == node;
+    return node && pc.primary == node;
+}
+inline bool is_secondary(const partition_configuration &pc, const host_port &node)
+{
+    return node && utils::contains(pc.hp_secondaries, node);
 }
 inline bool is_secondary(const partition_configuration &pc, const rpc_address &node)
 {
-    return !node.is_invalid() &&
-           std::find(pc.secondaries.begin(), pc.secondaries.end(), node) != pc.secondaries.end();
+    return node && utils::contains(pc.secondaries, node);
+}
+inline bool is_member(const partition_configuration &pc, const host_port &node)
+{
+    return is_primary(pc, node) || is_secondary(pc, node);
 }
 inline bool is_member(const partition_configuration &pc, const rpc_address &node)
 {
@@ -66,30 +79,50 @@ inline bool is_partition_config_equal(const partition_configuration &pc1,
                                       const partition_configuration &pc2)
 {
     // secondaries no need to be same order
-    for (const rpc_address &addr : pc1.secondaries)
-        if (!is_secondary(pc2, addr))
+    for (const auto &pc1_secondary : pc1.hp_secondaries) {
+        if (!is_secondary(pc2, pc1_secondary)) {
             return false;
+        }
+    }
     // last_drops is not considered into equality check
     return pc1.ballot == pc2.ballot && pc1.pid == pc2.pid &&
            pc1.max_replica_count == pc2.max_replica_count && pc1.primary == pc2.primary &&
-           pc1.secondaries.size() == pc2.secondaries.size() &&
+           pc1.hp_primary == pc2.hp_primary && pc1.secondaries.size() == pc2.secondaries.size() &&
+           pc1.hp_secondaries.size() == pc2.hp_secondaries.size() &&
            pc1.last_committed_decree == pc2.last_committed_decree;
 }
 
 class replica_helper
 {
 public:
-    static bool remove_node(::dsn::rpc_address node,
-                            /*inout*/ std::vector<::dsn::rpc_address> &nodeList);
-    static bool get_replica_config(const partition_configuration &partition_config,
-                                   ::dsn::rpc_address node,
-                                   /*out*/ replica_configuration &replica_config);
-    // true if meta_list's value of config is valid, otherwise return false
-    static bool load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &servers,
-                                  const char *section = "meta_server",
-                                  const char *key = "server_list");
+    template <typename T>
+    static bool remove_node(const T node,
+                            /*inout*/ std::vector<T> &nodes)
+    {
+        auto it = std::find(nodes.begin(), nodes.end(), node);
+        if (it != nodes.end()) {
+            nodes.erase(it);
+            return true;
+        }
+        return false;
+    }
+    static bool get_replica_config(const partition_configuration &pc,
+                                   const ::dsn::host_port &node,
+                                   /*out*/ replica_configuration &rc);
+
+    // Return true if 'server_list' is a valid comma-separated list of servers, otherwise return
+    // false. The result is filled into 'servers' if success.
+    static bool parse_server_list(const char *server_list,
+                                  /*out*/ std::vector<dsn::host_port> &servers);
+
+    // Return true if load server list from config value located in 'section' and 'key', the value
+    // should be a valid comma-separated list of servers, otherwise return false. The result is
+    // filled into 'servers' if success.
+    static bool load_servers_from_config(const std::string &section,
+                                         const std::string &key,
+                                         /*out*/ std::vector<dsn::host_port> &servers);
 };
-}
-} // namespace
+} // namespace replication
+} // namespace dsn
 
 #endif

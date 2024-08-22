@@ -19,11 +19,11 @@
 
 #include "server/pegasus_mutation_duplicator.h"
 
-#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
 #include <memory>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -42,7 +42,6 @@
 #include "runtime/message_utils.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "runtime/rpc/rpc_message.h"
-#include "server/pegasus_write_service.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
@@ -118,12 +117,13 @@ public:
 
                 total_shipped_size +=
                     rpc.dsn_request()->body_size() + rpc.dsn_request()->header->hdr_length;
-                duplicator_impl->on_duplicate_reply(get_hash(rpc),
-                                                    [total_shipped_size](size_t final_size) {
-                                                        ASSERT_EQ(total_shipped_size, final_size);
-                                                    },
-                                                    rpc,
-                                                    dsn::ERR_OK);
+                duplicator_impl->on_duplicate_reply(
+                    get_hash(rpc),
+                    [total_shipped_size](size_t final_size) {
+                        ASSERT_EQ(total_shipped_size, final_size);
+                    },
+                    rpc,
+                    dsn::ERR_OK);
 
                 // schedule next round
                 _tracker.wait_outstanding_tasks();
@@ -192,7 +192,8 @@ public:
 
             // with other error
             rpc.response().error = PERR_INVALID_ARGUMENT;
-            duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_OK);
+            duplicator_impl->on_duplicate_reply(
+                get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_OK);
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicator_impl->_inflights.size(), 1);
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 1);
@@ -262,7 +263,8 @@ public:
             auto rpc_list = std::move(duplicate_rpc::mail_box());
             for (const auto &rpc : rpc_list) {
                 rpc.response().error = dsn::ERR_OK;
-                duplicator_impl->on_duplicate_reply(get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_OK);
+                duplicator_impl->on_duplicate_reply(
+                    get_hash(rpc), [](size_t) {}, rpc, dsn::ERR_OK);
             }
             _tracker.wait_outstanding_tasks();
             ASSERT_EQ(duplicate_rpc::mail_box().size(), 0);
@@ -276,9 +278,9 @@ public:
         auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
         duplicator->set_task_environment(&_env);
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
-        ASSERT_EQ(duplicator_impl->_remote_cluster_id, 2);
-        ASSERT_EQ(duplicator_impl->_remote_cluster, "onebox2");
-        ASSERT_EQ(get_current_cluster_id(), 1);
+        ASSERT_EQ(2, duplicator_impl->_remote_cluster_id);
+        ASSERT_STREQ("onebox2", duplicator_impl->_remote_cluster.c_str());
+        ASSERT_EQ(1, get_current_dup_cluster_id());
     }
 
 private:

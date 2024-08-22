@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <atomic>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -33,6 +34,7 @@
 #include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
+#include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
@@ -55,6 +57,7 @@
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
+#include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/defer.h"
 #include "utils/env.h"
@@ -64,10 +67,14 @@
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 #include "utils/string_conv.h"
+#include "utils/synchronize.h"
 #include "utils/test_macros.h"
 
 DSN_DECLARE_bool(fd_disabled);
 DSN_DECLARE_string(cold_backup_root);
+DSN_DECLARE_uint32(mutation_2pc_min_replica_count);
+
+using pegasus::AssertEventually;
 
 namespace dsn {
 namespace replication {
@@ -89,6 +96,7 @@ public:
         mock_app_info();
         _mock_replica =
             stub->generate_replica_ptr(_app_info, _pid, partition_status::PS_PRIMARY, 1);
+        _mock_replica->init_private_log(_log_dir);
 
         // set FLAGS_cold_backup_root manually.
         // FLAGS_cold_backup_root is set by configuration "replication.cold_backup_root",
@@ -141,7 +149,7 @@ public:
     {
         _app_info.app_id = 2;
         _app_info.app_name = "replica_test";
-        _app_info.app_type = "replica";
+        _app_info.app_type = replication_options::kReplicaAppType;
         _app_info.is_stateful = true;
         _app_info.max_replica_count = 3;
         _app_info.partition_count = 8;
@@ -203,6 +211,25 @@ public:
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
 
+    void test_trigger_manual_emergency_checkpoint(const decree min_checkpoint_decree,
+                                                  const error_code expected_err,
+                                                  std::function<void()> callback = {})
+    {
+        dsn::utils::notify_event op_completed;
+        _mock_replica->async_trigger_manual_emergency_checkpoint(
+            min_checkpoint_decree, 0, [&](error_code actual_err) {
+                ASSERT_EQ(expected_err, actual_err);
+
+                if (callback) {
+                    callback();
+                }
+
+                op_completed.notify();
+            });
+
+        op_completed.wait();
+    }
+
     bool has_gpid(gpid &pid) const
     {
         for (const auto &node : stub->_fs_manager.get_dir_nodes()) {
@@ -226,8 +253,8 @@ public:
         dsn::app_info info;
         replica_app_info replica_info(&info);
 
-        auto path = dsn::utils::filesystem::path_combine(_mock_replica->_dir,
-                                                         dsn::replication::replica::kAppInfo);
+        auto path = dsn::utils::filesystem::path_combine(
+            _mock_replica->_dir, dsn::replication::replica_app_info::kAppInfo);
         std::cout << "the path of .app-info file is " << path << std::endl;
 
         // load new max_replica_count from file
@@ -270,6 +297,7 @@ TEST_P(replica_test, write_size_limited)
 
     auto write_request = dsn::message_ex::create_request(RPC_TEST);
     auto cleanup = dsn::defer([=]() { delete write_request; });
+    header.context.u.is_forwarded = false;
     write_request->header = &header;
     std::unique_ptr<tools::sim_network_provider> sim_net(
         new tools::sim_network_provider(nullptr, nullptr));
@@ -312,9 +340,7 @@ TEST_P(replica_test, query_data_version_test)
         std::string expected_response_json;
     } tests[] = {{"", http_status_code::kBadRequest, "app_id should not be empty"},
                  {"wrong", http_status_code::kBadRequest, "invalid app_id=wrong"},
-                 {"2",
-                  http_status_code::kOk,
-                  R"({"1":{"data_version":"1"}})"},
+                 {"2", http_status_code::kOk, R"({"1":{"data_version":"1"}})"},
                  {"4", http_status_code::kNotFound, "app_id=4 not found"}};
     for (const auto &test : tests) {
         http_request req;
@@ -424,28 +450,50 @@ TEST_P(replica_test, test_replica_backup_and_restore_with_specific_path)
 
 TEST_P(replica_test, test_trigger_manual_emergency_checkpoint)
 {
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(100), ERR_OK);
-    ASSERT_TRUE(is_checkpointing());
+    // There is only one replica for the unit test.
+    PRESERVE_FLAG(mutation_2pc_min_replica_count);
+    FLAGS_mutation_2pc_min_replica_count = 1;
+
+    // Initially the mutation log is empty.
+    ASSERT_EQ(0, _mock_replica->last_applied_decree());
+    ASSERT_EQ(0, _mock_replica->last_durable_decree());
+
+    // Commit at least an empty write to make the replica become non-empty.
+    _mock_replica->update_expect_last_durable_decree(1);
+    test_trigger_manual_emergency_checkpoint(1, ERR_OK);
+    _mock_replica->tracker()->wait_outstanding_tasks();
+
+    // Committing multiple empty writes (retry multiple times) might make the last
+    // applied decree greater than 1.
+    ASSERT_LE(1, _mock_replica->last_applied_decree());
+    ASSERT_EQ(1, _mock_replica->last_durable_decree());
+
+    test_trigger_manual_emergency_checkpoint(
+        100, ERR_OK, [this]() { ASSERT_TRUE(is_checkpointing()); });
     _mock_replica->update_last_durable_decree(100);
 
-    // test no need start checkpoint because `old_decree` < `last_durable`
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(100), ERR_OK);
-    ASSERT_FALSE(is_checkpointing());
+    // There's no need to trigger checkpoint since min_checkpoint_decree <= last_durable_decree.
+    test_trigger_manual_emergency_checkpoint(
+        100, ERR_OK, [this]() { ASSERT_FALSE(is_checkpointing()); });
 
-    // test has existed running task
+    // There's already an existing running manual emergency checkpoint task.
     force_update_checkpointing(true);
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_BUSY);
-    ASSERT_TRUE(is_checkpointing());
-    // test running task completed
+    test_trigger_manual_emergency_checkpoint(
+        101, ERR_BUSY, [this]() { ASSERT_TRUE(is_checkpointing()); });
+
+    // Wait until the running task is completed.
     _mock_replica->tracker()->wait_outstanding_tasks();
     ASSERT_FALSE(is_checkpointing());
 
-    // test exceed max concurrent count
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_OK);
+    // The number of concurrent tasks exceeds the limit.
+    test_trigger_manual_emergency_checkpoint(101, ERR_OK);
     force_update_checkpointing(false);
+
+    PRESERVE_FLAG(max_concurrent_manual_emergency_checkpointing_count);
     FLAGS_max_concurrent_manual_emergency_checkpointing_count = 1;
-    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_TRY_AGAIN);
-    ASSERT_FALSE(is_checkpointing());
+
+    test_trigger_manual_emergency_checkpoint(
+        101, ERR_TRY_AGAIN, [this]() { ASSERT_FALSE(is_checkpointing()); });
     _mock_replica->tracker()->wait_outstanding_tasks();
 }
 
@@ -543,8 +591,8 @@ void replica_test::test_auto_trash(error_code ec)
     }
     ASSERT_EQ(moved_to_err_path, found_err_path);
     ASSERT_FALSE(has_gpid(_pid));
-    ASSERT_EQ(moved_to_err_path, dn->status == disk_status::NORMAL) << moved_to_err_path << ", "
-                                                                    << enum_to_string(dn->status);
+    ASSERT_EQ(moved_to_err_path, dn->status == disk_status::NORMAL)
+        << moved_to_err_path << ", " << enum_to_string(dn->status);
     ASSERT_EQ(!moved_to_err_path, dn->status == disk_status::IO_ERROR)
         << moved_to_err_path << ", " << enum_to_string(dn->status);
 

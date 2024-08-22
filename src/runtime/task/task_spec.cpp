@@ -231,8 +231,8 @@ bool task_spec::init()
         }
 
         if (spec->rpc_call_channel == RPC_CHANNEL_UDP && !FLAGS_enable_udp) {
-            LOG_ERROR("task rpc_call_channel RPC_CHANNEL_UCP need udp service, make sure "
-                      "[network].enable_udp");
+            LOG_ERROR("task rpc_call_channel RPC_CHANNEL_UDP need udp service, make sure "
+                      "[network].enable_udp is enabled");
             return false;
         }
     }
@@ -288,4 +288,4 @@ bool threadpool_spec::init(/*out*/ std::vector<threadpool_spec> &specs)
     return true;
 }
 
-} // end namespace
+} // namespace dsn

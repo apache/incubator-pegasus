@@ -25,4 +25,4 @@ namespace pegasus {
 #include <pegasus/error_def.h>
 #undef PEGASUS_ERR_CODE
 
-} // namespace
+} // namespace pegasus

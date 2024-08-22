@@ -35,8 +35,7 @@ namespace dsn {
 class replica_envs
 {
 public:
-    static const uint64_t MIN_SLOW_QUERY_THRESHOLD_MS;
-
+    // Environment variable keys.
     static const std::string DENY_CLIENT_REQUEST;
     static const std::string WRITE_QPS_THROTTLING;
     static const std::string WRITE_SIZE_THROTTLING;
@@ -74,6 +73,14 @@ public:
 
     static const std::set<std::string> ROCKSDB_DYNAMIC_OPTIONS;
     static const std::set<std::string> ROCKSDB_STATIC_OPTIONS;
+
+    // Environment variable values.
+    static const uint64_t MIN_SLOW_QUERY_THRESHOLD_MS;
+    static const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE;
+    static const std::string MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP;
+    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
+    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE;
+    static const std::string ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
 };
 
 } // namespace dsn

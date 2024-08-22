@@ -291,13 +291,14 @@ public:
 
     void TearDown() override { utils::filesystem::remove_path(_log_dir); }
 
-    mutation_ptr create_test_mutation(decree d, const std::string &data) override
+    mutation_ptr
+    create_test_mutation(int64_t decree, int64_t last_committed_decree, const char *data) override
     {
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
-        mu->data.header.decree = d;
+        mu->data.header.decree = decree;
         mu->data.header.pid = get_gpid();
-        mu->data.header.last_committed_decree = d - 1;
+        mu->data.header.last_committed_decree = last_committed_decree;
         mu->data.header.log_offset = 0;
 
         binary_writer writer;
@@ -313,6 +314,11 @@ public:
         return mu;
     }
 
+    mutation_ptr create_test_mutation(int64_t decree, const char *data) override
+    {
+        return mutation_log_test::create_test_mutation(decree, decree - 1, data);
+    }
+
     static void ASSERT_BLOB_EQ(const blob &lhs, const blob &rhs)
     {
         ASSERT_EQ(std::string(lhs.data(), lhs.length()), std::string(rhs.data(), rhs.length()));
@@ -326,8 +332,7 @@ public:
             // each round mlog will replay the former logs, and create new file
             mutation_log_ptr mlog = create_private_log();
             for (int i = 1; i <= 10; i++) {
-                std::string msg = "hello!";
-                mutation_ptr mu = create_test_mutation(10 * f + i, msg);
+                auto mu = create_test_mutation(10 * f + i, "hello!");
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             }
             mlog->tracker()->wait_outstanding_tasks();
@@ -540,12 +545,13 @@ TEST_P(mutation_log_test, reset_from)
 
     // reset from the tmp log dir.
     std::vector<mutation_ptr> actual;
-    auto err = mlog->reset_from(_log_dir + ".tmp",
-                                [&](int, mutation_ptr &mu) -> bool {
-                                    actual.push_back(mu);
-                                    return true;
-                                },
-                                [](error_code err) { ASSERT_EQ(err, ERR_OK); });
+    auto err = mlog->reset_from(
+        _log_dir + ".tmp",
+        [&](int, mutation_ptr &mu) -> bool {
+            actual.push_back(mu);
+            return true;
+        },
+        [](error_code err) { ASSERT_EQ(err, ERR_OK); });
     ASSERT_EQ(err, ERR_OK);
     ASSERT_EQ(actual.size(), expected.size());
 
@@ -586,12 +592,13 @@ TEST_P(mutation_log_test, reset_from_while_writing)
 
     // reset from the tmp log dir.
     std::vector<mutation_ptr> actual;
-    auto err = mlog->reset_from(_log_dir + ".test",
-                                [&](int, mutation_ptr &mu) -> bool {
-                                    actual.push_back(mu);
-                                    return true;
-                                },
-                                [](error_code err) { ASSERT_EQ(err, ERR_OK); });
+    auto err = mlog->reset_from(
+        _log_dir + ".test",
+        [&](int, mutation_ptr &mu) -> bool {
+            actual.push_back(mu);
+            return true;
+        },
+        [](error_code err) { ASSERT_EQ(err, ERR_OK); });
     ASSERT_EQ(err, ERR_OK);
 
     mlog->flush();

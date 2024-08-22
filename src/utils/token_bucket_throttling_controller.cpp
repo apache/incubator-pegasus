@@ -23,6 +23,7 @@
 #include "string_conv.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
+#include "utils/throttling_controller.h"
 
 namespace dsn {
 namespace utils {
@@ -85,7 +86,7 @@ bool token_bucket_throttling_controller::parse_from_env(const std::string &env_v
         return true;
     }
 
-    int64_t reject_size_value;
+    uint64_t reject_size_value;
     bool enabled;
     if (!transform_env_string(env_value, reject_size_value, enabled, parse_error)) {
         return false;
@@ -101,74 +102,67 @@ bool token_bucket_throttling_controller::parse_from_env(const std::string &env_v
     return true;
 }
 
-bool token_bucket_throttling_controller::string_to_value(std::string str, int64_t &value)
-{
-    int64_t unit_multiplier = 1;
-    if (*str.rbegin() == 'M') {
-        unit_multiplier = 1000 * 1000;
-    } else if (*str.rbegin() == 'K') {
-        unit_multiplier = 1000;
-    }
-    if (unit_multiplier != 1) {
-        str.pop_back();
-    }
-    if (!buf2int64(str, value) || value < 0) {
-        return false;
-    }
-    value *= unit_multiplier;
-    return true;
-}
-
 bool token_bucket_throttling_controller::validate(const std::string &env, std::string &hint_message)
 {
-    int64_t temp;
+    uint64_t temp;
     bool temp_bool;
-    bool validated = transform_env_string(env, temp, temp_bool, hint_message);
-    return validated;
+    return transform_env_string(env, temp, temp_bool, hint_message);
 };
 
 bool token_bucket_throttling_controller::transform_env_string(const std::string &env,
-                                                              int64_t &reject_size_value,
+                                                              uint64_t &reject_size_value,
                                                               bool &enabled,
                                                               std::string &hint_message)
 {
+    hint_message.clear();
     enabled = true;
 
-    if (buf2int64(env, reject_size_value) && reject_size_value > 0) {
+    // format like "200"
+    if (buf2uint64(env, reject_size_value) && reject_size_value > 0) {
         return true;
     }
 
     // format like "200K"
-    if (string_to_value(env, reject_size_value) && reject_size_value > 0) {
+    if (throttling_controller::parse_unit(env, reject_size_value, hint_message) &&
+        reject_size_value > 0) {
         return true;
     }
 
-    // format like "20000*delay*100"
-    if (env.find("delay") != -1 && env.find("reject") == -1) {
-        // rate must > 0 in TokenBucket.h
-        reject_size_value = 1;
-        enabled = false;
+    // format like "20000*delay*100", it's not supported.
+    {
+        uint64_t units = 0;
+        uint64_t ms = 0;
+        if (throttling_controller::parse_from_env(env, "delay", units, ms, hint_message) ==
+            throttling_controller::ParseResult::kSuccess) {
+            // rate must > 0 in TokenBucket.h
+            reject_size_value = 1;
+            enabled = false;
 
-        LOG_DEBUG("token_bucket_throttling_controller doesn't support delay method, so throttling "
-                  "controller is disabled now");
-        return true;
+            LOG_DEBUG(
+                "token_bucket_throttling_controller doesn't support delay method, so throttling "
+                "controller is disabled now");
+            return true;
+        }
     }
 
     // format like "20000*delay*100,20000*reject*100"
-    auto comma_index = env.find(",");
-    auto star_index = env.find("*reject", comma_index + 1);
-    if (star_index < 0) {
-        hint_message = "wrong format, you can set like 20000 or 20K";
-        return false;
-    }
-    auto reject_size = env.substr(comma_index + 1, star_index - comma_index - 1);
+    uint64_t reject_units = 0;
+    {
+        uint64_t delay_units = 0;
+        uint64_t delay_ms = 0;
+        uint64_t reject_delay_ms = 0;
+        if (!throttling_controller::parse_from_env(
+                env, delay_units, delay_ms, reject_units, reject_delay_ms, hint_message)) {
+            return false;
+        }
 
-    if (string_to_value(reject_size, reject_size_value) && reject_size_value > 0) {
-        return true;
+        if (reject_units == 0) {
+            hint_message = "reject value should be greater than 0";
+            return false;
+        }
     }
-
-    hint_message = "wrong format, you can set like 20000 or 20K";
-    return false;
+    reject_size_value = reject_units;
+    return true;
 }
 
 } // namespace utils

@@ -23,6 +23,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "common/replication_common.h"
+
 namespace pegasus {
 namespace test {
 
@@ -40,7 +42,7 @@ inline const char *job_type_str(enum job_type type)
     case META:
         return "meta";
     case REPLICA:
-        return "replica";
+        return dsn::replication::replication_options::kReplicaAppType.c_str();
     case ZOOKEEPER:
         return "zookeeper";
     default:
@@ -59,5 +61,5 @@ struct job
     std::string get_addr_by_index(int index);
     void set_name(const std::string &_name);
 };
-}
-} // end namespace
+} // namespace test
+} // namespace pegasus

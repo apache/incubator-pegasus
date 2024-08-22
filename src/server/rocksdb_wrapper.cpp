@@ -19,17 +19,18 @@
 
 #include "rocksdb_wrapper.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <rocksdb/db.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
 
+#include "base/meta_store.h"
 #include "base/pegasus_value_schema.h"
+#include "common/duplication_common.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
 #include "pegasus_write_service_impl.h"
 #include "server/logging_utils.h"
-#include "server/meta_store.h"
 #include "server/pegasus_server_impl.h"
 #include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"
@@ -73,9 +74,9 @@ rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
     _wt_opts->disableWAL = true;
 }
 
-int rocksdb_wrapper::get(absl::string_view raw_key, /*out*/ db_get_context *ctx)
+int rocksdb_wrapper::get(std::string_view raw_key, /*out*/ db_get_context *ctx)
 {
-    FAIL_POINT_INJECT_F("db_get", [](absl::string_view) -> int { return FAIL_DB_GET; });
+    FAIL_POINT_INJECT_F("db_get", [](std::string_view) -> int { return FAIL_DB_GET; });
 
     rocksdb::Status s = _db->Get(_rd_opts, utils::to_rocksdb_slice(raw_key), &(ctx->raw_value));
     if (dsn_likely(s.ok())) {
@@ -104,24 +105,25 @@ int rocksdb_wrapper::get(absl::string_view raw_key, /*out*/ db_get_context *ctx)
 }
 
 int rocksdb_wrapper::write_batch_put(int64_t decree,
-                                     absl::string_view raw_key,
-                                     absl::string_view value,
+                                     std::string_view raw_key,
+                                     std::string_view value,
                                      uint32_t expire_sec)
 {
     return write_batch_put_ctx(db_write_context::empty(decree), raw_key, value, expire_sec);
 }
 
 int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
-                                         absl::string_view raw_key,
-                                         absl::string_view value,
+                                         std::string_view raw_key,
+                                         std::string_view value,
                                          uint32_t expire_sec)
 {
     FAIL_POINT_INJECT_F("db_write_batch_put",
-                        [](absl::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
+                        [](std::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
 
     uint64_t new_timetag = ctx.remote_timetag;
     if (!ctx.is_duplicated_write()) { // local write
-        new_timetag = generate_timetag(ctx.timestamp, get_cluster_id_if_exists(), false);
+        new_timetag = generate_timetag(
+            ctx.timestamp, dsn::replication::get_current_dup_cluster_id_or_default(), false);
     }
 
     if (ctx.verify_timetag &&         // needs read-before-write
@@ -141,7 +143,7 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
             if (local_timetag >= new_timetag) {
                 // ignore this stale update with lower timetag,
                 // and write an empty record instead
-                raw_key = value = absl::string_view();
+                raw_key = value = std::string_view();
             }
         }
     }
@@ -173,7 +175,7 @@ int rocksdb_wrapper::write(int64_t decree)
         return FLAGS_inject_write_error_for_test;
     }
 
-    FAIL_POINT_INJECT_F("db_write", [](absl::string_view) -> int { return FAIL_DB_WRITE; });
+    FAIL_POINT_INJECT_F("db_write", [](std::string_view) -> int { return FAIL_DB_WRITE; });
 
     rocksdb::Status status =
         _write_batch->Put(_meta_cf, meta_store::LAST_FLUSHED_DECREE, std::to_string(decree));
@@ -192,10 +194,10 @@ int rocksdb_wrapper::write(int64_t decree)
     return status.code();
 }
 
-int rocksdb_wrapper::write_batch_delete(int64_t decree, absl::string_view raw_key)
+int rocksdb_wrapper::write_batch_delete(int64_t decree, std::string_view raw_key)
 {
     FAIL_POINT_INJECT_F("db_write_batch_delete",
-                        [](absl::string_view) -> int { return FAIL_DB_WRITE_BATCH_DELETE; });
+                        [](std::string_view) -> int { return FAIL_DB_WRITE_BATCH_DELETE; });
 
     rocksdb::Status s = _write_batch->Delete(utils::to_rocksdb_slice(raw_key));
     if (dsn_unlikely(!s.ok())) {

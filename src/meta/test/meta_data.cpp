@@ -35,13 +35,15 @@
 #include "meta/meta_data.h"
 #include "metadata_types.h"
 #include "misc/misc.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 
 using namespace dsn::replication;
 
 TEST(meta_data, dropped_cmp)
 {
-    dsn::rpc_address n;
+    dsn::host_port n;
 
     dropped_replica d1, d2;
     // time not equal
@@ -107,7 +109,7 @@ static bool vec_equal(const std::vector<dropped_replica> &vec1,
 
 TEST(meta_data, collect_replica)
 {
-    app_mapper app;
+    app_mapper apps;
     node_mapper nodes;
 
     dsn::app_info info;
@@ -118,25 +120,25 @@ TEST(meta_data, collect_replica)
     info.app_type = "test";
     info.max_replica_count = 3;
     info.partition_count = 1024;
-    std::shared_ptr<app_state> the_app = app_state::create(info);
-    app.emplace(the_app->app_id, the_app);
-    meta_view view = {&app, &nodes};
+    std::shared_ptr<app_state> app = app_state::create(info);
+    apps.emplace(app->app_id, app);
+    meta_view view = {&apps, &nodes};
 
     replica_info rep;
     rep.app_type = "test";
     rep.pid = dsn::gpid(1, 0);
 
-    dsn::partition_configuration &pc = *get_config(app, rep.pid);
-    config_context &cc = *get_config_context(app, rep.pid);
+    auto &pc = *get_config(apps, rep.pid);
+    auto &cc = *get_config_context(apps, rep.pid);
 
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<dsn::host_port> node_list;
     generate_node_list(node_list, 10, 10);
 
 #define CLEAR_REPLICA                                                                              \
     do {                                                                                           \
-        pc.primary.set_invalid();                                                                  \
-        pc.secondaries.clear();                                                                    \
-        pc.last_drops.clear();                                                                     \
+        RESET_IP_AND_HOST_PORT(pc, primary);                                                       \
+        CLEAR_IP_AND_HOST_PORT(pc, secondaries);                                                   \
+        CLEAR_IP_AND_HOST_PORT(pc, last_drops);                                                    \
     } while (false)
 
 #define CLEAR_DROP_LIST                                                                            \
@@ -153,14 +155,14 @@ TEST(meta_data, collect_replica)
         CLEAR_ALL;
         rep.ballot = 10;
         pc.ballot = 9;
-        pc.primary = node_list[0];
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, node_list[0]);
         ASSERT_TRUE(collect_replica(view, node_list[0], rep));
     }
 
     {
         // replica is secondary of partition
         CLEAR_ALL;
-        pc.secondaries.push_back(node_list[0]);
+        ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, node_list[0]);
         ASSERT_TRUE(collect_replica(view, node_list[0], rep));
     }
 
@@ -350,7 +352,7 @@ TEST(meta_data, collect_replica)
 
 TEST(meta_data, construct_replica)
 {
-    app_mapper app;
+    app_mapper apps;
     node_mapper nodes;
 
     dsn::app_info info;
@@ -361,25 +363,25 @@ TEST(meta_data, construct_replica)
     info.app_type = "test";
     info.max_replica_count = 3;
     info.partition_count = 1024;
-    std::shared_ptr<app_state> the_app = app_state::create(info);
-    app.emplace(the_app->app_id, the_app);
-    meta_view view = {&app, &nodes};
+    std::shared_ptr<app_state> app = app_state::create(info);
+    apps.emplace(app->app_id, app);
+    meta_view view = {&apps, &nodes};
 
     replica_info rep;
     rep.app_type = "test";
     rep.pid = dsn::gpid(1, 0);
 
-    dsn::partition_configuration &pc = *get_config(app, rep.pid);
-    config_context &cc = *get_config_context(app, rep.pid);
+    dsn::partition_configuration &pc = *get_config(apps, rep.pid);
+    config_context &cc = *get_config_context(apps, rep.pid);
 
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<dsn::host_port> node_list;
     generate_node_list(node_list, 10, 10);
 
 #define CLEAR_REPLICA                                                                              \
     do {                                                                                           \
-        pc.primary.set_invalid();                                                                  \
-        pc.secondaries.clear();                                                                    \
-        pc.last_drops.clear();                                                                     \
+        RESET_IP_AND_HOST_PORT(pc, primary);                                                       \
+        CLEAR_IP_AND_HOST_PORT(pc, secondaries);                                                   \
+        CLEAR_IP_AND_HOST_PORT(pc, last_drops);                                                    \
     } while (false)
 
 #define CLEAR_DROP_LIST                                                                            \
@@ -403,8 +405,8 @@ TEST(meta_data, construct_replica)
         CLEAR_ALL;
         cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12}};
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-        ASSERT_EQ(node_list[0], pc.primary);
-        ASSERT_TRUE(pc.secondaries.empty());
+        ASSERT_EQ(node_list[0], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
         ASSERT_TRUE(cc.dropped.empty());
         ASSERT_EQ(-1, cc.prefered_dropped);
     }
@@ -417,11 +419,11 @@ TEST(meta_data, construct_replica)
                       dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 8, 10, 12},
                       dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 9, 11, 12}};
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-        ASSERT_EQ(node_list[4], pc.primary);
-        ASSERT_TRUE(pc.secondaries.empty());
+        ASSERT_EQ(node_list[4], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
 
-        std::vector<dsn::rpc_address> nodes = {node_list[2], node_list[3]};
-        ASSERT_EQ(nodes, pc.last_drops);
+        std::vector<dsn::host_port> nodes = {node_list[2], node_list[3]};
+        ASSERT_EQ(nodes, pc.hp_last_drops);
         ASSERT_EQ(3, cc.dropped.size());
         ASSERT_EQ(2, cc.prefered_dropped);
     }
@@ -434,11 +436,11 @@ TEST(meta_data, construct_replica)
                       dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 12, 12}};
 
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-        ASSERT_EQ(node_list[2], pc.primary);
-        ASSERT_TRUE(pc.secondaries.empty());
+        ASSERT_EQ(node_list[2], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
 
-        std::vector<dsn::rpc_address> nodes = {node_list[0], node_list[1]};
-        ASSERT_EQ(nodes, pc.last_drops);
+        std::vector<dsn::host_port> nodes = {node_list[0], node_list[1]};
+        ASSERT_EQ(nodes, pc.hp_last_drops);
         ASSERT_EQ(2, cc.dropped.size());
         ASSERT_EQ(1, cc.prefered_dropped);
     }
@@ -452,11 +454,11 @@ TEST(meta_data, construct_replica)
                       dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 7, 14, 14}};
 
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-        ASSERT_EQ(node_list[3], pc.primary);
-        ASSERT_TRUE(pc.secondaries.empty());
+        ASSERT_EQ(node_list[3], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
 
-        std::vector<dsn::rpc_address> nodes = {node_list[1], node_list[2]};
-        ASSERT_EQ(nodes, pc.last_drops);
+        std::vector<dsn::host_port> nodes = {node_list[1], node_list[2]};
+        ASSERT_EQ(nodes, pc.hp_last_drops);
 
         ASSERT_EQ(3, cc.dropped.size());
         ASSERT_EQ(2, cc.prefered_dropped);

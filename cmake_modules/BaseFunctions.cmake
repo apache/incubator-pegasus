@@ -193,12 +193,20 @@ endfunction()
 function(dsn_setup_compiler_flags)
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DDSN_BUILD_TYPE=Debug)
-    add_definitions(-g)
   else()
-    add_definitions(-g)
     add_definitions(-O2)
     add_definitions(-DDSN_BUILD_TYPE=Release)
   endif()
+
+  if("$ENV{GITHUB_ACTION}" STREQUAL "" OR APPLE)
+    add_definitions(-g)
+  else()
+    # Reduce the target size when build on GitHub actions and non-macOS.
+    message(WARNING "Running GitHub actions, the target size will be reduced!")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-s -Wl,--gc-sections")
+  endif()
+
   cmake_host_system_information(RESULT BUILD_HOSTNAME QUERY HOSTNAME)
   add_definitions(-DDSN_BUILD_HOSTNAME=${BUILD_HOSTNAME})
 

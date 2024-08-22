@@ -41,6 +41,7 @@
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/autoref_ptr.h"
@@ -71,7 +72,7 @@ public:
     {
         _app_info.app_id = APP_ID;
         _app_info.app_name = APP_NAME;
-        _app_info.app_type = "replica";
+        _app_info.app_type = replication_options::kReplicaAppType;
         _app_info.is_stateful = true;
         _app_info.max_replica_count = 3;
         _app_info.partition_count = OLD_PARTITION_COUNT;
@@ -185,16 +186,16 @@ public:
 
     void mock_parent_primary_configuration(bool lack_of_secondary = false)
     {
-        partition_configuration config;
-        config.max_replica_count = 3;
-        config.pid = PARENT_GPID;
-        config.ballot = INIT_BALLOT;
-        config.primary = PRIMARY;
-        config.secondaries.emplace_back(SECONDARY);
+        partition_configuration pc;
+        pc.max_replica_count = 3;
+        pc.pid = PARENT_GPID;
+        pc.ballot = INIT_BALLOT;
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, PRIMARY);
+        ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY);
         if (!lack_of_secondary) {
-            config.secondaries.emplace_back(SECONDARY2);
+            ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY2);
         }
-        _parent_replica->set_primary_partition_configuration(config);
+        _parent_replica->set_primary_partition_configuration(pc);
     }
 
     void mock_update_child_partition_count_request(update_child_group_partition_count_request &req,
@@ -202,7 +203,7 @@ public:
     {
         req.child_pid = CHILD_GPID;
         req.ballot = b;
-        req.target_address = PRIMARY;
+        SET_IP_AND_HOST_PORT_BY_DNS(req, target, PRIMARY);
         req.new_partition_count = NEW_PARTITION_COUNT;
     }
 
@@ -293,7 +294,7 @@ public:
         req.child_gpid = CHILD_GPID;
         req.parent_gpid = PARENT_GPID;
         req.child_ballot = child_ballot;
-        req.child_address = PRIMARY;
+        SET_IPS_AND_HOST_PORTS_BY_DNS(req, child, PRIMARY);
 
         notify_cacth_up_response resp;
         _parent_split_mgr->parent_handle_child_catch_up(req, resp);
@@ -325,11 +326,11 @@ public:
         mock_update_child_partition_count_request(req, INIT_BALLOT);
         update_child_group_partition_count_response resp;
         resp.err = resp_err;
-        auto not_replied_addresses = std::make_shared<std::unordered_set<rpc_address>>();
-        not_replied_addresses->insert(PRIMARY);
+        auto not_replied_host_ports = std::make_shared<std::unordered_set<host_port>>();
+        not_replied_host_ports->insert(PRIMARY);
 
         _parent_split_mgr->on_update_child_group_partition_count_reply(
-            ERR_OK, req, resp, not_replied_addresses);
+            ERR_OK, req, resp, not_replied_host_ports);
         _parent_replica->tracker()->wait_outstanding_tasks();
         _child_replica->tracker()->wait_outstanding_tasks();
         return resp.err;
@@ -345,7 +346,7 @@ public:
     void test_on_register_child_reply(partition_status::type status, dsn::error_code resp_err)
     {
         stub->set_state_connected();
-        stub->set_rpc_address(PRIMARY);
+        stub->set_host_port(PRIMARY);
         mock_parent_split_context(status);
         _parent_replica->_primary_states.sync_send_write_request = true;
         _parent_split_mgr->_partition_version = -1;
@@ -356,11 +357,11 @@ public:
         req.parent_config.pid = PARENT_GPID;
         req.parent_config.ballot = INIT_BALLOT;
         req.parent_config.last_committed_decree = DECREE;
-        req.parent_config.primary = PRIMARY;
+        SET_IP_AND_HOST_PORT_BY_DNS(req.parent_config, primary, PRIMARY);
         req.child_config.pid = CHILD_GPID;
         req.child_config.ballot = INIT_BALLOT + 1;
         req.child_config.last_committed_decree = 0;
-        req.primary_address = PRIMARY;
+        SET_IP_AND_HOST_PORT_BY_DNS(req, primary, PRIMARY);
 
         register_child_response resp;
         resp.err = resp_err;
@@ -394,7 +395,7 @@ public:
         req.app = _parent_replica->_app_info;
         req.config.ballot = INIT_BALLOT;
         req.config.status = partition_status::PS_SECONDARY;
-        req.node = SECONDARY;
+        SET_IP_AND_HOST_PORT_BY_DNS(req, node, SECONDARY);
         if (meta_split_status == split_status::PAUSING ||
             meta_split_status == split_status::CANCELING) {
             req.__set_meta_split_status(meta_split_status);
@@ -426,7 +427,7 @@ public:
 
         std::shared_ptr<group_check_request> req = std::make_shared<group_check_request>();
         std::shared_ptr<group_check_response> resp = std::make_shared<group_check_response>();
-        req->node = SECONDARY;
+        SET_IPS_AND_HOST_PORTS_BY_DNS(*req, node, SECONDARY);
         if (meta_split_status != split_status::NOT_SPLIT) {
             req->__set_meta_split_status(meta_split_status);
         }
@@ -452,15 +453,15 @@ public:
         req.partition_count = OLD_PARTITION_COUNT;
         req.pid = PARENT_GPID;
 
-        partition_configuration child_config;
-        child_config.pid = CHILD_GPID;
-        child_config.ballot = INIT_BALLOT + 1;
-        child_config.last_committed_decree = 0;
+        partition_configuration child_pc;
+        child_pc.pid = CHILD_GPID;
+        child_pc.ballot = INIT_BALLOT + 1;
+        child_pc.last_committed_decree = 0;
 
         query_child_state_response resp;
         resp.err = ERR_OK;
         resp.__set_partition_count(NEW_PARTITION_COUNT);
-        resp.__set_child_config(child_config);
+        resp.__set_child_config(child_pc);
 
         _parent_split_mgr->on_query_child_state_reply(ERR_OK, req, resp);
         _parent_split_mgr->tracker()->wait_outstanding_tasks();
@@ -525,9 +526,10 @@ public:
     const int32_t APP_ID = 2;
     const int32_t OLD_PARTITION_COUNT = 8;
     const int32_t NEW_PARTITION_COUNT = 16;
-    const rpc_address PRIMARY = rpc_address::from_ip_port("127.0.0.1", 18230);
-    const rpc_address SECONDARY = rpc_address::from_ip_port("127.0.0.2", 10058);
-    const rpc_address SECONDARY2 = rpc_address::from_ip_port("127.0.0.3", 10805);
+
+    const host_port PRIMARY = host_port("localhost", 18230);
+    const host_port SECONDARY = host_port("localhost", 10058);
+    const host_port SECONDARY2 = host_port("localhost", 10805);
     const gpid PARENT_GPID = gpid(APP_ID, 1);
     const gpid CHILD_GPID = gpid(APP_ID, 9);
     const ballot INIT_BALLOT = 3;

@@ -47,14 +47,14 @@ jobs:
     name: Check Markdown links
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: gaurav-nelson/github-action-markdown-link-check@1.0.13
 
   dockerfile_linter:
     name: Lint Dockerfile
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hadolint/hadolint-action@v3.1.0
         with:
           recursive: true
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Check License Header
         uses: apache/skywalking-eyes@main
         env:

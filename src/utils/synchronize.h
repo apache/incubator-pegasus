@@ -41,6 +41,7 @@ public:
     __inline void lock() { _lock.lock(); }
     __inline bool try_lock() { return _lock.tryLock(); }
     __inline void unlock() { _lock.unlock(); }
+
 private:
     RecursiveBenaphore _lock;
 };
@@ -51,6 +52,7 @@ public:
     __inline void lock() { _lock.lock(); }
     __inline bool try_lock() { return _lock.tryLock(); }
     __inline void unlock() { _lock.unlock(); }
+
 private:
     NonRecursiveBenaphore _lock;
 };
@@ -179,5 +181,5 @@ public:
 private:
     rw_lock_nr *_lock;
 };
-}
-}
+} // namespace utils
+} // namespace dsn

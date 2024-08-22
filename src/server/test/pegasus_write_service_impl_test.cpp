@@ -34,7 +34,7 @@
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
 #include "utils/fail_point.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 namespace pegasus {
 namespace server {
@@ -55,7 +55,7 @@ public:
         _rocksdb_wrapper = _write_impl->_rocksdb_wrapper.get();
     }
 
-    int db_get(absl::string_view raw_key, db_get_context *get_ctx)
+    int db_get(std::string_view raw_key, db_get_context *get_ctx)
     {
         return _rocksdb_wrapper->get(raw_key, get_ctx);
     }
@@ -79,7 +79,7 @@ public:
     {
         pegasus_write_service_impl_test::SetUp();
         pegasus::pegasus_generate_key(
-            req.key, absl::string_view("hash_key"), absl::string_view("sort_key"));
+            req.key, std::string_view("hash_key"), std::string_view("sort_key"));
     }
 
     dsn::apps::incr_request req;

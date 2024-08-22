@@ -15,6 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 ---
+permissions:
+  contents: write
+
 github:
   - .github/**/*
 admin-cli:
@@ -42,7 +45,8 @@ thrift:
 docs:
   - '**/*.md'
 scripts:
-  - 'scripts/**/*'
+  - 'admin_tools/**/*'
+  - 'build_tools/**/*'
   - '**/*.sh'
 build:
   - 'cmake_modules/**/*'

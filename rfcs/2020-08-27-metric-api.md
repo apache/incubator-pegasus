@@ -25,7 +25,7 @@ This RFC proposes a new metric API in replace of the old perf-counter API.
 
 ## Motivation
 
-The perf-counter API has bad naming convention to be parsed and queried over the external monitoring system like [Prometheus](https://prometheus.io/), or [open-falcon](http://open-falcon.org/).
+The perf-counter API has bad naming convention to be parsed and queried over the external monitoring system like [Prometheus](https://prometheus.io/), or [open-falcon](https://github.com/open-falcon).
 
 Here are some examples of the perf-counter it exposes:
 

@@ -59,5 +59,5 @@ private:
     // check whether the command execute success.
     bool check(const std::string &job, int index, const std::string &type);
 };
-}
-} // end namespace
+} // namespace test
+} // namespace pegasus

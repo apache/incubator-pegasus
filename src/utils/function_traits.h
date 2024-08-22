@@ -119,4 +119,4 @@ template <typename T>
 struct function_traits<const volatile T &&> : public function_traits<T>
 {
 };
-}
+} // namespace dsn

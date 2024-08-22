@@ -32,17 +32,17 @@
 #include "load_balance_policy.h"
 #include "meta/meta_data.h"
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 
 namespace dsn {
 namespace replication {
 class meta_service;
 
 uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t app_id);
-uint32_t get_skew(const std::map<rpc_address, uint32_t> &count_map);
-void get_min_max_set(const std::map<rpc_address, uint32_t> &node_count_map,
-                     /*out*/ std::set<rpc_address> &min_set,
-                     /*out*/ std::set<rpc_address> &max_set);
+uint32_t get_skew(const std::map<host_port, uint32_t> &count_map);
+void get_min_max_set(const std::map<host_port, uint32_t> &node_count_map,
+                     /*out*/ std::set<host_port> &min_set,
+                     /*out*/ std::set<host_port> &max_set);
 
 class cluster_balance_policy : public load_balance_policy
 {
@@ -79,19 +79,19 @@ private:
                        const partition_set &selected_pid,
                        /*out*/ move_info &next_move);
     bool pick_up_move(const cluster_migration_info &cluster_info,
-                      const std::set<rpc_address> &max_nodes,
-                      const std::set<rpc_address> &min_nodes,
+                      const std::set<host_port> &max_nodes,
+                      const std::set<host_port> &min_nodes,
                       const int32_t app_id,
                       const partition_set &selected_pid,
                       /*out*/ move_info &move_info);
     void get_max_load_disk_set(const cluster_migration_info &cluster_info,
-                               const std::set<rpc_address> &max_nodes,
+                               const std::set<host_port> &max_nodes,
                                const int32_t app_id,
                                /*out*/ std::set<app_disk_info> &max_load_disk_set);
     std::map<std::string, partition_set> get_disk_partitions_map(
-        const cluster_migration_info &cluster_info, const rpc_address &addr, const int32_t app_id);
+        const cluster_migration_info &cluster_info, const host_port &node, const int32_t app_id);
     bool pick_up_partition(const cluster_migration_info &cluster_info,
-                           const rpc_address &min_node_addr,
+                           const host_port &min_node_hp,
                            const partition_set &max_load_partitions,
                            const partition_set &selected_pid,
                            /*out*/ gpid &picked_pid);
@@ -104,8 +104,8 @@ private:
     {
         int32_t app_id;
         std::string app_name;
-        std::vector<std::map<rpc_address, partition_status::type>> partitions;
-        std::map<rpc_address, uint32_t> replicas_count;
+        std::vector<std::map<host_port, partition_status::type>> partitions;
+        std::map<host_port, uint32_t> replicas_count;
         bool operator<(const app_migration_info &another) const
         {
             if (app_id < another.app_id)
@@ -116,10 +116,10 @@ private:
         {
             return app_id == another.app_id;
         }
-        partition_status::type get_partition_status(int32_t pidx, rpc_address addr)
+        partition_status::type get_partition_status(int32_t pidx, const host_port &node)
         {
             for (const auto &kv : partitions[pidx]) {
-                if (kv.first == addr) {
+                if (kv.first == node) {
                     return kv.second;
                 }
             }
@@ -129,18 +129,12 @@ private:
 
     struct node_migration_info
     {
-        rpc_address address;
+        host_port hp;
         // key-disk tag, value-partition set
         std::map<std::string, partition_set> partitions;
         partition_set future_partitions;
-        bool operator<(const node_migration_info &another) const
-        {
-            return address < another.address;
-        }
-        bool operator==(const node_migration_info &another) const
-        {
-            return address == another.address;
-        }
+        bool operator<(const node_migration_info &another) const { return hp < another.hp; }
+        bool operator==(const node_migration_info &another) const { return hp == another.hp; }
     };
 
     struct cluster_migration_info
@@ -148,14 +142,14 @@ private:
         balance_type type;
         std::map<int32_t, uint32_t> apps_skew;
         std::map<int32_t, app_migration_info> apps_info;
-        std::map<rpc_address, node_migration_info> nodes_info;
-        std::map<rpc_address, uint32_t> replicas_count;
+        std::map<host_port, node_migration_info> nodes_info;
+        std::map<host_port, uint32_t> replicas_count;
     };
 
     struct app_disk_info
     {
         int32_t app_id;
-        rpc_address node;
+        host_port node;
         std::string disk_tag;
         partition_set partitions;
         bool operator==(const app_disk_info &another) const
@@ -174,9 +168,9 @@ private:
     struct move_info
     {
         gpid pid;
-        rpc_address source_node;
+        host_port source_node;
         std::string source_disk_tag;
-        rpc_address target_node;
+        host_port target_node;
         balance_type type;
     };
 

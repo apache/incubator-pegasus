@@ -237,6 +237,12 @@
         JSON_DECODE_ENTRIES(input, t, __VA_ARGS__);                                                \
     }
 
+#define JSON_ENCODE_OBJ(writer, name, ...)                                                         \
+    do {                                                                                           \
+        writer.Key(#name);                                                                         \
+        dsn::json::json_encode(writer, __VA_ARGS__);                                               \
+    } while (0)
+
 namespace dsn {
 namespace json {
 
@@ -423,7 +429,7 @@ inline bool json_decode(const dsn::json::JsonObject &in, dsn::rpc_address &addre
     }
 
     address = dsn::rpc_address::from_host_port(rpc_address_string);
-    return !address.is_invalid();
+    return static_cast<bool>(address);
 }
 
 // json serialization for rpc host_port, we use the string representation of a host_port
@@ -439,11 +445,11 @@ inline bool json_decode(const dsn::json::JsonObject &in, dsn::host_port &hp)
         return true;
     }
     hp = host_port::from_string(host_port_string);
-    return !hp.is_invalid();
+    return static_cast<bool>(hp);
 }
 
-inline void json_encode(JsonWriter &out, const dsn::partition_configuration &config);
-inline bool json_decode(const JsonObject &in, dsn::partition_configuration &config);
+inline void json_encode(JsonWriter &out, const dsn::partition_configuration &pc);
+inline bool json_decode(const JsonObject &in, dsn::partition_configuration &pc);
 inline void json_encode(JsonWriter &out, const dsn::app_info &info);
 inline bool json_decode(const JsonObject &in, dsn::app_info &info);
 inline void json_encode(JsonWriter &out, const dsn::replication::file_meta &f_meta);
@@ -715,7 +721,10 @@ NON_MEMBER_JSON_SERIALIZATION(dsn::partition_configuration,
                               secondaries,
                               last_drops,
                               last_committed_decree,
-                              partition_flags)
+                              partition_flags,
+                              hp_primary,
+                              hp_secondaries,
+                              hp_last_drops)
 
 NON_MEMBER_JSON_SERIALIZATION(dsn::app_info,
                               status,

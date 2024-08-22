@@ -32,7 +32,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "common/bulk_load_common.h"
 #include "common/duplication_common.h"
 #include "common/replica_envs.h"
@@ -68,6 +68,7 @@ namespace dsn {
 
 namespace replication {
 
+const std::string replica_app_info::kAppInfo = ".app-info";
 const std::string replica_init_info::kInitInfo = ".init-info";
 const std::string kms_info::kKmsInfo = ".kms-info";
 
@@ -119,6 +120,9 @@ error_code replica_app_info::store(const std::string &fname)
         fname, writer.get_buffer(), dsn::utils::FileDataType::kSensitive);
 }
 
+const std::string replication_app_base::kDataDir = "data";
+const std::string replication_app_base::kRdbDir = "rdb";
+
 /*static*/
 void replication_app_base::register_storage_engine(const std::string &name, factory f)
 {
@@ -135,7 +139,7 @@ replication_app_base *replication_app_base::new_storage_instance(const std::stri
 replication_app_base::replication_app_base(replica *replica)
     : replica_base(replica), METRIC_VAR_INIT_replica(committed_requests)
 {
-    _dir_data = utils::filesystem::path_combine(replica->dir(), "data");
+    _dir_data = utils::filesystem::path_combine(replica->dir(), kDataDir);
     _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
     _dir_backup = utils::filesystem::path_combine(replica->dir(), "backup");
     _dir_bulk_load = utils::filesystem::path_combine(replica->dir(),
@@ -277,7 +281,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
 error_code replication_app_base::apply_mutation(const mutation *mu)
 {
     FAIL_POINT_INJECT_F("replication_app_base_apply_mutation",
-                        [](absl::string_view) { return ERR_OK; });
+                        [](std::string_view) { return ERR_OK; });
 
     CHECK_EQ_PREFIX(mu->data.header.decree, last_committed_decree() + 1);
     CHECK_EQ_PREFIX(mu->data.updates.size(), mu->client_requests.size());

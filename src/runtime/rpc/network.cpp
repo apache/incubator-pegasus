@@ -32,7 +32,7 @@
 #include <list>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "message_parser_manager.h"
 #include "runtime/api_task.h"
 #include "runtime/rpc/rpc_address.h"
@@ -62,7 +62,7 @@ METRIC_DEFINE_gauge_int64(server,
 DSN_DEFINE_uint32(network,
                   conn_threshold_per_ip,
                   0,
-                  "The maximum connection count to each server per ip, 0 means no limit");
+                  "The maximum connection count to each server per IP address, 0 means no limit");
 DSN_DEFINE_string(network, unknown_message_header_format, "", "format for unknown message headers");
 DSN_DEFINE_string(network,
                   explicit_host_address,
@@ -388,14 +388,17 @@ rpc_session::rpc_session(connection_oriented_network &net,
       _message_sent(0),
       _net(net),
       _remote_addr(remote_addr),
+      // TODO(yingchun): '_remote_host_port' is possible to be invalid after this!
+      // TODO(yingchun): It's too cost to reverse resolve host in constructor.
+      _remote_host_port(host_port::from_address(_remote_addr)),
       _max_buffer_block_count_per_send(net.max_buffer_block_count_per_send()),
       _reader(net.message_buffer_block_size()),
       _parser(parser),
-
       _is_client(is_client),
       _matcher(_net.engine()->matcher()),
       _delay_server_receive_ms(0)
 {
+    LOG_WARNING_IF(!_remote_host_port, "'{}' can not be reverse resolved", _remote_addr);
     if (!is_client) {
         on_rpc_session_connected.execute(this);
     }
@@ -433,9 +436,12 @@ void rpc_session::on_failure(bool is_write)
 
 bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
 {
-    if (msg->header->from_address.is_invalid())
+    if (!msg->header->from_address) {
         msg->header->from_address = _remote_addr;
+    }
+
     msg->to_address = _net.address();
+    msg->to_host_port = _net.host_port();
     msg->io_session = this;
 
     // ignore msg if join point return false

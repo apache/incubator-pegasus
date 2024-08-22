@@ -62,7 +62,7 @@ public:
         that.reset();
     }
     template <typename... Args>
-    /*implicit*/ optional(Args &&... args) : _is_some(true)
+    /*implicit*/ optional(Args &&...args) : _is_some(true)
     {
         new (_data_placeholder) T{std::forward<Args>(args)...};
     }
@@ -90,7 +90,7 @@ public:
         }
     }
     template <typename... Args>
-    void reset(Args &&... args)
+    void reset(Args &&...args)
     {
         if (_is_some) {
             reinterpret_cast<T *>(_data_placeholder)->~T();
@@ -101,4 +101,4 @@ public:
     }
     ~optional() { reset(); }
 };
-}
+} // namespace dsn

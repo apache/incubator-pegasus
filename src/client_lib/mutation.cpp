@@ -90,4 +90,4 @@ void pegasus_client::mutations::get_mutations(std::vector<mutate> &mutations) co
         mutations[pair.first].set_expire_ts_seconds = pair.second + current_time;
     }
 }
-}
+} // namespace pegasus

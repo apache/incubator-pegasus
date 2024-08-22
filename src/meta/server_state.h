@@ -38,6 +38,7 @@
 #include <utility>
 #include <vector>
 
+#include "app_env_validator.h"
 #include "common/gpid.h"
 #include "common/manual_compact.h"
 #include "dsn.layer2_types.h"
@@ -53,7 +54,7 @@ namespace dsn {
 class blob;
 class command_deregister;
 class message_ex;
-class rpc_address;
+class host_port;
 
 namespace replication {
 class configuration_balancer_request;
@@ -156,7 +157,7 @@ public:
 
     void query_configuration_by_index(const query_cfg_request &request,
                                       /*out*/ query_cfg_response &response);
-    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &config);
+    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &pc);
 
     // app options
     void create_app(dsn::message_ex *msg);
@@ -182,7 +183,7 @@ public:
     error_code dump_from_remote_storage(const char *local_path, bool sync_immediately);
     error_code restore_from_local_storage(const char *local_path);
 
-    void on_change_node_state(rpc_address node, bool is_alive);
+    void on_change_node_state(const host_port &node, bool is_alive);
     void on_propose_balancer(const configuration_balancer_request &request,
                              configuration_balancer_response &response);
     void on_start_recovery(const configuration_recovery_request &request,
@@ -233,7 +234,7 @@ private:
     // else indicate error that remote storage responses
     error_code sync_apps_to_remote_storage();
 
-    error_code sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &node_list,
+    error_code sync_apps_from_replica_nodes(const std::vector<dsn::host_port> &node_list,
                                             bool skip_bad_nodes,
                                             bool skip_lost_partitions,
                                             std::string &hint_message);
@@ -249,11 +250,11 @@ private:
     void check_consistency(const dsn::gpid &gpid);
 
     error_code construct_apps(const std::vector<query_app_info_response> &query_app_responses,
-                              const std::vector<dsn::rpc_address> &replica_nodes,
+                              const std::vector<dsn::host_port> &replica_nodes,
                               std::string &hint_message);
     error_code construct_partitions(
         const std::vector<query_replica_info_response> &query_replica_info_responses,
-        const std::vector<dsn::rpc_address> &replica_nodes,
+        const std::vector<dsn::host_port> &replica_nodes,
         bool skip_lost_partitions,
         std::string &hint_message);
 
@@ -275,22 +276,19 @@ private:
     void
     update_configuration_locally(app_state &app,
                                  std::shared_ptr<configuration_update_request> &config_request);
-    void request_check(const partition_configuration &old,
+    void request_check(const partition_configuration &old_pc,
                        const configuration_update_request &request);
     void recall_partition(std::shared_ptr<app_state> &app, int pidx);
     void drop_partition(std::shared_ptr<app_state> &app, int pidx);
     void downgrade_primary_to_inactive(std::shared_ptr<app_state> &app, int pidx);
     void downgrade_secondary_to_inactive(std::shared_ptr<app_state> &app,
                                          int pidx,
-                                         const rpc_address &node);
-    void downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
-                                   int pidx,
-                                   const rpc_address &address);
-
-    void on_partition_node_dead(std::shared_ptr<app_state> &app,
-                                int pidx,
-                                const dsn::rpc_address &address);
-    void send_proposal(rpc_address target, const configuration_update_request &proposal);
+                                         const host_port &node);
+    void
+    downgrade_stateless_nodes(std::shared_ptr<app_state> &app, int pidx, const host_port &node);
+    void
+    on_partition_node_dead(std::shared_ptr<app_state> &app, int pidx, const dsn::host_port &node);
+    void send_proposal(const host_port &target, const configuration_update_request &proposal);
     void send_proposal(const configuration_proposal_action &action,
                        const partition_configuration &pc,
                        const app_state &app);
@@ -347,18 +345,16 @@ private:
                                             int32_t partition_index,
                                             int32_t new_max_replica_count,
                                             partition_callback on_partition_updated);
-    task_ptr update_partition_max_replica_count_on_remote(
-        std::shared_ptr<app_state> &app,
-        const partition_configuration &new_partition_config,
-        partition_callback on_partition_updated);
-    void on_update_partition_max_replica_count_on_remote_reply(
-        error_code ec,
-        std::shared_ptr<app_state> &app,
-        const partition_configuration &new_partition_config,
-        partition_callback on_partition_updated);
+    task_ptr update_partition_max_replica_count_on_remote(std::shared_ptr<app_state> &app,
+                                                          const partition_configuration &new_pc,
+                                                          partition_callback on_partition_updated);
     void
-    update_partition_max_replica_count_locally(std::shared_ptr<app_state> &app,
-                                               const partition_configuration &new_partition_config);
+    on_update_partition_max_replica_count_on_remote_reply(error_code ec,
+                                                          std::shared_ptr<app_state> &app,
+                                                          const partition_configuration &new_pc,
+                                                          partition_callback on_partition_updated);
+    void update_partition_max_replica_count_locally(std::shared_ptr<app_state> &app,
+                                                    const partition_configuration &new_pc);
 
     void recover_all_partitions_max_replica_count(std::shared_ptr<app_state> &app,
                                                   int32_t max_replica_count,
@@ -429,6 +425,8 @@ private:
     bool _add_secondary_enable_flow_control;
     int32_t _add_secondary_max_count_for_one_node;
     std::vector<std::unique_ptr<command_deregister>> _cmds;
+
+    app_env_validator _app_env_validator;
 
     table_metric_entities _table_metric_entities;
 };

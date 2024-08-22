@@ -43,5 +43,5 @@ public:
 
     virtual void run() override;
 };
-}
-} // end namespace dsn::tools
+} // namespace tools
+} // namespace dsn

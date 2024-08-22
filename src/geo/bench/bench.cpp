@@ -44,8 +44,9 @@ static const int data_count = 10000;
 int main(int argc, char **argv)
 {
     if (argc < 7) {
-        std::cerr << "USAGE: " << argv[0] << " <cluster_name> <app_name> <geo_app_name> <radius> "
-                                             "<test_count> <max_level> [gen_data]"
+        std::cerr << "USAGE: " << argv[0]
+                  << " <cluster_name> <app_name> <geo_app_name> <radius> "
+                     "<test_count> <max_level> [gen_data]"
                   << std::endl;
         return -1;
     }

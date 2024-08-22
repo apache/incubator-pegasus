@@ -36,8 +36,9 @@
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_holder.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_code.h"
@@ -169,7 +170,7 @@ error_code backup_engine::backup_app_meta()
 
 void backup_engine::backup_app_partition(const gpid &pid)
 {
-    dsn::rpc_address partition_primary;
+    dsn::host_port partition_primary;
     {
         zauto_read_lock l;
         _backup_service->get_state()->lock_read(l);
@@ -181,19 +182,20 @@ void backup_engine::backup_app_partition(const gpid &pid)
             _is_backup_failed = true;
             return;
         }
-        partition_primary = app->partitions[pid.get_partition_index()].primary;
+        partition_primary = app->pcs[pid.get_partition_index()].hp_primary;
     }
 
-    if (partition_primary.is_invalid()) {
+    if (!partition_primary) {
         LOG_WARNING(
             "backup_id({}): partition {} doesn't have a primary now, retry to backup it later.",
             _cur_backup.backup_id,
             pid);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this, pid]() { backup_app_partition(pid); },
-                         0,
-                         std::chrono::seconds(10));
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this, pid]() { backup_app_partition(pid); },
+            0,
+            std::chrono::seconds(10));
         return;
     }
 
@@ -214,10 +216,11 @@ void backup_engine::backup_app_partition(const gpid &pid)
              pid,
              partition_primary);
     backup_rpc rpc(std::move(req), RPC_COLD_BACKUP, 10000_ms, 0, pid.thread_hash());
-    rpc.call(
-        partition_primary, &_tracker, [this, rpc, pid, partition_primary](error_code err) mutable {
-            on_backup_reply(err, rpc.response(), pid, partition_primary);
-        });
+    rpc.call(dsn::dns_resolver::instance().resolve_address(partition_primary),
+             &_tracker,
+             [this, rpc, pid, partition_primary](error_code err) mutable {
+                 on_backup_reply(err, rpc.response(), pid, partition_primary);
+             });
 
     zauto_lock l(_lock);
     _backup_status[pid.get_partition_index()] = backup_status::ALIVE;
@@ -241,17 +244,18 @@ inline void backup_engine::handle_replica_backup_failed(const backup_response &r
 
 inline void backup_engine::retry_backup(const dsn::gpid pid)
 {
-    tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                     &_tracker,
-                     [this, pid]() { backup_app_partition(pid); },
-                     0,
-                     std::chrono::seconds(1));
+    tasking::enqueue(
+        LPC_DEFAULT_CALLBACK,
+        &_tracker,
+        [this, pid]() { backup_app_partition(pid); },
+        0,
+        std::chrono::seconds(1));
 }
 
 void backup_engine::on_backup_reply(const error_code err,
                                     const backup_response &response,
                                     const gpid pid,
-                                    const rpc_address &primary)
+                                    const host_port &primary)
 {
     {
         zauto_lock l(_lock);
@@ -326,11 +330,12 @@ void backup_engine::write_backup_info()
     if (err != ERR_OK) {
         LOG_WARNING("backup_id({}): write backup info failed, retry it later.",
                     _cur_backup.backup_id);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this]() { write_backup_info(); },
-                         0,
-                         std::chrono::seconds(1));
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this]() { write_backup_info(); },
+            0,
+            std::chrono::seconds(1));
         return;
     }
     LOG_INFO("backup_id({}): successfully wrote backup info, backup for app {} completed.",

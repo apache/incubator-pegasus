@@ -422,6 +422,6 @@ public:
 protected:
     std::string _name;
 };
-}
-}
-}
+} // namespace block_service
+} // namespace dist
+} // namespace dsn

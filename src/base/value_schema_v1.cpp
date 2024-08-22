@@ -19,7 +19,7 @@
 
 #include "value_schema_v1.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <stdint.h>
 #include <string.h>
 #include <algorithm>
@@ -32,7 +32,7 @@
 #include "utils/ports.h"
 
 namespace pegasus {
-std::unique_ptr<value_field> value_schema_v1::extract_field(absl::string_view value,
+std::unique_ptr<value_field> value_schema_v1::extract_field(std::string_view value,
                                                             value_field_type type)
 {
     std::unique_ptr<value_field> field = nullptr;
@@ -88,20 +88,20 @@ rocksdb::SliceParts value_schema_v1::generate_value(const value_params &params)
     params.write_slices.clear();
     params.write_slices.emplace_back(params.write_buf.data(), params.write_buf.size());
 
-    absl::string_view user_data = data_field->user_data;
+    std::string_view user_data = data_field->user_data;
     if (user_data.length() > 0) {
         params.write_slices.emplace_back(user_data.data(), user_data.length());
     }
     return {&params.write_slices[0], static_cast<int>(params.write_slices.size())};
 }
 
-std::unique_ptr<value_field> value_schema_v1::extract_timestamp(absl::string_view value)
+std::unique_ptr<value_field> value_schema_v1::extract_timestamp(std::string_view value)
 {
     uint32_t expire_ts = dsn::data_input(value).read_u32();
     return std::make_unique<expire_timestamp_field>(expire_ts);
 }
 
-std::unique_ptr<value_field> value_schema_v1::extract_time_tag(absl::string_view value)
+std::unique_ptr<value_field> value_schema_v1::extract_time_tag(std::string_view value)
 {
     dsn::data_input input(value);
     input.skip(sizeof(uint32_t));

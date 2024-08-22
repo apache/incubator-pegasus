@@ -251,8 +251,10 @@ TEST_P(replica_disk_migrate_test, disk_migrate_replica_run)
                                                         request.target_disk,
                                                         request.pid,
                                                         replica_init_info::kInitInfo);
-    const std::string kTargetAppInfoFile = fmt::format(
-        "./{}/{}.replica.disk.migrate.tmp/{}", request.target_disk, request.pid, replica::kAppInfo);
+    const std::string kTargetAppInfoFile = fmt::format("./{}/{}.replica.disk.migrate.tmp/{}",
+                                                       request.target_disk,
+                                                       request.pid,
+                                                       replica_app_info::kAppInfo);
 
     init_migration_target_dir(fake_migrate_rpc);
     ASSERT_TRUE(utils::filesystem::directory_exists(kTargetDataDir));

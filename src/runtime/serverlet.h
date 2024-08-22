@@ -247,4 +247,4 @@ inline void serverlet<T>::reply(dsn::message_ex *request, const TResponse &resp)
     dsn_rpc_reply(msg);
 }
 /*@}*/
-} // end namespace
+} // namespace dsn

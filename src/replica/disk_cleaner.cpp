@@ -36,11 +36,11 @@
 #include "utils/fmt_logging.h"
 #include "utils/macros.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_error_replica_interval_seconds,
-                  7 * 24 * 3600 /*7day*/,
+                  7 * 24 * 3600,
                   "The interval in seconds to GC error replicas, which are in directories "
                   "suffixed with '.err'");
 DSN_TAG_VARIABLE(gc_disk_error_replica_interval_seconds, FT_MUTABLE);
@@ -148,7 +148,7 @@ bool parse_timestamp_us(const std::string &name, size_t suffix_size, uint64_t &t
     }
 
     const auto ok =
-        dsn::buf2uint64(absl::string_view(name.data() + begin_idx, length), timestamp_us);
+        dsn::buf2uint64(std::string_view(name.data() + begin_idx, length), timestamp_us);
     return ok ? timestamp_us > MIN_TIMESTAMP_US : false;
 }
 

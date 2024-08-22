@@ -29,7 +29,7 @@
 #include <string>
 
 #include "common/gpid.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 
@@ -39,7 +39,7 @@ namespace replication {
 /// Base class for types that are one-instance-per-replica.
 struct replica_base
 {
-    replica_base(gpid id, absl::string_view name, absl::string_view app_name);
+    replica_base(gpid id, std::string_view name, std::string_view app_name);
 
     explicit replica_base(replica_base *rhs)
         : replica_base(rhs->get_gpid(), rhs->replica_name(), rhs->_app_name)

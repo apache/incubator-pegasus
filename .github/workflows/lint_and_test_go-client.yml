@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
@@ -66,7 +66,7 @@ jobs:
       - name: Install thrift
         run: sudo apt-get install -y thrift-compiler
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
@@ -78,7 +78,7 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.2
+          version: v1.56.2
           working-directory: ./go-client
 
   build_server:
@@ -91,7 +91,7 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - uses: "./.github/actions/build_pegasus"
       - uses: "./.github/actions/upload_artifact"
@@ -118,7 +118,7 @@ jobs:
           make install
           cd - && rm -rf thrift-${THRIFT_VERSION} v${THRIFT_VERSION}.tar.gz
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v2
         with:

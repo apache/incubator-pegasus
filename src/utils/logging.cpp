@@ -28,6 +28,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "runtime/tool_api.h"
 #include "simple_logger.h"
@@ -61,7 +62,7 @@ std::function<std::string()> log_prefixed_message_func = []() -> std::string { r
 
 void set_log_prefixed_message_func(std::function<std::string()> func)
 {
-    log_prefixed_message_func = func;
+    log_prefixed_message_func = std::move(func);
 }
 } // namespace dsn
 
@@ -72,8 +73,9 @@ static void log_on_sys_exit(::dsn::sys_exit_type)
 }
 
 void dsn_log_init(const std::string &logging_factory_name,
-                  const std::string &dir_log,
-                  std::function<std::string()> dsn_log_prefixed_message_func)
+                  const std::string &log_dir,
+                  const std::string &role_name,
+                  const std::function<std::string()> &dsn_log_prefixed_message_func)
 {
     log_start_level = enum_from_string(FLAGS_logging_start_level, LOG_LEVEL_INVALID);
 
@@ -86,7 +88,7 @@ void dsn_log_init(const std::string &logging_factory_name,
     }
 
     dsn::logging_provider *logger = dsn::utils::factory_store<dsn::logging_provider>::create(
-        logging_factory_name.c_str(), dsn::PROVIDER_TYPE_MAIN, dir_log.c_str());
+        logging_factory_name.c_str(), dsn::PROVIDER_TYPE_MAIN, log_dir.c_str(), role_name.c_str());
     dsn::logging_provider::set_logger(logger);
 
     if (dsn_log_prefixed_message_func != nullptr) {
@@ -117,7 +119,7 @@ logging_provider *logging_provider::instance()
 
 logging_provider *logging_provider::create_default_instance()
 {
-    return new tools::screen_logger(true);
+    return new tools::screen_logger(nullptr, nullptr);
 }
 
 void logging_provider::set_logger(logging_provider *logger) { _logger.reset(logger); }

@@ -20,6 +20,7 @@
 #include "utils/fmt_logging.h"
 #include "http_server.h"
 #include "utils/errors.h"
+#include "gutil/map_util.h"
 #include "utils/singleton.h"
 
 namespace dsn {
@@ -35,11 +36,8 @@ public:
     std::shared_ptr<http_call> find(const std::string &path) const
     {
         std::lock_guard<std::mutex> guard(_mu);
-        const auto &iter = _call_map.find(path);
-        if (iter == _call_map.end()) {
-            return nullptr;
-        }
-        return iter->second;
+        const auto *hc = gutil::FindOrNull(_call_map, path);
+        return hc == nullptr ? nullptr : *hc;
     }
 
     void remove(const std::string &path)
@@ -51,7 +49,12 @@ public:
     void add(const std::shared_ptr<http_call> &call)
     {
         std::lock_guard<std::mutex> guard(_mu);
+// Some tests (e.g. policy_context_test) create multiple objects which
+// register duplicate http paths, so disable checking the path when
+// MOCK_TEST enabled.
+#ifndef MOCK_TEST
         CHECK_EQ_MSG(_call_map.count(call->path), 0, "{} has been added", call->path);
+#endif
         _call_map[call->path] = call;
     }
 

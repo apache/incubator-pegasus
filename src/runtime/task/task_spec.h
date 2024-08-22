@@ -61,7 +61,8 @@ ENUM_REG(TASK_STATE_FINISHED)
 ENUM_REG(TASK_STATE_CANCELLED)
 ENUM_END(task_state)
 
-typedef enum grpc_mode_t {
+typedef enum grpc_mode_t
+{
     GRPC_TO_LEADER, // the rpc is sent to the leader (if exist)
     GRPC_TO_ALL,    // the rpc is sent to all
     GRPC_TO_ANY,    // the rpc is sent to one of the group member
@@ -76,7 +77,8 @@ ENUM_REG(GRPC_TO_ALL)
 ENUM_REG(GRPC_TO_ANY)
 ENUM_END(grpc_mode_t)
 
-typedef enum throttling_mode_t {
+typedef enum throttling_mode_t
+{
     TM_NONE,   // no throttling applied
     TM_REJECT, // reject the incoming request
     TM_DELAY,  // delay network receive ops to reducing incoming rate
@@ -91,7 +93,8 @@ ENUM_REG(TM_REJECT)
 ENUM_REG(TM_DELAY)
 ENUM_END(throttling_mode_t)
 
-typedef enum dsn_msg_serialize_format {
+typedef enum dsn_msg_serialize_format
+{
     DSF_INVALID = 0,
     DSF_THRIFT_BINARY = 1,
     DSF_THRIFT_COMPACT = 2,
@@ -249,9 +252,9 @@ CONFIG_FLD(bool,
            bool,
            allow_inline,
            false,
-           "allow task executed in other thread pools or tasks "
-           "for TASK_TYPE_COMPUTE - allow-inline allows a task being executed in its caller site "
-           "for other tasks - allow-inline allows a task being execution in io-thread ")
+           "Whether allowing a task to be executed in other thread pools or tasks. "
+           "1. For TASK_TYPE_COMPUTE: allows a task being executed in its caller site. "
+           "2. For other tasks: allows a task being executed in io-thread.")
 CONFIG_FLD(bool,
            bool,
            randomize_timer_delay_if_zero,
@@ -265,7 +268,8 @@ CONFIG_FLD_ID(network_header_format,
               rpc_call_header_format,
               NET_HDR_DSN,
               false,
-              "what kind of header format for this kind of rpc calls")
+              "What kind of header format for this kind of RPC calls, e.g. NET_HDR_THRIFT, "
+              "NET_HDR_HTTP, NET_HDR_RAW and NET_HDR_DSN")
 CONFIG_FLD_ENUM(dsn_msg_serialize_format,
                 rpc_msg_payload_serialize_default_format,
                 DSF_THRIFT_BINARY,
@@ -276,7 +280,8 @@ CONFIG_FLD_ID(rpc_channel,
               rpc_call_channel,
               RPC_CHANNEL_TCP,
               false,
-              "what kind of network channel for this kind of rpc calls")
+              "What kind of network channel for this kind of RPC calls, e.g. RPC_CHANNEL_TCP and "
+              "RPC_CHANNEL_UDP")
 CONFIG_FLD(bool,
            bool,
            rpc_message_crc_required,
@@ -286,7 +291,7 @@ CONFIG_FLD(int32_t,
            uint64,
            rpc_timeout_milliseconds,
            5000,
-           "what is the default timeout (ms) for this kind of rpc calls")
+           "The timeout (in milliseconds) for this kind of RPC calls")
 CONFIG_FLD(int32_t,
            uint64,
            rpc_request_resend_timeout_milliseconds,
@@ -315,4 +320,4 @@ CONFIG_FLD(bool,
            "greater than its timeout value")
 CONFIG_END
 
-} // end namespace
+} // namespace dsn

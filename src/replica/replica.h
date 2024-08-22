@@ -30,13 +30,16 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <atomic>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 
+#include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "duplication/replica_duplicator_manager.h" // IWYU pragma: keep
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
@@ -67,7 +70,7 @@ class rocksdb_wrapper_test;
 
 namespace dsn {
 class gpid;
-class rpc_address;
+class host_port;
 
 namespace dist {
 namespace block_service {
@@ -96,7 +99,6 @@ class replica;
 class replica_backup_manager;
 class replica_bulk_loader;
 class replica_disk_migrator;
-class replica_duplicator_manager;
 class replica_follower;
 class replica_split_manager;
 class replica_stub;
@@ -186,7 +188,7 @@ public:
     //
     void on_config_proposal(configuration_update_request &proposal);
     void on_config_sync(const app_info &info,
-                        const partition_configuration &config,
+                        const partition_configuration &pc,
                         split_status::type meta_split_status);
     void on_cold_backup(const backup_request &request, /*out*/ backup_response &response);
 
@@ -223,8 +225,38 @@ public:
     const app_info *get_app_info() const { return &_app_info; }
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
+
+    // The last decree that has been applied into rocksdb memtable.
+    decree last_applied_decree() const;
+
+    // The last decree that has been flushed into rocksdb sst.
+    decree last_flushed_decree() const;
+
     decree last_prepared_decree() const;
     decree last_durable_decree() const;
+
+    // Encode current progress of decrees into json, including both local writes and duplications
+    // of this replica.
+    template <typename TWriter>
+    void encode_progress(TWriter &writer) const
+    {
+        writer.StartObject();
+
+        JSON_ENCODE_OBJ(writer, max_prepared_decree, max_prepared_decree());
+        JSON_ENCODE_OBJ(writer, max_plog_decree, _private_log->max_decree(get_gpid()));
+        JSON_ENCODE_OBJ(writer, max_plog_decree_on_disk, _private_log->max_decree_on_disk());
+        JSON_ENCODE_OBJ(writer, max_plog_commit_on_disk, _private_log->max_commit_on_disk());
+        JSON_ENCODE_OBJ(writer, last_committed_decree, last_committed_decree());
+        JSON_ENCODE_OBJ(writer, last_applied_decree, last_applied_decree());
+        JSON_ENCODE_OBJ(writer, last_flushed_decree, last_flushed_decree());
+        JSON_ENCODE_OBJ(writer, last_durable_decree, last_durable_decree());
+        JSON_ENCODE_OBJ(writer, max_gc_decree, _private_log->max_gced_decree(get_gpid()));
+
+        _duplication_mgr->encode_progress(writer);
+
+        writer.EndObject();
+    }
+
     const std::string &dir() const { return _dir; }
     uint64_t create_time_milliseconds() const { return _create_time_ms; }
     const char *name() const { return replica_name(); }
@@ -237,11 +269,38 @@ public:
     //
     // Duplication
     //
-    error_code trigger_manual_emergency_checkpoint(decree old_decree);
+
+    using trigger_checkpoint_callback = std::function<void(error_code)>;
+
+    // Choose a fixed thread from pool to trigger an emergency checkpoint asynchronously.
+    // A new checkpoint would still be created even if the replica is empty (hasn't received
+    // any write operation).
+    //
+    // Parameters:
+    // - `min_checkpoint_decree`: the min decree that should be covered by the triggered
+    // checkpoint. Should be a number greater than 0 which means a new checkpoint must be
+    // created.
+    // - `delay_ms`: the delayed time in milliseconds that the triggering task is put into
+    // the thread pool.
+    // - `callback`: the callback processor handling the error code of triggering checkpoint.
+    void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree,
+                                                   uint32_t delay_ms,
+                                                   trigger_checkpoint_callback callback = {});
+
     void on_query_last_checkpoint(learn_response &response);
-    replica_duplicator_manager *get_duplication_manager() const { return _duplication_mgr.get(); }
+    std::shared_ptr<replica_duplicator_manager> get_duplication_manager() const
+    {
+        return _duplication_mgr;
+    }
     bool is_duplication_master() const { return _is_duplication_master; }
     bool is_duplication_follower() const { return _is_duplication_follower; }
+    bool is_duplication_plog_checking() const { return _is_duplication_plog_checking.load(); }
+    void set_duplication_plog_checking(bool checking)
+    {
+        _is_duplication_plog_checking.store(checking);
+    }
+
+    void update_app_duplication_status(bool duplicating);
 
     //
     // Backup
@@ -286,8 +345,6 @@ public:
     METRIC_DEFINE_INCREMENT(backup_file_upload_successful_count)
     METRIC_DEFINE_INCREMENT_BY(backup_file_upload_total_bytes)
 
-    static const std::string kAppInfo;
-
 protected:
     // this method is marked protected to enable us to mock it in unit tests.
     virtual decree max_gced_decree_no_lock() const;
@@ -318,7 +375,7 @@ private:
     // See more about it in `replica_bulk_loader.cpp`
     void
     init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations = false);
-    void send_prepare_message(::dsn::rpc_address addr,
+    void send_prepare_message(const ::dsn::host_port &addr,
                               partition_status::type status,
                               const mutation_ptr &mu,
                               int timeout_milliseconds,
@@ -344,7 +401,7 @@ private:
                                         learn_response &&resp);
     void on_learn_remote_state_completed(error_code err);
     void handle_learning_error(error_code err, bool is_local_error);
-    error_code handle_learning_succeeded_on_primary(::dsn::rpc_address node,
+    error_code handle_learning_succeeded_on_primary(const host_port &node,
                                                     uint64_t learn_signature);
     void notify_learn_completion();
     error_code apply_learned_state_from_private_log(learn_state &state);
@@ -373,21 +430,21 @@ private:
     // failure handling
     void handle_local_failure(error_code error);
     void handle_remote_failure(partition_status::type status,
-                               ::dsn::rpc_address node,
+                               const host_port &node,
                                error_code error,
                                const std::string &caused_by);
 
     /////////////////////////////////////////////////////////////////
     // reconfiguration
     void assign_primary(configuration_update_request &proposal);
-    void add_potential_secondary(configuration_update_request &proposal);
-    void upgrade_to_secondary_on_primary(::dsn::rpc_address node);
+    void add_potential_secondary(const configuration_update_request &proposal);
+    void upgrade_to_secondary_on_primary(const host_port &node);
     void downgrade_to_secondary_on_primary(configuration_update_request &proposal);
     void downgrade_to_inactive_on_primary(configuration_update_request &proposal);
     void remove(configuration_update_request &proposal);
     void update_configuration_on_meta_server(config_type::type type,
-                                             ::dsn::rpc_address node,
-                                             partition_configuration &newConfig);
+                                             const host_port &node,
+                                             partition_configuration &new_pc);
     void
     on_update_configuration_on_meta_server_reply(error_code err,
                                                  dsn::message_ex *request,
@@ -401,7 +458,7 @@ private:
     void update_app_envs_internal(const std::map<std::string, std::string> &envs);
     void query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
 
-    bool update_configuration(const partition_configuration &config);
+    bool update_configuration(const partition_configuration &pc);
     bool update_local_configuration(const replica_configuration &config, bool same_ballot = false);
     error_code update_init_info_ballot_and_decree();
 
@@ -421,13 +478,20 @@ private:
     error_code background_sync_checkpoint();
     void catch_up_with_private_logs(partition_status::type s);
     void on_checkpoint_completed(error_code err);
-    void on_copy_checkpoint_ack(error_code err,
-                                const std::shared_ptr<replica_configuration> &req,
-                                const std::shared_ptr<learn_response> &resp);
-    void on_copy_checkpoint_file_completed(error_code err,
-                                           size_t sz,
-                                           std::shared_ptr<learn_response> resp,
-                                           const std::string &chk_dir);
+
+    // Enable/Disable plog garbage collection to be executed. For example, to duplicate data
+    // to target cluster, we could firstly disable plog garbage collection, then do copy_data.
+    // After copy_data is finished, a duplication with DS_LOG status could be added to continue
+    // to duplicate data in plog to target cluster; at the same time, plog garbage collection
+    // certainly should be enabled again.
+    void init_plog_gc_enabled();
+    void update_plog_gc_enabled(bool enabled);
+    bool is_plog_gc_enabled() const;
+    std::string get_plog_gc_enabled_message() const;
+
+    // Trigger an emergency checkpoint for duplication. Once the replica is empty (hasn't
+    // received any write operation), there would be no checkpoint created.
+    error_code trigger_manual_emergency_checkpoint(decree min_checkpoint_decree);
 
     /////////////////////////////////////////////////////////////////
     // cold backup
@@ -468,8 +532,8 @@ private:
     void update_restore_progress(uint64_t f_size);
 
     // Used for remote command
-    // TODO: remove this interface and only expose the http interface
-    // now this remote commend will be used by `scripts/pegasus_manual_compact.sh`
+    // TODO(clang-tidy): remove this interface and only expose the http interface
+    // now this remote commend will be used by `admin_tools/pegasus_manual_compact.sh`
     std::string query_manual_compact_state() const;
 
     manual_compaction_status::type get_manual_compact_status() const;
@@ -491,7 +555,7 @@ private:
     void update_throttle_envs(const std::map<std::string, std::string> &envs);
     void update_throttle_env_internal(const std::map<std::string, std::string> &envs,
                                       const std::string &key,
-                                      throttling_controller &cntl);
+                                      utils::throttling_controller &cntl);
 
     // update allowed users for access controller
     void update_ac_allowed_users(const std::map<std::string, std::string> &envs);
@@ -566,6 +630,8 @@ private:
     // local checkpoint timer for gc, checkpoint, etc.
     dsn::task_ptr _checkpoint_timer;
 
+    std::atomic<bool> _plog_gc_enabled{true};
+
     // application
     std::unique_ptr<replication_app_base> _app;
 
@@ -612,16 +678,21 @@ private:
     bool _inactive_is_transient; // upgrade to P/S is allowed only iff true
     bool _is_initializing;       // when initializing, switching to primary need to update ballot
     deny_client _deny_client;    // if deny requests
-    throttling_controller _write_qps_throttling_controller;  // throttling by requests-per-second
-    throttling_controller _write_size_throttling_controller; // throttling by bytes-per-second
-    throttling_controller _read_qps_throttling_controller;
-    throttling_controller _backup_request_qps_throttling_controller;
+    utils::throttling_controller
+        _write_qps_throttling_controller; // throttling by requests-per-second
+    utils::throttling_controller
+        _write_size_throttling_controller; // throttling by bytes-per-second
+    utils::throttling_controller _read_qps_throttling_controller;
+    utils::throttling_controller _backup_request_qps_throttling_controller;
 
     // duplication
-    std::unique_ptr<replica_duplicator_manager> _duplication_mgr;
+    std::shared_ptr<replica_duplicator_manager> _duplication_mgr;
     bool _is_manual_emergency_checkpointing{false};
     bool _is_duplication_master{false};
     bool _is_duplication_follower{false};
+    // Indicate whether the replica is during finding out some private logs to
+    // load for duplication. It useful to prevent plog GCed unexpectedly.
+    std::atomic<bool> _is_duplication_plog_checking{false};
 
     // backup
     std::unique_ptr<replica_backup_manager> _backup_mgr;

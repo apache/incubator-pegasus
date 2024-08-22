@@ -32,6 +32,7 @@
 #include <utility>
 #include <vector>
 
+#include "utils/errors.h"
 #include "utils/error_code.h"
 
 #ifndef _XOPEN_SOURCE
@@ -68,6 +69,8 @@ namespace filesystem {
 // TODO(yingchun): Consider using rocksdb APIs to rewrite the following functions.
 
 void get_normalized_path(const std::string &path, std::string &npath);
+
+bool is_absolute_path(const std::string &path);
 
 bool get_absolute_path(const std::string &path1, std::string &path2);
 
@@ -164,6 +167,13 @@ bool create_directory(const std::string &path,
 // check if directory is readable and writable
 // call `create_directory` before to make `path` exist
 bool check_dir_rw(const std::string &path, /*out*/ std::string &err_msg);
+
+// Finds paths on the filesystem matching a pattern.
+//
+// The found pathnames are added to the 'paths' vector. If no pathnames are
+// found matching the pattern, no paths are added to the vector and an OK
+// status is returned.
+error_s glob(const std::string &path_pattern, std::vector<std::string> &path_list);
 
 } // namespace filesystem
 } // namespace utils

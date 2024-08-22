@@ -35,5 +35,5 @@ public:
 
 template <typename T>
 T preloadable<T>::s_instance;
-}
-}
+} // namespace utils
+} // namespace dsn

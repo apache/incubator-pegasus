@@ -74,5 +74,5 @@ inline int get_current_tid()
 ///
 uint64_t process_start_millis();
 const char *process_start_date_time_mills();
-}
-}
+} // namespace utils
+} // namespace dsn

@@ -117,27 +117,27 @@ perf_counters::perf_counters()
     // perf_counters
     tools::shared_io_service::instance();
 
-    _cmds.emplace_back(command_manager::instance().register_command(
-        {"perf-counters"},
-        "perf-counters - query perf counters, filtered by OR of POSIX basic regular expressions",
-        "perf-counters [regexp]...",
+    _cmds.emplace_back(command_manager::instance().register_single_command(
+        "perf-counters",
+        "Query perf counters, filtered by OR of POSIX basic regular expressions",
+        "[regexp]...",
         [](const std::vector<std::string> &args) {
             return perf_counters::instance().list_snapshot_by_regexp(args);
         }));
-    _cmds.emplace_back(command_manager::instance().register_command(
-        {"perf-counters-by-substr"},
-        "perf-counters-by-substr - query perf counters, filtered by OR of substrs",
-        "perf-counters-by-substr [substr]...",
+    _cmds.emplace_back(command_manager::instance().register_single_command(
+        "perf-counters-by-substr",
+        "Query perf counters, filtered by OR of substrs",
+        "[substr]...",
         [](const std::vector<std::string> &args) {
             return perf_counters::instance().list_snapshot_by_literal(
                 args, [](const std::string &arg, const counter_snapshot &cs) {
                     return cs.name.find(arg) != std::string::npos;
                 });
         }));
-    _cmds.emplace_back(command_manager::instance().register_command(
-        {"perf-counters-by-prefix"},
-        "perf-counters-by-prefix - query perf counters, filtered by OR of prefix strings",
-        "perf-counters-by-prefix [prefix]...",
+    _cmds.emplace_back(command_manager::instance().register_single_command(
+        "perf-counters-by-prefix",
+        "Query perf counters, filtered by OR of prefix strings",
+        "[prefix]...",
         [](const std::vector<std::string> &args) {
             return perf_counters::instance().list_snapshot_by_literal(
                 args, [](const std::string &arg, const counter_snapshot &cs) {
@@ -145,10 +145,10 @@ perf_counters::perf_counters()
                            utils::mequals(cs.name.c_str(), arg.c_str(), arg.size());
                 });
         }));
-    _cmds.emplace_back(command_manager::instance().register_command(
-        {"perf-counters-by-postfix"},
-        "perf-counters-by-postfix - query perf counters, filtered by OR of postfix strings",
-        "perf-counters-by-postfix [postfix]...",
+    _cmds.emplace_back(command_manager::instance().register_single_command(
+        "perf-counters-by-postfix",
+        "Query perf counters, filtered by OR of postfix strings",
+        "[postfix]...",
         [](const std::vector<std::string> &args) {
             return perf_counters::instance().list_snapshot_by_literal(
                 args, [](const std::string &arg, const counter_snapshot &cs) {
@@ -159,10 +159,10 @@ perf_counters::perf_counters()
                 });
         }));
 
-    _cmds.emplace_back(command_manager::instance().register_command(
-        {"server-stat"},
-        "server-stat - query selected perf counters",
+    _cmds.emplace_back(command_manager::instance().register_single_command(
         "server-stat",
+        "Query selected perf counters",
+        "",
         [](const std::vector<std::string> &args) { return get_brief_stat(); }));
 }
 

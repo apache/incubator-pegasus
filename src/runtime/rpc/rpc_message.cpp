@@ -35,6 +35,7 @@
 
 #include "network.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/crc.h"
 #include "utils/flags.h"
@@ -221,6 +222,7 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
 
     message_ex *msg = new message_ex();
     msg->to_address = to_address;
+    msg->to_host_port = to_host_port;
     msg->local_rpc_code = local_rpc_code;
     msg->hdr_format = hdr_format;
 
@@ -248,7 +250,6 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
         int total_length = body_size() + sizeof(dsn::message_header);
         std::shared_ptr<char> recv_buffer(dsn::utils::make_shared_array<char>(total_length));
         char *ptr = recv_buffer.get();
-        int i = 0;
 
         if ((const char *)header != buffers[0].data()) {
             memcpy(ptr, (const void *)header, sizeof(message_header));
@@ -257,10 +258,9 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
 
         for (dsn::blob &bb : buffers) {
             memcpy(ptr, bb.data(), bb.length());
-            i += bb.length();
             ptr += bb.length();
         }
-        CHECK_EQ_MSG(i, total_length, "rpc_name = {}", msg->header->rpc_name);
+        CHECK_EQ_MSG(ptr - recv_buffer.get(), total_length, "rpc_name = {}", msg->header->rpc_name);
 
         auto data = dsn::blob(recv_buffer, total_length);
 
@@ -355,6 +355,7 @@ message_ex *message_ex::create_response()
     // the primary address.
     msg->header->from_address = to_address;
     msg->to_address = header->from_address;
+    msg->to_host_port = host_port::from_address(header->from_address);
     msg->io_session = io_session;
     msg->hdr_format = hdr_format;
 

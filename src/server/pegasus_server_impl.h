@@ -223,6 +223,8 @@ public:
     ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
                                                const dsn::replication::learn_state &state) override;
 
+    int64_t last_flushed_decree() const override;
+
     int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
 
     void update_app_envs(const std::map<std::string, std::string> &envs) override;
@@ -391,8 +393,8 @@ private:
     bool check_value_if_nearby(uint64_t base_value, uint64_t check_value)
     {
         uint64_t gap = base_value / 4;
-        uint64_t actual_gap =
-            (base_value < check_value) ? check_value - base_value : base_value - check_value;
+        uint64_t actual_gap = (base_value < check_value) ? check_value - base_value
+                                                         : base_value - check_value;
         return actual_gap <= gap;
     }
 
@@ -476,12 +478,9 @@ private:
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
-    // Column family names.
-    static const std::string DATA_COLUMN_FAMILY_NAME;
-    static const std::string META_COLUMN_FAMILY_NAME;
 
     dsn::gpid _gpid;
-    std::string _primary_address;
+    std::string _primary_host_port;
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
 

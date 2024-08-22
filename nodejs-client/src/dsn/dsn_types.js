@@ -256,6 +256,41 @@ rpc_address.prototype.equals = function(other){
     return false;
 };
 
+// TODO(yingchun): host_port is now just a place holder and not well implemented, need improve it
+var host_port_type = {
+    HOST_TYPE_INVALID : 0,
+    HOST_TYPE_IPV4 : 1,
+    HOST_TYPE_GROUP : 2
+};
+
+var host_port = function(args) {
+    this.host = null;
+    this.port = 0;
+    this.type = host_port_type.HOST_TYPE_INVALID;
+    if(args && args.host){
+        this.host = args.host;
+    }
+    if(args && args.port){
+        this.port = args.port;
+    }
+    if(args && args.type){
+        this.type = args.type;
+    }
+};
+
+host_port.prototype = {};
+host_port.prototype.read = function(input){
+    this.host = input.readBinary();
+    this.port = input.readI16();
+    this.type = input.readByte();
+};
+
+host_port.prototype.write = function(output){
+    output.writeBinary(this.host);
+    output.writeI16(this.port);
+    output.writeByte(this.type);
+};
+
 //value, calculate by app_id and partition index
 var gpid = function(args) {
     this.value = 0;
@@ -298,6 +333,7 @@ module.exports = {
     error_code : error_code,
     task_code : task_code,
     rpc_address : rpc_address,
+    host_port : host_port,
     gpid : gpid,
 };
 

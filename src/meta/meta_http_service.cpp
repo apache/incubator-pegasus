@@ -16,6 +16,7 @@
 // under the License.
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <algorithm>
 #include <map>
@@ -47,7 +48,7 @@
 #include "meta_http_service.h"
 #include "meta_server_failure_detector.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "server_load_balancer.h"
 #include "server_state.h"
 #include "utils/error_code.h"
@@ -90,6 +91,12 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
     if (!redirect_if_not_primary(req, resp))
         return;
 
+    if (app_name.empty()) {
+        resp.status_code = http_status_code::kBadRequest;
+        resp.body = "app name shouldn't be empty";
+        return;
+    }
+
     query_cfg_request request;
     query_cfg_response response;
 
@@ -128,47 +135,40 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         tp_details.add_column("replica_count");
         tp_details.add_column("primary");
         tp_details.add_column("secondaries");
-        std::map<rpc_address, std::pair<int, int>> node_stat;
+        std::map<host_port, std::pair<int, int>> node_stat;
 
         int total_prim_count = 0;
         int total_sec_count = 0;
         int fully_healthy = 0;
         int write_unhealthy = 0;
         int read_unhealthy = 0;
-        for (const auto &p : response.partitions) {
+        for (const auto &pc : response.partitions) {
             int replica_count = 0;
-            if (!p.primary.is_invalid()) {
+            if (pc.hp_primary) {
                 replica_count++;
-                node_stat[p.primary].first++;
+                node_stat[pc.hp_primary].first++;
                 total_prim_count++;
             }
-            replica_count += p.secondaries.size();
-            total_sec_count += p.secondaries.size();
-            if (!p.primary.is_invalid()) {
-                if (replica_count >= p.max_replica_count)
+            replica_count += pc.hp_secondaries.size();
+            total_sec_count += pc.hp_secondaries.size();
+            if (pc.hp_primary) {
+                if (replica_count >= pc.max_replica_count) {
                     fully_healthy++;
-                else if (replica_count < 2)
+                } else if (replica_count < 2) {
                     write_unhealthy++;
+                }
             } else {
                 write_unhealthy++;
                 read_unhealthy++;
             }
-            tp_details.add_row(p.pid.get_partition_index());
-            tp_details.append_data(p.ballot);
-            std::stringstream oss;
-            oss << replica_count << "/" << p.max_replica_count;
-            tp_details.append_data(oss.str());
-            tp_details.append_data((p.primary.is_invalid() ? "-" : p.primary.to_string()));
-            oss.str("");
-            oss << "[";
-            for (int j = 0; j < p.secondaries.size(); j++) {
-                if (j != 0)
-                    oss << ",";
-                oss << p.secondaries[j];
-                node_stat[p.secondaries[j]].second++;
+            tp_details.add_row(pc.pid.get_partition_index());
+            tp_details.append_data(pc.ballot);
+            tp_details.append_data(fmt::format("{}/{}", replica_count, pc.max_replica_count));
+            tp_details.append_data(pc.hp_primary ? pc.hp_primary.to_string() : "-");
+            tp_details.append_data(fmt::format("[{}]", fmt::join(pc.hp_secondaries, ",")));
+            for (const auto &secondary : pc.hp_secondaries) {
+                node_stat[secondary].second++;
             }
-            oss << "]";
-            tp_details.append_data(oss.str());
         }
         mtp.add(std::move(tp_details));
 
@@ -316,18 +316,18 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             int fully_healthy = 0;
             int write_unhealthy = 0;
             int read_unhealthy = 0;
-            for (int i = 0; i < response.partitions.size(); i++) {
-                const dsn::partition_configuration &p = response.partitions[i];
+            for (const auto &pc : response.partitions) {
                 int replica_count = 0;
-                if (!p.primary.is_invalid()) {
+                if (pc.hp_primary) {
                     replica_count++;
                 }
-                replica_count += p.secondaries.size();
-                if (!p.primary.is_invalid()) {
-                    if (replica_count >= p.max_replica_count)
+                replica_count += pc.hp_secondaries.size();
+                if (pc.hp_primary) {
+                    if (replica_count >= pc.max_replica_count) {
                         fully_healthy++;
-                    else if (replica_count < 2)
+                    } else if (replica_count < 2) {
                         write_unhealthy++;
+                    }
                 } else {
                     write_unhealthy++;
                     read_unhealthy++;
@@ -384,7 +384,7 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
     if (!redirect_if_not_primary(req, resp))
         return;
 
-    std::map<dsn::rpc_address, list_nodes_helper> tmp_map;
+    std::map<dsn::host_port, list_nodes_helper> tmp_map;
     for (const auto &node : _service->_alive_set) {
         tmp_map.emplace(node, list_nodes_helper(node.to_string(), "ALIVE"));
     }
@@ -407,16 +407,15 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
             CHECK_EQ(app.app_id, response_app.app_id);
             CHECK_EQ(app.partition_count, response_app.partition_count);
 
-            for (int i = 0; i < response_app.partitions.size(); i++) {
-                const dsn::partition_configuration &p = response_app.partitions[i];
-                if (!p.primary.is_invalid()) {
-                    auto find = tmp_map.find(p.primary);
+            for (const auto &pc : response_app.partitions) {
+                if (pc.hp_primary) {
+                    auto find = tmp_map.find(pc.hp_primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (int j = 0; j < p.secondaries.size(); j++) {
-                    auto find = tmp_map.find(p.secondaries[j]);
+                for (const auto &secondary : pc.hp_secondaries) {
+                    auto find = tmp_map.find(secondary);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;
                     }
@@ -475,7 +474,7 @@ void meta_http_service::get_cluster_info_handler(const http_request &req, http_r
         }
     }
     tp.add_row_name_and_data("meta_servers", meta_servers_str);
-    tp.add_row_name_and_data("primary_meta_server", dsn_primary_address().to_string());
+    tp.add_row_name_and_data("primary_meta_server", dsn_primary_host_port().to_string());
     tp.add_row_name_and_data("zookeeper_hosts", FLAGS_hosts_list);
     tp.add_row_name_and_data("zookeeper_root", _service->_cluster_root);
     tp.add_row_name_and_data(
@@ -674,6 +673,7 @@ void meta_http_service::start_bulk_load_handler(const http_request &req, http_re
         resp.status_code = http_status_code::kBadRequest;
         return;
     }
+    // TODO(yingchun): Also deal the 'ingest_behind' parameter.
 
     auto rpc_req = std::make_unique<start_bulk_load_request>(request);
     start_bulk_load_rpc rpc(std::move(rpc_req), LPC_META_CALLBACK);
@@ -754,8 +754,11 @@ void meta_http_service::start_compaction_handler(const http_request &req, http_r
         resp.status_code = http_status_code::kBadRequest;
         return;
     }
-    if (info.bottommost_level_compaction.empty() || (info.bottommost_level_compaction != "skip" &&
-                                                     info.bottommost_level_compaction != "force")) {
+    if (info.bottommost_level_compaction.empty() ||
+        (info.bottommost_level_compaction !=
+             replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP &&
+         info.bottommost_level_compaction !=
+             replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE)) {
         resp.body = "bottommost_level_compaction should ony be 'skip' or 'force'";
         resp.status_code = http_status_code::kBadRequest;
         return;
@@ -799,7 +802,7 @@ void meta_http_service::update_scenario_handler(const http_request &req, http_re
         return;
     }
 
-    // validate paramters
+    // validate parameters
     usage_scenario_info info;
     bool ret = json::json_forwarder<usage_scenario_info>::decode(req.body, info);
     if (!ret) {
@@ -846,7 +849,7 @@ bool meta_http_service::redirect_if_not_primary(const http_request &req, http_re
     }
 #endif
 
-    rpc_address leader;
+    host_port leader;
     if (_service->_failure_detector->get_leader(&leader)) {
         return true;
     }

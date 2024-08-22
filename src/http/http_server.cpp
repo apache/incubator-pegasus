@@ -23,19 +23,20 @@
 #include <ostream>
 #include <vector>
 
-#include "http/builtin_http_calls.h"
 #include "fmt/core.h"
-#include "http/http_method.h"
+#include "gutil/map_util.h"
+#include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"
 #include "http/http_message_parser.h"
+#include "http/http_method.h"
 #include "http/http_server_impl.h"
+#include "http/uri_decoder.h"
 #include "nodejs/http_parser.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/tool_api.h"
-#include "http/uri_decoder.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
@@ -90,6 +91,14 @@ std::string http_service::get_rel_path(const std::string &sub_path) const
 
 void http_service::register_handler(std::string sub_path, http_callback cb, std::string help) const
 {
+    register_handler(std::move(sub_path), std::move(cb), "", std::move(help));
+}
+
+void http_service::register_handler(std::string sub_path,
+                                    http_callback cb,
+                                    std::string parameters,
+                                    std::string help) const
+{
     CHECK_FALSE(sub_path.empty());
     if (!FLAGS_enable_http_server) {
         return;
@@ -97,9 +106,13 @@ void http_service::register_handler(std::string sub_path, http_callback cb, std:
 
     auto call = std::make_unique<http_call>();
     call->path = get_rel_path(sub_path);
-    call->callback = std::move(cb);
-    call->help = std::move(help);
+    call->with_callback(std::move(cb)).with_help(parameters, help);
     http_call_registry::instance().add(std::move(call));
+}
+
+void http_service::deregister_handler(std::string sub_path) const
+{
+    http_call_registry::instance().remove(get_rel_path(sub_path));
 }
 
 void http_server_base::update_config_handler(const http_request &req, http_response &resp)
@@ -238,8 +251,7 @@ void http_server::serve(message_ex *msg)
             if (sep + 1 < arg_val.size()) {
                 value = arg_val.substr(sep + 1, arg_val.size() - sep);
             }
-            auto iter = ret.query_args.find(name);
-            if (iter != ret.query_args.end()) {
+            if (gutil::ContainsKey(ret.query_args, name)) {
                 return FMT_ERR(ERR_INVALID_PARAMETERS, "duplicate parameter: {}", name);
             }
             ret.query_args.emplace(std::move(name), std::move(value));

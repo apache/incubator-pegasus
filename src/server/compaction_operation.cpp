@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <cstdint>
 
 #include "base/pegasus_utils.h"
@@ -30,9 +30,9 @@ namespace pegasus {
 namespace server {
 compaction_operation::~compaction_operation() = default;
 
-bool compaction_operation::all_rules_match(absl::string_view hash_key,
-                                           absl::string_view sort_key,
-                                           absl::string_view existing_value) const
+bool compaction_operation::all_rules_match(std::string_view hash_key,
+                                           std::string_view sort_key,
+                                           std::string_view existing_value) const
 {
     if (rules.empty()) {
         return false;
@@ -55,9 +55,9 @@ delete_key::delete_key(filter_rules &&rules, uint32_t data_version)
 
 delete_key::delete_key(uint32_t data_version) : compaction_operation(data_version) {}
 
-bool delete_key::filter(absl::string_view hash_key,
-                        absl::string_view sort_key,
-                        absl::string_view existing_value,
+bool delete_key::filter(std::string_view hash_key,
+                        std::string_view sort_key,
+                        std::string_view existing_value,
                         std::string *new_value,
                         bool *value_changed) const
 {
@@ -74,9 +74,9 @@ update_ttl::update_ttl(filter_rules &&rules, uint32_t data_version)
 
 update_ttl::update_ttl(uint32_t data_version) : compaction_operation(data_version) {}
 
-bool update_ttl::filter(absl::string_view hash_key,
-                        absl::string_view sort_key,
-                        absl::string_view existing_value,
+bool update_ttl::filter(std::string_view hash_key,
+                        std::string_view sort_key,
+                        std::string_view existing_value,
                         std::string *new_value,
                         bool *value_changed) const
 {

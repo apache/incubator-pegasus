@@ -28,10 +28,14 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-    dsn_runtime
-    dsn_utils
-    pegasus_base
-    gtest)
+        dsn_runtime
+        dsn_utils
+        pegasus_base
+        rocksdb
+        lz4
+        zstd
+        snappy
+        gtest)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

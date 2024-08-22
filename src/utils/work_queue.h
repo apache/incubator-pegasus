@@ -98,4 +98,4 @@ private:
 protected:
     slist<T> _hdr;
 };
-}
+} // namespace dsn

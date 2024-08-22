@@ -17,32 +17,48 @@
 
 #include "meta/load_balance_policy.h"
 
+#include <fmt/core.h>
+#include <fmt/format.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <limits.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <algorithm>
 #include <iterator>
 #include <limits>
 #include <mutex>
 #include <ostream>
 
+#include <string_view>
 #include "dsn.layer2_types.h"
-#include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
+#include "runtime/rpc/rpc_address.h"
 #include "utils/command_manager.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
 namespace dsn {
+
 namespace replication {
 
-void dump_disk_load(app_id id, const rpc_address &node, bool only_primary, const disk_load &load)
+configuration_proposal_action
+new_proposal_action(const host_port &target, const host_port &node, config_type::type type)
+{
+    configuration_proposal_action act;
+    SET_IP_AND_HOST_PORT_BY_DNS(act, target, target);
+    SET_IP_AND_HOST_PORT_BY_DNS(act, node, node);
+    act.__set_type(type);
+    return act;
+}
+
+void dump_disk_load(app_id id, const host_port &node, bool only_primary, const disk_load &load)
 {
     std::ostringstream load_string;
     load_string << std::endl << "<<<<<<<<<<" << std::endl;
@@ -63,7 +79,7 @@ void dump_disk_load(app_id id, const rpc_address &node, bool only_primary, const
 bool calc_disk_load(node_mapper &nodes,
                     const app_mapper &apps,
                     app_id id,
-                    const rpc_address &node,
+                    const host_port &node,
                     bool only_primary,
                     /*out*/ disk_load &load)
 {
@@ -96,13 +112,12 @@ bool calc_disk_load(node_mapper &nodes,
     }
 }
 
-std::unordered_map<dsn::rpc_address, disk_load>
-get_node_loads(const std::shared_ptr<app_state> &app,
-               const app_mapper &apps,
-               node_mapper &nodes,
-               bool only_primary)
+std::unordered_map<dsn::host_port, disk_load> get_node_loads(const std::shared_ptr<app_state> &app,
+                                                             const app_mapper &apps,
+                                                             node_mapper &nodes,
+                                                             bool only_primary)
 {
-    std::unordered_map<dsn::rpc_address, disk_load> node_loads;
+    std::unordered_map<dsn::host_port, disk_load> node_loads;
     for (auto iter = nodes.begin(); iter != nodes.end(); ++iter) {
         if (!calc_disk_load(
                 nodes, apps, app->app_id, iter->first, only_primary, node_loads[iter->first])) {
@@ -116,7 +131,7 @@ get_node_loads(const std::shared_ptr<app_state> &app,
     return node_loads;
 }
 
-const std::string &get_disk_tag(const app_mapper &apps, const rpc_address &node, const gpid &pid)
+const std::string &get_disk_tag(const app_mapper &apps, const host_port &node, const gpid &pid)
 {
     const config_context &cc = *get_config_context(apps, pid);
     auto iter = cc.find_from_serving(node);
@@ -128,11 +143,10 @@ std::shared_ptr<configuration_balancer_request>
 generate_balancer_request(const app_mapper &apps,
                           const partition_configuration &pc,
                           const balance_type &type,
-                          const rpc_address &from,
-                          const rpc_address &to)
+                          const host_port &from,
+                          const host_port &to)
 {
-    FAIL_POINT_INJECT_F("generate_balancer_request",
-                        [](absl::string_view name) { return nullptr; });
+    FAIL_POINT_INJECT_F("generate_balancer_request", [](std::string_view name) { return nullptr; });
 
     configuration_balancer_request result;
     result.gpid = pc.pid;
@@ -162,9 +176,9 @@ generate_balancer_request(const app_mapper &apps,
         ans = "copy_secondary";
         result.balance_type = balancer_request_type::copy_secondary;
         result.action_list.emplace_back(
-            new_proposal_action(pc.primary, to, config_type::CT_ADD_SECONDARY_FOR_LB));
+            new_proposal_action(pc.hp_primary, to, config_type::CT_ADD_SECONDARY_FOR_LB));
         result.action_list.emplace_back(
-            new_proposal_action(pc.primary, from, config_type::CT_REMOVE));
+            new_proposal_action(pc.hp_primary, from, config_type::CT_REMOVE));
         break;
     default:
         CHECK(false, "");
@@ -183,10 +197,10 @@ load_balance_policy::load_balance_policy(meta_service *svc)
 {
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_command(
-            {"meta.lb.ignored_app_list"},
-            "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
-            "get, set and clear balancer ignored_app_list",
+        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_single_command(
+            "meta.lb.ignored_app_list",
+            "Get, set or clear balancer ignored_app_list",
+            "<get|set|clear> [set_app_id1,set_app_id2,...]",
             [this](const std::vector<std::string> &args) {
                 return remote_command_balancer_ignored_app_ids(args);
             });
@@ -212,7 +226,7 @@ bool load_balance_policy::primary_balance(const std::shared_ptr<app_state> &app,
                  "too few alive nodes will lead to freeze");
     LOG_INFO("primary balancer for app({}:{})", app->app_name, app->app_id);
 
-    auto graph = ford_fulkerson::builder(app, *_global_view->nodes, address_id).build();
+    auto graph = ford_fulkerson::builder(app, *_global_view->nodes, host_port_id).build();
     if (nullptr == graph) {
         LOG_DEBUG("the primaries are balanced for app({}:{})", app->app_name, app->app_id);
         return true;
@@ -240,8 +254,8 @@ bool load_balance_policy::copy_primary(const std::shared_ptr<app_state> &app,
     const app_mapper &apps = *_global_view->apps;
     int replicas_low = app->partition_count / _alive_nodes;
 
-    std::unique_ptr<copy_replica_operation> operation = std::make_unique<copy_primary_operation>(
-        app, apps, nodes, address_vec, address_id, still_have_less_than_average, replicas_low);
+    auto operation = std::make_unique<copy_primary_operation>(
+        app, apps, nodes, host_port_vec, host_port_id, still_have_less_than_average, replicas_low);
     return operation->start(_migration_result);
 }
 
@@ -258,17 +272,17 @@ bool load_balance_policy::move_primary(std::unique_ptr<flow_path> path)
 
     int current = path->_prev.back();
     if (!calc_disk_load(
-            nodes, apps, path->_app->app_id, address_vec[current], true, *current_load)) {
+            nodes, apps, path->_app->app_id, host_port_vec[current], true, *current_load)) {
         LOG_WARNING("stop move primary as some replica infos aren't collected, node({}), app({})",
-                    address_vec[current],
+                    host_port_vec[current],
                     path->_app->get_logname());
         return false;
     }
 
     int plan_moving = path->_flow.back();
     while (path->_prev[current] != 0) {
-        rpc_address from = address_vec[path->_prev[current]];
-        rpc_address to = address_vec[current];
+        const auto &from = host_port_vec[path->_prev[current]];
+        const auto &to = host_port_vec[current];
         if (!calc_disk_load(nodes, apps, path->_app->app_id, from, true, *prev_load)) {
             LOG_WARNING(
                 "stop move primary as some replica infos aren't collected, node({}), app({})",
@@ -286,8 +300,8 @@ bool load_balance_policy::move_primary(std::unique_ptr<flow_path> path)
 }
 
 void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> &app,
-                                               const rpc_address &from,
-                                               const rpc_address &to,
+                                               const host_port &from,
+                                               const host_port &to,
                                                int plan_moving,
                                                disk_load *prev_load,
                                                disk_load *current_load)
@@ -305,7 +319,7 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
     while (plan_moving-- > 0) {
         dsn::gpid selected = select_moving(potential_moving, prev_load, current_load, from, to);
 
-        const partition_configuration &pc = app->partitions[selected.get_partition_index()];
+        const auto &pc = app->pcs[selected.get_partition_index()];
         auto balancer_result = _migration_result->emplace(
             selected,
             generate_balancer_request(
@@ -318,12 +332,12 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
 }
 
 std::list<dsn::gpid> load_balance_policy::calc_potential_moving(
-    const std::shared_ptr<app_state> &app, const rpc_address &from, const rpc_address &to)
+    const std::shared_ptr<app_state> &app, const host_port &from, const host_port &to)
 {
     std::list<dsn::gpid> potential_moving;
     const node_state &ns = _global_view->nodes->find(from)->second;
     ns.for_each_primary(app->app_id, [&](const gpid &pid) {
-        const partition_configuration &pc = app->partitions[pid.get_partition_index()];
+        const auto &pc = app->pcs[pid.get_partition_index()];
         if (is_secondary(pc, to)) {
             potential_moving.push_back(pid);
         }
@@ -335,8 +349,8 @@ std::list<dsn::gpid> load_balance_policy::calc_potential_moving(
 dsn::gpid load_balance_policy::select_moving(std::list<dsn::gpid> &potential_moving,
                                              disk_load *prev_load,
                                              disk_load *current_load,
-                                             rpc_address from,
-                                             rpc_address to)
+                                             const host_port &from,
+                                             const host_port &to)
 {
     std::list<dsn::gpid>::iterator selected = potential_moving.end();
     int max = std::numeric_limits<int>::min();
@@ -395,70 +409,75 @@ bool load_balance_policy::execute_balance(
 std::string
 load_balance_policy::remote_command_balancer_ignored_app_ids(const std::vector<std::string> &args)
 {
-    static const std::string invalid_arguments("invalid arguments");
-    if (args.empty()) {
-        return invalid_arguments;
-    }
-    if (args[0] == "set") {
-        return set_balancer_ignored_app_ids(args);
-    }
-    if (args[0] == "get") {
-        return get_balancer_ignored_app_ids();
-    }
-    if (args[0] == "clear") {
-        return clear_balancer_ignored_app_ids();
-    }
-    return invalid_arguments;
+    static const std::string invalid_arguments_message("invalid arguments");
+    nlohmann::json info;
+    do {
+        if (args.empty()) {
+            break;
+        }
+        if (args[0] == "set") {
+            return set_balancer_ignored_app_ids(args);
+        } else if (args[0] == "get") {
+            return get_balancer_ignored_app_ids();
+        } else if (args[0] == "clear") {
+            return clear_balancer_ignored_app_ids();
+        }
+    } while (false);
+
+    info["error"] = invalid_arguments_message;
+    return info.dump(2);
 }
 
 std::string load_balance_policy::set_balancer_ignored_app_ids(const std::vector<std::string> &args)
 {
-    static const std::string invalid_arguments("invalid arguments");
+    nlohmann::json info;
+    info["error"] = "invalid argument";
     if (args.size() != 2) {
-        return invalid_arguments;
+        return info.dump(2);
     }
 
     std::vector<std::string> app_ids;
     dsn::utils::split_args(args[1].c_str(), app_ids, ',');
     if (app_ids.empty()) {
-        return invalid_arguments;
+        return info.dump(2);
     }
 
     std::set<app_id> app_list;
-    for (const std::string &app_id_str : app_ids) {
+    for (const auto &app_id_str : app_ids) {
         app_id app;
         if (!dsn::buf2int32(app_id_str, app)) {
-            return invalid_arguments;
+            return info.dump(2);
         }
         app_list.insert(app);
     }
 
-    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
-    _balancer_ignored_apps = std::move(app_list);
-    return "set ok";
+    {
+        dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
+        _balancer_ignored_apps = std::move(app_list);
+    }
+    info["error"] = "ok";
+    return info.dump(2);
 }
 
 std::string load_balance_policy::get_balancer_ignored_app_ids()
 {
-    std::stringstream oss;
-    dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
-    if (_balancer_ignored_apps.empty()) {
-        return "no ignored apps";
+    nlohmann::json data;
+    {
+        dsn::zauto_read_lock l(_balancer_ignored_apps_lock);
+        data["ignored_app_id_list"] = fmt::format("{}", fmt::join(_balancer_ignored_apps, ","));
     }
-    oss << "ignored_app_id_list: ";
-    std::copy(_balancer_ignored_apps.begin(),
-              _balancer_ignored_apps.end(),
-              std::ostream_iterator<app_id>(oss, ","));
-    std::string app_ids = oss.str();
-    app_ids[app_ids.size() - 1] = '\0';
-    return app_ids;
+    return data.dump(2);
 }
 
 std::string load_balance_policy::clear_balancer_ignored_app_ids()
 {
-    dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
-    _balancer_ignored_apps.clear();
-    return "clear ok";
+    {
+        dsn::zauto_write_lock l(_balancer_ignored_apps_lock);
+        _balancer_ignored_apps.clear();
+    }
+    nlohmann::json info;
+    info["error"] = "ok";
+    return info.dump(2);
 }
 
 bool load_balance_policy::is_ignored_app(app_id app_id)
@@ -471,27 +490,27 @@ void load_balance_policy::number_nodes(const node_mapper &nodes)
 {
     int current_id = 1;
 
-    address_id.clear();
-    address_vec.resize(_alive_nodes + 2);
+    host_port_id.clear();
+    host_port_vec.resize(_alive_nodes + 2);
     for (auto iter = nodes.begin(); iter != nodes.end(); ++iter) {
-        CHECK(!iter->first.is_invalid() && !iter->second.addr().is_invalid(), "invalid address");
+        CHECK(iter->first && iter->second.host_port(), "invalid address");
         CHECK(iter->second.alive(), "dead node");
 
-        address_id[iter->first] = current_id;
-        address_vec[current_id] = iter->first;
+        host_port_id[iter->first] = current_id;
+        host_port_vec[current_id] = iter->first;
         ++current_id;
     }
 }
 
 ford_fulkerson::ford_fulkerson(const std::shared_ptr<app_state> &app,
                                const node_mapper &nodes,
-                               const std::unordered_map<dsn::rpc_address, int> &address_id,
+                               const std::unordered_map<dsn::host_port, int> &host_port_id,
                                uint32_t higher_count,
                                uint32_t lower_count,
                                int replicas_low)
     : _app(app),
       _nodes(nodes),
-      _address_id(address_id),
+      _host_port_id(host_port_id),
       _higher_count(higher_count),
       _lower_count(lower_count),
       _replicas_low(replicas_low)
@@ -526,7 +545,7 @@ void ford_fulkerson::make_graph()
     _graph_nodes = _nodes.size() + 2;
     _network.resize(_graph_nodes, std::vector<int>(_graph_nodes, 0));
     for (const auto &node : _nodes) {
-        int node_id = _address_id.at(node.first);
+        int node_id = _host_port_id.at(node.first);
         add_edge(node_id, node.second);
         update_decree(node_id, node.second);
     }
@@ -546,10 +565,10 @@ void ford_fulkerson::add_edge(int node_id, const node_state &ns)
 void ford_fulkerson::update_decree(int node_id, const node_state &ns)
 {
     ns.for_each_primary(_app->app_id, [&, this](const gpid &pid) {
-        const partition_configuration &pc = _app->partitions[pid.get_partition_index()];
-        for (const auto &secondary : pc.secondaries) {
-            auto i = _address_id.find(secondary);
-            CHECK(i != _address_id.end(), "invalid secondary address, address = {}", secondary);
+        const auto &pc = _app->pcs[pid.get_partition_index()];
+        for (const auto &secondary : pc.hp_secondaries) {
+            auto i = _host_port_id.find(secondary);
+            CHECK(i != _host_port_id.end(), "invalid secondary: {}", secondary);
             _network[node_id][i->second]++;
         }
         return true;
@@ -619,15 +638,19 @@ copy_replica_operation::copy_replica_operation(
     const std::shared_ptr<app_state> app,
     const app_mapper &apps,
     node_mapper &nodes,
-    const std::vector<dsn::rpc_address> &address_vec,
-    const std::unordered_map<dsn::rpc_address, int> &address_id)
-    : _app(app), _apps(apps), _nodes(nodes), _address_vec(address_vec), _address_id(address_id)
+    const std::vector<dsn::host_port> &host_port_vec,
+    const std::unordered_map<dsn::host_port, int> &host_port_id)
+    : _app(app),
+      _apps(apps),
+      _nodes(nodes),
+      _host_port_vec(host_port_vec),
+      _host_port_id(host_port_id)
 {
 }
 
 bool copy_replica_operation::start(migration_list *result)
 {
-    init_ordered_address_ids();
+    init_ordered_host_port_ids();
     _node_loads = get_node_loads(_app, _apps, _nodes, only_copy_primary());
     if (_node_loads.size() != _nodes.size()) {
         return false;
@@ -641,9 +664,9 @@ bool copy_replica_operation::start(migration_list *result)
         gpid selected_pid = select_partition(result);
         if (selected_pid.get_app_id() != -1) {
             copy_once(selected_pid, result);
-            update_ordered_address_ids();
+            update_ordered_host_port_ids();
         } else {
-            _ordered_address_ids.erase(--_ordered_address_ids.end());
+            _ordered_host_port_ids.erase(--_ordered_host_port_ids.end());
         }
     }
     return true;
@@ -651,8 +674,8 @@ bool copy_replica_operation::start(migration_list *result)
 
 const partition_set *copy_replica_operation::get_all_partitions()
 {
-    int id_max = *_ordered_address_ids.rbegin();
-    const node_state &ns = _nodes.find(_address_vec[id_max])->second;
+    int id_max = *_ordered_host_port_ids.rbegin();
+    const node_state &ns = _nodes.find(_host_port_vec[id_max])->second;
     const partition_set *partitions = ns.partitions(_app->app_id, only_copy_primary());
     return partitions;
 }
@@ -660,8 +683,8 @@ const partition_set *copy_replica_operation::get_all_partitions()
 gpid copy_replica_operation::select_max_load_gpid(const partition_set *partitions,
                                                   migration_list *result)
 {
-    int id_max = *_ordered_address_ids.rbegin();
-    const disk_load &load_on_max = _node_loads.at(_address_vec[id_max]);
+    int id_max = *_ordered_host_port_ids.rbegin();
+    const auto &load_on_max = _node_loads.at(_host_port_vec[id_max]);
 
     gpid selected_pid(-1, -1);
     int max_load = -1;
@@ -670,7 +693,7 @@ gpid copy_replica_operation::select_max_load_gpid(const partition_set *partition
             continue;
         }
 
-        const std::string &disk_tag = get_disk_tag(_apps, _address_vec[id_max], pid);
+        const std::string &disk_tag = get_disk_tag(_apps, _host_port_vec[id_max], pid);
         auto load = load_on_max.at(disk_tag);
         if (load > max_load) {
             selected_pid = pid;
@@ -682,33 +705,33 @@ gpid copy_replica_operation::select_max_load_gpid(const partition_set *partition
 
 void copy_replica_operation::copy_once(gpid selected_pid, migration_list *result)
 {
-    auto from = _address_vec[*_ordered_address_ids.rbegin()];
-    auto to = _address_vec[*_ordered_address_ids.begin()];
+    const auto &from = _host_port_vec[*_ordered_host_port_ids.rbegin()];
+    const auto &to = _host_port_vec[*_ordered_host_port_ids.begin()];
 
-    auto pc = _app->partitions[selected_pid.get_partition_index()];
+    auto pc = _app->pcs[selected_pid.get_partition_index()];
     auto request = generate_balancer_request(_apps, pc, get_balance_type(), from, to);
     result->emplace(selected_pid, request);
 }
 
-void copy_replica_operation::update_ordered_address_ids()
+void copy_replica_operation::update_ordered_host_port_ids()
 {
-    int id_min = *_ordered_address_ids.begin();
-    int id_max = *_ordered_address_ids.rbegin();
+    int id_min = *_ordered_host_port_ids.begin();
+    int id_max = *_ordered_host_port_ids.rbegin();
     --_partition_counts[id_max];
     ++_partition_counts[id_min];
 
-    _ordered_address_ids.erase(_ordered_address_ids.begin());
-    _ordered_address_ids.erase(--_ordered_address_ids.end());
+    _ordered_host_port_ids.erase(_ordered_host_port_ids.begin());
+    _ordered_host_port_ids.erase(--_ordered_host_port_ids.end());
 
-    _ordered_address_ids.insert(id_max);
-    _ordered_address_ids.insert(id_min);
+    _ordered_host_port_ids.insert(id_max);
+    _ordered_host_port_ids.insert(id_min);
 }
 
-void copy_replica_operation::init_ordered_address_ids()
+void copy_replica_operation::init_ordered_host_port_ids()
 {
-    _partition_counts.resize(_address_vec.size(), 0);
+    _partition_counts.resize(_host_port_vec.size(), 0);
     for (const auto &iter : _nodes) {
-        auto id = _address_id.at(iter.first);
+        auto id = _host_port_id.at(iter.first);
         _partition_counts[id] = get_partition_count(iter.second);
     }
 
@@ -719,19 +742,21 @@ void copy_replica_operation::init_ordered_address_ids()
                        : left < right;
         });
     for (const auto &iter : _nodes) {
-        auto id = _address_id.at(iter.first);
+        auto id = _host_port_id.at(iter.first);
         ordered_queue.insert(id);
     }
-    _ordered_address_ids.swap(ordered_queue);
+    _ordered_host_port_ids.swap(ordered_queue);
 }
 
 gpid copy_replica_operation::select_partition(migration_list *result)
 {
     const partition_set *partitions = get_all_partitions();
 
-    int id_max = *_ordered_address_ids.rbegin();
-    const node_state &ns = _nodes.find(_address_vec[id_max])->second;
-    CHECK(partitions != nullptr && !partitions->empty(), "max load({}) shouldn't empty", ns.addr());
+    int id_max = *_ordered_host_port_ids.rbegin();
+    const node_state &ns = _nodes.find(_host_port_vec[id_max])->second;
+    CHECK(partitions != nullptr && !partitions->empty(),
+          "max load({}) shouldn't empty",
+          ns.host_port());
 
     return select_max_load_gpid(partitions, result);
 }
@@ -740,11 +765,11 @@ copy_primary_operation::copy_primary_operation(
     const std::shared_ptr<app_state> app,
     const app_mapper &apps,
     node_mapper &nodes,
-    const std::vector<dsn::rpc_address> &address_vec,
-    const std::unordered_map<dsn::rpc_address, int> &address_id,
+    const std::vector<dsn::host_port> &host_port_vec,
+    const std::unordered_map<dsn::host_port, int> &host_port_id,
     bool have_lower_than_average,
     int replicas_low)
-    : copy_replica_operation(app, apps, nodes, address_vec, address_id)
+    : copy_replica_operation(app, apps, nodes, host_port_vec, host_port_id)
 {
     _have_lower_than_average = have_lower_than_average;
     _replicas_low = replicas_low;
@@ -762,14 +787,14 @@ bool copy_primary_operation::can_select(gpid pid, migration_list *result)
 
 bool copy_primary_operation::can_continue()
 {
-    int id_min = *_ordered_address_ids.begin();
+    int id_min = *_ordered_host_port_ids.begin();
     if (_have_lower_than_average && _partition_counts[id_min] >= _replicas_low) {
         LOG_INFO("{}: stop the copy due to primaries on all nodes will reach low later.",
                  _app->get_logname());
         return false;
     }
 
-    int id_max = *_ordered_address_ids.rbegin();
+    int id_max = *_ordered_host_port_ids.rbegin();
     if (!_have_lower_than_average && _partition_counts[id_max] - _partition_counts[id_min] <= 1) {
         LOG_INFO("{}: stop the copy due to the primary will be balanced later.",
                  _app->get_logname());

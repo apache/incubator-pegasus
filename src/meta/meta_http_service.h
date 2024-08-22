@@ -67,70 +67,80 @@ public:
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/app?app_name=temp");
+                         "name=<app_name>[&detail]",
+                         "Query app info.");
         register_handler("app/duplication",
                          std::bind(&meta_http_service::query_duplication_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/app/duplication?name=<app_name>");
+                         "name=<app_name>",
+                         "Query app duplication info.");
         register_handler("apps",
                          std::bind(&meta_http_service::list_app_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/apps");
+                         "[detail]",
+                         "List all apps in the cluster.");
         register_handler("nodes",
                          std::bind(&meta_http_service::list_node_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/nodes");
+                         "[detail]",
+                         "Query the replica servers info.");
         register_handler("cluster",
                          std::bind(&meta_http_service::get_cluster_info_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/cluster");
+                         "Query the cluster info.");
         register_handler("app_envs",
                          std::bind(&meta_http_service::get_app_envs_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/app_envs?name=temp");
+                         "name=<app_name>",
+                         "Query app environments.");
         register_handler("backup_policy",
                          std::bind(&meta_http_service::query_backup_policy_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/backup_policy");
+                         "name=<app_name1>&name=<app_name2>",
+                         "Query backup policy by policy names.");
         // request body should be start_bulk_load_request
         register_handler("app/start_bulk_load",
                          std::bind(&meta_http_service::start_bulk_load_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/start_bulk_load");
+                         "A JSON format of start_bulk_load_request structure",
+                         "Start bulk load on an app.");
         register_handler("app/query_bulk_load",
                          std::bind(&meta_http_service::query_bulk_load_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/query_bulk_load?name=temp");
+                         "name=<app_name>",
+                         "Query app bulk load info.");
         // request body should be manual_compaction_info
         register_handler("app/start_compaction",
                          std::bind(&meta_http_service::start_compaction_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/start_compaction");
+                         "A JSON format of manual_compaction_info structure",
+                         "Start compaction for an app.");
         // request body should be usage_scenario_info
         register_handler("app/usage_scenario",
                          std::bind(&meta_http_service::update_scenario_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),
-                         "ip:port/meta/app/usage_scenario");
+                         "A JSON format of usage_scenario_info structure",
+                         "Update usage scenario of an app.");
     }
 
     std::string path() const override { return "meta"; }

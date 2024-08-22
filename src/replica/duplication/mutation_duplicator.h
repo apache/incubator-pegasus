@@ -68,7 +68,7 @@ public:
 
     // Singleton creator of mutation_duplicator.
     static std::function<std::unique_ptr<mutation_duplicator>(
-        replica_base *, absl::string_view /*remote cluster*/, absl::string_view /*app name*/)>
+        replica_base *, std::string_view /*remote cluster*/, std::string_view /*app name*/)>
         creator;
 
     explicit mutation_duplicator(replica_base *r) : replica_base(r) {}
@@ -84,7 +84,7 @@ protected:
 };
 
 inline std::unique_ptr<mutation_duplicator> new_mutation_duplicator(
-    replica_base *r, absl::string_view remote_cluster_address, absl::string_view app)
+    replica_base *r, std::string_view remote_cluster_address, std::string_view app)
 {
     return mutation_duplicator::creator(r, remote_cluster_address, app);
 }

@@ -27,6 +27,9 @@
 #pragma once
 
 #include <fmt/core.h>
+#include <fmt/format.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdint.h>
 #include <functional>
@@ -35,7 +38,6 @@
 #include <string>
 #include <vector>
 
-#include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
@@ -44,19 +46,12 @@
 #include "utils/synchronize.h"
 
 namespace dsn {
-
 class command_deregister;
 
 class command_manager : public ::dsn::utils::singleton<command_manager>
 {
 public:
     using command_handler = std::function<std::string(const std::vector<std::string> &)>;
-
-    std::unique_ptr<command_deregister>
-    register_command(const std::vector<std::string> &commands,
-                     const std::string &help_one_line,
-                     const std::string &help_long,
-                     command_handler handler) WARN_UNUSED_RESULT;
 
     // Register command which query or update a boolean configuration.
     // The 'value' will be queried or updated by the command named 'command' with the 'help'
@@ -70,22 +65,42 @@ public:
     // 'validator' is used to validate the new value.
     // The value is reset to 'default_value' if passing "DEFAULT" argument.
     template <typename T>
-    WARN_UNUSED_RESULT std::unique_ptr<command_deregister>
-    register_int_command(T &value,
-                         T default_value,
-                         const std::string &command,
-                         const std::string &help,
-                         std::function<bool(int64_t new_value)> validator =
-                             [](int64_t new_value) -> bool { return new_value >= 0; })
+    WARN_UNUSED_RESULT std::unique_ptr<command_deregister> register_int_command(
+        T &value,
+        T default_value,
+        const std::string &command,
+        const std::string &help,
+        std::function<bool(int64_t new_value)> validator = [](int64_t new_value) -> bool {
+            return new_value >= 0;
+        })
     {
-        return register_command(
-            {command},
-            fmt::format("{} [num | DEFAULT]", command),
+        return register_single_command(
+            command,
             help,
+            fmt::format("[num | DEFAULT]"),
             [&value, default_value, command, validator](const std::vector<std::string> &args) {
                 return set_int(value, default_value, command, args, validator);
             });
     }
+
+    // Register a single 'command' with the 'help' description, its arguments are described in
+    // 'args'.
+    std::unique_ptr<command_deregister>
+    register_single_command(const std::string &command,
+                            const std::string &help,
+                            const std::string &args,
+                            command_handler handler) WARN_UNUSED_RESULT;
+
+    // Register multiple 'commands' with the 'help' description, their arguments are described in
+    // 'args'.
+    std::unique_ptr<command_deregister>
+    register_multiple_commands(const std::vector<std::string> &commands,
+                               const std::string &help,
+                               const std::string &args,
+                               command_handler handler) WARN_UNUSED_RESULT;
+
+    // Register a global command which is not associated with any objects.
+    void add_global_cmd(std::unique_ptr<command_deregister> cmd);
 
     bool run_command(const std::string &cmd,
                      const std::vector<std::string> &args,
@@ -98,15 +113,21 @@ private:
     command_manager();
     ~command_manager();
 
-    struct command_instance : public ref_counter
+    struct commands_handler
     {
         std::vector<std::string> commands;
-        std::string help_short;
-        std::string help_long;
+        std::string help;
+        std::string args;
         command_handler handler;
     };
 
-    void deregister_command(uintptr_t handle);
+    std::unique_ptr<command_deregister>
+    register_command(const std::vector<std::string> &commands,
+                     const std::string &help,
+                     const std::string &args,
+                     command_handler handler) WARN_UNUSED_RESULT;
+
+    void deregister_command(uintptr_t cmd_id);
 
     static std::string
     set_bool(bool &value, const std::string &name, const std::vector<std::string> &args);
@@ -118,39 +139,47 @@ private:
                                const std::vector<std::string> &args,
                                const std::function<bool(int64_t value)> &validator)
     {
+        nlohmann::json msg;
+        msg["error"] = "ok";
         // Query.
         if (args.empty()) {
-            return std::to_string(value);
+            msg[name] = fmt::format("{}", std::to_string(value));
+            return msg.dump(2);
         }
 
         // Invalid arguments size.
         if (args.size() > 1) {
-            return fmt::format("ERR: invalid arguments, only one integer argument is acceptable");
+            msg["error"] =
+                fmt::format("ERR: invalid arguments '{}', only one argument is acceptable",
+                            fmt::join(args, " "));
+            return msg.dump(2);
         }
 
         // Reset to the default value.
         if (dsn::utils::iequals(args[0], "DEFAULT")) {
             value = default_value;
-            return "OK";
+            msg[name] = default_value;
+            return msg.dump(2);
         }
 
         // Invalid argument.
         T new_value = 0;
         if (!internal::buf2signed(args[0], new_value) ||
             !validator(static_cast<int64_t>(new_value))) {
-            return {"ERR: invalid arguments"};
+            msg["error"] =
+                fmt::format("ERR: invalid argument '{}', the value is not acceptable", args[0]);
+            return msg.dump(2);
         }
 
         // Set to a new value.
         value = new_value;
         LOG_INFO("set {} to {} by remote command", name, new_value);
 
-        return "OK";
+        return msg.dump(2);
     }
 
-    typedef ref_ptr<command_instance> command_instance_ptr;
     utils::rw_lock_nr _lock;
-    std::map<std::string, command_instance_ptr> _handlers;
+    std::map<std::string, std::shared_ptr<commands_handler>> _handler_by_cmd;
 
     std::vector<std::unique_ptr<command_deregister>> _cmds;
 };

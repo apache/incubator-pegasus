@@ -197,7 +197,7 @@ private:
     global_strings_completion(int rc, const struct String_vector *strings, const void *data);
     static void global_void_completion(int rc, const void *data);
 };
-}
-}
+} // namespace dist
+} // namespace dsn
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::dist::zookeeper_session);

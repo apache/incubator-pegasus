@@ -45,10 +45,11 @@
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
 
-DSN_DEFINE_uint64(replication,
-                  abnormal_write_trace_latency_threshold,
-                  1000 * 1000 * 1000, // 1s
-                  "latency trace will be logged when exceed the write latency threshold");
+DSN_DEFINE_uint64(
+    replication,
+    abnormal_write_trace_latency_threshold,
+    1000 * 1000 * 1000, // 1s
+    "Latency trace will be logged when exceed the write latency threshold, in nanoseconds");
 DSN_TAG_VARIABLE(abnormal_write_trace_latency_threshold, FT_MUTABLE);
 
 namespace dsn {
@@ -462,5 +463,5 @@ void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
     // is handled by prepare_list
     // _current_op_count = 0;
 }
-}
-} // namespace end
+} // namespace replication
+} // namespace dsn

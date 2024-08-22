@@ -26,7 +26,7 @@
 
 #include "replica.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <functional>
@@ -38,12 +38,13 @@
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
+#include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "consensus_types.h"
-#include "duplication/replica_duplicator_manager.h"
 #include "duplication/replica_follower.h"
 #include "mutation.h"
 #include "mutation_log.h"
+#include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
@@ -265,16 +266,14 @@ METRIC_DEFINE_counter(replica,
 namespace dsn {
 namespace replication {
 
-const std::string replica::kAppInfo = ".app-info";
-
 replica::replica(replica_stub *stub,
                  gpid gpid,
                  const app_info &app,
                  dir_node *dn,
                  bool need_restore,
                  bool is_duplication_follower)
-    : serverlet<replica>("replica"),
-      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str), app.app_name),
+    : serverlet<replica>(replication_options::kReplicaAppType.c_str()),
+      replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_host_port_cache), app.app_name),
       _app_info(app),
       _primary_states(gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
       _potential_secondary_states(this),
@@ -282,7 +281,7 @@ replica::replica(replica_stub *stub,
       _cur_download_size(0),
       _restore_progress(0),
       _restore_status(ERR_OK),
-      _duplication_mgr(new replica_duplicator_manager(this)),
+      _duplication_mgr(std::make_shared<replica_duplicator_manager>(this)),
       // todo(jiashuo1): app.duplicating need rename
       _is_duplication_master(app.duplicating),
       _is_duplication_follower(is_duplication_follower),
@@ -322,6 +321,8 @@ replica::replica(replica_stub *stub,
       METRIC_VAR_INIT_replica(backup_file_upload_successful_count),
       METRIC_VAR_INIT_replica(backup_file_upload_total_bytes)
 {
+    init_plog_gc_enabled();
+
     CHECK(!_app_info.app_type.empty(), "");
     CHECK_NOTNULL(stub, "");
     _stub = stub;
@@ -368,7 +369,7 @@ void replica::init_state()
     _config.pid.set_app_id(0);
     _config.pid.set_partition_index(0);
     _config.status = partition_status::PS_INACTIVE;
-    _primary_states.membership.ballot = 0;
+    _primary_states.pc.ballot = 0;
     _create_time_ms = dsn_now_ms();
     _last_config_change_time_ms = _create_time_ms;
     update_last_checkpoint_generate_time();
@@ -577,6 +578,10 @@ mutation_ptr replica::new_mutation(decree decree)
     return mu;
 }
 
+decree replica::last_applied_decree() const { return _app->last_committed_decree(); }
+
+decree replica::last_flushed_decree() const { return _app->last_flushed_decree(); }
+
 decree replica::last_durable_decree() const { return _app->last_durable_decree(); }
 
 decree replica::last_prepared_decree() const
@@ -693,7 +698,8 @@ uint32_t replica::query_data_version() const
 error_code replica::store_app_info(app_info &info, const std::string &path)
 {
     replica_app_info new_info((app_info *)&info);
-    const auto &info_path = path.empty() ? utils::filesystem::path_combine(_dir, kAppInfo) : path;
+    const auto &info_path =
+        path.empty() ? utils::filesystem::path_combine(_dir, replica_app_info::kAppInfo) : path;
     auto err = new_info.store(info_path);
     if (dsn_unlikely(err != ERR_OK)) {
         LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", info_path, err);

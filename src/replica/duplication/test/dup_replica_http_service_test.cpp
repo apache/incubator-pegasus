@@ -42,13 +42,15 @@ INSTANTIATE_TEST_SUITE_P(, dup_replica_http_service_test, ::testing::Values(fals
 
 TEST_P(dup_replica_http_service_test, query_duplication_handler)
 {
-    auto pri = stub->add_primary_replica(1, 1);
+    auto *pri = stub->add_primary_replica(1, 1);
+    pri->init_private_log(pri->dir());
 
     // primary confirmed_decree
     duplication_entry ent;
     ent.dupid = 1583306653;
     ent.progress[pri->get_gpid().get_partition_index()] = 0;
     ent.status = duplication_status::DS_PAUSE;
+    ent.__set_remote_app_name("temp");
     add_dup(pri, std::make_unique<replica_duplicator>(ent, pri));
 
     replica_http_service http_svc(stub.get());
@@ -73,7 +75,7 @@ TEST_P(dup_replica_http_service_test, query_duplication_handler)
     http_svc.query_duplication_handler(req, resp);
     ASSERT_EQ(resp.status_code, http_status_code::kOk);
     ASSERT_EQ(
-        R"({"1583306653":{"1.1":{"duplicating":false,"fail_mode":"FAIL_SLOW","not_confirmed_mutations_num":100,"not_duplicated_mutations_num":50}}})",
+        R"({"1583306653":{"1.1":{"duplicating":false,"fail_mode":"FAIL_SLOW","not_confirmed_mutations_num":100,"not_duplicated_mutations_num":50,"remote_app_name":"temp"}}})",
         resp.body);
 }
 

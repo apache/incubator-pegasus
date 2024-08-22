@@ -45,4 +45,4 @@ private:
     int _access_thread_id;
     bool _access_thread_id_inited;
 };
-}
+} // namespace dsn

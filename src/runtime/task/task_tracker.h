@@ -226,4 +226,4 @@ inline void trackable_task::owner_delete_commit()
 
     _deleting_owner.store(OWNER_DELETE_FINISHED, std::memory_order_relaxed);
 }
-}
+} // namespace dsn

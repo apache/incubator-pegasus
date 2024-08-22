@@ -108,4 +108,4 @@ private:
     // use raw pointer to make the class object small, so it can be accessed quickly
     dsn::perf_counter *_counter;
 };
-}
+} // namespace dsn

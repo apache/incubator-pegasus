@@ -47,7 +47,9 @@
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
 #include "runtime/api_layer1.h"
+#include "runtime/rpc/dns_resolver.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task.h"
 #include "split/replica_split_manager.h"
@@ -56,7 +58,7 @@
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
@@ -80,7 +82,7 @@ namespace replication {
 
 void replica::init_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_init_group_check", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_init_group_check", [](std::string_view) {});
 
     _checker.only_one_thread_access();
 
@@ -90,17 +92,17 @@ void replica::init_group_check()
         return;
 
     CHECK(nullptr == _primary_states.group_check_task, "");
-    _primary_states.group_check_task =
-        tasking::enqueue_timer(LPC_GROUP_CHECK,
-                               &_tracker,
-                               [this] { broadcast_group_check(); },
-                               std::chrono::milliseconds(FLAGS_group_check_interval_ms),
-                               get_gpid().thread_hash());
+    _primary_states.group_check_task = tasking::enqueue_timer(
+        LPC_GROUP_CHECK,
+        &_tracker,
+        [this] { broadcast_group_check(); },
+        std::chrono::milliseconds(FLAGS_group_check_interval_ms),
+        get_gpid().thread_hash());
 }
 
 void replica::broadcast_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](std::string_view) {});
 
     CHECK_NOTNULL(_primary_states.group_check_task, "");
 
@@ -120,14 +122,16 @@ void replica::broadcast_group_check()
     }
 
     for (auto it = _primary_states.statuses.begin(); it != _primary_states.statuses.end(); ++it) {
-        if (it->first == _stub->_primary_address)
+        if (it->first == _stub->primary_host_port()) {
             continue;
+        }
 
-        ::dsn::rpc_address addr = it->first;
+        auto hp = it->first;
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app = _app_info;
-        request->node = addr;
+        const auto addr = dsn::dns_resolver::instance().resolve_address(hp);
+        SET_IP_AND_HOST_PORT(*request, node, addr, hp);
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
         request->__set_confirmed_decree(_duplication_mgr->min_confirmed_decree());
@@ -141,26 +145,26 @@ void replica::broadcast_group_check()
         }
 
         if (request->config.status == partition_status::PS_POTENTIAL_SECONDARY) {
-            auto it = _primary_states.learners.find(addr);
-            CHECK(it != _primary_states.learners.end(), "learner {} is missing", addr);
+            auto it = _primary_states.learners.find(hp);
+            CHECK(it != _primary_states.learners.end(), "learner {} is missing", hp);
             request->config.learner_signature = it->second.signature;
         }
 
-        LOG_INFO_PREFIX("send group check to {} with state {}", addr, enum_to_string(it->second));
+        LOG_INFO_PREFIX("send group check to {} with state {}", hp, enum_to_string(it->second));
 
-        dsn::task_ptr callback_task =
-            rpc::call(addr,
-                      RPC_GROUP_CHECK,
-                      *request,
-                      &_tracker,
-                      [=](error_code err, group_check_response &&resp) {
-                          auto alloc = std::make_shared<group_check_response>(std::move(resp));
-                          on_group_check_reply(err, request, alloc);
-                      },
-                      std::chrono::milliseconds(0),
-                      get_gpid().thread_hash());
+        dsn::task_ptr callback_task = rpc::call(
+            addr,
+            RPC_GROUP_CHECK,
+            *request,
+            &_tracker,
+            [=](error_code err, group_check_response &&resp) {
+                auto alloc = std::make_shared<group_check_response>(std::move(resp));
+                on_group_check_reply(err, request, alloc);
+            },
+            std::chrono::milliseconds(0),
+            get_gpid().thread_hash());
 
-        _primary_states.group_check_pending_replies[addr] = callback_task;
+        _primary_states.group_check_pending_replies[hp] = callback_task;
     }
 
     // send empty prepare when necessary
@@ -179,7 +183,7 @@ void replica::on_group_check(const group_check_request &request,
 
     LOG_INFO_PREFIX("process group check, primary = {}, ballot = {}, status = {}, "
                     "last_committed_decree = {}, confirmed_decree = {}",
-                    request.config.primary,
+                    FMT_HOST_PORT_AND_IP(request.config, primary),
                     request.config.ballot,
                     enum_to_string(request.config.status),
                     request.last_committed_decree,
@@ -222,7 +226,7 @@ void replica::on_group_check(const group_check_request &request,
     }
 
     response.pid = get_gpid();
-    response.node = _stub->_primary_address;
+    SET_IP_AND_HOST_PORT(response, node, _stub->primary_address(), _stub->primary_host_port());
     response.err = ERR_OK;
     if (status() == partition_status::PS_ERROR) {
         response.err = ERR_INVALID_STATE;
@@ -241,37 +245,40 @@ void replica::on_group_check_reply(error_code err,
 {
     _checker.only_one_thread_access();
 
+    host_port hp_node;
+    GET_HOST_PORT(*req, node, hp_node);
     if (partition_status::PS_PRIMARY != status() || req->config.ballot < get_ballot()) {
         return;
     }
 
-    auto r = _primary_states.group_check_pending_replies.erase(req->node);
-    CHECK_EQ_MSG(r, 1, "invalid node address, address = {}", req->node);
+    auto r = _primary_states.group_check_pending_replies.erase(hp_node);
+    CHECK_EQ_MSG(r, 1, "invalid node: {}", FMT_HOST_PORT_AND_IP(*req, node));
 
     if (err != ERR_OK || resp->err != ERR_OK) {
         if (ERR_OK == err) {
             err = resp->err;
         }
-        handle_remote_failure(req->config.status, req->node, err, "group check");
+        handle_remote_failure(req->config.status, hp_node, err, "group check");
         METRIC_VAR_INCREMENT(group_check_failed_requests);
     } else {
         if (resp->learner_status_ == learner_status::LearningSucceeded &&
             req->config.status == partition_status::PS_POTENTIAL_SECONDARY) {
-            handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
+            handle_learning_succeeded_on_primary(hp_node, resp->learner_signature);
         }
         _split_mgr->primary_parent_handle_stop_split(req, resp);
         if (req->config.status == partition_status::PS_SECONDARY) {
-            _primary_states.secondary_disk_status[req->node] = resp->disk_status;
+            _primary_states.secondary_disk_status[hp_node] = resp->disk_status;
         }
     }
 }
 
 void replica::inject_error(error_code err)
 {
-    tasking::enqueue(LPC_REPLICATION_ERROR,
-                     &_tracker,
-                     [this, err]() { handle_local_failure(err); },
-                     get_gpid().thread_hash());
+    tasking::enqueue(
+        LPC_REPLICATION_ERROR,
+        &_tracker,
+        [this, err]() { handle_local_failure(err); },
+        get_gpid().thread_hash());
 }
 } // namespace replication
 } // namespace dsn

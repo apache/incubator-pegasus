@@ -34,6 +34,8 @@
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/chrono_literals.h"
+
+#include <string_view>
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
 
@@ -64,8 +66,8 @@ class pegasus_mutation_duplicator : public dsn::replication::mutation_duplicator
 
 public:
     pegasus_mutation_duplicator(dsn::replication::replica_base *r,
-                                absl::string_view remote_cluster,
-                                absl::string_view app);
+                                std::string_view remote_cluster,
+                                std::string_view app);
 
     void duplicate(mutation_tuple_set muts, callback cb) override;
 

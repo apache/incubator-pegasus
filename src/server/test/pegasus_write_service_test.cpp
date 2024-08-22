@@ -215,7 +215,7 @@ public:
         ASSERT_EQ(response.app_id, _gpid.get_app_id());
         ASSERT_EQ(response.partition_index, _gpid.get_partition_index());
         ASSERT_EQ(response.decree, decree);
-        ASSERT_EQ(response.server, _write_svc->_impl->_primary_address);
+        ASSERT_EQ(response.server, _write_svc->_impl->_primary_host_port);
         ASSERT_EQ(_write_svc->_impl->_rocksdb_wrapper->_write_batch->Count(), 0);
         ASSERT_EQ(_write_svc->_impl->_update_responses.size(), 0);
     }

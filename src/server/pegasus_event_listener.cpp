@@ -19,7 +19,7 @@
 
 #include "pegasus_event_listener.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <rocksdb/compaction_job_stats.h>
 #include <rocksdb/table_properties.h>
 #include <rocksdb/types.h>

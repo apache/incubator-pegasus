@@ -35,8 +35,12 @@ include(BaseFunctions)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 set(PROJECT_ROOT ${CMAKE_CURRENT_LIST_DIR})
-set(THIRDPARTY_ROOT ${PROJECT_ROOT}/thirdparty)
-set(THIRDPARTY_INSTALL_DIR ${PROJECT_ROOT}/thirdparty/output)
+if ("$ENV{THIRDPARTY_ROOT}" STREQUAL "")
+    set(THIRDPARTY_ROOT ${PROJECT_ROOT}/thirdparty)
+else()
+    set(THIRDPARTY_ROOT $ENV{THIRDPARTY_ROOT})
+endif()
+set(THIRDPARTY_INSTALL_DIR ${THIRDPARTY_ROOT}/output)
 message(STATUS "THIRDPARTY_INSTALL_DIR = ${THIRDPARTY_INSTALL_DIR}")
 
 set(BUILD_DIR ${PROJECT_ROOT}/src/builder)
@@ -63,5 +67,8 @@ if(USE_JEMALLOC)
     message(STATUS "jemalloc is enabled")
     set(JEMALLOC_LIB_TYPE "SHARED")
 endif()
+
+option(SEPARATE_SERVERS "Whether to build pegasus_collector，pegasus_meta_server and pegasus_replica_server binaries separately, otherwise a combined pegasus_server binary will be built" OFF)
+message(STATUS "SEPARATE_SERVERS = ${SEPARATE_SERVERS}")
 
 add_subdirectory(src)

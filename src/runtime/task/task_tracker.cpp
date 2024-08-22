@@ -166,4 +166,4 @@ int task_tracker::cancel_but_not_wait_outstanding_tasks()
     }
     return not_finished;
 }
-}
+} // namespace dsn

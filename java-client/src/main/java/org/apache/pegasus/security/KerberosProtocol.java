@@ -19,6 +19,8 @@
 package org.apache.pegasus.security;
 
 import com.sun.security.auth.callback.TextCallbackHandler;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -50,19 +52,21 @@ class KerberosProtocol implements AuthProtocol {
   // request. The JAAS framework defines the term "subject" to represent the source of a request. A
   // subject may be any entity, such as a person or a service.
   private Subject subject;
-  private String serviceName;
-  private String serviceFqdn;
-  private String keyTab;
-  private String principal;
+  private final String serviceName;
+  private final String serviceFqdn;
+  private final String keyTab;
+  private final String principal;
   final int CHECK_TGT_INTEVAL_SECONDS = 10;
   final ScheduledExecutorService service =
       Executors.newSingleThreadScheduledExecutor(
           new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
-              Thread t = new Thread(r);
+              String timestamp = LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+              Thread t = new Thread(r, "TGT renew for pegasus - " + timestamp);
               t.setDaemon(true);
-              t.setName("TGT renew for pegasus");
+              t.setUncaughtExceptionHandler(
+                  (thread, error) -> logger.error("Uncaught exception", error));
               return t;
             }
           });
@@ -97,7 +101,16 @@ class KerberosProtocol implements AuthProtocol {
 
   private void scheduleCheckTGTAndRelogin() {
     service.scheduleAtFixedRate(
-        () -> checkTGTAndRelogin(),
+        () -> {
+          try {
+            checkTGTAndRelogin();
+          } catch (Exception e) {
+            logger.warn(
+                "check TGT and ReLogin kerberos failed , will retry after {} seconds.",
+                CHECK_TGT_INTEVAL_SECONDS,
+                e);
+          }
+        },
         CHECK_TGT_INTEVAL_SECONDS,
         CHECK_TGT_INTEVAL_SECONDS,
         TimeUnit.SECONDS);
@@ -198,5 +211,10 @@ class KerberosProtocol implements AuthProtocol {
         };
       }
     };
+  }
+
+  @Override
+  public void close() {
+    service.shutdown();
   }
 }

@@ -21,6 +21,7 @@
 
 #include "common/fs_manager.h"
 #include "common/gpid.h"
+#include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
@@ -45,7 +46,7 @@ public:
     {
         gpid pid(1, 0);
         app_info ai;
-        ai.app_type = "replica";
+        ai.app_type = replication_options::kReplicaAppType;
         ai.duplicating = true;
 
         dir_node *dn = stub->get_fs_manager()->find_best_dir_for_new_replica(pid);
@@ -130,7 +131,6 @@ public:
             {0, invalid_decree, 5, 2, invalid_decree, 1},
             // learn_start_decree_for_dup(3) > learn_start_decree_no_dup(2)
             {1, invalid_decree, 5, 2, invalid_decree, 2},
-
         };
 
         int id = 1;
@@ -148,8 +148,8 @@ public:
             auto dup = create_test_duplicator(tt.min_confirmed_decree);
             add_dup(_replica.get(), std::move(dup));
 
-            ASSERT_EQ(_replica->get_learn_start_decree(req), tt.wlearn_start_decree) << "case #"
-                                                                                     << id;
+            ASSERT_EQ(_replica->get_learn_start_decree(req), tt.wlearn_start_decree)
+                << "case #" << id;
             id++;
         }
     }

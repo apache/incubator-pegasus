@@ -34,6 +34,7 @@
 #include "gtest/gtest.h"
 #include "runtime/rpc/group_address.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
@@ -80,9 +81,9 @@ TEST(core, group_address_talk_to_others)
     auto typed_callback = [addr](error_code err_code, const std::string &result) {
         EXPECT_EQ(ERR_OK, err_code);
         LOG_INFO("talk to others callback, result: {}", result);
-        const auto addr_got = rpc_address::from_ip_port(result);
-        EXPECT_TRUE(addr_got);
-        EXPECT_EQ(TEST_PORT_END, addr_got.port());
+        const auto hp_got = host_port::from_string(result);
+        EXPECT_TRUE(hp_got);
+        EXPECT_EQ(TEST_PORT_END, hp_got.port());
     };
     ::dsn::task_ptr resp = ::dsn::rpc::call(addr,
                                             RPC_TEST_STRING_COMMAND,
@@ -100,10 +101,10 @@ TEST(core, group_address_change_leader)
     auto typed_callback = [addr, &rpc_err](error_code err_code, const std::string &result) -> void {
         rpc_err = err_code;
         if (ERR_OK == err_code) {
+            const auto hp_got = host_port::from_string(result);
             LOG_INFO("talk to others callback, result: {}", result);
-            const auto addr_got = rpc_address::from_ip_port(result);
-            EXPECT_TRUE(addr_got);
-            EXPECT_EQ(TEST_PORT_END, addr_got.port());
+            EXPECT_TRUE(hp_got);
+            EXPECT_EQ(TEST_PORT_END, hp_got.port());
         }
     };
 
@@ -207,8 +208,8 @@ TEST(core, group_address_no_response_2)
             EXPECT_EQ(ERR_OK, err);
             std::string result;
             ::dsn::unmarshall(resp, result);
-            const auto addr = ::dsn::rpc_address::from_ip_port(result);
-            EXPECT_EQ(TEST_PORT_END, addr.port());
+            const auto hp_got = host_port::from_string(result);
+            EXPECT_EQ(TEST_PORT_END, hp_got.port());
         };
 
     rpc_reply_handler action_on_failure =
@@ -224,8 +225,8 @@ TEST(core, group_address_no_response_2)
 TEST(core, send_to_invalid_address)
 {
     ::dsn::rpc_address group = build_group();
-    /* here we assume 10.255.254.253:32766 is not assigned */
-    group.group_address()->set_leader(dsn::rpc_address::from_ip_port("10.255.254.253", 32766));
+    /* here we assume 127.0.0.1:32766 is not assigned */
+    group.group_address()->set_leader(dsn::rpc_address::from_ip_port("127.0.0.1", 32766));
 
     rpc_reply_handler action_on_succeed =
         [](error_code err, dsn::message_ex *, dsn::message_ex *resp) {

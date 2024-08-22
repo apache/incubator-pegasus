@@ -30,12 +30,15 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
+#include "gutil/map_util.h"
 #include "meta/cluster_balance_policy.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
+#include "meta/meta_service.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/defer.h"
 #include "utils/fail_point.h"
 
@@ -65,33 +68,27 @@ TEST(cluster_balance_policy, node_migration_info)
 {
     {
         cluster_balance_policy::node_migration_info info1;
-        info1.address = rpc_address(1, 10086);
+        info1.hp = host_port("localhost", 10000);
         cluster_balance_policy::node_migration_info info2;
-        info2.address = rpc_address(2, 10086);
+        info2.hp = host_port("localhost", 10086);
         ASSERT_LT(info1, info2);
     }
 
     {
         cluster_balance_policy::node_migration_info info1;
-        info1.address = rpc_address(1, 10000);
+        info1.hp = host_port("localhost", 10086);
         cluster_balance_policy::node_migration_info info2;
-        info2.address = rpc_address(1, 10086);
-        ASSERT_LT(info1, info2);
-    }
-
-    {
-        cluster_balance_policy::node_migration_info info1;
-        info1.address = rpc_address(1, 10086);
-        cluster_balance_policy::node_migration_info info2;
-        info2.address = rpc_address(1, 10086);
+        info2.hp = host_port("localhost", 10086);
         ASSERT_EQ(info1, info2);
     }
 }
 
 TEST(cluster_balance_policy, get_skew)
 {
-    std::map<rpc_address, uint32_t> count_map = {
-        {rpc_address(1, 10086), 1}, {rpc_address(2, 10086), 3}, {rpc_address(3, 10086), 5},
+    std::map<host_port, uint32_t> count_map = {
+        {host_port("localhost", 10085), 1},
+        {host_port("localhost", 10086), 3},
+        {host_port("localhost", 10087), 5},
     };
 
     ASSERT_EQ(get_skew(count_map), count_map.rbegin()->second - count_map.begin()->second);
@@ -112,67 +109,69 @@ TEST(cluster_balance_policy, get_partition_count)
 
 TEST(cluster_balance_policy, get_app_migration_info)
 {
-    cluster_balance_policy policy(nullptr);
+    meta_service svc;
+    cluster_balance_policy policy(&svc);
 
     int appid = 1;
     std::string appname = "test";
-    auto address = rpc_address(1, 10086);
+    const auto &hp = host_port("localhost", 10086);
     app_info info;
     info.app_id = appid;
     info.app_name = appname;
     info.partition_count = 1;
     auto app = std::make_shared<app_state>(info);
-    app->partitions[0].primary = address;
+    SET_IP_AND_HOST_PORT_BY_DNS(app->pcs[0], primary, hp);
 
     node_state ns;
-    ns.set_addr(address);
+    ns.set_hp(hp);
     ns.put_partition(gpid(appid, 0), true);
     node_mapper nodes;
-    nodes[address] = ns;
+    nodes[hp] = ns;
 
     cluster_balance_policy::app_migration_info migration_info;
     {
-        app->partitions[0].max_replica_count = 100;
+        app->pcs[0].max_replica_count = 100;
         auto res =
             policy.get_app_migration_info(app, nodes, balance_type::COPY_PRIMARY, migration_info);
         ASSERT_FALSE(res);
     }
 
     {
-        app->partitions[0].max_replica_count = 1;
+        app->pcs[0].max_replica_count = 1;
         auto res =
             policy.get_app_migration_info(app, nodes, balance_type::COPY_PRIMARY, migration_info);
         ASSERT_TRUE(res);
         ASSERT_EQ(migration_info.app_id, appid);
         ASSERT_EQ(migration_info.app_name, appname);
-        std::map<rpc_address, partition_status::type> pstatus_map;
-        pstatus_map[address] = partition_status::type::PS_PRIMARY;
+        std::map<host_port, partition_status::type> pstatus_map;
+        pstatus_map[hp] = partition_status::type::PS_PRIMARY;
         ASSERT_EQ(migration_info.partitions[0], pstatus_map);
-        ASSERT_EQ(migration_info.replicas_count[address], 1);
+        ASSERT_EQ(migration_info.replicas_count[hp], 1);
     }
 }
 
 TEST(cluster_balance_policy, get_node_migration_info)
 {
-    cluster_balance_policy policy(nullptr);
+    meta_service svc;
+    cluster_balance_policy policy(&svc);
 
     int appid = 1;
     std::string appname = "test";
-    auto address = rpc_address(1, 10086);
+    const auto &hp = host_port("localhost", 10086);
     app_info info;
     info.app_id = appid;
     info.app_name = appname;
     info.partition_count = 1;
     auto app = std::make_shared<app_state>(info);
-    app->partitions[0].primary = address;
+    SET_IP_AND_HOST_PORT_BY_DNS(app->pcs[0], primary, hp);
     serving_replica sr;
-    sr.node = address;
+    sr.node = hp;
     std::string disk_tag = "disk1";
     sr.disk_tag = disk_tag;
     config_context context;
-    context.config_owner = new partition_configuration();
-    auto cleanup = dsn::defer([&context]() { delete context.config_owner; });
-    context.config_owner->pid = gpid(appid, 0);
+    context.pc = new partition_configuration();
+    auto cleanup = dsn::defer([&context]() { delete context.pc; });
+    context.pc->pid = gpid(appid, 0);
     context.serving.emplace_back(std::move(sr));
     app->helpers->contexts.emplace_back(std::move(context));
 
@@ -180,49 +179,51 @@ TEST(cluster_balance_policy, get_node_migration_info)
     all_apps[appid] = app;
 
     node_state ns;
-    ns.set_addr(address);
+    ns.set_hp(hp);
     gpid pid = gpid(appid, 0);
     ns.put_partition(pid, true);
 
     cluster_balance_policy::node_migration_info migration_info;
     policy.get_node_migration_info(ns, all_apps, migration_info);
 
-    ASSERT_EQ(migration_info.address, address);
-    ASSERT_NE(migration_info.partitions.find(disk_tag), migration_info.partitions.end());
-    ASSERT_EQ(migration_info.partitions.at(disk_tag).size(), 1);
-    ASSERT_EQ(*migration_info.partitions.at(disk_tag).begin(), pid);
+    ASSERT_EQ(migration_info.hp, hp);
+    const auto *ps = gutil::FindOrNull(migration_info.partitions, disk_tag);
+    ASSERT_NE(ps, nullptr);
+    ASSERT_EQ(1, ps->size());
+    ASSERT_EQ(pid, *ps->begin());
 }
 
 TEST(cluster_balance_policy, get_min_max_set)
 {
-    std::map<rpc_address, uint32_t> node_count_map;
-    node_count_map.emplace(rpc_address(1, 10086), 1);
-    node_count_map.emplace(rpc_address(2, 10086), 3);
-    node_count_map.emplace(rpc_address(3, 10086), 5);
-    node_count_map.emplace(rpc_address(4, 10086), 5);
+    std::map<host_port, uint32_t> node_count_map;
+    node_count_map.emplace(host_port("localhost", 10081), 1);
+    node_count_map.emplace(host_port("localhost", 10082), 3);
+    node_count_map.emplace(host_port("localhost", 10083), 5);
+    node_count_map.emplace(host_port("localhost", 10084), 5);
 
-    std::set<rpc_address> min_set, max_set;
+    std::set<host_port> min_set, max_set;
     get_min_max_set(node_count_map, min_set, max_set);
 
     ASSERT_EQ(min_set.size(), 1);
-    ASSERT_EQ(*min_set.begin(), rpc_address(1, 10086));
+    ASSERT_EQ(*min_set.begin(), host_port("localhost", 10081));
     ASSERT_EQ(max_set.size(), 2);
-    ASSERT_EQ(*max_set.begin(), rpc_address(3, 10086));
-    ASSERT_EQ(*max_set.rbegin(), rpc_address(4, 10086));
+    ASSERT_EQ(*max_set.begin(), host_port("localhost", 10083));
+    ASSERT_EQ(*max_set.rbegin(), host_port("localhost", 10084));
 }
 
 TEST(cluster_balance_policy, get_disk_partitions_map)
 {
-    cluster_balance_policy policy(nullptr);
+    meta_service svc;
+    cluster_balance_policy policy(&svc);
     cluster_balance_policy::cluster_migration_info cluster_info;
-    rpc_address addr(1, 10086);
+    const auto &hp = host_port("localhost", 10086);
     int32_t app_id = 1;
 
-    auto disk_partitions = policy.get_disk_partitions_map(cluster_info, addr, app_id);
+    auto disk_partitions = policy.get_disk_partitions_map(cluster_info, hp, app_id);
     ASSERT_TRUE(disk_partitions.empty());
 
-    std::map<rpc_address, partition_status::type> partition;
-    partition[addr] = partition_status::PS_SECONDARY;
+    std::map<host_port, partition_status::type> partition;
+    partition[hp] = partition_status::PS_SECONDARY;
     cluster_balance_policy::app_migration_info app_info;
     app_info.partitions.push_back(partition);
     cluster_info.apps_info[app_id] = app_info;
@@ -233,10 +234,10 @@ TEST(cluster_balance_policy, get_disk_partitions_map)
     cluster_balance_policy::node_migration_info node_info;
     std::string disk_tag = "disk1";
     node_info.partitions[disk_tag] = partitions;
-    cluster_info.nodes_info[addr] = node_info;
+    cluster_info.nodes_info[hp] = node_info;
 
     cluster_info.type = balance_type::COPY_SECONDARY;
-    disk_partitions = policy.get_disk_partitions_map(cluster_info, addr, app_id);
+    disk_partitions = policy.get_disk_partitions_map(cluster_info, hp, app_id);
     ASSERT_EQ(disk_partitions.size(), 1);
     ASSERT_EQ(disk_partitions.count(disk_tag), 1);
     ASSERT_EQ(disk_partitions[disk_tag].size(), 1);
@@ -249,13 +250,13 @@ TEST(cluster_balance_policy, get_max_load_disk_set)
     cluster_info.type = balance_type::COPY_SECONDARY;
 
     int32_t app_id = 1;
-    rpc_address addr(1, 10086);
-    rpc_address addr2(2, 10086);
-    std::map<rpc_address, partition_status::type> partition;
-    partition[addr] = partition_status::PS_SECONDARY;
-    std::map<rpc_address, partition_status::type> partition2;
-    partition2[addr] = partition_status::PS_SECONDARY;
-    partition2[addr2] = partition_status::PS_SECONDARY;
+    const auto &hp = host_port("localhost", 10086);
+    const auto &hp2 = host_port("localhost", 10087);
+    std::map<host_port, partition_status::type> partition;
+    partition[hp] = partition_status::PS_SECONDARY;
+    std::map<host_port, partition_status::type> partition2;
+    partition2[hp] = partition_status::PS_SECONDARY;
+    partition2[hp2] = partition_status::PS_SECONDARY;
     cluster_balance_policy::app_migration_info app_info;
     app_info.partitions.push_back(partition);
     app_info.partitions.push_back(partition2);
@@ -272,7 +273,7 @@ TEST(cluster_balance_policy, get_max_load_disk_set)
     partitions2.insert(pid2);
     std::string disk_tag2 = "disk2";
     node_info.partitions[disk_tag2] = partitions2;
-    cluster_info.nodes_info[addr] = node_info;
+    cluster_info.nodes_info[hp] = node_info;
 
     cluster_balance_policy::node_migration_info node_info2;
     partition_set partitions3;
@@ -280,12 +281,13 @@ TEST(cluster_balance_policy, get_max_load_disk_set)
     partitions3.insert(pid3);
     std::string disk_tag3 = "disk3";
     node_info2.partitions[disk_tag3] = partitions3;
-    cluster_info.nodes_info[addr2] = node_info2;
+    cluster_info.nodes_info[hp2] = node_info2;
 
-    cluster_balance_policy policy(nullptr);
-    std::set<rpc_address> max_nodes;
-    max_nodes.insert(addr);
-    max_nodes.insert(addr2);
+    meta_service svc;
+    cluster_balance_policy policy(&svc);
+    std::set<host_port> max_nodes;
+    max_nodes.insert(hp);
+    max_nodes.insert(hp2);
 
     std::set<cluster_balance_policy::app_disk_info> max_load_disk_set;
     policy.get_max_load_disk_set(cluster_info, max_nodes, app_id, max_load_disk_set);
@@ -299,11 +301,11 @@ TEST(cluster_balance_policy, apply_move)
     int32_t app_id = 1;
     int32_t partition_index = 1;
     minfo.pid = gpid(app_id, partition_index);
-    rpc_address source_node(1, 10086);
+    host_port source_node("localhost", 10086);
     minfo.source_node = source_node;
     std::string disk_tag = "disk1";
     minfo.source_disk_tag = disk_tag;
-    rpc_address target_node(2, 10086);
+    host_port target_node("localhost", 10087);
     minfo.target_node = target_node;
     minfo.type = balance_type::MOVE_PRIMARY;
 
@@ -313,7 +315,8 @@ TEST(cluster_balance_policy, apply_move)
     view.apps = &apps;
     view.nodes = &nodes;
 
-    cluster_balance_policy policy(nullptr);
+    meta_service svc;
+    cluster_balance_policy policy(&svc);
     policy._global_view = &view;
     cluster_balance_policy::cluster_migration_info cluster_info;
     cluster_info.type = balance_type::COPY_SECONDARY;
@@ -354,7 +357,7 @@ TEST(cluster_balance_policy, apply_move)
     ASSERT_FALSE(res);
 
     // all of the partition status are not PS_SECONDARY
-    std::map<rpc_address, partition_status::type> partition_status;
+    std::map<host_port, partition_status::type> partition_status;
     partition_status[source_node] = partition_status::type::PS_PRIMARY;
     cluster_info.apps_info[app_id].partitions.push_back(partition_status);
     cluster_info.apps_info[app_id].partitions.push_back(partition_status);
@@ -389,15 +392,16 @@ TEST(cluster_balance_policy, apply_move)
 TEST(cluster_balance_policy, pick_up_partition)
 {
     cluster_balance_policy::cluster_migration_info cluster_info;
-    rpc_address addr(1, 10086);
+    host_port hp("localhost", 10086);
     int32_t app_id = 1;
-    std::map<rpc_address, partition_status::type> partition;
-    partition[addr] = partition_status::PS_SECONDARY;
+    std::map<host_port, partition_status::type> partition;
+    partition[hp] = partition_status::PS_SECONDARY;
     cluster_balance_policy::app_migration_info app_info;
     app_info.partitions.push_back(partition);
     cluster_info.apps_info[app_id] = app_info;
 
-    cluster_balance_policy policy(nullptr);
+    meta_service svc;
+    cluster_balance_policy policy(&svc);
     {
         // all of the partitions in max_load_partitions are not found in cluster_info
         partition_set max_load_partitions;
@@ -407,7 +411,7 @@ TEST(cluster_balance_policy, pick_up_partition)
         partition_set selected_pid;
         gpid picked_pid;
         auto found = policy.pick_up_partition(
-            cluster_info, addr, max_load_partitions, selected_pid, picked_pid);
+            cluster_info, hp, max_load_partitions, selected_pid, picked_pid);
         ASSERT_FALSE(found);
     }
 
@@ -420,7 +424,7 @@ TEST(cluster_balance_policy, pick_up_partition)
 
         gpid picked_pid;
         auto found = policy.pick_up_partition(
-            cluster_info, addr, max_load_partitions, selected_pid, picked_pid);
+            cluster_info, hp, max_load_partitions, selected_pid, picked_pid);
         ASSERT_FALSE(found);
     }
 
@@ -432,7 +436,7 @@ TEST(cluster_balance_policy, pick_up_partition)
 
         gpid picked_pid;
         auto found = policy.pick_up_partition(
-            cluster_info, addr, max_load_partitions, selected_pid, picked_pid);
+            cluster_info, hp, max_load_partitions, selected_pid, picked_pid);
         ASSERT_FALSE(found);
     }
 
@@ -441,11 +445,11 @@ TEST(cluster_balance_policy, pick_up_partition)
         gpid pid(app_id, 0);
         max_load_partitions.insert(pid);
         partition_set selected_pid;
-        rpc_address not_exist_addr(3, 12345);
+        const auto &not_exist_hp = host_port("localhost", 12345);
 
         gpid picked_pid;
         auto found = policy.pick_up_partition(
-            cluster_info, not_exist_addr, max_load_partitions, selected_pid, picked_pid);
+            cluster_info, not_exist_hp, max_load_partitions, selected_pid, picked_pid);
         ASSERT_TRUE(found);
         ASSERT_EQ(pid, picked_pid);
     }
@@ -470,7 +474,8 @@ TEST(cluster_balance_policy, execute_balance)
     app->helpers->split_states.splitting_count = 0;
     app_mapper apps;
     apps[app_id] = app;
-    cluster_balance_policy policy(nullptr);
+    meta_service svc;
+    cluster_balance_policy policy(&svc);
 
     app->status = app_status::AS_DROPPED;
     auto res = policy.execute_balance(apps, false, false, true, balance_func);
@@ -502,9 +507,9 @@ TEST(cluster_balance_policy, execute_balance)
 
 TEST(cluster_balance_policy, calc_potential_moving)
 {
-    auto addr1 = rpc_address(1, 1);
-    auto addr2 = rpc_address(1, 2);
-    auto addr3 = rpc_address(1, 3);
+    const auto &hp1 = host_port("localhost", 1);
+    const auto &hp2 = host_port("localhost", 2);
+    const auto &hp3 = host_port("localhost", 3);
 
     int32_t app_id = 1;
     dsn::app_info info;
@@ -512,11 +517,10 @@ TEST(cluster_balance_policy, calc_potential_moving)
     info.partition_count = 4;
     std::shared_ptr<app_state> app = app_state::create(info);
     partition_configuration pc;
-    pc.primary = addr1;
-    pc.secondaries.push_back(addr2);
-    pc.secondaries.push_back(addr3);
-    app->partitions[0] = pc;
-    app->partitions[1] = pc;
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, hp1);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, hp2, hp3);
+    app->pcs[0] = pc;
+    app->pcs[1] = pc;
 
     app_mapper apps;
     apps[app_id] = app;
@@ -525,31 +529,32 @@ TEST(cluster_balance_policy, calc_potential_moving)
     node_state ns1;
     ns1.put_partition(gpid(app_id, 0), true);
     ns1.put_partition(gpid(app_id, 1), true);
-    nodes[addr1] = ns1;
+    nodes[hp1] = ns1;
 
     node_state ns2;
     ns2.put_partition(gpid(app_id, 0), false);
     ns2.put_partition(gpid(app_id, 1), false);
-    nodes[addr2] = ns2;
-    nodes[addr3] = ns2;
+    nodes[hp2] = ns2;
+    nodes[hp3] = ns2;
 
     struct meta_view view;
     view.nodes = &nodes;
     view.apps = &apps;
-    cluster_balance_policy policy(nullptr);
+    meta_service svc;
+    cluster_balance_policy policy(&svc);
     policy._global_view = &view;
 
-    auto gpids = policy.calc_potential_moving(app, addr1, addr2);
+    auto gpids = policy.calc_potential_moving(app, hp1, hp2);
     ASSERT_EQ(gpids.size(), 2);
     ASSERT_EQ(*gpids.begin(), gpid(app_id, 0));
     ASSERT_EQ(*gpids.rbegin(), gpid(app_id, 1));
 
-    gpids = policy.calc_potential_moving(app, addr1, addr3);
+    gpids = policy.calc_potential_moving(app, hp1, hp3);
     ASSERT_EQ(gpids.size(), 2);
     ASSERT_EQ(*gpids.begin(), gpid(app_id, 0));
     ASSERT_EQ(*gpids.rbegin(), gpid(app_id, 1));
 
-    gpids = policy.calc_potential_moving(app, addr2, addr3);
+    gpids = policy.calc_potential_moving(app, hp2, hp3);
     ASSERT_EQ(gpids.size(), 0);
 }
 } // namespace replication

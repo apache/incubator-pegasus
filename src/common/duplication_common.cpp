@@ -19,9 +19,11 @@
 
 #include <nlohmann/json.hpp>
 #include <cstdint>
+#include <map>
 #include <utility>
 #include <vector>
 
+#include "common/common.h"
 #include "duplication_types.h"
 #include "nlohmann/detail/json_ref.hpp"
 #include "nlohmann/json_fwd.hpp"
@@ -38,6 +40,7 @@ DSN_DEFINE_uint32(replication,
                   "send mutation log batch bytes size per rpc");
 DSN_TAG_VARIABLE(duplicate_log_batch_bytes, FT_MUTABLE);
 
+
 DSN_DEFINE_bool(
     replication,
     duplication_unsafe_allow_non_idempotent,
@@ -46,6 +49,18 @@ DSN_DEFINE_bool(
     "writes via duplication. Note that this switch may cause data inconsistency between "
     "clusters. So we say it is unsafe.");
 DSN_TAG_VARIABLE(duplication_unsafe_allow_non_idempotent, FT_MUTABLE);
+
+// While many clusters are duplicated to a target cluster, we have to add many cluster
+// ids to the `*.ini` file of the target cluster, and the target cluster might be restarted
+// very frequently.
+//
+// This option is added so that only the target cluster id should be configured while
+// there is no need to add any other cluster id.
+DSN_DEFINE_bool(replication,
+                dup_ignore_other_cluster_ids,
+                false,
+                "Allow any other cluster id except myself to be ignored for duplication");
+
 
 namespace dsn {
 namespace replication {
@@ -56,6 +71,8 @@ const std::string duplication_constants::kDuplicationEnvMasterClusterKey /*NOLIN
     "duplication.master_cluster";
 const std::string duplication_constants::kDuplicationEnvMasterMetasKey /*NOLINT*/ =
     "duplication.master_metas";
+const std::string duplication_constants::kDuplicationEnvMasterAppNameKey /*NOLINT*/ =
+    "duplication.master_app_name";
 
 /*extern*/ const char *duplication_status_to_string(duplication_status::type status)
 {
@@ -97,7 +114,6 @@ public:
         return it->second;
     }
 
-    const std::map<std::string, uint8_t> &get_duplication_group() { return _group; }
     const std::set<uint8_t> &get_distinct_cluster_id_set() { return _distinct_cids; }
 
 private:
@@ -118,6 +134,7 @@ private:
                      _group.size(),
                      "there might be duplicate cluster_name in configuration");
 
+        // TODO(yingchun): add InsertValuesFromMap to src/gutil/map_util.h, then use it here.
         for (const auto &kv : _group) {
             _distinct_cids.insert(kv.second);
         }
@@ -140,6 +157,22 @@ private:
     return internal::duplication_group_registry::instance().get_cluster_id(cluster_name);
 }
 
+/*extern*/ uint8_t get_current_dup_cluster_id_or_default()
+{
+    // Set cluster id to 0 as default if it is not configured, which means it would accept
+    // writes from any cluster as long as the timestamp is larger.
+    static const auto res = get_duplication_cluster_id(get_current_dup_cluster_name());
+    static const uint8_t cluster_id = res.is_ok() ? res.get_value() : 0;
+    return cluster_id;
+}
+
+/*extern*/ uint8_t get_current_dup_cluster_id()
+{
+    static const uint8_t cluster_id =
+        get_duplication_cluster_id(get_current_dup_cluster_name()).get_value();
+    return cluster_id;
+}
+
 // TODO(wutao1): implement our C++ version of `TSimpleJSONProtocol` if there're
 //               more cases for converting thrift to JSON
 static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
@@ -153,6 +186,7 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
         {"status", duplication_status_to_string(ent.status)},
         {"fail_mode", duplication_fail_mode_to_string(ent.fail_mode)},
     };
+
     if (ent.__isset.progress) {
         nlohmann::json sub_json;
         for (const auto &p : ent.progress) {
@@ -160,6 +194,17 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
         }
         json["progress"] = sub_json;
     }
+
+    if (ent.__isset.remote_app_name) {
+        // remote_app_name is supported since v2.6.0, thus it won't be shown before v2.6.0.
+        json["remote_app_name"] = ent.remote_app_name;
+    }
+
+    if (ent.__isset.remote_replica_count) {
+        // remote_replica_count is supported since v2.6.0, thus it won't be shown before v2.6.0.
+        json["remote_replica_count"] = ent.remote_replica_count;
+    }
+
     return json;
 }
 
@@ -180,14 +225,20 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
     return json.dump();
 }
 
-/*extern*/ const std::map<std::string, uint8_t> &get_duplication_group()
-{
-    return internal::duplication_group_registry::instance().get_duplication_group();
-}
-
 /*extern*/ const std::set<uint8_t> &get_distinct_cluster_id_set()
 {
     return internal::duplication_group_registry::instance().get_distinct_cluster_id_set();
+}
+
+/*extern*/ bool is_dup_cluster_id_configured(uint8_t cluster_id)
+{
+    if (cluster_id != get_current_dup_cluster_id()) {
+        if (FLAGS_dup_ignore_other_cluster_ids) {
+            return true;
+        }
+    }
+
+    return get_distinct_cluster_id_set().find(cluster_id) != get_distinct_cluster_id_set().end();
 }
 
 } // namespace replication

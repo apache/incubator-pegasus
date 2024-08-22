@@ -86,18 +86,19 @@ partition_status::type partition_status_from_short_string(const std::string &str
     return partition_status::PS_INVALID;
 }
 
-std::string address_to_node(rpc_address addr)
+std::string address_to_node(host_port addr)
 {
-    if (addr.is_invalid())
+    if (!addr) {
         return "-";
+    }
     CHECK(test_checker::s_inited, "");
     return test_checker::instance().address_to_node_name(addr);
 }
 
-rpc_address node_to_address(const std::string &name)
+host_port node_to_address(const std::string &name)
 {
     if (name == "-")
-        return rpc_address();
+        return host_port();
     CHECK(test_checker::s_inited, "");
     return test_checker::instance().node_name_to_address(name);
 }
@@ -314,15 +315,16 @@ bool parti_config::from_string(const std::string &str)
     return true;
 }
 
-void parti_config::convert_from(const partition_configuration &c)
+void parti_config::convert_from(const partition_configuration &pc)
 {
-    pid = c.pid;
-    ballot = c.ballot;
-    primary = address_to_node(c.primary);
-    for (auto &s : c.secondaries)
-        secondaries.push_back(address_to_node(s));
+    pid = pc.pid;
+    ballot = pc.ballot;
+    primary = address_to_node(pc.hp_primary);
+    for (const auto &secondary : pc.hp_secondaries) {
+        secondaries.push_back(address_to_node(secondary));
+    }
     std::sort(secondaries.begin(), secondaries.end());
 }
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

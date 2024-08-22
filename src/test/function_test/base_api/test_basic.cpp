@@ -309,7 +309,8 @@ TEST_F(basic, multi_get)
         std::map<std::string, std::string> new_values;
         ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
         std::map<std::string, std::string> expect_kvs({
-            {"1", "1"}, {"1-abcdefg", "1-abcdefg"},
+            {"1", "1"},
+            {"1-abcdefg", "1-abcdefg"},
         });
         ASSERT_EQ(expect_kvs, new_values);
     }

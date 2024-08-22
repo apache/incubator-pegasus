@@ -18,8 +18,8 @@
  */
 
 #include <fmt/core.h>
+#include <unistd.h>
 #include <chrono>
-#include <cstdint>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -32,8 +32,7 @@
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
-#include "runtime/rpc/rpc_address.h"
-#include "test/function_test/utils/global_env.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "test/function_test/utils/test_util.h"
 #include "utils/error_code.h"
 #include "utils/rand.h"
@@ -71,12 +70,15 @@ public:
     // cluster has only one meta server, while "onebox" means the cluster has 3 meta servers.
     recovery_test() : test_util(std::map<std::string, std::string>(), "single_master_cluster") {}
 
-    std::vector<dsn::rpc_address> get_rpc_address_list(const std::vector<uint16_t> &ports)
+    std::vector<dsn::host_port> get_rpc_host_port_list(const std::vector<int> ports)
     {
-        std::vector<dsn::rpc_address> result;
+        std::vector<dsn::host_port> result;
         result.reserve(ports.size());
         for (const auto &port : ports) {
-            result.emplace_back(dsn::rpc_address(global_env::instance()._host_ip, port));
+            char hostname[1024];
+            gethostname(hostname, 1024);
+            dsn::host_port hp(hostname, port);
+            result.push_back(hp);
         }
         return result;
     }
@@ -187,7 +189,7 @@ TEST_F(recovery_test, recovery)
         std::this_thread::sleep_for(std::chrono::seconds(10));
 
         // then do recovery
-        auto nodes = get_rpc_address_list({34801, 34802, 34803});
+        auto nodes = get_rpc_host_port_list({34801, 34802, 34803});
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
         // send another recovery command
@@ -216,7 +218,7 @@ TEST_F(recovery_test, recovery)
         std::this_thread::sleep_for(std::chrono::seconds(10));
 
         // recovery only from 1 & 2
-        std::vector<dsn::rpc_address> nodes = get_rpc_address_list({34801, 34802});
+        auto nodes = get_rpc_host_port_list({34801, 34802});
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
         // then wait the app to ready
@@ -247,7 +249,7 @@ TEST_F(recovery_test, recovery)
         std::this_thread::sleep_for(std::chrono::seconds(10));
 
         // then do recovery
-        auto nodes = get_rpc_address_list({34801, 34802, 34803});
+        auto nodes = get_rpc_host_port_list({34801, 34802, 34803});
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
         // then wait the apps to ready
@@ -277,7 +279,7 @@ TEST_F(recovery_test, recovery)
         std::this_thread::sleep_for(std::chrono::seconds(10));
 
         // then do recovery
-        auto nodes = get_rpc_address_list({34801, 34802, 34803});
+        auto nodes = get_rpc_host_port_list({34801, 34802, 34803});
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
         // then wait the apps to ready

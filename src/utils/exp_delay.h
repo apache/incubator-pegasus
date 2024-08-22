@@ -119,4 +119,4 @@ public:
 private:
     int _delay[DELAY_COUNT];
 };
-}
+} // namespace dsn

@@ -51,7 +51,7 @@ public:
     {
         create_app(APP_NAME, PARTITION_COUNT);
         auto app = find_app(APP_NAME);
-        app->partitions.resize(PARTITION_COUNT);
+        app->pcs.resize(PARTITION_COUNT);
         app->helpers->contexts.resize(PARTITION_COUNT);
         for (auto i = 0; i < PARTITION_COUNT; ++i) {
             serving_replica rep;
@@ -165,14 +165,62 @@ TEST_F(meta_app_compaction_test, test_start_compaction)
         int32_t running_count;
         error_code expected_err;
         std::string expected_bottommost;
-    } tests[] = {{"app_not_exist", "false", false, -1, 0, ERR_APP_NOT_EXIST, "skip"},
-                 {APP_NAME, "true", false, -1, 0, ERR_OPERATION_DISABLED, "skip"},
-                 {APP_NAME, "false", false, -5, 0, ERR_INVALID_PARAMETERS, "skip"},
-                 {APP_NAME, "false", false, -1, -1, ERR_INVALID_PARAMETERS, "skip"},
-                 {APP_NAME, "false", false, -1, 0, ERR_OK, "skip"},
-                 {APP_NAME, "false", true, -1, 0, ERR_OK, "force"},
-                 {APP_NAME, "false", false, 1, 0, ERR_OK, "skip"},
-                 {APP_NAME, "false", true, -1, 1, ERR_OK, "force"}};
+    } tests[] = {{"app_not_exist",
+                  "false",
+                  false,
+                  -1,
+                  0,
+                  ERR_APP_NOT_EXIST,
+                  replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP},
+                 {APP_NAME,
+                  "true",
+                  false,
+                  -1,
+                  0,
+                  ERR_OPERATION_DISABLED,
+                  replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP},
+                 {APP_NAME,
+                  "false",
+                  false,
+                  -5,
+                  0,
+                  ERR_INVALID_PARAMETERS,
+                  replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP},
+                 {APP_NAME,
+                  "false",
+                  false,
+                  -1,
+                  -1,
+                  ERR_INVALID_PARAMETERS,
+                  replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP},
+                 {APP_NAME,
+                  "false",
+                  false,
+                  -1,
+                  0,
+                  ERR_OK,
+                  replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP},
+                 {APP_NAME,
+                  "false",
+                  true,
+                  -1,
+                  0,
+                  ERR_OK,
+                  replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE},
+                 {APP_NAME,
+                  "false",
+                  false,
+                  1,
+                  0,
+                  ERR_OK,
+                  replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP},
+                 {APP_NAME,
+                  "false",
+                  true,
+                  -1,
+                  1,
+                  ERR_OK,
+                  replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE}};
 
     for (const auto &test : tests) {
         auto err = start_manual_compaction(test.app_name,

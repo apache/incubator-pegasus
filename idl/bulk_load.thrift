@@ -89,15 +89,16 @@ struct partition_bulk_load_state
 // meta server -> replica server
 struct bulk_load_request
 {
-    1:dsn.gpid          pid;
-    2:string            app_name;
-    3:dsn.rpc_address   primary_addr;
-    4:string            remote_provider_name;
-    5:string            cluster_name;
-    6:i64               ballot;
-    7:bulk_load_status  meta_bulk_load_status;
-    8:bool              query_bulk_load_metadata;
-    9:string            remote_root_path;
+    1:dsn.gpid                pid;
+    2:string                  app_name;
+    3:dsn.rpc_address         primary;
+    4:string                  remote_provider_name;
+    5:string                  cluster_name;
+    6:i64                     ballot;
+    7:bulk_load_status        meta_bulk_load_status;
+    8:bool                    query_bulk_load_metadata;
+    9:string                  remote_root_path;
+    10:optional dsn.host_port hp_primary;
 }
 
 struct bulk_load_response
@@ -109,28 +110,30 @@ struct bulk_load_response
     // - ERR_FILE_OPERATION_FAILED: local file system error during bulk load downloading
     // - ERR_FS_INTERNAL: remote file provider error during bulk load downloading
     // - ERR_CORRUPTION: metadata corruption during bulk load downloading
-    1:dsn.error_code                                    err;
-    2:dsn.gpid                                          pid;
-    3:string                                            app_name;
-    4:bulk_load_status                                  primary_bulk_load_status;
-    5:map<dsn.rpc_address, partition_bulk_load_state>   group_bulk_load_state;
-    6:optional bulk_load_metadata                       metadata;
-    7:optional i32                                      total_download_progress;
-    8:optional bool                                     is_group_ingestion_finished;
-    9:optional bool                                     is_group_bulk_load_context_cleaned_up;
-    10:optional bool                                    is_group_bulk_load_paused;
+    1:dsn.error_code                                          err;
+    2:dsn.gpid                                                pid;
+    3:string                                                  app_name;
+    4:bulk_load_status                                        primary_bulk_load_status;
+    5:map<dsn.rpc_address, partition_bulk_load_state>         group_bulk_load_state;
+    6:optional bulk_load_metadata                             metadata;
+    7:optional i32                                            total_download_progress;
+    8:optional bool                                           is_group_ingestion_finished;
+    9:optional bool                                           is_group_bulk_load_context_cleaned_up;
+    10:optional bool                                          is_group_bulk_load_paused;
+    11:optional map<dsn.host_port, partition_bulk_load_state> hp_group_bulk_load_state;
 }
 
 // primary -> secondary
 struct group_bulk_load_request
 {
-    1:string                        app_name;
-    2:dsn.rpc_address               target_address;
-    3:metadata.replica_configuration         config;
-    4:string                        provider_name;
-    5:string                        cluster_name;
-    6:bulk_load_status              meta_bulk_load_status;
-    7:string                        remote_root_path;
+    1:string                         app_name;
+    2:dsn.rpc_address                target;
+    3:metadata.replica_configuration config;
+    4:string                         provider_name;
+    5:string                         cluster_name;
+    6:bulk_load_status               meta_bulk_load_status;
+    7:string                         remote_root_path;
+    8:optional dsn.host_port         hp_target;
 }
 
 struct group_bulk_load_response
@@ -209,15 +212,16 @@ struct query_bulk_load_response
     // - ERR_CORRUPTION: file not exist or damaged
     // - ERR_INGESTION_FAILED: ingest failed
     // - ERR_RETRY_EXHAUSTED: retry too many times
-    1:dsn.error_code                                        err;
-    2:string                                                app_name;
-    3:bulk_load_status                                      app_status;
-    4:list<bulk_load_status>                                partitions_status;
-    5:i32                                                   max_replica_count;
+    1:dsn.error_code                                               err;
+    2:string                                                       app_name;
+    3:bulk_load_status                                             app_status;
+    4:list<bulk_load_status>                                       partitions_status;
+    5:i32                                                          max_replica_count;
     // detailed bulk load state for each replica
-    6:list<map<dsn.rpc_address, partition_bulk_load_state>> bulk_load_states;
-    7:optional string                                       hint_msg;
-    8:optional bool                                         is_bulk_loading;
+    6:list<map<dsn.rpc_address, partition_bulk_load_state>>        bulk_load_states;
+    7:optional string                                              hint_msg;
+    8:optional bool                                                is_bulk_loading;
+    9:optional list<map<dsn.host_port, partition_bulk_load_state>> hp_bulk_load_states;
 }
 
 struct clear_bulk_load_state_request

@@ -83,9 +83,10 @@ static message_ex *virtual_send_message(message_ex *msg)
         tmp += buf.length();
     }
 
-    blob bb(buffer, 0, msg->header->body_length + sizeof(message_header));
+    blob bb(buffer, msg->header->body_length + sizeof(message_header));
     message_ex *recv_msg = message_ex::create_receive_message(bb);
     recv_msg->to_address = msg->to_address;
+    recv_msg->to_host_port = msg->to_host_port;
 
     msg->copy_to(*recv_msg); // extensible object state move
 
@@ -160,6 +161,8 @@ sim_network_provider::sim_network_provider(rpc_engine *rpc, network *inner_provi
     : connection_oriented_network(rpc, inner_provider)
 {
     _address = rpc_address::from_host_port("localhost", 1);
+    _hp = ::dsn::host_port::from_address(_address);
+    LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
 }
 
 error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
@@ -169,6 +172,8 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
           channel);
 
     _address = dsn::rpc_address::from_host_port("localhost", port);
+    _hp = ::dsn::host_port::from_address(_address);
+    LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
     auto hostname = boost::asio::ip::host_name();
     if (!client_only) {
         for (int i = NET_HDR_INVALID + 1; i <= network_header_format::max_value(); i++) {
@@ -190,5 +195,5 @@ uint32_t sim_network_provider::net_delay_milliseconds() const
                           FLAGS_max_message_delay_microseconds) /
            1000;
 }
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

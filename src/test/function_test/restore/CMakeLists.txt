@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME "restore_test")
+set(MY_PROJ_NAME restore_test)
 project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
@@ -37,7 +37,11 @@ set(MY_PROJ_LIBS
         krb5
         function_test_utils
         pegasus_client_static
-        test_utils)
+        test_utils
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

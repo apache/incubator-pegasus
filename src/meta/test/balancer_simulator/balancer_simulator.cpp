@@ -42,7 +42,9 @@
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
 #include "runtime/app_model.h"
+#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
 #include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "utils/fmt_logging.h"
 
 using namespace dsn::replication;
@@ -50,34 +52,35 @@ using namespace dsn::replication;
 class simple_priority_queue
 {
 public:
-    simple_priority_queue(const std::vector<dsn::rpc_address> &nl,
+    simple_priority_queue(const std::vector<dsn::host_port> &nl,
                           server_load_balancer::node_comparator &&compare)
         : container(nl), cmp(std::move(compare))
     {
         std::make_heap(container.begin(), container.end(), cmp);
     }
-    void push(const dsn::rpc_address &addr)
+    void push(const dsn::host_port &addr)
     {
         container.push_back(addr);
         std::push_heap(container.begin(), container.end(), cmp);
     }
-    dsn::rpc_address pop()
+    dsn::host_port pop()
     {
         std::pop_heap(container.begin(), container.end(), cmp);
-        dsn::rpc_address result = container.back();
+        dsn::host_port result = container.back();
         container.pop_back();
         return result;
     }
-    dsn::rpc_address top() const { return container.front(); }
+    const dsn::host_port &top() const { return container.front(); }
     bool empty() const { return container.empty(); }
+
 private:
-    std::vector<dsn::rpc_address> container;
+    std::vector<dsn::host_port> container;
     server_load_balancer::node_comparator cmp;
 };
 
 void generate_balanced_apps(/*out*/ app_mapper &apps,
                             node_mapper &nodes,
-                            const std::vector<dsn::rpc_address> &node_list)
+                            const std::vector<dsn::host_port> &node_list)
 {
     nodes.clear();
     for (const auto &node : node_list)
@@ -93,27 +96,27 @@ void generate_balanced_apps(/*out*/ app_mapper &apps,
     info.partition_count = partitions_per_node * node_list.size();
     info.max_replica_count = 3;
 
-    std::shared_ptr<app_state> the_app = app_state::create(info);
+    std::shared_ptr<app_state> app = app_state::create(info);
 
     simple_priority_queue pq1(node_list, server_load_balancer::primary_comparator(nodes));
     // generate balanced primary
-    for (dsn::partition_configuration &pc : the_app->partitions) {
-        dsn::rpc_address n = pq1.pop();
+    for (auto &pc : app->pcs) {
+        const auto &n = pq1.pop();
         nodes[n].put_partition(pc.pid, true);
-        pc.primary = n;
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, n);
         pq1.push(n);
     }
 
     // generate balanced secondary
     simple_priority_queue pq2(node_list, server_load_balancer::partition_comparator(nodes));
-    std::vector<dsn::rpc_address> temp;
+    std::vector<dsn::host_port> temp;
 
-    for (dsn::partition_configuration &pc : the_app->partitions) {
+    for (auto &pc : app->pcs) {
         temp.clear();
-        while (pc.secondaries.size() + 1 < pc.max_replica_count) {
-            dsn::rpc_address n = pq2.pop();
+        while (pc.hp_secondaries.size() + 1 < pc.max_replica_count) {
+            const auto &n = pq2.pop();
             if (!is_member(pc, n)) {
-                pc.secondaries.push_back(n);
+                pc.hp_secondaries.push_back(n);
                 nodes[n].put_partition(pc.pid, false);
             }
             temp.push_back(n);
@@ -124,7 +127,7 @@ void generate_balanced_apps(/*out*/ app_mapper &apps,
 
     // check if balanced
     int pri_min, part_min;
-    pri_min = part_min = the_app->partition_count + 1;
+    pri_min = part_min = app->partition_count + 1;
     int pri_max, part_max;
     pri_max = part_max = -1;
 
@@ -139,7 +142,7 @@ void generate_balanced_apps(/*out*/ app_mapper &apps,
             part_min = kv.second.partition_count();
     }
 
-    apps.emplace(the_app->app_id, the_app);
+    apps.emplace(app->app_id, app);
 
     CHECK_LE(pri_max - pri_min, 1);
     CHECK_LE(part_max - part_min, 1);
@@ -147,15 +150,16 @@ void generate_balanced_apps(/*out*/ app_mapper &apps,
 
 void random_move_primary(app_mapper &apps, node_mapper &nodes, int primary_move_ratio)
 {
-    app_state &the_app = *(apps[0]);
-    int space_size = the_app.partition_count * 100;
-    for (dsn::partition_configuration &pc : the_app.partitions) {
+    app_state &app = *(apps[0]);
+    int space_size = app.partition_count * 100;
+    for (auto &pc : app.pcs) {
         int n = random32(1, space_size) / 100;
         if (n < primary_move_ratio) {
             int indice = random32(0, 1);
-            nodes[pc.primary].remove_partition(pc.pid, true);
+            nodes[pc.hp_primary].remove_partition(pc.pid, true);
             std::swap(pc.primary, pc.secondaries[indice]);
-            nodes[pc.primary].put_partition(pc.pid, true);
+            std::swap(pc.hp_primary, pc.hp_secondaries[indice]);
+            nodes[pc.hp_primary].put_partition(pc.pid, true);
         }
     }
 }
@@ -164,9 +168,9 @@ void greedy_balancer_perfect_move_primary()
 {
     app_mapper apps;
     node_mapper nodes;
-    std::vector<dsn::rpc_address> node_list;
+    std::vector<dsn::host_port> node_list;
+    generate_node_list(node_list, 19, 100);
 
-    generate_node_list(node_list, 20, 100);
     generate_balanced_apps(apps, nodes, node_list);
 
     random_move_primary(apps, nodes, 70);

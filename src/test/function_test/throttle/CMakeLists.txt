@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME "throttle_test")
+set(MY_PROJ_NAME throttle_test)
 project(${MY_PROJ_NAME} C CXX)
 
 # Source files under CURRENT project directory will be automatically included.
@@ -28,17 +28,20 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
-    dsn_client
-    dsn_replication_common
-    dsn_utils
-    pegasus_client_static
-    gtest
-    sasl2
-    gssapi_krb5
-    krb5
-    function_test_utils
-    test_utils
-    )
+        dsn_client
+        dsn_replication_common
+        dsn_utils
+        pegasus_client_static
+        gtest
+        sasl2
+        gssapi_krb5
+        krb5
+        function_test_utils
+        test_utils
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

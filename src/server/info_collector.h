@@ -29,7 +29,7 @@
 
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
-#include "runtime/rpc/rpc_address.h"
+#include "runtime/rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 #include "runtime/task/task_tracker.h"
 #include "shell/command_helper.h"
@@ -219,7 +219,7 @@ public:
 
 private:
     dsn::task_tracker _tracker;
-    ::dsn::rpc_address _meta_servers;
+    ::dsn::host_port _meta_servers;
     std::string _cluster_name;
     std::shared_ptr<shell_context> _shell_context;
     ::dsn::task_ptr _app_stat_timer_task;

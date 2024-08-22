@@ -20,6 +20,7 @@
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <getopt.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -27,12 +28,17 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "client/replication_ddl_client.h"
+#include "shell/argh.h"
 #include "shell/command_executor.h"
+#include "shell/command_helper.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
 #include "utils/error_code.h"
@@ -143,64 +149,52 @@ bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
 
 bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    ::dsn::error_code err = sc->ddl_client->ls_backup_policy();
+    argh::parser cmd(args.argc, args.argv);
+    const bool json = cmd[{"-j", "--json"}];
+
+    ::dsn::error_code err = sc->ddl_client->ls_backup_policy(json);
     if (err != ::dsn::ERR_OK) {
         std::cout << "ls backup policy failed" << std::endl;
-    } else {
-        std::cout << std::endl << "ls backup policy succeed" << std::endl;
     }
     return true;
 }
 
 bool query_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
-                                           {"backup_info_cnt", required_argument, 0, 'b'},
-                                           {0, 0, 0, 0}};
-    std::vector<std::string> policy_names;
-    int backup_info_cnt = 3;
+    const std::string query_backup_policy_help =
+        "<-p|--policy_name> [-b|--backup_info_cnt] [-j|--json]";
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+    RETURN_FALSE_IF_NOT(!cmd.params().empty(),
+                        "invalid command, should be in the form of '{}'",
+                        query_backup_policy_help);
 
-    optind = 0;
-    while (true) {
-        int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "p:b:", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 'p': {
-            std::vector<std::string> names;
-            ::dsn::utils::split_args(optarg, names, ',');
-            for (const auto &policy_name : names) {
-                if (policy_name.empty()) {
-                    fprintf(stderr, "invalid, empty policy_name, just ignore\n");
-                    continue;
-                } else {
-                    policy_names.emplace_back(policy_name);
-                }
-            }
-        } break;
-        case 'b':
-            backup_info_cnt = atoi(optarg);
-            if (backup_info_cnt <= 0) {
-                fprintf(stderr, "invalid backup_info_cnt %s\n", optarg);
-                return false;
-            }
-            break;
-        default:
-            return false;
-        }
-    }
+    std::vector<std::string> policy_names;
+    PARSE_OPT_STRS(policy_names, "", {"-p", "--policy_name"});
+
     if (policy_names.empty()) {
-        fprintf(stderr, "empty policy_name, please assign policy_name you want to query\n");
+        SHELL_PRINTLN_ERROR(
+            "invalid command, policy_name should be in the form of 'val1,val2,val3' and "
+            "should not be empty");
         return false;
     }
-    ::dsn::error_code ret = sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt);
+
+    std::set<std::string> str_set(policy_names.begin(), policy_names.end());
+    if (str_set.size() != policy_names.size()) {
+        SHELL_PRINTLN_ERROR("invalid command, policy_name has duplicate values");
+        return false;
+    }
+
+    uint32_t backup_info_cnt;
+    PARSE_OPT_UINT(backup_info_cnt, 3, {"-b", "--backup_info_cnt"});
+
+    const bool json = cmd[{"-j", "--json"}];
+
+    ::dsn::error_code ret =
+        sc->ddl_client->query_backup_policy(policy_names, backup_info_cnt, json);
     if (ret != ::dsn::ERR_OK) {
         fprintf(stderr, "query backup policy failed, err = %s\n", ret.to_string());
-    } else {
-        std::cout << std::endl << "query backup policy succeed" << std::endl;
     }
+
     return true;
 }
 
@@ -311,37 +305,32 @@ bool modify_backup_policy(command_executor *e, shell_context *sc, arguments args
     return true;
 }
 
+const std::string disable_backup_policy_help = "<-p|--policy_name str> [-f|--force]";
 bool disable_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},
-                                           {0, 0, 0, 0}};
+    const argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+    // TODO(yingchun): make the following code as a function.
+    RETURN_FALSE_IF_NOT(cmd.pos_args().size() == 1 && cmd.pos_args()[0] == "disable_backup_policy",
+                        "invalid command, should be in the form of '{}'",
+                        disable_backup_policy_help);
+    RETURN_FALSE_IF_NOT(cmd.flags().empty() ||
+                            (cmd.flags().size() == 1 &&
+                             (cmd.flags().count("force") == 1 || cmd.flags().count("f") == 1)),
+                        "invalid command, should be in the form of '{}'",
+                        disable_backup_policy_help);
+    RETURN_FALSE_IF_NOT(cmd.params().size() == 1 && (cmd.params().begin()->first == "policy_name" ||
+                                                     cmd.params().begin()->first == "p"),
+                        "invalid command, should be in the form of '{}'",
+                        disable_backup_policy_help);
 
-    std::string policy_name;
-    optind = 0;
-    while (true) {
-        int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "p:", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 'p':
-            policy_name = optarg;
-            break;
-        default:
-            return false;
-        }
-    }
+    const std::string policy_name = cmd({"-p", "--policy_name"}).str();
+    RETURN_FALSE_IF_NOT(!policy_name.empty(), "invalid command, policy_name should not be empty");
 
-    if (policy_name.empty()) {
-        fprintf(stderr, "empty policy name\n");
-        return false;
-    }
+    const bool force = cmd[{"-f", "--force"}];
 
-    ::dsn::error_code ret = sc->ddl_client->disable_backup_policy(policy_name);
-    if (ret != dsn::ERR_OK) {
-        fprintf(stderr, "disable backup policy failed, with err = %s\n", ret.to_string());
-    }
+    const auto ret = sc->ddl_client->disable_backup_policy(policy_name, force);
+    RETURN_FALSE_IF_NOT(
+        ret == dsn::ERR_OK, "disable backup policy failed, with err = {}", ret.to_string());
     return true;
 }
 
@@ -387,11 +376,13 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
                                            {"new_app_name", required_argument, 0, 'n'},
                                            {"timestamp", required_argument, 0, 't'},
                                            {"backup_provider_type", required_argument, 0, 'b'},
+                                           {"restore_path", required_argument, 0, 'r'},
                                            {"skip_bad_partition", no_argument, 0, 's'},
                                            {0, 0, 0, 0}};
     std::string old_cluster_name, old_policy_name;
     std::string old_app_name, new_app_name;
     std::string backup_provider_type;
+    std::string restore_path;
     int32_t old_app_id = 0;
     int64_t timestamp = 0;
     bool skip_bad_partition = false;
@@ -400,7 +391,7 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "c:p:a:i:n:t:b:s", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "c:p:a:i:n:t:b:r:s", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -424,6 +415,9 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'b':
             backup_provider_type = optarg;
+            break;
+        case 'r':
+            restore_path = optarg;
             break;
         case 's':
             skip_bad_partition = true;
@@ -452,7 +446,8 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
                                                        old_app_name,
                                                        old_app_id,
                                                        new_app_name,
-                                                       skip_bad_partition);
+                                                       skip_bad_partition,
+                                                       restore_path);
     if (err != ::dsn::ERR_OK) {
         fprintf(stderr, "restore app failed with err(%s)\n", err.to_string());
     }

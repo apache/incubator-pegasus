@@ -22,6 +22,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -38,10 +39,9 @@
 #include "utils/errors.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
+#include "utils/ports.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 /*static*/ error_code mutation_log::replay(log_file_ptr log,
                                            replay_callback callback,
@@ -72,39 +72,54 @@ namespace replication {
     return err.code();
 }
 
-/*static*/ error_s mutation_log::replay_block(log_file_ptr &log,
-                                              replay_callback &callback,
-                                              size_t start_offset,
-                                              int64_t &end_offset)
+namespace {
+
+dsn::error_s read_block(dsn::replication::log_file_ptr &log,
+                        size_t start_offset,
+                        int64_t &end_offset,
+                        std::unique_ptr<dsn::binary_reader> &reader)
 {
-    FAIL_POINT_INJECT_F("mutation_log_replay_block", [](absl::string_view) -> error_s {
-        return error_s::make(ERR_INCOMPLETE_DATA, "mutation_log_replay_block");
-    });
+    log->reset_stream(start_offset); // Start reading from given offset.
+    int64_t global_start_offset = static_cast<int64_t>(start_offset) + log->start_offset();
+    end_offset = global_start_offset; // Reset end_offset to the start.
 
-    blob bb;
-    std::unique_ptr<binary_reader> reader;
-
-    log->reset_stream(start_offset); // start reading from given offset
-    int64_t global_start_offset = start_offset + log->start_offset();
-    end_offset = global_start_offset; // reset end_offset to the start.
-
-    // reads the entire block into memory
-    error_code err = log->read_next_log_block(bb);
-    if (err != ERR_OK) {
-        return error_s::make(err, "failed to read log block");
+    {
+        // Read the entire block into memory.
+        blob bb;
+        const auto err = log->read_next_log_block(bb);
+        if (dsn_unlikely(err != dsn::ERR_OK)) {
+            return FMT_ERR(err, "failed to read log block");
+        }
+        reader = std::make_unique<dsn::binary_reader>(std::move(bb));
     }
 
-    reader = std::make_unique<binary_reader>(bb);
-    end_offset += sizeof(log_block_header);
+    end_offset += sizeof(dsn::replication::log_block_header);
 
     // The first block is log_file_header.
     if (global_start_offset == log->start_offset()) {
         end_offset += log->read_file_header(*reader);
         if (!log->is_right_header()) {
-            return error_s::make(ERR_INVALID_DATA, "failed to read log file header");
+            return FMT_ERR(dsn::ERR_INVALID_DATA, "failed to read log file header");
         }
-        // continue to parsing the data block
+        // Continue to parsing the data block.
     }
+
+    return dsn::error_s::ok();
+}
+
+} // anonymous namespace
+
+/*static*/ error_s mutation_log::replay_block(log_file_ptr &log,
+                                              replay_callback &callback,
+                                              size_t start_offset,
+                                              int64_t &end_offset)
+{
+    FAIL_POINT_INJECT_F("mutation_log_replay_block", [](std::string_view) -> error_s {
+        return error_s::make(ERR_INCOMPLETE_DATA, "mutation_log_replay_block");
+    });
+
+    std::unique_ptr<binary_reader> reader;
+    RETURN_NOT_OK(read_block(log, start_offset, end_offset, reader));
 
     while (!reader->is_eof()) {
         auto old_size = reader->get_remaining_size();
@@ -218,5 +233,4 @@ namespace replication {
     return err;
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

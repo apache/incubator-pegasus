@@ -34,6 +34,7 @@
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica/backup/cold_backup_context.h"
+#include "runtime/rpc/rpc_host_port.h"
 
 DSN_DECLARE_int32(log_private_file_size_mb);
 
@@ -82,6 +83,8 @@ public:
     // we mock the followings
     void update_app_envs(const std::map<std::string, std::string> &envs) override { _envs = envs; }
     void query_app_envs(std::map<std::string, std::string> &out) override { out = _envs; }
+
+    decree last_flushed_decree() const override { return _last_durable_decree; }
     decree last_durable_decree() const override { return _last_durable_decree; }
 
     // TODO(heyuchen): implement this function in further pull request
@@ -96,6 +99,8 @@ public:
     {
         return manual_compaction_status::IDLE;
     }
+
+    void set_last_applied_decree(decree d) { _last_committed_decree.store(d); }
 
     void set_last_durable_decree(decree d) { _last_durable_decree = d; }
 
@@ -125,7 +130,7 @@ public:
 
     void register_service()
     {
-        _app->register_storage_engine("replica",
+        _app->register_storage_engine(replication_options::kReplicaAppType,
                                       replication_app_base::create<mock_replication_app_base>);
     }
 
@@ -175,15 +180,15 @@ public:
     void prepare_list_commit_hard(decree d) { _prepare_list->commit(d, COMMIT_TO_DECREE_HARD); }
     decree get_app_last_committed_decree() { return _app->last_committed_decree(); }
     void set_app_last_committed_decree(decree d) { _app->_last_committed_decree = d; }
-    void set_primary_partition_configuration(partition_configuration &pconfig)
+    void set_primary_partition_configuration(partition_configuration &pc)
     {
-        _primary_states.membership = pconfig;
+        _primary_states.pc = pc;
     }
-    partition_bulk_load_state get_secondary_bulk_load_state(const rpc_address &node)
+    partition_bulk_load_state get_secondary_bulk_load_state(const host_port &node)
     {
         return _primary_states.secondary_bulk_load_states[node];
     }
-    void set_secondary_bulk_load_state(const rpc_address &node,
+    void set_secondary_bulk_load_state(const host_port &node,
                                        const partition_bulk_load_state &state)
     {
         _primary_states.secondary_bulk_load_states[node] = state;
@@ -215,6 +220,11 @@ public:
         backup_context->complete_checkpoint();
     }
 
+    void update_last_applied_decree(decree decree)
+    {
+        dynamic_cast<mock_replication_app_base *>(_app.get())->set_last_applied_decree(decree);
+    }
+
     void update_last_durable_decree(decree decree)
     {
         dynamic_cast<mock_replication_app_base *>(_app.get())->set_last_durable_decree(decree);
@@ -236,7 +246,7 @@ create_mock_replica(replica_stub *stub, int app_id = 1, int partition_index = 1)
 {
     gpid pid(app_id, partition_index);
     app_info app_info;
-    app_info.app_type = "replica";
+    app_info.app_type = replication_options::kReplicaAppType;
     app_info.app_name = "temp";
 
     auto *dn = stub->get_fs_manager()->create_replica_dir_if_necessary(app_info.app_type, pid);
@@ -277,7 +287,7 @@ public:
 
     rpc_address get_meta_server_address() const override
     {
-        return rpc_address::from_ip_port("127.0.0.2", 12321);
+        return rpc_address::from_ip_port("127.0.0.1", 12321);
     }
 
     std::map<gpid, mock_replica *> mock_replicas;
@@ -374,7 +384,7 @@ public:
         _bulk_load_downloading_count.store(count);
     }
 
-    void set_rpc_address(const rpc_address &address) { _primary_address = address; }
+    void set_host_port(const host_port &address) { _primary_host_port = address; }
 };
 
 class mock_log_file : public log_file
@@ -413,8 +423,8 @@ public:
                                  std::vector<mutation_ptr> &mutation_list) const override
     {
         for (auto &mu : _mu_list) {
-            ballot current_ballot =
-                (start_ballot == invalid_ballot) ? invalid_ballot : mu->get_ballot();
+            ballot current_ballot = (start_ballot == invalid_ballot) ? invalid_ballot
+                                                                     : mu->get_ballot();
             if ((mu->get_decree() >= start_decree && start_ballot == current_ballot) ||
                 current_ballot > start_ballot) {
                 mutation_list.push_back(mu);

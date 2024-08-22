@@ -20,7 +20,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <map>
 #include <set>
 #include <string>
 
@@ -60,21 +59,19 @@ inline bool is_duplication_status_invalid(duplication_status::type status)
 /// The returned cluster id of get_duplication_cluster_id("wuhan-mi-srv-ad") is 3.
 extern error_with<uint8_t> get_duplication_cluster_id(const std::string &cluster_name);
 
+extern uint8_t get_current_dup_cluster_id_or_default();
+
+extern uint8_t get_current_dup_cluster_id();
+
 /// Returns a json string.
 extern std::string duplication_entry_to_string(const duplication_entry &dup);
 
 /// Returns a json string.
 extern std::string duplication_query_response_to_string(const duplication_query_response &);
 
-/// Returns a mapping from cluster_name to cluster_id.
-extern const std::map<std::string, uint8_t> &get_duplication_group();
-
 extern const std::set<uint8_t> &get_distinct_cluster_id_set();
 
-inline bool is_cluster_id_configured(uint8_t cid)
-{
-    return get_distinct_cluster_id_set().find(cid) != get_distinct_cluster_id_set().end();
-}
+extern bool is_dup_cluster_id_configured(uint8_t cluster_id);
 
 struct duplication_constants
 {
@@ -83,6 +80,7 @@ struct duplication_constants
     // These will fill into app env and mark one app as a "follower app" and record master info
     const static std::string kDuplicationEnvMasterClusterKey;
     const static std::string kDuplicationEnvMasterMetasKey;
+    const static std::string kDuplicationEnvMasterAppNameKey;
 };
 
 USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)
