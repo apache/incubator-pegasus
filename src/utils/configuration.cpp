@@ -54,10 +54,9 @@ void configuration::clear_configs()
 void configuration::copy_configs(configuration &source_conf)
 {
     source_conf._lock.lock();
-    for (auto &section_kv : source_conf._configs) {
-        auto &section = section_kv.second;
-        for (auto &kv : section) {
-            _configs[section_kv.first][kv.first] = new conf(*kv.second);
+    for (auto &[section_key, section] : source_conf._configs) {
+        for (auto &[key, value] : section) {
+            _configs[section_key][key] = new conf(*value);
         }
     }
     source_conf._lock.unlock();

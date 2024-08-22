@@ -47,7 +47,7 @@ bool dsn_config_reload(const char *file,
     *old_config = g_config;
     dsn::configuration temp_config;
     if (!temp_config.load(file, arguments)) {
-        // todo gns: add some error log
+        // TODO(ninsmiracle):  Add some error log
         return false;
     }
 

@@ -107,7 +107,7 @@ public:
     const std::set<uint8_t> &get_distinct_cluster_id_set() { return _distinct_cids; }
     error_with<uint8_t> reload_duplication_config(std::string config_file)
     {
-        if (config_file.length() == 0) {
+        if (config_file.empty()) {
             config_file = "config.ini";
         }
         const char *config_file_cstr = config_file.c_str();
@@ -118,17 +118,17 @@ public:
 
         // reload default config.ini, user can point to another config file. update g_config here
         if (!dsn_config_reload(config_file_cstr, nullptr, &old_config)) {
-            LOG_ERROR("Fail to reload config file {} \n", config_file_cstr);
+            LOG_ERROR("Fail to reload config file {}", config_file_cstr);
             return error_s::make(
                 ERR_OBJECT_NOT_FOUND,
                 " new `duplication-group` configured can not be read. Check your config.ini now");
-            ;
         }
 
         int influented_clusters = 0;
 
         std::vector<std::string> clusters;
         dsn_config_get_all_keys("duplication-group", clusters);
+        // TODO(ninsmiracle):  Add more illegal parameter conditional judgments
         for (std::string &cluster : clusters) {
             int64_t cluster_id =
                 dsn_config_get_value_int64("duplication-group", cluster.data(), 0, "");
