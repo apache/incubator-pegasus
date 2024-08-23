@@ -42,9 +42,11 @@
 
 #include <string_view>
 #include "common/json_helper.h"
+#include "gutil/map_util.h"
 #include "http/http_server.h"
 #include "utils/alloc.h"
 #include "utils/autoref_ptr.h"
+#include "utils/blob.h"
 #include "utils/casts.h"
 #include "utils/enum_helper.h"
 #include "utils/error_code.h"
@@ -52,7 +54,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/long_adder.h"
 #include "utils/macros.h"
-#include "gutil/map_util.h"
 #include "utils/nth_element.h"
 #include "utils/ports.h"
 #include "utils/singleton.h"
@@ -1662,7 +1663,7 @@ private:
     struct metric_brief_##field##_snapshot                                                         \
     {                                                                                              \
         std::string name;                                                                          \
-        double field;                                                                              \
+        double field = 0.0;                                                                        \
                                                                                                    \
         DEFINE_JSON_SERIALIZATION(name, field)                                                     \
     }
@@ -1700,31 +1701,84 @@ DEF_ALL_METRIC_BRIEF_SNAPSHOTS(value);
 
 DEF_ALL_METRIC_BRIEF_SNAPSHOTS(p99);
 
-#define DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(field, json_string, query_snapshot)                \
-    dsn::metric_query_brief_##field##_snapshot query_snapshot;                                     \
+// Deserialize the json string into the snapshot.
+template <typename TMetricSnapshot>
+inline error_s deserialize_metric_snapshot(const std::string &json_string,
+                                           TMetricSnapshot &snapshot)
+{
+    dsn::blob bb(json_string.data(), 0, json_string.size());
+    if (dsn_unlikely(!dsn::json::json_forwarder<TMetricSnapshot>::decode(bb, snapshot))) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string: {}", json_string);
+    }
+
+    return error_s::ok();
+}
+
+#define DESERIALIZE_METRIC_SNAPSHOT(json_string, query_snapshot)                                   \
     do {                                                                                           \
-        dsn::blob bb(json_string.data(), 0, json_string.size());                                   \
-        if (dsn_unlikely(                                                                          \
-                !dsn::json::json_forwarder<dsn::metric_query_brief_##field##_snapshot>::decode(    \
-                    bb, query_snapshot))) {                                                        \
-            return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid json string: {}", json_string);         \
+        const auto &res = deserialize_metric_snapshot(json_string, query_snapshot);                \
+        if (dsn_unlikely(!res)) {                                                                  \
+            return res;                                                                            \
         }                                                                                          \
     } while (0)
 
+// Deserialize the json string into the snapshot specially for metric query which is declared
+// internally.
+#define DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(field, json_string, query_snapshot)                \
+    dsn::metric_query_brief_##field##_snapshot query_snapshot;                                     \
+    DESERIALIZE_METRIC_SNAPSHOT(json_string, query_snapshot)
+
+// Deserialize both json string samples into respective snapshots.
+template <typename TMetricSnapshot>
+inline error_s deserialize_metric_2_samples(const std::string &json_string_start,
+                                            const std::string &json_string_end,
+                                            TMetricSnapshot &snapshot_start,
+                                            TMetricSnapshot &snapshot_end)
+{
+    DESERIALIZE_METRIC_SNAPSHOT(json_string_start, snapshot_start);
+    DESERIALIZE_METRIC_SNAPSHOT(json_string_end, snapshot_end);
+    return error_s::ok();
+}
+
+// Deserialize both json string samples into respective snapshots specially for metric queries.
+template <typename TMetricQuerySnapshot>
+inline error_s deserialize_metric_query_2_samples(const std::string &json_string_start,
+                                                  const std::string &json_string_end,
+                                                  TMetricQuerySnapshot &snapshot_start,
+                                                  TMetricQuerySnapshot &snapshot_end)
+{
+    const auto &res = deserialize_metric_2_samples(
+        json_string_start, json_string_end, snapshot_start, snapshot_end);
+    if (!res) {
+        return res;
+    }
+
+    if (snapshot_end.timestamp_ns <= snapshot_start.timestamp_ns) {
+        return FMT_ERR(dsn::ERR_INVALID_DATA,
+                       "duration for metric samples should be > 0: timestamp_ns_start={}, "
+                       "timestamp_ns_end={}",
+                       snapshot_start.timestamp_ns,
+                       snapshot_end.timestamp_ns);
+    }
+
+    return error_s::ok();
+}
+
+// Deserialize both json string samples into respective snapshots specially for metric queries
+// which are declared internally.
+//
 // Currently only Gauge and Counter are considered to have "increase" and "rate", which means
 // samples are needed. Thus brief `value` field is enough.
 #define DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(                                                  \
     json_string_start, json_string_end, query_snapshot_start, query_snapshot_end)                  \
-    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_start, query_snapshot_start);       \
-    DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string_end, query_snapshot_end);           \
+    dsn::metric_query_brief_value_snapshot query_snapshot_start;                                   \
+    dsn::metric_query_brief_value_snapshot query_snapshot_end;                                     \
                                                                                                    \
     do {                                                                                           \
-        if (query_snapshot_end.timestamp_ns <= query_snapshot_start.timestamp_ns) {                \
-            return FMT_ERR(dsn::ERR_INVALID_DATA,                                                  \
-                           "duration for metric samples should be > 0: timestamp_ns_start={}, "    \
-                           "timestamp_ns_end={}",                                                  \
-                           query_snapshot_start.timestamp_ns,                                      \
-                           query_snapshot_end.timestamp_ns);                                       \
+        const auto &res = deserialize_metric_query_2_samples(                                      \
+            json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);         \
+        if (dsn_unlikely(!res)) {                                                                  \
+            return res;                                                                            \
         }                                                                                          \
     } while (0)
 
@@ -1756,7 +1810,7 @@ inline error_s parse_metric_attribute(const metric_entity::attr_map &attrs,
         return FMT_ERR(dsn::ERR_INVALID_DATA, "invalid {}: {}", name, *value_ptr);
     }
 
-    return dsn::error_s::ok();
+    return error_s::ok();
 }
 
 inline error_s parse_metric_table_id(const metric_entity::attr_map &attrs, int32_t &table_id)

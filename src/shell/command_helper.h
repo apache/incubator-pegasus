@@ -709,30 +709,67 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
     return results;
 }
 
+// Adapt the result returned by `get_metrics` into the structure that could be processed by
+// `remote_command`.
+template <typename... Args>
+inline dsn::error_s process_get_metrics_result(const dsn::http_result &result,
+                                               const node_desc &node,
+                                               const char *what,
+                                               Args &&...args)
+{
+    if (dsn_unlikely(!result.error())) {
+        return FMT_ERR(result.error().code(),
+                       "ERROR: query {} metrics from node {} failed, msg={}",
+                       fmt::format(what, std::forward<Args>(args)...),
+                       node.hp,
+                       result.error());
+    }
+
+    if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {
+        return FMT_ERR(dsn::ERR_HTTP_ERROR,
+                       "ERROR: query {} metrics from node {} failed, http_status={}, msg={}",
+                       fmt::format(what, std::forward<Args>(args)...),
+                       node.hp,
+                       dsn::get_http_status_message(result.status()),
+                       result.body());
+    }
+
+    return dsn::error_s::ok();
+}
+
 #define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what, ...)                                \
     do {                                                                                           \
-        if (dsn_unlikely(!result.error())) {                                                       \
-            std::cout << "ERROR: send http request to query " << fmt::format(what, ##__VA_ARGS__)  \
-                      << " metrics from node " << node.hp << " failed: " << result.error()         \
-                      << std::endl;                                                                \
-            return true;                                                                           \
-        }                                                                                          \
-        if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {                         \
-            std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
-                      << node.hp << " failed: " << dsn::get_http_status_message(result.status())   \
-                      << std::endl                                                                 \
-                      << result.body() << std::endl;                                               \
+        const auto &res = process_get_metrics_result(result, node, what, ##__VA_ARGS__);           \
+        if (dsn_unlikely(!res)) {                                                                  \
+            fmt::println(res.description());                                                       \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
 
+// Adapt the result of some parsing operations on the metrics returned by `get_metrics` into the
+// structure that could be processed by `remote_command`.
+template <typename... Args>
+inline dsn::error_s process_parse_metrics_result(const dsn::error_s &result,
+                                                 const node_desc &node,
+                                                 const char *what,
+                                                 Args &&...args)
+{
+    if (dsn_unlikely(!result)) {
+        return FMT_ERR(result.code(),
+                       "ERROR: {} metrics response from node {} failed, msg={}",
+                       fmt::format(what, std::forward<Args>(args)...),
+                       node.hp,
+                       result);
+    }
+
+    return dsn::error_s::ok();
+}
+
 #define RETURN_SHELL_IF_PARSE_METRICS_FAILED(expr, node, what, ...)                                \
     do {                                                                                           \
-        const auto &res = (expr);                                                                  \
+        const auto &res = process_parse_metrics_result(expr, node, what, ##__VA_ARGS__);           \
         if (dsn_unlikely(!res)) {                                                                  \
-            std::cout << "ERROR: parse " << fmt::format(what, ##__VA_ARGS__)                       \
-                      << " metrics response from node " << node.hp << " failed: " << res           \
-                      << std::endl;                                                                \
+            fmt::println(res.description());                                                       \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
@@ -832,11 +869,19 @@ public:
     }
 
     // Create the aggregations as needed.
+    DEF_CALC_CREATOR(assignments)
     DEF_CALC_CREATOR(sums)
     DEF_CALC_CREATOR(increases)
     DEF_CALC_CREATOR(rates)
 
 #undef DEF_CALC_CREATOR
+
+#define CALC_ASSIGNMENT_STATS(entities)                                                            \
+    do {                                                                                           \
+        if (_assignments) {                                                                        \
+            RETURN_NOT_OK(_assignments->assign(entities));                                         \
+        }                                                                                          \
+    } while (0)
 
 #define CALC_ACCUM_STATS(entities)                                                                 \
     do {                                                                                           \
@@ -845,24 +890,38 @@ public:
         }                                                                                          \
     } while (0)
 
-    // Perform the chosen accum aggregations on the fetched metrics.
+    // Perform the chosen aggregations (both assignment and accum) on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string)
     {
         DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
 
+        return aggregate_metrics(query_snapshot);
+    }
+
+    dsn::error_s aggregate_metrics(const dsn::metric_query_brief_value_snapshot &query_snapshot)
+    {
+        CALC_ASSIGNMENT_STATS(query_snapshot.entities);
         CALC_ACCUM_STATS(query_snapshot.entities);
 
         return dsn::error_s::ok();
     }
 
-    // Perform all of the chosen aggregations (both accum and delta) on the fetched metrics.
+    // Perform the chosen aggregations (assignement, accum, delta and rate) on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string_start,
                                    const std::string &json_string_end)
     {
         DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
             json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
 
-        // Apply ending sample to the accum aggregations.
+        return aggregate_metrics(query_snapshot_start, query_snapshot_end);
+    }
+
+    dsn::error_s
+    aggregate_metrics(const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
+                      const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
+    {
+        // Apply ending sample to the assignment and accum aggregations.
+        CALC_ASSIGNMENT_STATS(query_snapshot_end.entities);
         CALC_ACCUM_STATS(query_snapshot_end.entities);
 
         const std::array deltas_list = {&_increases, &_rates};
@@ -884,9 +943,12 @@ public:
 
 #undef CALC_ACCUM_STATS
 
+#undef CALC_ASSIGNMENT_STATS
+
 private:
     DISALLOW_COPY_AND_ASSIGN(aggregate_stats_calcs);
 
+    std::unique_ptr<aggregate_stats> _assignments;
     std::unique_ptr<aggregate_stats> _sums;
     std::unique_ptr<aggregate_stats> _increases;
     std::unique_ptr<aggregate_stats> _rates;
@@ -1940,7 +2002,7 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
-            "row data requests");
+            "aggregate row data requests");
     }
 
     return true;
@@ -1990,7 +2052,7 @@ inline bool get_partition_stats(shell_context *sc,
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
-            "row data requests for table(id={})",
+            "aggregate row data requests for table(id={})",
             table_id);
     }
 

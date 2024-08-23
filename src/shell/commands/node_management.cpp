@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "client/replication_ddl_client.h"
+#include "common/json_helper.h"
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
@@ -49,6 +50,7 @@
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"
+#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
@@ -232,19 +234,173 @@ dsn::metric_filters rw_requests_filters()
     return filters;
 }
 
+dsn::metric_filters server_stat_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"server"};
+    filters.entity_metrics = {"virtual_mem_usage_mb", "resident_mem_usage_mb"};
+    return filters;
+}
+
+struct meta_server_stats
+{
+    meta_server_stats() = default;
+
+    double virt_mem_mb{0.0};
+    double res_mem_mb{0.0};
+
+    DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
+};
+
+std::pair<bool, std::string>
+aggregate_meta_server_stats(const node_desc &node,
+                            const dsn::metric_query_brief_value_snapshot &query_snapshot)
+{
+    aggregate_stats_calcs calcs;
+    meta_server_stats stats;
+    calcs.create_assignments<total_aggregate_stats>(
+        "server",
+        stat_var_map({{"virtual_mem_usage_mb", &stats.virt_mem_mb},
+                      {"resident_mem_usage_mb", &stats.res_mem_mb}}));
+
+    auto command_result = process_parse_metrics_result(
+        calcs.aggregate_metrics(query_snapshot), node, "aggregate meta server stats");
+    if (!command_result) {
+        // Metrics failed to be aggregated.
+        return std::make_pair(false, command_result.description());
+    }
+
+    return std::make_pair(true,
+                          dsn::json::json_forwarder<meta_server_stats>::encode(stats).to_string());
+}
+
+struct replica_server_stats
+{
+    replica_server_stats() = default;
+
+    double virt_mem_mb{0.0};
+    double res_mem_mb{0.0};
+
+    DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
+};
+
+std::pair<bool, std::string>
+aggregate_replica_server_stats(const node_desc &node,
+                               const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
+                               const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
+{
+    aggregate_stats_calcs calcs;
+    meta_server_stats stats;
+    calcs.create_assignments<total_aggregate_stats>(
+        "server",
+        stat_var_map({{"virtual_mem_usage_mb", &stats.virt_mem_mb},
+                      {"resident_mem_usage_mb", &stats.res_mem_mb}}));
+
+    auto command_result = process_parse_metrics_result(
+        calcs.aggregate_metrics(query_snapshot_start, query_snapshot_end),
+        node,
+        "aggregate replica server stats");
+    if (!command_result) {
+        // Metrics failed to be aggregated.
+        return std::make_pair(false, command_result.description());
+    }
+
+    return std::make_pair(true,
+                          dsn::json::json_forwarder<meta_server_stats>::encode(stats).to_string());
+}
+
+std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
+                                                           uint32_t sample_interval_ms)
+{
+    // Ask target node (meta or replica server) for the metrics of server stats.
+    const auto &query_string = server_stat_filters().to_query_string();
+    const auto &results_start = get_metrics(nodes, query_string);
+    std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
+    const auto &results_end = get_metrics(nodes, query_string);
+
+    std::vector<std::pair<bool, std::string>> command_results;
+    command_results.reserve(nodes.size());
+    for (size_t i = 0; i < nodes.size(); ++i) {
+
+#define SKIP_IF_PROCESS_RESULT_FALSE()                                                             \
+    if (!command_result) {                                                                         \
+        command_results.emplace_back(command_result, command_result.description());                \
+        continue;                                                                                  \
+    }
+
+#define PROCESS_GET_METRICS_RESULT(result, what, ...)                                              \
+    {                                                                                              \
+        auto command_result = process_get_metrics_result(result, nodes[i], what, ##__VA_ARGS__);   \
+        SKIP_IF_PROCESS_RESULT_FALSE()                                                             \
+    }
+
+        // Skip the metrics that failed to be fetched.
+        PROCESS_GET_METRICS_RESULT(results_start[i], "starting server stats")
+        PROCESS_GET_METRICS_RESULT(results_end[i], "ending server stats")
+
+#undef PROCESS_GET_METRICS_RESULT
+
+        dsn::metric_query_brief_value_snapshot query_snapshot_start;
+        dsn::metric_query_brief_value_snapshot query_snapshot_end;
+        {
+            // Skip the metrics that failed to be deserialized.
+            auto command_result = process_parse_metrics_result(
+                deserialize_metric_query_2_samples(results_start[i].body(),
+                                                   results_end[i].body(),
+                                                   query_snapshot_start,
+                                                   query_snapshot_end),
+                nodes[i],
+                "deserialize server stats");
+            SKIP_IF_PROCESS_RESULT_FALSE()
+        }
+
+#undef SKIP_IF_PROCESS_RESULT_FALSE
+
+        if (query_snapshot_end.role == "meta") {
+            command_results.push_back(aggregate_meta_server_stats(nodes[i], query_snapshot_end));
+            continue;
+        }
+
+        if (query_snapshot_end.role == "replica") {
+            command_results.push_back(
+                aggregate_replica_server_stats(nodes[i], query_snapshot_start, query_snapshot_end));
+            continue;
+        }
+
+        command_results.emplace_back(
+            false, fmt::format("role {} is unsupported", query_snapshot_end.role));
+    }
+
+    return command_results;
+}
+
+std::vector<std::pair<bool, std::string>> call_nodes(shell_context *sc,
+                                                     const std::vector<node_desc> &nodes,
+                                                     const std::string &command,
+                                                     const std::vector<std::string> &arguments,
+                                                     uint32_t sample_interval_ms)
+{
+    if (command == "server_stat") {
+        return get_server_stats(nodes, sample_interval_ms);
+    }
+
+    return call_remote_command(sc, nodes, command, arguments);
+}
+
 } // anonymous namespace
 
-bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
+bool ls_nodes(command_executor *, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
-                                           {"resolve_ip", no_argument, 0, 'r'},
-                                           {"resource_usage", no_argument, 0, 'u'},
-                                           {"qps", no_argument, 0, 'q'},
-                                           {"json", no_argument, 0, 'j'},
-                                           {"status", required_argument, 0, 's'},
-                                           {"output", required_argument, 0, 'o'},
-                                           {"sample_interval_ms", required_argument, 0, 't'},
-                                           {0, 0, 0, 0}};
+    static struct option long_options[] = {{"detailed", no_argument, nullptr, 'd'},
+                                           {"resolve_ip", no_argument, nullptr, 'r'},
+                                           {"resource_usage", no_argument, nullptr, 'u'},
+                                           {"qps", no_argument, nullptr, 'q'},
+                                           {"json", no_argument, nullptr, 'j'},
+                                           {"status", required_argument, nullptr, 's'},
+                                           {"output", required_argument, nullptr, 'o'},
+                                           {"sample_interval_ms", required_argument, nullptr, 'i'},
+                                           {nullptr, 0, nullptr, 0}};
 
     std::string status;
     std::string output_file;
@@ -259,7 +415,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c = getopt_long(args.argc, args.argv, "druqjs:o:t:", long_options, &option_index);
+        // TODO(wangdan): getopt_long() is not thread-safe (clang-tidy[concurrency-mt-unsafe]),
+        // could use https://github.com/p-ranav/argparse instead.
+        int c = getopt_long(args.argc, args.argv, "druqjs:o:i:", long_options, &option_index);
         if (c == -1) {
             // -1 means all command-line options have been parsed.
             break;
@@ -288,7 +446,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             output_file = optarg;
             break;
-        case 't':
+        case 'i':
             RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
             break;
         default:
@@ -388,7 +546,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
             auto &stat = tmp_it->second;
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
-                parse_resource_usage(results[i].body(), stat), nodes[i], "resource");
+                parse_resource_usage(results[i].body(), stat), nodes[i], "parse resource usage");
         }
     }
 
@@ -430,7 +588,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
                 calcs.aggregate_metrics(results_start[i].body(), results_end[i].body()),
                 nodes[i],
-                "rw requests");
+                "aggregate rw requests");
         }
     }
 
@@ -452,8 +610,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "profiler latency");
 
             auto &stat = tmp_it->second;
-            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
-                parse_profiler_latency(results[i].body(), stat), nodes[i], "profiler latency");
+            RETURN_SHELL_IF_PARSE_METRICS_FAILED(parse_profiler_latency(results[i].body(), stat),
+                                                 nodes[i],
+                                                 "parse profiler latency");
         }
     }
 
@@ -568,6 +727,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
     //                                            [-t all|meta-server|replica-server]
     //                                            [-r|--resolve_ip]
     //                                            [-l host:port,host:port...]
+    //                                            [-i|--sample_interval_ms num]
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
     std::string command;
@@ -593,9 +753,8 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         }
 
         // Initialize the command.
-        const std::map<std::string, std::string> kCmdsMapping({{"server_info", "server-info"},
-                                                               {"server_stat", "server-stat"},
-                                                               {"flush_log", "flush-log"}});
+        const std::map<std::string, std::string> kCmdsMapping(
+            {{"server_info", "server-info"}, {"flush_log", "flush-log"}});
         const auto &it = kCmdsMapping.find(pos_arg.str());
         if (it != kCmdsMapping.end()) {
             // Use the mapped command.
@@ -652,10 +811,16 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
 
     nlohmann::json info;
     info["command"] = fmt::format("{} {}", command, fmt::join(pos_args, " "));
-    const auto results = call_remote_command(sc, nodes, command, pos_args);
+
+    uint32_t sample_interval_ms = 0;
+    PARSE_OPT_UINT(
+        sample_interval_ms, FLAGS_nodes_sample_interval_ms, {"-i", "--sample_interval_ms"});
+
+    const auto &results = call_nodes(sc, nodes, command, pos_args, sample_interval_ms);
+    CHECK_EQ(results.size(), nodes.size());
+
     int succeed = 0;
     int failed = 0;
-    CHECK_EQ(results.size(), nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
         nlohmann::json node_info;
         node_info["role"] = nodes[i].desc;

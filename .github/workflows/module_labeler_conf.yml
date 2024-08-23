@@ -16,7 +16,8 @@
 # under the License.
 ---
 permissions:
-  contents: write
+  contents: 'write'
+  pull-requests: 'write'
 
 github:
   - .github/**/*
