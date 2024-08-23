@@ -90,7 +90,7 @@ private:
     // download sst files from remote provider
     void download_sst_file(const std::string &remote_dir,
                            const std::string &local_dir,
-                           std::vector<::dsn::replication::file_meta> &download_file_metas,
+                           std::vector<::dsn::replication::file_meta> &&download_file_metas,
                            dist::block_service::block_filesystem *fs);
 
     // \return ERR_PATH_NOT_FOUND: file not exist

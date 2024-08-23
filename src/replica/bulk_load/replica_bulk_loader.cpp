@@ -530,10 +530,8 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
     }
     if (!download_file_metas.empty()) {
         _download_files_task[download_file_metas.back().name] = tasking::enqueue(
-            LPC_BACKGROUND_BULK_LOAD,
-            tracker(),
-            [this, remote_dir, local_dir, download_file_metas, fs]() mutable {
-                this->download_sst_file(remote_dir, local_dir, download_file_metas, fs);
+            LPC_BACKGROUND_BULK_LOAD, tracker(), [=, file_metas = download_file_metas]() mutable {
+                this->download_sst_file(remote_dir, local_dir, std::move(file_metas), fs);
             });
     }
 }
@@ -542,7 +540,7 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
 void replica_bulk_loader::download_sst_file(
     const std::string &remote_dir,
     const std::string &local_dir,
-    std::vector<::dsn::replication::file_meta> &download_file_metas,
+    std::vector<::dsn::replication::file_meta> &&download_file_metas,
     dist::block_service::block_filesystem *fs)
 {
     if (_status != bulk_load_status::BLS_DOWNLOADING) {
@@ -609,10 +607,8 @@ void replica_bulk_loader::download_sst_file(
     // download next file
     if (!download_file_metas.empty()) {
         _download_files_task[download_file_metas.back().name] = tasking::enqueue(
-            LPC_BACKGROUND_BULK_LOAD,
-            tracker(),
-            [this, remote_dir, local_dir, download_file_metas, fs]() mutable {
-                this->download_sst_file(remote_dir, local_dir, download_file_metas, fs);
+            LPC_BACKGROUND_BULK_LOAD, tracker(), [=, file_metas = download_file_metas]() mutable {
+                this->download_sst_file(remote_dir, local_dir, std::move(file_metas), fs);
             });
     }
 }
