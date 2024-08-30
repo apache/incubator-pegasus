@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <cstddef>
+#include <cstdint>
 #include <fmt/core.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -47,21 +47,14 @@
 
 DSN_DECLARE_uint64(max_replicas_on_load_for_each_disk);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
-struct load_replicas_case
-{
-    std::map<std::string, std::string> dirs_by_tag;
-    std::map<std::string, std::vector<gpid>> replicas_by_tag;
-};
-
-class LoadReplicasTest : public replica_stub, public testing::TestWithParam<load_replicas_case>
+class mock_load_replica : public replica_stub
 {
 public:
-    LoadReplicasTest() = default;
+    mock_load_replica() = default;
 
-    ~LoadReplicasTest() override = default;
+    ~mock_load_replica() override = default;
 
     void initialize(const std::map<std::string, std::string> &dirs_by_tag,
                     const std::map<std::string, std::vector<gpid>> &replicas_by_tag)
@@ -126,8 +119,6 @@ public:
             ASSERT_TRUE(utils::filesystem::remove_path(dn->full_dir));
         }
     }
-
-    void TearDown() override { remove_disk_dirs(); }
 
 private:
     void load_replica_for_test(dir_node *dn, const char *dir, replica_ptr &rep)
@@ -206,28 +197,45 @@ private:
 
     mutable std::mutex _mtx;
     replicas _expected_loaded_replicas;
+
+    DISALLOW_COPY_AND_ASSIGN(mock_load_replica);
 };
 
-TEST_P(LoadReplicasTest, LoadReplicas)
+struct load_replicas_case
 {
-    const auto &load_case = GetParam();
-    initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
-    test_load_replicas(false, 256);
-}
+    std::map<std::string, std::string> dirs_by_tag;
+    std::map<std::string, std::vector<gpid>> replicas_by_tag;
+};
 
-TEST_P(LoadReplicasTest, LoadOrder)
+class LoadReplicasTest : public testing::TestWithParam<load_replicas_case>
 {
-    const auto &load_case = GetParam();
-    initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
-    test_load_replicas(true, 256);
-}
+public:
+    LoadReplicasTest()
+    {
+        const auto &load_case = GetParam();
+        _stub.initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
+    }
 
-TEST_P(LoadReplicasTest, LoadThrottling)
-{
-    const auto &load_case = GetParam();
-    initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
-    test_load_replicas(false, 5);
-}
+    ~LoadReplicasTest() override = default;
+
+    void TearDown() override { _stub.remove_disk_dirs(); }
+
+    void test_load_replicas(bool test_load_order, uint64_t max_replicas_on_load_for_each_disk)
+    {
+        _stub.test_load_replicas(test_load_order, max_replicas_on_load_for_each_disk);
+    }
+
+private:
+    mock_load_replica _stub;
+
+    DISALLOW_COPY_AND_ASSIGN(LoadReplicasTest);
+};
+
+TEST_P(LoadReplicasTest, LoadReplicas) { test_load_replicas(false, 256); }
+
+TEST_P(LoadReplicasTest, LoadOrder) { test_load_replicas(true, 256); }
+
+TEST_P(LoadReplicasTest, LoadThrottling) { test_load_replicas(false, 5); }
 
 load_replicas_case generate_load_replicas_case(const std::vector<size_t> &disk_replicas)
 {
@@ -302,5 +310,4 @@ INSTANTIATE_TEST_SUITE_P(ReplicaStubTest,
                          LoadReplicasTest,
                          testing::ValuesIn(generate_load_replicas_cases()));
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

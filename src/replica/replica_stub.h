@@ -27,9 +27,9 @@
 #pragma once
 
 #include <gtest/gtest_prod.h>
-#include <stdint.h>
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -71,11 +71,11 @@
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace utils {
+namespace dsn::utils {
+
 class ex_lock;
-} // namespace utils
-} // namespace dsn
+
+} // namespace dsn::utils
 
 DSN_DECLARE_uint32(max_concurrent_manual_emergency_checkpointing_count);
 
@@ -365,7 +365,12 @@ private:
                          const app_info &app,
                          bool restore_if_necessary,
                          bool is_duplication_follower,
-                         const std::string &parent_dir = "");
+                         const std::string &parent_dir);
+
+    replica *new_replica(gpid gpid,
+                         const app_info &app,
+                         bool restore_if_necessary,
+                         bool is_duplication_follower);
 
     using disk_dirs = std::vector<std::pair<dir_node *, std::vector<std::string>>>;
 
@@ -479,7 +484,7 @@ private:
     friend class replica_follower;
     friend class replica_follower_test;
     friend class replica_http_service_test;
-    friend class LoadReplicasTest;
+    friend class mock_load_replica;
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
     FRIEND_TEST(replica_test, test_clear_on_failure);
@@ -600,5 +605,6 @@ private:
 
     dsn::task_tracker _tracker;
 };
+
 } // namespace replication
 } // namespace dsn

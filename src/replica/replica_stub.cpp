@@ -542,7 +542,7 @@ void replica_stub::load_replicas(replicas &reps)
             //
             // For the docs of clang 16 please see:
             //
-            // https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#c-20-feature-support:
+            // https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#c-20-feature-support.
             const auto &dirs = disks[disk_index].second;
 
             auto &dir_index = dir_indexes[disk_index];
@@ -558,7 +558,8 @@ void replica_stub::load_replicas(replicas &reps)
             if (!load_disk_queue.empty() &&
                 load_disk_queue.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
                 // Loading replicas should be throttled in case that disk IO is saturated.
-                if (load_disk_queue.front().second->wait(FLAGS_load_replica_max_wait_time_ms)) {
+                if (load_disk_queue.front().second->wait(
+                        static_cast<int>(FLAGS_load_replica_max_wait_time_ms))) {
                     load_disk_queue.pop();
                 } else {
                     // There might be too many replicas that are being loaded which lead to
@@ -755,8 +756,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     if (!is_log_complete) {
         LOG_ERROR("logs are not complete for some replicas, which means that shared log is "
                   "truncated, mark all replicas as inactive");
-        for (auto it = reps.begin(); it != reps.end(); ++it) {
-            it->second->set_inactive_state_transient(false);
+        for (auto &[_, rep] : reps) {
+            rep->set_inactive_state_transient(false);
         }
     }
 
@@ -1507,27 +1508,28 @@ void replica_stub::on_node_query_reply(error_code err,
                  resp.partitions.size(),
                  resp.gc_replicas.size());
 
-        replicas rs;
+        replicas reps;
         {
             zauto_read_lock rl(_replicas_lock);
-            rs = _replicas;
+            reps = _replicas;
         }
 
-        for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it) {
-            rs.erase(it->config.pid);
-            tasking::enqueue(LPC_QUERY_NODE_CONFIGURATION_SCATTER,
-                             &_tracker,
-                             std::bind(&replica_stub::on_node_query_reply_scatter, this, this, *it),
-                             it->config.pid.thread_hash());
+        for (const auto &config_update : resp.partitions) {
+            reps.erase(config_update.config.pid);
+            tasking::enqueue(
+                LPC_QUERY_NODE_CONFIGURATION_SCATTER,
+                &_tracker,
+                std::bind(&replica_stub::on_node_query_reply_scatter, this, this, config_update),
+                config_update.config.pid.thread_hash());
         }
 
         // For the replicas that do not exist on meta_servers.
-        for (auto it = rs.begin(); it != rs.end(); ++it) {
+        for (const auto &[pid, _] : reps) {
             tasking::enqueue(
                 LPC_QUERY_NODE_CONFIGURATION_SCATTER2,
                 &_tracker,
-                std::bind(&replica_stub::on_node_query_reply_scatter2, this, this, it->first),
-                it->first.thread_hash());
+                std::bind(&replica_stub::on_node_query_reply_scatter2, this, this, pid),
+                pid.thread_hash());
         }
 
         // handle the replicas which need to be gc
@@ -1656,18 +1658,18 @@ void replica_stub::on_meta_server_disconnected()
 
     _state = NS_Disconnected;
 
-    replicas rs;
+    replicas reps;
     {
         zauto_read_lock rl(_replicas_lock);
-        rs = _replicas;
+        reps = _replicas;
     }
 
-    for (auto it = rs.begin(); it != rs.end(); ++it) {
+    for (const auto &[pid, _] : reps) {
         tasking::enqueue(
             LPC_CM_DISCONNECTED_SCATTER,
             &_tracker,
-            std::bind(&replica_stub::on_meta_server_disconnected_scatter, this, this, it->first),
-            it->first.thread_hash());
+            std::bind(&replica_stub::on_meta_server_disconnected_scatter, this, this, pid),
+            pid.thread_hash());
     }
 }
 
@@ -2115,6 +2117,14 @@ replica *replica_stub::new_replica(gpid gpid,
     return rep;
 }
 
+replica *replica_stub::new_replica(gpid gpid,
+                                   const app_info &app,
+                                   bool restore_if_necessary,
+                                   bool is_duplication_follower)
+{
+    return new_replica(gpid, app, restore_if_necessary, is_duplication_follower, "");
+}
+
 /*static*/ std::string replica_stub::get_replica_dir_name(const std::string &dir)
 {
     static const char splitters[] = {'\\', '/', 0};
@@ -2124,15 +2134,28 @@ replica *replica_stub::new_replica(gpid gpid,
 /* static */ bool
 replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type)
 {
-    int32_t app_id = 0, partition_id = 0;
-    char app_type_buf[128] = {0};
-    if (3 != sscanf(dir_name.c_str(), "%d.%d.%s", &app_id, &partition_id, app_type_buf)) {
+    std::vector<int32_t> ids(2, 0);
+    size_t begin = 0;
+    for (auto &id : ids) {
+        size_t end = dir_name.find('.', begin);
+        if (end == std::string::npos) {
+            return false;
+        }
+
+        if (!buf2int32(std::string_view(dir_name.data() + begin, end - begin), id)) {
+            return false;
+        }
+
+        begin = end + 1;
+    }
+
+    if (begin >= dir_name.size()) {
         return false;
     }
 
-    pid.set_app_id(app_id);
-    pid.set_partition_index(partition_id);
-    app_type = app_type_buf;
+    pid.set_app_id(ids[0]);
+    pid.set_partition_index(ids[1]);
+    app_type.assign(dir_name, begin);
     return true;
 }
 
