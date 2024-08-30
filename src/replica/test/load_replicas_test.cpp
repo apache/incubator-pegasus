@@ -44,6 +44,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
+#include "utils/ports.h"
 
 DSN_DECLARE_uint64(max_replicas_on_load_for_each_disk);
 
@@ -199,6 +200,7 @@ private:
     replicas _expected_loaded_replicas;
 
     DISALLOW_COPY_AND_ASSIGN(mock_load_replica);
+    DISALLOW_MOVE_AND_ASSIGN(mock_load_replica);
 };
 
 struct load_replicas_case
@@ -229,6 +231,7 @@ private:
     mock_load_replica _stub;
 
     DISALLOW_COPY_AND_ASSIGN(LoadReplicasTest);
+    DISALLOW_MOVE_AND_ASSIGN(LoadReplicasTest);
 };
 
 TEST_P(LoadReplicasTest, LoadReplicas) { test_load_replicas(false, 256); }
