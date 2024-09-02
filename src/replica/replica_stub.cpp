@@ -83,6 +83,7 @@
 #include "utils/ports.h"
 #include "utils/process_utils.h"
 #include "utils/rand.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/synchronize.h"
 #include "utils/threadpool_spec.h"
