@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -49,6 +50,10 @@ type Metric struct {
 
 type Metrics []Metric
 
+// Only initialize once.
+var hasInit = false
+var initLock sync.Mutex
+
 var GaugeMetricsMap map[string]prometheus.GaugeVec
 var CounterMetricsMap map[string]prometheus.CounterVec
 var SummaryMetricsMap map[string]prometheus.Summary
@@ -63,14 +68,15 @@ func NewMetricCollector(
 	role string,
 	detectInterval time.Duration,
 	detectTimeout time.Duration) MetricCollector {
-	GaugeMetricsMap = make(map[string]prometheus.GaugeVec, 128)
-	CounterMetricsMap = make(map[string]prometheus.CounterVec, 128)
-	SummaryMetricsMap = make(map[string]prometheus.Summary, 128)
-	TableNameByID = make(map[string]string, 128)
-
-	var collector = Collector{detectInterval: detectInterval, detectTimeout: detectTimeout, role: role}
-	collector.initMetrics()
-	return &collector
+	if !hasInit {
+		initLock.Lock()
+		if !hasInit {
+			hasInit = true
+			initMetrics()
+		}
+		initLock.Unlock()
+	}
+	return &Collector{detectInterval: detectInterval, detectTimeout: detectTimeout, role: role}
 }
 
 type Collector struct {
@@ -117,19 +123,8 @@ func getReplicaAddrs() ([]string, error) {
 	return rserverAddrs, nil
 }
 
-// Register all metrics.
-func (collector *Collector) initMetrics() {
-	var addrs []string
-	var err error
-	if collector.role == MetaServer {
-		addrs = viper.GetStringSlice("meta_servers")
-	} else {
-		addrs, err = getReplicaAddrs()
-		if err != nil {
-			log.Errorf("Get replica server address failed, err: %s", err)
-			return
-		}
-	}
+// Get all metrics of meta-server and replica-server by their addrs
+func getAllMetricsByAddrs(addrs []string) {
 	for _, addr := range addrs {
 		data, err := getOneServerMetrics(addr)
 		if err != nil {
@@ -179,6 +174,25 @@ func (collector *Collector) initMetrics() {
 			}
 		}
 	}
+}
+
+// Register all metrics.
+func initMetrics() {
+	GaugeMetricsMap = make(map[string]prometheus.GaugeVec, 256)
+	CounterMetricsMap = make(map[string]prometheus.CounterVec, 256)
+	SummaryMetricsMap = make(map[string]prometheus.Summary, 256)
+	TableNameByID = make(map[string]string, 256)
+
+	var addrs []string
+	addrs = viper.GetStringSlice("meta_servers")
+	replicAddrs, err := getReplicaAddrs()
+	if err != nil {
+		log.Errorf("Get raw metrics from %s failed, err: %s", replicAddrs, err)
+		return
+	}
+	addrs = append(addrs, replicAddrs...)
+
+	getAllMetricsByAddrs(addrs)
 }
 
 // Parse metric data and update metrics.
