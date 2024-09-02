@@ -2155,7 +2155,10 @@ replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std
 
     pid.set_app_id(ids[0]);
     pid.set_partition_index(ids[1]);
-    app_type.assign(dir_name, begin);
+
+    // TODO(wangdan): the 3rd parameter `count` does not support default argument for CentOS 7
+    // (gcc 7.3.1). After CentOS 7 is deprecated, consider dropping std::string::npos.
+    app_type.assign(dir_name, begin, std::string::npos);
     return true;
 }
 
