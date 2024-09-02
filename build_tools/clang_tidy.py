@@ -96,7 +96,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-readability-function-cognitive-complexity,"
                            "-readability-identifier-length,"
                            "-readability-magic-numbers,"
-                           "-readability-named-parameter",
+                           "-readability-named-parameter,"
                            "-readability-suspicious-call-argument",
                    "-extra-arg=-language=c++",
                    "-extra-arg=-std=c++17",
