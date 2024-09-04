@@ -2213,7 +2213,7 @@ bool replica_stub::validate_replica_dir(const std::string &dir,
     return true;
 }
 
-replica_ptr replica_stub::load_replica(dir_node *dn, const char *dir)
+replica_ptr replica_stub::load_replica(dir_node *dn, const char *replica_dir)
 {
     FAIL_POINT_INJECT_F("mock_replica_load",
                         [&](std::string_view) -> replica * { return nullptr; });
@@ -2221,13 +2221,13 @@ replica_ptr replica_stub::load_replica(dir_node *dn, const char *dir)
     app_info ai;
     gpid pid;
     std::string hint_message;
-    if (!validate_replica_dir(dir, ai, pid, hint_message)) {
-        LOG_ERROR("invalid replica dir '{}', hint: {}", dir, hint_message);
+    if (!validate_replica_dir(replica_dir, ai, pid, hint_message)) {
+        LOG_ERROR("invalid replica dir '{}', hint: {}", replica_dir, hint_message);
         return nullptr;
     }
 
     // The replica's directory must exist when creating a replica.
-    CHECK_EQ(dir, dn->replica_dir(ai.app_type, pid));
+    CHECK_EQ(replica_dir, dn->replica_dir(ai.app_type, pid));
     auto *rep = new replica(this, pid, ai, dn, false);
     const auto err = rep->initialize_on_load();
     if (err != ERR_OK) {
@@ -2236,8 +2236,8 @@ replica_ptr replica_stub::load_replica(dir_node *dn, const char *dir)
         rep = nullptr;
 
         // clear work on failure
-        if (dsn::utils::filesystem::directory_exists(dir)) {
-            move_to_err_path(dir, "load replica");
+        if (dsn::utils::filesystem::directory_exists(replica_dir)) {
+            move_to_err_path(replica_dir, "load replica");
             METRIC_VAR_INCREMENT(moved_error_replicas);
             _fs_manager.remove_replica(pid);
         }
