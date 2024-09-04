@@ -30,8 +30,8 @@ TEST(BlobTest, CreateFromNullptr)
 
     // TODO(wangdan): once create_from_bytes() could return an empty blob, add case
     // to test if all pointers are null.
-        EXPECT_EQ(0, obj.length());
-        EXPECT_EQ(0, obj.size());
+    EXPECT_EQ(0, obj.length());
+    EXPECT_EQ(0, obj.size());
 }
 
 struct blob_base_case
@@ -42,7 +42,7 @@ struct blob_base_case
 class BlobBaseTest : public testing::TestWithParam<blob_base_case>
 {
 public:
-    void BlobBaseTest()
+    BlobBaseTest()
     {
         const auto &test_case = GetParam();
         _expected_str = test_case.expected_str;

@@ -113,8 +113,10 @@ public:
             // TODO(wangdan): decide if an empty blob could be returned, which is initialized
             // by default constructor blob() whose length is zero and all pointers(_holder,
             // _buffer and _data) are null.
-            CHECK_EQ_MSG(len, 0, "null source pointer with non-zero length would lead to "
-                    "undefined behaviour");
+            CHECK_EQ_MSG(len,
+                         0,
+                         "null source pointer with non-zero length would lead to "
+                         "undefined behaviour");
         }
 
         std::shared_ptr<char> s_arr(new char[len], std::default_delete<char[]>());
