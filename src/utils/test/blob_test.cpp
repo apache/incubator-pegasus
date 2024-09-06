@@ -24,6 +24,25 @@
 
 namespace dsn {
 
+TEST(BlobTest, CreateFromZeroLengthNullptr)
+{
+    const auto &obj = blob::create_from_bytes(nullptr, 0);
+
+    EXPECT_EQ(0, obj.length());
+    EXPECT_EQ(0, obj.size());
+}
+
+#ifndef NDEBUG
+
+TEST(BlobTest, CreateFromNonZeroLengthNullptr)
+{
+    ASSERT_DEATH({ const auto &obj = blob::create_from_bytes(nullptr, 1); },
+                 "null source pointer with non-zero length would lead to "
+                 "undefined behaviour");
+}
+
+#endif
+
 struct blob_base_case
 {
     std::string expected_str;
@@ -32,7 +51,7 @@ struct blob_base_case
 class BlobBaseTest : public testing::TestWithParam<blob_base_case>
 {
 public:
-    void SetUp() override
+    BlobBaseTest()
     {
         const auto &test_case = GetParam();
         _expected_str = test_case.expected_str;

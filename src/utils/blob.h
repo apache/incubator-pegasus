@@ -109,7 +109,9 @@ public:
     /// NOTE: this operation is not efficient since it involves a memory copy.
     [[nodiscard]] static blob create_from_bytes(const char *s, size_t len)
     {
-        CHECK_NOTNULL(s, "null source pointer would lead to undefined behaviour");
+        DCHECK(s != nullptr || len == 0,
+               "null source pointer with non-zero length would lead to "
+               "undefined behaviour");
 
         std::shared_ptr<char> s_arr(new char[len], std::default_delete<char[]>());
         memcpy(s_arr.get(), s, len);
