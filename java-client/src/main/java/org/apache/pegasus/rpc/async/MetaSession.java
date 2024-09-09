@@ -249,6 +249,7 @@ public class MetaSession extends HostNameResolver {
       return;
     }
 
+    round.lastSession.getInterceptorManager().onConnected(round.lastSession);
     retryQueryMeta(round, needDelay);
   }
 
