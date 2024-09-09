@@ -429,8 +429,14 @@ bool rpc_session::on_disconnected(bool is_write)
 
 void rpc_session::on_failure(bool is_write)
 {
+    // Just update the state machine here.
     if (on_disconnected(is_write)) {
-        close();
+        // The under layer socket may be used by async_* interfaces concurrently, it's not thread
+        // safe to invalidate the '_socket', it should be invalidated when the session is
+        // destroyed.
+        LOG_WARNING("disconnect to remote {}, the socket will be lazily closed when the session "
+                    "destroyed",
+                    _remote_addr);
     }
 }
 

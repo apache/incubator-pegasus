@@ -50,15 +50,15 @@ public:
                        ::dsn::rpc_address remote_addr,
                        message_parser_ptr &parser);
 
-    virtual void connect();
+    void connect() override;
 
-    virtual void send(uint64_t signature) override;
+    void send(uint64_t signature) override;
 
-    virtual void do_read(int sz) override {}
+    void do_read(int sz) override {}
 
-    virtual void close() override {}
+    void close() override {}
 
-    virtual void on_failure(bool is_write = false) override {}
+    void on_failure(bool is_write) override {}
 };
 
 class sim_server_session : public rpc_session
@@ -69,15 +69,15 @@ public:
                        rpc_session_ptr &client,
                        message_parser_ptr &parser);
 
-    virtual void send(uint64_t signature) override;
+    void send(uint64_t signature) override;
 
-    virtual void connect() {}
+    void connect() override {}
 
-    virtual void do_read(int sz) override {}
+    void do_read(int sz) override {}
 
-    virtual void close() override {}
+    void close() override {}
 
-    virtual void on_failure(bool is_write = false) override {}
+    void on_failure(bool is_write) override {}
 
 private:
     rpc_session_ptr _client;

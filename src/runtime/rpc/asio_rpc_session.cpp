@@ -130,7 +130,7 @@ void asio_rpc_session::do_read(int read_next)
                 } else {
                     LOG_ERROR("asio read from {} failed: {}", _remote_addr, ec.message());
                 }
-                on_failure();
+                on_failure(false);
             } else {
                 _reader.mark_read(length);
 
@@ -151,7 +151,7 @@ void asio_rpc_session::do_read(int read_next)
 
                 if (read_next == -1) {
                     LOG_ERROR("asio read from {} failed", _remote_addr);
-                    on_failure();
+                    on_failure(false);
                 } else {
                     start_read_next(read_next);
                 }
@@ -197,16 +197,25 @@ asio_rpc_session::asio_rpc_session(asio_network_provider &net,
     set_options();
 }
 
+asio_rpc_session::~asio_rpc_session()
+{
+    // Because every async_* invoking adds the reference counter and releases the reference counter
+    // in corresponding callback, it's certain that the reference counter is zero in its
+    // destructor, which means there is no inflight invoking, then it's safe to close the socket.
+    asio_rpc_session::close();
+}
+
 void asio_rpc_session::close()
 {
-
     boost::system::error_code ec;
     _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
-    if (ec)
+    if (ec) {
         LOG_WARNING("asio socket shutdown failed, error = {}", ec.message());
+    }
     _socket->close(ec);
-    if (ec)
+    if (ec) {
         LOG_WARNING("asio socket close failed, error = {}", ec.message());
+    }
 }
 
 void asio_rpc_session::connect()
@@ -222,7 +231,7 @@ void asio_rpc_session::connect()
 
                 set_options();
                 set_connected();
-                on_send_completed();
+                on_send_completed(0);
                 start_read_next();
             } else {
                 LOG_ERROR(
