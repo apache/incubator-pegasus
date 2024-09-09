@@ -44,6 +44,7 @@
 #include <gperftools/malloc_extension.h>
 #endif
 
+#include "common/duplication_common.h"
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "perf_counter/perf_counters.h"
@@ -70,6 +71,7 @@
 #include "utils/config_api.h"
 #include "utils/coredump.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/factory_store.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
@@ -118,6 +120,7 @@ static struct _all_info_
 } dsn_all;
 
 std::unique_ptr<dsn::command_deregister> dump_log_cmd;
+std::unique_ptr<dsn::command_deregister> reload_log_cmd;
 
 volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
 {
@@ -229,6 +232,7 @@ bool dsn_run_config(const char *config, bool is_server)
 [[noreturn]] void dsn_exit(int code)
 {
     dump_log_cmd.reset();
+    reload_log_cmd.reset();
 
     printf("dsn exit with code %d\n", code);
     fflush(stdout);
@@ -582,6 +586,36 @@ bool run(const char *config_file,
             }
 
             dsn_config_dump(*os);
+            return oss.str();
+        });
+
+    dump_log_cmd = dsn::command_manager::instance().register_single_command(
+        {"dup-config-reload"},
+        "dup-config-reload - reload the new config file on every server",
+        "dup-config-reload  [empty OR reload-this-config-file]. To dynamic update duplication "
+        "parameter "
+        "1.Put new config on every server.(Include replica server and meta server)"
+        "2.Use this remote command reload config to memory, and get duplication parameter to dup "
+        "object",
+        [](const std::vector<std::string> &args) {
+            std::ostringstream oss;
+            std::string file_name = "config.ini";
+            // choose another file to reload
+            if (args.size() > 0) {
+                file_name = args[0];
+            }
+
+            auto reload_influence_lines =
+                dsn::replication::make_reloading_duplication_config(file_name);
+            if (!reload_influence_lines.is_ok()) {
+                oss << "ERR_INVALID_PARAMETERS. Reload duplication config file, error:{"
+                    << reload_influence_lines.get_error() << "}" << std::endl;
+
+                return oss.str();
+            }
+
+            oss << "ERR_OK. Reload duplication config success, reload_influence_lines:{"
+                << std::to_string(reload_influence_lines.get_value()) << "}" << std::endl;
             return oss.str();
         });
 

@@ -48,6 +48,6 @@ add_library(dsn_runtime STATIC
         tool_api.cpp
         tracer.cpp
         zlocks.cpp)
-target_link_libraries(dsn_runtime PRIVATE dsn_security dsn_utils sasl2 gssapi_krb5 krb5)
+target_link_libraries(dsn_runtime PRIVATE dsn_replication_common dsn_security dsn_utils sasl2 gssapi_krb5 krb5)
 define_file_basename_for_sources(dsn_runtime)
 install(TARGETS dsn_runtime DESTINATION "lib")

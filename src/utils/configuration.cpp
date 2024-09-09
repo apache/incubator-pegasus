@@ -40,7 +40,7 @@ namespace dsn {
 
 configuration::configuration() { _warning = false; }
 
-configuration::~configuration()
+void configuration::clear_configs()
 {
     for (auto &section_kv : _configs) {
         auto &section = section_kv.second;
@@ -50,6 +50,19 @@ configuration::~configuration()
     }
     _configs.clear();
 }
+
+void configuration::copy_configs(configuration &source_conf)
+{
+    source_conf._lock.lock();
+    for (auto &[section_key, section] : source_conf._configs) {
+        for (auto &[key, value] : section) {
+            _configs[section_key][key] = new conf(*value);
+        }
+    }
+    source_conf._lock.unlock();
+}
+
+configuration::~configuration() { clear_configs(); }
 
 // arguments: k1=v1;k2=v2;k3=v3; ...
 // e.g.,

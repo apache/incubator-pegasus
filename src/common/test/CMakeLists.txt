@@ -40,6 +40,8 @@ set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES
         config-test.ini
+        err-config-test.ini
+        new-config-test.ini
         run.sh
         )
 

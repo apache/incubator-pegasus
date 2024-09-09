@@ -27,6 +27,7 @@
 #include "utils/config_api.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "utils/configuration.h"
 
@@ -38,6 +39,23 @@ bool dsn_config_load(const char *file, const char *arguments)
 }
 
 void dsn_config_dump(std::ostream &os) { g_config.dump(os); }
+
+bool dsn_config_reload(const char *file,
+                       const char *arguments,
+                       /*out*/ dsn::configuration *old_config)
+{
+    *old_config = g_config;
+    dsn::configuration temp_config;
+    if (!temp_config.load(file, arguments)) {
+        // TODO(ninsmiracle):  Add some error log
+        return false;
+    }
+
+    g_config = std::move(temp_config);
+    return true;
+}
+
+void dsn_config_rollback(dsn::configuration &old_config) { g_config = std::move(old_config); }
 
 const char *dsn_config_get_value_string(const char *section,
                                         const char *key,

@@ -18,6 +18,7 @@
 #include "duplication_common.h"
 
 #include <nlohmann/json.hpp>
+#include <cmath>
 #include <cstdint>
 #include <map>
 #include <utility>
@@ -28,6 +29,7 @@
 #include "nlohmann/detail/json_ref.hpp"
 #include "nlohmann/json_fwd.hpp"
 #include "utils/config_api.h"
+#include "utils/configuration.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/singleton.h"
@@ -103,6 +105,59 @@ public:
     }
 
     const std::set<uint8_t> &get_distinct_cluster_id_set() { return _distinct_cids; }
+    error_with<uint8_t> reload_duplication_config(std::string config_file)
+    {
+        if (config_file.empty()) {
+            config_file = "config.ini";
+        }
+        const char *config_file_cstr = config_file.c_str();
+
+        std::map<std::string, uint8_t> new_group;
+        std::set<uint8_t> new_distinct_cids;
+        dsn::configuration old_config;
+
+        // reload default config.ini, user can point to another config file. update g_config here
+        if (!dsn_config_reload(config_file_cstr, nullptr, &old_config)) {
+            LOG_ERROR("Fail to reload config file {}", config_file_cstr);
+            return error_s::make(
+                ERR_OBJECT_NOT_FOUND,
+                " new `duplication-group` configured can not be read. Check your config.ini now");
+        }
+
+        int influented_clusters = 0;
+
+        std::vector<std::string> clusters;
+        dsn_config_get_all_keys("duplication-group", clusters);
+        // TODO(ninsmiracle):  Add more illegal parameter conditional judgments
+        for (std::string &cluster : clusters) {
+            int64_t cluster_id =
+                dsn_config_get_value_int64("duplication-group", cluster.data(), 0, "");
+
+            // gns : do not dassert, just rolling it back and log error
+            if (cluster_id < 128 && cluster_id > 0) {
+                new_group.emplace(cluster, static_cast<uint8_t>(cluster_id));
+                new_distinct_cids.emplace(cluster_id);
+            } else {
+                LOG_ERROR(
+                    "cluster_id({}) for {} should be in [1, 127]", cluster_id, cluster.data());
+                // roll back cluster group and configuration
+                dsn_config_rollback(old_config);
+                return error_s::make(ERR_INVALID_PARAMETERS,
+                                     " new `duplication-group` configured invalid cluster id. "
+                                     "Check your config.ini now");
+            }
+        }
+
+        if (new_group.size() != _group.size()) {
+            influented_clusters = std::fabs(_group.size() - new_group.size());
+            LOG_DEBUG("There are {} influented lines after reloading the config file",
+                      influented_clusters);
+        }
+
+        swap(new_group, _group);
+        swap(new_distinct_cids, _distinct_cids);
+        return influented_clusters;
+    }
 
 private:
     duplication_group_registry()
@@ -159,6 +214,11 @@ private:
     static const uint8_t cluster_id =
         get_duplication_cluster_id(get_current_dup_cluster_name()).get_value();
     return cluster_id;
+}
+
+/*extern*/ error_with<uint8_t> make_reloading_duplication_config(std::string &config_file)
+{
+    return internal::duplication_group_registry::instance().reload_duplication_config(config_file);
 }
 
 // TODO(wutao1): implement our C++ version of `TSimpleJSONProtocol` if there're
