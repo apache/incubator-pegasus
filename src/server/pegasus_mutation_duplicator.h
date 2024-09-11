@@ -23,14 +23,18 @@
 #include <stdint.h>
 #include <deque>
 #include <map>
+#include <set>
 #include <string>
 
+#include "absl/strings/string_view.h"
 #include "replica/duplication/mutation_duplicator.h"
 #include "rrdb/rrdb.client.h"
+#include "rrdb/rrdb.code.definition.h"
 #include "runtime/pipeline.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/chrono_literals.h"
+
 #include <string_view>
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
@@ -38,6 +42,7 @@
 namespace dsn {
 class blob;
 class error_code;
+
 namespace replication {
 struct replica_base;
 } // namespace replication
@@ -73,6 +78,8 @@ private:
 
     void on_duplicate_reply(uint64_t hash, callback, duplicate_rpc, dsn::error_code err);
 
+    void type_force_send_non_idempotent_if_need(duplicate_rpc &rpc);
+
 private:
     friend class pegasus_mutation_duplicator_test;
 
@@ -89,8 +96,14 @@ private:
 
     size_t _total_shipped_size{0};
 
+    const std::set<dsn::task_code> _non_idempotent_codes = {
+        dsn::apps::RPC_RRDB_RRDB_INCR,
+        dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
+        dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE};
+
     METRIC_VAR_DECLARE_counter(dup_shipped_successful_requests);
     METRIC_VAR_DECLARE_counter(dup_shipped_failed_requests);
+    METRIC_VAR_DECLARE_counter(dup_retry_non_idempotent_duplicate_request);
 };
 
 // Decodes the binary `request_data` into write request in thrift struct, and

@@ -121,6 +121,14 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of DUPLICATE requests");
 
+METRIC_DEFINE_counter(replica,
+                      dup_unsafe_received_non_idempotent_duplicate_request,
+                      dsn::metric_unit::kRequests,
+                      "receive non-idempotent request from master cluster via duplication when "
+                      "FLAG_duplication_unsafe_allow_non_idempotent set as true."
+                      "This metric greater than zero means that there is already the possibility "
+                      "of inconsistency between clusters.");
+
 METRIC_DEFINE_percentile_int64(replica,
                                dup_time_lag_ms,
                                dsn::metric_unit::kMilliSeconds,
@@ -168,6 +176,7 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       METRIC_VAR_INIT_replica(check_and_set_latency_ns),
       METRIC_VAR_INIT_replica(check_and_mutate_latency_ns),
       METRIC_VAR_INIT_replica(dup_requests),
+      METRIC_VAR_INIT_replica(dup_unsafe_received_non_idempotent_duplicate_request),
       METRIC_VAR_INIT_replica(dup_time_lag_ms),
       METRIC_VAR_INIT_replica(dup_lagging_writes),
       _put_batch_size(0),
@@ -415,6 +424,41 @@ int pegasus_write_service::duplicate(int64_t decree,
             }
             continue;
         }
+
+        // Parse non-idempotent writes via duplication
+        if (request.task_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
+            request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
+            request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+
+            METRIC_VAR_INCREMENT(dup_unsafe_received_non_idempotent_duplicate_request);
+
+            if (request.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
+                incr_rpc rpc(write);
+                resp.__set_error(_impl->incr(ctx.decree, rpc.request(), rpc.response()));
+                if (resp.error != rocksdb::Status::kOk) {
+                    return resp.error;
+                }
+                continue;
+            }
+            if (request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+                check_and_set_rpc rpc(write);
+                resp.__set_error(_impl->check_and_set(ctx.decree, rpc.request(), rpc.response()));
+                if (resp.error != rocksdb::Status::kOk) {
+                    return resp.error;
+                }
+                continue;
+            }
+            if (request.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+                check_and_mutate_rpc rpc(write);
+                resp.__set_error(
+                    _impl->check_and_mutate(ctx.decree, rpc.request(), rpc.response()));
+                if (resp.error != rocksdb::Status::kOk) {
+                    return resp.error;
+                }
+                continue;
+            }
+        }
+
         resp.__set_error(rocksdb::Status::kInvalidArgument);
         resp.__set_error_hint(fmt::format("unrecognized task code {}", request.task_code));
         return empty_put(ctx.decree);

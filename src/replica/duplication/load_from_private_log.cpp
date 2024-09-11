@@ -18,9 +18,11 @@
 #include <iterator>
 #include <map>
 #include <string>
+#include <string_view>
 #include <utility>
 
-#include <string_view>
+
+#include "absl/strings/string_view.h"
 #include "common/duplication_common.h"
 #include "duplication_types.h"
 #include "load_from_private_log.h"
@@ -34,6 +36,7 @@
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fail_point.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
@@ -57,6 +60,8 @@ METRIC_DEFINE_counter(replica,
                       dup_log_read_mutations,
                       dsn::metric_unit::kMutations,
                       "The number of mutations read from private log for dup");
+
+DSN_DECLARE_uint32(duplicate_log_batch_bytes);
 
 namespace dsn {
 namespace replication {
