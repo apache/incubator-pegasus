@@ -274,8 +274,8 @@ public:
     // should always be called in lock
     bool unlink_message_for_send();
     virtual void send(uint64_t signature) = 0;
-    void on_send_completed(uint64_t signature = 0);
-    virtual void on_failure(bool is_write = false);
+    void on_send_completed(uint64_t signature);
+    virtual void on_failure(bool is_write);
 
 protected:
     ///
@@ -314,7 +314,6 @@ protected:
     uint64_t _message_sent;
     // ]
 
-protected:
     ///
     /// change status and check status
     ///
@@ -327,7 +326,6 @@ protected:
     void clear_send_queue(bool resend_msgs);
     bool on_disconnected(bool is_write);
 
-protected:
     // constant info
     connection_oriented_network &_net;
     dsn::rpc_address _remote_addr;

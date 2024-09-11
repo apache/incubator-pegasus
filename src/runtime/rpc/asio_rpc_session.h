@@ -51,10 +51,14 @@ public:
                      message_parser_ptr &parser,
                      bool is_client);
 
-    ~asio_rpc_session() override = default;
+    ~asio_rpc_session() override;
 
     void send(uint64_t signature) override;
 
+    // The under layer socket will be invalidated after being closed.
+    //
+    // It's needed to prevent the '_socket' to be closed while the socket's async_* interfaces are
+    // in flight.
     void close() override;
 
     void connect() override;
@@ -69,9 +73,6 @@ private:
         }
     }
 
-private:
-    // boost::asio::socket is thread-unsafe, must use lock to prevent a
-    // reading/writing socket being modified or closed concurrently.
     std::shared_ptr<boost::asio::ip::tcp::socket> _socket;
 };
 
