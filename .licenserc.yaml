@@ -61,7 +61,6 @@ header:
     - 'src/meta/test/suite2'
     - 'src/nfs/test/nfs_test_file1'
     - 'src/nfs/test/nfs_test_file2'
-    - 'src/runtime/test/gtest.filter'
     # Used for tests and should be empty, or ignore all comment lines (otherwise would lead to error).
     - 'src/utils/test/config-empty.ini'
     # Binary files used for tests and could not be added with copyright info (otherwise would lead to error).
