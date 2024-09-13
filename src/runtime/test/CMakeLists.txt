@@ -41,6 +41,5 @@ set(MY_BINPLACES
         config-test-sim.ini
         command.txt
         run.sh
-        clear.sh
-        gtest.filter)
+        clear.sh)
 dsn_add_test()
