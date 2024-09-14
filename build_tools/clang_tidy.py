@@ -60,6 +60,8 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                    "clang-tidy",
                    "-p0",
                    "-path", BUILD_PATH,
+                   # Disable some checks that are not useful for us now.
+                   # They are sorted by names, and should be consistent to .clang-tidy.
                    "-checks=-bugprone-easily-swappable-parameters,"
                            "-bugprone-lambda-function-name,"
                            "-bugprone-macro-parentheses,"
