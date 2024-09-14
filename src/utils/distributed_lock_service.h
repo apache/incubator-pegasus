@@ -173,5 +173,5 @@ public:
                                    /*out*/ std::string &owner,
                                    /*out*/ uint64_t &version) = 0;
 };
-}
-}
+} // namespace dist
+} // namespace dsn
