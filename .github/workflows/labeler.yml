@@ -23,9 +23,12 @@ on:
     types: [ synchronize, opened, reopened, edited ]
 
 jobs:
-  process:
+  labeler:
     name: Module Labeler
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - name: Assign GitHub labels
