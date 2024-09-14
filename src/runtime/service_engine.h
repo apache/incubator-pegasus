@@ -35,7 +35,7 @@
 #include "runtime/api_task.h"
 #include "runtime/global_config.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/error_code.h"
 #include "utils/singleton.h"
 

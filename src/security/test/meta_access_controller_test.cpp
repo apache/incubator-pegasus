@@ -26,7 +26,7 @@
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_message.h"
 #include "security/access_controller.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 

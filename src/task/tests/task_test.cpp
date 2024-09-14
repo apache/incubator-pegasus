@@ -15,15 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "runtime/task/task.h"
+#include "task/task.h"
 
 #include <string>
 
 #include "aio/aio_task.h"
 #include "aio/file_io.h"
 #include "gtest/gtest.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/flags.h"
 #include "utils/threadpool_code.h"
 

@@ -34,7 +34,7 @@
 #include "replica/test/mock_utils.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"

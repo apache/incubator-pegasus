@@ -34,7 +34,7 @@
 #include "common/gpid.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_task.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/error_code.h"
 
 namespace dsn {

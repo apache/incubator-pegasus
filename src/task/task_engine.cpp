@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include "runtime/task/task_engine.h"
+#include "task_engine.h"
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <limits.h>
@@ -34,11 +34,12 @@
 #include "nlohmann/json.hpp"
 #include "runtime/global_config.h"
 #include "runtime/service_engine.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_queue.h"
-#include "runtime/task/task_spec.h"
-#include "runtime/task/task_worker.h"
-#include "runtime/task/timer_service.h"
+#include "task.h"
+#include "task/task_code.h"
+#include "task_queue.h"
+#include "task_spec.h"
+#include "task_worker.h"
+#include "timer_service.h"
 #include "utils/command_manager.h"
 #include "utils/factory_store.h"
 #include "utils/fmt_logging.h"

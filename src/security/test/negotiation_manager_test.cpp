@@ -27,7 +27,7 @@
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_message.h"
 #include "security/negotiation_utils.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "security_types.h"
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"

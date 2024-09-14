@@ -27,7 +27,7 @@
 #include "dsn.layer2_types.h"
 #include "replica.h"
 #include "rpc/rpc_message.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"

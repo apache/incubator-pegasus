@@ -71,8 +71,8 @@
 // IWYU pragma: no_include "boost/asio/ip/impl/address_v4.ipp"
 // IWYU pragma: no_include "boost/asio/socket_base.hpp"
 // IWYU pragma: no_include "boost/system/error_code.hpp
-#include "runtime/task/task.h"
-#include "runtime/task/task_worker.h"
+#include "task/task.h"
+#include "task/task_worker.h"
 #include "runtime/tool_api.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"

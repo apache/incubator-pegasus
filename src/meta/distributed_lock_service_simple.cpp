@@ -29,7 +29,7 @@
 #include "common/replication.codes.h"
 #include "distributed_lock_service_simple.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 
 namespace dsn {
 namespace dist {

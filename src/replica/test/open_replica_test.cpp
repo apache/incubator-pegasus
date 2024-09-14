@@ -33,7 +33,7 @@
 #include "replica_test_base.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/filesystem.h"
 
 namespace dsn {

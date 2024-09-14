@@ -29,9 +29,9 @@
 
 #include "pegasus/client.h"
 #include "pegasus/error.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/async_calls.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

@@ -37,9 +37,9 @@
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/async_calls.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 

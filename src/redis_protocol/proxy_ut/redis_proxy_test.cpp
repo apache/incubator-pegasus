@@ -50,7 +50,7 @@
 #include "rpc/rpc_message.h"
 #include "rpc/rpc_stream.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"

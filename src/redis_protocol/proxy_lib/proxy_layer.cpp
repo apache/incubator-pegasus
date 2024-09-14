@@ -24,7 +24,7 @@
 #include "rpc/network.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 

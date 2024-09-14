@@ -31,7 +31,7 @@
 #include <vector>
 
 #include "rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 

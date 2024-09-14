@@ -28,8 +28,8 @@
 #include "replica/duplication/mutation_duplicator.h"
 #include "rrdb/rrdb.client.h"
 #include "runtime/pipeline.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/chrono_literals.h"
 #include <string_view>
 #include "utils/metrics.h"
