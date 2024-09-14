@@ -34,7 +34,7 @@
 #include "pegasus_key_schema.h"
 #include "rrdb/rrdb.client.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/serialization.h"
+#include "rpc/serialization.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"

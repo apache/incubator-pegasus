@@ -27,7 +27,7 @@
 #include "hotspot_partition_stat.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica_admin_types.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
 
 struct row_data;
 struct shell_context;

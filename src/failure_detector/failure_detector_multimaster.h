@@ -31,8 +31,8 @@
 #include <vector>
 
 #include "failure_detector/failure_detector.h"
-#include "runtime/rpc/group_host_port.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/group_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
@@ -40,6 +40,7 @@ namespace dsn {
 class error_code;
 
 namespace fd {
+
 class beacon_ack;
 } // namespace fd
 

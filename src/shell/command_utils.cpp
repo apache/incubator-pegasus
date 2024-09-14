@@ -22,7 +22,7 @@
 #include "client/replication_ddl_client.h"
 #include "command_executor.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 
 bool validate_ip(shell_context *sc,

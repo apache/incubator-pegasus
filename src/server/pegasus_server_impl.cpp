@@ -43,8 +43,8 @@
 #include <mutex>
 #include <ostream>
 #include <set>
-
 #include <string_view>
+
 #include "base/idl_utils.h" // IWYU pragma: keep
 #include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
@@ -60,10 +60,10 @@
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
 #include "replica_admin_types.h"
+#include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "server/key_ttl_compaction_filter.h"

@@ -23,10 +23,10 @@
 #include <chrono>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
-#include <string_view>
 #include "common/common.h"
 #include "common/replication_other_types.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
@@ -34,10 +34,10 @@
 #include "pegasus_client_impl.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/group_host_port.h"
+#include "rpc/serialization.h"
 #include "rrdb/rrdb.client.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/group_host_port.h"
-#include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "utils/error_code.h"

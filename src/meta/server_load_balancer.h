@@ -35,12 +35,13 @@
 #include <vector>
 
 #include "meta_data.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/extensible_object.h"
 
 namespace dsn {
 namespace replication {
 class configuration_balancer_request;
+
 class configuration_balancer_response;
 class meta_service;
 

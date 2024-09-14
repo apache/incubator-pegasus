@@ -22,7 +22,7 @@
 #include <unordered_map>
 
 #include "common/gpid.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/flags.h"
 
 DSN_DECLARE_uint32(bulk_load_node_max_ingesting_count);

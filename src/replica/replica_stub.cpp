@@ -40,10 +40,10 @@
 #include <mutex>
 #include <set>
 #include <sstream>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
-#include <string_view>
 #include "backup/replica_backup_server.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
@@ -65,9 +65,9 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_disk_migrator.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
 #include "runtime/task/async_calls.h"
 #include "security/access_controller.h"
 #include "split/replica_split_manager.h"

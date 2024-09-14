@@ -38,7 +38,7 @@
 
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/task/task_code.h"
 #include "task_spec.h"
 #include "task_tracker.h"

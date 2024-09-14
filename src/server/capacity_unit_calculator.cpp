@@ -27,7 +27,7 @@
 
 #include "hotkey_collector.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/flags.h"

@@ -19,7 +19,6 @@
 
 #include "pegasus_mutation_duplicator.h"
 
-#include <string_view>
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
@@ -27,6 +26,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -37,10 +37,10 @@
 #include "duplication_internal_types.h"
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"
+#include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
-#include "runtime/rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"

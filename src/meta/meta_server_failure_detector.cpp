@@ -35,7 +35,7 @@
 #include "meta/meta_options.h"
 #include "meta/meta_service.h"
 #include "runtime/app_model.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "runtime/serverlet.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"

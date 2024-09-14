@@ -27,7 +27,7 @@
 #pragma once
 #include <iostream>
 #include "utils/optional.h"
-#include "runtime/rpc/dns_resolver.h"
+#include "rpc/dns_resolver.h"
 #include "runtime/task/async_calls.h"
 #include "client/partition_resolver.h"
 #include "simple_kv.code.definition.h"

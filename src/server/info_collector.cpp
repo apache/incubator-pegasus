@@ -32,7 +32,7 @@
 #include "hotspot_partition_calculator.h"
 #include "pegasus/client.h"
 #include "result_writer.h"
-#include "runtime/rpc/group_host_port.h"
+#include "rpc/group_host_port.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_code.h"
 #include "shell/command_executor.h"

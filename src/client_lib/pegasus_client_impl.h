@@ -31,8 +31,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "rpc/rpc_host_port.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/zlocks.h"
 

@@ -35,8 +35,8 @@
 
 #include "http/http_message_parser.h"
 #include "percentile_utils.h"
-#include "runtime/rpc/message_parser.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/message_parser.h"
+#include "rpc/rpc_message.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
 #include "gutil/map_util.h"

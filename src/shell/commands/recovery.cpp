@@ -33,7 +33,7 @@
 #include "dsn.layer2_types.h"
 #include "meta/load_balance_policy.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/commands.h"
 #include "utils/error_code.h"

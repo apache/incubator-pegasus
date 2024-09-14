@@ -32,20 +32,21 @@
 #include <vector>
 
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_holder.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/task/task.h"
 
 namespace dsn {
 namespace replication {
 class configuration_update_app_env_request;
 class configuration_update_app_env_response;
+
 class query_app_info_request;
 class query_app_info_response;
 class query_replica_info_request;
 class query_replica_info_response;
-
 typedef std::unordered_map<::dsn::host_port, partition_status::type> node_statuses;
+
 typedef std::unordered_map<::dsn::host_port, dsn::task_ptr> node_tasks;
 
 typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>

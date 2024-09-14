@@ -31,7 +31,7 @@
 #include <vector>
 
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/service_app.h"
 #include "runtime/task/task_tracker.h"
 #include "utils/error_code.h"

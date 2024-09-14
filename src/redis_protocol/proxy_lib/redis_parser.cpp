@@ -31,15 +31,15 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
-
 #include <string_view>
+
 #include "common/common.h"
 #include "common/replication_other_types.h"
 #include "pegasus/client.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/serialization.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/serialization.h"
 #include "utils/api_utilities.h"
 #include "utils/binary_writer.h"
 #include "utils/error_code.h"

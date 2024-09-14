@@ -34,7 +34,7 @@
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica/backup/cold_backup_context.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 
 DSN_DECLARE_int32(log_private_file_size_mb);
 

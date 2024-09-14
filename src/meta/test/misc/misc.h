@@ -37,7 +37,7 @@
 #include <vector>
 
 #include "meta/meta_data.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 
 namespace dsn {
 class gpid;

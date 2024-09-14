@@ -27,7 +27,7 @@
 #include "gtest/gtest.h"
 // IWYU pragma: no_include "gtest/gtest-message.h"
 // IWYU pragma: no_include "gtest/gtest-test-part.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "test/function_test/utils/utils.h"
 #include "utils/fmt_logging.h"
 

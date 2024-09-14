@@ -32,7 +32,7 @@
 #include "common/gpid.h"
 #include "meta/load_balance_policy.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"

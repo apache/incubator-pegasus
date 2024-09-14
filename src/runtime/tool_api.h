@@ -43,8 +43,8 @@ Component providers define the interface for the local components (e.g., network
 #include <vector>
 
 #include "runtime/env_provider.h"
-#include "runtime/rpc/message_parser.h"
-#include "runtime/rpc/network.h"
+#include "rpc/message_parser.h"
+#include "rpc/network.h"
 #include "runtime/task/task_queue.h"
 #include "runtime/task/task_spec.h"
 #include "runtime/task/task_worker.h"

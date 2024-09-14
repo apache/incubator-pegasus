@@ -28,7 +28,7 @@
 #include <vector>
 
 #include "dsn.layer2_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 
 // TODO(yingchun): it's too tricky, but I don't know how does it happen, we can fix it later.
 #define TRICKY_CODE_TO_AVOID_LINK_ERROR                                                            \
