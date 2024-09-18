@@ -56,10 +56,11 @@ uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t ap
         }
         break;
     case balance_type::COPY_PRIMARY:
-        if (app_id > 0)
+        if (app_id > 0) {
             count = ns.primary_count(app_id);
-        else
+        } else {
             count = ns.primary_count();
+        }
         break;
     default:
         break;
