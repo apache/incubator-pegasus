@@ -202,8 +202,11 @@ TEST(core, dsn_semaphore)
 
 TEST(core, dsn_env)
 {
-    if (dsn::service_engine::instance().spec().tool == "simulator")
-        return;
+    if (dsn::service_engine::instance().spec().tool == "simulator") {
+        GTEST_SKIP() << "Skip the test in simulator mode, set 'tool = nativerun' in '[core]' "
+                        "section in config file to enable it.";
+    }
+    ASSERT_EQ("nativerun", dsn::service_engine::instance().spec().tool);
     uint64_t now1 = dsn_now_ns();
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     uint64_t now2 = dsn_now_ns();
