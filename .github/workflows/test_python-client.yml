@@ -76,6 +76,7 @@ jobs:
           make -j $(nproc)
           make install
           cd - && rm -rf thrift-${THRIFT_VERSION} v${THRIFT_VERSION}.tar.gz
+          yum install python3-devel -y
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Start Pegasus cluster
