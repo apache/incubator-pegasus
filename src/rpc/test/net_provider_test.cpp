@@ -136,8 +136,10 @@ void rpc_client_session_send(rpc_session_ptr client_session, bool reject = false
 TEST(net_provider_test, asio_net_provider)
 {
     if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
-        return;
+        "dsn::tools::sim_semaphore_provider") {
+        GTEST_SKIP() << "Skip the test in simulator mode, set 'tool = nativerun' in '[core]' "
+                        "section in config file to enable it.";
+    }
 
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
@@ -183,8 +185,10 @@ TEST(net_provider_test, asio_net_provider)
 TEST(net_provider_test, asio_udp_provider)
 {
     if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
-        return;
+        "dsn::tools::sim_semaphore_provider") {
+        GTEST_SKIP() << "Skip the test in simulator mode, set 'tool = nativerun' in '[core]' "
+                        "section in config file to enable it.";
+    }
 
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
@@ -226,8 +230,10 @@ TEST(net_provider_test, asio_udp_provider)
 TEST(net_provider_test, sim_net_provider)
 {
     if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
-        return;
+        "dsn::tools::sim_semaphore_provider") {
+        GTEST_SKIP() << "Skip the test in simulator mode, set 'tool = nativerun' in '[core]' "
+                        "section in config file to enable it.";
+    }
 
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));
@@ -256,8 +262,10 @@ TEST(net_provider_test, sim_net_provider)
 TEST(net_provider_test, asio_network_provider_connection_threshold)
 {
     if (dsn::service_engine::instance().spec().semaphore_factory_name ==
-        "dsn::tools::sim_semaphore_provider")
-        return;
+        "dsn::tools::sim_semaphore_provider") {
+        GTEST_SKIP() << "Skip the test in simulator mode, set 'tool = nativerun' in '[core]' "
+                        "section in config file to enable it.";
+    }
 
     ASSERT_TRUE(dsn_rpc_register_handler(
         RPC_TEST_NETPROVIDER, "rpc.test.netprovider", rpc_server_response));

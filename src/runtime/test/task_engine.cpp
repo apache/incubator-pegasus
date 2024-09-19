@@ -50,8 +50,11 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_FOR_TEST_2)
 
 TEST(core, task_engine)
 {
-    if (dsn::service_engine::instance().spec().tool == "simulator")
-        return;
+    if (dsn::service_engine::instance().spec().tool == "simulator") {
+        GTEST_SKIP() << "Skip the test in simulator mode, set 'tool = nativerun' in '[core]' "
+                        "section in config file to enable it.";
+    }
+    ASSERT_EQ("nativerun", dsn::service_engine::instance().spec().tool);
     service_node *node = task::get_current_node2();
     ASSERT_NE(nullptr, node);
     ASSERT_STREQ("client", node->full_name());
