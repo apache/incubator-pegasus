@@ -19,7 +19,7 @@
 name: Labeler
 
 on:
-  pull_request:
+  pull_request_target:
     types: [ synchronize, opened, reopened, edited ]
 
 jobs:
