@@ -482,7 +482,8 @@ public class PegasusTable implements PegasusTableInterface {
   public Future<BatchGetResult> asyncBatchGet(batch_get_request request, int timeout) {
     final DefaultPromise<BatchGetResult> promise = table.newPromise();
     if (request.keys == null || request.keys.isEmpty()) {
-      promise.setFailure(new PException("Invalid parameter: full_key list should not be null or empty"));
+      promise.setFailure(
+          new PException("Invalid parameter: full_key list should not be null or empty"));
       return promise;
     }
     for (full_key fullKey : request.keys) {
