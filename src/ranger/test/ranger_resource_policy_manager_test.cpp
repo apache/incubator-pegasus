@@ -30,7 +30,7 @@
 #include "ranger/access_type.h"
 #include "ranger/ranger_resource_policy.h"
 #include "ranger/ranger_resource_policy_manager.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/blob.h"
 #include "utils/flags.h"
 

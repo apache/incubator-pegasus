@@ -26,13 +26,13 @@
 
 #include "hpc_task_queue.h"
 
-#include <concurrentqueue/lightweightsemaphore.h>
+#include "concurrentqueue/lightweightsemaphore.h"
 
 #include "boost/iterator/function_output_iterator.hpp"
 #include "concurrentqueue/concurrentqueue.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_queue.h"
-#include "runtime/task/task_spec.h"
+#include "task.h"
+#include "task_queue.h"
+#include "task_spec.h"
 
 namespace dsn {
 class task_worker_pool;

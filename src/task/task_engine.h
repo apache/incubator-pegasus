@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "nlohmann/json_fwd.hpp"
-#include "runtime/task/task_code.h"
+#include "task_code.h"
 #include "utils/command_manager.h"
 #include "utils/threadpool_spec.h"
 

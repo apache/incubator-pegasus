@@ -32,10 +32,10 @@
 #include <limits>
 #include <string>
 
+#include "common/gpid.h"
 #include "gtest/gtest.h"
 #include "test_util/test_util.h"
 #include "utils/env.h"
-#include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/rand.h"

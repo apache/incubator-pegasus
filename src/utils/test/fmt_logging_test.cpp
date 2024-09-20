@@ -31,7 +31,7 @@
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fmt_logging.h"

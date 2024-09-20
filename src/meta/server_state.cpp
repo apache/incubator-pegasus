@@ -1,5 +1,4 @@
 /*
-
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Microsoft Corporation
@@ -64,12 +63,12 @@
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_spec.h"
 #include "security/access_controller.h"
 #include "server_load_balancer.h"
 #include "server_state.h"
+#include "task/async_calls.h"
+#include "task/task.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"

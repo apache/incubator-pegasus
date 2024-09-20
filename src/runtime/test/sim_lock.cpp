@@ -31,8 +31,8 @@
 #include "runtime/global_config.h"
 #include "runtime/scheduler.h"
 #include "runtime/service_engine.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_engine.sim.h"
+#include "task/task.h"
+#include "task/task_engine.sim.h"
 #include "utils/synchronize.h"
 #include "utils/zlocks.h"
 

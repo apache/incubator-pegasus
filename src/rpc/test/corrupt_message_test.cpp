@@ -32,9 +32,9 @@
 
 #include "gtest/gtest.h"
 #include "rpc/rpc_address.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_code.h"
 #include "runtime/test_utils.h"
+#include "task/async_calls.h"
+#include "task/task_code.h"
 #include "utils/error_code.h"
 
 // TODO(yingchun): the tests are failed because the fault injector is not work well as expected.

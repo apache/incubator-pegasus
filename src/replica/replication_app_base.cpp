@@ -29,10 +29,10 @@
 #include <rocksdb/env.h>
 #include <rocksdb/status.h>
 #include <memory>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include <string_view>
 #include "common/bulk_load_common.h"
 #include "common/duplication_common.h"
 #include "common/replica_envs.h"
@@ -45,8 +45,8 @@
 #include "replica/replication_app_base.h"
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"

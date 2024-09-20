@@ -26,7 +26,10 @@
 #include "rrdb.code.definition.h"
 #include "rrdb_types.h"
 #include "rpc/rpc_holder.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
+#include "rrdb/rrdb_types.h"
+#include "rpc/rpc_holder.h"
+#include "task/task_tracker.h"
 #include "utils/optional.h"
 
 namespace dsn {

@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <absl/utility/utility.h>
+#include <stdint.h>
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -36,10 +36,10 @@
 #include <utility>
 #include <vector>
 
+#include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
-#include "rpc/rpc_message.h"
-#include "runtime/task/task_code.h"
+#include "task_code.h"
 #include "task_spec.h"
 #include "task_tracker.h"
 #include "utils/autoref_ptr.h"

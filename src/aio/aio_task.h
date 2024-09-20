@@ -33,8 +33,8 @@
 #include <vector>
 
 #include "runtime/api_task.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 

@@ -35,10 +35,10 @@
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
-#include "runtime/api_layer1.h"
 #include "rpc/rpc_message.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "runtime/api_layer1.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 #include "utils/link.h"
@@ -48,6 +48,7 @@ class binary_reader;
 class binary_writer;
 class blob;
 class gpid;
+
 namespace utils {
 class latency_tracer;
 } // namespace utils

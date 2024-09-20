@@ -32,7 +32,7 @@
 
 #include "request_meta_types.h"
 #include "rpc/message_parser.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/customizable_id.h"
 
 namespace dsn {

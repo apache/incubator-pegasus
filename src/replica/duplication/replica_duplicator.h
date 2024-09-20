@@ -28,7 +28,7 @@
 #include "duplication_types.h"
 #include "replica/replica_base.h"
 #include "runtime/pipeline.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/zlocks.h"

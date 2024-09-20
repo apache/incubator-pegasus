@@ -53,10 +53,10 @@
 #include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
 #include "runtime/serverlet.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
 #include "security/access_controller.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/enum_helper.h"
 #include "utils/error_code.h"
@@ -79,13 +79,12 @@ class meta_state_service;
 namespace replication {
 class backup_service;
 class bulk_load_service;
-
 class meta_duplication_service;
 class meta_split_service;
 class partition_guardian;
-
 class server_load_balancer;
 class server_state;
+
 namespace mss {
 struct meta_storage;
 } // namespace mss

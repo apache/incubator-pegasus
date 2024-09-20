@@ -40,7 +40,7 @@
 #include "meta_service_test_app.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/factory_store.h"
 #include "utils/filesystem.h"

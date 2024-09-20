@@ -17,7 +17,6 @@
 
 #include "replica_duplicator.h"
 
-#include <string_view>
 #include <rapidjson/document.h>
 #include <rapidjson/encodings.h>
 #include <rapidjson/stringbuffer.h>
@@ -25,6 +24,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <map>
+#include <string_view>
 #include <utility>
 
 #include "common/duplication_common.h"

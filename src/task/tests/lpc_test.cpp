@@ -24,33 +24,30 @@
  * THE SOFTWARE.
  */
 
-#pragma once
+#include <functional>
+#include <string>
 
-#include <concurrentqueue/concurrentqueue.h>
+#include "gtest/gtest.h"
+#include "runtime/api_task.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_worker.h"
+#include "runtime/test_utils.h"
+#include "utils/autoref_ptr.h"
 
-#include "concurrentqueue/lightweightsemaphore.h"
-#include "runtime/task/task_code.h"
-#include "task_queue.h"
+DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
-namespace dsn {
-class task;
-class task_worker_pool;
-
-namespace tools {
-class hpc_concurrent_task_queue : public task_queue
+void on_lpc_test(void *p)
 {
-    moodycamel::LightweightSemaphore _sema;
-    struct queue_t
-    {
-        moodycamel::ConcurrentQueue<task *> q;
-    } _queues[TASK_PRIORITY_COUNT];
+    std::string &result = *(std::string *)p;
+    result = ::dsn::task::get_current_worker()->name();
+}
 
-public:
-    hpc_concurrent_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
-
-    void enqueue(task *task) override;
-
-    task *dequeue(/*inout*/ int &batch_size) override;
-};
-} // namespace tools
-} // namespace dsn
+TEST(lpc_test, basic)
+{
+    std::string result = "heheh";
+    dsn::task_ptr t(new dsn::raw_task(LPC_TEST_HASH, std::bind(&on_lpc_test, (void *)&result), 1));
+    t->enqueue();
+    t->wait();
+    EXPECT_TRUE(result.substr(0, result.length() - 2) == "client.THREAD_POOL_TEST_SERVER");
+}

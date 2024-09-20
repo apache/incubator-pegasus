@@ -27,14 +27,13 @@
 #include "dsn.layer2_types.h"
 #include "replica/replica_base.h"
 #include "rpc/rpc_host_port.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
 class learn_response;
-
 class replica;
 
 class replica_follower : replica_base

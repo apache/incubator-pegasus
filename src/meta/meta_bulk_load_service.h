@@ -36,8 +36,8 @@
 #include "meta/meta_state_service_utils.h"
 #include "meta_bulk_load_ingestion_context.h"
 #include "rpc/rpc_host_port.h"
-#include "runtime/task/task_tracker.h"
 #include "server_state.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/zlocks.h"
@@ -50,7 +50,6 @@ class partition_configuration;
 
 namespace replication {
 class app_state;
-
 class config_context;
 class meta_service;
 

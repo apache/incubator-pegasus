@@ -48,7 +48,7 @@
 #include "meta_service_test_app.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"

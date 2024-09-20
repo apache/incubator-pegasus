@@ -31,7 +31,7 @@
 #include "runtime/api_task.h"
 #include "runtime/app_model.h"
 #include "rpc/rpc_message.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/api_utilities.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"

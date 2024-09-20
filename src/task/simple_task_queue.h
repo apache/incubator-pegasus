@@ -24,30 +24,57 @@
  * THE SOFTWARE.
  */
 
-#include <functional>
-#include <string>
+#pragma once
 
-#include "gtest/gtest.h"
-#include "runtime/api_task.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_worker.h"
-#include "runtime/test_utils.h"
-#include "utils/autoref_ptr.h"
+#include <algorithm>
+#include <thread>
 
-DEFINE_TASK_CODE(LPC_TEST_HASH, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+#include "boost/asio/io_service.hpp"
+#include "task_code.h"
+#include "task_queue.h"
+#include "timer_service.h"
+#include "utils/priority_queue.h"
 
-void on_lpc_test(void *p)
+namespace dsn {
+class service_node;
+class task;
+class task_worker_pool;
+
+namespace tools {
+class simple_task_queue : public task_queue
 {
-    std::string &result = *(std::string *)p;
-    result = ::dsn::task::get_current_worker()->name();
-}
+public:
+    simple_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
 
-TEST(core, lpc)
+    ~simple_task_queue() override = default;
+
+    virtual void enqueue(task *task) override;
+    virtual task *dequeue(/*inout*/ int &batch_size) override;
+
+private:
+    typedef utils::blocking_priority_queue<task *, TASK_PRIORITY_COUNT> tqueue;
+    tqueue _samples;
+};
+
+class simple_timer_service : public timer_service
 {
-    std::string result = "heheh";
-    dsn::task_ptr t(new dsn::raw_task(LPC_TEST_HASH, std::bind(&on_lpc_test, (void *)&result), 1));
-    t->enqueue();
-    t->wait();
-    EXPECT_TRUE(result.substr(0, result.length() - 2) == "client.THREAD_POOL_TEST_SERVER");
-}
+public:
+    simple_timer_service(service_node *node, timer_service *inner_provider);
+
+    ~simple_timer_service() override { stop(); }
+
+    // after milliseconds, the provider should call task->enqueue()
+    virtual void add_timer(task *task) override;
+
+    virtual void start() override;
+
+    virtual void stop() override;
+
+private:
+    boost::asio::io_service _ios;
+    std::thread _worker;
+    bool _is_running;
+};
+
+} // namespace tools
+} // namespace dsn

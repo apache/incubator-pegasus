@@ -33,7 +33,7 @@
 #include "meta_admin_types.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 
 namespace dsn {

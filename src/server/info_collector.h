@@ -30,9 +30,9 @@
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
 #include "shell/command_helper.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/synchronize.h"
 
 struct shell_context;
@@ -43,7 +43,6 @@ class pegasus_client;
 namespace server {
 
 class hotspot_partition_calculator;
-
 class result_writer;
 
 class info_collector

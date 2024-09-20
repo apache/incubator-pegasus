@@ -35,15 +35,16 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "runtime/api_task.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_message.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "runtime/api_task.h"
 #include "runtime/test_utils.h"
+#include "task/async_calls.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
+#include "utils/enum_helper.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/thread_access_checker.h"
@@ -81,7 +82,7 @@ public:
     void callback_function3() { ++global_value; }
 };
 
-TEST(async_call, task_call)
+TEST(async_call_test, task_call)
 {
     /* normal lpc*/
     tracker_class *tc = new tracker_class();
@@ -123,7 +124,7 @@ TEST(async_call, task_call)
         EXPECT_FALSE(test_tasks[i]->cancel(true));
 }
 
-TEST(async_call, rpc_call)
+TEST(async_call_test, rpc_call)
 {
     const auto addr = rpc_address::from_host_port("localhost", 20101);
     const auto addr2 = rpc_address::from_host_port("localhost", TEST_PORT_END);
@@ -210,7 +211,7 @@ bool spin_wait(const std::function<bool()> &pred, int wait_times)
     }
     return pred();
 }
-TEST(async_call, task_destructor)
+TEST(async_call_test, task_destructor)
 {
     {
         task_ptr t(new simple_task(LPC_TEST_CLIENTLET, nullptr));

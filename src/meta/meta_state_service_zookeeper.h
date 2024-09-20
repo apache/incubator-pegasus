@@ -32,10 +32,10 @@
 #include <vector>
 
 #include "meta/meta_state_service.h"
-#include "runtime/task/future_types.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "task/future_types.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"

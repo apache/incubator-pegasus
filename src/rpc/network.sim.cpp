@@ -33,7 +33,7 @@
 #include "boost/asio/ip/impl/host_name.ipp"
 #include "network.sim.h"
 #include "runtime/node_scoper.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/flags.h"

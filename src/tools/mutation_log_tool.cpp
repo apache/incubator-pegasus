@@ -40,7 +40,7 @@
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/defer.h"

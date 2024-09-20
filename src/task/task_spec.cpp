@@ -32,6 +32,7 @@
 #include <thread>
 
 #include "rpc/rpc_message.h"
+#include "task/task_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_spec.h"

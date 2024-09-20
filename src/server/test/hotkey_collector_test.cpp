@@ -17,9 +17,9 @@
 
 #include "server/hotkey_collector.h"
 
-#include <string_view>
 #include <fmt/core.h>
 #include <chrono>
+#include <string_view>
 #include <thread>
 
 #include "base/pegasus_key_schema.h"
@@ -27,14 +27,14 @@
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
+#include "rpc/rpc_holder.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
-#include "rpc/rpc_holder.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_tracker.h"
 #include "server/hotkey_collector_state.h"
 #include "server/pegasus_read_service.h"
 #include "server/test/message_utils.h"
+#include "task/async_calls.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

@@ -40,7 +40,7 @@
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/env.h"
