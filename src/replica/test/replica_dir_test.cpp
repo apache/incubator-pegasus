@@ -15,36 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <cstddef>
-#include <cstdint>
-#include <fmt/core.h>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <set>
 #include <string>
-#include <type_traits>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
-#include "common/fs_manager.h"
-#include "common/gpid.h"
-#include "common/replication.codes.h"
-#include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
-#include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "replica/replication_app_base.h"
-#include "replica/test/mock_utils.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
-#include "test_util/test_util.h"
-#include "utils/autoref_ptr.h"
-#include "utils/filesystem.h"
-#include "utils/flags.h"
-#include "utils/ports.h"
 
 namespace dsn::replication {
 
@@ -57,11 +32,7 @@ struct get_replica_dir_name_case
 class GetReplicaDirNameTest : public testing::TestWithParam<get_replica_dir_name_case>
 {
 public:
-    GetReplicaDirNameTest() = default;
-
-    ~GetReplicaDirNameTest() override = default;
-
-    void test_get_replica_dir_name()
+    static void test_get_replica_dir_name()
     {
         const auto &test_case = GetParam();
         const auto &actual_replica_dir_name = replica_stub::get_replica_dir_name(test_case.path);
@@ -77,21 +48,61 @@ const std::vector<get_replica_dir_name_case> get_replica_dir_name_tests{
     // Linux absolute path and empty dir name.
     {"/data/pegasus/1.2.pegasus/", ""},
     // Windows absolute path and non-empty dir name.
-    {"D:\\data\\pegasus\\1.2.pegasus", "1.2.pegasus"},
+    {R"(D:\data\pegasus\1.2.pegasus)", "1.2.pegasus"},
     // Windows absolute path and empty dir name.
-    {"D:\\data\\pegasus\\1.2.pegasus\\", ""},
+    {R"(D:\data\pegasus\1.2.pegasus\)", ""},
     // Linux relative path and non-empty dir name.
     {"./1.2.pegasus", "1.2.pegasus"},
     // Linux relative path and empty dir name.
     {"./1.2.pegasus/", ""},
     // Windows relative path and non-empty dir name.
-    {".\\1.2.pegasus", "1.2.pegasus"},
+    {R"(.\1.2.pegasus)", "1.2.pegasus"},
     // Windows relative path and empty dir name.
-    {".\\1.2.pegasus\\", ""},
+    {R"(.\1.2.pegasus\)", ""},
 };
 
 INSTANTIATE_TEST_SUITE_P(ReplicaDirTest,
                          GetReplicaDirNameTest,
                          testing::ValuesIn(get_replica_dir_name_tests));
+
+struct parse_replica_dir_name_case
+{
+    std::string replica_dir_name;
+    bool ok;
+    gpid expected_pid;
+    std::string expected_app_type;
+};
+
+class ParseReplicaDirNameTest : public testing::TestWithParam<parse_replica_dir_name_case>
+{
+public:
+    static void test_parse_replica_dir_name()
+    {
+        const auto &test_case = GetParam();
+
+        gpid actual_pid;
+        std::string actual_app_type;
+        ASSERT_EQ(test_case.ok,
+                  replica_stub::parse_replica_dir_name(
+                      test_case.replica_dir_name, actual_pid, actual_app_type));
+        if (!test_case.ok) {
+            return;
+        }
+
+        EXPECT_EQ(test_case.expected_pid, actual_pid);
+        EXPECT_EQ(test_case.expected_app_type, actual_app_type);
+    }
+};
+
+TEST_P(ParseReplicaDirNameTest, ParseReplicaDirName) { test_parse_replica_dir_name(); }
+
+const std::vector<parse_replica_dir_name_case> parse_replica_dir_name_tests{
+    {"", false, {}, ""},
+    {"1.2.pegasus", true, {1, 2}, "pegasus"},
+};
+
+INSTANTIATE_TEST_SUITE_P(ReplicaDirTest,
+                         ParseReplicaDirNameTest,
+                         testing::ValuesIn(parse_replica_dir_name_tests));
 
 } // namespace dsn::replication
