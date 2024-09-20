@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "common/gpid.h"
 #include "gtest/gtest.h"
 #include "replica/replica_stub.h"
 
@@ -97,8 +98,26 @@ public:
 TEST_P(ParseReplicaDirNameTest, ParseReplicaDirName) { test_parse_replica_dir_name(); }
 
 const std::vector<parse_replica_dir_name_case> parse_replica_dir_name_tests{
+    // Empty dir name.
     {"", false, {}, ""},
+    // Single-digit IDs.
     {"1.2.pegasus", true, {1, 2}, "pegasus"},
+    // Multi-digit IDs.
+    {"1234.56789.pegasus", true, {1234, 56789}, "pegasus"},
+    // Custom app type other than "pegasus".
+    {"1.2.another", true, {1, 2}, "another"},
+    // Custom app type with dot.
+    {"1.2.another.pegasus", true, {1, 2}, "another.pegasus"},
+    // Custom app type with other specific symbol.
+    {"1.2.another_pegasus", true, {1, 2}, "another_pegasus"},
+    // Missing one ID.
+    {"1.pegasus", false, {}, ""},
+    // Missing both IDs.
+    {"pegasus", false, {}, ""},
+    // ID with letter.
+    {"1.2a.pegasus", false, {}, ""},
+    // ID with minus.
+    {"1.-2.pegasus", false, {}, ""},
 };
 
 INSTANTIATE_TEST_SUITE_P(ReplicaDirTest,
