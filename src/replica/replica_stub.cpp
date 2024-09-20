@@ -2135,7 +2135,7 @@ replica *replica_stub::new_replica(gpid gpid,
 /* static */ bool
 replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type)
 {
-    std::vector<int32_t> ids(2, 0);
+    std::vector<uint32_t> ids(2, 0);
     size_t begin = 0;
     for (auto &id : ids) {
         size_t end = dir_name.find('.', begin);
@@ -2143,7 +2143,7 @@ replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std
             return false;
         }
 
-        if (!buf2int32(std::string_view(dir_name.data() + begin, end - begin), id)) {
+        if (!buf2uint32(std::string_view(dir_name.data() + begin, end - begin), id)) {
             return false;
         }
 
@@ -2154,8 +2154,8 @@ replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std
         return false;
     }
 
-    pid.set_app_id(ids[0]);
-    pid.set_partition_index(ids[1]);
+    pid.set_app_id(static_cast<int32_t>(ids[0]));
+    pid.set_partition_index(static_cast<int32_t>(ids[1]));
 
     // TODO(wangdan): the 3rd parameter `count` does not support default argument for CentOS 7
     // (gcc 7.3.1). After CentOS 7 is deprecated, consider dropping std::string::npos.
