@@ -152,7 +152,7 @@ ExternalProject_Add(thrift
         URL ${OSS_URL_PREFIX}/thrift-0.9.3.tar.gz
         http://archive.apache.org/dist/thrift/0.9.3/thrift-0.9.3.tar.gz
         URL_MD5 88d667a8ae870d5adeca8cb7d6795442
-        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_thrift_for_cpp11.patch
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_thrift_build_and_link_errors.patch
         CMAKE_ARGS -DCMAKE_BUILD_TYPE=release
         -DWITH_JAVA=OFF
         -DWITH_PYTHON=OFF
