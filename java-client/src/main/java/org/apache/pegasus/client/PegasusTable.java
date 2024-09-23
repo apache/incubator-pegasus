@@ -84,6 +84,12 @@ public class PegasusTable implements PegasusTableInterface {
     this.metaList = client.getMetaList();
   }
 
+  /**
+   * Check if the given hash key is valid.
+   *
+   * @param hashKey is the hash key to be checked.
+   * @return the error message once the validation failed; otherwise return an empty Optional.
+   */
   private Optional<String> validateHashKey(byte[] hashKey) {
     if (hashKey == null || hashKey.length == 0) {
       return Optional.of("Invalid parameter: hashKey should not be null or empty");
