@@ -260,7 +260,7 @@ public class PegasusTable implements PegasusTableInterface {
     List<blob> sortKeyBlobs = new ArrayList<blob>();
     Map<ByteBuffer, byte[]> setKeyMap = null;
 
-    if (sortKeys != null && sortKeys.size() > 0) {
+    if (sortKeys != null && !sortKeys.isEmpty()) {
       setKeyMap = new TreeMap<ByteBuffer, byte[]>();
       for (int i = 0; i < sortKeys.size(); i++) {
         byte[] sortKey = sortKeys.get(i);
@@ -552,7 +552,7 @@ public class PegasusTable implements PegasusTableInterface {
           new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
       return promise;
     }
-    if (values == null || values.size() == 0) {
+    if (values == null || values.isEmpty()) {
       promise.setFailure(new PException("Invalid parameter: values should not be null or empty"));
       return promise;
     }
@@ -1147,7 +1147,7 @@ public class PegasusTable implements PegasusTableInterface {
   @Override
   public void batchGet(List<Pair<byte[], byte[]>> keys, List<byte[]> values, int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (values == null) {
@@ -1175,7 +1175,7 @@ public class PegasusTable implements PegasusTableInterface {
   public int batchGetByPartitions(
       List<Pair<byte[], byte[]>> keys, List<Pair<PException, byte[]>> results, int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (results == null) {
@@ -1265,7 +1265,7 @@ public class PegasusTable implements PegasusTableInterface {
   public int batchGet2(
       List<Pair<byte[], byte[]>> keys, List<Pair<PException, byte[]>> results, int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (results == null) {
@@ -1392,7 +1392,7 @@ public class PegasusTable implements PegasusTableInterface {
   public void batchMultiGet(
       List<Pair<byte[], List<byte[]>>> keys, List<HashKeyData> values, int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (values == null) {
@@ -1426,7 +1426,7 @@ public class PegasusTable implements PegasusTableInterface {
       List<Pair<PException, HashKeyData>> results,
       int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (results == null) {
@@ -1610,7 +1610,7 @@ public class PegasusTable implements PegasusTableInterface {
   @Override
   public void batchMultiSet(List<HashKeyData> items, int ttlSeconds, int timeout)
       throws PException {
-    if (items == null || items.size() == 0) {
+    if (items == null || items.isEmpty()) {
       throw new PException("Invalid parameter: items should not be null or empty");
     }
     if (ttlSeconds < 0) {
@@ -1683,7 +1683,7 @@ public class PegasusTable implements PegasusTableInterface {
 
   @Override
   public void batchDel(List<Pair<byte[], byte[]>> keys, int timeout) throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     List<Future<Void>> futures = new ArrayList<Future<Void>>();
@@ -1850,7 +1850,7 @@ public class PegasusTable implements PegasusTableInterface {
 
   @Override
   public void batchMultiDel(List<Pair<byte[], List<byte[]>>> keys, int timeout) throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     List<Future<Void>> futures = new ArrayList<Future<Void>>();
