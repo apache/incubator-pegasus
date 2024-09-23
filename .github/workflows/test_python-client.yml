@@ -67,6 +67,7 @@ jobs:
       # build and install thrift-compiler 0.13.0 manually.
       - name: Install thrift
         run: |
+          apt-get install python3-devel -y
           export THRIFT_VERSION=0.13.0
           wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/v${THRIFT_VERSION}.tar.gz
           tar -xzf v${THRIFT_VERSION}.tar.gz
@@ -76,7 +77,6 @@ jobs:
           make -j $(nproc)
           make install
           cd - && rm -rf thrift-${THRIFT_VERSION} v${THRIFT_VERSION}.tar.gz
-          apt-get install python3-devel -y
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Start Pegasus cluster
