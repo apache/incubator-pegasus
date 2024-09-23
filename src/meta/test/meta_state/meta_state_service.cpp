@@ -28,6 +28,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <chrono>
+#include <ostream>
 #include <thread>
 
 #include "gtest/gtest.h"

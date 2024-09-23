@@ -23,6 +23,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>

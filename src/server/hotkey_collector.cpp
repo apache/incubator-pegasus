@@ -17,13 +17,13 @@
 
 #include "hotkey_collector.h"
 
-#include <string_view>
-#include <boost/container_hash/extensions.hpp>
+#include <boost/container_hash/hash.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <string_view>
 #include <unordered_map>
 
 #include "base/pegasus_key_schema.h"

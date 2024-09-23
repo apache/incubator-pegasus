@@ -46,7 +46,6 @@ class meta_service_app;
 
 namespace replication {
 class replica_configuration;
-
 class replication_service_app;
 
 namespace test {

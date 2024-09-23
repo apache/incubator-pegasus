@@ -335,6 +335,7 @@ function(dsn_setup_thirdparty_libs)
 
   set(CMAKE_PREFIX_PATH ${THIRDPARTY_INSTALL_DIR};${CMAKE_PREFIX_PATH})
   message(STATUS "CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
+  set(Boost_NO_WARN_NEW_VERSIONS 1)
   find_package(Boost COMPONENTS system filesystem REQUIRED)
   include_directories(${Boost_INCLUDE_DIRS})
 
