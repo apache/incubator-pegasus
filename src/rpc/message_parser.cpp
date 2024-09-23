@@ -36,7 +36,7 @@
 
 #include "message_parser_manager.h"
 #include "rpc/message_parser.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/blob.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"

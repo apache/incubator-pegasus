@@ -48,7 +48,7 @@
 #include "metadata_types.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/enum_helper.h"

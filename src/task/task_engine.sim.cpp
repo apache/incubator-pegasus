@@ -28,8 +28,8 @@
 #include <utility>
 
 #include "runtime/scheduler.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_queue.h"
+#include "task.h"
+#include "task_queue.h"
 #include "task_engine.sim.h"
 #include "utils/fmt_logging.h"
 #include "utils/process_utils.h"

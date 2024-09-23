@@ -19,15 +19,15 @@
 
 #pragma once
 
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "common/gpid.h"
 #include "rpc/serialization.h"
 #include "rpc/rpc_stream.h"

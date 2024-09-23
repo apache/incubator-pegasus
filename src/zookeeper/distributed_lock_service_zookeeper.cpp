@@ -34,7 +34,7 @@
 #include "lock_struct.h"
 #include "lock_types.h"
 #include "runtime/service_app.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"

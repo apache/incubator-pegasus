@@ -38,7 +38,7 @@
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"

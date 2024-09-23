@@ -27,8 +27,8 @@
 
 #include "perf_counter/perf_counter_wrapper.h"
 #include "rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/synchronize.h"
 
 namespace dsn {

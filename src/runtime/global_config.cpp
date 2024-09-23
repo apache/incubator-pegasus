@@ -33,7 +33,7 @@
 
 #include "runtime/global_config.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/config_api.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"

@@ -30,11 +30,11 @@
 
 #pragma once
 
-#include "runtime/api_task.h"
 #include "common/gpid.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
-#include "runtime/task/task_tracker.h"
+#include "runtime/api_task.h"
+#include "task/task_tracker.h"
 
 /*!
  @defgroup service-api-c Core Service API

@@ -35,7 +35,7 @@
 #include "failure_detector/failure_detector.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
@@ -55,7 +55,6 @@ class rpc_replier;
 namespace replication {
 
 class fd_suboptions;
-
 class meta_service;
 
 namespace test {

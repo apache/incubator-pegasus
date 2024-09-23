@@ -30,8 +30,8 @@
 
 #include "case.h"
 #include "checker.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/join_point.h"
 
 namespace dsn {

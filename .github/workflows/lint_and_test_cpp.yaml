@@ -167,6 +167,7 @@ jobs:
           - dsn.rep_tests.simple_kv
           - dsn_runtime_tests
           - dsn_security_tests
+          - dsn_task_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
@@ -251,6 +252,7 @@ jobs:
           - dsn.rep_tests.simple_kv
           - dsn_runtime_tests
           - dsn_security_tests
+          - dsn_task_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
@@ -340,6 +342,7 @@ jobs:
 #          - dsn.rep_tests.simple_kv
 #          - dsn_runtime_tests
 #          - dsn_security_tests
+#          - dsn_task_tests
 #          - dsn_utils_tests
 #          - dsn.zookeeper.tests
 #          - partition_split_test

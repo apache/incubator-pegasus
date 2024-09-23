@@ -36,7 +36,7 @@
 #include "common/replication.codes.h"
 #include "replica.h"
 #include "runtime/api_task.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"

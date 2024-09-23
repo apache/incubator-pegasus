@@ -31,14 +31,15 @@
 #include <thread>
 #include <vector>
 
+#include "common/gpid.h"
 #include "gtest/gtest.h"
 #include "runtime/api_layer1.h"
 #include "runtime/global_config.h"
 #include "runtime/service_app.h"
 #include "runtime/service_engine.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
 #include "runtime/tool_api.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/config_api.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"

@@ -26,55 +26,31 @@
 
 #pragma once
 
-#include <algorithm>
-#include <thread>
+#include "concurrentqueue/concurrentqueue.h"
 
-#include "boost/asio/io_service.hpp"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_queue.h"
-#include "runtime/task/timer_service.h"
-#include "utils/priority_queue.h"
+#include "concurrentqueue/lightweightsemaphore.h"
+#include "task_code.h"
+#include "task_queue.h"
 
 namespace dsn {
-class service_node;
 class task;
 class task_worker_pool;
 
 namespace tools {
-class simple_task_queue : public task_queue
+class hpc_concurrent_task_queue : public task_queue
 {
+    moodycamel::LightweightSemaphore _sema;
+    struct queue_t
+    {
+        moodycamel::ConcurrentQueue<task *> q;
+    } _queues[TASK_PRIORITY_COUNT];
+
 public:
-    simple_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
+    hpc_concurrent_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
 
-    ~simple_task_queue() override = default;
+    void enqueue(task *task) override;
 
-    virtual void enqueue(task *task) override;
-    virtual task *dequeue(/*inout*/ int &batch_size) override;
-
-private:
-    typedef utils::blocking_priority_queue<task *, TASK_PRIORITY_COUNT> tqueue;
-    tqueue _samples;
+    task *dequeue(/*inout*/ int &batch_size) override;
 };
-
-class simple_timer_service : public timer_service
-{
-public:
-    simple_timer_service(service_node *node, timer_service *inner_provider);
-
-    ~simple_timer_service() override { stop(); }
-
-    // after milliseconds, the provider should call task->enqueue()
-    virtual void add_timer(task *task) override;
-
-    virtual void start() override;
-
-    virtual void stop() override;
-
-private:
-    boost::asio::io_service _ios;
-    std::thread _worker;
-    bool _is_running;
-};
-
 } // namespace tools
 } // namespace dsn

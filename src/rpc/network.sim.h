@@ -33,7 +33,7 @@
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/error_code.h"
 
 namespace dsn {
