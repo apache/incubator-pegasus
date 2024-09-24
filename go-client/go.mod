@@ -28,7 +28,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
-	k8s.io/apimachinery v0.0.0-20191123233150-4c4803ed55e3
+	k8s.io/apimachinery v0.16.13
 )
 
 require (
@@ -38,5 +38,5 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
-	gopkg.in/yaml.v2 v2.2.4 // indirect
+	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
