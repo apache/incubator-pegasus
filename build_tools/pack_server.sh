@@ -148,30 +148,40 @@ pack_server_lib crypto $separate_servers
 pack_server_lib ssl $separate_servers
 
 # Pack hadoop-related files.
-# If you want to use hdfs service to backup/restore/bulkload pegasus tables,
-# you need to set env ${HADOOP_HOME}, edit ${HADOOP_HOME}/etc/hadoop/core-site.xml,
-# and specify the keytab file.
-if [ -n "$HADOOP_HOME" ] && [ -n "$keytab_file" ]; then
-    mkdir -p ${pack}/hadoop
-    copy_file $keytab_file ${pack}/hadoop
-    copy_file ${HADOOP_HOME}/etc/hadoop/core-site.xml ${pack}/hadoop
-    if [ -d $HADOOP_HOME/share/hadoop ]; then
-        for f in ${HADOOP_HOME}/share/hadoop/common/lib/*.jar; do
-            copy_file $f ${pack}/hadoop
-        done
-        for f in ${HADOOP_HOME}/share/hadoop/common/*.jar; do
-            copy_file $f ${pack}/hadoop
-        done
-        for f in ${HADOOP_HOME}/share/hadoop/hdfs/lib/*.jar; do
-            copy_file $f ${pack}/hadoop
-        done
-        for f in ${HADOOP_HOME}/share/hadoop/hdfs/*.jar; do
-            copy_file $f ${pack}/hadoop
-        done
+# If you want to use hdfs service to backup/restore/bulkload pegasus tables, you need to
+# set env ${HADOOP_HOME} to the proper directory where contains Hadoop *.jar files.
+if [ -n "$HADOOP_HOME" ]; then
+    # Verify one of the jars.
+    arch_output=$(arch)
+    if [ "$arch_output"x == "aarch64"x ]; then
+        HDFS_JAR_MD5="fcc09dbed936cd8673918774cc3ead6b"
+    else
+      if [ "$arch_output"x != "x86_64"x ]; then
+          echo "WARNING: unrecognized CPU architecture '$arch_output', use 'x86_64' as default"
+      fi
+      HDFS_JAR_MD5="f67f3a5613c885e1622b1056fd94262b"
     fi
+    HDFS_JAR=${HADOOP_HOME}/share/hadoop/hdfs/hadoop-hdfs-3.3.6.jar
+    if [ "$(md5sum "${HDFS_JAR}" | awk '{print$1}')" != "${HDFS_JAR_MD5}" ]; then
+        echo "check file ${HDFS_JAR} md5sum failed!"
+        exit 1
+    fi
+    # Pack the jars.
+    mkdir -p ${pack}/hadoop
+    for f in ${HADOOP_HOME}/share/hadoop/common/lib/*.jar; do
+        copy_file $f ${pack}/hadoop
+    done
+    for f in ${HADOOP_HOME}/share/hadoop/common/*.jar; do
+        copy_file $f ${pack}/hadoop
+    done
+    for f in ${HADOOP_HOME}/share/hadoop/hdfs/lib/*.jar; do
+        copy_file $f ${pack}/hadoop
+    done
+    for f in ${HADOOP_HOME}/share/hadoop/hdfs/*.jar; do
+        copy_file $f ${pack}/hadoop
+    done
 else
-    echo "Couldn't find env ${HADOOP_HOME} or no valid keytab file was specified,
-          hadoop-related files were not packed."
+    echo "Couldn't find env HADOOP_HOME, hadoop-related files were not packed."
 fi
 
 DISTRIB_ID=$(cat /etc/*-release | grep DISTRIB_ID | awk -F'=' '{print $2}')

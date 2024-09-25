@@ -252,6 +252,8 @@ TEST_F(recovery_test, recovery)
         auto nodes = get_rpc_host_port_list({34801, 34802, 34803});
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
 
+        ASSERT_NO_FATAL_FAILURE(wait_table_healthy(table_name_));
+
         // then wait the apps to ready
         ASSERT_EQ(dsn::ERR_OK,
                   ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, {}, false));

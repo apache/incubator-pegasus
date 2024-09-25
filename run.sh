@@ -28,12 +28,13 @@ export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=${PEGASUS_THIRDPARTY_ROOT:-"$ROOT/thirdparty"}
 ARCH_TYPE=''
 arch_output=$(arch)
-if [ "$arch_output"x == "x86_64"x ]; then
-    ARCH_TYPE="amd64"
-elif [ "$arch_output"x == "aarch64"x ]; then
+if [ "$arch_output"x == "aarch64"x ]; then
     ARCH_TYPE="aarch64"
 else
-    echo "WARNING: unsupported CPU architecture '$arch_output', use 'x86_64' as default"
+    if [ "$arch_output"x != "x86_64"x ]; then
+        echo "WARNING: unrecognized CPU architecture '$arch_output', use 'x86_64' as default"
+    fi
+    ARCH_TYPE="amd64"
 fi
 export LD_LIBRARY_PATH=${JAVA_HOME}/jre/lib/${ARCH_TYPE}:${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 # Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
@@ -656,7 +657,7 @@ function run_start_zk()
         fi
     fi
 
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/build_tools/start_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/admin_tools/start_zk.sh
 }
 
 #####################
@@ -693,7 +694,7 @@ function run_stop_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $ROOT/build_tools/stop_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/admin_tools/stop_zk.sh
 }
 
 #####################
@@ -730,7 +731,7 @@ function run_clear_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $ROOT/build_tools/clear_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/admin_tools/clear_zk.sh
 }
 
 #####################
@@ -2105,6 +2106,8 @@ case $cmd in
         ;;
     pack_server)
         shift
+        # source the config_hdfs.sh to get the HADOOP_HOME.
+        source "${ROOT}"/admin_tools/config_hdfs.sh
         PEGASUS_ROOT=$ROOT ./build_tools/pack_server.sh $*
         ;;
     pack_client)

@@ -156,12 +156,9 @@ chmod -x ${pack}/lib/*
 
 mkdir -p ${pack}/admin_tools
 copy_file ./admin_tools/* ${pack}/admin_tools/
+copy_file ./admin_tools/download_*.sh ${pack}/admin_tools/
+copy_file ./admin_tools/*_zk.sh ${pack}/admin_tools/
 chmod +x ${pack}/admin_tools/*.sh
-
-mkdir -p ${pack}/build_tools
-copy_file ./build_tools/download_*.sh ${pack}/build_tools/
-copy_file ./build_tools/*_zk.sh ${pack}/build_tools/
-chmod +x ${pack}/build_tools/*.sh
 
 mkdir -p ${pack}/src/server
 copy_file ./src/server/*.ini ${pack}/src/server/
