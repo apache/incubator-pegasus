@@ -58,6 +58,7 @@ public:
     virtual error_code get_result(unsigned int entry_index) override;
 
     std::shared_ptr<zookeeper_session::zoo_atomic_packet> packet() { return _pkt; }
+
 private:
     std::shared_ptr<zookeeper_session::zoo_atomic_packet> _pkt;
 };
@@ -262,47 +263,49 @@ task_ptr meta_state_service_zookeeper::delete_node(const std::string &node,
 {
     error_code_future_ptr tsk(new error_code_future(cb_code, cb_delete, 0));
     tsk->set_tracker(tracker);
-    err_stringv_callback after_get_children = [node, recursively_delete, cb_code, tsk, this](
-        error_code err, const std::vector<std::string> &children) {
-        if (ERR_OK != err)
-            tsk->enqueue_with(err);
-        else if (children.empty())
-            delete_empty_node(
-                node, cb_code, [tsk](error_code err) { tsk->enqueue_with(err); }, &_tracker);
-        else if (!recursively_delete)
-            tsk->enqueue_with(ERR_INVALID_PARAMETERS);
-        else {
-            std::atomic_int *child_count = new std::atomic_int();
-            std::atomic_int *error_count = new std::atomic_int();
+    err_stringv_callback after_get_children =
+        [node, recursively_delete, cb_code, tsk, this](error_code err,
+                                                       const std::vector<std::string> &children) {
+            if (ERR_OK != err)
+                tsk->enqueue_with(err);
+            else if (children.empty())
+                delete_empty_node(
+                    node, cb_code, [tsk](error_code err) { tsk->enqueue_with(err); }, &_tracker);
+            else if (!recursively_delete)
+                tsk->enqueue_with(ERR_INVALID_PARAMETERS);
+            else {
+                std::atomic_int *child_count = new std::atomic_int();
+                std::atomic_int *error_count = new std::atomic_int();
 
-            child_count->store((int)children.size());
-            error_count->store(0);
+                child_count->store((int)children.size());
+                error_count->store(0);
 
-            for (auto &child : children) {
-                delete_node(node + "/" + child,
-                            true,
-                            cb_code,
-                            [=](error_code err) {
-                                if (ERR_OK != err)
-                                    ++(*error_count);
-                                int result = --(*child_count);
-                                if (0 == result) {
-                                    if (0 == *error_count)
-                                        delete_empty_node(
-                                            node,
-                                            cb_code,
-                                            [tsk](error_code err) { tsk->enqueue_with(err); },
-                                            &_tracker);
-                                    else
-                                        tsk->enqueue_with(ERR_FILE_OPERATION_FAILED);
-                                    delete child_count;
-                                    delete error_count;
-                                }
-                            },
-                            &_tracker);
+                for (auto &child : children) {
+                    delete_node(
+                        node + "/" + child,
+                        true,
+                        cb_code,
+                        [=](error_code err) {
+                            if (ERR_OK != err)
+                                ++(*error_count);
+                            int result = --(*child_count);
+                            if (0 == result) {
+                                if (0 == *error_count)
+                                    delete_empty_node(
+                                        node,
+                                        cb_code,
+                                        [tsk](error_code err) { tsk->enqueue_with(err); },
+                                        &_tracker);
+                                else
+                                    tsk->enqueue_with(ERR_FILE_OPERATION_FAILED);
+                                delete child_count;
+                                delete error_count;
+                            }
+                        },
+                        &_tracker);
+                }
             }
-        }
-    };
+        };
 
     get_children(node, cb_code, after_get_children, &_tracker);
     return tsk;
@@ -429,5 +432,5 @@ void meta_state_service_zookeeper::visit_zookeeper_internal(ref_this,
         break;
     }
 }
-}
-}
+} // namespace dist
+} // namespace dsn

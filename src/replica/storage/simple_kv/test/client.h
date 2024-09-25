@@ -31,9 +31,9 @@
 #include <vector>
 
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 
 namespace dsn {
@@ -68,6 +68,6 @@ private:
     host_port _service_addr;
     dsn::task_tracker _tracker;
 };
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

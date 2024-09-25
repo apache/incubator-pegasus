@@ -18,11 +18,11 @@
 #include <algorithm>
 #include <functional>
 #include <iterator>
-#include <map>
 #include <set>
 
 #include "app_balance_policy.h"
 #include "common/gpid.h"
+#include "gutil/map_util.h"
 #include "meta/load_balance_policy.h"
 #include "metadata_types.h"
 #include "utils/flags.h"
@@ -162,7 +162,7 @@ bool copy_secondary_operation::can_select(gpid pid, migration_list *result)
     }
 
     // if the pid have been used
-    if (result->find(pid) != result->end()) {
+    if (gutil::ContainsKey(*result, pid)) {
         LOG_DEBUG("{}: skip gpid({}.{}) coz it is already copyed",
                   _app->get_logname(),
                   pid.get_app_id(),

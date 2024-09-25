@@ -29,8 +29,8 @@
 
 #include "failure_detector/failure_detector_multimaster.h"
 #include "fd_types.h"
-#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/dns_resolver.h" // IWYU pragma: keep
+#include "rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 #include "utils/rand.h"
 
@@ -132,13 +132,13 @@ void slave_failure_detector_with_multimaster::on_master_disconnected(
 void slave_failure_detector_with_multimaster::on_master_connected(const host_port &node)
 {
     /*
-    * well, this is called in on_ping_internal, which is called by rep::end_ping.
-    * So this function is called in the lock context of fd::_lock
-    */
+     * well, this is called in on_ping_internal, which is called by rep::end_ping.
+     * So this function is called in the lock context of fd::_lock
+     */
     bool is_primary = (_meta_servers.group_host_port()->leader() == node);
     if (is_primary) {
         _master_connected_callback();
     }
 }
-}
-} // end namespace
+} // namespace dist
+} // namespace dsn

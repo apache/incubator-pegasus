@@ -30,13 +30,16 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <atomic>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 
+#include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
+#include "duplication/replica_duplicator_manager.h" // IWYU pragma: keep
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
@@ -46,11 +49,11 @@
 #include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
+#include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
@@ -70,6 +73,7 @@ class gpid;
 class host_port;
 
 namespace dist {
+
 namespace block_service {
 class block_filesystem;
 } // namespace block_service
@@ -82,6 +86,7 @@ namespace replication {
 
 class backup_request;
 class backup_response;
+
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;
@@ -96,14 +101,12 @@ class replica;
 class replica_backup_manager;
 class replica_bulk_loader;
 class replica_disk_migrator;
-class replica_duplicator_manager;
 class replica_follower;
 class replica_split_manager;
 class replica_stub;
 class replication_app_base;
 class replication_options;
 struct dir_node;
-
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
 namespace test {
@@ -186,7 +189,7 @@ public:
     //
     void on_config_proposal(configuration_update_request &proposal);
     void on_config_sync(const app_info &info,
-                        const partition_configuration &config,
+                        const partition_configuration &pc,
                         split_status::type meta_split_status);
     void on_cold_backup(const backup_request &request, /*out*/ backup_response &response);
 
@@ -223,8 +226,38 @@ public:
     const app_info *get_app_info() const { return &_app_info; }
     decree max_prepared_decree() const { return _prepare_list->max_decree(); }
     decree last_committed_decree() const { return _prepare_list->last_committed_decree(); }
+
+    // The last decree that has been applied into rocksdb memtable.
+    decree last_applied_decree() const;
+
+    // The last decree that has been flushed into rocksdb sst.
+    decree last_flushed_decree() const;
+
     decree last_prepared_decree() const;
     decree last_durable_decree() const;
+
+    // Encode current progress of decrees into json, including both local writes and duplications
+    // of this replica.
+    template <typename TWriter>
+    void encode_progress(TWriter &writer) const
+    {
+        writer.StartObject();
+
+        JSON_ENCODE_OBJ(writer, max_prepared_decree, max_prepared_decree());
+        JSON_ENCODE_OBJ(writer, max_plog_decree, _private_log->max_decree(get_gpid()));
+        JSON_ENCODE_OBJ(writer, max_plog_decree_on_disk, _private_log->max_decree_on_disk());
+        JSON_ENCODE_OBJ(writer, max_plog_commit_on_disk, _private_log->max_commit_on_disk());
+        JSON_ENCODE_OBJ(writer, last_committed_decree, last_committed_decree());
+        JSON_ENCODE_OBJ(writer, last_applied_decree, last_applied_decree());
+        JSON_ENCODE_OBJ(writer, last_flushed_decree, last_flushed_decree());
+        JSON_ENCODE_OBJ(writer, last_durable_decree, last_durable_decree());
+        JSON_ENCODE_OBJ(writer, max_gc_decree, _private_log->max_gced_decree(get_gpid()));
+
+        _duplication_mgr->encode_progress(writer);
+
+        writer.EndObject();
+    }
+
     const std::string &dir() const { return _dir; }
     uint64_t create_time_milliseconds() const { return _create_time_ms; }
     const char *name() const { return replica_name(); }
@@ -237,7 +270,24 @@ public:
     //
     // Duplication
     //
-    error_code trigger_manual_emergency_checkpoint(decree old_decree);
+
+    using trigger_checkpoint_callback = std::function<void(error_code)>;
+
+    // Choose a fixed thread from pool to trigger an emergency checkpoint asynchronously.
+    // A new checkpoint would still be created even if the replica is empty (hasn't received
+    // any write operation).
+    //
+    // Parameters:
+    // - `min_checkpoint_decree`: the min decree that should be covered by the triggered
+    // checkpoint. Should be a number greater than 0 which means a new checkpoint must be
+    // created.
+    // - `delay_ms`: the delayed time in milliseconds that the triggering task is put into
+    // the thread pool.
+    // - `callback`: the callback processor handling the error code of triggering checkpoint.
+    void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree,
+                                                   uint32_t delay_ms,
+                                                   trigger_checkpoint_callback callback = {});
+
     void on_query_last_checkpoint(learn_response &response);
     std::shared_ptr<replica_duplicator_manager> get_duplication_manager() const
     {
@@ -395,7 +445,7 @@ private:
     void remove(configuration_update_request &proposal);
     void update_configuration_on_meta_server(config_type::type type,
                                              const host_port &node,
-                                             partition_configuration &new_config);
+                                             partition_configuration &new_pc);
     void
     on_update_configuration_on_meta_server_reply(error_code err,
                                                  dsn::message_ex *request,
@@ -409,7 +459,7 @@ private:
     void update_app_envs_internal(const std::map<std::string, std::string> &envs);
     void query_app_envs(/*out*/ std::map<std::string, std::string> &envs);
 
-    bool update_configuration(const partition_configuration &config);
+    bool update_configuration(const partition_configuration &pc);
     bool update_local_configuration(const replica_configuration &config, bool same_ballot = false);
     error_code update_init_info_ballot_and_decree();
 
@@ -429,13 +479,6 @@ private:
     error_code background_sync_checkpoint();
     void catch_up_with_private_logs(partition_status::type s);
     void on_checkpoint_completed(error_code err);
-    void on_copy_checkpoint_ack(error_code err,
-                                const std::shared_ptr<replica_configuration> &req,
-                                const std::shared_ptr<learn_response> &resp);
-    void on_copy_checkpoint_file_completed(error_code err,
-                                           size_t sz,
-                                           std::shared_ptr<learn_response> resp,
-                                           const std::string &chk_dir);
 
     // Enable/Disable plog garbage collection to be executed. For example, to duplicate data
     // to target cluster, we could firstly disable plog garbage collection, then do copy_data.
@@ -446,6 +489,10 @@ private:
     void update_plog_gc_enabled(bool enabled);
     bool is_plog_gc_enabled() const;
     std::string get_plog_gc_enabled_message() const;
+
+    // Trigger an emergency checkpoint for duplication. Once the replica is empty (hasn't
+    // received any write operation), there would be no checkpoint created.
+    error_code trigger_manual_emergency_checkpoint(decree min_checkpoint_decree);
 
     /////////////////////////////////////////////////////////////////
     // cold backup
@@ -486,8 +533,8 @@ private:
     void update_restore_progress(uint64_t f_size);
 
     // Used for remote command
-    // TODO: remove this interface and only expose the http interface
-    // now this remote commend will be used by `scripts/pegasus_manual_compact.sh`
+    // TODO(clang-tidy): remove this interface and only expose the http interface
+    // now this remote commend will be used by `admin_tools/pegasus_manual_compact.sh`
     std::string query_manual_compact_state() const;
 
     manual_compaction_status::type get_manual_compact_status() const;

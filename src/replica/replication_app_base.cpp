@@ -29,10 +29,10 @@
 #include <rocksdb/env.h>
 #include <rocksdb/status.h>
 #include <memory>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
 #include "common/bulk_load_common.h"
 #include "common/duplication_common.h"
 #include "common/replica_envs.h"
@@ -43,10 +43,10 @@
 #include "mutation.h"
 #include "replica.h"
 #include "replica/replication_app_base.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
@@ -281,7 +281,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
 error_code replication_app_base::apply_mutation(const mutation *mu)
 {
     FAIL_POINT_INJECT_F("replication_app_base_apply_mutation",
-                        [](absl::string_view) { return ERR_OK; });
+                        [](std::string_view) { return ERR_OK; });
 
     CHECK_EQ_PREFIX(mu->data.header.decree, last_committed_decree() + 1);
     CHECK_EQ_PREFIX(mu->data.updates.size(), mu->client_requests.size());

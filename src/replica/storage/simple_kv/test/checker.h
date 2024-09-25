@@ -33,18 +33,20 @@
 
 #include "common.h"
 #include "meta/meta_data.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/simulator.h"
 #include "utils/singleton.h"
 
 namespace dsn {
 class service_app;
+
 namespace service {
 class meta_service_app;
 } // namespace service
 
 namespace replication {
 class replica_configuration;
+
 class replication_service_app;
 
 namespace test {
@@ -116,6 +118,6 @@ private:
 };
 
 void install_checkers();
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

@@ -25,10 +25,11 @@
 #include <unordered_map>
 
 #include "dsn.layer2_types.h"
+#include "gutil/map_util.h"
 #include "meta/load_balance_policy.h"
-#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/dns_resolver.h" // IWYU pragma: keep
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
@@ -223,18 +224,18 @@ bool cluster_balance_policy::get_app_migration_info(std::shared_ptr<app_state> a
 {
     info.app_id = app->app_id;
     info.app_name = app->app_name;
-    info.partitions.resize(app->partitions.size());
-    for (auto i = 0; i < app->partitions.size(); ++i) {
+    info.partitions.reserve(app->pcs.size());
+    for (const auto &pc : app->pcs) {
         std::map<host_port, partition_status::type> pstatus_map;
-        pstatus_map[app->partitions[i].hp_primary] = partition_status::PS_PRIMARY;
-        if (app->partitions[i].hp_secondaries.size() != app->partitions[i].max_replica_count - 1) {
+        pstatus_map[pc.hp_primary] = partition_status::PS_PRIMARY;
+        if (pc.hp_secondaries.size() != pc.max_replica_count - 1) {
             // partition is unhealthy
             return false;
         }
-        for (const auto &hp : app->partitions[i].hp_secondaries) {
-            pstatus_map[hp] = partition_status::PS_SECONDARY;
+        for (const auto &secondary : pc.hp_secondaries) {
+            pstatus_map[secondary] = partition_status::PS_SECONDARY;
         }
-        info.partitions[i] = pstatus_map;
+        info.partitions.push_back(std::move(pstatus_map));
     }
 
     for (const auto &it : nodes) {
@@ -258,14 +259,8 @@ void cluster_balance_policy::get_node_migration_info(const node_state &ns,
             if (!context.get_disk_tag(ns.host_port(), disk_tag)) {
                 continue;
             }
-            auto pid = context.config_owner->pid;
-            if (info.partitions.find(disk_tag) != info.partitions.end()) {
-                info.partitions[disk_tag].insert(pid);
-            } else {
-                partition_set pset;
-                pset.insert(pid);
-                info.partitions.emplace(disk_tag, pset);
-            }
+            auto &partitions_of_disk = gutil::LookupOrInsert(&info.partitions, disk_tag, {});
+            partitions_of_disk.insert(context.pc->pid);
         }
     }
 }

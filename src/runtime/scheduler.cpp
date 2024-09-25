@@ -35,9 +35,9 @@
 #include "runtime/node_scoper.h"
 #include "runtime/service_app.h"
 #include "runtime/simulator.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_queue.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_code.h"
+#include "task/task_queue.h"
+#include "task/task_spec.h"
 #include "scheduler.h"
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
@@ -297,5 +297,5 @@ void scheduler::schedule()
 
     _is_scheduling = false;
 }
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

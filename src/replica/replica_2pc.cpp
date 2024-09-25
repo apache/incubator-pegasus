@@ -55,18 +55,18 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/rpc_stream.h"
+#include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
 #include "security/access_controller.h"
 #include "split/replica_split_manager.h"
+#include "task/async_calls.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/api_utilities.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
@@ -200,8 +200,8 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         LOG_INFO_PREFIX("receive bulk load ingestion request");
 
         // bulk load ingestion request requires that all secondaries should be alive
-        if (static_cast<int>(_primary_states.membership.hp_secondaries.size()) + 1 <
-            _primary_states.membership.max_replica_count) {
+        if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
+            _primary_states.pc.max_replica_count) {
             response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
             return;
         }
@@ -209,7 +209,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         _bulk_load_ingestion_start_time_ms = dsn_now_ms();
     }
 
-    if (static_cast<int>(_primary_states.membership.hp_secondaries.size()) + 1 <
+    if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
         _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
         response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
         return;
@@ -269,8 +269,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             break;
         }
         LOG_INFO_PREFIX("try to prepare bulk load mutation({})", mu->name());
-        if (static_cast<int>(_primary_states.membership.hp_secondaries.size()) + 1 <
-            _primary_states.membership.max_replica_count) {
+        if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
+            _primary_states.pc.max_replica_count) {
             err = ERR_NOT_ENOUGH_MEMBER;
             break;
         }
@@ -282,7 +282,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // stop prepare if there are too few replicas unless it's a reconciliation
     // for reconciliation, we should ensure every prepared mutation to be committed
     // please refer to PacificA paper
-    if (static_cast<int>(_primary_states.membership.hp_secondaries.size()) + 1 <
+    if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
             _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count) &&
         !reconciliation) {
         err = ERR_NOT_ENOUGH_MEMBER;
@@ -300,8 +300,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // remote prepare
     mu->set_prepare_ts();
     mu->set_left_secondary_ack_count(
-        (unsigned int)_primary_states.membership.hp_secondaries.size());
-    for (const auto &secondary : _primary_states.membership.hp_secondaries) {
+        static_cast<unsigned int>(_primary_states.pc.hp_secondaries.size()));
+    for (const auto &secondary : _primary_states.pc.hp_secondaries) {
         send_prepare_message(secondary,
                              partition_status::PS_SECONDARY,
                              mu,
@@ -383,14 +383,14 @@ void replica::send_prepare_message(const ::dsn::host_port &hp,
         mu->write_to(writer, msg);
     }
 
-    mu->remote_tasks()[hp] =
-        rpc::call(dsn::dns_resolver::instance().resolve_address(hp),
-                  msg,
-                  &_tracker,
-                  [=](error_code err, dsn::message_ex *request, dsn::message_ex *reply) {
-                      on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
-                  },
-                  get_gpid().thread_hash());
+    mu->remote_tasks()[hp] = rpc::call(
+        dsn::dns_resolver::instance().resolve_address(hp),
+        msg,
+        &_tracker,
+        [=](error_code err, dsn::message_ex *request, dsn::message_ex *reply) {
+            on_prepare_reply(std::make_pair(mu, rconfig.status), err, request, reply);
+        },
+        get_gpid().thread_hash());
 
     LOG_DEBUG_PREFIX("mutation {} send_prepare_message to {} as {}",
                      mu->name(),

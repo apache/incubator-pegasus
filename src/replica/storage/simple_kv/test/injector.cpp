@@ -30,8 +30,8 @@
 
 #include "case.h"
 #include "checker.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/join_point.h"
 
 namespace dsn {
@@ -198,6 +198,6 @@ void test_injector::install(service_spec &svc_spec)
 }
 
 test_injector::test_injector(const char *name) : toollet(name) {}
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

@@ -33,9 +33,9 @@
 #include <vector>
 
 #include "failure_detector/failure_detector.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
@@ -43,10 +43,12 @@ namespace dsn {
 namespace dist {
 class distributed_lock_service;
 } // namespace dist
+
 namespace fd {
 class beacon_ack;
 class beacon_msg;
 } // namespace fd
+
 template <typename TResponse>
 class rpc_replier;
 
@@ -58,6 +60,7 @@ class meta_service;
 namespace test {
 class test_checker;
 }
+
 class meta_server_failure_detector : public fd::failure_detector
 {
 public:
@@ -154,5 +157,5 @@ public:
     void set_leader_for_test(const host_port &leader_host_port, bool is_myself_leader);
     stability_map *get_stability_map_for_test();
 };
-}
-}
+} // namespace replication
+} // namespace dsn

@@ -26,7 +26,7 @@
 
 #include "replica.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <functional>
@@ -41,17 +41,17 @@
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "consensus_types.h"
-#include "duplication/replica_duplicator_manager.h"
 #include "duplication/replica_follower.h"
 #include "mutation.h"
 #include "mutation_log.h"
+#include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_admin_types.h"
 #include "replica_disk_migrator.h"
 #include "replica_stub.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/filesystem.h"
@@ -369,7 +369,7 @@ void replica::init_state()
     _config.pid.set_app_id(0);
     _config.pid.set_partition_index(0);
     _config.status = partition_status::PS_INACTIVE;
-    _primary_states.membership.ballot = 0;
+    _primary_states.pc.ballot = 0;
     _create_time_ms = dsn_now_ms();
     _last_config_change_time_ms = _create_time_ms;
     update_last_checkpoint_generate_time();
@@ -577,6 +577,10 @@ mutation_ptr replica::new_mutation(decree decree)
     mu->data.header.log_offset = invalid_offset;
     return mu;
 }
+
+decree replica::last_applied_decree() const { return _app->last_committed_decree(); }
+
+decree replica::last_flushed_decree() const { return _app->last_flushed_decree(); }
 
 decree replica::last_durable_decree() const { return _app->last_durable_decree(); }
 

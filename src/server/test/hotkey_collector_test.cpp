@@ -17,9 +17,9 @@
 
 #include "server/hotkey_collector.h"
 
-#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <chrono>
+#include <string_view>
 #include <thread>
 
 #include "base/pegasus_key_schema.h"
@@ -27,14 +27,14 @@
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
+#include "rpc/rpc_holder.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_tracker.h"
 #include "server/hotkey_collector_state.h"
 #include "server/pegasus_read_service.h"
 #include "server/test/message_utils.h"
+#include "task/async_calls.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -70,7 +70,7 @@ TEST(hotkey_collector_public_func_test, get_bucket_id_test)
 {
     int bucket_id = -1;
     for (int i = 0; i < 1000000; i++) {
-        bucket_id = get_bucket_id(absl::string_view(generate_hash_key_by_random(false)),
+        bucket_id = get_bucket_id(std::string_view(generate_hash_key_by_random(false)),
                                   FLAGS_hotkey_buckets_num);
         ASSERT_GE(bucket_id, 0);
         ASSERT_LT(bucket_id, FLAGS_hotkey_buckets_num);

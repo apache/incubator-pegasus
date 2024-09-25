@@ -15,40 +15,74 @@
 # specific language governing permissions and limitations
 # under the License.
 ---
+
 github:
-  - .github/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - .github/**/*
 admin-cli:
-  - admin-cli/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - admin-cli/**/*
 collector:
-  - collector/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - collector/**/*
 docker:
-  - docker/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - docker/**/*
 go-client:
-  - go-client/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - go-client/**/*
 java-client:
-  - java-client/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - java-client/**/*
 nodejs-client:
-  - nodejs-client/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - nodejs-client/**/*
 pegic:
-  - pegic/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - pegic/**/*
 python-client:
-  - python-client/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - python-client/**/*
 scala-client:
-  - scala-client/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - scala-client/**/*
 thirdparty:
-  - thirdparty/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - thirdparty/**/*
 thrift:
-  - '**/*.thrift'
+- changed-files:
+  - any-glob-to-any-file:
+    - '**/*.thrift'
 docs:
-  - '**/*.md'
+- changed-files:
+  - any-glob-to-any-file:
+    - '**/*.md'
 scripts:
-  - 'scripts/**/*'
-  - '**/*.sh'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'admin_tools/**/*'
+    - 'build_tools/**/*'
+    - '**/*.sh'
 build:
-  - 'cmake_modules/**/*'
-  - '**/CMakeLists.txt'
-  - 'run.sh'
+- changed-files:
+  - any-glob-to-any-file:
+    - 'cmake_modules/**/*'
+    - '**/CMakeLists.txt'
+    - 'run.sh'
 cpp:
+- changed-files:
+  - any-glob-to-any-file:
   # TODO(yingchun): add more fine-grained labels
-  - 'src/**/*.h'
-  - 'src/**/*.cpp'
+    - 'src/**/*.h'
+    - 'src/**/*.cpp'

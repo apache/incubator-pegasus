@@ -38,7 +38,7 @@
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
@@ -285,15 +285,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     int32_t app_id = 0;
     int32_t partition_count = 0;
     int32_t max_replica_count = 0;
-    std::vector<dsn::partition_configuration> partitions;
+    std::vector<dsn::partition_configuration> pcs;
 
-    dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
+    dsn::error_code err = sc->ddl_client->list_app(app_name, app_id, partition_count, pcs);
     if (err != ::dsn::ERR_OK) {
         std::cout << "ERROR: list app " << app_name << " failed, error=" << err << std::endl;
         return true;
     }
-    if (!partitions.empty()) {
-        max_replica_count = partitions[0].max_replica_count;
+    if (!pcs.empty()) {
+        max_replica_count = pcs[0].max_replica_count;
     }
 
     std::vector<node_desc> nodes;
@@ -312,7 +312,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             parse_sst_stat(results[i].body(), count_map[nodes[i].hp], disk_map[nodes[i].hp]),
             nodes[i],
-            "sst");
+            "parse sst stats");
     }
 
     ::dsn::utils::table_printer tp_general("result");
@@ -333,27 +333,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     int primary_replicas_count = 0;
     double disk_used_for_all_replicas = 0;
     int all_replicas_count = 0;
-    for (int i = 0; i < partitions.size(); i++) {
-        const dsn::partition_configuration &p = partitions[i];
-        int replica_count = 0;
-        if (p.hp_primary) {
-            replica_count++;
-        }
-        replica_count += p.hp_secondaries.size();
-        std::string replica_count_str;
-        {
-            std::stringstream oss;
-            oss << replica_count << "/" << p.max_replica_count;
-            replica_count_str = oss.str();
-        }
+    for (const auto &pc : pcs) {
         std::string primary_str("-");
-        if (p.hp_primary) {
+        if (pc.hp_primary) {
             bool disk_found = false;
             double disk_value = 0;
-            auto f1 = disk_map.find(p.hp_primary);
+            auto f1 = disk_map.find(pc.hp_primary);
             if (f1 != disk_map.end()) {
                 auto &sub_map = f1->second;
-                auto f2 = sub_map.find(p.pid.get_partition_index());
+                auto f2 = sub_map.find(pc.pid.get_partition_index());
                 if (f2 != sub_map.end()) {
                     disk_found = true;
                     disk_value = f2->second;
@@ -365,17 +353,17 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             }
             bool count_found = false;
             double count_value = 0;
-            auto f3 = count_map.find(p.hp_primary);
+            auto f3 = count_map.find(pc.hp_primary);
             if (f3 != count_map.end()) {
                 auto &sub_map = f3->second;
-                auto f4 = sub_map.find(p.pid.get_partition_index());
+                auto f4 = sub_map.find(pc.pid.get_partition_index());
                 if (f4 != sub_map.end()) {
                     count_found = true;
                     count_value = f4->second;
                 }
             }
             std::stringstream oss;
-            oss << replication_ddl_client::node_name(p.hp_primary, resolve_ip) << "(";
+            oss << replication_ddl_client::node_name(pc.hp_primary, resolve_ip) << "(";
             if (disk_found)
                 oss << disk_value;
             else
@@ -392,15 +380,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         {
             std::stringstream oss;
             oss << "[";
-            for (int j = 0; j < p.hp_secondaries.size(); j++) {
+            for (int j = 0; j < pc.hp_secondaries.size(); j++) {
                 if (j != 0)
                     oss << ",";
                 bool found = false;
                 double value = 0;
-                auto f1 = disk_map.find(p.hp_secondaries[j]);
+                auto f1 = disk_map.find(pc.hp_secondaries[j]);
                 if (f1 != disk_map.end()) {
                     auto &sub_map = f1->second;
-                    auto f2 = sub_map.find(p.pid.get_partition_index());
+                    auto f2 = sub_map.find(pc.pid.get_partition_index());
                     if (f2 != sub_map.end()) {
                         found = true;
                         value = f2->second;
@@ -410,17 +398,17 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
                 bool count_found = false;
                 double count_value = 0;
-                auto f3 = count_map.find(p.hp_secondaries[j]);
+                auto f3 = count_map.find(pc.hp_secondaries[j]);
                 if (f3 != count_map.end()) {
                     auto &sub_map = f3->second;
-                    auto f3 = sub_map.find(p.pid.get_partition_index());
+                    auto f3 = sub_map.find(pc.pid.get_partition_index());
                     if (f3 != sub_map.end()) {
                         count_found = true;
                         count_value = f3->second;
                     }
                 }
 
-                oss << replication_ddl_client::node_name(p.hp_secondaries[j], resolve_ip) << "(";
+                oss << replication_ddl_client::node_name(pc.hp_secondaries[j], resolve_ip) << "(";
                 if (found)
                     oss << value;
                 else
@@ -437,9 +425,10 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         }
 
         if (detailed) {
-            tp_details.add_row(std::to_string(p.pid.get_partition_index()));
-            tp_details.append_data(p.ballot);
-            tp_details.append_data(replica_count_str);
+            tp_details.add_row(std::to_string(pc.pid.get_partition_index()));
+            tp_details.append_data(pc.ballot);
+            tp_details.append_data(fmt::format(
+                "{}/{}", pc.hp_secondaries.size() + (pc.hp_primary ? 1 : 0), pc.max_replica_count));
             tp_details.append_data(primary_str);
             tp_details.append_data(secondary_str);
         }
@@ -463,15 +452,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-bool app_stat(command_executor *e, shell_context *sc, arguments args)
+bool app_stat(command_executor *, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
-                                           {"only_qps", no_argument, 0, 'q'},
-                                           {"only_usage", no_argument, 0, 'u'},
-                                           {"json", no_argument, 0, 'j'},
-                                           {"output", required_argument, 0, 'o'},
-                                           {"sample_interval_ms", required_argument, 0, 't'},
-                                           {0, 0, 0, 0}};
+    static struct option long_options[] = {{"app_name", required_argument, nullptr, 'a'},
+                                           {"only_qps", no_argument, nullptr, 'q'},
+                                           {"only_usage", no_argument, nullptr, 'u'},
+                                           {"json", no_argument, nullptr, 'j'},
+                                           {"output", required_argument, nullptr, 'o'},
+                                           {"sample_interval_ms", required_argument, nullptr, 'i'},
+                                           {nullptr, 0, nullptr, 0}};
 
     std::string app_name;
     std::string out_file;
@@ -483,7 +472,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c = getopt_long(args.argc, args.argv, "a:qujo:t:", long_options, &option_index);
+        int c = getopt_long(args.argc, args.argv, "a:qujo:i:", long_options, &option_index);
         if (c == -1) {
             // -1 means all command-line options have been parsed.
             break;
@@ -505,7 +494,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             out_file = optarg;
             break;
-        case 't':
+        case 'i':
             RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
             break;
         default:

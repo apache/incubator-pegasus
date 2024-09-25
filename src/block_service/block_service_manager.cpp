@@ -25,8 +25,8 @@
 #include "block_service/hdfs/hdfs_service.h"
 #include "block_service/local/local_service.h"
 #include "fmt/core.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/config_api.h"
 #include "utils/factory_store.h"
 #include "utils/filesystem.h"
@@ -108,10 +108,11 @@ static create_file_response create_block_file_sync(const std::string &remote_fil
                                                    task_tracker *tracker)
 {
     create_file_response ret;
-    fs->create_file(create_file_request{remote_file_path, ignore_meta},
-                    TASK_CODE_EXEC_INLINED,
-                    [&ret](const create_file_response &resp) { ret = resp; },
-                    tracker);
+    fs->create_file(
+        create_file_request{remote_file_path, ignore_meta},
+        TASK_CODE_EXEC_INLINED,
+        [&ret](const create_file_response &resp) { ret = resp; },
+        tracker);
     tracker->wait_outstanding_tasks();
     return ret;
 }
@@ -120,10 +121,11 @@ static download_response
 download_block_file_sync(const std::string &local_file_path, block_file *bf, task_tracker *tracker)
 {
     download_response ret;
-    bf->download(download_request{local_file_path, 0, -1},
-                 TASK_CODE_EXEC_INLINED,
-                 [&ret](const download_response &resp) { ret = resp; },
-                 tracker);
+    bf->download(
+        download_request{local_file_path, 0, -1},
+        TASK_CODE_EXEC_INLINED,
+        [&ret](const download_response &resp) { ret = resp; },
+        tracker);
     tracker->wait_outstanding_tasks();
     return ret;
 }

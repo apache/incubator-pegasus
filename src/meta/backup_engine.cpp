@@ -35,15 +35,15 @@
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
 #include "server_state.h"
+#include "task/async_calls.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
@@ -182,7 +182,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
             _is_backup_failed = true;
             return;
         }
-        partition_primary = app->partitions[pid.get_partition_index()].hp_primary;
+        partition_primary = app->pcs[pid.get_partition_index()].hp_primary;
     }
 
     if (!partition_primary) {
@@ -190,11 +190,12 @@ void backup_engine::backup_app_partition(const gpid &pid)
             "backup_id({}): partition {} doesn't have a primary now, retry to backup it later.",
             _cur_backup.backup_id,
             pid);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this, pid]() { backup_app_partition(pid); },
-                         0,
-                         std::chrono::seconds(10));
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this, pid]() { backup_app_partition(pid); },
+            0,
+            std::chrono::seconds(10));
         return;
     }
 
@@ -243,11 +244,12 @@ inline void backup_engine::handle_replica_backup_failed(const backup_response &r
 
 inline void backup_engine::retry_backup(const dsn::gpid pid)
 {
-    tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                     &_tracker,
-                     [this, pid]() { backup_app_partition(pid); },
-                     0,
-                     std::chrono::seconds(1));
+    tasking::enqueue(
+        LPC_DEFAULT_CALLBACK,
+        &_tracker,
+        [this, pid]() { backup_app_partition(pid); },
+        0,
+        std::chrono::seconds(1));
 }
 
 void backup_engine::on_backup_reply(const error_code err,
@@ -328,11 +330,12 @@ void backup_engine::write_backup_info()
     if (err != ERR_OK) {
         LOG_WARNING("backup_id({}): write backup info failed, retry it later.",
                     _cur_backup.backup_id);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this]() { write_backup_info(); },
-                         0,
-                         std::chrono::seconds(1));
+        tasking::enqueue(
+            LPC_DEFAULT_CALLBACK,
+            &_tracker,
+            [this]() { write_backup_info(); },
+            0,
+            std::chrono::seconds(1));
         return;
     }
     LOG_INFO("backup_id({}): successfully wrote backup info, backup for app {} completed.",

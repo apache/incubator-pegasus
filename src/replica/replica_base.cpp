@@ -17,7 +17,7 @@
 
 #include "replica_base.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 
 METRIC_DEFINE_entity(replica);
@@ -41,7 +41,7 @@ metric_entity_ptr instantiate_replica_metric_entity(const gpid &id)
 
 } // anonymous namespace
 
-replica_base::replica_base(gpid id, absl::string_view name, absl::string_view app_name)
+replica_base::replica_base(gpid id, std::string_view name, std::string_view app_name)
     : _gpid(id),
       _name(name),
       _app_name(app_name),

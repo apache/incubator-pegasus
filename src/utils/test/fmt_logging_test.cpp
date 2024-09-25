@@ -27,13 +27,14 @@
 #include <fmt/core.h>
 #include <memory>
 
+#include <string_view>
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "absl/strings/string_view.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -45,8 +46,9 @@ TEST(fmt_logging, basic)
     ASSERT_EQ(fmt::format("{}", error_s::make(ERR_TIMEOUT, "yes")), "ERR_TIMEOUT: yes");
     ASSERT_EQ(fmt::format("{}", ERR_OK), "ERR_OK");
     ASSERT_EQ(fmt::format("{}", LPC_REPLICATION_LOW), "LPC_REPLICATION_LOW");
-    ASSERT_EQ(absl::string_view("yes"), "yes");
-    ASSERT_EQ(fmt::format("{}", absl::string_view("yes\0yes")), "yes\0yes");
+    ASSERT_EQ(std::string_view("yes"), "yes");
+    ASSERT_EQ(fmt::format("{}", std::string_view("yes\0yes")), "yes\0yes");
+    ASSERT_DEATH(CHECK(false, "CHECK false in test"), "CHECK false in test");
 }
 
 } // namespace replication

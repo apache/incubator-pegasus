@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "http_server.h"
 

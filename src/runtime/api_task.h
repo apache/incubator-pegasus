@@ -33,7 +33,7 @@
 
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 
 /*!
 @addtogroup task-common
@@ -70,7 +70,7 @@ class raw_task;
 class rpc_request_task;
 class rpc_response_task;
 class aio_task;
-}
+} // namespace dsn
 /*!
 apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
 the length of a vitual queue (bound to current code + hash) to

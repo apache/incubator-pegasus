@@ -46,8 +46,8 @@
 #include "pegasus_value_schema.h"
 #include "range_read_limiter.h"
 #include "replica/replication_app_base.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/metrics.h"
@@ -223,6 +223,8 @@ public:
     ::dsn::error_code storage_apply_checkpoint(chkpt_apply_mode mode,
                                                const dsn::replication::learn_state &state) override;
 
+    int64_t last_flushed_decree() const override;
+
     int64_t last_durable_decree() const override { return _last_durable_decree.load(); }
 
     void update_app_envs(const std::map<std::string, std::string> &envs) override;
@@ -391,8 +393,8 @@ private:
     bool check_value_if_nearby(uint64_t base_value, uint64_t check_value)
     {
         uint64_t gap = base_value / 4;
-        uint64_t actual_gap =
-            (base_value < check_value) ? check_value - base_value : base_value - check_value;
+        uint64_t actual_gap = (base_value < check_value) ? check_value - base_value
+                                                         : base_value - check_value;
         return actual_gap <= gap;
     }
 

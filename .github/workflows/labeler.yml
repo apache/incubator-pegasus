@@ -23,13 +23,16 @@ on:
     types: [ synchronize, opened, reopened, edited ]
 
 jobs:
-  process:
+  labeler:
     name: Module Labeler
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Assign GitHub labels
-        uses: actions/labeler@v4
+        uses: actions/labeler@v5
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/workflows/module_labeler_conf.yml

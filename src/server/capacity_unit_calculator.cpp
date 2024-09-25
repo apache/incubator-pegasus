@@ -19,7 +19,7 @@
 
 #include "capacity_unit_calculator.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <rocksdb/status.h>
 #include <sys/param.h>
 #include <cmath>
@@ -27,7 +27,7 @@
 
 #include "hotkey_collector.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/flags.h"

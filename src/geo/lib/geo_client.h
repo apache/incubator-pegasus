@@ -28,7 +28,7 @@
 #include <utility>
 
 #include "latlng_codec.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 
 class S2Cap;
 class S2CellId;

@@ -61,5 +61,5 @@ struct job
     std::string get_addr_by_index(int index);
     void set_name(const std::string &_name);
 };
-}
-} // end namespace
+} // namespace test
+} // namespace pegasus

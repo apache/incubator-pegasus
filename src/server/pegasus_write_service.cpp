@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <stddef.h>
@@ -38,8 +38,8 @@
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
 #include "runtime/message_utils.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_code.h"
+#include "task/async_calls.h"
+#include "task/task_code.h"
 #include "server/pegasus_server_impl.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"

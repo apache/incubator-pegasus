@@ -36,8 +36,8 @@
 #include "consensus_types.h"
 #include "replica_admin_types.h"
 #include "common/replication_enums.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 
 namespace dsn {
 namespace replication {
@@ -79,8 +79,8 @@ inline bool is_partition_config_equal(const partition_configuration &pc1,
                                       const partition_configuration &pc2)
 {
     // secondaries no need to be same order
-    for (const auto &hp : pc1.hp_secondaries) {
-        if (!is_secondary(pc2, hp)) {
+    for (const auto &pc1_secondary : pc1.hp_secondaries) {
+        if (!is_secondary(pc2, pc1_secondary)) {
             return false;
         }
     }
@@ -106,9 +106,9 @@ public:
         }
         return false;
     }
-    static bool get_replica_config(const partition_configuration &partition_config,
+    static bool get_replica_config(const partition_configuration &pc,
                                    const ::dsn::host_port &node,
-                                   /*out*/ replica_configuration &replica_config);
+                                   /*out*/ replica_configuration &rc);
 
     // Return true if 'server_list' is a valid comma-separated list of servers, otherwise return
     // false. The result is filled into 'servers' if success.
@@ -122,7 +122,7 @@ public:
                                          const std::string &key,
                                          /*out*/ std::vector<dsn::host_port> &servers);
 };
-}
-} // namespace
+} // namespace replication
+} // namespace dsn
 
 #endif

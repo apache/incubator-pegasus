@@ -31,6 +31,7 @@
 #include "utils/fmt_logging.h"
 
 namespace dsn {
+class error_code;
 class host_port;
 class zrwlock_nr;
 
@@ -81,8 +82,7 @@ private:
     void do_add_duplication(std::shared_ptr<app_state> &app,
                             duplication_info_s_ptr &dup,
                             duplication_add_rpc &rpc,
-                            const std::string &remote_app_name,
-                            const int32_t remote_replica_count);
+                            const error_code &resp_err);
 
     void do_modify_duplication(std::shared_ptr<app_state> &app,
                                duplication_info_s_ptr &dup,

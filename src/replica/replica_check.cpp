@@ -27,6 +27,7 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -46,19 +47,18 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
 #include "split/replica_split_manager.h"
+#include "task/async_calls.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
@@ -82,7 +82,7 @@ namespace replication {
 
 void replica::init_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_init_group_check", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_init_group_check", [](std::string_view) {});
 
     _checker.only_one_thread_access();
 
@@ -92,17 +92,17 @@ void replica::init_group_check()
         return;
 
     CHECK(nullptr == _primary_states.group_check_task, "");
-    _primary_states.group_check_task =
-        tasking::enqueue_timer(LPC_GROUP_CHECK,
-                               &_tracker,
-                               [this] { broadcast_group_check(); },
-                               std::chrono::milliseconds(FLAGS_group_check_interval_ms),
-                               get_gpid().thread_hash());
+    _primary_states.group_check_task = tasking::enqueue_timer(
+        LPC_GROUP_CHECK,
+        &_tracker,
+        [this] { broadcast_group_check(); },
+        std::chrono::milliseconds(FLAGS_group_check_interval_ms),
+        get_gpid().thread_hash());
 }
 
 void replica::broadcast_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](std::string_view) {});
 
     CHECK_NOTNULL(_primary_states.group_check_task, "");
 
@@ -152,17 +152,17 @@ void replica::broadcast_group_check()
 
         LOG_INFO_PREFIX("send group check to {} with state {}", hp, enum_to_string(it->second));
 
-        dsn::task_ptr callback_task =
-            rpc::call(addr,
-                      RPC_GROUP_CHECK,
-                      *request,
-                      &_tracker,
-                      [=](error_code err, group_check_response &&resp) {
-                          auto alloc = std::make_shared<group_check_response>(std::move(resp));
-                          on_group_check_reply(err, request, alloc);
-                      },
-                      std::chrono::milliseconds(0),
-                      get_gpid().thread_hash());
+        dsn::task_ptr callback_task = rpc::call(
+            addr,
+            RPC_GROUP_CHECK,
+            *request,
+            &_tracker,
+            [=](error_code err, group_check_response &&resp) {
+                auto alloc = std::make_shared<group_check_response>(std::move(resp));
+                on_group_check_reply(err, request, alloc);
+            },
+            std::chrono::milliseconds(0),
+            get_gpid().thread_hash());
 
         _primary_states.group_check_pending_replies[hp] = callback_task;
     }
@@ -274,10 +274,11 @@ void replica::on_group_check_reply(error_code err,
 
 void replica::inject_error(error_code err)
 {
-    tasking::enqueue(LPC_REPLICATION_ERROR,
-                     &_tracker,
-                     [this, err]() { handle_local_failure(err); },
-                     get_gpid().thread_hash());
+    tasking::enqueue(
+        LPC_REPLICATION_ERROR,
+        &_tracker,
+        [this, err]() { handle_local_failure(err); },
+        get_gpid().thread_hash());
 }
 } // namespace replication
 } // namespace dsn

@@ -21,6 +21,7 @@
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <fmt/printf.h>
 #include <getopt.h>
 #include <inttypes.h>
@@ -49,19 +50,18 @@
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
+#include "rpc/rpc_host_port.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/async_calls.h"
 #include "shell/args.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
+#include "task/async_calls.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
 #include "utils/error_code.h"
-#include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
@@ -2231,16 +2231,16 @@ inline dsn::metric_filters rdb_estimated_keys_filters(int32_t table_id)
 // All selected partitions should have their primary replicas on this node.
 std::unique_ptr<aggregate_stats_calcs>
 create_rdb_estimated_keys_stats_calcs(const int32_t table_id,
-                                      const std::vector<dsn::partition_configuration> &partitions,
+                                      const std::vector<dsn::partition_configuration> &pcs,
                                       const dsn::host_port &node,
                                       const std::string &entity_type,
                                       std::vector<row_data> &rows)
 {
-    CHECK_EQ(rows.size(), partitions.size());
+    CHECK_EQ(rows.size(), pcs.size());
 
     partition_stat_map sums;
     for (size_t i = 0; i < rows.size(); ++i) {
-        if (partitions[i].hp_primary != node) {
+        if (pcs[i].hp_primary != node) {
             // Ignore once the replica of the metrics is not the primary of the partition.
             continue;
         }
@@ -2268,13 +2268,13 @@ bool get_rdb_estimated_keys_stats(shell_context *sc,
 
     int32_t table_id = 0;
     int32_t partition_count = 0;
-    std::vector<dsn::partition_configuration> partitions;
-    const auto &err = sc->ddl_client->list_app(table_name, table_id, partition_count, partitions);
+    std::vector<dsn::partition_configuration> pcs;
+    const auto &err = sc->ddl_client->list_app(table_name, table_id, partition_count, pcs);
     if (err != ::dsn::ERR_OK) {
         LOG_ERROR("list app {} failed, error = {}", table_name, err);
         return false;
     }
-    CHECK_EQ(partitions.size(), partition_count);
+    CHECK_EQ(pcs.size(), partition_count);
 
     const auto &results =
         get_metrics(nodes, rdb_estimated_keys_filters(table_id).to_query_string());
@@ -2289,11 +2289,11 @@ bool get_rdb_estimated_keys_stats(shell_context *sc,
         RETURN_SHELL_IF_GET_METRICS_FAILED(
             results[i], nodes[i], "rdb_estimated_keys for table(id={})", table_id);
 
-        auto calcs = create_rdb_estimated_keys_stats_calcs(
-            table_id, partitions, nodes[i].hp, "replica", rows);
+        auto calcs =
+            create_rdb_estimated_keys_stats_calcs(table_id, pcs, nodes[i].hp, "replica", rows);
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(calcs->aggregate_metrics(results[i].body()),
                                              nodes[i],
-                                             "rdb_estimated_keys for table(id={})",
+                                             "aggregate rdb_estimated_keys for table(id={})",
                                              table_id);
     }
 
@@ -2870,9 +2870,9 @@ bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args
     if (!sc->current_app_name.empty()) {
         int32_t app_id;
         int32_t partition_count;
-        std::vector<::dsn::partition_configuration> partitions;
+        std::vector<::dsn::partition_configuration> pcs;
         ::dsn::error_code err =
-            sc->ddl_client->list_app(sc->current_app_name, app_id, partition_count, partitions);
+            sc->ddl_client->list_app(sc->current_app_name, app_id, partition_count, pcs);
         if (err != ::dsn::ERR_OK) {
             std::cout << "list app [" << sc->current_app_name << "] failed, error=" << err
                       << std::endl;
@@ -2883,17 +2883,11 @@ bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args
         tp.add_row_name_and_data("app_id", app_id);
         tp.add_row_name_and_data("partition_count", partition_count);
         tp.add_row_name_and_data("partition_index", partition_index);
-        if (partitions.size() > partition_index) {
-            ::dsn::partition_configuration &pc = partitions[partition_index];
+        if (pcs.size() > partition_index) {
+            const auto &pc = pcs[partition_index];
             tp.add_row_name_and_data("primary", pc.hp_primary.to_string());
-
-            std::ostringstream oss;
-            for (int i = 0; i < pc.hp_secondaries.size(); ++i) {
-                if (i != 0)
-                    oss << ",";
-                oss << pc.hp_secondaries[i];
-            }
-            tp.add_row_name_and_data("secondaries", oss.str());
+            tp.add_row_name_and_data("secondaries",
+                                     fmt::format("{}", fmt::join(pc.hp_secondaries, ",")));
         }
     }
     tp.output(std::cout);

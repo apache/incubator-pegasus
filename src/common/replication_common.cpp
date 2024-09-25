@@ -34,8 +34,8 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "fmt/core.h"
-#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/dns_resolver.h" // IWYU pragma: keep
+#include "rpc/rpc_address.h"
 #include "runtime/service_app.h"
 #include "utils/config_api.h"
 #include "utils/filesystem.h"
@@ -166,26 +166,26 @@ int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_
     }
 }
 
-/*static*/ bool replica_helper::get_replica_config(const partition_configuration &partition_config,
+/*static*/ bool replica_helper::get_replica_config(const partition_configuration &pc,
                                                    const ::dsn::host_port &node,
-                                                   /*out*/ replica_configuration &replica_config)
+                                                   /*out*/ replica_configuration &rc)
 {
-    replica_config.pid = partition_config.pid;
-    replica_config.ballot = partition_config.ballot;
-    replica_config.learner_signature = invalid_signature;
-    SET_OBJ_IP_AND_HOST_PORT(replica_config, primary, partition_config, primary);
+    rc.pid = pc.pid;
+    rc.ballot = pc.ballot;
+    rc.learner_signature = invalid_signature;
+    SET_OBJ_IP_AND_HOST_PORT(rc, primary, pc, primary);
 
-    if (node == partition_config.hp_primary) {
-        replica_config.status = partition_status::PS_PRIMARY;
+    if (node == pc.hp_primary) {
+        rc.status = partition_status::PS_PRIMARY;
         return true;
     }
 
-    if (utils::contains(partition_config.hp_secondaries, node)) {
-        replica_config.status = partition_status::PS_SECONDARY;
+    if (utils::contains(pc.hp_secondaries, node)) {
+        rc.status = partition_status::PS_SECONDARY;
         return true;
     }
 
-    replica_config.status = partition_status::PS_INACTIVE;
+    rc.status = partition_status::PS_INACTIVE;
     return false;
 }
 

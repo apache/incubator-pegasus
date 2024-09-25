@@ -17,20 +17,29 @@
 
 #include "duplication_pipeline.h"
 
-#include <absl/strings/string_view.h>
-#include <stddef.h>
+#include <algorithm>
+#include <chrono>
+#include <cstddef>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "load_from_private_log.h"
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
-#include "runtime/rpc/rpc_holder.h"
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
+
+DSN_DEFINE_uint64(
+    replication,
+    dup_no_mutation_load_delay_ms,
+    100,
+    "The duration of the delay until the next execution if there is no mutation to be loaded.");
+DSN_TAG_VARIABLE(dup_no_mutation_load_delay_ms, FT_MUTABLE);
 
 METRIC_DEFINE_counter(replica,
                       dup_shipped_bytes,
@@ -46,7 +55,7 @@ namespace replication {
 //                     //
 
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
-    replica_base *, absl::string_view /*remote cluster*/, absl::string_view /*app*/)>
+    replica_base *, std::string_view /*remote cluster*/, std::string_view /*app*/)>
     mutation_duplicator::creator;
 
 //               //
@@ -57,9 +66,13 @@ void load_mutation::run()
 {
     decree last_decree = _duplicator->progress().last_decree;
     _start_decree = last_decree + 1;
-    if (_replica->private_log()->max_commit_on_disk() < _start_decree) {
-        // wait 100ms for next try if no mutation was added.
-        repeat(100_ms);
+
+    // Load the mutations from plog that have been committed recently, if any.
+    const auto max_plog_committed_decree =
+        std::min(_replica->private_log()->max_decree_on_disk(), _replica->last_applied_decree());
+    if (_start_decree > max_plog_committed_decree) {
+        // Wait for a while if no mutation was added.
+        repeat(std::chrono::milliseconds(FLAGS_dup_no_mutation_load_delay_ms));
         return;
     }
 

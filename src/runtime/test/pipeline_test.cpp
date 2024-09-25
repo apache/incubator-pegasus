@@ -30,7 +30,7 @@
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"
 #include "runtime/pipeline.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/chrono_literals.h"
 
 namespace dsn {

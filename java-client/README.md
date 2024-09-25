@@ -24,7 +24,7 @@ under the License.
 ### 1. Prepare
 
 ```
-cd scripts && bash recompile_thrift.sh
+cd scripts && bash download_thrift.sh
 ```
 
 ### 2. Format the code
@@ -60,7 +60,7 @@ mvn clean package -Dtest=TestPing
 ### Install
 
 ```
-cd scripts && bash recompile_thrift.sh && cd -
+cd scripts && bash download_thrift.sh && cd -
 mvn clean install -DskipTests
 ```
 
@@ -108,7 +108,7 @@ For each type of request(get, set, multiset, etc.), we collect 8 metrics:
 
 We use io.dropwizard.metrics library to calculate the request count.
 
-Currently, metrics are integrated with open-falcon(https://open-falcon.org/),
+Currently, metrics are integrated with open-falcon(https://github.com/open-falcon),
 <!-- markdown-link-check-disable -->
 which push counters to local http agent http://127.0.0.1:1988/push/v1.
 <!-- markdown-link-check-enable-->

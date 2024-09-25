@@ -176,9 +176,9 @@ inline void compare(const std::map<std::string, std::string> &expect,
 {
     for (auto it1 = actual.begin(), it2 = expect.begin();; ++it1, ++it2) {
         if (it1 == actual.end()) {
-            ASSERT_EQ(expect.end(), it2) << "Only in expect: hash_key=" << hash_key
-                                         << ", sort_key=" << it2->first
-                                         << ", value=" << it2->second;
+            ASSERT_EQ(expect.end(), it2)
+                << "Only in expect: hash_key=" << hash_key << ", sort_key=" << it2->first
+                << ", value=" << it2->second;
             break;
         }
         ASSERT_NE(expect.end(), it2) << "Only in actual: hash_key=" << hash_key
@@ -200,8 +200,8 @@ inline void compare(const T &expect, const U &actual)
             break;
         }
         ASSERT_NE(expect.end(), it2) << "Only in actual: hash_key=" << it1->first;
-        ASSERT_EQ(it1->first, it2->first) << "Diff: actual_hash_key=" << it1->first
-                                          << ", expected_hash_key=" << it2->first;
+        ASSERT_EQ(it1->first, it2->first)
+            << "Diff: actual_hash_key=" << it1->first << ", expected_hash_key=" << it2->first;
         ASSERT_NO_FATAL_FAILURE(compare(it1->second, it2->second, it1->first));
     }
 }

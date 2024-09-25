@@ -18,9 +18,12 @@
 #include <rocksdb/env.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <set>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "utils/env.h"
@@ -173,6 +176,40 @@ TEST(filesystem_test, verify_file_test)
     ASSERT_FALSE(verify_file("file_not_exists", FileDataType::kNonSensitive, "wrong_md5", 10086));
 
     remove_path(fname);
+}
+
+TEST(filesystem_test, absolute_path_test)
+{
+    const std::string kTestDir = "absolute_path_test";
+    ASSERT_TRUE(create_directory(kTestDir));
+    ASSERT_FALSE(is_absolute_path(kTestDir));
+
+    std::string abs_path;
+    ASSERT_TRUE(get_absolute_path(kTestDir, abs_path));
+    ASSERT_TRUE(is_absolute_path(abs_path));
+}
+
+TEST(filesystem_test, glob_test)
+{
+    const std::string kTestDir = "glob_test";
+    ASSERT_TRUE(create_directory(kTestDir));
+    std::vector<std::string> filenames = {"fuzz", "fuzzy", "fuzzyiest", "buzz"};
+    std::vector<std::pair<std::string, size_t>> matchers = {
+        {"file", 0},
+        {"fuzz", 1},
+        {"fuzz*", 3},
+        {"?uzz", 2},
+    };
+
+    for (const auto &name : filenames) {
+        ASSERT_TRUE(create_file(path_combine(kTestDir, name)));
+    }
+
+    for (const auto &[path_pattern, matched_count] : matchers) {
+        std::vector<std::string> matches;
+        ASSERT_TRUE(glob(path_combine(kTestDir, path_pattern), matches)) << path_pattern;
+        ASSERT_EQ(matched_count, matches.size()) << path_pattern;
+    }
 }
 
 } // namespace filesystem

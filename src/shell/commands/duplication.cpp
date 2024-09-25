@@ -19,7 +19,6 @@
 
 #include <fmt/core.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <initializer_list>
 #include <iostream>
 #include <memory>
@@ -51,27 +50,23 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     // add_dup <app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str]
     // [-r|--remote_replica_count num]
 
-    argh::parser cmd(args.argc, args.argv);
-    if (cmd.pos_args().size() > 5) {
-        fmt::print(stderr, "too many params\n");
-        return false;
-    }
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
     if (!cmd(1)) {
-        fmt::print(stderr, "missing param <app_name>\n");
+        SHELL_PRINTLN_ERROR("missing param <app_name>");
         return false;
     }
     std::string app_name = cmd(1).str();
 
     if (!cmd(2)) {
-        fmt::print(stderr, "missing param <remote_cluster_name>\n");
+        SHELL_PRINTLN_ERROR("missing param <remote_cluster_name>");
         return false;
     }
     std::string remote_cluster_name = cmd(2).str();
+
     if (remote_cluster_name == sc->current_cluster_name) {
-        fmt::print(stderr,
-                   "illegal operation: adding duplication to itself [remote: {}]\n",
-                   remote_cluster_name);
+        SHELL_PRINTLN_ERROR("illegal operation: adding duplication to itself [remote: {}]",
+                            remote_cluster_name);
         return true;
     }
 
@@ -87,6 +82,14 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     uint32_t remote_replica_count = 0;
     PARSE_OPT_UINT(remote_replica_count, 0, {"-r", "--remote_replica_count"});
 
+    fmt::println("trying to add duplication [app_name: {}, remote_cluster_name: {}, "
+                 "is_duplicating_checkpoint: {}, remote_app_name: {}, remote_replica_count: {}]",
+                 app_name,
+                 remote_cluster_name,
+                 is_duplicating_checkpoint,
+                 remote_app_name,
+                 remote_replica_count);
+
     auto err_resp = sc->ddl_client->add_dup(app_name,
                                             remote_cluster_name,
                                             is_duplicating_checkpoint,
@@ -99,36 +102,63 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         hint = err_resp.get_value().hint;
     }
 
-    if (!err) {
-        fmt::print(stderr,
-                   "adding duplication failed [app: {}, remote: {}, checkpoint: {}, error: {}]\n",
-                   app_name,
-                   remote_cluster_name,
-                   is_duplicating_checkpoint,
-                   err);
+    if (!err && err.code() != dsn::ERR_DUP_EXIST) {
+        SHELL_PRINTLN_ERROR(
+            "adding duplication failed [app_name: {}, remote_cluster_name: {}, "
+            "is_duplicating_checkpoint: {}, remote_app_name: {}, remote_replica_count: {}, "
+            "error: {}]",
+            app_name,
+            remote_cluster_name,
+            is_duplicating_checkpoint,
+            remote_app_name,
+            remote_replica_count,
+            err);
 
         if (!hint.empty()) {
-            fmt::print(stderr, "detail:\n  {}\n", hint);
+            SHELL_PRINTLN_ERROR("detail:\n  {}", hint);
         }
 
         return true;
     }
 
+    if (err.code() == dsn::ERR_DUP_EXIST) {
+        SHELL_PRINT_WARNING("duplication has been existing");
+    } else {
+        SHELL_PRINT_OK("adding duplication succeed");
+    }
+
     const auto &resp = err_resp.get_value();
-    fmt::print("adding duplication succeed [app: {}, remote: {}, appid: {}, dupid: "
-               "{}], checkpoint: {}",
-               app_name,
-               remote_cluster_name,
-               resp.appid,
-               resp.dupid,
-               is_duplicating_checkpoint);
+    SHELL_PRINT_OK(" [app_name: {}, remote_cluster_name: {}, appid: {}, dupid: {}",
+                   app_name,
+                   remote_cluster_name,
+                   resp.appid,
+                   resp.dupid);
+
+    if (err) {
+        SHELL_PRINT_OK(", is_duplicating_checkpoint: {}", is_duplicating_checkpoint);
+    }
 
     if (resp.__isset.remote_app_name) {
-        fmt::print(", remote_app_name: {}\n", remote_app_name);
-    } else {
-        fmt::print("\nWARNING: meta server does NOT support specifying remote_app_name, "
-                   "remote_app_name might has been specified with {}\n",
-                   app_name);
+        SHELL_PRINT_OK(", remote_app_name: {}", resp.remote_app_name);
+    }
+
+    if (resp.__isset.remote_replica_count) {
+        SHELL_PRINT_OK(", remote_replica_count: {}", resp.remote_replica_count);
+    }
+
+    SHELL_PRINTLN_OK("]");
+
+    if (!resp.__isset.remote_app_name) {
+        SHELL_PRINTLN_WARNING("WARNING: meta server does NOT support specifying remote_app_name, "
+                              "remote_app_name might has been specified with '{}'",
+                              app_name);
+    }
+
+    if (!resp.__isset.remote_replica_count) {
+        SHELL_PRINTLN_WARNING(
+            "WARNING: meta server does NOT support specifying remote_replica_count, "
+            "remote_replica_count might has been specified with the replica count of '{}'",
+            app_name);
     }
 
     return true;
@@ -139,7 +169,7 @@ bool string2dupid(const std::string &str, dupid_t *dup_id)
 {
     bool ok = dsn::buf2int32(str, *dup_id);
     if (!ok) {
-        fmt::print(stderr, "parsing {} as positive int failed: {}\n", str);
+        SHELL_PRINTLN_ERROR("parsing {} as positive int failed", str);
         return false;
     }
     return true;
@@ -151,18 +181,18 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
 
     argh::parser cmd(args.argc, args.argv);
     if (cmd.pos_args().size() > 2) {
-        fmt::print(stderr, "too many params\n");
+        SHELL_PRINTLN_ERROR("too many params");
         return false;
     }
     for (const auto &flag : cmd.flags()) {
         if (flag != "d" && flag != "detail") {
-            fmt::print(stderr, "unknown flag {}\n", flag);
+            SHELL_PRINTLN_ERROR("unknown flag {}", flag);
             return false;
         }
     }
 
     if (!cmd(1)) {
-        fmt::print(stderr, "missing param <app_name>\n");
+        SHELL_PRINTLN_ERROR("missing param <app_name>");
         return false;
     }
     std::string app_name = cmd(1).str();
@@ -176,20 +206,20 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
         err = dsn::error_s::make(err_resp.get_value().err);
     }
     if (!err) {
-        fmt::print(stderr, "querying duplications of app [{}] failed, error={}\n", app_name, err);
+        SHELL_PRINTLN_ERROR("querying duplications of app [{}] failed, error={}", app_name, err);
 
         return true;
     }
 
     if (detail) {
-        fmt::print("duplications of app [{}] in detail:\n", app_name);
-        fmt::print("{}\n\n", duplication_query_response_to_string(err_resp.get_value()));
+        fmt::println("duplications of app [{}] in detail:", app_name);
+        fmt::println("{}\n", duplication_query_response_to_string(err_resp.get_value()));
 
         return true;
     }
 
     const auto &resp = err_resp.get_value();
-    fmt::print("duplications of app [{}] are listed as below:\n", app_name);
+    fmt::println("duplications of app [{}] are listed as below:", app_name);
 
     dsn::utils::table_printer printer;
     printer.add_title("dup_id");
@@ -225,9 +255,9 @@ void handle_duplication_modify_response(
         hint = " [duplication not found]";
     }
     if (err.is_ok()) {
-        fmt::print("{} succeed\n", operation);
+        SHELL_PRINTLN_OK("{} succeed", operation);
     } else {
-        fmt::print(stderr, "{} failed, error={}{}\n", operation, err.description(), hint);
+        SHELL_PRINTLN_ERROR("{} failed, error={}{}", operation, err.description(), hint);
     }
 }
 
@@ -290,19 +320,19 @@ bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args)
 
     argh::parser cmd(args.argc, args.argv);
     if (cmd.pos_args().size() > 4) {
-        fmt::print(stderr, "too many params\n");
+        SHELL_PRINTLN_ERROR("too many params");
         return false;
     }
     std::string app_name = cmd(1).str();
     std::string dupid_str = cmd(2).str();
     dupid_t dup_id;
     if (!dsn::buf2int32(dupid_str, dup_id)) {
-        fmt::print(stderr, "invalid dup_id {}\n", dupid_str);
+        SHELL_PRINTLN_ERROR("invalid dup_id {}", dupid_str);
         return false;
     }
     std::string fail_mode_str = cmd(3).str();
     if (fail_mode_str != "slow" && fail_mode_str != "skip") {
-        fmt::print(stderr, "fail_mode must be \"slow\" or  \"skip\": {}\n", fail_mode_str);
+        SHELL_PRINTLN_ERROR("fail_mode must be \"slow\" or  \"skip\": {}", fail_mode_str);
         return false;
     }
     auto fmode = fail_mode_str == "slow" ? duplication_fail_mode::FAIL_SLOW

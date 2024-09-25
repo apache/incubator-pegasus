@@ -57,8 +57,9 @@
 #include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
 #include "meta_test_base.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "runtime/api_layer1.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
@@ -116,6 +117,12 @@ public:
                                         const int32_t remote_replica_count)
     {
         return create_dup(app_name, remote_cluster, app_name, remote_replica_count);
+    }
+
+    duplication_add_response create_dup(const std::string &app_name,
+                                        const int32_t remote_replica_count)
+    {
+        return create_dup(app_name, kTestRemoteClusterName, remote_replica_count);
     }
 
     duplication_add_response create_dup(const std::string &app_name)
@@ -399,7 +406,7 @@ public:
         struct TestData
         {
             std::string app_name;
-            std::string remote;
+            std::string remote_cluster_name;
 
             bool specified;
             std::string remote_app_name;
@@ -414,13 +421,14 @@ public:
              kTestRemoteAppName,
              kTestRemoteReplicaCount,
              ERR_OK},
-            // A duplication that has been added would be found with its original remote_app_name.
+            // Add a duplication that has been existing for the same table with the same remote
+            // cluster.
             {kTestAppName,
              kTestRemoteClusterName,
-             true,
+             false,
              kTestRemoteAppName,
              kTestRemoteReplicaCount,
-             ERR_OK},
+             ERR_DUP_EXIST},
             // The general case that duplicating to remote cluster with same remote_app_name.
             {kTestSameAppName,
              kTestRemoteClusterName,
@@ -437,7 +445,7 @@ public:
              ERR_INVALID_PARAMETERS},
             // Duplicating to local cluster is not allowed.
             {kTestAppName,
-             get_current_cluster_name(),
+             get_current_dup_cluster_name(),
              true,
              kTestRemoteAppName,
              kTestRemoteReplicaCount,
@@ -477,10 +485,12 @@ public:
         for (auto test : tests) {
             duplication_add_response resp;
             if (test.specified) {
-                resp = create_dup(
-                    test.app_name, test.remote, test.remote_app_name, test.remote_replica_count);
+                resp = create_dup(test.app_name,
+                                  test.remote_cluster_name,
+                                  test.remote_app_name,
+                                  test.remote_replica_count);
             } else {
-                resp = create_dup_unspecified(test.app_name, test.remote);
+                resp = create_dup_unspecified(test.app_name, test.remote_cluster_name);
             }
 
             ASSERT_EQ(test.wec, resp.err);
@@ -494,7 +504,7 @@ public:
             ASSERT_TRUE(dup != nullptr);
             ASSERT_EQ(app->app_id, dup->app_id);
             ASSERT_EQ(duplication_status::DS_PREPARE, dup->_status);
-            ASSERT_EQ(test.remote, dup->remote_cluster_name);
+            ASSERT_EQ(test.remote_cluster_name, dup->remote_cluster_name);
             ASSERT_EQ(test.remote_app_name, resp.remote_app_name);
             ASSERT_EQ(test.remote_app_name, dup->remote_app_name);
             ASSERT_EQ(test.remote_replica_count, resp.remote_replica_count);
@@ -524,23 +534,24 @@ TEST_F(meta_duplication_service_test, dup_op_upon_unavail_app)
     create_app(test_app_unavail);
     find_app(test_app_unavail)->status = app_status::AS_DROPPED;
 
-    dupid_t test_dup = create_dup(kTestAppName).dupid;
-
     struct TestData
     {
         std::string app;
-
         error_code wec;
     } tests[] = {
         {test_app_not_exist, ERR_APP_NOT_EXIST},
         {test_app_unavail, ERR_APP_NOT_EXIST},
-
         {kTestAppName, ERR_OK},
     };
 
     for (auto test : tests) {
+        const auto &resp = create_dup(test.app);
+        ASSERT_EQ(test.wec, resp.err);
+
         ASSERT_EQ(test.wec, query_dup_info(test.app).err);
-        ASSERT_EQ(test.wec, create_dup(test.app).err);
+
+        // For the response with some error, `dupid` doesn't matter.
+        dupid_t test_dup = test.wec == ERR_OK ? resp.dupid : static_cast<dupid_t>(dsn_now_s());
         ASSERT_EQ(test.wec,
                   change_dup_status(test.app, test_dup, duplication_status::DS_REMOVED).err);
     }
@@ -669,7 +680,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
     auto app = find_app(test_app);
 
     // generate all primaries on node[0]
-    for (partition_configuration &pc : app->partitions) {
+    for (auto &pc : app->pcs) {
         pc.ballot = random32(1, 10000);
         SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, server_nodes[0]);
         SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, server_nodes[1], server_nodes[2]);
@@ -892,7 +903,7 @@ TEST_F(meta_duplication_service_test, fail_mode)
 
     // ensure dup_sync will synchronize fail_mode
     const auto hp = generate_node_list(3)[0];
-    for (partition_configuration &pc : app->partitions) {
+    for (auto &pc : app->pcs) {
         SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, hp);
     }
     initialize_node_state();
@@ -958,39 +969,99 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
 {
     struct test_case
     {
+        int32_t remote_replica_count;
         std::vector<std::string> fail_cfg_name;
         std::vector<std::string> fail_cfg_action;
         bool is_altering;
         duplication_status::type cur_status;
         duplication_status::type next_status;
-    } test_cases[] = {{{"create_app_ok"},
-                       {"void()"},
+    } test_cases[] = {// 3 remote replicas with both primary and secondaries valid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,2,0)"},
                        false,
                        duplication_status::DS_LOG,
                        duplication_status::DS_INIT},
-                      // the case just `palace holder`, actually
-                      // `check_follower_app_if_create_completed` is failed by default in unit test
-                      {{"create_app_failed"},
+                      // 3 remote replicas with primary invalid and all secondaries valid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(false,2,0)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // 3 remote replicas with primary valid and only one secondary present
+                      // and valid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,1,0)"},
+                       false,
+                       duplication_status::DS_LOG,
+                       duplication_status::DS_INIT},
+                      // 3 remote replicas with primary valid and one secondary invalid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,1,1)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // 3 remote replicas with primary valid and only one secondary present
+                      // and invalid.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,0,1)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // 3 remote replicas with primary valid and both secondaries absent.
+                      {3,
+                       {"create_app_ok"},
+                       {"void(true,0,0)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // 1 remote replicas with primary valid.
+                      {1,
+                       {"create_app_ok"},
+                       {"void(true,0,0)"},
+                       false,
+                       duplication_status::DS_LOG,
+                       duplication_status::DS_INIT},
+                      // 1 remote replicas with primary invalid.
+                      {1,
+                       {"create_app_ok"},
+                       {"void(false,0,0)"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      // The case is just a "palace holder", actually
+                      // `check_follower_app_if_create_completed` would fail by default
+                      // in unit test.
+                      {3,
+                       {"create_app_failed"},
                        {"off()"},
                        false,
                        duplication_status::DS_APP,
                        duplication_status::DS_INIT},
-                      {{"create_app_ok", "persist_dup_status_failed"},
-                       {"void()", "return()"},
+                      {3,
+                       {"create_app_ok", "persist_dup_status_failed"},
+                       {"void(true,2,0)", "return()"},
                        true,
                        duplication_status::DS_APP,
                        duplication_status::DS_LOG}};
 
+    size_t i = 0;
     for (const auto &test : test_cases) {
-        const auto test_app = fmt::format("{}{}", test.fail_cfg_name[0], test.fail_cfg_name.size());
-        create_app(test_app);
-        auto app = find_app(test_app);
+        const auto &app_name = fmt::format("check_follower_app_if_create_completed_test_{}", i++);
+        create_app(app_name);
 
-        auto dup_add_resp = create_dup(test_app);
+        auto app = find_app(app_name);
+        auto dup_add_resp = create_dup(app_name, test.remote_replica_count);
         auto dup = app->duplications[dup_add_resp.dupid];
+
         // 'check_follower_app_if_create_completed' must execute under duplication_status::DS_APP,
-        // so force update it
+        // so force update it.
         force_update_dup_status(dup, duplication_status::DS_APP);
+
         fail::setup();
         for (int i = 0; i < test.fail_cfg_name.size(); i++) {
             fail::cfg(test.fail_cfg_name[i], test.fail_cfg_action[i]);
@@ -998,6 +1069,7 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
         check_follower_app_if_create_completed(dup);
         wait_all();
         fail::teardown();
+
         ASSERT_EQ(dup->is_altering(), test.is_altering);
         ASSERT_EQ(next_status(dup), test.next_status);
         ASSERT_EQ(dup->status(), test.cur_status);

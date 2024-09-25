@@ -33,6 +33,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -43,15 +44,15 @@
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
 #include "replica_admin_types.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
+#include "task/async_calls.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
@@ -59,7 +60,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "absl/strings/string_view.h"
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
@@ -125,7 +125,7 @@ public:
     dsn::error_code list_app(const std::string &app_name,
                              int32_t &app_id,
                              int32_t &partition_count,
-                             std::vector<partition_configuration> &partitions);
+                             std::vector<partition_configuration> &pcs);
 
     dsn::replication::configuration_meta_control_response
     control_meta_function_level(meta_function_level::type level);
@@ -162,7 +162,7 @@ public:
                                int32_t old_app_id,
                                const std::string &new_app_name,
                                bool skip_bad_partition,
-                               const std::string &restore_path = "");
+                               const std::string &restore_path);
 
     dsn::error_code query_restore(int32_t restore_app_id, bool detailed);
 
@@ -179,14 +179,15 @@ public:
 
     error_with<query_backup_status_response> query_backup(int32_t app_id, int64_t backup_id);
 
-    dsn::error_code ls_backup_policy();
+    dsn::error_code ls_backup_policy(bool json);
 
-    dsn::error_code disable_backup_policy(const std::string &policy_name);
+    dsn::error_code disable_backup_policy(const std::string &policy_name, bool force);
 
     dsn::error_code enable_backup_policy(const std::string &policy_name);
 
     dsn::error_code query_backup_policy(const std::vector<std::string> &policy_names,
-                                        int backup_info_cnt);
+                                        int backup_info_cnt,
+                                        bool json);
 
     dsn::error_code update_backup_policy(const std::string &policy_name,
                                          const std::vector<int32_t> &add_appids,
@@ -298,10 +299,9 @@ private:
                   &_tracker,
                   [this, task](
                       error_code err, dsn::message_ex *request, dsn::message_ex *response) mutable {
-
                       FAIL_POINT_INJECT_NOT_RETURN_F(
                           "ddl_client_request_meta",
-                          [&err, this](absl::string_view str) { err = pop_mock_error(); });
+                          [&err, this](std::string_view str) { err = pop_mock_error(); });
 
                       end_meta_request(std::move(task), 1, err, request, response);
                   });
@@ -342,7 +342,7 @@ private:
 
             FAIL_POINT_INJECT_NOT_RETURN_F(
                 "ddl_client_request_meta",
-                [&resp, this](absl::string_view str) { resp.err = pop_mock_error(); });
+                [&resp, this](std::string_view str) { resp.err = pop_mock_error(); });
 
             LOG_INFO("received response from meta server: rpc_code={}, err={}, attempt_count={}, "
                      "max_attempt_count={}",
@@ -378,10 +378,11 @@ private:
         static constexpr int MAX_RETRY = 2;
         error_code err = ERR_UNKNOWN;
         for (int retry = 0; retry < MAX_RETRY; retry++) {
-            task_ptr task = rpc.call(dsn::dns_resolver::instance().resolve_address(_meta_server),
-                                     &_tracker,
-                                     [&err](error_code code) { err = code; },
-                                     reply_thread_hash);
+            task_ptr task = rpc.call(
+                dsn::dns_resolver::instance().resolve_address(_meta_server),
+                &_tracker,
+                [&err](error_code code) { err = code; },
+                reply_thread_hash);
             task->wait();
             if (err == ERR_OK) {
                 break;

@@ -24,9 +24,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <string_view>
 #include <type_traits>
 
-#include "absl/strings/string_view.h"
 #include "block_service/block_service.h"
 #include "block_service/block_service_manager.h"
 #include "common/replica_envs.h"
@@ -39,14 +39,14 @@
 #include "meta/meta_state_service.h"
 #include "meta/server_state.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
+#include "task/async_calls.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
@@ -101,7 +101,7 @@ void bulk_load_service::initialize_bulk_load_service()
 void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
 {
     FAIL_POINT_INJECT_F("meta_on_start_bulk_load",
-                        [=](absl::string_view) { rpc.response().err = ERR_OK; });
+                        [=](std::string_view) { rpc.response().err = ERR_OK; });
 
     const auto &request = rpc.request();
     auto &response = rpc.response();
@@ -155,10 +155,11 @@ void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
     // avoid possible load balancing
     _meta_svc->set_function_level(meta_function_level::fl_steady);
 
-    tasking::enqueue(LPC_META_STATE_NORMAL,
-                     _meta_svc->tracker(),
-                     [this, rpc, app]() { do_start_app_bulk_load(std::move(app), std::move(rpc)); },
-                     server_state::sStateHash);
+    tasking::enqueue(
+        LPC_META_STATE_NORMAL,
+        _meta_svc->tracker(),
+        [this, rpc, app]() { do_start_app_bulk_load(std::move(app), std::move(rpc)); },
+        server_state::sStateHash);
 }
 
 // ThreadPool: THREAD_POOL_META_SERVER
@@ -170,7 +171,7 @@ bulk_load_service::check_bulk_load_request_params(const start_bulk_load_request 
                                                   std::string &hint_msg)
 {
     FAIL_POINT_INJECT_F("meta_check_bulk_load_request_params",
-                        [](absl::string_view) -> error_code { return ERR_OK; });
+                        [](std::string_view) -> error_code { return ERR_OK; });
 
     if (!validate_ingest_behind(envs, request.ingest_behind)) {
         hint_msg = fmt::format("inconsistent ingestion behind option");
@@ -356,7 +357,7 @@ bool bulk_load_service::check_partition_status(
     const gpid &pid,
     bool always_unhealthy_check,
     const std::function<void(const std::string &, const gpid &)> &retry_function,
-    /*out*/ partition_configuration &pconfig)
+    /*out*/ partition_configuration &pc)
 {
     std::shared_ptr<app_state> app = get_app(pid.get_app_id());
     if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
@@ -369,18 +370,19 @@ bool bulk_load_service::check_partition_status(
         return false;
     }
 
-    pconfig = app->partitions[pid.get_partition_index()];
-    if (!pconfig.hp_primary) {
+    pc = app->pcs[pid.get_partition_index()];
+    if (!pc.hp_primary) {
         LOG_WARNING("app({}) partition({}) primary is invalid, try it later", app_name, pid);
-        tasking::enqueue(LPC_META_STATE_NORMAL,
-                         _meta_svc->tracker(),
-                         [retry_function, app_name, pid]() { retry_function(app_name, pid); },
-                         0,
-                         std::chrono::seconds(1));
+        tasking::enqueue(
+            LPC_META_STATE_NORMAL,
+            _meta_svc->tracker(),
+            [retry_function, app_name, pid]() { retry_function(app_name, pid); },
+            0,
+            std::chrono::seconds(1));
         return false;
     }
 
-    if (pconfig.hp_secondaries.size() < pconfig.max_replica_count - 1) {
+    if (pc.hp_secondaries.size() < pc.max_replica_count - 1) {
         bulk_load_status::type p_status;
         {
             zauto_read_lock l(_lock);
@@ -398,11 +400,12 @@ bool bulk_load_service::check_partition_status(
                     app_name,
                     pid,
                     dsn::enum_to_string(p_status));
-        tasking::enqueue(LPC_META_STATE_NORMAL,
-                         _meta_svc->tracker(),
-                         [retry_function, app_name, pid]() { retry_function(app_name, pid); },
-                         0,
-                         std::chrono::seconds(1));
+        tasking::enqueue(
+            LPC_META_STATE_NORMAL,
+            _meta_svc->tracker(),
+            [retry_function, app_name, pid]() { retry_function(app_name, pid); },
+            0,
+            std::chrono::seconds(1));
         return false;
     }
     return true;
@@ -411,9 +414,9 @@ bool bulk_load_service::check_partition_status(
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::partition_bulk_load(const std::string &app_name, const gpid &pid)
 {
-    FAIL_POINT_INJECT_F("meta_bulk_load_partition_bulk_load", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("meta_bulk_load_partition_bulk_load", [](std::string_view) {});
 
-    partition_configuration pconfig;
+    partition_configuration pc;
     if (!check_partition_status(app_name,
                                 pid,
                                 false,
@@ -421,7 +424,7 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
                                           this,
                                           std::placeholders::_1,
                                           std::placeholders::_2),
-                                pconfig)) {
+                                pc)) {
         return;
     }
 
@@ -431,18 +434,18 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
         const app_bulk_load_info &ainfo = _app_bulk_load_info[pid.get_app_id()];
         req->pid = pid;
         req->app_name = app_name;
-        SET_IP_AND_HOST_PORT(*req, primary, pconfig.primary, pconfig.hp_primary);
+        SET_IP_AND_HOST_PORT(*req, primary, pc.primary, pc.hp_primary);
         req->remote_provider_name = ainfo.file_provider_type;
         req->cluster_name = ainfo.cluster_name;
         req->meta_bulk_load_status = get_partition_bulk_load_status_unlocked(pid);
-        req->ballot = pconfig.ballot;
+        req->ballot = pc.ballot;
         req->query_bulk_load_metadata = is_partition_metadata_not_updated_unlocked(pid);
         req->remote_root_path = ainfo.remote_root_path;
     }
 
     LOG_INFO("send bulk load request to node({}), app({}), partition({}), partition "
              "status = {}, remote provider = {}, cluster_name = {}, remote_root_path = {}",
-             FMT_HOST_PORT_AND_IP(pconfig, primary),
+             FMT_HOST_PORT_AND_IP(pc, primary),
              app_name,
              pid,
              dsn::enum_to_string(req->meta_bulk_load_status),
@@ -451,17 +454,14 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
              req->remote_root_path);
 
     bulk_load_rpc rpc(std::move(req), RPC_BULK_LOAD, 0_ms, 0, pid.thread_hash());
-    rpc.call(pconfig.primary, _meta_svc->tracker(), [this, rpc](error_code err) mutable {
-        // fill host_port struct if needed
-        // remote server maybe not supported host_post, just have address
-        auto &bulk_load_resp = rpc.response();
-        if (!bulk_load_resp.__isset.hp_group_bulk_load_state) {
-            bulk_load_resp.__set_hp_group_bulk_load_state({});
-            for (const auto & [ addr, pbls ] : bulk_load_resp.group_bulk_load_state) {
-                bulk_load_resp.hp_group_bulk_load_state[host_port::from_address(addr)] = pbls;
-            }
-        }
-
+    rpc.call(pc.primary, _meta_svc->tracker(), [this, pid, rpc, pc](error_code err) mutable {
+        // The remote server may not support FQDN, but do not try to reverse resolve the
+        // IP addresses because they may be unresolved. Just warning and ignore this.
+        LOG_WARNING_IF(!rpc.response().__isset.hp_group_bulk_load_state,
+                       "The {} primary {} doesn't support FQDN, the response "
+                       "hp_group_bulk_load_state field is not set",
+                       pid,
+                       FMT_HOST_PORT_AND_IP(pc, primary));
         on_partition_bulk_load_reply(err, rpc.request(), rpc.response());
     });
 }
@@ -532,7 +532,7 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
         handle_app_unavailable(pid.get_app_id(), app_name);
         return;
     }
-    ballot current_ballot = app->partitions[pid.get_partition_index()].ballot;
+    ballot current_ballot = app->pcs[pid.get_partition_index()].ballot;
     if (request.ballot < current_ballot) {
         LOG_WARNING(
             "receive out-date response from node({}), app({}), partition({}), request ballot = "
@@ -583,7 +583,7 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::try_resend_bulk_load_request(const std::string &app_name, const gpid &pid)
 {
-    FAIL_POINT_INJECT_F("meta_bulk_load_resend_request", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("meta_bulk_load_resend_request", [](std::string_view) {});
     zauto_read_lock l(_lock);
     if (is_app_bulk_loading_unlocked(pid.get_app_id())) {
         tasking::enqueue(LPC_META_STATE_NORMAL,
@@ -596,7 +596,7 @@ void bulk_load_service::try_resend_bulk_load_request(const std::string &app_name
 
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::handle_app_downloading(const bulk_load_response &response,
-                                               const host_port &primary_addr)
+                                               const host_port &primary)
 {
     const std::string &app_name = response.app_name;
     const gpid &pid = response.pid;
@@ -605,7 +605,7 @@ void bulk_load_service::handle_app_downloading(const bulk_load_response &respons
         LOG_WARNING(
             "receive bulk load response from node({}) app({}), partition({}), primary_status({}), "
             "but total_download_progress is not set",
-            primary_addr,
+            primary,
             app_name,
             pid,
             dsn::enum_to_string(response.primary_bulk_load_status));
@@ -618,7 +618,7 @@ void bulk_load_service::handle_app_downloading(const bulk_load_response &respons
             !bulk_load_states.__isset.download_status) {
             LOG_WARNING("receive bulk load response from node({}) app({}), partition({}), "
                         "primary_status({}), but node({}) progress or status is not set",
-                        primary_addr,
+                        primary,
                         app_name,
                         pid,
                         dsn::enum_to_string(response.primary_bulk_load_status),
@@ -657,7 +657,7 @@ void bulk_load_service::handle_app_downloading(const bulk_load_response &respons
     int32_t total_progress = response.total_download_progress;
     LOG_INFO("receive bulk load response from node({}) app({}) partition({}), primary_status({}), "
              "total_download_progress = {}",
-             primary_addr,
+             primary,
              app_name,
              pid,
              dsn::enum_to_string(response.primary_bulk_load_status),
@@ -678,7 +678,7 @@ void bulk_load_service::handle_app_downloading(const bulk_load_response &respons
 
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
-                                             const host_port &primary_addr)
+                                             const host_port &primary)
 {
     const std::string &app_name = response.app_name;
     const gpid &pid = response.pid;
@@ -686,7 +686,7 @@ void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
     if (!response.__isset.is_group_ingestion_finished) {
         LOG_WARNING("receive bulk load response from node({}) app({}) partition({}), "
                     "primary_status({}), but is_group_ingestion_finished is not set",
-                    primary_addr,
+                    primary,
                     app_name,
                     pid,
                     dsn::enum_to_string(response.primary_bulk_load_status));
@@ -698,7 +698,7 @@ void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
         if (!bulk_load_states.__isset.ingest_status) {
             LOG_WARNING("receive bulk load response from node({}) app({}) partition({}), "
                         "primary_status({}), but node({}) ingestion_status is not set",
-                        primary_addr,
+                        primary,
                         app_name,
                         pid,
                         dsn::enum_to_string(response.primary_bulk_load_status),
@@ -717,7 +717,7 @@ void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
 
     LOG_INFO("receive bulk load response from node({}) app({}) partition({}), primary_status({}), "
              "is_group_ingestion_finished = {}",
-             primary_addr,
+             primary,
              app_name,
              pid,
              dsn::enum_to_string(response.primary_bulk_load_status),
@@ -736,7 +736,7 @@ void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
 
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &response,
-                                                const host_port &primary_addr)
+                                                const host_port &primary)
 {
     const std::string &app_name = response.app_name;
     const gpid &pid = response.pid;
@@ -744,7 +744,7 @@ void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &respon
     if (!response.__isset.is_group_bulk_load_context_cleaned_up) {
         LOG_WARNING("receive bulk load response from node({}) app({}) partition({}), "
                     "primary_status({}), but is_group_bulk_load_context_cleaned_up is not set",
-                    primary_addr,
+                    primary,
                     app_name,
                     pid,
                     dsn::enum_to_string(response.primary_bulk_load_status));
@@ -755,7 +755,7 @@ void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &respon
         if (!kv.second.__isset.is_cleaned_up) {
             LOG_WARNING("receive bulk load response from node({}) app({}), partition({}), "
                         "primary_status({}), but node({}) is_cleaned_up is not set",
-                        primary_addr,
+                        primary,
                         app_name,
                         pid,
                         dsn::enum_to_string(response.primary_bulk_load_status),
@@ -770,7 +770,7 @@ void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &respon
             LOG_WARNING(
                 "receive bulk load response from node({}) app({}) partition({}), current partition "
                 "has already been cleaned up",
-                primary_addr,
+                primary,
                 app_name,
                 pid);
             return;
@@ -781,7 +781,7 @@ void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &respon
     bool group_cleaned_up = response.is_group_bulk_load_context_cleaned_up;
     LOG_INFO("receive bulk load response from node({}) app({}) partition({}), primary status = {}, "
              "is_group_bulk_load_context_cleaned_up = {}",
-             primary_addr,
+             primary,
              app_name,
              pid,
              dsn::enum_to_string(response.primary_bulk_load_status),
@@ -817,7 +817,7 @@ void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &respon
 
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::handle_app_pausing(const bulk_load_response &response,
-                                           const host_port &primary_addr)
+                                           const host_port &primary)
 {
     const std::string &app_name = response.app_name;
     const gpid &pid = response.pid;
@@ -825,7 +825,7 @@ void bulk_load_service::handle_app_pausing(const bulk_load_response &response,
     if (!response.__isset.is_group_bulk_load_paused) {
         LOG_WARNING("receive bulk load response from node({}) app({}) partition({}), "
                     "primary_status({}), but is_group_bulk_load_paused is not set",
-                    primary_addr,
+                    primary,
                     app_name,
                     pid,
                     dsn::enum_to_string(response.primary_bulk_load_status));
@@ -836,7 +836,7 @@ void bulk_load_service::handle_app_pausing(const bulk_load_response &response,
         if (!kv.second.__isset.is_paused) {
             LOG_WARNING("receive bulk load response from node({}) app({}), partition({}), "
                         "primary_status({}), but node({}) is_paused is not set",
-                        primary_addr,
+                        primary,
                         app_name,
                         pid,
                         dsn::enum_to_string(response.primary_bulk_load_status),
@@ -848,7 +848,7 @@ void bulk_load_service::handle_app_pausing(const bulk_load_response &response,
     bool is_group_paused = response.is_group_bulk_load_paused;
     LOG_INFO("receive bulk load response from node({}) app({}) partition({}), primary status = {}, "
              "is_group_bulk_load_paused = {}",
-             primary_addr,
+             primary,
              app_name,
              pid,
              dsn::enum_to_string(response.primary_bulk_load_status),
@@ -1091,7 +1091,7 @@ void bulk_load_service::update_app_status_on_remote_storage_unlocked(
     int32_t app_id, bulk_load_status::type new_status, error_code err, bool should_send_request)
 {
     FAIL_POINT_INJECT_F("meta_update_app_status_on_remote_storage_unlocked",
-                        [](absl::string_view) {});
+                        [](std::string_view) {});
 
     app_bulk_load_info ainfo = _app_bulk_load_info[app_id];
     auto old_status = ainfo.status;
@@ -1186,7 +1186,7 @@ void bulk_load_service::update_app_status_on_remote_storage_reply(const app_bulk
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
-bool bulk_load_service::check_ever_ingestion_succeed(const partition_configuration &config,
+bool bulk_load_service::check_ever_ingestion_succeed(const partition_configuration &pc,
                                                      const std::string &app_name,
                                                      const gpid &pid)
 {
@@ -1201,8 +1201,8 @@ bool bulk_load_service::check_ever_ingestion_succeed(const partition_configurati
     }
 
     std::vector<host_port> current_nodes;
-    current_nodes.emplace_back(config.hp_primary);
-    for (const auto &secondary : config.hp_secondaries) {
+    current_nodes.emplace_back(pc.hp_primary);
+    for (const auto &secondary : pc.hp_secondaries) {
         current_nodes.emplace_back(secondary);
     }
 
@@ -1223,7 +1223,7 @@ bool bulk_load_service::check_ever_ingestion_succeed(const partition_configurati
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::partition_ingestion(const std::string &app_name, const gpid &pid)
 {
-    FAIL_POINT_INJECT_F("meta_bulk_load_partition_ingestion", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("meta_bulk_load_partition_ingestion", [](std::string_view) {});
 
     auto app_status = get_app_bulk_load_status(pid.get_app_id());
     if (app_status != bulk_load_status::BLS_INGESTING) {
@@ -1242,7 +1242,7 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
-    partition_configuration pconfig;
+    partition_configuration pc;
     if (!check_partition_status(app_name,
                                 pid,
                                 true,
@@ -1250,16 +1250,16 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
                                           this,
                                           std::placeholders::_1,
                                           std::placeholders::_2),
-                                pconfig)) {
+                                pc)) {
         return;
     }
 
-    if (check_ever_ingestion_succeed(pconfig, app_name, pid)) {
+    if (check_ever_ingestion_succeed(pc, app_name, pid)) {
         return;
     }
 
     auto app = get_app(pid.get_app_id());
-    if (!try_partition_ingestion(pconfig, app->helpers->contexts[pid.get_partition_index()])) {
+    if (!try_partition_ingestion(pc, app->helpers->contexts[pid.get_partition_index()])) {
         LOG_WARNING(
             "app({}) partition({}) couldn't execute ingestion, wait and try later", app_name, pid);
         tasking::enqueue(LPC_META_STATE_NORMAL,
@@ -1270,24 +1270,21 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
-    const auto &primary_addr = pconfig.hp_primary;
-    ballot meta_ballot = pconfig.ballot;
-    tasking::enqueue(LPC_BULK_LOAD_INGESTION,
-                     _meta_svc->tracker(),
-                     std::bind(&bulk_load_service::send_ingestion_request,
-                               this,
-                               app_name,
-                               pid,
-                               primary_addr,
-                               meta_ballot),
-                     0,
-                     std::chrono::seconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
+    const auto &primary = pc.hp_primary;
+    ballot meta_ballot = pc.ballot;
+    tasking::enqueue(
+        LPC_BULK_LOAD_INGESTION,
+        _meta_svc->tracker(),
+        std::bind(
+            &bulk_load_service::send_ingestion_request, this, app_name, pid, primary, meta_ballot),
+        0,
+        std::chrono::seconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
 void bulk_load_service::send_ingestion_request(const std::string &app_name,
                                                const gpid &pid,
-                                               const host_port &primary_addr,
+                                               const host_port &primary,
                                                const ballot &meta_ballot)
 {
     ingestion_request req;
@@ -1310,11 +1307,11 @@ void bulk_load_service::send_ingestion_request(const std::string &app_name,
     dsn::rpc_response_task_ptr rpc_callback = rpc::create_rpc_response_task(
         msg,
         _meta_svc->tracker(),
-        [this, app_name, pid, primary_addr](error_code err, ingestion_response &&resp) {
-            on_partition_ingestion_reply(err, std::move(resp), app_name, pid, primary_addr);
+        [this, app_name, pid, primary](error_code err, ingestion_response &&resp) {
+            on_partition_ingestion_reply(err, std::move(resp), app_name, pid, primary);
         });
-    _meta_svc->send_request(msg, primary_addr, rpc_callback);
-    LOG_INFO("send ingest_request to node({}), app({}) partition({})", primary_addr, app_name, pid);
+    _meta_svc->send_request(msg, primary, rpc_callback);
+    LOG_INFO("send ingest_request to node({}), app({}) partition({})", primary, app_name, pid);
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
@@ -1322,7 +1319,7 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
                                                      const ingestion_response &&resp,
                                                      const std::string &app_name,
                                                      const gpid &pid,
-                                                     const host_port &primary_addr)
+                                                     const host_port &primary)
 {
     if (err != ERR_OK || resp.err != ERR_OK || resp.rocksdb_error != ERR_OK) {
         finish_ingestion(pid);
@@ -1334,7 +1331,7 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
             "repeated request",
             app_name,
             pid,
-            primary_addr);
+            primary);
         return;
     }
 
@@ -1343,7 +1340,7 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
         LOG_ERROR("app({}) partition({}) on node({}) ingestion files failed, error = {}",
                   app_name,
                   pid,
-                  primary_addr,
+                  primary,
                   err);
         tasking::enqueue(
             LPC_META_STATE_NORMAL,
@@ -1358,7 +1355,7 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
                   "{}, retry it later",
                   app_name,
                   pid,
-                  primary_addr,
+                  primary,
                   resp.rocksdb_error);
         tasking::enqueue(LPC_BULK_LOAD_INGESTION,
                          _meta_svc->tracker(),
@@ -1376,7 +1373,7 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
             "error = {}",
             app_name,
             pid,
-            primary_addr,
+            primary,
             resp.err,
             resp.rocksdb_error);
 
@@ -1392,7 +1389,7 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
     LOG_INFO("app({}) partition({}) receive ingestion response from node({}) succeed",
              app_name,
              pid,
-             primary_addr);
+             primary);
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
@@ -1611,13 +1608,13 @@ void bulk_load_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
     response.bulk_load_states.resize(partition_count);
     response.__set_hp_bulk_load_states(
         std::vector<std::map<host_port, partition_bulk_load_state>>(partition_count));
-    for (const auto & [ pid, pbls_by_hps ] : _partitions_bulk_load_state) {
+    for (const auto &[pid, pbls_by_hps] : _partitions_bulk_load_state) {
         if (pid.get_app_id() == app_id) {
             auto pidx = pid.get_partition_index();
             response.hp_bulk_load_states[pidx] = pbls_by_hps;
 
             std::map<rpc_address, partition_bulk_load_state> pbls_by_addrs;
-            for (const auto & [ hp, pbls ] : pbls_by_hps) {
+            for (const auto &[hp, pbls] : pbls_by_hps) {
                 pbls_by_addrs[dsn::dns_resolver::instance().resolve_address(hp)] = pbls;
             }
             response.bulk_load_states[pidx] = pbls_by_addrs;
@@ -1662,7 +1659,7 @@ void bulk_load_service::on_clear_bulk_load(clear_bulk_load_rpc rpc)
 void bulk_load_service::do_clear_app_bulk_load_result(int32_t app_id, clear_bulk_load_rpc rpc)
 {
     FAIL_POINT_INJECT_F("meta_do_clear_app_bulk_load_result",
-                        [rpc](absl::string_view) { rpc.response().err = ERR_OK; });
+                        [rpc](std::string_view) { rpc.response().err = ERR_OK; });
     std::string bulk_load_path = get_app_bulk_load_path(app_id);
     _meta_svc->get_meta_storage()->delete_node_recursively(
         std::move(bulk_load_path), [this, app_id, bulk_load_path, rpc]() {
@@ -1756,7 +1753,7 @@ void bulk_load_service::do_sync_partition(const gpid &pid, std::string &partitio
 // ThreadPool: THREAD_POOL_META_SERVER
 void bulk_load_service::try_to_continue_bulk_load()
 {
-    FAIL_POINT_INJECT_F("meta_try_to_continue_bulk_load", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("meta_try_to_continue_bulk_load", [](std::string_view) {});
     zauto_read_lock l(_lock);
     for (const auto app_id : _bulk_load_app_id) {
         app_bulk_load_info ainfo = _app_bulk_load_info[app_id];

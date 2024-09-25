@@ -37,7 +37,7 @@
 #include "meta/server_load_balancer.h"
 #include "meta/server_state.h"
 #include "meta/table_metrics.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
@@ -86,14 +86,15 @@ pc_status partition_guardian::cure(meta_view view,
     CHECK(acts.empty(), "");
 
     pc_status status;
-    if (!pc.hp_primary)
+    if (!pc.hp_primary) {
         status = on_missing_primary(view, gpid);
-    else if (static_cast<int>(pc.hp_secondaries.size()) + 1 < pc.max_replica_count)
+    } else if (static_cast<int>(pc.hp_secondaries.size()) + 1 < pc.max_replica_count) {
         status = on_missing_secondary(view, gpid);
-    else if (static_cast<int>(pc.hp_secondaries.size()) >= pc.max_replica_count)
+    } else if (static_cast<int>(pc.hp_secondaries.size()) >= pc.max_replica_count) {
         status = on_redundant_secondary(view, gpid);
-    else
+    } else {
         status = pc_status::healthy;
+    }
 
     if (!acts.empty()) {
         action = *acts.front();
@@ -125,9 +126,9 @@ void partition_guardian::reconfig(meta_view view, const configuration_update_req
     if (request.type == config_type::CT_DROP_PARTITION) {
         cc->serving.clear();
 
-        const std::vector<host_port> &config_dropped = request.config.hp_last_drops;
-        for (const auto &drop_node : config_dropped) {
-            cc->record_drop_history(drop_node);
+        const auto &last_drops = request.config.hp_last_drops;
+        for (const auto &last_drop : last_drops) {
+            cc->record_drop_history(last_drop);
         }
     } else {
         when_update_replicas(request.type, [cc, &request](bool is_adding) {
@@ -248,9 +249,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
     // try to upgrade a secondary to primary if the primary is missing
     if (!pc.hp_secondaries.empty()) {
         RESET_IP_AND_HOST_PORT(action, node);
-        for (const auto &hp_secondary : pc.hp_secondaries) {
-            const auto ns = get_node_state(*(view.nodes), hp_secondary, false);
-            CHECK_NOTNULL(ns, "invalid secondary: {}", hp_secondary);
+        for (const auto &secondary : pc.hp_secondaries) {
+            const auto ns = get_node_state(*(view.nodes), secondary, false);
+            CHECK_NOTNULL(ns, "invalid secondary: {}", secondary);
             if (dsn_unlikely(!ns->alive())) {
                 continue;
             }
@@ -515,7 +516,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
 
     configuration_proposal_action action;
     bool is_emergency = false;
-    if (cc.config_owner->max_replica_count >
+    if (cc.pc->max_replica_count >
             _svc->get_options().app_mutation_2pc_min_replica_count(pc.max_replica_count) &&
         replica_count(pc) <
             _svc->get_options().app_mutation_2pc_min_replica_count(pc.max_replica_count)) {
@@ -601,7 +602,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
                     "gpid({}) refuse to use selected node({}) as it is in black list", gpid, node);
             }
             newly_partitions *min_server_np = nullptr;
-            for (auto & [ _, ns ] : *view.nodes) {
+            for (auto &[_, ns] : *view.nodes) {
                 if (!ns.alive() || is_member(pc, ns.host_port()) || in_black_list(ns.host_port())) {
                     continue;
                 }

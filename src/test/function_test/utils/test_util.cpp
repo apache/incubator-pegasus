@@ -1,20 +1,20 @@
 /*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #include "test_util.h"
@@ -55,9 +55,9 @@ class rpc_address;
 } // namespace dsn
 
 using dsn::partition_configuration;
+using dsn::rpc_address;
 using dsn::replication::replica_helper;
 using dsn::replication::replication_ddl_client;
-using dsn::rpc_address;
 using nlohmann::json;
 using std::map;
 using std::string;
@@ -108,11 +108,10 @@ void test_util::SetUp()
     ASSERT_TRUE(client_ != nullptr);
 
     int32_t partition_count;
-    ASSERT_EQ(dsn::ERR_OK,
-              ddl_client_->list_app(table_name_, table_id_, partition_count, partitions_));
+    ASSERT_EQ(dsn::ERR_OK, ddl_client_->list_app(table_name_, table_id_, partition_count, pcs_));
     ASSERT_NE(0, table_id_);
     ASSERT_EQ(partition_count_, partition_count);
-    ASSERT_EQ(partition_count_, partitions_.size());
+    ASSERT_EQ(partition_count_, pcs_.size());
 }
 
 void test_util::run_cmd_from_project_root(const string &cmd)

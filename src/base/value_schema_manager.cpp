@@ -19,7 +19,7 @@
 
 #include "value_schema_manager.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <iterator>
 #include <utility>
 
@@ -47,7 +47,7 @@ void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)
 }
 
 value_schema *value_schema_manager::get_value_schema(uint32_t meta_cf_data_version,
-                                                     absl::string_view value) const
+                                                     std::string_view value) const
 {
     dsn::data_input input(value);
     uint8_t first_byte = input.read_u8();

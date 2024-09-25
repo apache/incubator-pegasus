@@ -24,11 +24,12 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
+#include "gutil/map_util.h"
 #include "meta/meta_bulk_load_ingestion_context.h"
 #include "meta/meta_data.h"
 #include "meta_test_base.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/fail_point.h"
 
 namespace dsn {
@@ -64,10 +65,11 @@ public:
 
     uint32_t get_disk_count(const std::string &disk_tag)
     {
-        if (_context.disk_ingesting_counts.find(disk_tag) == _context.disk_ingesting_counts.end()) {
+        const auto *count = gutil::FindOrNull(_context.disk_ingesting_counts, disk_tag);
+        if (count == nullptr) {
             return -1;
         }
-        return _context.disk_ingesting_counts[disk_tag];
+        return *count;
     }
 
     void mock_get_max_disk_ingestion_count(const uint32_t node_min_disk_count,
@@ -199,39 +201,27 @@ public:
         ainfo.app_id = APP_ID;
         ainfo.partition_count = PARTITION_COUNT;
         _app = std::make_shared<app_state>(ainfo);
-        _app->partitions.reserve(PARTITION_COUNT);
+        _app->pcs.reserve(PARTITION_COUNT);
         _app->helpers->contexts.reserve(PARTITION_COUNT);
-        mock_partition(0,
-                       {NODE1, NODE2, NODE3},
-                       {TAG1, TAG1, TAG2},
-                       _app->partitions[0],
-                       _app->helpers->contexts[0]);
-        mock_partition(1,
-                       {NODE4, NODE1, NODE2},
-                       {TAG2, TAG1, TAG2},
-                       _app->partitions[1],
-                       _app->helpers->contexts[1]);
-        mock_partition(2,
-                       {NODE3, NODE1, NODE4},
-                       {TAG1, TAG2, TAG1},
-                       _app->partitions[2],
-                       _app->helpers->contexts[2]);
-        mock_partition(3,
-                       {NODE2, NODE3, NODE4},
-                       {TAG1, TAG1, TAG2},
-                       _app->partitions[3],
-                       _app->helpers->contexts[3]);
+        mock_partition(
+            0, {NODE1, NODE2, NODE3}, {TAG1, TAG1, TAG2}, _app->pcs[0], _app->helpers->contexts[0]);
+        mock_partition(
+            1, {NODE4, NODE1, NODE2}, {TAG2, TAG1, TAG2}, _app->pcs[1], _app->helpers->contexts[1]);
+        mock_partition(
+            2, {NODE3, NODE1, NODE4}, {TAG1, TAG2, TAG1}, _app->pcs[2], _app->helpers->contexts[2]);
+        mock_partition(
+            3, {NODE2, NODE3, NODE4}, {TAG1, TAG1, TAG2}, _app->pcs[3], _app->helpers->contexts[3]);
     }
 
     void mock_partition(const uint32_t pidx,
                         std::vector<host_port> nodes,
                         const std::vector<std::string> tags,
-                        partition_configuration &config,
+                        partition_configuration &pc,
                         config_context &cc)
     {
-        config.pid = gpid(APP_ID, pidx);
-        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, nodes[0]);
-        SET_IPS_AND_HOST_PORTS_BY_DNS(config, secondaries, nodes[1], nodes[2]);
+        pc.pid = gpid(APP_ID, pidx);
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
+        SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, nodes[1], nodes[2]);
 
         auto count = nodes.size();
         for (auto i = 0; i < count; i++) {
@@ -253,14 +243,13 @@ public:
 
     bool try_partition_ingestion(const uint32_t pidx)
     {
-        return _context->try_partition_ingestion(_app->partitions[pidx],
-                                                 _app->helpers->contexts[pidx]);
+        return _context->try_partition_ingestion(_app->pcs[pidx], _app->helpers->contexts[pidx]);
     }
 
     void add_partition(const uint32_t pidx)
     {
-        auto pinfo = ingestion_context::partition_node_info(_app->partitions[pidx],
-                                                            _app->helpers->contexts[pidx]);
+        const auto pinfo =
+            ingestion_context::partition_node_info(_app->pcs[pidx], _app->helpers->contexts[pidx]);
         _context->add_partition(pinfo);
     }
 
@@ -268,8 +257,7 @@ public:
 
     bool is_partition_ingesting(const uint32_t pidx) const
     {
-        return _context->_running_partitions.find(gpid(APP_ID, pidx)) !=
-               _context->_running_partitions.end();
+        return gutil::ContainsKey(_context->_running_partitions, gpid(APP_ID, pidx));
     }
 
     uint32_t get_app_ingesting_count() const { return _context->get_app_ingesting_count(APP_ID); }

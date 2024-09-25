@@ -43,8 +43,8 @@
 #include "replica/prepare_list.h"
 #include "replica/replication_app_base.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
+#include "task/async_calls.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
@@ -157,10 +157,11 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 err = _private_log->open(
                     [this](int log_length, mutation_ptr &mu) { return replay_mutation(mu, true); },
                     [this](error_code err) {
-                        tasking::enqueue(LPC_REPLICATION_ERROR,
-                                         &_tracker,
-                                         [this, err]() { handle_local_failure(err); },
-                                         get_gpid().thread_hash());
+                        tasking::enqueue(
+                            LPC_REPLICATION_ERROR,
+                            &_tracker,
+                            [this, err]() { handle_local_failure(err); },
+                            get_gpid().thread_hash());
                     },
                     replay_condition);
 
@@ -227,21 +228,22 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             LOG_INFO_PREFIX("plog_dir = {}", log_dir);
 
             err = _private_log->open(nullptr, [this](error_code err) {
-                tasking::enqueue(LPC_REPLICATION_ERROR,
-                                 &_tracker,
-                                 [this, err]() { handle_local_failure(err); },
-                                 get_gpid().thread_hash());
+                tasking::enqueue(
+                    LPC_REPLICATION_ERROR,
+                    &_tracker,
+                    [this, err]() { handle_local_failure(err); },
+                    get_gpid().thread_hash());
             });
         }
 
         if (err == ERR_OK) {
             if (_checkpoint_timer == nullptr && !FLAGS_checkpoint_disabled) {
-                _checkpoint_timer =
-                    tasking::enqueue_timer(LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                                           &_tracker,
-                                           [this] { on_checkpoint_timer(); },
-                                           std::chrono::seconds(FLAGS_checkpoint_interval_seconds),
-                                           get_gpid().thread_hash());
+                _checkpoint_timer = tasking::enqueue_timer(
+                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                    &_tracker,
+                    [this] { on_checkpoint_timer(); },
+                    std::chrono::seconds(FLAGS_checkpoint_interval_seconds),
+                    get_gpid().thread_hash());
             }
 
             _backup_mgr->start_collect_backup_info();

@@ -37,8 +37,8 @@
 #include "rocksdb/slice.h"
 #include "rocksdb/status.h"
 #include "runtime/service_app.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
+#include "task/async_calls.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/env.h"
@@ -237,8 +237,8 @@ error_code meta_state_service_simple::apply_transaction(
 
 error_code meta_state_service_simple::initialize(const std::vector<std::string> &args)
 {
-    const char *work_dir =
-        args.empty() ? service_app::current_service_app_info().data_dir.c_str() : args[0].c_str();
+    const char *work_dir = args.empty() ? service_app::current_service_app_info().data_dir.c_str()
+                                        : args[0].c_str();
 
     _offset = 0;
     std::string log_path = dsn::utils::filesystem::path_combine(work_dir, "meta_state_service.log");
@@ -426,9 +426,10 @@ task_ptr meta_state_service_simple::submit_transaction(
         CHECK_EQ_MSG(dest - batch.get(), total_size, "memcpy error");
         task_ptr task(new error_code_future(cb_code, cb_transaction, 0));
         task->set_tracker(tracker);
-        write_log(blob(batch, total_size),
-                  [this, t_entries] { return apply_transaction(t_entries); },
-                  task);
+        write_log(
+            blob(batch, total_size),
+            [this, t_entries] { return apply_transaction(t_entries); },
+            task);
         return task;
     }
 }
@@ -441,9 +442,10 @@ task_ptr meta_state_service_simple::create_node(const std::string &node,
 {
     task_ptr task(new error_code_future(cb_code, cb_create, 0));
     task->set_tracker(tracker);
-    write_log(create_node_log::get_log(node, value),
-              [=] { return create_node_internal(node, value); },
-              task);
+    write_log(
+        create_node_log::get_log(node, value),
+        [=] { return create_node_internal(node, value); },
+        task);
     return task;
 }
 
@@ -455,9 +457,10 @@ task_ptr meta_state_service_simple::delete_node(const std::string &node,
 {
     task_ptr task(new error_code_future(cb_code, cb_delete, 0));
     task->set_tracker(tracker);
-    write_log(delete_node_log::get_log(node, recursively_delete),
-              [=] { return delete_node_internal(node, recursively_delete); },
-              task);
+    write_log(
+        delete_node_log::get_log(node, recursively_delete),
+        [=] { return delete_node_internal(node, recursively_delete); },
+        task);
     return task;
 }
 

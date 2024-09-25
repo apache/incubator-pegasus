@@ -33,7 +33,7 @@
 #include <cstdio>
 #include <string>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "runtime/api_layer1.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -47,12 +47,15 @@ static struct tm *get_localtime(uint64_t ts_ms, struct tm *tm_buf)
     return localtime_r(&t, tm_buf);
 }
 
-// get time string, which format is yyyy-MM-dd hh:mm:ss.SSS
+// Get time string, which format is yyyy-MM-dd hh:mm:ss.SSS
 // NOTE: using char* as output is usually unsafe, remember to initialize its memory as zero before
 // calling 'time_ms_to_string'. Please use std::string as the output argument as long as it's
 // possible.
 extern void time_ms_to_string(uint64_t ts_ms, char *str);
 extern void time_ms_to_string(uint64_t ts_ms, std::string &str);
+
+// Get time string, which format is yyyyMMdd_hhmmss_SSS
+extern void time_ms_to_sequent_string(uint64_t ts_ms, std::string &str);
 
 // get date string with format of 'yyyy-MM-dd' from given timestamp
 inline void time_ms_to_date(uint64_t ts_ms, char *str, int len)
@@ -112,7 +115,7 @@ inline int64_t get_unix_sec_today_midnight()
 // `hh:mm` (range in [00:00, 23:59]) to seconds since 00:00:00
 // eg. `01:00` => `3600`
 // Return: -1 when invalid
-inline int hh_mm_to_seconds(absl::string_view hhmm)
+inline int hh_mm_to_seconds(std::string_view hhmm)
 {
     int hour = 0, min = 0, sec = -1;
     if (::sscanf(hhmm.data(), "%d:%d", &hour, &min) == 2 && (0 <= hour && hour <= 23) &&
@@ -125,7 +128,7 @@ inline int hh_mm_to_seconds(absl::string_view hhmm)
 // local time `hh:mm` to unix timestamp.
 // eg. `18:10` => `1525947000` when called on May 10, 2018, CST
 // Return: -1 when invalid
-inline int64_t hh_mm_today_to_unix_sec(absl::string_view hhmm_of_day)
+inline int64_t hh_mm_today_to_unix_sec(std::string_view hhmm_of_day)
 {
     int sec_of_day = hh_mm_to_seconds(hhmm_of_day);
     if (sec_of_day == -1) {

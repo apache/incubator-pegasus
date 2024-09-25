@@ -31,9 +31,9 @@
 #include "mock_utils.h"
 #include "replica/replica_stub.h"
 #include "replica_test_base.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "task/task.h"
 #include "utils/filesystem.h"
 
 namespace dsn {
@@ -72,15 +72,15 @@ TEST_P(open_replica_test, open_replica_add_decree_and_ballot_check)
 
         _replica->register_service();
 
-        partition_configuration config;
-        config.pid = pid;
-        config.ballot = test.b;
-        config.last_committed_decree = test.last_committed_decree;
+        partition_configuration pc;
+        pc.pid = pid;
+        pc.ballot = test.b;
+        pc.last_committed_decree = test.last_committed_decree;
         auto as = app_state::create(ai);
 
         auto req = std::make_shared<configuration_update_request>();
         req->info = *as;
-        req->config = config;
+        req->config = pc;
         req->type = config_type::CT_ASSIGN_PRIMARY;
         SET_IP_AND_HOST_PORT_BY_DNS(*req, node, node);
         if (test.expect_crash) {

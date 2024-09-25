@@ -31,7 +31,7 @@
 #include <cstdint>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "common/gpid.h"
 #include "common/replication_enums.h"
 #include "fmt/core.h"
@@ -134,7 +134,7 @@ uint64_t dir_node::replicas_count(app_id id) const
     return iter->second.size();
 }
 
-std::string dir_node::replica_dir(absl::string_view app_type, const dsn::gpid &pid) const
+std::string dir_node::replica_dir(std::string_view app_type, const dsn::gpid &pid) const
 {
     return utils::filesystem::path_combine(full_dir, fmt::format("{}.{}", pid, app_type));
 }
@@ -159,7 +159,7 @@ uint64_t dir_node::remove(const gpid &pid)
 
 void dir_node::update_disk_stat()
 {
-    FAIL_POINT_INJECT_F("update_disk_stat", [](absl::string_view) { return; });
+    FAIL_POINT_INJECT_F("update_disk_stat", [](std::string_view) { return; });
 
     dsn::utils::filesystem::disk_space_info dsi;
     if (!dsn::utils::filesystem::get_disk_space_info(full_dir, dsi)) {
@@ -298,6 +298,7 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
         for (const auto &dn : _dir_nodes) {
             // Do not allocate new replica on dir_node which is not NORMAL.
             if (dn->status != disk_status::NORMAL) {
+                LOG_INFO("skip the {} state dir_node({})", enum_to_string(dn->status), dn->tag);
                 continue;
             }
             CHECK(!dn->has(pid), "gpid({}) already exists in dir_node({})", pid, dn->tag);
@@ -328,7 +329,7 @@ dir_node *fs_manager::find_best_dir_for_new_replica(const gpid &pid) const
 }
 
 void fs_manager::specify_dir_for_new_replica_for_test(dir_node *specified_dn,
-                                                      absl::string_view app_type,
+                                                      std::string_view app_type,
                                                       const dsn::gpid &pid) const
 {
     bool dn_found = false;
@@ -431,7 +432,7 @@ bool fs_manager::is_dir_node_exist(const std::string &data_dir, const std::strin
     return false;
 }
 
-dir_node *fs_manager::find_replica_dir(absl::string_view app_type, gpid pid)
+dir_node *fs_manager::find_replica_dir(std::string_view app_type, gpid pid)
 {
     std::string replica_dir;
     dir_node *replica_dn = nullptr;
@@ -440,6 +441,7 @@ dir_node *fs_manager::find_replica_dir(absl::string_view app_type, gpid pid)
         for (const auto &dn : _dir_nodes) {
             // Skip IO error dir_node.
             if (dn->status == disk_status::IO_ERROR) {
+                LOG_INFO("skip the {} state dir_node({})", enum_to_string(dn->status), dn->tag);
                 continue;
             }
             const auto dir = dn->replica_dir(app_type, pid);
@@ -455,7 +457,7 @@ dir_node *fs_manager::find_replica_dir(absl::string_view app_type, gpid pid)
     return replica_dn;
 }
 
-dir_node *fs_manager::create_replica_dir_if_necessary(absl::string_view app_type, gpid pid)
+dir_node *fs_manager::create_replica_dir_if_necessary(std::string_view app_type, gpid pid)
 {
     // Try to find the replica directory.
     auto replica_dn = find_replica_dir(app_type, pid);
@@ -487,7 +489,7 @@ dir_node *fs_manager::create_replica_dir_if_necessary(absl::string_view app_type
     return replica_dn;
 }
 
-dir_node *fs_manager::create_child_replica_dir(absl::string_view app_type,
+dir_node *fs_manager::create_child_replica_dir(std::string_view app_type,
                                                gpid child_pid,
                                                const std::string &parent_dir)
 {
@@ -498,6 +500,7 @@ dir_node *fs_manager::create_child_replica_dir(absl::string_view app_type,
         for (const auto &dn : _dir_nodes) {
             // Skip non-available dir_node.
             if (dn->status != disk_status::NORMAL) {
+                LOG_INFO("skip the {} state dir_node({})", enum_to_string(dn->status), dn->tag);
                 continue;
             }
             child_dir = dn->replica_dir(app_type, child_pid);

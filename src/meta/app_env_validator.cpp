@@ -29,6 +29,7 @@
 #include "common/replica_envs.h"
 #include "http/http_status_code.h"
 #include "utils/fmt_logging.h"
+#include "gutil/map_util.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/throttling_controller.h"
@@ -51,11 +52,9 @@ app_env_validator::~app_env_validator() { deregister_handler("list"); }
 bool app_env_validator::validate_app_envs(const std::map<std::string, std::string> &envs)
 {
     // only check rocksdb app envs currently
-    for (const auto & [ key, value ] : envs) {
-        if (replica_envs::ROCKSDB_STATIC_OPTIONS.find(key) ==
-                replica_envs::ROCKSDB_STATIC_OPTIONS.end() &&
-            replica_envs::ROCKSDB_DYNAMIC_OPTIONS.find(key) ==
-                replica_envs::ROCKSDB_DYNAMIC_OPTIONS.end()) {
+    for (const auto &[key, value] : envs) {
+        if (!gutil::ContainsKey(replica_envs::ROCKSDB_STATIC_OPTIONS, key) &&
+            !gutil::ContainsKey(replica_envs::ROCKSDB_DYNAMIC_OPTIONS, key)) {
             continue;
         }
         std::string hint_message;
@@ -155,15 +154,15 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
                                          std::string &hint_message)
 {
     // Check if the env is supported.
-    const auto func_iter = _validator_funcs.find(env_name);
-    if (func_iter == _validator_funcs.end()) {
+    const auto *func = gutil::FindOrNull(_validator_funcs, env_name);
+    if (func == nullptr) {
         hint_message = fmt::format("app_env '{}' is not supported", env_name);
         return false;
     }
 
     // 'int_result' will be used if the env variable is integer type.
     int64_t int_result = 0;
-    switch (func_iter->second.type) {
+    switch (func->type) {
     case ValueType::kBool: {
         // Check by the default boolean validator.
         bool result = false;
@@ -197,8 +196,7 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
     }
     case ValueType::kString: {
         // Check by the self defined validator.
-        if (nullptr != func_iter->second.string_validator &&
-            !func_iter->second.string_validator(env_value, hint_message)) {
+        if (nullptr != func->string_validator && !func->string_validator(env_value, hint_message)) {
             return false;
         }
         break;
@@ -208,13 +206,11 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
         __builtin_unreachable();
     }
 
-    if (func_iter->second.type == ValueType::kInt32 ||
-        func_iter->second.type == ValueType::kInt64) {
+    if (func->type == ValueType::kInt32 || func->type == ValueType::kInt64) {
         // Check by the self defined validator.
-        if (nullptr != func_iter->second.int_validator &&
-            !func_iter->second.int_validator(int_result)) {
-            hint_message = fmt::format(
-                "invalid value '{}', should be '{}'", env_value, func_iter->second.limit_desc);
+        if (nullptr != func->int_validator && !func->int_validator(int_result)) {
+            hint_message =
+                fmt::format("invalid value '{}', should be '{}'", env_value, func->limit_desc);
             return false;
         }
     }
@@ -354,10 +350,10 @@ const std::unordered_map<app_env_validator::ValueType, std::string>
 
 nlohmann::json app_env_validator::EnvInfo::to_json() const
 {
-    const auto &type_str = ValueType2String.find(type);
-    CHECK_TRUE(type_str != ValueType2String.end());
+    const auto *type_str = gutil::FindOrNull(ValueType2String, type);
+    CHECK_NOTNULL(type_str, "");
     nlohmann::json info;
-    info["type"] = type_str->second;
+    info["type"] = *type_str;
     info["limitation"] = limit_desc;
     info["sample"] = sample;
     return info;

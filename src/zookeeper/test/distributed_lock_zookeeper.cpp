@@ -35,8 +35,8 @@
 
 #include "gtest/gtest.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/distributed_lock_service.h"
 #include "utils/error_code.h"
@@ -163,14 +163,14 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
     cb_pair.first->wait();
 
     opt.create_if_not_exist = true;
-    cb_pair =
-        dlock_svc->lock(lock_id,
-                        my_id,
-                        DLOCK_CALLBACK,
-                        [](error_code ec, const std::string &, int) { ASSERT_TRUE(ec == ERR_OK); },
-                        DLOCK_CALLBACK,
-                        nullptr,
-                        opt);
+    cb_pair = dlock_svc->lock(
+        lock_id,
+        my_id,
+        DLOCK_CALLBACK,
+        [](error_code ec, const std::string &, int) { ASSERT_TRUE(ec == ERR_OK); },
+        DLOCK_CALLBACK,
+        nullptr,
+        opt);
     ASSERT_TRUE(cb_pair.first != nullptr && cb_pair.second != nullptr);
     cb_pair.first->wait();
 
@@ -208,16 +208,17 @@ TEST(distributed_lock_service_zookeeper, abnormal_api_call)
         });
     tsk->wait();
 
-    cb_pair2 = dlock_svc->lock(lock_id,
-                               my_id2,
-                               DLOCK_CALLBACK,
-                               [my_id2](error_code ec, const std::string &name, int) {
-                                   ASSERT_TRUE(ec == ERR_OK);
-                                   ASSERT_TRUE(name == my_id2);
-                               },
-                               DLOCK_CALLBACK,
-                               nullptr,
-                               opt);
+    cb_pair2 = dlock_svc->lock(
+        lock_id,
+        my_id2,
+        DLOCK_CALLBACK,
+        [my_id2](error_code ec, const std::string &name, int) {
+            ASSERT_TRUE(ec == ERR_OK);
+            ASSERT_TRUE(name == my_id2);
+        },
+        DLOCK_CALLBACK,
+        nullptr,
+        opt);
 
     bool result = cb_pair2.first->wait(2000);
     ASSERT_FALSE(result);

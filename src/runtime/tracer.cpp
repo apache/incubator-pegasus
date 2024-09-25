@@ -36,11 +36,11 @@
 #include "aio/aio_task.h"
 #include "fmt/core.h"
 #include "fmt/format.h"
+#include "rpc/rpc_message.h"
 #include "runtime/global_config.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/command_manager.h"
 #include "utils/config_api.h"
 #include "utils/enum_helper.h"
@@ -408,7 +408,7 @@ void tracer::install(service_spec &spec)
             "tracer.find",
             "Find related logs",
             "[forward|f|backward|b] [rpc|r|task|t] [trace_id|task_id(e.g., a023003920302390)] "
-            "<log_file_name(e.g., log.xx.txt)>",
+            "<log_file_name(e.g., replica.log.yyyyMMdd_hhmmss_SSS)>",
             tracer_log_flow);
     });
 }

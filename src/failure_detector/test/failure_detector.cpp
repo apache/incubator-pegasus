@@ -47,17 +47,17 @@
 #include "meta/meta_options.h"
 #include "meta/meta_server_failure_detector.h"
 #include "replica/replica_stub.h"
+#include "rpc/group_host_port.h"
+#include "rpc/network.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/group_host_port.h"
-#include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/async_calls.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/enum_helper.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
@@ -110,9 +110,10 @@ protected:
 
 public:
     worker_fd_test(replication::replica_stub *stub, std::vector<dsn::host_port> &meta_servers)
-        : slave_failure_detector_with_multimaster(meta_servers,
-                                                  [=]() { stub->on_meta_server_disconnected(); },
-                                                  [=]() { stub->on_meta_server_connected(); })
+        : slave_failure_detector_with_multimaster(
+              meta_servers,
+              [=]() { stub->on_meta_server_disconnected(); },
+              [=]() { stub->on_meta_server_connected(); })
     {
         _send_ping_switch = false;
     }
@@ -219,6 +220,7 @@ public:
     }
 
     worker_fd_test *fd() { return _worker_fd; }
+
 private:
     worker_fd_test *_worker_fd;
 };
@@ -241,6 +243,7 @@ public:
             for (auto &port : ports) {
                 rpc_address addr(network::get_local_ipv4(), std::stoi(port));
                 const auto hp = ::dsn::host_port::from_address(addr);
+                CHECK(hp, "'{}' can not be reverse resolved", addr);
                 _master_fd->add_allow_list(hp);
             }
             use_allow_list = true;
@@ -256,6 +259,7 @@ public:
     error_code stop(bool) override { return ERR_OK; }
 
     master_fd_test *fd() { return _master_fd; }
+
 private:
     master_fd_test *_master_fd;
     replication::fd_suboptions _opts;

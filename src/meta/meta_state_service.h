@@ -31,9 +31,9 @@
 #include <string>
 #include <vector>
 
-#include "runtime/task/future_types.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/future_types.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
@@ -177,5 +177,5 @@ public:
                                   const err_stringv_callback &cb_get_children,
                                   dsn::task_tracker *tracker = nullptr) = 0;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

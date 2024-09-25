@@ -342,11 +342,6 @@ package-lock.json
 # ============= #
 go-client/bin
 go-client/coverage.txt
-go-client/idl/admin/
-go-client/idl/cmd/
-go-client/idl/radmin/
-go-client/idl/replication/
-go-client/idl/rrdb/
 
 thirdparty/output/
 

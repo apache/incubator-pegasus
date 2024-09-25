@@ -29,12 +29,12 @@
 #include <mutex>
 #include <ostream>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/dns_resolver.h" // IWYU pragma: keep
+#include "rpc/rpc_address.h"
 #include "utils/command_manager.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
@@ -146,8 +146,7 @@ generate_balancer_request(const app_mapper &apps,
                           const host_port &from,
                           const host_port &to)
 {
-    FAIL_POINT_INJECT_F("generate_balancer_request",
-                        [](absl::string_view name) { return nullptr; });
+    FAIL_POINT_INJECT_F("generate_balancer_request", [](std::string_view name) { return nullptr; });
 
     configuration_balancer_request result;
     result.gpid = pc.pid;
@@ -320,7 +319,7 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
     while (plan_moving-- > 0) {
         dsn::gpid selected = select_moving(potential_moving, prev_load, current_load, from, to);
 
-        const partition_configuration &pc = app->partitions[selected.get_partition_index()];
+        const auto &pc = app->pcs[selected.get_partition_index()];
         auto balancer_result = _migration_result->emplace(
             selected,
             generate_balancer_request(
@@ -338,7 +337,7 @@ std::list<dsn::gpid> load_balance_policy::calc_potential_moving(
     std::list<dsn::gpid> potential_moving;
     const node_state &ns = _global_view->nodes->find(from)->second;
     ns.for_each_primary(app->app_id, [&](const gpid &pid) {
-        const partition_configuration &pc = app->partitions[pid.get_partition_index()];
+        const auto &pc = app->pcs[pid.get_partition_index()];
         if (is_secondary(pc, to)) {
             potential_moving.push_back(pid);
         }
@@ -566,10 +565,10 @@ void ford_fulkerson::add_edge(int node_id, const node_state &ns)
 void ford_fulkerson::update_decree(int node_id, const node_state &ns)
 {
     ns.for_each_primary(_app->app_id, [&, this](const gpid &pid) {
-        const partition_configuration &pc = _app->partitions[pid.get_partition_index()];
+        const auto &pc = _app->pcs[pid.get_partition_index()];
         for (const auto &secondary : pc.hp_secondaries) {
             auto i = _host_port_id.find(secondary);
-            CHECK(i != _host_port_id.end(), "invalid secondary address, address = {}", secondary);
+            CHECK(i != _host_port_id.end(), "invalid secondary: {}", secondary);
             _network[node_id][i->second]++;
         }
         return true;
@@ -709,7 +708,7 @@ void copy_replica_operation::copy_once(gpid selected_pid, migration_list *result
     const auto &from = _host_port_vec[*_ordered_host_port_ids.rbegin()];
     const auto &to = _host_port_vec[*_ordered_host_port_ids.begin()];
 
-    auto pc = _app->partitions[selected_pid.get_partition_index()];
+    auto pc = _app->pcs[selected_pid.get_partition_index()];
     auto request = generate_balancer_request(_apps, pc, get_balance_type(), from, to);
     result->emplace(selected_pid, request);
 }

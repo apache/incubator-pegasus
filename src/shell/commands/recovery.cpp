@@ -33,7 +33,7 @@
 #include "dsn.layer2_types.h"
 #include "meta/load_balance_policy.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
 #include "shell/commands.h"
 #include "utils/error_code.h"
@@ -118,7 +118,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
         for (std::string &token : tokens) {
             const auto node = dsn::host_port::from_string(token);
             if (!node) {
-                fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
+                fprintf(stderr, "parse %s as a host:port node failed\n", token.c_str());
                 return true;
             }
             node_list.push_back(node);
@@ -140,7 +140,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
             const auto node = dsn::host_port::from_string(str);
             if (!node) {
                 fprintf(stderr,
-                        "parse %s at file %s line %d as ip:port failed\n",
+                        "parse %s at file %s line %d as host:port failed\n",
                         str.c_str(),
                         node_list_file.c_str(),
                         lineno);
@@ -165,8 +165,9 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
 
 dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
 {
-    if (pinfo.config.hp_last_drops.size() < 2)
+    if (pinfo.config.hp_last_drops.size() < 2) {
         return dsn::host_port();
+    }
 
     std::vector<dsn::host_port> last_two_nodes(pinfo.config.hp_last_drops.end() - 2,
                                                pinfo.config.hp_last_drops.end());
@@ -290,11 +291,13 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             << "last_committed(" << pinfo.config.last_committed_decree << ")" << std::endl;
         out << "    ----" << std::endl;
         dsn::host_port latest_dropped, secondary_latest_dropped;
-        if (pinfo.config.hp_last_drops.size() > 0)
+        if (pinfo.config.hp_last_drops.size() > 0) {
             latest_dropped = pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 1];
-        if (pinfo.config.hp_last_drops.size() > 1)
+        }
+        if (pinfo.config.hp_last_drops.size() > 1) {
             secondary_latest_dropped =
                 pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 2];
+        }
         int j = 0;
         for (const ddd_node_info &n : pinfo.dropped) {
             dsn::host_port hp_node;

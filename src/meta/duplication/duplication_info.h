@@ -31,7 +31,7 @@
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -42,6 +42,7 @@ namespace dsn {
 namespace replication {
 
 class app_state;
+
 class duplication_info;
 
 using duplication_info_s_ptr = std::shared_ptr<duplication_info>;
@@ -108,8 +109,9 @@ public:
 
     bool is_valid_alteration(duplication_status::type to_status) const
     {
-        return to_status == _status || (to_status == duplication_status::DS_PREPARE &&
-                                        _status == duplication_status::DS_INIT) ||
+        return to_status == _status ||
+               (to_status == duplication_status::DS_PREPARE &&
+                _status == duplication_status::DS_INIT) ||
                (to_status == duplication_status::DS_APP &&
                 _status == duplication_status::DS_PREPARE) ||
                (to_status == duplication_status::DS_LOG &&
@@ -173,13 +175,13 @@ public:
     bool all_checkpoint_has_prepared()
     {
         int prepared = 0;
-        bool completed =
-            std::all_of(_progress.begin(),
-                        _progress.end(),
-                        [&](std::pair<int, partition_progress> item) -> bool {
-                            prepared = item.second.checkpoint_prepared ? prepared + 1 : prepared;
-                            return item.second.checkpoint_prepared;
-                        });
+        bool completed = std::all_of(_progress.begin(),
+                                     _progress.end(),
+                                     [&](std::pair<int, partition_progress> item) -> bool {
+                                         prepared = item.second.checkpoint_prepared ? prepared + 1
+                                                                                    : prepared;
+                                         return item.second.checkpoint_prepared;
+                                     });
         if (!completed) {
             LOG_WARNING("replica checkpoint still running: {}/{}", prepared, _progress.size());
         }

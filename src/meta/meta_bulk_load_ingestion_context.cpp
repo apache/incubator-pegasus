@@ -26,7 +26,7 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 DSN_DEFINE_uint32(meta_server,
                   bulk_load_node_max_ingesting_count,
@@ -44,13 +44,13 @@ ingestion_context::ingestion_context() { reset_all(); }
 
 ingestion_context::~ingestion_context() { reset_all(); }
 
-void ingestion_context::partition_node_info::create(const partition_configuration &config,
+void ingestion_context::partition_node_info::create(const partition_configuration &pc,
                                                     const config_context &cc)
 {
-    pid = config.pid;
+    pid = pc.pid;
     std::unordered_set<host_port> current_nodes;
-    current_nodes.insert(config.hp_primary);
-    for (const auto &secondary : config.hp_secondaries) {
+    current_nodes.insert(pc.hp_primary);
+    for (const auto &secondary : pc.hp_secondaries) {
         current_nodes.insert(secondary);
     }
     for (const auto &node : current_nodes) {
@@ -73,7 +73,7 @@ uint32_t ingestion_context::node_context::get_max_disk_ingestion_count(
     const uint32_t max_node_ingestion_count) const
 {
     FAIL_POINT_INJECT_F("ingestion_node_context_disk_count",
-                        [](absl::string_view count_str) -> uint32_t {
+                        [](std::string_view count_str) -> uint32_t {
                             uint32_t count = 0;
                             buf2uint32(count_str, count);
                             return count;
@@ -120,16 +120,16 @@ void ingestion_context::node_context::decrease(const std::string &disk_tag)
     disk_ingesting_counts[disk_tag]--;
 }
 
-bool ingestion_context::try_partition_ingestion(const partition_configuration &config,
+bool ingestion_context::try_partition_ingestion(const partition_configuration &pc,
                                                 const config_context &cc)
 {
-    FAIL_POINT_INJECT_F("ingestion_try_partition_ingestion", [=](absl::string_view) -> bool {
+    FAIL_POINT_INJECT_F("ingestion_try_partition_ingestion", [=](std::string_view) -> bool {
         auto info = partition_node_info();
-        info.pid = config.pid;
-        _running_partitions[config.pid] = info;
+        info.pid = pc.pid;
+        _running_partitions[pc.pid] = info;
         return true;
     });
-    partition_node_info info(config, cc);
+    partition_node_info info(pc, cc);
     for (const auto &kv : info.node_disk) {
         if (!check_node_ingestion(kv.first, kv.second)) {
             return false;
@@ -158,7 +158,7 @@ void ingestion_context::add_partition(const partition_node_info &info)
 void ingestion_context::remove_partition(const gpid &pid)
 {
     FAIL_POINT_INJECT_F("ingestion_context_remove_partition",
-                        [=](absl::string_view) { _running_partitions.erase(pid); });
+                        [=](std::string_view) { _running_partitions.erase(pid); });
 
     if (_running_partitions.find(pid) == _running_partitions.end()) {
         return;

@@ -44,25 +44,27 @@
 #include <gperftools/malloc_extension.h>
 #endif
 
+#include "fmt/core.h"
+#include "fmt/format.h"
 #include "perf_counter/perf_counters.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_engine.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
 #include "runtime/app_model.h"
 #include "runtime/global_config.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_engine.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "security/init.h"
-#include "security/negotiation_manager.h"
 #include "runtime/service_app.h"
 #include "runtime/service_engine.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_engine.h"
-#include "runtime/task/task_spec.h"
-#include "runtime/task/task_worker.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_engine.h"
+#include "task/task_spec.h"
+#include "task/task_worker.h"
 #include "runtime/tool_api.h"
+#include "security/init.h"
+#include "security/negotiation_manager.h"
 #include "utils/api_utilities.h"
 #include "utils/command_manager.h"
 #include "utils/config_api.h"
@@ -75,6 +77,7 @@
 #include "utils/join_point.h"
 #include "utils/logging_provider.h"
 #include "utils/process_utils.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 #include "utils/sys_exit_hook.h"
 #include "utils/threadpool_spec.h"
@@ -162,7 +165,7 @@ void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call)
 
     auto msg = rpc_call->get_request();
     msg->server_address = server;
-    msg->server_host_port = dsn::host_port::from_address(server);
+    msg->server_host_port = dsn::host_port::from_address(msg->server_address);
     ::dsn::task::get_current_rpc()->call(msg, dsn::rpc_response_task_ptr(rpc_call));
 }
 
@@ -170,7 +173,7 @@ dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *req
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
-    msg->server_host_port = dsn::host_port::from_address(server);
+    msg->server_host_port = dsn::host_port::from_address(msg->server_address);
 
     ::dsn::rpc_response_task *rtask = new ::dsn::rpc_response_task(msg, nullptr, 0);
     rtask->add_ref();
@@ -342,45 +345,29 @@ inline void dsn_global_init()
 
 static std::string dsn_log_prefixed_message_func()
 {
-    std::string res;
-    res.resize(100);
-    char *prefixed_message = const_cast<char *>(res.c_str());
-
-    int tid = dsn::utils::get_current_tid();
-    auto t = dsn::task::get_current_task_id();
+    const int tid = dsn::utils::get_current_tid();
+    const auto t = dsn::task::get_current_task_id();
     if (t) {
         if (nullptr != dsn::task::get_current_worker2()) {
-            sprintf(prefixed_message,
-                    "%6s.%7s%d.%016" PRIx64 ": ",
-                    dsn::task::get_current_node_name(),
-                    dsn::task::get_current_worker2()->pool_spec().name.c_str(),
-                    dsn::task::get_current_worker2()->index(),
-                    t);
+            return fmt::format("{}.{}{}.{:016}: ",
+                               dsn::task::get_current_node_name(),
+                               dsn::task::get_current_worker2()->pool_spec().name,
+                               dsn::task::get_current_worker2()->index(),
+                               t);
         } else {
-            sprintf(prefixed_message,
-                    "%6s.%7s.%05d.%016" PRIx64 ": ",
-                    dsn::task::get_current_node_name(),
-                    "io-thrd",
-                    tid,
-                    t);
+            return fmt::format(
+                "{}.io-thrd.{}.{:016}: ", dsn::task::get_current_node_name(), tid, t);
         }
     } else {
         if (nullptr != dsn::task::get_current_worker2()) {
-            sprintf(prefixed_message,
-                    "%6s.%7s%u: ",
-                    dsn::task::get_current_node_name(),
-                    dsn::task::get_current_worker2()->pool_spec().name.c_str(),
-                    dsn::task::get_current_worker2()->index());
+            return fmt::format("{}.{}{}: ",
+                               dsn::task::get_current_node_name(),
+                               dsn::task::get_current_worker2()->pool_spec().name,
+                               dsn::task::get_current_worker2()->index());
         } else {
-            sprintf(prefixed_message,
-                    "%6s.%7s.%05d: ",
-                    dsn::task::get_current_node_name(),
-                    "io-thrd",
-                    tid);
+            return fmt::format("{}.io-thrd.{}: ", dsn::task::get_current_node_name(), tid);
         }
     }
-
-    return res;
 }
 
 bool run(const char *config_file,
@@ -443,18 +430,27 @@ bool run(const char *config_file,
 
     ::dsn::utils::coredump::init();
 
-    // setup log dir
-    spec.dir_log = ::dsn::utils::filesystem::path_combine(cdir, "log");
-    dsn::utils::filesystem::create_directory(spec.dir_log);
+    // Setup log directory.
+    // If log_dir is not set, use data_dir/log instead.
+    if (spec.log_dir.empty()) {
+        spec.log_dir = ::dsn::utils::filesystem::path_combine(spec.data_dir, "log");
+        fmt::print(stdout, "log_dir is not set, use '{}' instead\n", spec.log_dir);
+    }
+    // Validate log_dir.
+    if (!dsn::utils::filesystem::is_absolute_path(spec.log_dir)) {
+        fmt::print(stderr, "log_dir({}) should be set with an absolute path\n", spec.log_dir);
+        return false;
+    }
+    dsn::utils::filesystem::create_directory(spec.log_dir);
 
-    // init tools
+    // Initialize tools.
     dsn_all.tool.reset(::dsn::utils::factory_store<::dsn::tools::tool_app>::create(
         spec.tool.c_str(), ::dsn::PROVIDER_TYPE_MAIN, spec.tool.c_str()));
     dsn_all.tool->install(spec);
 
-    // init app specs
+    // Initialize app specs.
     if (!spec.init_app_specs()) {
-        printf("error in config file %s, exit ...\n", config_file);
+        fmt::print(stderr, "error in config file {}, exit ...\n", config_file);
         return false;
     }
 
@@ -462,10 +458,27 @@ bool run(const char *config_file,
     ::MallocExtension::instance()->SetMemoryReleaseRate(FLAGS_tcmalloc_release_rate);
 #endif
 
-    // init logging
-    dsn_log_init(spec.logging_factory_name, spec.dir_log, dsn_log_prefixed_message_func);
+    // Extract app_names.
+    std::list<std::string> app_names_and_indexes;
+    ::dsn::utils::split_args(app_list.c_str(), app_names_and_indexes, ';');
+    std::vector<std::string> app_names;
+    for (const auto &app_name_and_index : app_names_and_indexes) {
+        std::vector<std::string> name_and_index;
+        ::dsn::utils::split_args(app_name_and_index.c_str(), name_and_index, '@');
+        if (name_and_index.empty()) {
+            fmt::print(stderr, "app_name should be specified in '{}'", app_name_and_index);
+            return false;
+        }
+        app_names.push_back(name_and_index[0]);
+    }
 
-    // prepare minimum necessary
+    // Initialize logging.
+    dsn_log_init(spec.logging_factory_name,
+                 spec.log_dir,
+                 fmt::format("{}", fmt::join(app_names, ".")),
+                 dsn_log_prefixed_message_func);
+
+    // Prepare the minimum necessary.
     ::dsn::service_engine::instance().init_before_toollets(spec);
 
     LOG_INFO("process({}) start: {}, date: {}",
@@ -473,10 +486,10 @@ bool run(const char *config_file,
              dsn::utils::process_start_millis(),
              dsn::utils::process_start_date_time_mills());
 
-    // init toollets
-    for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it) {
-        auto tlet =
-            dsn::tools::internal_use_only::get_toollet(it->c_str(), ::dsn::PROVIDER_TYPE_MAIN);
+    // Initialize toollets.
+    for (const auto &toollet_name : spec.toollets) {
+        auto tlet = dsn::tools::internal_use_only::get_toollet(toollet_name.c_str(),
+                                                               ::dsn::PROVIDER_TYPE_MAIN);
         CHECK_NOTNULL(tlet, "toolet not found");
         tlet->install(spec);
     }
@@ -507,29 +520,34 @@ bool run(const char *config_file,
         }
     }
 
-    // split app_name and app_index
-    std::list<std::string> applistkvs;
-    ::dsn::utils::split_args(app_list.c_str(), applistkvs, ';');
-
     // init apps
     for (auto &sp : spec.app_specs) {
-        if (!sp.run)
+        if (!sp.run) {
             continue;
+        }
 
         bool create_it = false;
-
         // create all apps
-        if (app_list == "") {
+        if (app_list.empty()) {
             create_it = true;
         } else {
-            for (auto &kv : applistkvs) {
-                std::list<std::string> argskvs;
-                ::dsn::utils::split_args(kv.c_str(), argskvs, '@');
-                if (std::string("apps.") + argskvs.front() == sp.config_section) {
-                    if (argskvs.size() < 2)
+            for (const auto &app_name_and_index : app_names_and_indexes) {
+                std::vector<std::string> name_and_index;
+                ::dsn::utils::split_args(app_name_and_index.c_str(), name_and_index, '@');
+                CHECK(!name_and_index.empty(),
+                      "app_name should be specified in '{}'",
+                      app_name_and_index);
+                if (std::string("apps.") + name_and_index.front() == sp.config_section) {
+                    if (name_and_index.size() < 2) {
                         create_it = true;
-                    else
-                        create_it = (std::stoi(argskvs.back()) == sp.index);
+                    } else {
+                        int32_t index = 0;
+                        const auto index_str = name_and_index.back();
+                        CHECK(dsn::buf2int32(index_str, index),
+                              "'{}' is not a valid index",
+                              index_str);
+                        create_it = (index == sp.index);
+                    }
                     break;
                 }
             }
@@ -540,10 +558,11 @@ bool run(const char *config_file,
         }
     }
 
-    if (dsn::service_engine::instance().get_all_nodes().size() == 0) {
-        printf("no app are created, usually because \n"
-               "app_name is not specified correctly, should be 'xxx' in [apps.xxx]\n"
-               "or app_index (1-based) is greater than specified count in config file\n");
+    if (dsn::service_engine::instance().get_all_nodes().empty()) {
+        fmt::print(stderr,
+                   "no app are created, usually because \n"
+                   "app_name is not specified correctly, should be 'xxx' in [apps.xxx]\n"
+                   "or app_index (1-based) is greater than specified count in config file\n");
         exit(1);
     }
 

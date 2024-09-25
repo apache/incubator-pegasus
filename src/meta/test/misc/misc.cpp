@@ -27,6 +27,7 @@
 #include "misc.h"
 
 #include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stdio.h>
 #include <atomic>
@@ -47,9 +48,10 @@
 #include "duplication_types.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
-#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/dns_resolver.h" // IWYU pragma: keep
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/rand.h"
 
@@ -76,11 +78,11 @@ void verbose_apps(const app_mapper &input_apps)
     for (const auto &apps : input_apps) {
         const std::shared_ptr<app_state> &app = apps.second;
         std::cout << apps.first << " " << app->partition_count << std::endl;
-        for (int i = 0; i < app->partition_count; ++i) {
-            std::cout << app->partitions[i].hp_secondaries.size() + 1 << " "
-                      << app->partitions[i].hp_primary;
-            for (int j = 0; j < app->partitions[i].hp_secondaries.size(); ++j) {
-                std::cout << " " << app->partitions[i].hp_secondaries[j];
+        CHECK_EQ(app->partition_count, app->pcs.size());
+        for (const auto &pc : app->pcs) {
+            std::cout << pc.hp_secondaries.size() + 1 << " " << pc.hp_primary;
+            for (const auto &secondary : pc.hp_secondaries) {
+                std::cout << " " << secondary;
             }
             std::cout << std::endl;
         }
@@ -99,7 +101,7 @@ void generate_node_mapper(
 
     for (auto &kv : input_apps) {
         const std::shared_ptr<app_state> &app = kv.second;
-        for (const dsn::partition_configuration &pc : app->partitions) {
+        for (const auto &pc : app->pcs) {
             node_state *ns;
             if (pc.hp_primary) {
                 ns = get_node_state(output_nodes, pc.hp_primary, true);
@@ -117,7 +119,7 @@ void generate_node_mapper(
 void generate_app(/*out*/ std::shared_ptr<app_state> &app,
                   const std::vector<dsn::host_port> &node_list)
 {
-    for (dsn::partition_configuration &pc : app->partitions) {
+    for (auto &pc : app->pcs) {
         pc.ballot = random32(1, 10000);
         std::vector<int> indices(3, 0);
         indices[0] = random32(0, node_list.size() - 3);
@@ -145,18 +147,18 @@ void generate_app_serving_replica_info(/*out*/ std::shared_ptr<dsn::replication:
 {
     char buffer[256];
     for (int i = 0; i < app->partition_count; ++i) {
-        config_context &cc = app->helpers->contexts[i];
-        dsn::partition_configuration &pc = app->partitions[i];
+        auto &cc = app->helpers->contexts[i];
+        auto &pc = app->pcs[i];
         replica_info ri;
 
         snprintf(buffer, 256, "disk%u", dsn::rand::next_u32(1, total_disks));
         ri.disk_tag = buffer;
         cc.collect_serving_replica(pc.hp_primary, ri);
 
-        for (const auto &hp : pc.hp_secondaries) {
+        for (const auto &secondary : pc.hp_secondaries) {
             snprintf(buffer, 256, "disk%u", dsn::rand::next_u32(1, total_disks));
             ri.disk_tag = buffer;
-            cc.collect_serving_replica(hp, ri);
+            cc.collect_serving_replica(secondary, ri);
         }
     }
 }
@@ -178,14 +180,14 @@ void generate_apps(/*out*/ dsn::replication::app_mapper &mapper,
         info.app_type = "test";
         info.max_replica_count = 3;
         info.partition_count = random32(partitions_range.first, partitions_range.second);
-        std::shared_ptr<app_state> the_app = app_state::create(info);
-        generate_app(the_app, node_list);
+        std::shared_ptr<app_state> app = app_state::create(info);
+        generate_app(app, node_list);
 
         if (generate_serving_info) {
-            generate_app_serving_replica_info(the_app, disks_per_node);
+            generate_app_serving_replica_info(app, disks_per_node);
         }
         LOG_DEBUG("generated app, partitions({})", info.partition_count);
-        mapper.emplace(the_app->app_id, the_app);
+        mapper.emplace(app->app_id, app);
     }
 }
 
@@ -195,15 +197,13 @@ void generate_node_fs_manager(const app_mapper &apps,
                               int total_disks)
 {
     nfm.clear();
-    const char *prefix = "/home/work/";
-    char pid_dir[256];
+    std::string prefix;
+    CHECK(dsn::utils::filesystem::get_current_directory(prefix), "");
     std::vector<std::string> data_dirs(total_disks);
     std::vector<std::string> tags(total_disks);
     for (int i = 0; i < data_dirs.size(); ++i) {
-        snprintf(pid_dir, 256, "%sdisk%d", prefix, i + 1);
-        data_dirs[i] = pid_dir;
-        snprintf(pid_dir, 256, "disk%d", i + 1);
-        tags[i] = pid_dir;
+        data_dirs[i] = fmt::format("{}disk{}", prefix, i + 1);
+        tags[i] = fmt::format("disk{}", i + 1);
     }
 
     for (const auto &kv : nodes) {
@@ -215,15 +215,13 @@ void generate_node_fs_manager(const app_mapper &apps,
         manager.initialize(data_dirs, tags);
         ns.for_each_partition([&](const dsn::gpid &pid) {
             const config_context &cc = *get_config_context(apps, pid);
-            snprintf(pid_dir,
-                     256,
-                     "%s%s/%d.%d.test",
-                     prefix,
-                     cc.find_from_serving(ns.host_port())->disk_tag.c_str(),
-                     pid.get_app_id(),
-                     pid.get_partition_index());
-            LOG_DEBUG("concat pid_dir({}) of node({})", pid_dir, ns.host_port());
-            manager.add_replica(pid, pid_dir);
+            const auto dir = fmt::format("{}{}/{}.{}.test",
+                                         prefix,
+                                         cc.find_from_serving(ns.host_port())->disk_tag,
+                                         pid.get_app_id(),
+                                         pid.get_partition_index());
+            LOG_DEBUG("concat {} of node({})", dir, ns.host_port());
+            manager.add_replica(pid, dir);
             return true;
         });
     }
@@ -410,19 +408,17 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
 
 void migration_check_and_apply(app_mapper &apps,
                                node_mapper &nodes,
-                               migration_list &ml,
+                               const migration_list &ml,
                                nodes_fs_manager *manager)
 {
     int i = 0;
-    for (auto kv = ml.begin(); kv != ml.end(); ++kv) {
-        std::shared_ptr<configuration_balancer_request> &proposal = kv->second;
+    for (const auto &[_, proposal] : ml) {
         LOG_DEBUG("the {}th round of proposal, gpid({})", i++, proposal->gpid);
-        std::shared_ptr<app_state> &the_app = apps.find(proposal->gpid.get_app_id())->second;
+        const auto &app = apps.find(proposal->gpid.get_app_id())->second;
 
-        CHECK_EQ(proposal->gpid.get_app_id(), the_app->app_id);
-        CHECK_LT(proposal->gpid.get_partition_index(), the_app->partition_count);
-        dsn::partition_configuration &pc =
-            the_app->partitions[proposal->gpid.get_partition_index()];
+        CHECK_EQ(proposal->gpid.get_app_id(), app->app_id);
+        CHECK_LT(proposal->gpid.get_partition_index(), app->partition_count);
+        const auto &pc = app->pcs[proposal->gpid.get_partition_index()];
 
         CHECK(pc.hp_primary, "");
         CHECK_EQ(pc.hp_secondaries.size(), 2);
@@ -462,7 +458,7 @@ void app_mapper_compare(const app_mapper &mapper1, const app_mapper &mapper2)
         if (app1->status == dsn::app_status::AS_AVAILABLE) {
             CHECK_EQ(app1->partition_count, app2->partition_count);
             for (unsigned int i = 0; i < app1->partition_count; ++i) {
-                CHECK(is_partition_config_equal(app1->partitions[i], app2->partitions[i]), "");
+                CHECK(is_partition_config_equal(app1->pcs[i], app2->pcs[i]), "");
             }
         }
     }

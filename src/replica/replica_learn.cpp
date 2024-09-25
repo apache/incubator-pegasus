@@ -55,14 +55,14 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
+#include "task/async_calls.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
@@ -174,13 +174,14 @@ void replica::init_learn(uint64_t signature)
                         METRIC_VAR_INCREMENT(learn_rounds);
                         _potential_secondary_states.learning_round_is_running = true;
                         _potential_secondary_states.catchup_with_private_log_task =
-                            tasking::create_task(LPC_CATCHUP_WITH_PRIVATE_LOGS,
-                                                 &_tracker,
-                                                 [this]() {
-                                                     this->catch_up_with_private_logs(
-                                                         partition_status::PS_POTENTIAL_SECONDARY);
-                                                 },
-                                                 get_gpid().thread_hash());
+                            tasking::create_task(
+                                LPC_CATCHUP_WITH_PRIVATE_LOGS,
+                                &_tracker,
+                                [this]() {
+                                    this->catch_up_with_private_logs(
+                                        partition_status::PS_POTENTIAL_SECONDARY);
+                                },
+                                get_gpid().thread_hash());
                         _potential_secondary_states.catchup_with_private_log_task->enqueue();
 
                         return; // incomplete
@@ -261,7 +262,7 @@ void replica::init_learn(uint64_t signature)
         dsn::dns_resolver::instance().resolve_address(primary),
         msg,
         &_tracker,
-        [ this, req_cap = std::move(request) ](error_code err, learn_response && resp) mutable {
+        [this, req_cap = std::move(request)](error_code err, learn_response &&resp) mutable {
             on_learn_reply(err, std::move(req_cap), std::move(resp));
         });
 }
@@ -699,14 +700,14 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         }
 
         if (err != ERR_OK) {
-            _potential_secondary_states.learn_remote_files_task =
-                tasking::create_task(LPC_LEARN_REMOTE_DELTA_FILES, &_tracker, [
-                    this,
-                    err,
-                    copy_start = _potential_secondary_states.duration_ms(),
-                    req_cap = std::move(req),
-                    resp_cap = std::move(resp)
-                ]() mutable {
+            _potential_secondary_states.learn_remote_files_task = tasking::create_task(
+                LPC_LEARN_REMOTE_DELTA_FILES,
+                &_tracker,
+                [this,
+                 err,
+                 copy_start = _potential_secondary_states.duration_ms(),
+                 req_cap = std::move(req),
+                 resp_cap = std::move(resp)]() mutable {
                     on_copy_remote_state_completed(
                         err, 0, copy_start, std::move(req_cap), std::move(resp_cap));
                 });
@@ -849,14 +850,14 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
         // go to next stage
         _potential_secondary_states.learning_status = learner_status::LearningWithPrepare;
-        _potential_secondary_states.learn_remote_files_task =
-            tasking::create_task(LPC_LEARN_REMOTE_DELTA_FILES, &_tracker, [
-                this,
-                err,
-                copy_start = _potential_secondary_states.duration_ms(),
-                req_cap = std::move(req),
-                resp_cap = std::move(resp)
-            ]() mutable {
+        _potential_secondary_states.learn_remote_files_task = tasking::create_task(
+            LPC_LEARN_REMOTE_DELTA_FILES,
+            &_tracker,
+            [this,
+             err,
+             copy_start = _potential_secondary_states.duration_ms(),
+             req_cap = std::move(req),
+             resp_cap = std::move(resp)]() mutable {
                 on_copy_remote_state_completed(
                     err, 0, copy_start, std::move(req_cap), std::move(resp_cap));
             });
@@ -876,18 +877,18 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                 learn_dir);
 
             _potential_secondary_states.learn_remote_files_task =
-                tasking::create_task(LPC_LEARN_REMOTE_DELTA_FILES, &_tracker, [
-                    this,
-                    copy_start = _potential_secondary_states.duration_ms(),
-                    req_cap = std::move(req),
-                    resp_cap = std::move(resp)
-                ]() mutable {
-                    on_copy_remote_state_completed(ERR_FILE_OPERATION_FAILED,
-                                                   0,
-                                                   copy_start,
-                                                   std::move(req_cap),
-                                                   std::move(resp_cap));
-                });
+                tasking::create_task(LPC_LEARN_REMOTE_DELTA_FILES,
+                                     &_tracker,
+                                     [this,
+                                      copy_start = _potential_secondary_states.duration_ms(),
+                                      req_cap = std::move(req),
+                                      resp_cap = std::move(resp)]() mutable {
+                                         on_copy_remote_state_completed(ERR_FILE_OPERATION_FAILED,
+                                                                        0,
+                                                                        copy_start,
+                                                                        std::move(req_cap),
+                                                                        std::move(resp_cap));
+                                     });
             _potential_secondary_states.learn_remote_files_task->enqueue();
             return;
         }
@@ -915,23 +916,21 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             high_priority,
             LPC_REPLICATION_COPY_REMOTE_FILES,
             &_tracker,
-            [
-              this,
-              copy_start = _potential_secondary_states.duration_ms(),
-              req_cap = std::move(req),
-              resp_copy = resp
-            ](error_code err, size_t sz) mutable {
+            [this,
+             copy_start = _potential_secondary_states.duration_ms(),
+             req_cap = std::move(req),
+             resp_copy = resp](error_code err, size_t sz) mutable {
                 on_copy_remote_state_completed(
                     err, sz, copy_start, std::move(req_cap), std::move(resp_copy));
             });
     } else {
-        _potential_secondary_states.learn_remote_files_task =
-            tasking::create_task(LPC_LEARN_REMOTE_DELTA_FILES, &_tracker, [
-                this,
-                copy_start = _potential_secondary_states.duration_ms(),
-                req_cap = std::move(req),
-                resp_cap = std::move(resp)
-            ]() mutable {
+        _potential_secondary_states.learn_remote_files_task = tasking::create_task(
+            LPC_LEARN_REMOTE_DELTA_FILES,
+            &_tracker,
+            [this,
+             copy_start = _potential_secondary_states.duration_ms(),
+             req_cap = std::move(req),
+             resp_cap = std::move(resp)]() mutable {
                 on_copy_remote_state_completed(
                     ERR_OK, 0, copy_start, std::move(req_cap), std::move(resp_cap));
             });
@@ -1177,11 +1176,11 @@ void replica::on_copy_remote_state_completed(error_code err,
     // cleanup
     _potential_secondary_states.learn_remote_files_task = nullptr;
 
-    _potential_secondary_states.learn_remote_files_completed_task =
-        tasking::create_task(LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
-                             &_tracker,
-                             [this, err]() { on_learn_remote_state_completed(err); },
-                             get_gpid().thread_hash());
+    _potential_secondary_states.learn_remote_files_completed_task = tasking::create_task(
+        LPC_LEARN_REMOTE_DELTA_FILES_COMPLETED,
+        &_tracker,
+        [this, err]() { on_learn_remote_state_completed(err); },
+        get_gpid().thread_hash());
     _potential_secondary_states.learn_remote_files_completed_task->enqueue();
 }
 
@@ -1307,11 +1306,11 @@ void replica::notify_learn_completion()
 
     host_port primary;
     GET_HOST_PORT(_config, primary, primary);
-    _potential_secondary_states.completion_notify_task =
-        rpc::call(dsn::dns_resolver::instance().resolve_address(primary), msg, &_tracker, [
-            this,
-            report = std::move(report)
-        ](error_code err, learn_notify_response && resp) mutable {
+    _potential_secondary_states.completion_notify_task = rpc::call(
+        dsn::dns_resolver::instance().resolve_address(primary),
+        msg,
+        &_tracker,
+        [this, report = std::move(report)](error_code err, learn_notify_response &&resp) mutable {
             on_learn_completion_notification_reply(err, std::move(report), std::move(resp));
         });
 }
@@ -1477,10 +1476,11 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
             _app->learn_dir(),
             [](int log_length, mutation_ptr &mu) { return true; },
             [this](error_code err) {
-                tasking::enqueue(LPC_REPLICATION_ERROR,
-                                 &_tracker,
-                                 [this, err]() { handle_local_failure(err); },
-                                 get_gpid().thread_hash());
+                tasking::enqueue(
+                    LPC_REPLICATION_ERROR,
+                    &_tracker,
+                    [this, err]() { handle_local_failure(err); },
+                    get_gpid().thread_hash());
             });
         if (err != ERR_OK) {
             LOG_ERROR_PREFIX("failed to reset this private log with logs in learn/ dir: {}", err);
@@ -1522,21 +1522,21 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                            }
                        });
 
-    err = mutation_log::replay(state.files,
-                               [&plist](int log_length, mutation_ptr &mu) {
-                                   auto d = mu->data.header.decree;
-                                   if (d <= plist.last_committed_decree())
-                                       return false;
+    err = mutation_log::replay(
+        state.files,
+        [&plist](int log_length, mutation_ptr &mu) {
+            auto d = mu->data.header.decree;
+            if (d <= plist.last_committed_decree())
+                return false;
 
-                                   auto old = plist.get_mutation_by_decree(d);
-                                   if (old != nullptr &&
-                                       old->data.header.ballot >= mu->data.header.ballot)
-                                       return false;
+            auto old = plist.get_mutation_by_decree(d);
+            if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot)
+                return false;
 
-                                   plist.prepare(mu, partition_status::PS_SECONDARY);
-                                   return true;
-                               },
-                               offset);
+            plist.prepare(mu, partition_status::PS_SECONDARY);
+            return true;
+        },
+        offset);
 
     // update first_learn_start_decree, the position where the first round of LT_LOG starts from.
     // we use this value to determine whether to learn back from min_confirmed_decree

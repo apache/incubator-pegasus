@@ -90,7 +90,7 @@ public:
     int empty_put(int64_t decree)
     {
         int err =
-            _rocksdb_wrapper->write_batch_put(decree, absl::string_view(), absl::string_view(), 0);
+            _rocksdb_wrapper->write_batch_put(decree, std::string_view(), std::string_view(), 0);
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         if (err != rocksdb::Status::kOk) {
             return err;
@@ -178,7 +178,7 @@ public:
         resp.decree = decree;
         resp.server = _primary_host_port;
 
-        absl::string_view raw_key = update.key.to_string_view();
+        std::string_view raw_key = update.key.to_string_view();
         int64_t new_value = 0;
         uint32_t new_expire_ts = 0;
         db_get_context get_ctx;
@@ -275,7 +275,7 @@ public:
         pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
 
         db_get_context get_context;
-        absl::string_view check_raw_key = check_key.to_string_view();
+        std::string_view check_raw_key = check_key.to_string_view();
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != rocksdb::Status::kOk) {
             // read check value failed
@@ -327,7 +327,7 @@ public:
         } else {
             // check not passed, write empty record to update rocksdb's last flushed decree
             resp.error = _rocksdb_wrapper->write_batch_put(
-                decree, absl::string_view(), absl::string_view(), 0);
+                decree, std::string_view(), std::string_view(), 0);
         }
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
@@ -342,8 +342,8 @@ public:
 
         if (!passed) {
             // check not passed, return proper error code to user
-            resp.error =
-                invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
+            resp.error = invalid_argument ? rocksdb::Status::kInvalidArgument
+                                          : rocksdb::Status::kTryAgain;
         }
 
         return rocksdb::Status::kOk;
@@ -395,7 +395,7 @@ public:
         pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
 
         db_get_context get_context;
-        absl::string_view check_raw_key = check_key.to_string_view();
+        std::string_view check_raw_key = check_key.to_string_view();
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != rocksdb::Status::kOk) {
             // read check value failed
@@ -453,7 +453,7 @@ public:
         } else {
             // check not passed, write empty record to update rocksdb's last flushed decree
             resp.error = _rocksdb_wrapper->write_batch_put(
-                decree, absl::string_view(), absl::string_view(), 0);
+                decree, std::string_view(), std::string_view(), 0);
         }
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
@@ -468,8 +468,8 @@ public:
 
         if (!passed) {
             // check not passed, return proper error code to user
-            resp.error =
-                invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
+            resp.error = invalid_argument ? rocksdb::Status::kInvalidArgument
+                                          : rocksdb::Status::kTryAgain;
         }
         return rocksdb::Status::kOk;
     }
@@ -562,7 +562,7 @@ private:
         _rocksdb_wrapper->clear_up_write_batch();
     }
 
-    static dsn::blob composite_raw_key(absl::string_view hash_key, absl::string_view sort_key)
+    static dsn::blob composite_raw_key(std::string_view hash_key, std::string_view sort_key)
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, sort_key);
@@ -609,7 +609,7 @@ private:
                 return false;
             if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
                 return value.to_string_view().find(check_operand.to_string_view()) !=
-                       absl::string_view::npos;
+                       std::string_view::npos;
             } else if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_PREFIX) {
                 return dsn::utils::mequals(
                     value.data(), check_operand.data(), check_operand.length());

@@ -49,7 +49,7 @@
 
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "common/gpid.h"
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
@@ -236,6 +236,12 @@
     {                                                                                              \
         JSON_DECODE_ENTRIES(input, t, __VA_ARGS__);                                                \
     }
+
+#define JSON_ENCODE_OBJ(writer, name, ...)                                                         \
+    do {                                                                                           \
+        writer.Key(#name);                                                                         \
+        dsn::json::json_encode(writer, __VA_ARGS__);                                               \
+    } while (0)
 
 namespace dsn {
 namespace json {
@@ -442,8 +448,8 @@ inline bool json_decode(const dsn::json::JsonObject &in, dsn::host_port &hp)
     return static_cast<bool>(hp);
 }
 
-inline void json_encode(JsonWriter &out, const dsn::partition_configuration &config);
-inline bool json_decode(const JsonObject &in, dsn::partition_configuration &config);
+inline void json_encode(JsonWriter &out, const dsn::partition_configuration &pc);
+inline bool json_decode(const JsonObject &in, dsn::partition_configuration &pc);
 inline void json_encode(JsonWriter &out, const dsn::app_info &info);
 inline bool json_decode(const JsonObject &in, dsn::app_info &info);
 inline void json_encode(JsonWriter &out, const dsn::replication::file_meta &f_meta);

@@ -29,7 +29,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "common/gpid.h"
 #include "utils/distributed_lock_service.h"
 
@@ -43,5 +43,5 @@ class distributed_lock_service_zookeeper;
 class lock_struct;
 typedef ref_ptr<distributed_lock_service_zookeeper> lock_srv_ptr;
 typedef ref_ptr<lock_struct> lock_struct_ptr;
-}
-}
+} // namespace dist
+} // namespace dsn

@@ -32,9 +32,9 @@
 #include "nfs/nfs_node.h"
 #include "replica/duplication/replica_follower.h"
 #include "replica/test/mock_utils.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
@@ -99,7 +99,7 @@ public:
 
     const partition_configuration &master_replica_config(replica_follower *follower) const
     {
-        return follower->_master_replica_config;
+        return follower->_pc;
     }
 
     error_code nfs_copy_checkpoint(replica_follower *follower, error_code err, learn_response resp)
@@ -225,42 +225,42 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
     ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partition_count = _app_info.partition_count;
-    partition_configuration p;
-    resp.partitions.emplace_back(p);
-    resp.partitions.emplace_back(p);
+    partition_configuration pc;
+    resp.partitions.emplace_back(pc);
+    resp.partitions.emplace_back(pc);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INVALID_DATA);
     ASSERT_FALSE(master_replica_config(follower).primary);
     ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partitions.clear();
-    p.pid = gpid(2, 100);
-    resp.partitions.emplace_back(p);
+    pc.pid = gpid(2, 100);
+    resp.partitions.emplace_back(pc);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INCONSISTENT_STATE);
     ASSERT_FALSE(master_replica_config(follower).primary);
     ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partitions.clear();
-    RESET_IP_AND_HOST_PORT(p, primary);
-    p.pid = gpid(2, 1);
-    resp.partitions.emplace_back(p);
+    RESET_IP_AND_HOST_PORT(pc, primary);
+    pc.pid = gpid(2, 1);
+    resp.partitions.emplace_back(pc);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INVALID_STATE);
     ASSERT_FALSE(master_replica_config(follower).primary);
     ASSERT_FALSE(master_replica_config(follower).hp_primary);
 
     resp.partitions.clear();
-    p.pid = gpid(2, 1);
+    pc.pid = gpid(2, 1);
 
     const host_port primary("localhost", 34801);
     const host_port secondary1("localhost", 34802);
     const host_port secondary2("localhost", 34803);
 
-    SET_IP_AND_HOST_PORT_BY_DNS(p, primary, primary);
-    SET_IPS_AND_HOST_PORTS_BY_DNS(p, secondaries, secondary1, secondary2);
-    resp.partitions.emplace_back(p);
+    SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
+    SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, secondary1, secondary2);
+    resp.partitions.emplace_back(pc);
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_OK);
-    ASSERT_EQ(master_replica_config(follower).primary, p.primary);
-    ASSERT_EQ(master_replica_config(follower).hp_primary, p.hp_primary);
-    ASSERT_EQ(master_replica_config(follower).pid, p.pid);
+    ASSERT_EQ(master_replica_config(follower).primary, pc.primary);
+    ASSERT_EQ(master_replica_config(follower).hp_primary, pc.hp_primary);
+    ASSERT_EQ(master_replica_config(follower).pid, pc.pid);
 }
 
 TEST_P(replica_follower_test, test_nfs_copy_checkpoint)

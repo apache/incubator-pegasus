@@ -20,9 +20,9 @@
 #pragma once
 
 #include <absl/utility/utility.h>
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
-#include "runtime/task/async_calls.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
+#include "task/async_calls.h"
 #include "utils/chrono_literals.h"
 
 namespace dsn {
@@ -106,7 +106,7 @@ struct result
     //   });
     // ```
     //
-    void step_down_next_stage(Args &&... args)
+    void step_down_next_stage(Args &&...args)
     {
         CHECK_NOTNULL(__func, "no next stage is linked");
         __func(std::make_tuple(std::forward<Args>(args)...));
@@ -181,16 +181,14 @@ struct base : environment
 
             // link to node of existing pipeline
             if (next.__pipeline != nullptr) {
-                this_stage->__func = [next_ptr = &next](ArgsTupleType && args) mutable
-                {
+                this_stage->__func = [next_ptr = &next](ArgsTupleType &&args) mutable {
                     absl::apply(&NextStage::async,
                                 std::tuple_cat(std::make_tuple(next_ptr), std::move(args)));
                 };
             } else {
                 next.__conf = this_stage->__conf;
                 next.__pipeline = this_stage->__pipeline;
-                this_stage->__func = [next_ptr = &next](ArgsTupleType && args) mutable
-                {
+                this_stage->__func = [next_ptr = &next](ArgsTupleType &&args) mutable {
                     if (next_ptr->paused()) {
                         return;
                     }
@@ -240,22 +238,23 @@ template <typename... Args>
 struct when : environment
 {
     /// Run this stage within current context.
-    virtual void run(Args &&... in) = 0;
+    virtual void run(Args &&...in) = 0;
 
-    void repeat(Args &&... in, std::chrono::milliseconds delay_ms = 0_ms)
+    void repeat(Args &&...in, std::chrono::milliseconds delay_ms = 0_ms)
     {
         auto arg_tuple = std::make_tuple(this, std::forward<Args>(in)...);
-        schedule([ this, args = std::move(arg_tuple) ]() mutable {
-            if (paused()) {
-                return;
-            }
-            absl::apply(&when<Args...>::run, std::move(args));
-        },
-                 delay_ms);
+        schedule(
+            [this, args = std::move(arg_tuple)]() mutable {
+                if (paused()) {
+                    return;
+                }
+                absl::apply(&when<Args...>::run, std::move(args));
+            },
+            delay_ms);
     }
 
     /// Run this stage asynchronously in its environment.
-    void async(Args &&... in) { repeat(std::forward<Args>(in)...); }
+    void async(Args &&...in) { repeat(std::forward<Args>(in)...); }
 
     bool paused() const { return __pipeline->paused(); }
 
@@ -279,9 +278,9 @@ inline void base::run_pipeline()
 template <typename... Args>
 struct do_when : when<Args...>
 {
-    explicit do_when(std::function<void(Args &&... args)> &&func) : _cb(std::move(func)) {}
+    explicit do_when(std::function<void(Args &&...args)> &&func) : _cb(std::move(func)) {}
 
-    void run(Args &&... args) override { _cb(std::forward<Args>(args)...); }
+    void run(Args &&...args) override { _cb(std::forward<Args>(args)...); }
 
     virtual ~do_when() = default;
 

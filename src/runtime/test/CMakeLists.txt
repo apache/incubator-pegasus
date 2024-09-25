@@ -36,11 +36,9 @@ set(MY_PROJ_LIBS
         gtest)
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 set(MY_BINPLACES
-        config-test-corrupt-message.ini
         config-test.ini
         config-test-sim.ini
         command.txt
         run.sh
-        clear.sh
-        gtest.filter)
+        clear.sh)
 dsn_add_test()

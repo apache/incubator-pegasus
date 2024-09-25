@@ -19,9 +19,9 @@
 
 #include <stdint.h>
 
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "rpc/rpc_stream.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "thrift_helper.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"

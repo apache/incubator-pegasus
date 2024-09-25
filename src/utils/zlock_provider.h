@@ -179,4 +179,4 @@ public:
 private:
     semaphore_provider *_inner_provider;
 };
-}
+} // namespace dsn

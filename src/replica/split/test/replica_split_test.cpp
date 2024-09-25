@@ -40,10 +40,10 @@
 #include "replica/split/replica_split_manager.h"
 #include "replica/test/mock_utils.h"
 #include "replica/test/replica_test_base.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
@@ -186,16 +186,16 @@ public:
 
     void mock_parent_primary_configuration(bool lack_of_secondary = false)
     {
-        partition_configuration config;
-        config.max_replica_count = 3;
-        config.pid = PARENT_GPID;
-        config.ballot = INIT_BALLOT;
-        SET_IP_AND_HOST_PORT_BY_DNS(config, primary, PRIMARY);
-        ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY);
+        partition_configuration pc;
+        pc.max_replica_count = 3;
+        pc.pid = PARENT_GPID;
+        pc.ballot = INIT_BALLOT;
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, PRIMARY);
+        ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY);
         if (!lack_of_secondary) {
-            ADD_IP_AND_HOST_PORT_BY_DNS(config, secondaries, SECONDARY2);
+            ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, SECONDARY2);
         }
-        _parent_replica->set_primary_partition_configuration(config);
+        _parent_replica->set_primary_partition_configuration(pc);
     }
 
     void mock_update_child_partition_count_request(update_child_group_partition_count_request &req,
@@ -453,15 +453,15 @@ public:
         req.partition_count = OLD_PARTITION_COUNT;
         req.pid = PARENT_GPID;
 
-        partition_configuration child_config;
-        child_config.pid = CHILD_GPID;
-        child_config.ballot = INIT_BALLOT + 1;
-        child_config.last_committed_decree = 0;
+        partition_configuration child_pc;
+        child_pc.pid = CHILD_GPID;
+        child_pc.ballot = INIT_BALLOT + 1;
+        child_pc.last_committed_decree = 0;
 
         query_child_state_response resp;
         resp.err = ERR_OK;
         resp.__set_partition_count(NEW_PARTITION_COUNT);
-        resp.__set_child_config(child_config);
+        resp.__set_child_config(child_pc);
 
         _parent_split_mgr->on_query_child_state_reply(ERR_OK, req, resp);
         _parent_split_mgr->tracker()->wait_outstanding_tasks();

@@ -37,15 +37,15 @@
 #include "common/replication_other_types.h"
 #include "replica/storage/simple_kv/simple_kv.client.h"
 #include "replica/storage/simple_kv/test/common.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/group_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/group_host_port.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_code.h"
 #include "simple_kv_types.h"
+#include "task/async_calls.h"
+#include "task/task_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
@@ -141,11 +141,12 @@ void simple_kv_client_app::begin_write(int id,
     ctx->req.value = value;
     ctx->timeout_ms = timeout_ms;
     auto &req = ctx->req;
-    _simple_kv_client->write(req,
-                             [ctx](error_code err, int32_t resp) {
-                                 test_case::instance().on_end_write(ctx->id, err, resp);
-                             },
-                             std::chrono::milliseconds(timeout_ms));
+    _simple_kv_client->write(
+        req,
+        [ctx](error_code err, int32_t resp) {
+            test_case::instance().on_end_write(ctx->id, err, resp);
+        },
+        std::chrono::milliseconds(timeout_ms));
 }
 
 void simple_kv_client_app::send_config_to_meta(const host_port &receiver,
@@ -183,11 +184,12 @@ void simple_kv_client_app::begin_read(int id, const std::string &key, int timeou
     ctx->id = id;
     ctx->key = key;
     ctx->timeout_ms = timeout_ms;
-    _simple_kv_client->read(key,
-                            [ctx](error_code err, std::string &&resp) {
-                                test_case::instance().on_end_read(ctx->id, err, resp);
-                            },
-                            std::chrono::milliseconds(timeout_ms));
+    _simple_kv_client->read(
+        key,
+        [ctx](error_code err, std::string &&resp) {
+            test_case::instance().on_end_read(ctx->id, err, resp);
+        },
+        std::chrono::milliseconds(timeout_ms));
 }
 } // namespace test
 } // namespace replication

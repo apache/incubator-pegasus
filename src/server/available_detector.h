@@ -25,11 +25,10 @@
 #include <string>
 #include <vector>
 
-#include "dsn.layer2_types.h"
 #include "perf_counter/perf_counter_wrapper.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/rpc_host_port.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
@@ -86,7 +85,6 @@ private:
     std::vector<::dsn::task_ptr> _detect_tasks;
     int32_t _app_id;
     int32_t _partition_count;
-    std::vector<::dsn::partition_configuration> partitions;
 
     std::string _send_alert_email_cmd;
     std::string _send_availability_info_email_cmd;

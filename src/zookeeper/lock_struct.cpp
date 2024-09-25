@@ -36,8 +36,8 @@
 #include "distributed_lock_service_zookeeper.h"
 #include "lock_struct.h"
 #include "lock_types.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
+#include "task/async_calls.h"
+#include "task/task.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -81,11 +81,12 @@ static bool is_zookeeper_timeout(int zookeeper_error)
                 zookeeper_session::string_zoo_operation(op->_optype),                              \
                 op->_input._path);                                                                 \
     zookeeper_session::add_ref(op);                                                                \
-    tasking::enqueue(TASK_CODE_DLOCK,                                                              \
-                     nullptr,                                                                      \
-                     [_this, op]() { _this->_dist_lock_service->session()->visit(op); },           \
-                     _this->hash(),                                                                \
-                     std::chrono::seconds(1));
+    tasking::enqueue(                                                                              \
+        TASK_CODE_DLOCK,                                                                           \
+        nullptr,                                                                                   \
+        [_this, op]() { _this->_dist_lock_service->session()->visit(op); },                        \
+        _this->hash(),                                                                             \
+        std::chrono::seconds(1));
 
 #define IGNORE_CALLBACK true
 #define DONT_IGNORE_CALLBACK false
@@ -798,5 +799,5 @@ void lock_struct::lock_expired(lock_struct_ptr _this)
     _this->_checker.only_one_thread_access();
     _this->on_expire();
 }
-}
-}
+} // namespace dist
+} // namespace dsn

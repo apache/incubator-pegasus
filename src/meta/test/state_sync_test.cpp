@@ -46,15 +46,15 @@
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/strings.h"
-#include "utils/utils.h"
 #include "utils/test_macros.h"
+#include "utils/utils.h"
 
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
@@ -75,7 +75,7 @@ static void random_assign_partition_config(std::shared_ptr<app_state> &app,
     };
 
     int max_servers = (server_list.size() - 1) * 2 - 1;
-    for (dsn::partition_configuration &pc : app->partitions) {
+    for (auto &pc : app->pcs) {
         int start = 0;
         std::vector<int> indices;
         for (int i = 0; i < max_replica_count && start <= max_servers; ++i) {
@@ -169,7 +169,7 @@ void meta_service_test_app::state_sync_test()
             random_assign_partition_config(app, server_list, 3);
             if (app->status == dsn::app_status::AS_DROPPING) {
                 for (int j = 0; j < app->partition_count; ++j) {
-                    app->partitions[j].partition_flags = pc_flags::dropped;
+                    app->pcs[j].partition_flags = pc_flags::dropped;
                 }
             }
         }
@@ -218,11 +218,12 @@ void meta_service_test_app::state_sync_test()
         dsn::error_code ec;
         dsn::dist::meta_state_service *storage = svc->get_remote_storage();
         storage
-            ->delete_node(apps_root,
-                          true,
-                          LPC_META_CALLBACK,
-                          [&ec](dsn::error_code error) { ec = error; },
-                          nullptr)
+            ->delete_node(
+                apps_root,
+                true,
+                LPC_META_CALLBACK,
+                [&ec](dsn::error_code error) { ec = error; },
+                nullptr)
             ->wait();
         ASSERT_TRUE(dsn::ERR_OK == ec || dsn::ERR_OBJECT_NOT_FOUND == ec);
     }
@@ -280,7 +281,7 @@ void meta_service_test_app::state_sync_test()
         dsn::gpid gpid = {15, 0};
         dsn::partition_configuration pc;
         ASSERT_TRUE(ss2->query_configuration_by_gpid(gpid, pc));
-        ASSERT_EQ(ss1->_all_apps[15]->partitions[0], pc);
+        ASSERT_EQ(ss1->_all_apps[15]->pcs[0], pc);
         // 1.2 dropped app
         if (!drop_set.empty()) {
             gpid.set_app_id(drop_set[0]);
@@ -300,7 +301,7 @@ void meta_service_test_app::state_sync_test()
         ASSERT_EQ(app_created->partition_count, resp.partition_count);
         ASSERT_EQ(resp.partitions.size(), 3);
         for (int i = 1; i <= 3; ++i)
-            ASSERT_EQ(resp.partitions[i - 1], app_created->partitions[i]);
+            ASSERT_EQ(resp.partitions[i - 1], app_created->pcs[i]);
 
         // 2.2 no exist app
         req.app_name = "make_no_sense";
@@ -341,11 +342,12 @@ void meta_service_test_app::state_sync_test()
 
         dsn::dist::meta_state_service *storage = svc->get_remote_storage();
         storage
-            ->delete_node(ss2->get_partition_path(dsn::gpid{apps_count, 0}),
-                          false,
-                          LPC_META_CALLBACK,
-                          [&ec](dsn::error_code error) { ec = error; },
-                          nullptr)
+            ->delete_node(
+                ss2->get_partition_path(dsn::gpid{apps_count, 0}),
+                false,
+                LPC_META_CALLBACK,
+                [&ec](dsn::error_code error) { ec = error; },
+                nullptr)
             ->wait();
         ASSERT_EQ(ec, dsn::ERR_OK);
 

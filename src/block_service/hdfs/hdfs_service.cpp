@@ -29,8 +29,8 @@
 #include "hdfs_service.h"
 #include "rocksdb/slice.h"
 #include "rocksdb/status.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
+#include "task/async_calls.h"
+#include "task/task.h"
 #include "utils/TokenBucket.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
@@ -41,6 +41,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/strings.h"
+#include "utils/utils.h"
 
 DSN_DEFINE_uint64(replication,
                   hdfs_read_batch_size_bytes,
@@ -435,8 +436,8 @@ dsn::task_ptr hdfs_file_object::upload(const upload_request &req,
             }
 
             rocksdb::Slice result;
-            char scratch[file_size];
-            s = rfile->Read(file_size, &result, scratch);
+            auto scratch = dsn::utils::make_shared_array<char>(file_size);
+            s = rfile->Read(file_size, &result, scratch.get());
             if (!s.ok()) {
                 LOG_ERROR(
                     "read local file '{}' failed, err = {}", req.input_local_name, s.ToString());

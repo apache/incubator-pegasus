@@ -122,6 +122,7 @@ private:
                      _group.size(),
                      "there might be duplicate cluster_name in configuration");
 
+        // TODO(yingchun): add InsertValuesFromMap to src/gutil/map_util.h, then use it here.
         for (const auto &kv : _group) {
             _distinct_cids.insert(kv.second);
         }

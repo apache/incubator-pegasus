@@ -15,14 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <algorithm>
 #include <cstdint>
 #include <memory>
 
 #include "common//duplication_common.h"
 #include "common/gpid.h"
+#include "common/replication_enums.h"
+#include "metadata_types.h"
 #include "replica/duplication/replica_duplicator.h"
+#include "replica/duplication/replica_duplicator_manager.h"
+#include "replica/replica.h"
 #include "replica_duplicator_manager.h"
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
@@ -41,29 +45,56 @@ replica_duplicator_manager::replica_duplicator_manager(replica *r)
 {
 }
 
+void replica_duplicator_manager::update_duplication_map(
+    const std::map<int32_t, duplication_entry> &new_dup_map)
+{
+    if (new_dup_map.empty() || _replica->status() != partition_status::PS_PRIMARY) {
+        remove_all_duplications();
+        return;
+    }
+
+    remove_non_existed_duplications(new_dup_map);
+
+    for (const auto &kv2 : new_dup_map) {
+        sync_duplication(kv2.second);
+    }
+}
+
 std::vector<duplication_confirm_entry>
 replica_duplicator_manager::get_duplication_confirms_to_update() const
 {
     zauto_lock l(_lock);
 
     std::vector<duplication_confirm_entry> updates;
-    for (const auto &kv : _duplications) {
-        replica_duplicator *duplicator = kv.second.get();
-        duplication_progress p = duplicator->progress();
-        if (p.last_decree != p.confirmed_decree ||
-            (kv.second->status() == duplication_status::DS_PREPARE && p.checkpoint_has_prepared)) {
-            if (p.last_decree < p.confirmed_decree) {
-                LOG_ERROR_PREFIX("invalid decree state: p.last_decree({}) < p.confirmed_decree({})",
-                                 p.last_decree,
-                                 p.confirmed_decree);
-                continue;
-            }
-            duplication_confirm_entry entry;
-            entry.dupid = duplicator->id();
-            entry.confirmed_decree = p.last_decree;
-            entry.__set_checkpoint_prepared(p.checkpoint_has_prepared);
-            updates.emplace_back(entry);
+    for (const auto &[_, dup] : _duplications) {
+        // There are two conditions when we should send confirmed decrees to meta server to update
+        // the progress:
+        //
+        // 1. the acknowledged decree from remote cluster has changed, making it different from
+        // the one that is persisted in zk by meta server; otherwise,
+        //
+        // 2. the duplication has been in the stage of synchronizing checkpoint to the remote
+        // cluster, and the synchronized checkpoint has been ready.
+        const auto &progress = dup->progress();
+        if (progress.last_decree == progress.confirmed_decree &&
+            (dup->status() != duplication_status::DS_PREPARE ||
+             !progress.checkpoint_has_prepared)) {
+            continue;
         }
+
+        if (progress.last_decree < progress.confirmed_decree) {
+            LOG_ERROR_PREFIX(
+                "invalid decree state: progress.last_decree({}) < progress.confirmed_decree({})",
+                progress.last_decree,
+                progress.confirmed_decree);
+            continue;
+        }
+
+        duplication_confirm_entry entry;
+        entry.dupid = dup->id();
+        entry.confirmed_decree = progress.last_decree;
+        entry.__set_checkpoint_prepared(progress.checkpoint_has_prepared);
+        updates.emplace_back(entry);
     }
     return updates;
 }
@@ -189,6 +220,18 @@ replica_duplicator_manager::get_dup_states() const
         ret.emplace_back(state);
     }
     return ret;
+}
+
+void replica_duplicator_manager::remove_all_duplications()
+{
+    // fast path
+    if (_duplications.empty()) {
+        return;
+    }
+
+    LOG_WARNING_PREFIX("remove all duplication, replica status = {}",
+                       enum_to_string(_replica->status()));
+    _duplications.clear();
 }
 
 } // namespace replication

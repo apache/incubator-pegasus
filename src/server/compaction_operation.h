@@ -21,13 +21,12 @@
 
 #include <gtest/gtest_prod.h>
 #include <stdint.h>
-#include <algorithm>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
 #include "common/json_helper.h"
 #include "compaction_filter_rule.h"
 #include "utils/blob.h"
@@ -75,18 +74,18 @@ public:
     explicit compaction_operation(uint32_t data_version) : data_version(data_version) {}
     virtual ~compaction_operation() = 0;
 
-    bool all_rules_match(absl::string_view hash_key,
-                         absl::string_view sort_key,
-                         absl::string_view existing_value) const;
+    bool all_rules_match(std::string_view hash_key,
+                         std::string_view sort_key,
+                         std::string_view existing_value) const;
     void set_rules(filter_rules &&rules);
     /**
      * @return false indicates that this key-value should be removed
      * If you want to modify the existing_value, you can pass it back through new_value and
      * value_changed needs to be set to true in this case.
      */
-    virtual bool filter(absl::string_view hash_key,
-                        absl::string_view sort_key,
-                        absl::string_view existing_value,
+    virtual bool filter(std::string_view hash_key,
+                        std::string_view sort_key,
+                        std::string_view existing_value,
                         std::string *new_value,
                         bool *value_changed) const = 0;
 
@@ -106,9 +105,9 @@ public:
     delete_key(filter_rules &&rules, uint32_t data_version);
     explicit delete_key(uint32_t data_version);
 
-    bool filter(absl::string_view hash_key,
-                absl::string_view sort_key,
-                absl::string_view existing_value,
+    bool filter(std::string_view hash_key,
+                std::string_view sort_key,
+                std::string_view existing_value,
                 std::string *new_value,
                 bool *value_changed) const;
 
@@ -154,9 +153,9 @@ public:
     update_ttl(filter_rules &&rules, uint32_t data_version);
     explicit update_ttl(uint32_t data_version);
 
-    bool filter(absl::string_view hash_key,
-                absl::string_view sort_key,
-                absl::string_view existing_value,
+    bool filter(std::string_view hash_key,
+                std::string_view sort_key,
+                std::string_view existing_value,
                 std::string *new_value,
                 bool *value_changed) const;
     DEFINE_JSON_SERIALIZATION(type, value)

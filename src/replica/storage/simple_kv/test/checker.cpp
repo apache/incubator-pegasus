@@ -50,8 +50,8 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_service_app.h"
 #include "replica/storage/simple_kv/test/common.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_engine.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_engine.h"
 #include "runtime/service_app.h"
 #include "runtime/service_engine.h"
 #include "runtime/tool_api.h"
@@ -323,7 +323,7 @@ bool test_checker::get_current_config(parti_config &config)
     meta_service_app *meta = meta_leader();
     if (meta == nullptr)
         return false;
-    partition_configuration c;
+    partition_configuration pc;
 
     // we should never try to acquire lock when we are in checker. Because we are the only
     // thread that is running.
@@ -332,11 +332,8 @@ bool test_checker::get_current_config(parti_config &config)
     // the rDSN's
     //"enqueue,dequeue and lock..."
 
-    // meta->_service->_state->query_configuration_by_gpid(g_default_gpid, c);
     const meta_view view = meta->_service->_state->get_meta_view();
-    const partition_configuration *pc = get_config(*(view.apps), g_default_gpid);
-    c = *pc;
-    config.convert_from(c);
+    config.convert_from(*get_config(*(view.apps), g_default_gpid));
     return true;
 }
 

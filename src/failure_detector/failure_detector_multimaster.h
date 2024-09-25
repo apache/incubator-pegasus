@@ -31,8 +31,8 @@
 #include <vector>
 
 #include "failure_detector/failure_detector.h"
-#include "runtime/rpc/group_host_port.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/group_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
@@ -40,6 +40,7 @@ namespace dsn {
 class error_code;
 
 namespace fd {
+
 class beacon_ack;
 } // namespace fd
 
@@ -86,5 +87,5 @@ inline ::dsn::host_port slave_failure_detector_with_multimaster::current_server_
     zauto_lock l(failure_detector::_lock);
     return _meta_servers.group_host_port()->leader();
 }
-}
-} // end namespace
+} // namespace dist
+} // namespace dsn

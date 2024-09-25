@@ -19,7 +19,6 @@
 
 #include "pegasus_mutation_duplicator.h"
 
-#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
@@ -27,6 +26,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -37,10 +37,10 @@
 #include "duplication_internal_types.h"
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"
+#include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
-#include "runtime/rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
@@ -75,9 +75,9 @@ DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
 
 /// static definition of mutation_duplicator::creator.
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
-    replica_base *, absl::string_view, absl::string_view)>
+    replica_base *, std::string_view, std::string_view)>
     mutation_duplicator::creator =
-        [](replica_base *r, absl::string_view remote, absl::string_view app) {
+        [](replica_base *r, std::string_view remote, std::string_view app) {
             return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
         };
 
@@ -116,8 +116,8 @@ using namespace dsn::literals::chrono_literals;
 }
 
 pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::replica_base *r,
-                                                         absl::string_view remote_cluster,
-                                                         absl::string_view app)
+                                                         std::string_view remote_cluster,
+                                                         std::string_view app)
     : mutation_duplicator(r),
       _remote_cluster(remote_cluster),
       METRIC_VAR_INIT_replica(dup_shipped_successful_requests),
@@ -171,11 +171,12 @@ void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
         _inflights[hash].pop_front();
     }
 
-    _client->async_duplicate(rpc,
-                             [hash, cb, rpc, this](dsn::error_code err) mutable {
-                                 on_duplicate_reply(hash, std::move(cb), std::move(rpc), err);
-                             },
-                             _env.__conf.tracker);
+    _client->async_duplicate(
+        rpc,
+        [hash, cb, rpc, this](dsn::error_code err) mutable {
+            on_duplicate_reply(hash, std::move(cb), std::move(rpc), err);
+        },
+        _env.__conf.tracker);
 }
 
 void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,

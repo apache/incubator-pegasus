@@ -24,19 +24,16 @@
 #include <vector>
 
 #include "common//duplication_common.h"
-#include "common/replication_enums.h"
 #include "common/replication_other_types.h"
 #include "duplication_types.h"
-#include "metadata_types.h"
-#include "replica/replica.h"
 #include "replica/replica_base.h"
 #include "replica_duplicator.h"
-#include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {
+class replica;
 
 /// replica_duplicator_manager manages the set of duplications on this replica.
 /// \see duplication_sync_timer
@@ -51,19 +48,7 @@ public:
     // - replica is not primary on replica-server perspective (status != PRIMARY)
     // - replica is not primary on meta-server perspective (progress.find(partition_id) == end())
     // - the app is not assigned with duplication (dup_map.empty())
-    void update_duplication_map(const std::map<int32_t, duplication_entry> &new_dup_map)
-    {
-        if (new_dup_map.empty() || _replica->status() != partition_status::PS_PRIMARY) {
-            remove_all_duplications();
-            return;
-        }
-
-        remove_non_existed_duplications(new_dup_map);
-
-        for (const auto &kv2 : new_dup_map) {
-            sync_duplication(kv2.second);
-        }
-    }
+    void update_duplication_map(const std::map<int32_t, duplication_entry> &new_dup_map);
 
     /// collect updated duplication confirm points from this replica.
     std::vector<duplication_confirm_entry> get_duplication_confirms_to_update() const;
@@ -93,21 +78,30 @@ public:
     };
     std::vector<dup_state> get_dup_states() const;
 
+    // Encode current progress of all duplication into json.
+    template <typename TWriter>
+    void encode_progress(TWriter &writer) const
+    {
+        zauto_lock l(_lock);
+
+        if (_duplications.empty()) {
+            return;
+        }
+
+        writer.Key("duplications");
+        writer.StartArray();
+        for (const auto &[_, dup] : _duplications) {
+            dup->encode_progress(writer);
+        }
+        writer.EndArray();
+    }
+
 private:
     void sync_duplication(const duplication_entry &ent);
 
     void remove_non_existed_duplications(const std::map<dupid_t, duplication_entry> &);
 
-    void remove_all_duplications()
-    {
-        // fast path
-        if (_duplications.empty())
-            return;
-
-        LOG_WARNING_PREFIX("remove all duplication, replica status = {}",
-                           enum_to_string(_replica->status()));
-        _duplications.clear();
-    }
+    void remove_all_duplications();
 
 private:
     friend class duplication_sync_timer_test;

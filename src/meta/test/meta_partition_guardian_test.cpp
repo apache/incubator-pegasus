@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -54,13 +55,13 @@
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "metadata_types.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
+#include "task/async_calls.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
@@ -207,8 +208,8 @@ void meta_partition_guardian_test::cure_test()
     std::vector<dsn::host_port> nodes;
     generate_node_list(nodes, 4, 4);
 
-    dsn::partition_configuration &pc = app->partitions[0];
-    config_context &cc = *get_config_context(state->_all_apps, dsn::gpid(1, 0));
+    auto &pc = app->pcs[0];
+    auto &cc = *get_config_context(state->_all_apps, dsn::gpid(1, 0));
 
 #define PROPOSAL_FLAG_CHECK                                                                        \
     ASSERT_TRUE(proposal_sent);                                                                    \
@@ -797,7 +798,7 @@ void meta_partition_guardian_test::cure()
     std::vector<dsn::host_port> nodes_list;
     generate_node_list(nodes_list, 20, 100);
 
-    app_mapper app;
+    app_mapper apps;
     node_mapper nodes;
     meta_service svc;
     partition_guardian guardian(&svc);
@@ -810,9 +811,9 @@ void meta_partition_guardian_test::cure()
     info.app_type = "test";
     info.max_replica_count = 3;
     info.partition_count = 1024;
-    std::shared_ptr<app_state> the_app = app_state::create(info);
+    std::shared_ptr<app_state> app = app_state::create(info);
 
-    app.emplace(the_app->app_id, the_app);
+    apps.emplace(app->app_id, app);
     for (const auto &hp : nodes_list) {
         get_node_state(nodes, hp, true)->set_alive(true);
     }
@@ -823,21 +824,21 @@ void meta_partition_guardian_test::cure()
         pc_status status;
         all_partitions_healthy = true;
 
-        for (int i = 0; i != the_app->partition_count; ++i) {
-            dsn::gpid &pid = the_app->partitions[i].pid;
-            status = guardian.cure({&app, &nodes}, pid, action);
+        CHECK_EQ(app->partition_count, app->pcs.size());
+        for (const auto &pc : app->pcs) {
+            status = guardian.cure({&apps, &nodes}, pc.pid, action);
             if (status != pc_status::healthy) {
                 all_partitions_healthy = false;
-                proposal_action_check_and_apply(action, pid, app, nodes, nullptr);
+                proposal_action_check_and_apply(action, pc.pid, apps, nodes, nullptr);
 
                 configuration_update_request fake_request;
-                fake_request.info = *the_app;
-                fake_request.config = the_app->partitions[i];
+                fake_request.info = *app;
+                fake_request.config = pc;
                 fake_request.type = action.type;
                 SET_OBJ_IP_AND_HOST_PORT(fake_request, node, action, node);
                 fake_request.host_node = action.node;
 
-                guardian.reconfig({&app, &nodes}, fake_request);
+                guardian.reconfig({&apps, &nodes}, fake_request);
                 check_nodes_loads(nodes);
             }
         }
@@ -849,7 +850,7 @@ void meta_partition_guardian_test::from_proposal_test()
     std::vector<dsn::host_port> nodes_list;
     generate_node_list(nodes_list, 3, 3);
 
-    app_mapper app;
+    app_mapper apps;
     node_mapper nodes;
     meta_service svc;
 
@@ -863,20 +864,20 @@ void meta_partition_guardian_test::from_proposal_test()
     info.app_type = "test";
     info.max_replica_count = 3;
     info.partition_count = 1;
-    std::shared_ptr<app_state> the_app = app_state::create(info);
+    std::shared_ptr<app_state> app = app_state::create(info);
 
-    app.emplace(the_app->app_id, the_app);
+    apps.emplace(app->app_id, app);
     for (const auto &hp : nodes_list) {
         get_node_state(nodes, hp, true)->set_alive(true);
     }
 
-    meta_view mv{&app, &nodes};
+    meta_view mv{&apps, &nodes};
     dsn::gpid p(1, 0);
     configuration_proposal_action cpa;
     configuration_proposal_action cpa2;
 
-    dsn::partition_configuration &pc = *get_config(app, p);
-    config_context &cc = *get_config_context(app, p);
+    dsn::partition_configuration &pc = *get_config(apps, p);
+    config_context &cc = *get_config_context(apps, p);
 
     std::cerr << "Case 1: test no proposals in config_context" << std::endl;
     ASSERT_FALSE(guardian.from_proposals(mv, p, cpa));

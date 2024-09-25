@@ -33,7 +33,7 @@
 #include "gtest/gtest.h"
 #include "meta/meta_state_service.h"
 #include "meta/meta_state_service_utils.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"

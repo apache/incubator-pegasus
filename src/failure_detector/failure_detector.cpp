@@ -34,18 +34,18 @@
 #include <type_traits>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "failure_detector/fd.code.definition.h"
 #include "fd_types.h"
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "nlohmann/json_fwd.hpp"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
 #include "runtime/serverlet.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_spec.h"
+#include "task/async_calls.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/command_manager.h"
 #include "utils/fmt_logging.h"
@@ -101,12 +101,13 @@ error_code failure_detector::start(uint32_t check_interval_seconds,
     open_service();
 
     // start periodically check job
-    _check_task = tasking::enqueue_timer(LPC_BEACON_CHECK,
-                                         &_tracker,
-                                         [this] { check_all_records(); },
-                                         std::chrono::milliseconds(_check_interval_milliseconds),
-                                         -1,
-                                         std::chrono::milliseconds(_check_interval_milliseconds));
+    _check_task = tasking::enqueue_timer(
+        LPC_BEACON_CHECK,
+        &_tracker,
+        [this] { check_all_records(); },
+        std::chrono::milliseconds(_check_interval_milliseconds),
+        -1,
+        std::chrono::milliseconds(_check_interval_milliseconds));
 
     _is_started = true;
     return ERR_OK;
@@ -149,13 +150,13 @@ void failure_detector::register_master(const ::dsn::host_port &target)
     if (setup_timer) {
         // delay the beacon slightly to make first beacon greater than the
         // last_beacon_send_time_with_ack
-        ret.first->second.send_beacon_timer =
-            tasking::enqueue_timer(LPC_BEACON_SEND,
-                                   &_tracker,
-                                   [this, target]() { this->send_beacon(target, dsn_now_ms()); },
-                                   std::chrono::milliseconds(_beacon_interval_milliseconds),
-                                   0,
-                                   std::chrono::milliseconds(1));
+        ret.first->second.send_beacon_timer = tasking::enqueue_timer(
+            LPC_BEACON_SEND,
+            &_tracker,
+            [this, target]() { this->send_beacon(target, dsn_now_ms()); },
+            std::chrono::milliseconds(_beacon_interval_milliseconds),
+            0,
+            std::chrono::milliseconds(1));
     }
 }
 
@@ -176,13 +177,13 @@ bool failure_detector::switch_master(const ::dsn::host_port &from,
         it->second.node = to;
         it->second.rejected = false;
         it->second.send_beacon_timer->cancel(true);
-        it->second.send_beacon_timer =
-            tasking::enqueue_timer(LPC_BEACON_SEND,
-                                   &_tracker,
-                                   [this, to]() { this->send_beacon(to, dsn_now_ms()); },
-                                   std::chrono::milliseconds(_beacon_interval_milliseconds),
-                                   0,
-                                   std::chrono::milliseconds(delay_milliseconds));
+        it->second.send_beacon_timer = tasking::enqueue_timer(
+            LPC_BEACON_SEND,
+            &_tracker,
+            [this, to]() { this->send_beacon(to, dsn_now_ms()); },
+            std::chrono::milliseconds(_beacon_interval_milliseconds),
+            0,
+            std::chrono::milliseconds(delay_milliseconds));
 
         _masters.insert(std::make_pair(to, it->second));
         _masters.erase(from);
@@ -592,24 +593,25 @@ void failure_detector::send_beacon(const host_port &target, uint64_t time)
              FMT_HOST_PORT_AND_IP(beacon, to_node),
              time);
 
-    ::dsn::rpc::call(addr_target,
-                     RPC_FD_FAILURE_DETECTOR_PING,
-                     beacon,
-                     &_tracker,
-                     [=](error_code err, beacon_ack &&resp) {
-                         if (err != ::dsn::ERR_OK) {
-                             beacon_ack ack;
-                             ack.time = beacon.time;
-                             SET_OBJ_IP_AND_HOST_PORT(ack, this_node, beacon, to_node);
-                             RESET_IP_AND_HOST_PORT(ack, primary_node);
-                             ack.is_master = false;
-                             ack.allowed = true;
-                             end_ping(err, ack, nullptr);
-                         } else {
-                             end_ping(err, std::move(resp), nullptr);
-                         }
-                     },
-                     std::chrono::milliseconds(_beacon_timeout_milliseconds));
+    ::dsn::rpc::call(
+        addr_target,
+        RPC_FD_FAILURE_DETECTOR_PING,
+        beacon,
+        &_tracker,
+        [=](error_code err, beacon_ack &&resp) {
+            if (err != ::dsn::ERR_OK) {
+                beacon_ack ack;
+                ack.time = beacon.time;
+                SET_OBJ_IP_AND_HOST_PORT(ack, this_node, beacon, to_node);
+                RESET_IP_AND_HOST_PORT(ack, primary_node);
+                ack.is_master = false;
+                ack.allowed = true;
+                end_ping(err, ack, nullptr);
+            } else {
+                end_ping(err, std::move(resp), nullptr);
+            }
+        },
+        std::chrono::milliseconds(_beacon_timeout_milliseconds));
 }
-}
-} // end namespace
+} // namespace fd
+} // namespace dsn

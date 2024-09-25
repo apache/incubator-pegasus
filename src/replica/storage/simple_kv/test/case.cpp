@@ -46,10 +46,10 @@
 #include "checker.h"
 #include "replica/replica_stub.h"
 #include "replica/storage/simple_kv/test/common.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "runtime/service_engine.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "simple_kv.server.impl.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -534,7 +534,9 @@ void event_on_rpc::init(message_ex *msg, task *tsk)
     if (msg != nullptr) {
         _trace_id = fmt::sprintf("%016llx", msg->header->trace_id);
         _rpc_name = msg->header->rpc_name;
-        _from = address_to_node(host_port::from_address(msg->header->from_address));
+        const auto hp = host_port::from_address(msg->header->from_address);
+        CHECK(hp, "'{}' can not be reverse resolved", msg->header->from_address);
+        _from = address_to_node(hp);
         _to = address_to_node(msg->to_host_port);
     }
 }
@@ -1393,6 +1395,6 @@ void test_case::internal_register_creator(const std::string &name, case_line_cre
     CHECK(_creators.find(name) == _creators.end(), "");
     _creators[name] = creator;
 }
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn

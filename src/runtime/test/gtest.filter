@@ -1,3 +1,0 @@
-config-test.ini -core.corrupt_message:core.aio*:core.operation_failed:tools_hpc.*
-config-test-sim.ini -core.corrupt_message:core.aio*:core.operation_failed:tools_hpc.*:tools_simulator.*:task_test.signal_finished_task
-config-test-sim.ini tools_simulator.*

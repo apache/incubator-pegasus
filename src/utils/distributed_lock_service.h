@@ -26,24 +26,24 @@
 
 #pragma once
 
-#include "runtime/api_task.h"
+#include <functional>
+#include <string>
+#include <utility>
+
+#include "common/gpid.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
+#include "runtime/api_task.h"
+#include "rpc/serialization.h"
+#include "rpc/rpc_stream.h"
+#include "runtime/serverlet.h"
+#include "runtime/service_app.h"
+#include "rpc/rpc_address.h"
+#include "task/task_code.h"
+#include "task/future_types.h"
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "utils/error_code.h"
-#include "runtime/task/future_types.h"
-#include <string>
-#include <functional>
-#include <utility>
 
 namespace dsn {
 namespace dist {
@@ -116,17 +116,17 @@ public:
                                                const lock_options &opt) = 0;
 
     /*
-    * cancel the lock operation that is on pending
-    * cb_code: the task code specifies where to execute the callback
-    * lock_id should be valid, and cb should not be empty
-    *
-    * possible ec:
-    *   ERR_INVALID_PARAMETERS
-    *   ERR_OK, the pending lock is cancelled successfully
-    *   ERR_OBJECT_NOT_FOUND, the caller is not found in pending list, check
-    *   returned owner to see whether it already succeedes
-    *
-    */
+     * cancel the lock operation that is on pending
+     * cb_code: the task code specifies where to execute the callback
+     * lock_id should be valid, and cb should not be empty
+     *
+     * possible ec:
+     *   ERR_INVALID_PARAMETERS
+     *   ERR_OK, the pending lock is cancelled successfully
+     *   ERR_OBJECT_NOT_FOUND, the caller is not found in pending list, check
+     *   returned owner to see whether it already succeedes
+     *
+     */
     virtual task_ptr cancel_pending_lock(const std::string &lock_id,
                                          const std::string &myself_id,
                                          task_code cb_code,
@@ -173,5 +173,5 @@ public:
                                    /*out*/ std::string &owner,
                                    /*out*/ uint64_t &version) = 0;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

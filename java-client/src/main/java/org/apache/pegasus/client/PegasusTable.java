@@ -23,12 +23,7 @@ import io.netty.util.concurrent.Future;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -89,6 +84,24 @@ public class PegasusTable implements PegasusTableInterface {
     this.metaList = client.getMetaList();
   }
 
+  /**
+   * Check if the given hash key is valid.
+   *
+   * @param hashKey is the hash key to be checked.
+   * @return the error message once the validation failed; otherwise return an empty Optional.
+   */
+  private Optional<String> validateHashKey(byte[] hashKey) {
+    if (hashKey == null || hashKey.length == 0) {
+      return Optional.of("Invalid parameter: hashKey should not be null or empty");
+    }
+
+    if (hashKey.length >= 0xFFFF) {
+      return Optional.of("Invalid parameter: hashKey length should be less than UINT16_MAX");
+    }
+
+    return Optional.empty();
+  }
+
   @Override
   public Future<Boolean> asyncExist(byte[] hashKey, byte[] sortKey, int timeout) {
     final DefaultPromise<Boolean> promise = table.newPromise();
@@ -110,13 +123,10 @@ public class PegasusTable implements PegasusTableInterface {
   @Override
   public Future<Long> asyncSortKeyCount(byte[] hashKey, int timeout) {
     final DefaultPromise<Long> promise = table.newPromise();
-    if (hashKey == null || hashKey.length == 0) {
-      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
-      return promise;
-    }
-    if (hashKey.length >= 0xFFFF) {
-      promise.setFailure(
-          new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
+
+    Optional<String> hashKeyValidationError = validateHashKey(hashKey);
+    if (hashKeyValidationError.isPresent()) {
+      promise.setFailure(new PException(hashKeyValidationError.get()));
       return promise;
     }
 
@@ -246,13 +256,10 @@ public class PegasusTable implements PegasusTableInterface {
       boolean noValue,
       int timeout) {
     final DefaultPromise<MultiGetResult> promise = table.newPromise();
-    if (hashKey == null || hashKey.length == 0) {
-      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
-      return promise;
-    }
-    if (hashKey.length >= 0xFFFF) {
-      promise.setFailure(
-          new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
+
+    Optional<String> hashKeyValidationError = validateHashKey(hashKey);
+    if (hashKeyValidationError.isPresent()) {
+      promise.setFailure(new PException(hashKeyValidationError.get()));
       return promise;
     }
 
@@ -260,7 +267,7 @@ public class PegasusTable implements PegasusTableInterface {
     List<blob> sortKeyBlobs = new ArrayList<blob>();
     Map<ByteBuffer, byte[]> setKeyMap = null;
 
-    if (sortKeys != null && sortKeys.size() > 0) {
+    if (sortKeys != null && !sortKeys.isEmpty()) {
       setKeyMap = new TreeMap<ByteBuffer, byte[]>();
       for (int i = 0; i < sortKeys.size(); i++) {
         byte[] sortKey = sortKeys.get(i);
@@ -365,13 +372,10 @@ public class PegasusTable implements PegasusTableInterface {
       int maxFetchSize,
       int timeout /* ms */) {
     final DefaultPromise<MultiGetResult> promise = table.newPromise();
-    if (hashKey == null || hashKey.length == 0) {
-      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
-      return promise;
-    }
-    if (hashKey.length >= 0xFFFF) {
-      promise.setFailure(
-          new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
+
+    Optional<String> hashKeyValidationError = validateHashKey(hashKey);
+    if (hashKeyValidationError.isPresent()) {
+      promise.setFailure(new PException(hashKeyValidationError.get()));
       return promise;
     }
 
@@ -483,13 +487,13 @@ public class PegasusTable implements PegasusTableInterface {
   @Override
   public Future<BatchGetResult> asyncBatchGet(batch_get_request request, int timeout) {
     final DefaultPromise<BatchGetResult> promise = table.newPromise();
-    if (request.keys.isEmpty()) {
-      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+    if (request.keys == null || request.keys.isEmpty()) {
+      promise.setFailure(
+          new PException("Invalid parameter: full_key list should not be null or empty"));
       return promise;
     }
     for (full_key fullKey : request.keys) {
-      blob key = fullKey.hash_key;
-      if (key.data.length >= 0xFFFF) {
+      if (fullKey.hash_key.data.length >= 0xFFFF) {
         promise.setFailure(
             new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
         return promise;
@@ -543,16 +547,14 @@ public class PegasusTable implements PegasusTableInterface {
   public Future<Void> asyncMultiSet(
       byte[] hashKey, List<Pair<byte[], byte[]>> values, int ttlSeconds, int timeout) {
     final DefaultPromise<Void> promise = table.newPromise();
-    if (hashKey == null || hashKey.length == 0) {
-      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+
+    Optional<String> hashKeyValidationError = validateHashKey(hashKey);
+    if (hashKeyValidationError.isPresent()) {
+      promise.setFailure(new PException(hashKeyValidationError.get()));
       return promise;
     }
-    if (hashKey.length >= 0xFFFF) {
-      promise.setFailure(
-          new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
-      return promise;
-    }
-    if (values == null || values.size() == 0) {
+
+    if (values == null || values.isEmpty()) {
       promise.setFailure(new PException("Invalid parameter: values should not be null or empty"));
       return promise;
     }
@@ -666,15 +668,13 @@ public class PegasusTable implements PegasusTableInterface {
   @Override
   public Future<Void> asyncMultiDel(byte[] hashKey, final List<byte[]> sortKeys, int timeout) {
     final DefaultPromise<Void> promise = table.newPromise();
-    if (hashKey == null || hashKey.length == 0) {
-      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+
+    Optional<String> hashKeyValidationError = validateHashKey(hashKey);
+    if (hashKeyValidationError.isPresent()) {
+      promise.setFailure(new PException(hashKeyValidationError.get()));
       return promise;
     }
-    if (hashKey.length >= 0xFFFF) {
-      promise.setFailure(
-          new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
-      return promise;
-    }
+
     if (sortKeys == null || sortKeys.isEmpty()) {
       promise.setFailure(new PException("Invalid parameter: sortKeys size should be at lease 1"));
       return promise;
@@ -781,15 +781,13 @@ public class PegasusTable implements PegasusTableInterface {
       CheckAndSetOptions options,
       int timeout) {
     final DefaultPromise<CheckAndSetResult> promise = table.newPromise();
-    if (hashKey == null || hashKey.length == 0) {
-      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+
+    Optional<String> hashKeyValidationError = validateHashKey(hashKey);
+    if (hashKeyValidationError.isPresent()) {
+      promise.setFailure(new PException(hashKeyValidationError.get()));
       return promise;
     }
-    if (hashKey.length >= 0xFFFF) {
-      promise.setFailure(
-          new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
-      return promise;
-    }
+
     if (options.setValueTTLSeconds < 0) {
       promise.setFailure(new PException("Invalid parameter: ttlSeconds should be no less than 0"));
       return promise;
@@ -889,17 +887,14 @@ public class PegasusTable implements PegasusTableInterface {
       Mutations mutations,
       CheckAndMutateOptions options,
       int timeout) {
-
     final DefaultPromise<CheckAndMutateResult> promise = table.newPromise();
-    if (hashKey == null || hashKey.length == 0) {
-      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+
+    Optional<String> hashKeyValidationError = validateHashKey(hashKey);
+    if (hashKeyValidationError.isPresent()) {
+      promise.setFailure(new PException(hashKeyValidationError.get()));
       return promise;
     }
-    if (hashKey.length >= 0xFFFF) {
-      promise.setFailure(
-          new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
-      return promise;
-    }
+
     if (mutations == null || mutations.isEmpty()) {
       promise.setFailure(
           new PException("Invalid parameter: mutations should not be null or empty"));
@@ -992,15 +987,13 @@ public class PegasusTable implements PegasusTableInterface {
       int ttlSeconds,
       int timeout) {
     final DefaultPromise<CompareExchangeResult> promise = table.newPromise();
-    if (hashKey == null || hashKey.length == 0) {
-      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+
+    Optional<String> hashKeyValidationError = validateHashKey(hashKey);
+    if (hashKeyValidationError.isPresent()) {
+      promise.setFailure(new PException(hashKeyValidationError.get()));
       return promise;
     }
-    if (hashKey.length >= 0xFFFF) {
-      promise.setFailure(
-          new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
-      return promise;
-    }
+
     if (ttlSeconds < 0) {
       promise.setFailure(new PException("Invalid parameter: ttlSeconds should be no less than 0"));
       return promise;
@@ -1147,7 +1140,7 @@ public class PegasusTable implements PegasusTableInterface {
   @Override
   public void batchGet(List<Pair<byte[], byte[]>> keys, List<byte[]> values, int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (values == null) {
@@ -1175,7 +1168,7 @@ public class PegasusTable implements PegasusTableInterface {
   public int batchGetByPartitions(
       List<Pair<byte[], byte[]>> keys, List<Pair<PException, byte[]>> results, int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (results == null) {
@@ -1265,7 +1258,7 @@ public class PegasusTable implements PegasusTableInterface {
   public int batchGet2(
       List<Pair<byte[], byte[]>> keys, List<Pair<PException, byte[]>> results, int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (results == null) {
@@ -1392,7 +1385,7 @@ public class PegasusTable implements PegasusTableInterface {
   public void batchMultiGet(
       List<Pair<byte[], List<byte[]>>> keys, List<HashKeyData> values, int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (values == null) {
@@ -1426,7 +1419,7 @@ public class PegasusTable implements PegasusTableInterface {
       List<Pair<PException, HashKeyData>> results,
       int timeout)
       throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     if (results == null) {
@@ -1610,7 +1603,7 @@ public class PegasusTable implements PegasusTableInterface {
   @Override
   public void batchMultiSet(List<HashKeyData> items, int ttlSeconds, int timeout)
       throws PException {
-    if (items == null || items.size() == 0) {
+    if (items == null || items.isEmpty()) {
       throw new PException("Invalid parameter: items should not be null or empty");
     }
     if (ttlSeconds < 0) {
@@ -1683,7 +1676,7 @@ public class PegasusTable implements PegasusTableInterface {
 
   @Override
   public void batchDel(List<Pair<byte[], byte[]>> keys, int timeout) throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     List<Future<Void>> futures = new ArrayList<Future<Void>>();
@@ -1850,7 +1843,7 @@ public class PegasusTable implements PegasusTableInterface {
 
   @Override
   public void batchMultiDel(List<Pair<byte[], List<byte[]>>> keys, int timeout) throws PException {
-    if (keys == null || keys.size() == 0) {
+    if (keys == null || keys.isEmpty()) {
       throw new PException("Invalid parameter: keys should not be null or empty");
     }
     List<Future<Void>> futures = new ArrayList<Future<Void>>();

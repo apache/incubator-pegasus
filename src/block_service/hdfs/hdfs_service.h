@@ -26,8 +26,8 @@
 #include <vector>
 
 #include "block_service/block_service.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/TokenBucket.h"
 #include "utils/error_code.h"
 

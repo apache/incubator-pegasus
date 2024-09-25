@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "lock_types.h"
-#include "runtime/task/future_types.h"
+#include "task/future_types.h"
 #include "utils/autoref_ptr.h"
 #include "utils/distributed_lock_service.h"
 #include "utils/fmt_utils.h"
@@ -122,5 +122,5 @@ private:
 
     thread_access_checker _checker;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

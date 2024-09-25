@@ -20,7 +20,7 @@
 #include <string>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "common/duplication_common.h"
 #include "duplication_types.h"
 #include "load_from_private_log.h"
@@ -119,7 +119,7 @@ void load_from_private_log::run()
             repeat(1_s);
 
             FAIL_POINT_INJECT_NOT_RETURN_F(
-                "duplication_sync_complete", [&](absl::string_view s) -> void {
+                "duplication_sync_complete", [&](std::string_view s) -> void {
                     if (_duplicator->progress().confirmed_decree == invalid_decree) {
                         // set_confirmed_decree(9), the value must be equal (decree_start of
                         // `test_start_duplication` in `load_from_private_log_test.cpp`) -1

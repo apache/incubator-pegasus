@@ -36,7 +36,7 @@
 #include <string>
 #include <vector>
 
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/config_api.h"
 #include "utils/config_helper.h"
 #include "utils/customizable_id.h"
@@ -169,8 +169,7 @@ struct service_spec
     std::vector<threadpool_spec> threadpool_specs;
     std::vector<service_app_spec> app_specs;
 
-    // auto-set
-    std::string dir_log;
+    std::string log_dir;
 
     service_spec() {}
     bool init();
@@ -186,6 +185,11 @@ CONFIG_FLD_STRING_LIST(toollets,
 CONFIG_FLD_STRING(data_dir,
                   "./data",
                   "The default directory to place the all the data, logs, coredump files, and etc.")
+CONFIG_FLD_STRING_BY_KEY(
+    log_dir,
+    "log_dir",
+    "",
+    "The directory to place the logs especially. 'data_dir' will be used if it's empty.")
 CONFIG_FLD(
     bool,
     bool,

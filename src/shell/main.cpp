@@ -60,10 +60,16 @@ bool help_info(command_executor *e, shell_context *sc, arguments args)
 
 static command_executor commands[] = {
     {
-        "help", "print help info", "", help_info,
+        "help",
+        "print help info",
+        "",
+        help_info,
     },
     {
-        "version", "get the shell version", "", version,
+        "version",
+        "get the shell version",
+        "",
+        version,
     },
     {
         "cluster_info",
@@ -95,7 +101,7 @@ static command_executor commands[] = {
         "get the node status for this cluster",
         "[-d|--detailed] [-j|--json] [-r|--resolve_ip] [-u|--resource_usage] "
         "[-o|--output file_name] [-s|--status all|alive|unalive] [-q|--qps] "
-        "[-t|--sample_interval_ms num]",
+        "[-i|--sample_interval_ms num]",
         ls_nodes,
     },
     {
@@ -106,13 +112,22 @@ static command_executor commands[] = {
         create_app,
     },
     {
-        "drop", "drop an app", "<app_name> [-r|--reserve_seconds num]", drop_app,
+        "drop",
+        "drop an app",
+        "<app_name> [-r|--reserve_seconds num]",
+        drop_app,
     },
     {
-        "recall", "recall an app", "<app_id> [new_app_name]", recall_app,
+        "recall",
+        "recall an app",
+        "<app_id> [new_app_name]",
+        recall_app,
     },
     {
-        "rename", "rename an app", "<old_app_name> <new_app_name>", rename_app,
+        "rename",
+        "rename an app",
+        "<old_app_name> <new_app_name>",
+        rename_app,
     },
     {
         "set_meta_level",
@@ -121,7 +136,10 @@ static command_executor commands[] = {
         set_meta_level,
     },
     {
-        "get_meta_level", "get the meta function level", "", get_meta_level,
+        "get_meta_level",
+        "get the meta function level",
+        "",
+        get_meta_level,
     },
     {
         "balance",
@@ -145,7 +163,10 @@ static command_executor commands[] = {
         use_app_as_current,
     },
     {
-        "cc", "change to the specified cluster", "[cluster_name]", cc_command,
+        "cc",
+        "change to the specified cluster",
+        "[cluster_name]",
+        cc_command,
     },
     {
         "escape_all",
@@ -166,7 +187,10 @@ static command_executor commands[] = {
         calculate_hash_value,
     },
     {
-        "set", "set value", "<hash_key> <sort_key> <value> [ttl_in_seconds]", data_operations,
+        "set",
+        "set value",
+        "<hash_key> <sort_key> <value> [ttl_in_seconds]",
+        data_operations,
     },
     {
         "multi_set",
@@ -175,7 +199,10 @@ static command_executor commands[] = {
         data_operations,
     },
     {
-        "get", "get value", "<hash_key> <sort_key>", data_operations,
+        "get",
+        "get value",
+        "<hash_key> <sort_key>",
+        data_operations,
     },
     {
         "multi_get",
@@ -200,7 +227,10 @@ static command_executor commands[] = {
         data_operations,
     },
     {
-        "del", "delete a key", "<hash_key> <sort_key>", data_operations,
+        "del",
+        "delete a key",
+        "<hash_key> <sort_key>",
+        data_operations,
     },
     {
         "multi_del",
@@ -254,13 +284,22 @@ static command_executor commands[] = {
         data_operations,
     },
     {
-        "exist", "check value exist", "<hash_key> <sort_key>", data_operations,
+        "exist",
+        "check value exist",
+        "<hash_key> <sort_key>",
+        data_operations,
     },
     {
-        "count", "get sort key count for a single hash key", "<hash_key>", data_operations,
+        "count",
+        "get sort key count for a single hash key",
+        "<hash_key>",
+        data_operations,
     },
     {
-        "ttl", "query ttl for a specific key", "<hash_key> <sort_key>", data_operations,
+        "ttl",
+        "query ttl for a specific key",
+        "<hash_key> <sort_key>",
+        data_operations,
     },
     {
         "hash_scan",
@@ -333,37 +372,41 @@ static command_executor commands[] = {
     {
         "remote_command",
         "send remote command to servers",
-        "[-t all|meta-server|replica-server] [-r|--resolve_ip] [-l ip:port,ip:port...]"
-        " <command> [arguments...]",
+        "[-t all|meta-server|replica-server] [-r|--resolve_ip] [-l host:port,host:port...] "
+        "[-i|--sample_interval_ms num] <command> [arguments...]",
         remote_command,
     },
     {
         "server_info",
         "get info of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] [-r|--resolve_ip]",
+        "[-t all|meta-server|replica-server] [-l host:port,host:port...] [-r|--resolve_ip]",
         server_info,
     },
     {
         "server_stat",
         "get stat of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...] [-r|--resolve_ip]",
+        "[-t all|meta-server|replica-server] [-l host:port,host:port...] [-r|--resolve_ip] "
+        "[-i|--sample_interval_ms num]",
         server_stat,
     },
     {
         "app_stat",
         "get stat of apps",
         "[-a|--app_name str] [-q|--only_qps] [-u|--only_usage] [-j|--json] "
-        "[-o|--output file_name] [-t|--sample_interval_ms num]",
+        "[-o|--output file_name] [-i|--sample_interval_ms num]",
         app_stat,
     },
     {
         "flush_log",
         "flush log of servers",
-        "[-t all|meta-server|replica-server] [-l ip:port,ip:port...][-r|--resolve_ip]",
+        "[-t all|meta-server|replica-server] [-l host:port,host:port...][-r|--resolve_ip]",
         flush_log,
     },
     {
-        "local_get", "get value from local db", "<db_path> <hash_key> <sort_key>", local_get,
+        "local_get",
+        "get value from local db",
+        "<db_path> <hash_key> <sort_key>",
+        local_get,
     },
     {
         "rdb_key_str2hex",
@@ -413,11 +456,16 @@ static command_executor commands[] = {
         "<-c|--backup_history_cnt num>",
         add_backup_policy,
     },
-    {"ls_backup_policy", "list the names of the subsistent backup policies", "", ls_backup_policy},
+    {
+        "ls_backup_policy",
+        "list the names of the subsistent backup policies",
+        "[-j|--json]",
+        ls_backup_policy,
+    },
     {
         "query_backup_policy",
         "query subsistent backup policy and last backup infos",
-        "<-p|--policy_name p1,p2...> [-b|--backup_info_cnt num]",
+        "<-p|--policy_name p1,p2...> [-b|--backup_info_cnt num] [-j|--json]",
         query_backup_policy,
     },
     {
@@ -431,7 +479,7 @@ static command_executor commands[] = {
     {
         "disable_backup_policy",
         "stop policy continue backup",
-        "<-p|--policy_name str>",
+        disable_backup_policy_help.c_str(),
         disable_backup_policy,
     },
     {
@@ -445,7 +493,8 @@ static command_executor commands[] = {
         "restore app from backup media",
         "<-c|--old_cluster_name str> <-p|--old_policy_name str> <-a|--old_app_name str> "
         "<-i|--old_app_id id> <-t|--timestamp/backup_id timestamp> "
-        "<-b|--backup_provider_type str> [-n|--new_app_name str] [-s|--skip_bad_partition]",
+        "<-b|--backup_provider_type str> [-n|--new_app_name str] [-s|--skip_bad_partition] "
+        "[-r|--restore_path str]",
         restore,
     },
     {
@@ -455,16 +504,28 @@ static command_executor commands[] = {
         query_restore_status,
     },
     {
-        "get_app_envs", "get current app envs", "[-j|--json]", get_app_envs,
+        "get_app_envs",
+        "get current app envs",
+        "[-j|--json]",
+        get_app_envs,
     },
     {
-        "set_app_envs", "set current app envs", "<key> <value> [key value...]", set_app_envs,
+        "set_app_envs",
+        "set current app envs",
+        "<key> <value> [key value...]",
+        set_app_envs,
     },
     {
-        "del_app_envs", "delete current app envs", "<key> [key...]", del_app_envs,
+        "del_app_envs",
+        "delete current app envs",
+        "<key> [key...]",
+        del_app_envs,
     },
     {
-        "clear_app_envs", "clear current app envs", "[-a|--all] [-p|--prefix str]", clear_app_envs,
+        "clear_app_envs",
+        "clear current app envs",
+        "[-a|--all] [-p|--prefix str]",
+        clear_app_envs,
     },
     {
         "ddd_diagnose",
@@ -500,10 +561,16 @@ static command_executor commands[] = {
         query_bulk_load_status,
     },
     {
-        "pause_bulk_load", "pause app bulk load", "<-a --app_name str>", pause_bulk_load,
+        "pause_bulk_load",
+        "pause app bulk load",
+        "<-a --app_name str>",
+        pause_bulk_load,
     },
     {
-        "restart_bulk_load", "restart app bulk load", "<-a --app_name str>", restart_bulk_load,
+        "restart_bulk_load",
+        "restart app bulk load",
+        "<-a --app_name str>",
+        restart_bulk_load,
     },
     {
         "cancel_bulk_load",
@@ -512,7 +579,10 @@ static command_executor commands[] = {
         cancel_bulk_load,
     },
     {
-        "clear_bulk_load", "clear app bulk load result", "<-a --app_name str>", clear_bulk_load,
+        "clear_bulk_load",
+        "clear app bulk load result",
+        "<-a --app_name str>",
+        clear_bulk_load,
     },
     {
         "detect_hotkey",
@@ -568,10 +638,16 @@ static command_executor commands[] = {
         local_partition_split,
     },
     {
-        "exit", "exit shell", "", exit_shell,
+        "exit",
+        "exit shell",
+        "",
+        exit_shell,
     },
     {
-        nullptr, nullptr, nullptr, nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
     }};
 
 void print_help(command_executor *e, size_t name_width, size_t option_width)

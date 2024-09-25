@@ -53,5 +53,5 @@ info_collector_app::~info_collector_app() {}
     _detector.stop();
     return ::dsn::ERR_OK;
 }
-}
-} // namespace
+} // namespace server
+} // namespace pegasus

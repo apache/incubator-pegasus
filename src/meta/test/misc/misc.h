@@ -37,7 +37,7 @@
 #include <vector>
 
 #include "meta/meta_data.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 
 namespace dsn {
 class gpid;
@@ -111,7 +111,7 @@ void generate_apps(/*out*/ dsn::replication::app_mapper &apps,
 void migration_check_and_apply(
     /*in-out*/ dsn::replication::app_mapper &apps,
     /*in-out*/ dsn::replication::node_mapper &nodes,
-    /*in-out*/ dsn::replication::migration_list &ml,
+    /*in*/ const dsn::replication::migration_list &ml,
     /*in-out*/ nodes_fs_manager *manager);
 
 // when the test need to track the disk info, please input the fs_manager of all disks,

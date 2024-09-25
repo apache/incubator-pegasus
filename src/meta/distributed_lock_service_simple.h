@@ -33,10 +33,10 @@
 #include <utility>
 #include <vector>
 
-#include "runtime/task/future_types.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "task/future_types.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/distributed_lock_service.h"
 #include "utils/error_code.h"
@@ -107,5 +107,5 @@ private:
 
     dsn::task_tracker _tracker;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

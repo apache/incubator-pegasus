@@ -49,23 +49,22 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 */
 #include "runtime/profiler.h"
 
-#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
-#include "absl/strings/string_view.h"
 #include "aio/aio_task.h"
 #include "fmt/core.h"
 #include "profiler_header.h"
+#include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/config_api.h"
 #include "utils/extensible_object.h"
 #include "utils/flags.h"
@@ -370,7 +369,7 @@ metric_entity_ptr instantiate_profiler_metric_entity(const std::string &task_nam
 task_spec_profiler::task_spec_profiler(int code)
     : collect_call_count(false),
       is_profile(false),
-      call_counts(new std::atomic<int64_t>[ s_task_code_max + 1 ]),
+      call_counts(new std::atomic<int64_t>[s_task_code_max + 1]),
       _task_name(dsn::task_code(code).to_string()),
       _profiler_metric_entity(instantiate_profiler_metric_entity(_task_name))
 {

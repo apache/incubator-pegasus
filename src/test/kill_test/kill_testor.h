@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "dsn.layer2_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 
 namespace dsn {
@@ -66,7 +66,7 @@ protected:
     shared_ptr<replication_ddl_client> ddl_client;
     vector<dsn::host_port> meta_list;
 
-    std::vector<partition_configuration> partitions;
+    std::vector<partition_configuration> pcs;
 };
 } // namespace test
 } // namespace pegasus

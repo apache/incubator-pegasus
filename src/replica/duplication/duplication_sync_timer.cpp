@@ -28,10 +28,10 @@
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica_duplicator_manager.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_code.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "task/async_calls.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
@@ -176,12 +176,13 @@ void duplication_sync_timer::start()
 {
     LOG_INFO("run duplication sync periodically in {}s", FLAGS_duplication_sync_period_second);
 
-    _timer_task = tasking::enqueue_timer(LPC_DUPLICATION_SYNC_TIMER,
-                                         &_stub->_tracker,
-                                         [this]() { run(); },
-                                         FLAGS_duplication_sync_period_second * 1_s,
-                                         0,
-                                         FLAGS_duplication_sync_period_second * 1_s);
+    _timer_task = tasking::enqueue_timer(
+        LPC_DUPLICATION_SYNC_TIMER,
+        &_stub->_tracker,
+        [this]() { run(); },
+        FLAGS_duplication_sync_period_second * 1_s,
+        0,
+        FLAGS_duplication_sync_period_second * 1_s);
 }
 
 std::multimap<dupid_t, duplication_sync_timer::replica_dup_state>

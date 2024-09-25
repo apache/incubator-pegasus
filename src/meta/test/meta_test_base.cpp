@@ -38,9 +38,9 @@
 #include "meta/server_state.h"
 #include "meta/test/misc/misc.h"
 #include "meta_service_test_app.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/factory_store.h"
 #include "utils/filesystem.h"
@@ -182,14 +182,16 @@ std::vector<host_port> meta_test_base::ensure_enough_alive_nodes(int min_node_co
     return nodes;
 }
 
-void meta_test_base::create_app(const std::string &name, uint32_t partition_count)
+void meta_test_base::create_app(const std::string &name,
+                                int32_t partition_count,
+                                int32_t replica_count)
 {
     configuration_create_app_request req;
     configuration_create_app_response resp;
     req.app_name = name;
     req.options.app_type = "simple_kv";
     req.options.partition_count = partition_count;
-    req.options.replica_count = 3;
+    req.options.replica_count = replica_count;
     req.options.success_if_exist = false;
     req.options.is_stateful = true;
     req.options.envs["value_version"] = "1";

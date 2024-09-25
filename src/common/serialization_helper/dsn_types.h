@@ -26,4 +26,4 @@
 
 #pragma once
 
-#include "runtime/rpc/serialization.h"
+#include "rpc/serialization.h"

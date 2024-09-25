@@ -37,8 +37,8 @@
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/fmt_utils.h"
-#include "runtime/rpc/rpc_host_port.h"
 
 namespace dsn {
 class partition_configuration;
@@ -198,16 +198,16 @@ struct parti_config
     bool operator<(const parti_config &o) const { return pid == o.pid && ballot < o.ballot; }
     std::string to_string() const;
     bool from_string(const std::string &str);
-    void convert_from(const partition_configuration &c);
+    void convert_from(const partition_configuration &pc);
 
     friend std::ostream &operator<<(std::ostream &os, const parti_config &pc)
     {
         return os << pc.to_string();
     }
 };
-}
-}
-}
+} // namespace test
+} // namespace replication
+} // namespace dsn
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::parti_config);
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::test::replica_id);

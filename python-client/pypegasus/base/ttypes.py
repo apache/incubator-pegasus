@@ -265,13 +265,13 @@ class rpc_address:
   def is_valid(self):
     return self.address == 0
 
-  def from_string(self, host_port):
-    host, port = host_port.split(':')
-    self.address = socket.ntohl(struct.unpack("I", socket.inet_aton(host))[0])
+  def from_string(self, ip_port):
+    ip, port = ip_port.split(':')
+    self.address = socket.ntohl(struct.unpack("I", socket.inet_aton(ip))[0])
     self.address = (self.address << 32) + (int(port) << 16) + 1     # TODO why + 1?
     return True
 
-  def to_host_port(self):
+  def to_ip_port(self):
     s = []
     address = self.address
     port = (address >> 16) & 0xFFFF
@@ -304,6 +304,73 @@ class rpc_address:
 
   def __ne__(self, other):
     return not (self == other)
+
+
+# TODO(yingchun): host_port is now just a place holder and not well implemented, need improve it
+class host_port_types(Enum):
+    kHostTypeInvalid = 0
+    kHostTypeIpv4 = 1
+    kHostTypeGroup = 2
+
+
+class host_port:
+
+  thrift_spec = (
+    (1, TType.STRING, 'host', None, None, ), # 1
+    (2, TType.I16, 'port', None, None, ), # 2
+    (3, TType.I08, 'type', None, None, ), # 3
+  )
+
+  def __init__(self):
+    self.host = ""
+    self.port = 0
+    self.type = host_port_types.kHostTypeInvalid
+
+  def is_valid(self):
+    return self.type != host_port_types.kHostTypeInvalid
+
+  def from_string(self, host_port_str):
+    host_and_port = host_port_str.split(':')
+    if len(host_and_port) != 2:
+        return False
+    self.host = host_and_port[0]
+    self.port = int(host_and_port[1])
+    # TODO(yingchun): Maybe it's not true, improve it
+    self.type = host_port_types.kHostTypeIpv4
+    return True
+
+  def to_host_port(self):
+    if not self.is_valid():
+      return None, None
+    return self.host, self.port
+
+  def read(self, iprot):
+    self.host = iprot.readString()
+    self.port = iprot.readI16()
+    self.type = iprot.readByte()
+
+  def write(self, oprot):
+    oprot.writeString(self.host)
+    oprot.writeI16(self.port)
+    oprot.writeByte(self.type)
+
+  def validate(self):
+    return
+
+  def __hash__(self):
+    return hash(self.host) ^ self.port ^ self.type
+
+  def __repr__(self):
+    L = ['%s=%r' % (key, value)
+      for key, value in self.__dict__.items()]
+    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+  def __eq__(self, other):
+    return other.__class__.__name__ == "host_port" and self.__dict__ == other.__dict__
+
+  def __ne__(self, other):
+    return not (self == other)
+
 
 class gpid:
 

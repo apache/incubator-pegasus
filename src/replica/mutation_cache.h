@@ -71,5 +71,5 @@ private:
     decree _start_decree;
     std::atomic<decree> _end_decree;
 };
-}
-} // namespace
+} // namespace replication
+} // namespace dsn

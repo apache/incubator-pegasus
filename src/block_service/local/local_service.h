@@ -25,8 +25,8 @@
 #include <vector>
 
 #include "block_service/block_service.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/error_code.h"
 
 namespace dsn {
@@ -113,6 +113,6 @@ private:
     std::string _md5_value;
     bool _has_meta_synced;
 };
-}
-}
-}
+} // namespace block_service
+} // namespace dist
+} // namespace dsn

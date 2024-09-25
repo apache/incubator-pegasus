@@ -31,7 +31,7 @@
 #include <vector>
 
 #include "runtime/global_config.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/flags.h"
 #include "utils/threadpool_spec.h"
 

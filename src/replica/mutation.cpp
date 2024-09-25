@@ -36,7 +36,7 @@
 #include "common/replication.codes.h"
 #include "replica.h"
 #include "runtime/api_task.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
@@ -463,5 +463,5 @@ void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
     // is handled by prepare_list
     // _current_op_count = 0;
 }
-}
-} // namespace end
+} // namespace replication
+} // namespace dsn

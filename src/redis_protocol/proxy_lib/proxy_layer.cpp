@@ -21,10 +21,10 @@
 #include <utility>
 
 #include "proxy_layer.h"
-#include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "rpc/network.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_message.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 
@@ -62,7 +62,7 @@ proxy_stub::proxy_stub(const proxy_session::factory &f,
 
 void proxy_stub::on_rpc_request(dsn::message_ex *request)
 {
-    auto source = ::dsn::host_port::from_address(request->header->from_address);
+    const auto &source = request->header->from_address;
     std::shared_ptr<proxy_session> session;
     {
         ::dsn::zauto_read_lock l(_lock);
@@ -87,11 +87,10 @@ void proxy_stub::on_rpc_request(dsn::message_ex *request)
 
 void proxy_stub::on_recv_remove_session_request(dsn::message_ex *request)
 {
-    auto source = ::dsn::host_port::from_address(request->header->from_address);
-    remove_session(source);
+    remove_session(request->header->from_address);
 }
 
-void proxy_stub::remove_session(dsn::host_port remote)
+void proxy_stub::remove_session(dsn::rpc_address remote)
 {
     std::shared_ptr<proxy_session> session;
     {
@@ -114,9 +113,9 @@ proxy_session::proxy_session(proxy_stub *op, dsn::message_ex *first_msg)
     CHECK_NOTNULL(first_msg, "null msg when create session");
     _backup_one_request->add_ref();
 
-    _session_remote = ::dsn::host_port::from_address(_backup_one_request->header->from_address);
+    _session_remote = _backup_one_request->header->from_address;
     _session_remote_str = _session_remote.to_string();
-    CHECK_EQ_MSG(_session_remote.type(), HOST_TYPE_IPV4, "invalid host_port type");
+    CHECK_EQ_MSG(_session_remote.type(), HOST_TYPE_IPV4, "invalid rpc_address type");
 }
 
 proxy_session::~proxy_session()

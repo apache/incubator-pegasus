@@ -36,12 +36,12 @@
 #include <vector>
 
 #include "meta/meta_state_service.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/future_types.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/serialization.h"
+#include "task/future_types.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
+#include "task/task_tracker.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
@@ -225,12 +225,12 @@ private:
                 shared_blob.length() - sizeof(log_header);
             return shared_blob;
         }
-        static void write(binary_writer &writer, const Head &head, const Tail &... tail)
+        static void write(binary_writer &writer, const Head &head, const Tail &...tail)
         {
             marshall(writer, head, DSF_THRIFT_BINARY);
             log_struct<op, Tail...>::write(writer, tail...);
         }
-        static void parse(binary_reader &reader, Head &head, Tail &... tail)
+        static void parse(binary_reader &reader, Head &head, Tail &...tail)
         {
             unmarshall(reader, head, DSF_THRIFT_BINARY);
             log_struct<op, Tail...>::parse(reader, tail...);

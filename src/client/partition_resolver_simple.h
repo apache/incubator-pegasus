@@ -34,9 +34,9 @@
 
 #include "client/partition_resolver.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/rpc_host_port.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
@@ -65,7 +65,7 @@ private:
     struct partition_info
     {
         int timeout_count;
-        ::dsn::partition_configuration config;
+        ::dsn::partition_configuration pc;
     };
     mutable dsn::zrwlock_nr _config_lock;
     std::unordered_map<int, std::unique_ptr<partition_info>> _config_cache;
@@ -107,7 +107,7 @@ private:
 
 private:
     // local routines
-    host_port get_host_port(const partition_configuration &config) const;
+    host_port get_host_port(const partition_configuration &pc) const;
     error_code get_host_port(int partition_index, /*out*/ host_port &hp);
     void handle_pending_requests(std::deque<request_context_ptr> &reqs, error_code err);
     void clear_all_pending_requests();

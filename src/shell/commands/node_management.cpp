@@ -17,17 +17,22 @@
  * under the License.
  */
 
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <getopt.h>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 #include <algorithm>
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <chrono>
 #include <fstream>
+#include <initializer_list>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -35,23 +40,25 @@
 #include <vector>
 
 #include "client/replication_ddl_client.h"
+#include "common/json_helper.h"
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
+#include "shell/argh.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"
-#include "shell/sds/sds.h"
+#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 #include "utils/math.h"
 #include "utils/metrics.h"
 #include "utils/output_utils.h"
 #include "utils/ports.h"
-#include "utils/strings.h"
 
 DSN_DEFINE_uint32(shell, nodes_sample_interval_ms, 1000, "The interval between sampling metrics.");
 DSN_DEFINE_validator(nodes_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
@@ -227,19 +234,173 @@ dsn::metric_filters rw_requests_filters()
     return filters;
 }
 
+dsn::metric_filters server_stat_filters()
+{
+    dsn::metric_filters filters;
+    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.entity_types = {"server"};
+    filters.entity_metrics = {"virtual_mem_usage_mb", "resident_mem_usage_mb"};
+    return filters;
+}
+
+struct meta_server_stats
+{
+    meta_server_stats() = default;
+
+    double virt_mem_mb{0.0};
+    double res_mem_mb{0.0};
+
+    DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
+};
+
+std::pair<bool, std::string>
+aggregate_meta_server_stats(const node_desc &node,
+                            const dsn::metric_query_brief_value_snapshot &query_snapshot)
+{
+    aggregate_stats_calcs calcs;
+    meta_server_stats stats;
+    calcs.create_assignments<total_aggregate_stats>(
+        "server",
+        stat_var_map({{"virtual_mem_usage_mb", &stats.virt_mem_mb},
+                      {"resident_mem_usage_mb", &stats.res_mem_mb}}));
+
+    auto command_result = process_parse_metrics_result(
+        calcs.aggregate_metrics(query_snapshot), node, "aggregate meta server stats");
+    if (!command_result) {
+        // Metrics failed to be aggregated.
+        return std::make_pair(false, command_result.description());
+    }
+
+    return std::make_pair(true,
+                          dsn::json::json_forwarder<meta_server_stats>::encode(stats).to_string());
+}
+
+struct replica_server_stats
+{
+    replica_server_stats() = default;
+
+    double virt_mem_mb{0.0};
+    double res_mem_mb{0.0};
+
+    DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
+};
+
+std::pair<bool, std::string>
+aggregate_replica_server_stats(const node_desc &node,
+                               const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
+                               const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
+{
+    aggregate_stats_calcs calcs;
+    meta_server_stats stats;
+    calcs.create_assignments<total_aggregate_stats>(
+        "server",
+        stat_var_map({{"virtual_mem_usage_mb", &stats.virt_mem_mb},
+                      {"resident_mem_usage_mb", &stats.res_mem_mb}}));
+
+    auto command_result = process_parse_metrics_result(
+        calcs.aggregate_metrics(query_snapshot_start, query_snapshot_end),
+        node,
+        "aggregate replica server stats");
+    if (!command_result) {
+        // Metrics failed to be aggregated.
+        return std::make_pair(false, command_result.description());
+    }
+
+    return std::make_pair(true,
+                          dsn::json::json_forwarder<meta_server_stats>::encode(stats).to_string());
+}
+
+std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
+                                                           uint32_t sample_interval_ms)
+{
+    // Ask target node (meta or replica server) for the metrics of server stats.
+    const auto &query_string = server_stat_filters().to_query_string();
+    const auto &results_start = get_metrics(nodes, query_string);
+    std::this_thread::sleep_for(std::chrono::milliseconds(sample_interval_ms));
+    const auto &results_end = get_metrics(nodes, query_string);
+
+    std::vector<std::pair<bool, std::string>> command_results;
+    command_results.reserve(nodes.size());
+    for (size_t i = 0; i < nodes.size(); ++i) {
+
+#define SKIP_IF_PROCESS_RESULT_FALSE()                                                             \
+    if (!command_result) {                                                                         \
+        command_results.emplace_back(command_result, command_result.description());                \
+        continue;                                                                                  \
+    }
+
+#define PROCESS_GET_METRICS_RESULT(result, what, ...)                                              \
+    {                                                                                              \
+        auto command_result = process_get_metrics_result(result, nodes[i], what, ##__VA_ARGS__);   \
+        SKIP_IF_PROCESS_RESULT_FALSE()                                                             \
+    }
+
+        // Skip the metrics that failed to be fetched.
+        PROCESS_GET_METRICS_RESULT(results_start[i], "starting server stats")
+        PROCESS_GET_METRICS_RESULT(results_end[i], "ending server stats")
+
+#undef PROCESS_GET_METRICS_RESULT
+
+        dsn::metric_query_brief_value_snapshot query_snapshot_start;
+        dsn::metric_query_brief_value_snapshot query_snapshot_end;
+        {
+            // Skip the metrics that failed to be deserialized.
+            auto command_result = process_parse_metrics_result(
+                deserialize_metric_query_2_samples(results_start[i].body(),
+                                                   results_end[i].body(),
+                                                   query_snapshot_start,
+                                                   query_snapshot_end),
+                nodes[i],
+                "deserialize server stats");
+            SKIP_IF_PROCESS_RESULT_FALSE()
+        }
+
+#undef SKIP_IF_PROCESS_RESULT_FALSE
+
+        if (query_snapshot_end.role == "meta") {
+            command_results.push_back(aggregate_meta_server_stats(nodes[i], query_snapshot_end));
+            continue;
+        }
+
+        if (query_snapshot_end.role == "replica") {
+            command_results.push_back(
+                aggregate_replica_server_stats(nodes[i], query_snapshot_start, query_snapshot_end));
+            continue;
+        }
+
+        command_results.emplace_back(
+            false, fmt::format("role {} is unsupported", query_snapshot_end.role));
+    }
+
+    return command_results;
+}
+
+std::vector<std::pair<bool, std::string>> call_nodes(shell_context *sc,
+                                                     const std::vector<node_desc> &nodes,
+                                                     const std::string &command,
+                                                     const std::vector<std::string> &arguments,
+                                                     uint32_t sample_interval_ms)
+{
+    if (command == "server_stat") {
+        return get_server_stats(nodes, sample_interval_ms);
+    }
+
+    return call_remote_command(sc, nodes, command, arguments);
+}
+
 } // anonymous namespace
 
-bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
+bool ls_nodes(command_executor *, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"detailed", no_argument, 0, 'd'},
-                                           {"resolve_ip", no_argument, 0, 'r'},
-                                           {"resource_usage", no_argument, 0, 'u'},
-                                           {"qps", no_argument, 0, 'q'},
-                                           {"json", no_argument, 0, 'j'},
-                                           {"status", required_argument, 0, 's'},
-                                           {"output", required_argument, 0, 'o'},
-                                           {"sample_interval_ms", required_argument, 0, 't'},
-                                           {0, 0, 0, 0}};
+    static struct option long_options[] = {{"detailed", no_argument, nullptr, 'd'},
+                                           {"resolve_ip", no_argument, nullptr, 'r'},
+                                           {"resource_usage", no_argument, nullptr, 'u'},
+                                           {"qps", no_argument, nullptr, 'q'},
+                                           {"json", no_argument, nullptr, 'j'},
+                                           {"status", required_argument, nullptr, 's'},
+                                           {"output", required_argument, nullptr, 'o'},
+                                           {"sample_interval_ms", required_argument, nullptr, 'i'},
+                                           {nullptr, 0, nullptr, 0}};
 
     std::string status;
     std::string output_file;
@@ -254,7 +415,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c = getopt_long(args.argc, args.argv, "druqjs:o:t:", long_options, &option_index);
+        // TODO(wangdan): getopt_long() is not thread-safe (clang-tidy[concurrency-mt-unsafe]),
+        // could use https://github.com/p-ranav/argparse instead.
+        int c = getopt_long(args.argc, args.argv, "druqjs:o:i:", long_options, &option_index);
         if (c == -1) {
             // -1 means all command-line options have been parsed.
             break;
@@ -283,7 +446,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             output_file = optarg;
             break;
-        case 't':
+        case 'i':
             RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
             break;
         default:
@@ -340,22 +503,22 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
         for (auto &app : apps) {
             int32_t app_id;
             int32_t partition_count;
-            std::vector<dsn::partition_configuration> partitions;
-            r = sc->ddl_client->list_app(app.app_name, app_id, partition_count, partitions);
+            std::vector<dsn::partition_configuration> pcs;
+            r = sc->ddl_client->list_app(app.app_name, app_id, partition_count, pcs);
             if (r != dsn::ERR_OK) {
                 std::cout << "list app " << app.app_name << " failed, error=" << r << std::endl;
                 return true;
             }
 
-            for (const dsn::partition_configuration &p : partitions) {
-                if (p.hp_primary) {
-                    auto find = tmp_map.find(p.hp_primary);
+            for (const auto &pc : pcs) {
+                if (pc.hp_primary) {
+                    auto find = tmp_map.find(pc.hp_primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (const auto &hp : p.hp_secondaries) {
-                    auto find = tmp_map.find(hp);
+                for (const auto &secondary : pc.hp_secondaries) {
+                    auto find = tmp_map.find(secondary);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;
                     }
@@ -383,7 +546,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
             auto &stat = tmp_it->second;
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
-                parse_resource_usage(results[i].body(), stat), nodes[i], "resource");
+                parse_resource_usage(results[i].body(), stat), nodes[i], "parse resource usage");
         }
     }
 
@@ -425,7 +588,7 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             RETURN_SHELL_IF_PARSE_METRICS_FAILED(
                 calcs.aggregate_metrics(results_start[i].body(), results_end[i].body()),
                 nodes[i],
-                "rw requests");
+                "aggregate rw requests");
         }
     }
 
@@ -447,8 +610,9 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
             RETURN_SHELL_IF_GET_METRICS_FAILED(results[i], nodes[i], "profiler latency");
 
             auto &stat = tmp_it->second;
-            RETURN_SHELL_IF_PARSE_METRICS_FAILED(
-                parse_profiler_latency(results[i].body(), stat), nodes[i], "profiler latency");
+            RETURN_SHELL_IF_PARSE_METRICS_FAILED(parse_profiler_latency(results[i].body(), stat),
+                                                 nodes[i],
+                                                 "parse profiler latency");
         }
     }
 
@@ -544,145 +708,140 @@ bool ls_nodes(command_executor *e, shell_context *sc, arguments args)
 
 bool server_info(command_executor *e, shell_context *sc, arguments args)
 {
-    char *argv[args.argc + 1];
-    memcpy(argv, args.argv, sizeof(char *) * args.argc);
-    argv[args.argc] = (char *)"server-info";
-    arguments new_args;
-    new_args.argc = args.argc + 1;
-    new_args.argv = argv;
-    return remote_command(e, sc, new_args);
+    return remote_command(e, sc, args);
 }
 
 bool server_stat(command_executor *e, shell_context *sc, arguments args)
 {
-    char *argv[args.argc + 1];
-    memcpy(argv, args.argv, sizeof(char *) * args.argc);
-    argv[args.argc] = (char *)"server-stat";
-    arguments new_args;
-    new_args.argc = args.argc + 1;
-    new_args.argv = argv;
-    return remote_command(e, sc, new_args);
-}
-
-bool remote_command(command_executor *e, shell_context *sc, arguments args)
-{
-    static struct option long_options[] = {{"node_type", required_argument, 0, 't'},
-                                           {"node_list", required_argument, 0, 'l'},
-                                           {"resolve_ip", no_argument, 0, 'r'},
-                                           {0, 0, 0, 0}};
-
-    std::string type;
-    std::string nodes;
-    optind = 0;
-    bool resolve_ip = false;
-    while (true) {
-        int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "t:l:r", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 't':
-            type = optarg;
-            break;
-        case 'l':
-            nodes = optarg;
-            break;
-        case 'r':
-            resolve_ip = true;
-            break;
-        default:
-            return false;
-        }
-    }
-
-    if (!type.empty() && !nodes.empty()) {
-        fprintf(stderr, "can not specify both node_type and node_list\n");
-        return false;
-    }
-
-    if (type.empty() && nodes.empty()) {
-        type = "all";
-    }
-
-    if (!type.empty() && type != "all" && type != "meta-server" && type != "replica-server") {
-        fprintf(stderr, "invalid type, should be: all | meta-server | replica-server\n");
-        return false;
-    }
-
-    if (optind == args.argc) {
-        fprintf(stderr, "command not specified\n");
-        return false;
-    }
-
-    std::string cmd = args.argv[optind];
-    std::vector<std::string> arguments;
-    for (int i = optind + 1; i < args.argc; i++) {
-        arguments.push_back(args.argv[i]);
-    }
-
-    std::vector<node_desc> node_list;
-    if (!type.empty()) {
-        if (!fill_nodes(sc, type, node_list)) {
-            fprintf(stderr, "prepare nodes failed, type = %s\n", type.c_str());
-            return true;
-        }
-    } else {
-        std::vector<std::string> tokens;
-        dsn::utils::split_args(nodes.c_str(), tokens, ',');
-        if (tokens.empty()) {
-            fprintf(stderr, "can't parse node from node_list\n");
-            return true;
-        }
-
-        for (std::string &token : tokens) {
-            const auto node = dsn::host_port::from_string(token);
-            if (!node) {
-                fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
-                return true;
-            }
-            node_list.emplace_back("user-specified", node);
-        }
-    }
-
-    fprintf(stderr, "COMMAND: %s", cmd.c_str());
-    for (auto &s : arguments) {
-        fprintf(stderr, " %s", s.c_str());
-    }
-    fprintf(stderr, "\n\n");
-
-    std::vector<std::pair<bool, std::string>> results =
-        call_remote_command(sc, node_list, cmd, arguments);
-
-    int succeed = 0;
-    int failed = 0;
-    // TODO (yingchun) output is hard to read, need do some refactor
-    for (int i = 0; i < node_list.size(); ++i) {
-        const auto &node = node_list[i];
-        const auto hostname = replication_ddl_client::node_name(node.hp, resolve_ip);
-        fprintf(stderr, "CALL [%s] [%s] ", node.desc.c_str(), hostname.c_str());
-        if (results[i].first) {
-            fprintf(stderr, "succeed:\n%s\n", results[i].second.c_str());
-            succeed++;
-        } else {
-            fprintf(stderr, "failed:\n%s\n", results[i].second.c_str());
-            failed++;
-        }
-    }
-
-    fprintf(stderr, "\nSucceed count: %d\n", succeed);
-    fprintf(stderr, "Failed count: %d\n", failed);
-
-    return true;
+    return remote_command(e, sc, args);
 }
 
 bool flush_log(command_executor *e, shell_context *sc, arguments args)
 {
-    char *argv[args.argc + 1];
-    memcpy(argv, args.argv, sizeof(char *) * args.argc);
-    argv[args.argc] = (char *)"flush-log";
-    arguments new_args;
-    new_args.argc = args.argc + 1;
-    new_args.argv = argv;
-    return remote_command(e, sc, new_args);
+    return remote_command(e, sc, args);
+}
+
+bool remote_command(command_executor *e, shell_context *sc, arguments args)
+{
+    // Command format: [remote_command] <command> [arguments...]
+    //                                            [-t all|meta-server|replica-server]
+    //                                            [-r|--resolve_ip]
+    //                                            [-l host:port,host:port...]
+    //                                            [-i|--sample_interval_ms num]
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+
+    std::string command;
+    std::vector<std::string> pos_args;
+    int pos = 0;
+    do {
+        // Try to parse the positional args.
+        const auto &pos_arg = cmd(pos++);
+        if (!pos_arg) {
+            break;
+        }
+
+        // Ignore the args that are useless to the command.
+        static const std::set<std::string> kIgnoreArgs({"remote_command"});
+        if (kIgnoreArgs.count(pos_arg.str()) == 1) {
+            continue;
+        }
+
+        // Collect the positional args following by the command.
+        if (!command.empty()) {
+            pos_args.emplace_back(pos_arg.str());
+            continue;
+        }
+
+        // Initialize the command.
+        const std::map<std::string, std::string> kCmdsMapping(
+            {{"server_info", "server-info"}, {"flush_log", "flush-log"}});
+        const auto &it = kCmdsMapping.find(pos_arg.str());
+        if (it != kCmdsMapping.end()) {
+            // Use the mapped command.
+            command = it->second;
+        } else {
+            command = pos_arg.str();
+        }
+    } while (true);
+
+    if (command.empty()) {
+        SHELL_PRINTLN_ERROR("missing <command>");
+        return false;
+    }
+    const auto resolve_ip = cmd[{"-r", "--resolve_ip"}];
+    auto node_type = cmd({"-t"}).str();
+    std::vector<std::string> nodes_str;
+    PARSE_OPT_STRS(nodes_str, "", {"-l"});
+
+    if (!node_type.empty() && !nodes_str.empty()) {
+        SHELL_PRINTLN_ERROR("can not specify both node_type and nodes_str");
+        return false;
+    }
+
+    if (node_type.empty() && nodes_str.empty()) {
+        node_type = "all";
+    }
+
+    static const std::set<std::string> kValidNodeTypes({"all", "meta-server", "replica-server"});
+    if (!node_type.empty() && kValidNodeTypes.count(node_type) == 0) {
+        SHELL_PRINTLN_ERROR("invalid node_type, should be in [{}]",
+                            fmt::join(kValidNodeTypes, ", "));
+        return false;
+    }
+
+    std::vector<node_desc> nodes;
+    do {
+        if (node_type.empty()) {
+            for (const auto &node_str : nodes_str) {
+                const auto node = dsn::host_port::from_string(node_str);
+                if (!node) {
+                    SHELL_PRINTLN_ERROR("parse '{}' as host:port failed", node_str);
+                    return false;
+                }
+                nodes.emplace_back("user-specified", node);
+            }
+            break;
+        }
+
+        if (!fill_nodes(sc, node_type, nodes)) {
+            SHELL_PRINTLN_ERROR("prepare nodes failed, node_type = {}", node_type);
+            return false;
+        }
+    } while (false);
+
+    nlohmann::json info;
+    info["command"] = fmt::format("{} {}", command, fmt::join(pos_args, " "));
+
+    uint32_t sample_interval_ms = 0;
+    PARSE_OPT_UINT(
+        sample_interval_ms, FLAGS_nodes_sample_interval_ms, {"-i", "--sample_interval_ms"});
+
+    const auto &results = call_nodes(sc, nodes, command, pos_args, sample_interval_ms);
+    CHECK_EQ(results.size(), nodes.size());
+
+    int succeed = 0;
+    int failed = 0;
+    for (int i = 0; i < nodes.size(); ++i) {
+        nlohmann::json node_info;
+        node_info["role"] = nodes[i].desc;
+        node_info["acked"] = results[i].first;
+        try {
+            // Treat the message as a JSON object by default.
+            node_info["message"] = nlohmann::json::parse(results[i].second);
+        } catch (nlohmann::json::exception &exp) {
+            // Treat it as a string if failed to parse as a JSON object.
+            node_info["message"] = results[i].second;
+        }
+        if (results[i].first) {
+            succeed++;
+        } else {
+            failed++;
+        }
+        info["details"].emplace(replication_ddl_client::node_name(nodes[i].hp, resolve_ip),
+                                node_info);
+    }
+    info["succeed_count"] = succeed;
+    info["failed_count"] = failed;
+    fmt::println(stdout, "{}", info.dump(2));
+    return true;
 }

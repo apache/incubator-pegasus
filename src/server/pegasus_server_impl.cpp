@@ -43,8 +43,8 @@
 #include <mutex>
 #include <ostream>
 #include <set>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "base/idl_utils.h" // IWYU pragma: keep
 #include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
@@ -60,17 +60,17 @@
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
 #include "replica_admin_types.h"
+#include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_code.h"
 #include "server/key_ttl_compaction_filter.h"
 #include "server/pegasus_manual_compact_service.h"
 #include "server/pegasus_read_service.h"
 #include "server/pegasus_scan_context.h"
 #include "server/range_read_limiter.h"
+#include "task/async_calls.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
@@ -1372,11 +1372,12 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         // if the context is used, it will be fetched and re-put into cache,
         // which will change the handle,
         // then the delayed task will fetch null context by old handle, and do nothing.
-        ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
-                                &_tracker,
-                                [this, handle]() { _context_cache.fetch(handle); },
-                                0,
-                                std::chrono::minutes(5));
+        ::dsn::tasking::enqueue(
+            LPC_PEGASUS_SERVER_DELAY,
+            &_tracker,
+            [this, handle]() { _context_cache.fetch(handle); },
+            0,
+            std::chrono::minutes(5));
     } else {
         // scan completed
         resp.context_id = pegasus_scan_context::SCAN_CONTEXT_ID_COMPLETED;
@@ -1517,11 +1518,12 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             // scan not completed
             int64_t handle = _context_cache.put(std::move(context));
             resp.context_id = handle;
-            ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
-                                    &_tracker,
-                                    [this, handle]() { _context_cache.fetch(handle); },
-                                    0,
-                                    std::chrono::minutes(5));
+            ::dsn::tasking::enqueue(
+                LPC_PEGASUS_SERVER_DELAY,
+                &_tracker,
+                [this, handle]() { _context_cache.fetch(handle); },
+                0,
+                std::chrono::minutes(5));
         } else {
             // scan completed
             resp.context_id = pegasus_scan_context::SCAN_CONTEXT_ID_COMPLETED;
@@ -1805,11 +1807,11 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     }
 
     LOG_DEBUG_PREFIX("start the update replica-level rocksdb statistics timer task");
-    _update_replica_rdb_stat =
-        dsn::tasking::enqueue_timer(LPC_REPLICATION_LONG_COMMON,
-                                    &_tracker,
-                                    [this]() { this->update_replica_rocksdb_statistics(); },
-                                    std::chrono::seconds(FLAGS_update_rdb_stat_interval));
+    _update_replica_rdb_stat = dsn::tasking::enqueue_timer(
+        LPC_REPLICATION_LONG_COMMON,
+        &_tracker,
+        [this]() { this->update_replica_rocksdb_statistics(); },
+        std::chrono::seconds(FLAGS_update_rdb_stat_interval));
 
     // These counters are singletons on this server shared by all replicas, their metrics update
     // task should be scheduled once an interval on the server view.
@@ -1817,6 +1819,12 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     std::call_once(flag, [&]() {
         // The timer task will always running even though there is no replicas
         CHECK_NE(kServerStatUpdateTimeSec.count(), 0);
+
+        // TODO(wangdan): _update_server_rdb_stat is server-level, thus it could not be simply
+        // cancelled in the destructor of pegasus_server_impl which is replica-level.
+        //
+        // We should refactor to make _update_server_rdb_stat exit gracefully by
+        // `_update_server_rdb_stat->cancel(true)`.
         _update_server_rdb_stat = dsn::tasking::enqueue_timer(
             LPC_REPLICATION_LONG_COMMON,
             nullptr, // TODO: the tracker is nullptr, we will fix it later
@@ -1829,15 +1837,17 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
         this, _read_hotkey_collector, _write_hotkey_collector, _read_size_throttling_controller);
     _server_write = std::make_unique<pegasus_server_write>(this);
 
-    dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
-                                &_tracker,
-                                [this]() { _read_hotkey_collector->analyse_data(); },
-                                std::chrono::seconds(FLAGS_hotkey_analyse_time_interval_s));
+    dsn::tasking::enqueue_timer(
+        LPC_ANALYZE_HOTKEY,
+        &_tracker,
+        [this]() { _read_hotkey_collector->analyse_data(); },
+        std::chrono::seconds(FLAGS_hotkey_analyse_time_interval_s));
 
-    dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
-                                &_tracker,
-                                [this]() { _write_hotkey_collector->analyse_data(); },
-                                std::chrono::seconds(FLAGS_hotkey_analyse_time_interval_s));
+    dsn::tasking::enqueue_timer(
+        LPC_ANALYZE_HOTKEY,
+        &_tracker,
+        [this]() { _write_hotkey_collector->analyse_data(); },
+        std::chrono::seconds(FLAGS_hotkey_analyse_time_interval_s));
 
     return dsn::ERR_OK;
 }
@@ -1869,10 +1879,7 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         _update_replica_rdb_stat->cancel(true);
         _update_replica_rdb_stat = nullptr;
     }
-    if (_update_server_rdb_stat != nullptr) {
-        _update_server_rdb_stat->cancel(true);
-        _update_server_rdb_stat = nullptr;
-    }
+
     _tracker.cancel_outstanding_tasks();
 
     _context_cache.clear();
@@ -2168,47 +2175,49 @@ private:
     }
     LOG_INFO_PREFIX("copy checkpoint to dir({}) succeed", checkpoint_dir);
 
-    if (checkpoint_decree != nullptr) {
-        rocksdb::DB *snapshot_db = nullptr;
-        std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
-        auto cleanup = [&](bool remove_checkpoint) {
-            if (remove_checkpoint && !::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
-                LOG_ERROR_PREFIX("remove checkpoint directory {} failed", checkpoint_dir);
-            }
-            if (snapshot_db) {
-                for (auto handle : handles_opened) {
-                    if (handle) {
-                        snapshot_db->DestroyColumnFamilyHandle(handle);
-                        handle = nullptr;
-                    }
-                }
-                delete snapshot_db;
-                snapshot_db = nullptr;
-            }
-        };
-
-        // Because of RocksDB's restriction, we have to to open default column family even though
-        // not use it
-        std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-            {{meta_store::DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
-             {meta_store::META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
-        status = rocksdb::DB::OpenForReadOnly(
-            _db_opts, checkpoint_dir, column_families, &handles_opened, &snapshot_db);
-        if (!status.ok()) {
-            LOG_ERROR_PREFIX(
-                "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
-            snapshot_db = nullptr;
-            cleanup(true);
-            return ::dsn::ERR_LOCAL_APP_FAILURE;
-        }
-        CHECK_EQ_PREFIX(handles_opened.size(), 2);
-        CHECK_EQ_PREFIX(handles_opened[1]->GetName(), meta_store::META_COLUMN_FAMILY_NAME);
-        uint64_t last_flushed_decree =
-            _meta_store->get_decree_from_readonly_db(snapshot_db, handles_opened[1]);
-        *checkpoint_decree = last_flushed_decree;
-
-        cleanup(false);
+    if (checkpoint_decree == nullptr) {
+        return ::dsn::ERR_OK;
     }
+
+    rocksdb::DB *snapshot_db = nullptr;
+    std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
+    auto cleanup = [&](bool remove_checkpoint) {
+        if (remove_checkpoint && !::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
+            LOG_ERROR_PREFIX("remove checkpoint directory {} failed", checkpoint_dir);
+        }
+        if (snapshot_db) {
+            for (auto handle : handles_opened) {
+                if (handle) {
+                    snapshot_db->DestroyColumnFamilyHandle(handle);
+                    handle = nullptr;
+                }
+            }
+            delete snapshot_db;
+            snapshot_db = nullptr;
+        }
+    };
+
+    // Because of RocksDB's restriction, we have to to open default column family even though
+    // not use it
+    std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
+        {{meta_store::DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
+         {meta_store::META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
+    status = rocksdb::DB::OpenForReadOnly(
+        _db_opts, checkpoint_dir, column_families, &handles_opened, &snapshot_db);
+    if (!status.ok()) {
+        LOG_ERROR_PREFIX(
+            "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
+        snapshot_db = nullptr;
+        cleanup(true);
+        return ::dsn::ERR_LOCAL_APP_FAILURE;
+    }
+    CHECK_EQ_PREFIX(handles_opened.size(), 2);
+    CHECK_EQ_PREFIX(handles_opened[1]->GetName(), meta_store::META_COLUMN_FAMILY_NAME);
+    uint64_t last_flushed_decree =
+        _meta_store->get_decree_from_readonly_db(snapshot_db, handles_opened[1]);
+    *checkpoint_decree = last_flushed_decree;
+
+    cleanup(false);
 
     return ::dsn::ERR_OK;
 }
@@ -2318,6 +2327,17 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
     return ::dsn::ERR_OK;
 }
 
+int64_t pegasus_server_impl::last_flushed_decree() const
+{
+    uint64_t decree = 0;
+    const auto &err = _meta_store->get_last_flushed_decree(&decree);
+    if (dsn_unlikely(err != dsn::ERR_OK)) {
+        return -1;
+    }
+
+    return static_cast<int64_t>(decree);
+}
+
 bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_type,
                                           const ::dsn::blob &filter_pattern,
                                           const ::dsn::blob &value)
@@ -2334,7 +2354,7 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
             return false;
         if (filter_type == ::dsn::apps::filter_type::FT_MATCH_ANYWHERE) {
             return value.to_string_view().find(filter_pattern.to_string_view()) !=
-                   absl::string_view::npos;
+                   std::string_view::npos;
         } else if (filter_type == ::dsn::apps::filter_type::FT_MATCH_PREFIX) {
             return dsn::utils::mequals(
                 value.data(), filter_pattern.data(), filter_pattern.length());
@@ -3362,14 +3382,15 @@ uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptio
         // we will try to generate it again, and it will probably succeed because at least some
         // empty data is written into rocksdb by periodic group check.
         LOG_INFO_PREFIX("release storage failed after manual compact, will retry after 5 minutes");
-        ::dsn::tasking::enqueue(LPC_PEGASUS_SERVER_DELAY,
-                                &_tracker,
-                                [this]() {
-                                    LOG_INFO_PREFIX("retry release storage after manual compact");
-                                    release_storage_after_manual_compact();
-                                },
-                                0,
-                                std::chrono::minutes(5));
+        ::dsn::tasking::enqueue(
+            LPC_PEGASUS_SERVER_DELAY,
+            &_tracker,
+            [this]() {
+                LOG_INFO_PREFIX("retry release storage after manual compact");
+                release_storage_after_manual_compact();
+            },
+            0,
+            std::chrono::minutes(5));
     }
 
     // update rocksdb statistics immediately

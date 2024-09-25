@@ -22,9 +22,9 @@
 #include <string>
 #include <utility>
 
-#include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/network.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_message.h"
 #include "sasl_wrapper.h"
 #include "security_types.h"
 #include "utils/autoref_ptr.h"

@@ -92,5 +92,5 @@ public:
     explicit fault_injector(const char *name);
     void install(service_spec &spec) override;
 };
-}
-}
+} // namespace tools
+} // namespace dsn

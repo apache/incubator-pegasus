@@ -46,9 +46,9 @@
 #include "meta/duplication/duplication_info.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/enum_helper.h"
@@ -196,7 +196,7 @@ struct serving_replica
 class config_context
 {
 public:
-    partition_configuration *config_owner;
+    partition_configuration *pc;
     config_status stage;
     // for server state's update config management
     //[
@@ -264,18 +264,12 @@ public:
 
 struct partition_configuration_stateless
 {
-    partition_configuration &config;
-    partition_configuration_stateless(partition_configuration &pc) : config(pc) {}
-    std::vector<dsn::host_port> &workers() { return config.hp_last_drops; }
-    std::vector<dsn::host_port> &hosts() { return config.hp_secondaries; }
-    bool is_host(const host_port &node) const
-    {
-        return utils::contains(config.hp_secondaries, node);
-    }
-    bool is_worker(const host_port &node) const
-    {
-        return utils::contains(config.hp_last_drops, node);
-    }
+    partition_configuration &pc;
+    partition_configuration_stateless(partition_configuration &_pc) : pc(_pc) {}
+    std::vector<dsn::host_port> &workers() { return pc.hp_last_drops; }
+    std::vector<dsn::host_port> &hosts() { return pc.hp_secondaries; }
+    bool is_host(const host_port &node) const { return utils::contains(pc.hp_secondaries, node); }
+    bool is_worker(const host_port &node) const { return utils::contains(pc.hp_last_drops, node); }
     bool is_member(const host_port &node) const { return is_host(node) || is_worker(node); }
 };
 
@@ -362,7 +356,7 @@ public:
 public:
     const char *get_logname() const { return log_name.c_str(); }
     std::shared_ptr<app_state_helper> helpers;
-    std::vector<partition_configuration> partitions;
+    std::vector<partition_configuration> pcs;
     std::map<dupid_t, duplication_info_s_ptr> duplications;
 
     static std::shared_ptr<app_state> create(const app_info &info);
@@ -462,7 +456,7 @@ inline const partition_configuration *get_config(const app_mapper &apps, const d
     auto iter = apps.find(gpid.get_app_id());
     if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED)
         return nullptr;
-    return &(iter->second->partitions[gpid.get_partition_index()]);
+    return &(iter->second->pcs[gpid.get_partition_index()]);
 }
 
 inline partition_configuration *get_config(app_mapper &apps, const dsn::gpid &gpid)
@@ -470,7 +464,7 @@ inline partition_configuration *get_config(app_mapper &apps, const dsn::gpid &gp
     auto iter = apps.find(gpid.get_app_id());
     if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED)
         return nullptr;
-    return &(iter->second->partitions[gpid.get_partition_index()]);
+    return &(iter->second->pcs[gpid.get_partition_index()]);
 }
 
 inline const config_context *get_config_context(const app_mapper &apps, const dsn::gpid &gpid)
@@ -510,29 +504,30 @@ inline health_status partition_health_status(const partition_configuration &pc,
                                              int mutation_2pc_min_replica_count)
 {
     if (!pc.hp_primary) {
-        if (pc.hp_secondaries.empty())
+        if (pc.hp_secondaries.empty()) {
             return HS_DEAD;
-        else
-            return HS_UNREADABLE;
-    } else {
-        int n = pc.hp_secondaries.size() + 1;
-        if (n < mutation_2pc_min_replica_count)
-            return HS_UNWRITABLE;
-        else if (n < pc.max_replica_count)
-            return HS_WRITABLE_ILL;
-        else
-            return HS_HEALTHY;
+        }
+        return HS_UNREADABLE;
     }
+
+    const auto replica_count = pc.hp_secondaries.size() + 1;
+    if (replica_count < mutation_2pc_min_replica_count) {
+        return HS_UNWRITABLE;
+    }
+
+    if (replica_count < pc.max_replica_count) {
+        return HS_WRITABLE_ILL;
+    }
+    return HS_HEALTHY;
 }
 
 inline void
 for_each_available_app(const app_mapper &apps,
                        const std::function<bool(const std::shared_ptr<app_state> &)> &action)
 {
-    for (const auto &p : apps) {
-        if (p.second->status == app_status::AS_AVAILABLE) {
-            if (!action(p.second))
-                break;
+    for (const auto &[_, as] : apps) {
+        if (as->status == app_status::AS_AVAILABLE && !action(as)) {
+            break;
         }
     }
 }
@@ -548,6 +543,7 @@ inline int count_partitions(const app_mapper &apps)
 
 void when_update_replicas(config_type::type t, const std::function<void(bool)> &func);
 
+// TODO(yingchun): refactor to deal both rpc_address and host_port
 template <typename T>
 void maintain_drops(/*inout*/ std::vector<T> &drops, const T &node, config_type::type t)
 {

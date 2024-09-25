@@ -42,8 +42,8 @@
 #include "meta/server_state.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 

@@ -35,10 +35,10 @@
 
 #include "failure_detector/fd.client.h"
 #include "failure_detector/fd.server.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/rpc_host_port.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
 #include "utils/threadpool_code.h"
@@ -237,5 +237,5 @@ protected:
     // subClass can rewrite these method.
     virtual void send_beacon(const host_port &node, uint64_t time);
 };
-}
-} // end namespace
+} // namespace fd
+} // namespace dsn

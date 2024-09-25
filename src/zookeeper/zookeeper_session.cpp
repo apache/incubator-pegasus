@@ -31,7 +31,7 @@
 #include <utility>
 
 #include "runtime/app_model.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -467,5 +467,5 @@ void zookeeper_session::global_void_completion(int rc, const void *data)
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
 }
-}
-}
+} // namespace dist
+} // namespace dsn

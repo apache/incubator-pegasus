@@ -47,8 +47,8 @@
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
@@ -165,14 +165,14 @@ void meta_service_test_app::balancer_validator()
                   iter.second.partition_count());
     }
 
-    std::shared_ptr<app_state> &the_app = apps[1];
-    for (::dsn::partition_configuration &pc : the_app->partitions) {
+    const auto &app = apps[1];
+    for (const auto &pc : app->pcs) {
         CHECK(pc.hp_primary, "");
         CHECK_GE(pc.secondaries.size(), pc.max_replica_count - 1);
     }
 
     // now test the cure
-    ::dsn::partition_configuration &pc = the_app->partitions[0];
+    auto &pc = app->pcs[0];
     nodes[pc.hp_primary].remove_partition(pc.pid, false);
     for (const auto &hp : pc.hp_secondaries) {
         nodes[hp].remove_partition(pc.pid, false);
@@ -218,11 +218,11 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
             infile >> n;
             infile >> ip_port;
             const auto primary = host_port::from_string(ip_port);
-            SET_IP_AND_HOST_PORT_BY_DNS(app->partitions[j], primary, primary);
+            SET_IP_AND_HOST_PORT_BY_DNS(app->pcs[j], primary, primary);
             for (int k = 1; k < n; ++k) {
                 infile >> ip_port;
                 const auto secondary = host_port::from_string(ip_port);
-                ADD_IP_AND_HOST_PORT_BY_DNS(app->partitions[j], secondaries, secondary);
+                ADD_IP_AND_HOST_PORT_BY_DNS(app->pcs[j], secondaries, secondary);
             }
         }
     }

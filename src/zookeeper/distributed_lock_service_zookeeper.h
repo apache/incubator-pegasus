@@ -36,9 +36,9 @@
 
 #include "boost/container/detail/std_fwd.hpp"
 #include "lock_types.h"
-#include "runtime/task/future_types.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
+#include "task/future_types.h"
+#include "task/task.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/distributed_lock_service.h"
 #include "utils/error_code.h"
@@ -126,5 +126,5 @@ private:
 
     friend class lock_struct;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

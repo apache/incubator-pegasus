@@ -37,17 +37,21 @@ on:
 jobs:
   lint_cpp:
     name: Lint Cpp
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:clang-format-3.9
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: clang-format
-        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
+        run: ./build_tools/run-clang-format.py --clang-format-executable clang-format-14 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
   build_cpp:
     name: Build Cpp
     runs-on: ubuntu-latest
+    env:
+      # The glibc version on ubuntu1804 and centos7 is lower than the node20 required, so
+      # we need to force the node version to 16.
+      # See more details: https://github.com/actions/checkout/issues/1809
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     strategy:
       fail-fast: false
       matrix:
@@ -72,6 +76,8 @@ jobs:
         working-directory: /root/incubator-pegasus
     steps:
       - name: Clone Apache Pegasus Source
+        # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
+        # we need to force to use actions/checkout@v3.
         uses: actions/checkout@v3
       - name: Unpack prebuilt third-parties
         uses: "./.github/actions/unpack_prebuilt_thirdparties"
@@ -87,7 +93,7 @@ jobs:
         # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
         run: sudo apt-get install -y thrift-compiler
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
@@ -130,13 +136,15 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
+      - name: Download thrift
+        working-directory: ./java-client/scripts
+        run: ./download_thrift.sh
       - name: Build
         working-directory: ./java-client
         run: |
-          cd scripts && bash recompile_thrift.sh && cd -
           mvn spotless:apply
           mvn clean package -DskipTests
