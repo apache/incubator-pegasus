@@ -127,7 +127,6 @@ else
     copy_file ${THIRDPARTY_ROOT}/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
 fi
 
-copy_file ${THIRDPARTY_ROOT}/output/lib/libboost*.so.1.86.0 ${pack}/bin
 copy_file ${THIRDPARTY_ROOT}/output/lib/libhdfs* ${pack}/bin
 copy_file ${THIRDPARTY_ROOT}/output/lib/librocksdb.so.8 ${pack}/bin
 copy_file ./admin_tools/config_hdfs.sh ${pack}/bin
