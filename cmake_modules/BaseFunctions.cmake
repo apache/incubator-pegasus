@@ -326,16 +326,16 @@ function(dsn_setup_include_path)#TODO(huangwei5): remove this
 endfunction(dsn_setup_include_path)
 
 function(dsn_setup_thirdparty_libs)
-  set(Boost_USE_MULTITHREADED ON)
-  set(Boost_USE_STATIC_LIBS OFF)
-  set(Boost_USE_STATIC_RUNTIME OFF)
   set(BOOST_ROOT ${THIRDPARTY_INSTALL_DIR})
+  set(Boost_USE_MULTITHREADED ON)
+  set(Boost_USE_STATIC_LIBS ON)
+  set(Boost_USE_STATIC_RUNTIME ON)
   set(Boost_NO_SYSTEM_PATHS ON)
   set(Boost_NO_BOOST_CMAKE ON)
+  set(Boost_NO_WARN_NEW_VERSIONS ON)
 
   set(CMAKE_PREFIX_PATH ${THIRDPARTY_INSTALL_DIR};${CMAKE_PREFIX_PATH})
   message(STATUS "CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
-  set(Boost_NO_WARN_NEW_VERSIONS 1)
   find_package(Boost COMPONENTS system filesystem REQUIRED)
   include_directories(${Boost_INCLUDE_DIRS})
 
