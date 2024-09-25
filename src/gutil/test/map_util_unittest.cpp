@@ -17,9 +17,7 @@
 #include "gutil/map_util.h"
 
 #include <absl/hash/hash.h>
-#include <string_view>
-#include <fmt/core.h>
-#include <stdint.h>
+#include <cstdint>
 #include <algorithm>
 #include <deque>
 #include <list>
@@ -27,6 +25,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 

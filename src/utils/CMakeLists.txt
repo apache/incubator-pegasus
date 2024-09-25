@@ -37,7 +37,8 @@ set(MY_PROJ_LIBS
         lz4
         zstd
         snappy
-        absl::strings)
+        absl::strings
+        spdlog)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")

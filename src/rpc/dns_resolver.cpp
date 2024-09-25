@@ -21,6 +21,7 @@
 #include <memory>
 #include <set>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "fmt/core.h"

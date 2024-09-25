@@ -68,11 +68,13 @@ void simulator::install(service_spec &spec)
 
     scheduler::instance();
 
-    if (spec.env_factory_name == "")
+    if (spec.env_factory_name.empty()) {
         spec.env_factory_name = ("dsn::tools::sim_env_provider");
+    }
 
-    if (spec.timer_factory_name == "")
+    if (spec.timer_factory_name.empty()) {
         spec.timer_factory_name = ("dsn::tools::sim_timer_service");
+    }
 
     network_client_config cs;
     cs.factory_name = "dsn::tools::sim_network_provider";
@@ -89,29 +91,25 @@ void simulator::install(service_spec &spec)
     cs2.channel = RPC_CHANNEL_UDP;
     spec.network_default_server_cfs[cs2] = cs2;
 
-    if (spec.logging_factory_name == "")
-        spec.logging_factory_name = "dsn::tools::simple_logger";
-
-    if (spec.lock_factory_name == "")
+    if (spec.lock_factory_name.empty()) {
         spec.lock_factory_name = ("dsn::tools::sim_lock_provider");
-
-    if (spec.lock_nr_factory_name == "")
+    }
+    if (spec.lock_nr_factory_name.empty()) {
         spec.lock_nr_factory_name = ("dsn::tools::sim_lock_nr_provider");
-
-    if (spec.rwlock_nr_factory_name == "")
+    }
+    if (spec.rwlock_nr_factory_name.empty()) {
         spec.rwlock_nr_factory_name = ("dsn::tools::sim_rwlock_nr_provider");
-
-    if (spec.semaphore_factory_name == "")
+    }
+    if (spec.semaphore_factory_name.empty()) {
         spec.semaphore_factory_name = ("dsn::tools::sim_semaphore_provider");
-
-    for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); ++it) {
-        threadpool_spec &tspec = *it;
-
-        if (tspec.worker_factory_name == "")
+    }
+    for (auto &tspec : spec.threadpool_specs) {
+        if (tspec.worker_factory_name.empty()) {
             tspec.worker_factory_name = ("dsn::task_worker");
-
-        if (tspec.queue_factory_name == "")
+        }
+        if (tspec.queue_factory_name.empty()) {
             tspec.queue_factory_name = ("dsn::tools::sim_task_queue");
+        }
     }
 
     sys_exit.put_front(simulator::on_system_exit, "simulator");
