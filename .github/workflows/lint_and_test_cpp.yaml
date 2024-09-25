@@ -36,6 +36,7 @@ on:
       - docker/thirdparties-src/**
       - CMakeLists.txt
       - cmake_modules/**
+      - idl/**
       - run.sh
       - src/**
       - thirdparty/**
