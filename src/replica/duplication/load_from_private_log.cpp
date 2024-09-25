@@ -160,7 +160,7 @@ void load_from_private_log::find_log_file_to_start()
     decree cleanable_decree = _private_log->get_cleanable_decree();
     decree max_decree_gpid = _private_log->max_decree(get_gpid());
     CHECK(max_decree_gpid > cleanable_decree,
-          "plog_file all error: max_decree_gpid {} , cleanable_decree {}",
+          "plog files all error: max_decree_gpid {} , cleanable_decree {}",
           max_decree_gpid,
           cleanable_decree);
 
@@ -175,8 +175,8 @@ void load_from_private_log::find_log_file_to_start()
 
         gpid pid = get_gpid();
         decree previous_log_max_decree = file->previous_log_max_decree(pid);
-        // These plog file has possible be deleted do not open_read next plog file , otherwise it
-        // may coredump
+        // These plog files has possible be deleted do not open_read() next plog file , otherwise it
+        // may coredump.
         if (previous_log_max_decree <= cleanable_decree) {
             break;
         }
