@@ -19,15 +19,14 @@
 
 #include "capacity_unit_calculator.h"
 
-#include <string_view>
 #include <rocksdb/status.h>
 #include <sys/param.h>
 #include <cmath>
-#include <cstdint>
+#include <string_view>
 
 #include "hotkey_collector.h"
-#include "rrdb/rrdb_types.h"
 #include "rpc/rpc_message.h"
+#include "rrdb/rrdb_types.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/flags.h"

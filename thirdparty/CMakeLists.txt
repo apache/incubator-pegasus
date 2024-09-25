@@ -58,11 +58,10 @@ file(MAKE_DIRECTORY ${TP_OUTPUT}/include)
 file(MAKE_DIRECTORY ${TP_OUTPUT}/lib)
 
 ExternalProject_Add(boost
-        URL ${OSS_URL_PREFIX}/boost_1_69_0.tar.bz2
-        https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.bz2
-        URL_MD5 a1332494397bf48332cb152abfefcec2
-        CONFIGURE_COMMAND ./bootstrap.sh --prefix=. --with-libraries=system,filesystem --with-toolset=gcc
-        BUILD_COMMAND ./b2 toolset=gcc cxxflags=-fPIC cxxstd=11 install
+        URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
+        URL_MD5 30a657150d8e5cf431e1de4396a433d0
+        CONFIGURE_COMMAND ./bootstrap.sh --prefix=. --with-libraries=filesystem,system --with-toolset=gcc
+        BUILD_COMMAND ./b2 toolset=gcc link=static cxxflags=-fPIC cxxflags=--std=c++17 install
         INSTALL_COMMAND cp -R include/boost ${TP_OUTPUT}/include && cp -R lib ${TP_OUTPUT}/
         BUILD_IN_SOURCE 1
         DOWNLOAD_EXTRACT_TIMESTAMP true
@@ -170,6 +169,9 @@ ExternalProject_Add(thrift
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DWITH_SHARED_LIB=OFF
         -DBOOST_ROOT=${TP_OUTPUT}
+        # The dependence boost library of thrift needs C++14 at least, but some standard
+        # functions (e.g. std::random_shuffle) are removed from C++17, so don't use C++17.
+        -DCMAKE_CXX_STANDARD=14
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         DEPENDS boost

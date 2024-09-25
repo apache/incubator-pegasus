@@ -23,12 +23,18 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <utility>
 
 #include "boost/asio/basic_deadline_timer.hpp"
 #include "boost/asio/detail/impl/epoll_reactor.hpp"
+#include "boost/asio/detail/impl/scheduler.ipp"
+#include "boost/asio/detail/impl/service_registry.hpp"
 #include "boost/asio/detail/impl/timer_queue_ptime.ipp"
+#include "boost/asio/impl/any_io_executor.ipp"
+#include "boost/asio/impl/io_context.hpp"
 #include "boost/date_time/posix_time/posix_time_duration.hpp"
-#include "boost/system/error_code.hpp"
+#include "boost/system/detail/errc.hpp"
+#include "boost/system/detail/error_code.hpp"
 #include "fmt/core.h"
 #include "utils/defer.h"
 #include "utils/error_code.h"

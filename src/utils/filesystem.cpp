@@ -26,8 +26,8 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/system/error_code.hpp>
-#include <errno.h>
+#include <boost/system/detail/error_code.hpp>
+#include <cerrno>
 #include <fmt/core.h>
 #include <ftw.h>
 #include <glob.h>
@@ -42,8 +42,8 @@
 // IWYU pragma: no_include <bits/struct_stat.h>
 #include <unistd.h>
 #include <memory>
-
 #include <string_view>
+
 #include "errors.h"
 #include "utils/defer.h"
 #include "utils/env.h"

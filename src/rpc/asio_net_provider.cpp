@@ -45,16 +45,19 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/socket_base.hpp>
-#include <boost/system/error_code.hpp>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <new>
+#include <utility>
 
 #include "asio_rpc_session.h"
+#include "boost/asio/detail/impl/scheduler.ipp"
+#include "boost/asio/impl/any_io_executor.ipp"
+#include "boost/system/detail/error_code.hpp"
+#include "runtime/tool_api.h"
 // IWYU pragma: no_include "boost/asio/basic_datagram_socket.hpp"
 // IWYU pragma: no_include "boost/asio/basic_socket_acceptor.hpp"
 // IWYU pragma: no_include "boost/asio/basic_stream_socket.hpp"
@@ -73,7 +76,6 @@
 // IWYU pragma: no_include "boost/system/error_code.hpp
 #include "task/task.h"
 #include "task/task_worker.h"
-#include "runtime/tool_api.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/customizable_id.h"

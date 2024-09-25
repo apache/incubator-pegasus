@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <istream>
 #include <string_view>
 #include <type_traits>
 

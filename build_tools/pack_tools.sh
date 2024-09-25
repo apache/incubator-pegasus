@@ -141,7 +141,6 @@ else
     copy_file ${THIRDPARTY_ROOT}/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/lib/
 fi
 
-copy_file ${THIRDPARTY_ROOT}/output/lib/libboost*.so.1.69.0 ${pack}/lib/
 copy_file ${THIRDPARTY_ROOT}/output/lib/libhdfs* ${pack}/lib/
 copy_file ${THIRDPARTY_ROOT}/output/lib/librocksdb.so.8 ${pack}/lib/
 copy_file `get_stdcpp_lib $custom_gcc $separate_servers` ${pack}/lib/

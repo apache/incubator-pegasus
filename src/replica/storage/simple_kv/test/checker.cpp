@@ -25,6 +25,7 @@
  */
 
 #include <boost/lexical_cast.hpp>
+#include <algorithm>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <atomic>
 #include <functional>

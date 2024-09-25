@@ -25,7 +25,9 @@
  */
 
 #include <boost/lexical_cast.hpp>
+#include <algorithm>
 #include <cstdint>
+#include <ostream>
 
 #include "common/gpid.h"
 #include "common/replication_enums.h"
