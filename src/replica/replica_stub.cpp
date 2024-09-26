@@ -493,8 +493,8 @@ void replica_stub::load_replica(dir_node *dn,
     const auto *const worker = task::get_current_worker2();
     if (worker != nullptr) {
         CHECK(!(worker->pool()->spec().partitioned),
-              "The thread pool for loading replicas must not be partitioned since load balancing "
-              "is required among multiple threads");
+              "The thread pool LPC_REPLICATION_INIT_LOAD for loading replicas must not be "
+              "partitioned since load balancing is required among multiple threads");
     }
 
     auto rep = load_replica(dn, dir.c_str());
@@ -513,12 +513,13 @@ void replica_stub::load_replica(dir_node *dn,
              rep->last_prepared_decree());
 
     utils::auto_lock<utils::ex_lock> l(reps_lock);
-    CHECK(reps.find(rep->get_gpid()) == reps.end(),
+    const auto rep_iter = reps.find(rep->get_gpid());
+    CHECK(rep_iter == reps.end(),
           "conflict replica dir: {} <--> {}",
           rep->dir(),
-          reps[rep->get_gpid()]->dir());
+          rep_iter->second->dir());
 
-    reps[rep->get_gpid()] = rep;
+    reps.emplace(rep->get_gpid(), rep);
 }
 
 void replica_stub::load_replicas(replicas &reps)
@@ -556,13 +557,10 @@ void replica_stub::load_replicas(replicas &reps)
 
             const auto &dn = disks[disk_index].first;
             auto &load_disk_queue = load_disk_queues[disk_index];
-            if (!load_disk_queue.empty() &&
-                load_disk_queue.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
+            if (load_disk_queue.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
                 // Loading replicas should be throttled in case that disk IO is saturated.
-                if (load_disk_queue.front().second->wait(
+                if (!load_disk_queue.front().second->wait(
                         static_cast<int>(FLAGS_load_replica_max_wait_time_ms))) {
-                    load_disk_queue.pop();
-                } else {
                     // There might be too many replicas that are being loaded which lead to
                     // slow disk IO.
                     LOG_WARNING("after {} ms, loading dir({}) is still not finished, there are "
@@ -580,10 +578,13 @@ void replica_stub::load_replicas(replicas &reps)
                 }
 
                 // Continue to load a replica since we are within the limit now.
-                if (dsn_unlikely(load_disk_queue.size() >=
-                                 FLAGS_max_replicas_on_load_for_each_disk)) {
-                    continue;
-                }
+                load_disk_queue.pop();
+            }
+
+            const auto &dir = dirs[dir_index++];
+            if (dsn::replication::is_data_dir_invalid(dir)) {
+                LOG_WARNING("ignore dir {}", dir);
+                continue;
             }
 
             LOG_DEBUG("ready to load dir(index={}, path={}) for disk(index={}, tag={}, path={})",
@@ -592,12 +593,6 @@ void replica_stub::load_replicas(replicas &reps)
                       disk_index,
                       dn->tag,
                       dn->full_dir);
-
-            const auto &dir = dirs[dir_index++];
-            if (dsn::replication::is_data_dir_invalid(dir)) {
-                LOG_WARNING("ignore dir {}", dir);
-                continue;
-            }
 
             load_disk_queue.emplace(
                 dir,

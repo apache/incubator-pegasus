@@ -395,10 +395,7 @@ private:
     void
     load_replica(dir_node *dn, const std::string &dir, utils::ex_lock &reps_lock, replicas &reps);
 
-    // Load all replicas synchronously from all disks to `reps`. This function would ensure
-    // that data on each disk is loaded more evenly, rather than that a disk would begin to
-    // be loaded only after another has been finished, in case that there are too many replicas
-    // on a disk and other disks cannot start loading until this disk is finished.
+    // Load all replicas simultaneously from all disks to `reps`.
     void load_replicas(replicas &reps);
 
     // Clean up the memory state and on disk data if creating replica failed.
