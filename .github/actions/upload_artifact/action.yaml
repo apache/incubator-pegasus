@@ -30,7 +30,7 @@ runs:
         tar -zcvhf ${ARTIFACT_NAME}_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       shell: bash
     - name: Upload tarball
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.ARTIFACT_NAME }}_artifact_${{ github.sha }}
         path: ${{ env.ARTIFACT_NAME }}_builder.tar
