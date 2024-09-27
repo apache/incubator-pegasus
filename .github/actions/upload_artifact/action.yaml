@@ -21,6 +21,8 @@ runs:
   steps:
     - name: Tar files
       run: |
+        mv thirdparty/hadoop-bin ./
+        mv thirdparty/zookeeper-bin ./
         rm -rf thirdparty
         # The following operations are tricky, these directories and files don't exist if not build with '--test'.
         # When build binaries for client tests, it's not needed to add '--test'.
