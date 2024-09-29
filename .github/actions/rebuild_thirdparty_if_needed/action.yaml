@@ -46,6 +46,4 @@ runs:
         ../admin_tools/download_zk.sh zookeeper-bin
         rm -rf hadoop-bin/share/doc
         rm -rf zookeeper-bin/docs
-        mv hadoop-bin ..
-        mv zookeeper-bin ..
       shell: bash
