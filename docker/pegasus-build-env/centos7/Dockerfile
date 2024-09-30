@@ -22,13 +22,14 @@ LABEL maintainer=wutao
 RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
     sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && \
     sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo && \
-    yum --disablerepo=centos-sclo-rh -y install centos-release-scl \
+    yum -y install centos-release-scl \
                    scl-utils \
                    epel-release --exclude=aarch64 && \
     sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
     sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && \
     sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo && \
-    yum --disablerepo=centos-sclo-rh -y install devtoolset-7-gcc \
+    yum --disablerepo=centos-sclo-rh --disablerepo=centos-sclo-sclo -y install \
+                   devtoolset-7-gcc \
                    devtoolset-7-gcc-c++ \
                    java-1.8.0-openjdk-devel.x86_64 \
                    python3 \
