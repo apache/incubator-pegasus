@@ -54,7 +54,7 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
                    flex \
                    krb5-devel \
                    cyrus-sasl-devel \
-                   patch && \
+                   patch --setopt=basearch=x86_64 --disablerepo=*aarch64* && \
     yum -y install ca-certificates && \
     yum clean all && \
     rm -rf /var/cache/yum;
