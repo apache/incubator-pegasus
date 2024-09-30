@@ -28,7 +28,8 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
     sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
     sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && \
     sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo && \
-    yum --disablerepo=centos-sclo-rh --enablerepo=centos-sclo-rh-x86_64 --disablerepo=centos-sclo-sclo --enablerepo=centos-sclo-sclo-x86_64 -y install \
+    #yum --disablerepo=centos-sclo-rh --enablerepo=centos-sclo-rh-x86_64 --disablerepo=centos-sclo-sclo --enablerepo=centos-sclo-sclo-x86_64 -y install \
+    yum --skip-broken -y install \
                    devtoolset-7-gcc.x86_64 \
                    devtoolset-7-gcc-c++.x86_64 \
                    java-1.8.0-openjdk-devel.x86_64 \
