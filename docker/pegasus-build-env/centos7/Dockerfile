@@ -24,7 +24,7 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
     sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo && \
     yum -y install centos-release-scl \
                    scl-utils \
-                   epel-release --setopt=basearch=x86_64 --disablerepo=*aarch64* && \
+                   epel-release --exclude=aarch64 && \
     sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
     sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && \
     sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo && \
@@ -54,7 +54,7 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
                    flex \
                    krb5-devel \
                    cyrus-sasl-devel \
-                   patch --setopt=basearch=x86_64 --disablerepo=*aarch64* && \
+                   patch --exclude=aarch64 && \
     yum -y install ca-certificates && \
     yum clean all && \
     rm -rf /var/cache/yum;
