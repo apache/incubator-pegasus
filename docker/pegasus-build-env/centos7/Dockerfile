@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM centos7.9.2009
+FROM centos:7.9.2009
 
 LABEL maintainer=wutao
 
