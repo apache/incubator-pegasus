@@ -27,4 +27,6 @@ runs:
         find ./thirdparty -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
         rm -rf ./thirdparty/hadoop-bin/share/doc
         rm -rf ./thirdparty/zookeeper-bin/docs
+        mv hadoop-bin ..
+        mv zookeeper-bin ..
       shell: bash

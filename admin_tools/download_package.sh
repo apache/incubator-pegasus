@@ -68,7 +68,7 @@ fi
 rm -rf "${DIR_NAME}"
 
 echo "Decompressing ${PACKAGE_NAME} ..."
-if ! tar xf "${PACKAGE_NAME}"; then
+if ! tar zxf "${PACKAGE_NAME}"; then
     echo "ERROR: decompress ${PACKAGE_NAME} failed"
     rm -f "${PACKAGE_NAME}"
     exit 1
