@@ -43,8 +43,6 @@ namespace dsn {
 namespace dist {
 namespace block_service {
 
-DEFINE_THREAD_POOL_CODE(THREAD_POOL_BLOCK_SERVICE)
-
 class block_file;
 typedef dsn::ref_ptr<block_file> block_file_ptr;
 
