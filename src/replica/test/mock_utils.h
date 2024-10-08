@@ -208,17 +208,17 @@ public:
     }
 
     // mock cold backup related function.
-//    void generate_backup_checkpoint(cold_backup_context_ptr backup_context) override
-//    {
-//        if (backup_context->status() != ColdBackupCheckpointing) {
-//            LOG_INFO("{}: ignore generating backup checkpoint because backup_status = {}",
-//                     backup_context->name,
-//                     cold_backup_status_to_string(backup_context->status()));
-//            backup_context->ignore_checkpoint();
-//            return;
-//        }
-//        backup_context->complete_checkpoint();
-//    }
+    //    void generate_backup_checkpoint(cold_backup_context_ptr backup_context) override
+    //    {
+    //        if (backup_context->status() != ColdBackupCheckpointing) {
+    //            LOG_INFO("{}: ignore generating backup checkpoint because backup_status = {}",
+    //                     backup_context->name,
+    //                     cold_backup_status_to_string(backup_context->status()));
+    //            backup_context->ignore_checkpoint();
+    //            return;
+    //        }
+    //        backup_context->complete_checkpoint();
+    //    }
 
     void update_last_applied_decree(decree decree)
     {
