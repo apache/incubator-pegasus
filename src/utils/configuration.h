@@ -73,15 +73,9 @@ public:
 
     void copy_configs(configuration &);
 
-    configuration(configuration &conf)
-    {
-        copy_configs(conf);
-    }
+    configuration(configuration &conf) { copy_configs(conf); }
 
-    configuration(const configuration &&conf)
-    {
-        _configs = std::move(conf._configs);
-    }
+    configuration(const configuration &&conf) { _configs = std::move(conf._configs); }
 
     configuration &operator=(configuration &conf)
     {
