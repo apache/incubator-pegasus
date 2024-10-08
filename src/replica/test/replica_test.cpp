@@ -82,13 +82,7 @@ namespace replication {
 class replica_test : public replica_test_base
 {
 public:
-    replica_test()
-        : _pid(gpid(2, 1)),
-          _backup_id(dsn_now_ms()),
-          _provider_name("local_service"),
-          _policy_name("mock_policy")
-    {
-    }
+    replica_test() : _pid(gpid(2, 1)) {}
 
     void SetUp() override
     {
@@ -161,6 +155,25 @@ public:
     }
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
+
+    void test_trigger_manual_emergency_checkpoint(const decree min_checkpoint_decree,
+                                                  const error_code expected_err,
+                                                  std::function<void()> callback = {})
+    {
+        dsn::utils::notify_event op_completed;
+        _mock_replica->async_trigger_manual_emergency_checkpoint(
+            min_checkpoint_decree, 0, [&](error_code actual_err) {
+                ASSERT_EQ(expected_err, actual_err);
+
+                if (callback) {
+                    callback();
+                }
+
+                op_completed.notify();
+            });
+
+        op_completed.wait();
+    }
 
     bool has_gpid(gpid &pid) const
     {
@@ -354,25 +367,6 @@ TEST_P(replica_test, update_allow_ingest_behind_test)
         ASSERT_EQ(get_allow_ingest_behind(), test.expected_value);
         reset_allow_ingest_behind();
     }
-}
-
-TEST_P(replica_test, test_replica_backup_and_restore)
-{
-    // TODO(yingchun): this test last too long time, optimize it!
-    return;
-    test_on_cold_backup();
-    auto err = test_find_valid_checkpoint();
-    ASSERT_EQ(ERR_OK, err);
-}
-
-TEST_P(replica_test, test_replica_backup_and_restore_with_specific_path)
-{
-    // TODO(yingchun): this test last too long time, optimize it!
-    return;
-    std::string user_specified_path = "test/backup";
-    test_on_cold_backup(user_specified_path);
-    auto err = test_find_valid_checkpoint(user_specified_path);
-    ASSERT_EQ(ERR_OK, err);
 }
 
 TEST_P(replica_test, test_trigger_manual_emergency_checkpoint)

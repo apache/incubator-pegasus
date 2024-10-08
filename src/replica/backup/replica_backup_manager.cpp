@@ -27,7 +27,7 @@
 #include <vector>
 
 #include "backup_types.h"
-#include "cold_backup_context.h"
+//#include "cold_backup_context.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
