@@ -427,6 +427,10 @@ public class ReplicaSession {
     return false;
   }
 
+  public ReplicaSessionInterceptorManager getInterceptorManager() {
+    return interceptorManager;
+  }
+
   final class DefaultHandler extends SimpleChannelInboundHandler<RequestEntry> {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
