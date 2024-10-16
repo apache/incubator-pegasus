@@ -17,12 +17,12 @@
  * under the License.
  */
 
-#include <fmt/core.h>
 #include <rocksdb/status.h>
-#include <stdint.h>
+#include <cstdint>
 #include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "gtest/gtest.h"
 #include "pegasus_key_schema.h"
@@ -34,10 +34,8 @@
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
 #include "utils/fail_point.h"
-#include <string_view>
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 class pegasus_write_service_impl_test : public pegasus_server_test_base
 {
@@ -181,5 +179,4 @@ TEST_P(incr_test, incr_on_expire_record)
     db_get(req.key.to_string_view(), &get_ctx);
     ASSERT_TRUE(get_ctx.found);
 }
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server
