@@ -270,23 +270,23 @@ public class ReplicaSession {
       // this. In this case, we are relying on the timeout task.
       try {
         while (!pendingSend.isEmpty()) {
-          RequestEntry e = pendingSend.poll();
+          RequestEntry entry = pendingSend.poll();
           tryNotifyFailureWithSeqID(
-                  e.sequenceId, error_code.error_types.ERR_SESSION_RESET, false);
+              entry.sequenceId, error_code.error_types.ERR_SESSION_RESET, false);
         }
-        List<RequestEntry> l = new LinkedList<RequestEntry>();
+        List<RequestEntry> pendingEntries = new LinkedList<>();
         for (Map.Entry<Integer, RequestEntry> entry : pendingResponse.entrySet()) {
-          l.add(entry.getValue());
+          pendingEntries.add(entry.getValue());
         }
-        for (RequestEntry e : l) {
+        for (RequestEntry entry : pendingEntries) {
           tryNotifyFailureWithSeqID(
-                  e.sequenceId, error_code.error_types.ERR_SESSION_RESET, false);
+              entry.sequenceId, error_code.error_types.ERR_SESSION_RESET, false);
         }
-      } catch (Exception e) {
+      } catch (Exception ex) {
         logger.error(
-                "failed to notify callers due to unexpected exception [state={}]: ",
-                cache.state.toString(),
-                e);
+            "failed to notify callers due to unexpected exception [state={}]: ",
+            cache.state.toString(),
+            ex);
       } finally {
         logger.info("{}: mark the session to be disconnected from state={}", name(), cache.state);
         fields = new VolatileFields(ConnState.DISCONNECTED);
@@ -388,8 +388,8 @@ public class ReplicaSession {
           public void run() {
             try {
               tryNotifyFailureWithSeqID(seqID, error_code.error_types.ERR_TIMEOUT, true);
-            } catch (Exception e) {
-              logger.warn("try notify with sequenceID {} exception!", seqID, e);
+            } catch (Exception ex) {
+              logger.warn("try notify with sequenceID {} exception!", seqID, ex);
             }
           }
         },
@@ -425,7 +425,7 @@ public class ReplicaSession {
   public boolean tryPendRequest(RequestEntry entry) {
     // Double check.
     if (this.authSucceed) {
-        return false;
+      return false;
     }
 
     synchronized (authPendingSend) {
@@ -488,11 +488,10 @@ public class ReplicaSession {
 
   MessageResponseFilter filter = null;
 
-  final ConcurrentHashMap<Integer, RequestEntry> pendingResponse =
-      new ConcurrentHashMap<Integer, RequestEntry>();
+  final ConcurrentHashMap<Integer, RequestEntry> pendingResponse = new ConcurrentHashMap<>();
   private final AtomicInteger seqId = new AtomicInteger(0);
 
-  final Queue<RequestEntry> pendingSend = new LinkedList<RequestEntry>();
+  final Queue<RequestEntry> pendingSend = new LinkedList<>();
 
   static final class VolatileFields {
     public VolatileFields(ConnState state, Channel nettyChannel) {
