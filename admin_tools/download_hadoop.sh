@@ -24,6 +24,7 @@ CWD=$(cd "$(dirname "$0")" && pwd)
 if [ $# -lt 1 ]; then
     echo "Invalid arguments !"
     echo "USAGE: $0 <HADOOP_BIN_PATH>"
+    exit 1
 fi
 
 HADOOP_BIN_PATH=$1
