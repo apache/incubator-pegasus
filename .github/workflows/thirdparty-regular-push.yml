@@ -93,7 +93,7 @@ jobs:
           - ubuntu2004
           - ubuntu2204
           - centos7
-    if: ${{ needs.build_push_src_docker_images.outputs.os_version == matrix.osversion }}
+    if: needs.build_push_src_docker_images.outputs.os_version == matrix.osversion
     steps:
       # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
@@ -136,7 +136,7 @@ jobs:
           - ubuntu2004
           - ubuntu2204
           - centos7
-    if: ${{ needs.build_push_src_docker_images.outputs.os_version == matrix.osversion }}
+    if: needs.build_push_src_docker_images.outputs.os_version == matrix.osversion
     steps:
       # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
@@ -171,7 +171,7 @@ jobs:
       matrix:
         osversion:
           - ubuntu2204
-    if: ${{ needs.build_push_src_docker_images.outputs.os_version == matrix.osversion }}
+    if: needs.build_push_src_docker_images.outputs.os_version == matrix.osversion
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -206,7 +206,7 @@ jobs:
       matrix:
         osversion:
           - ubuntu2204
-    if: ${{ needs.build_push_src_docker_images.outputs.os_version == matrix.osversion }}
+    if: needs.build_push_src_docker_images.outputs.os_version == matrix.osversion
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
