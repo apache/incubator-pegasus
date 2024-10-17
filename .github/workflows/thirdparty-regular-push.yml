@@ -72,8 +72,9 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+      - name: Generate output
+        id: gen_output
+        run: echo "os_version=${{ matrix.osversion }}" >> "$GITHUB_OUTPUT"
 
   build_push_bin_docker_images:
     runs-on: ubuntu-latest
@@ -92,6 +93,7 @@ jobs:
           - ubuntu2004
           - ubuntu2204
           - centos7
+    if: ${{ needs.build_push_src_docker_images.outputs.os_version == matrix.osversion }}
     steps:
       # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
@@ -116,8 +118,6 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
 
   build_push_bin_jemalloc_docker_images:
     runs-on: ubuntu-latest
@@ -136,6 +136,7 @@ jobs:
           - ubuntu2004
           - ubuntu2204
           - centos7
+    if: ${{ needs.build_push_src_docker_images.outputs.os_version == matrix.osversion }}
     steps:
       # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
@@ -161,8 +162,6 @@ jobs:
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
             USE_JEMALLOC=ON
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
 
   build_push_bin_test_docker_images:
     runs-on: ubuntu-latest
@@ -172,6 +171,7 @@ jobs:
       matrix:
         osversion:
           - ubuntu2204
+    if: ${{ needs.build_push_src_docker_images.outputs.os_version == matrix.osversion }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -197,8 +197,6 @@ jobs:
             ROCKSDB_PORTABLE=1
             HADOOP_BIN_PATH=hadoop-bin
             ZOOKEEPER_BIN_PATH=zookeeper-bin
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
 
   build_push_bin_test_jemalloc_docker_images:
     runs-on: ubuntu-latest
@@ -208,6 +206,7 @@ jobs:
       matrix:
         osversion:
           - ubuntu2204
+    if: ${{ needs.build_push_src_docker_images.outputs.os_version == matrix.osversion }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -234,5 +233,3 @@ jobs:
             USE_JEMALLOC=ON
             HADOOP_BIN_PATH=hadoop-bin
             ZOOKEEPER_BIN_PATH=zookeeper-bin
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
