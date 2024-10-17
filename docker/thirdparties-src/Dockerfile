@@ -16,7 +16,8 @@
 # under the License.
 
 ARG GITHUB_BRANCH=master
-FROM apache/pegasus:build-env-centos7-${GITHUB_BRANCH} as builder
+ARG OS_VERSION=centos7
+FROM apache/pegasus:build-env-${OS_VERSION}-${GITHUB_BRANCH} as builder
 
 WORKDIR /root
 
