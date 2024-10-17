@@ -73,6 +73,8 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
+            HADOOP_BIN_PATH=hadoop-bin
+            ZOOKEEPER_BIN_PATH=zookeeper-bin
 
   build_push_bin_docker_images:
     runs-on: ubuntu-latest
@@ -116,6 +118,8 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
+            HADOOP_BIN_PATH=hadoop-bin
+            ZOOKEEPER_BIN_PATH=zookeeper-bin
 
   build_push_bin_jemalloc_docker_images:
     runs-on: ubuntu-latest
@@ -160,6 +164,8 @@ jobs:
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
             USE_JEMALLOC=ON
+            HADOOP_BIN_PATH=hadoop-bin
+            ZOOKEEPER_BIN_PATH=zookeeper-bin
 
   build_push_bin_test_docker_images:
     runs-on: ubuntu-latest

@@ -21,9 +21,12 @@ set -e
 
 CWD=$(cd $(dirname $0) && pwd)
 
-if [ $# -ge 1 ]; then
-    ZOOKEEPER_BIN_PATH=$1
+if [ $# -lt 1 ]; then
+    echo "Invalid arguments !"
+    echo "USAGE: $0 <ZOOKEEPER_BIN_PATH>"
 fi
+
+ZOOKEEPER_BIN_PATH=$1
 
 ZOOKEEPER_VERSION=3.7.0
 ZOOKEEPER_DIR_NAME=apache-zookeeper-${ZOOKEEPER_VERSION}-bin
