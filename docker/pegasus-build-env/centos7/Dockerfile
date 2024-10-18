@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM centos:7.9.2009
+FROM centos:7.5.1804
 
 LABEL maintainer=wutao
 
@@ -24,14 +24,12 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
     sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo && \
     yum -y install centos-release-scl \
                    scl-utils \
-                   epel-release --exclude=aarch64 && \
+                   epel-release && \
     sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
     sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && \
     sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo && \
-    #yum --disablerepo=centos-sclo-rh --enablerepo=centos-sclo-rh-x86_64 --disablerepo=centos-sclo-sclo --enablerepo=centos-sclo-sclo-x86_64 -y install \
-    yum --skip-broken -y install \
-                   devtoolset-7-gcc.x86_64 \
-                   devtoolset-7-gcc-c++.x86_64 \
+    yum -y install devtoolset-7-gcc \
+                   devtoolset-7-gcc-c++ \
                    java-1.8.0-openjdk-devel.x86_64 \
                    python3 \
                    automake \
@@ -56,8 +54,8 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
                    flex \
                    krb5-devel \
                    cyrus-sasl-devel \
-                   patch --exclude=aarch64 && \
-    yum --disablerepo=centos-sclo-rh --disablerepo=centos-sclo-sclo -y install ca-certificates && \
+                   patch && \
+    yum -y install ca-certificates && \
     yum clean all && \
     rm -rf /var/cache/yum;
 
