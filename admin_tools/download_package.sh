@@ -19,19 +19,14 @@
 
 set -e
 
-if [ $# -lt 2 ]; then
+if [ $# -lt 3 ]; then
     echo "Invalid arguments !"
-    echo "USAGE: $0 <PACKAGE_BASE_NAME> <PACKAGE_MD5> [TARGET_PATH]"
+    echo "USAGE: $0 <PACKAGE_BASE_NAME> <PACKAGE_MD5> <TARGET_PATH>"
     exit 1
 fi
 
 PACKAGE_BASE_NAME=$1
 PACKAGE_MD5=$2
-
-if [ $# -lt 3 ]; then
-    echo "TARGET_PATH is not provided, thus do not try to download ${PACKAGE_BASE_NAME}"
-    exit 0
-fi
 
 TARGET_PATH=$3
 if [ -d "${TARGET_PATH}" ]; then

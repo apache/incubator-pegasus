@@ -21,15 +21,19 @@ set -e
 
 CWD=$(cd "$(dirname "$0")" && pwd)
 
-if [ $# -ge 1 ]; then
-    HADOOP_BIN_PATH=$1
+if [ $# -lt 1 ]; then
+    echo "Invalid arguments !"
+    echo "USAGE: $0 <HADOOP_BIN_PATH>"
+    exit 1
 fi
+
+HADOOP_BIN_PATH=$1
 
 HADOOP_VERSION="hadoop-3.3.6"
 arch_output=$(arch)
 if [ "$arch_output"x == "aarch64"x ]; then
-  HADOOP_PACKAGE_MD5="369f899194a920e0d1c3c3bc1718b3b5"
-  HADOOP_BASE_NAME=${HADOOP_VERSION}-"$(arch)"
+    HADOOP_PACKAGE_MD5="369f899194a920e0d1c3c3bc1718b3b5"
+    HADOOP_BASE_NAME=${HADOOP_VERSION}-"$(arch)"
 else
     if [ "$arch_output"x != "x86_64"x ]; then
         echo "WARNING: unrecognized CPU architecture '$arch_output', use 'x86_64' as default"

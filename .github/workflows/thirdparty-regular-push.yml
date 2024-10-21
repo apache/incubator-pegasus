@@ -42,6 +42,15 @@ on:
 jobs:
   build_push_src_docker_images:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        osversion:
+          - ubuntu1804
+          - ubuntu2004
+          - ubuntu2204
+          # TODO(wangdan): disable centos7 temporarily before image build-env-centos7-* is fixed.
+          # - centos7
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -60,11 +69,12 @@ jobs:
           file: ./docker/thirdparties-src/Dockerfile
           push: true
           tags: |
-            apache/pegasus:thirdparties-src-${{ github.ref_name }}
+            apache/pegasus:thirdparties-src-${{ matrix.osversion }}-${{ github.ref_name }}
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+            OS_VERSION=${{ matrix.osversion }}
+            HADOOP_BIN_PATH=hadoop-bin
+            ZOOKEEPER_BIN_PATH=zookeeper-bin
 
   build_push_bin_docker_images:
     runs-on: ubuntu-latest
@@ -82,7 +92,8 @@ jobs:
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          - centos7
+          # TODO(wangdan): disable centos7 temporarily before image build-env-centos7-* is fixed.
+          # - centos7
     steps:
       # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
@@ -107,8 +118,8 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+            HADOOP_BIN_PATH=hadoop-bin
+            ZOOKEEPER_BIN_PATH=zookeeper-bin
 
   build_push_bin_jemalloc_docker_images:
     runs-on: ubuntu-latest
@@ -126,7 +137,8 @@ jobs:
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          - centos7
+          # TODO(wangdan): disable centos7 temporarily before image build-env-centos7-* is fixed.
+          # - centos7
     steps:
       # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
@@ -152,8 +164,8 @@ jobs:
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
             USE_JEMALLOC=ON
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+            HADOOP_BIN_PATH=hadoop-bin
+            ZOOKEEPER_BIN_PATH=zookeeper-bin
 
   build_push_bin_test_docker_images:
     runs-on: ubuntu-latest
@@ -188,8 +200,6 @@ jobs:
             ROCKSDB_PORTABLE=1
             HADOOP_BIN_PATH=hadoop-bin
             ZOOKEEPER_BIN_PATH=zookeeper-bin
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
 
   build_push_bin_test_jemalloc_docker_images:
     runs-on: ubuntu-latest
@@ -225,5 +235,3 @@ jobs:
             USE_JEMALLOC=ON
             HADOOP_BIN_PATH=hadoop-bin
             ZOOKEEPER_BIN_PATH=zookeeper-bin
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
