@@ -17,7 +17,7 @@
 
 ARG GITHUB_BRANCH=master
 ARG OS_VERSION=ubuntu2204
-FROM apache/pegasus:thirdparties-src-${GITHUB_BRANCH} as builder
+FROM apache/pegasus:thirdparties-src-${OS_VERSION}-${GITHUB_BRANCH} as builder
 FROM apache/pegasus:build-env-${OS_VERSION}-${GITHUB_BRANCH}
 
 WORKDIR /root
@@ -28,8 +28,8 @@ ARG GITHUB_BRANCH
 ARG GITHUB_REPOSITORY_URL=https://github.com/apache/incubator-pegasus.git
 ARG ROCKSDB_PORTABLE=native
 ARG USE_JEMALLOC=OFF
-ARG HADOOP_BIN_PATH
-ARG ZOOKEEPER_BIN_PATH
+ARG HADOOP_BIN_PATH=hadoop-bin
+ARG ZOOKEEPER_BIN_PATH=zookeeper-bin
 RUN git clone --depth=1 --branch=${GITHUB_BRANCH} ${GITHUB_REPOSITORY_URL} \
     && cd incubator-pegasus/thirdparty \
     && unzip /root/thirdparties-src.zip -d . \

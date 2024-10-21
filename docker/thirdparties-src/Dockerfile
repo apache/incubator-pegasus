@@ -16,7 +16,8 @@
 # under the License.
 
 ARG GITHUB_BRANCH=master
-FROM apache/pegasus:build-env-ubuntu2204-${GITHUB_BRANCH} as builder
+ARG OS_VERSION=ubuntu2204
+FROM apache/pegasus:build-env-${OS_VERSION}-${GITHUB_BRANCH} as builder
 
 WORKDIR /root
 

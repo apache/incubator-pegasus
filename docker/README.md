@@ -50,7 +50,10 @@ It packages the downloaded sources into a zip in the container, so that
 other repos can easily extract third-parties from the container (via `docker cp`),
 without downloading from the cloud object storage.
 
-- `apache/pegasus:thirdparties-src-<branch>`
+- `apache/pegasus:thirdparties-src-centos7-<branch>`
+- `apache/pegasus:thirdparties-src-ubuntu1804-<branch>`
+- `apache/pegasus:thirdparties-src-ubuntu2004-<branch>`
+- `apache/pegasus:thirdparties-src-ubuntu2204-<branch>`
 
 ## thirdparties-bin
 
