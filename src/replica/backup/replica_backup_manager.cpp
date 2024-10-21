@@ -27,7 +27,6 @@
 #include <vector>
 
 #include "backup_types.h"
-#include "cold_backup_context.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
@@ -36,7 +35,6 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"

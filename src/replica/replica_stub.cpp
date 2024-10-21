@@ -44,7 +44,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "backup/replica_backup_server.h"
 #include "absl/strings/string_view.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
