@@ -47,7 +47,7 @@ jobs:
     name: Build Cpp
     runs-on: ubuntu-latest
     env:
-      # The glibc version on ubuntu1804 and centos7 is lower than the node20 required, so
+      # The glibc version on ubuntu1804 is lower than the node20 required, so
       # we need to force the node version to 16.
       # See more details: https://github.com/actions/checkout/issues/1809
       ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
@@ -59,7 +59,6 @@ jobs:
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          - centos7
         compiler:
           - "gcc,g++"
         include:
@@ -76,7 +75,7 @@ jobs:
         working-directory: /root/incubator-pegasus
     steps:
       - name: Clone Apache Pegasus Source
-        # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
+        # The glibc version on ubuntu1804 and is lower than the actions/checkout@v4 required, so
         # we need to force to use actions/checkout@v3.
         uses: actions/checkout@v3
       - name: Unpack prebuilt third-parties

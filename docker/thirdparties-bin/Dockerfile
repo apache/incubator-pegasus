@@ -16,7 +16,7 @@
 # under the License.
 
 ARG GITHUB_BRANCH=master
-ARG OS_VERSION=centos7
+ARG OS_VERSION=ubuntu2204
 FROM apache/pegasus:thirdparties-src-${GITHUB_BRANCH} as builder
 FROM apache/pegasus:build-env-${OS_VERSION}-${GITHUB_BRANCH}
 

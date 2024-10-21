@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# todo remove centos
+
 FROM centos:7.5.1804 as builder
 
 LABEL maintainer=wutao
