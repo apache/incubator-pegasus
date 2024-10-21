@@ -28,8 +28,6 @@
 #include <utility>
 #include <vector>
 
-#include "backup_types.h"
-#include "common/backup_common.h"
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
@@ -60,7 +58,6 @@
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/defer.h"
-#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
@@ -82,18 +79,13 @@ namespace replication {
 class replica_test : public replica_test_base
 {
 public:
-    replica_test()
-        : _pid(gpid(2, 1)),
-          _backup_id(dsn_now_ms()),
-          _provider_name("local_service"),
-          _policy_name("mock_policy")
-    {
-    }
+    replica_test() : _pid(gpid(2, 1)) {}
 
     void SetUp() override
     {
         FLAGS_enable_http_server = false;
         mock_app_info();
+
         _mock_replica =
             stub->generate_replica_ptr(_app_info, _pid, partition_status::PS_PRIMARY, 1);
         _mock_replica->init_private_log(_log_dir);
@@ -153,55 +145,6 @@ public:
         _app_info.is_stateful = true;
         _app_info.max_replica_count = 3;
         _app_info.partition_count = 8;
-    }
-
-    void test_on_cold_backup(const std::string user_specified_path = "")
-    {
-        backup_request req;
-        req.pid = _pid;
-        policy_info backup_policy_info;
-        backup_policy_info.__set_backup_provider_type(_provider_name);
-        backup_policy_info.__set_policy_name(_policy_name);
-        req.policy = backup_policy_info;
-        req.app_name = _app_info.app_name;
-        req.backup_id = _backup_id;
-        if (!user_specified_path.empty()) {
-            req.__set_backup_path(user_specified_path);
-        }
-
-        // test cold backup could complete.
-        backup_response resp;
-        do {
-            _mock_replica->on_cold_backup(req, resp);
-        } while (resp.err == ERR_BUSY);
-        ASSERT_EQ(ERR_OK, resp.err);
-
-        // test checkpoint files have been uploaded successfully.
-        std::string backup_root =
-            dsn::utils::filesystem::path_combine(user_specified_path, FLAGS_cold_backup_root);
-        std::string current_chkpt_file =
-            cold_backup::get_current_chkpt_file(backup_root, req.app_name, req.pid, req.backup_id);
-        ASSERT_TRUE(dsn::utils::filesystem::file_exists(current_chkpt_file));
-        int64_t size = 0;
-        dsn::utils::filesystem::file_size(
-            current_chkpt_file, dsn::utils::FileDataType::kSensitive, size);
-        ASSERT_LT(0, size);
-    }
-
-    error_code test_find_valid_checkpoint(const std::string user_specified_path = "")
-    {
-        configuration_restore_request req;
-        req.app_id = _app_info.app_id;
-        req.app_name = _app_info.app_name;
-        req.backup_provider_name = _provider_name;
-        req.cluster_name = FLAGS_cold_backup_root;
-        req.time_stamp = _backup_id;
-        if (!user_specified_path.empty()) {
-            req.__set_restore_path(user_specified_path);
-        }
-
-        std::string remote_chkpt_dir;
-        return _mock_replica->find_valid_checkpoint(req, remote_chkpt_dir);
     }
 
     void force_update_checkpointing(bool running)
@@ -280,11 +223,6 @@ public:
     dsn::app_info _app_info;
     dsn::gpid _pid;
     mock_replica_ptr _mock_replica;
-
-private:
-    const int64_t _backup_id;
-    const std::string _provider_name;
-    const std::string _policy_name;
 };
 
 INSTANTIATE_TEST_SUITE_P(, replica_test, ::testing::Values(false, true));
@@ -427,25 +365,6 @@ TEST_P(replica_test, update_allow_ingest_behind_test)
         ASSERT_EQ(get_allow_ingest_behind(), test.expected_value);
         reset_allow_ingest_behind();
     }
-}
-
-TEST_P(replica_test, test_replica_backup_and_restore)
-{
-    // TODO(yingchun): this test last too long time, optimize it!
-    return;
-    test_on_cold_backup();
-    auto err = test_find_valid_checkpoint();
-    ASSERT_EQ(ERR_OK, err);
-}
-
-TEST_P(replica_test, test_replica_backup_and_restore_with_specific_path)
-{
-    // TODO(yingchun): this test last too long time, optimize it!
-    return;
-    std::string user_specified_path = "test/backup";
-    test_on_cold_backup(user_specified_path);
-    auto err = test_find_valid_checkpoint(user_specified_path);
-    ASSERT_EQ(ERR_OK, err);
 }
 
 TEST_P(replica_test, test_trigger_manual_emergency_checkpoint)
