@@ -33,8 +33,7 @@
 
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "replica/backup/cold_backup_context.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 
 DSN_DECLARE_int32(log_private_file_size_mb);
 
@@ -205,19 +204,6 @@ public:
     {
         return (!_primary_states.ingestion_is_empty_prepare_sent &&
                 _primary_states.secondary_bulk_load_states.size() == 0);
-    }
-
-    // mock cold backup related function.
-    void generate_backup_checkpoint(cold_backup_context_ptr backup_context) override
-    {
-        if (backup_context->status() != ColdBackupCheckpointing) {
-            LOG_INFO("{}: ignore generating backup checkpoint because backup_status = {}",
-                     backup_context->name,
-                     cold_backup_status_to_string(backup_context->status()));
-            backup_context->ignore_checkpoint();
-            return;
-        }
-        backup_context->complete_checkpoint();
     }
 
     void update_last_applied_decree(decree decree)

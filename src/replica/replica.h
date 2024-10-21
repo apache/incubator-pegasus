@@ -107,7 +107,6 @@ class replica_stub;
 class replication_app_base;
 class replication_options;
 struct dir_node;
-typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
 
 namespace test {
