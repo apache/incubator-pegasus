@@ -108,7 +108,6 @@ class replication_app_base;
 class replication_options;
 struct dir_node;
 
-
 namespace test {
 class test_checker;
 }
