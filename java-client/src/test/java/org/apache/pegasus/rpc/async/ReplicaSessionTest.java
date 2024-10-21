@@ -18,14 +18,12 @@
  */
 package org.apache.pegasus.rpc.async;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -38,8 +36,10 @@ import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.ClientOptions;
 import org.apache.pegasus.client.PegasusClient;
 import org.apache.pegasus.operator.client_operator;
+import org.apache.pegasus.operator.query_cfg_operator;
 import org.apache.pegasus.operator.rrdb_get_operator;
 import org.apache.pegasus.operator.rrdb_put_operator;
+import org.apache.pegasus.replication.query_cfg_request;
 import org.apache.pegasus.rpc.KeyHasher;
 import org.apache.pegasus.rpc.interceptor.ReplicaSessionInterceptorManager;
 import org.apache.pegasus.tools.Toollet;
@@ -284,12 +284,27 @@ public class ReplicaSessionTest {
 
   @Test
   public void testSessionTryConnectWhenConnected() throws InterruptedException {
-    rpc_address addr = new rpc_address();
-    addr.fromString("127.0.0.1:34801");
-    ReplicaSession rs = manager.getReplicaSession(addr);
+    ReplicaSession rs =
+        manager.getReplicaSession(
+            Objects.requireNonNull(rpc_address.fromIpPort("127.0.0.1:34801")));
     rs.tryConnect().awaitUninterruptibly();
     Thread.sleep(100);
-    assertEquals(rs.getState(), ReplicaSession.ConnState.CONNECTED);
+    assertEquals(ReplicaSession.ConnState.CONNECTED, rs.getState());
     assertNull(rs.tryConnect()); // do not connect again
+  }
+
+  @Test
+  public void testSessionAuth() throws InterruptedException {
+    ReplicaSession rs =
+        manager.getReplicaSession(
+            Objects.requireNonNull(rpc_address.fromIpPort("127.0.0.1:34601")));
+    rs.tryConnect().awaitUninterruptibly();
+    Thread.sleep(100);
+    assertEquals(ReplicaSession.ConnState.CONNECTED, rs.getState());
+
+    query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
+    final ReplicaSession.RequestEntry entry = new ReplicaSession.RequestEntry();
+    entry.op = new query_cfg_operator(new gpid(-1, -1), req);
+    assertFalse(rs.tryPendRequest(entry));
   }
 }
