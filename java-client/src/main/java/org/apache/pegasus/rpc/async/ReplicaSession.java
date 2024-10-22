@@ -477,9 +477,19 @@ public class ReplicaSession {
     }
   }
 
-  // For test.
+  // Only for test.
   ConnState getState() {
     return fields.state;
+  }
+
+  interface AuthPendingChecker {
+    void onCheck(Queue<RequestEntry> realAuthPendingSend);
+  }
+
+  void checkAuthPending(AuthPendingChecker checker) {
+    synchronized (authPendingSend) {
+      checker.onCheck(authPendingSend);
+    }
   }
 
   interface MessageResponseFilter {

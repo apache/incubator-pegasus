@@ -23,7 +23,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -224,7 +226,7 @@ public class ReplicaSessionTest {
     ReplicaSession.RequestEntry entry = new ReplicaSession.RequestEntry();
     entry.sequenceId = 100;
     entry.callback = () -> passed.set(true);
-    entry.timeoutTask = null; // simulate the timeoutTask has been null
+    entry.timeoutTask = null; // Simulate the timeoutTask has been null.
     entry.op = new rrdb_put_operator(new gpid(1, 1), null, null, 0);
     rs.pendingResponse.put(100, entry);
     rs.tryNotifyFailureWithSeqID(100, error_code.error_types.ERR_TIMEOUT, false);
@@ -266,19 +268,16 @@ public class ReplicaSessionTest {
 
   @Test
   public void testSessionConnectTimeout() throws InterruptedException {
+    // This website normally ignores incorrect request without replying.
+    final rpc_address addr = rpc_address.fromIpPort("www.baidu.com:34801");
+
     final long start = System.currentTimeMillis();
 
     final EventLoopGroup rpcGroup = new NioEventLoopGroup(4);
     final EventLoopGroup timeoutTaskGroup = new NioEventLoopGroup(4);
     final ReplicaSession rs =
         new ReplicaSession(
-            // This website normally ignores incorrect request without replying.
-            rpc_address.fromIpPort("www.baidu.com:34801"),
-            rpcGroup,
-            timeoutTaskGroup,
-            1000,
-            30,
-            (ReplicaSessionInterceptorManager) null);
+            addr, rpcGroup, timeoutTaskGroup, 1000, 30, (ReplicaSessionInterceptorManager) null);
     rs.tryConnect().awaitUninterruptibly();
 
     final long end = System.currentTimeMillis();
@@ -301,7 +300,7 @@ public class ReplicaSessionTest {
   }
 
   @Test
-  public void testSessionAuth() throws InterruptedException {
+  public void testSessionAuth() throws InterruptedException, ExecutionException {
     final ReplicaSession rs =
         manager.getReplicaSession(
             Objects.requireNonNull(rpc_address.fromIpPort("127.0.0.1:34601")));
@@ -310,17 +309,52 @@ public class ReplicaSessionTest {
     assertEquals(ReplicaSession.ConnState.CONNECTED, rs.getState());
 
     final query_cfg_request queryCfgReq = new query_cfg_request("temp", new ArrayList<Integer>());
-    final ReplicaSession.RequestEntry entry = new ReplicaSession.RequestEntry();
-    entry.op = new query_cfg_operator(new gpid(-1, -1), queryCfgReq);
+    final ReplicaSession.RequestEntry queryCfgEntry = new ReplicaSession.RequestEntry();
+    queryCfgEntry.sequenceId = 100;
+    queryCfgEntry.op = new query_cfg_operator(new gpid(-1, -1), queryCfgReq);
+    final FutureTask<Void> cb =
+        new FutureTask<>(
+            () -> {
+              assertEquals(error_code.error_types.ERR_OK, queryCfgEntry.op.rpc_error.errno);
+              return null;
+            });
+    queryCfgEntry.callback = cb;
+    queryCfgEntry.timeoutTask = null;
 
     // Initially session has not been authenticated.
-    assertTrue(rs.tryPendRequest(entry));
+    assertTrue(rs.tryPendRequest(queryCfgEntry));
+
+    // queryCfgEntry should be pending in the queue.
+    rs.checkAuthPending(
+        (Queue<ReplicaSession.RequestEntry> realAuthPendingSend) -> {
+          assertEquals(1, realAuthPendingSend.size());
+          ReplicaSession.RequestEntry entry = realAuthPendingSend.peek();
+          assertNotNull(entry);
+          assertEquals(100, entry.sequenceId);
+          assertEquals(query_cfg_operator.class, entry.op.getClass());
+        });
 
     // Authentication is successful.
     rs.onAuthSucceed();
 
+    // Wait callback to be done.
+    cb.get();
+
+    // After the callback for auth success was called, nothing should be in the queue.
+    rs.checkAuthPending(
+        (Queue<ReplicaSession.RequestEntry> realAuthPendingSend) -> {
+          assertTrue(realAuthPendingSend.isEmpty());
+        });
+
     // tryPendRequest would return false at any time once authentication passed.
-    assertFalse(rs.tryPendRequest(entry));
+    queryCfgEntry.sequenceId = 101;
+    assertFalse(rs.tryPendRequest(queryCfgEntry));
+
+    // Now that authentication has passed, nothing should be in the queue.
+    rs.checkAuthPending(
+        (Queue<ReplicaSession.RequestEntry> realAuthPendingSend) -> {
+          assertTrue(realAuthPendingSend.isEmpty());
+        });
 
     // The session should keep connected before it is closed.
     assertEquals(ReplicaSession.ConnState.CONNECTED, rs.getState());
@@ -329,6 +363,10 @@ public class ReplicaSessionTest {
     assertEquals(ReplicaSession.ConnState.DISCONNECTED, rs.getState());
 
     // Authentication would be reset after the session is closed.
-    assertTrue(rs.tryPendRequest(entry));
+    queryCfgEntry.sequenceId = 102;
+    assertTrue(rs.tryPendRequest(queryCfgEntry));
+
+    // Clear the pending queue.
+    rs.checkAuthPending(Collection::clear);
   }
 }
