@@ -295,16 +295,33 @@ public class ReplicaSessionTest {
 
   @Test
   public void testSessionAuth() throws InterruptedException {
-    ReplicaSession rs =
+    final ReplicaSession rs =
         manager.getReplicaSession(
             Objects.requireNonNull(rpc_address.fromIpPort("127.0.0.1:34601")));
     rs.tryConnect().awaitUninterruptibly();
     Thread.sleep(100);
     assertEquals(ReplicaSession.ConnState.CONNECTED, rs.getState());
 
-    query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
+    final query_cfg_request queryCfgReq = new query_cfg_request("temp", new ArrayList<Integer>());
     final ReplicaSession.RequestEntry entry = new ReplicaSession.RequestEntry();
-    entry.op = new query_cfg_operator(new gpid(-1, -1), req);
+    entry.op = new query_cfg_operator(new gpid(-1, -1), queryCfgReq);
+
+    // Initially session has not been authenticated.
+    assertTrue(rs.tryPendRequest(entry));
+
+    // Authentication is successful.
+    rs.onAuthSucceed();
+
+    // tryPendRequest would return false at any time once authentication passed.
     assertFalse(rs.tryPendRequest(entry));
+
+    // The session should keep connected before it is closed.
+    assertEquals(ReplicaSession.ConnState.CONNECTED, rs.getState());
+    rs.closeSession();
+    Thread.sleep(100);
+    assertEquals(ReplicaSession.ConnState.DISCONNECTED, rs.getState());
+
+    // Authentication would be reset after the session is closed.
+    assertTrue(rs.tryPendRequest(entry));
   }
 }
