@@ -184,16 +184,28 @@ struct start_backup_app_response
     3:optional i64      backup_id;
 }
 
+enum backup_status
+{
+    UNINITIALIZED,
+    CHECKPOINTING,
+    CHECKPOINTED,
+    UPLOADING,
+    SUCCEED,
+    FAILED,
+    CANCELED
+}
+
 struct backup_item
 {
     1:i64           backup_id;
-    2:string        app_name;
-    3:string        backup_provider_type;
+    2:i32           app_id;
+    3:string        app_name;
+    4:string        backup_provider_type;
     // user specified backup_path.
-    4:string        backup_path;
-    5:i64           start_time_ms;
-    6:i64           end_time_ms;
-    7:bool          is_backup_failed;
+    5:string        backup_path;
+    6:i64           start_time_ms;
+    7:i64           end_time_ms;
+    8:backup_status status;
 }
 
 struct query_backup_status_request
