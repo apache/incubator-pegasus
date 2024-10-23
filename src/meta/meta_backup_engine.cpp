@@ -27,11 +27,12 @@
 #include "block_service/block_service.h"
 #include "block_service/block_service_manager.h"
 
+#include "absl/strings/string_view.h"
 #include "common/gpid.h"
 #include "common/json_helper.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
-#include "meta/backup_engine.h"
+#include "meta_backup_engine.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
@@ -93,7 +94,7 @@ void meta_backup_engine::init_backup(int32_t app_id,
 // ThreadPool: THREAD_POOL_DEFAULT
 void meta_backup_engine::start()
 {
-    ddebug_f("App[{}] start {} backup[{}] on {}, root_path = {}",
+    LOG_DEBUG("App[{}] start {} backup[{}] on {}, root_path = {}",
              _cur_backup.app_name,
              _is_periodic_backup ? "periodic" : "onetime",
              _cur_backup.backup_id,
@@ -101,7 +102,7 @@ void meta_backup_engine::start()
              _cur_backup.backup_path);
     error_code err = write_app_info();
     if (err != ERR_OK) {
-        derror_f("backup_id({}): backup meta data for app {} failed, error {}",
+        LOG_ERROR("backup_id({}): backup meta data for app {} failed, error {}",
                  _cur_backup.backup_id,
                  _cur_backup.app_id,
                  err);
@@ -109,7 +110,7 @@ void meta_backup_engine::start()
         return;
     }
     update_backup_item_on_remote_storage(backup_status::CHECKPOINTING);
-    FAIL_POINT_INJECT_F("meta_backup_engine_start", [](dsn::string_view) {});
+    FAIL_POINT_INJECT_F("meta_backup_engine_start", [](absl::string_view) {});
     for (auto i = 0; i < _backup_status.size(); ++i) {
         zauto_write_lock l(_lock);
         _backup_status[i] = backup_status::CHECKPOINTING;
@@ -375,9 +376,9 @@ void meta_backup_engine::write_backup_info()
 void meta_backup_engine::complete_current_backup()
 {
     {
-        zauto_lock l(_lock);
+        zauto_read_lock l(_lock);
         for (const auto &status : _backup_status) {
-            if (status.second != backup_status::COMPLETED) {
+            if (status != backup_status::SUCCEED) {
                 // backup for some partition was not finished.
                 return;
             }

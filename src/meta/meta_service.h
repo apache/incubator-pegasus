@@ -89,6 +89,8 @@ namespace mss {
 struct meta_storage;
 } // namespace mss
 
+class backup_service;
+
 namespace test {
 class test_checker;
 }

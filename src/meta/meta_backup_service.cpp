@@ -30,7 +30,7 @@
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
 #include "dsn.layer2_types.h"
-#include "meta/backup_engine.h"
+#include "meta_backup_engine.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_state_service.h"
