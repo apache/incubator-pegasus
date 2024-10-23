@@ -44,7 +44,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "absl/strings/string_view.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/backup_common.h"
 #include "common/duplication_common.h"

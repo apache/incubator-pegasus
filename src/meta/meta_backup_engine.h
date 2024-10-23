@@ -17,21 +17,15 @@
 
 #pragma once
 
-#include <gtest/gtest_prod.h>
 #include <stdint.h>
-#include <map>
 #include <string>
+#include <vector>
 
 #include "backup_types.h"
 #include "common/json_helper.h"
 #include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
-
-#include "common/backup_common.h"
-#include "meta_service.h"
-#include "server_state.h"
-#include "meta_backup_service.h"
 
 namespace dsn {
 class blob;
@@ -45,6 +39,8 @@ class block_filesystem;
 } // namespace dist
 
 namespace replication {
+class backup_service;
+class meta_service;
 
 struct app_backup_info
 {
