@@ -16,31 +16,30 @@
 // under the License.
 
 #include <chrono>
-#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "backup_types.h"
 #include "block_service/block_service.h"
-#include "block_service/block_service_manager.h"
 
-#include "absl/strings/string_view.h"
+#include "common/backup_common.h"
 #include "common/gpid.h"
 #include "common/json_helper.h"
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
-#include "meta_backup_engine.h"
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
+#include "meta/server_state.h"
+#include "meta_backup_engine.h"
 #include "rpc/dns_resolver.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-
 #include "task/async_calls.h"
 #include "task/task.h"
 #include "task/task_code.h"
@@ -49,12 +48,10 @@
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
+#include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
-#include "utils/fail_point.h"
-
-#include "meta_backup_engine.h"
 
 
 namespace dsn {

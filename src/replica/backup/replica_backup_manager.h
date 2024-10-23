@@ -17,11 +17,7 @@
 
 #pragma once
 
-#include <string>
-
 #include "replica/replica_base.h"
-#include "task/task.h"
-#include "utils/metrics.h"
 
 namespace dsn {
 

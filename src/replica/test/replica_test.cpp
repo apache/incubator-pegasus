@@ -52,7 +52,6 @@
 #include "rpc/network.sim.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_message.h"
-#include "runtime/api_layer1.h"
 #include "task/task_code.h"
 #include "task/task_tracker.h"
 #include "test_util/test_util.h"
