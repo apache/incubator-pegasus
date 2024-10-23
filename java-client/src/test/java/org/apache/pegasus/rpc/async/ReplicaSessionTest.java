@@ -60,9 +60,12 @@ public class ReplicaSessionTest {
 
   @BeforeEach
   public void before(TestInfo testInfo) throws Exception {
-    final String metaList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
-    manager = new ClusterManager(ClientOptions.builder().metaServers(metaList).build());
-    System.out.println("test started: " + testInfo.getDisplayName());
+    manager =
+        new ClusterManager(
+            ClientOptions.builder()
+                .metaServers("127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603")
+                .build());
+    logger.info("test started: {}", testInfo.getDisplayName());
   }
 
   @AfterEach
@@ -322,6 +325,11 @@ public class ReplicaSessionTest {
             });
     queryCfgEntry.callback = cb;
     queryCfgEntry.timeoutTask = null;
+
+    // Also insert into pendingResponse since ReplicaSession#sendPendingRequests() would check
+    // sequenceId in it.
+    assertTrue(rs.pendingResponse.isEmpty());
+    rs.pendingResponse.put(queryCfgEntry.sequenceId, queryCfgEntry);
 
     // Initially session has not been authenticated.
     assertTrue(rs.tryPendRequest(queryCfgEntry));

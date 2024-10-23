@@ -299,10 +299,16 @@ public class ReplicaSession {
 
   // After the authentication is reset, a new Negotiation would be launched.
   private void resetAuth() {
+    int pendingSize;
     synchronized (authPendingSend) {
       authSucceed = false;
-      authPendingSend.clear();
+      pendingSize = authPendingSend.size();
     }
+
+    logger.info(
+        "authentication is reset for session {}, with still {} request entries pending",
+        name(),
+        pendingSize);
   }
 
   // Notify the RPC sender if failure occurred.
@@ -405,6 +411,10 @@ public class ReplicaSession {
       authPendingSend.clear();
     }
 
+    logger.info(
+        "authentication is successful for session {}, then {} pending request entries would be sent",
+        name(),
+        authPendingSend.size());
     sendPendingRequests(swappedPendingSend, fields);
   }
 
