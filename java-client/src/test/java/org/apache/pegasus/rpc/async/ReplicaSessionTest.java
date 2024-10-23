@@ -50,6 +50,7 @@ import org.apache.thrift.protocol.TProtocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 
@@ -58,9 +59,10 @@ public class ReplicaSessionTest {
   private ClusterManager manager;
 
   @BeforeEach
-  public void before() throws Exception {
+  public void before(TestInfo testInfo) throws Exception {
     final String metaList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
     manager = new ClusterManager(ClientOptions.builder().metaServers(metaList).build());
+    System.out.println("test started: " + testInfo.getDisplayName());
   }
 
   @AfterEach
