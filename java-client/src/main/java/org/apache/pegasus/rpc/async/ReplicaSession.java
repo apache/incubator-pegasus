@@ -131,7 +131,7 @@ public class ReplicaSession {
         write(entry, cache);
       } else {
         if (!pendingSend.offer(entry)) {
-          logger.warn("pendingSend queue is full, drop the request");
+          logger.warn("pendingSend queue is full for session {}, drop the request", name());
         }
       }
     }
@@ -146,9 +146,9 @@ public class ReplicaSession {
         // but the connection may not be completely closed then, that is,
         // the state may not be marked as DISCONNECTED immediately.
         f.nettyChannel.close().sync();
-        logger.info("channel to {} closed", address.toString());
+        logger.info("channel to {} closed", name());
       } catch (Exception ex) {
-        logger.warn("close channel {} failed: ", address.toString(), ex);
+        logger.warn("close channel {} failed: ", name(), ex);
       }
     } else if (f.state == ConnState.CONNECTING) { // f.nettyChannel == null
       // If our actively-close strategy fails to reconnect the session due to
@@ -220,7 +220,7 @@ public class ReplicaSession {
                 }
               });
     } catch (UnknownHostException ex) {
-      logger.error("invalid address: {}", address.toString());
+      logger.error("invalid address: {}", name());
       assert false;
       return null; // unreachable
     }
@@ -284,7 +284,8 @@ public class ReplicaSession {
         }
       } catch (Exception ex) {
         logger.error(
-            "failed to notify callers due to unexpected exception [state={}]: ",
+            "{}: failed to notify callers due to unexpected exception [state={}]: ",
+            name(),
             cache.state.toString(),
             ex);
       } finally {
@@ -395,7 +396,7 @@ public class ReplicaSession {
             try {
               tryNotifyFailureWithSeqID(seqID, error_code.error_types.ERR_TIMEOUT, true);
             } catch (Exception ex) {
-              logger.warn("try notify with sequenceID {} exception!", seqID, ex);
+              logger.warn("{}: try notify with sequenceID {} exception!", name(), seqID, ex);
             }
           }
         },
@@ -414,7 +415,8 @@ public class ReplicaSession {
     logger.info(
         "authentication is successful for session {}, then {} pending request entries would be sent",
         name(),
-        authPendingSend.size());
+        swappedPendingSend.size());
+
     sendPendingRequests(swappedPendingSend, fields);
   }
 

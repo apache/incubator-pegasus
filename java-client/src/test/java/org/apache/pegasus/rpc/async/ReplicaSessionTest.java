@@ -306,6 +306,7 @@ public class ReplicaSessionTest {
 
   @Test
   public void testSessionAuth() throws InterruptedException, ExecutionException {
+    // Connect to the meta server.
     final ReplicaSession rs =
         manager.getReplicaSession(
             Objects.requireNonNull(rpc_address.fromIpPort("127.0.0.1:34601")));
@@ -313,6 +314,7 @@ public class ReplicaSessionTest {
     Thread.sleep(100);
     assertEquals(ReplicaSession.ConnState.CONNECTED, rs.getState());
 
+    // Send query_cfg_request to the meta server.
     final query_cfg_request queryCfgReq = new query_cfg_request("temp", new ArrayList<Integer>());
     final ReplicaSession.RequestEntry queryCfgEntry = new ReplicaSession.RequestEntry();
     queryCfgEntry.sequenceId = 100;
@@ -320,6 +322,7 @@ public class ReplicaSessionTest {
     final FutureTask<Void> cb =
         new FutureTask<>(
             () -> {
+              // queryCfgReq should be sent successfully to the meta server.
               assertEquals(error_code.error_types.ERR_OK, queryCfgEntry.op.rpc_error.errno);
               return null;
             });
@@ -331,10 +334,10 @@ public class ReplicaSessionTest {
     assertTrue(rs.pendingResponse.isEmpty());
     rs.pendingResponse.put(queryCfgEntry.sequenceId, queryCfgEntry);
 
-    // Initially session has not been authenticated.
+    // Initially session has not been authenticated, and queryCfgEntry(id=100) would be pending.
     assertTrue(rs.tryPendRequest(queryCfgEntry));
 
-    // queryCfgEntry should be pending in the queue.
+    // queryCfgEntry(id=100) should be the only element in the pending queue.
     rs.checkAuthPending(
         (Queue<ReplicaSession.RequestEntry> realAuthPendingSend) -> {
           assertEquals(1, realAuthPendingSend.size());
@@ -344,7 +347,7 @@ public class ReplicaSessionTest {
           assertEquals(query_cfg_operator.class, entry.op.getClass());
         });
 
-    // Authentication is successful.
+    // Authentication is successful, then the pending queryCfgEntry(id=100) should be sent.
     rs.onAuthSucceed();
 
     // Wait callback to be done.
