@@ -113,6 +113,7 @@ private:
     void write_backup_info();
 
     void update_backup_item_on_remote_storage(backup_status::type new_status, int64_t end_time = 0);
+
 private:
     friend class meta_backup_engine_test;
     meta_service *_meta_svc;

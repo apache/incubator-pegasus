@@ -53,7 +53,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/zlocks.h"
 
-
 namespace dsn {
 namespace replication {
 
@@ -92,17 +91,17 @@ void meta_backup_engine::init_backup(int32_t app_id,
 void meta_backup_engine::start()
 {
     LOG_DEBUG("App[{}] start {} backup[{}] on {}, root_path = {}",
-             _cur_backup.app_name,
-             _is_periodic_backup ? "periodic" : "onetime",
-             _cur_backup.backup_id,
-             _cur_backup.backup_provider_type,
-             _cur_backup.backup_path);
+              _cur_backup.app_name,
+              _is_periodic_backup ? "periodic" : "onetime",
+              _cur_backup.backup_id,
+              _cur_backup.backup_provider_type,
+              _cur_backup.backup_path);
     error_code err = write_app_info();
     if (err != ERR_OK) {
         LOG_ERROR("backup_id({}): backup meta data for app {} failed, error {}",
-                 _cur_backup.backup_id,
-                 _cur_backup.app_id,
-                 err);
+                  _cur_backup.backup_id,
+                  _cur_backup.app_id,
+                  err);
         update_backup_item_on_remote_storage(backup_status::FAILED, dsn_now_ms());
         return;
     }
@@ -125,7 +124,6 @@ error_code meta_backup_engine::write_app_info()
     return ERR_OK;
 }
 
-
 // ThreadPool: THREAD_POOL_DEFAULT
 void meta_backup_engine::update_backup_item_on_remote_storage(backup_status::type new_status,
                                                               int64_t end_time)
@@ -134,7 +132,6 @@ void meta_backup_engine::update_backup_item_on_remote_storage(backup_status::typ
 }
 
 // TODO(heyuchen): update following functions
-
 
 error_code meta_backup_engine::write_backup_file(const std::string &file_name,
                                                  const dsn::blob &write_buffer)
@@ -251,7 +248,7 @@ void meta_backup_engine::backup_app_partition(const gpid &pid)
 }
 
 inline void meta_backup_engine::handle_replica_backup_failed(const backup_response &response,
-                                                        const gpid pid)
+                                                             const gpid pid)
 {
     CHECK_EQ(response.pid, pid);
     CHECK_EQ(response.backup_id, _cur_backup.backup_id);
@@ -277,9 +274,9 @@ inline void meta_backup_engine::retry_backup(const dsn::gpid pid)
 }
 
 void meta_backup_engine::on_backup_reply(const error_code err,
-                                    const backup_response &response,
-                                    const gpid pid,
-                                    const host_port &primary)
+                                         const backup_response &response,
+                                         const gpid pid,
+                                         const host_port &primary)
 {
     {
         zauto_read_lock l(_lock);
