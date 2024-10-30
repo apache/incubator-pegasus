@@ -160,6 +160,15 @@ public:
 
     T *operator->() const { return _obj; }
 
+    bool operator==(const ref_ptr<T> &r) const { return _obj == r._obj; }
+
+    template <typename U,
+              typename = typename std::enable_if<std::is_convertible<U *, T *>::value>::type>
+    bool operator==(const ref_ptr<U> &r) const
+    {
+        return _obj == r._obj;
+    }
+
     bool operator==(T *r) const { return _obj == r; }
 
     bool operator!=(T *r) const { return _obj != r; }
