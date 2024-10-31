@@ -17,10 +17,9 @@
 
 #pragma once
 
-#include <gtest/gtest_prod.h>
 #include <stdint.h>
-#include <map>
 #include <string>
+#include <vector>
 
 #include "backup_types.h"
 #include "common/json_helper.h"
@@ -40,14 +39,8 @@ class block_filesystem;
 } // namespace dist
 
 namespace replication {
-
-enum backup_status
-{
-    UNALIVE = 1,
-    ALIVE = 2,
-    COMPLETED = 3,
-    FAILED = 4
-};
+class backup_service;
+class meta_service;
 
 struct app_backup_info
 {
@@ -63,45 +56,81 @@ struct app_backup_info
     DEFINE_JSON_SERIALIZATION(backup_id, start_time_ms, end_time_ms, app_id, app_name)
 };
 
-class backup_service;
-
-class backup_engine
+///
+///           Meta backup status
+///
+///              start backup
+///                  |
+///                  v       Error/Cancel
+///            Checkpointing ------------->|
+///                  |                     |
+///                  v       Error/Cancel  |
+///              Uploading  -------------->|
+///                  |                     |
+///                  v                     v
+///               Succeed          Failed/Canceled
+///
+class meta_backup_engine
 {
 public:
-    backup_engine(backup_service *service);
-    ~backup_engine();
-
-    error_code init_backup(int32_t app_id);
-    error_code set_block_service(const std::string &provider);
-    error_code set_backup_path(const std::string &path);
-
-    error_code start();
+    explicit meta_backup_engine(meta_service *meta_svc, bool is_periodic);
+    ~meta_backup_engine();
 
     int64_t get_current_backup_id() const { return _cur_backup.backup_id; }
     int32_t get_backup_app_id() const { return _cur_backup.app_id; }
-    bool is_in_progress() const;
 
-    backup_item get_backup_item() const;
+    backup_item get_backup_item() const
+    {
+        zauto_read_lock l(_lock);
+        backup_item item = _cur_backup;
+        return item;
+    }
+
+    bool is_in_progress() const
+    {
+        zauto_read_lock l(_lock);
+        return _cur_backup.end_time_ms == 0 && !_is_backup_failed && !_is_backup_canceled;
+    }
 
 private:
-    friend class backup_engine_test;
-    friend class backup_service_test;
+    void init_backup(int32_t app_id,
+                     int32_t partition_count,
+                     const std::string &app_name,
+                     const std::string &provider,
+                     const std::string &backup_root_path);
+    void start();
 
-    FRIEND_TEST(backup_engine_test, test_on_backup_reply);
-    FRIEND_TEST(backup_engine_test, test_backup_completed);
-    FRIEND_TEST(backup_engine_test, test_write_backup_info_failed);
-
-    error_code write_backup_file(const std::string &file_name, const dsn::blob &write_buffer);
-    error_code backup_app_meta();
     void backup_app_partition(const gpid &pid);
     void on_backup_reply(error_code err,
                          const backup_response &response,
                          gpid pid,
                          const host_port &primary);
-    void write_backup_info();
-    void complete_current_backup();
-    void handle_replica_backup_failed(const backup_response &response, const gpid pid);
     void retry_backup(const dsn::gpid pid);
+    void handle_replica_backup_failed(const backup_response &response, const gpid pid);
+    error_code write_backup_file(const std::string &file_name, const dsn::blob &write_buffer);
+    error_code write_app_info();
+
+    void write_backup_info();
+
+    void update_backup_item_on_remote_storage(backup_status::type new_status, int64_t end_time = 0);
+
+private:
+    friend class meta_backup_engine_test;
+    meta_service *_meta_svc;
+    task_tracker _tracker;
+    mutable zrwlock_nr _lock; // {
+    // TODO(guoningshen): remove this flag cause we do not implement perodic in pegasus server
+    bool _is_periodic_backup;
+    bool _is_backup_failed{false};
+    bool _is_backup_canceled{false};
+    backup_item _cur_backup;
+    std::vector<backup_status::type> _backup_status;
+    // }
+    // TODO(heyuchen): remove following functions and vars
+private:
+    error_code backup_app_meta();
+
+    void complete_current_backup();
 
     const std::string get_policy_name() const
     {
@@ -112,14 +141,6 @@ private:
     dist::block_service::block_filesystem *_block_service;
     std::string _backup_path;
     std::string _provider_type;
-    dsn::task_tracker _tracker;
-
-    // lock the following variables.
-    mutable dsn::zlock _lock;
-    bool _is_backup_failed;
-    app_backup_info _cur_backup;
-    // partition_id -> backup_status
-    std::map<int32_t, backup_status> _backup_status;
 };
 
 } // namespace replication

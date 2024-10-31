@@ -16,38 +16,12 @@
 // under the License.
 
 #include <absl/strings/string_view.h>
-#include <boost/cstdint.hpp>
-#include <boost/lexical_cast.hpp>
-#include <fmt/core.h>
-#include <algorithm>
-#include <iterator>
-#include <type_traits>
-#include <utility>
 
-#include "block_service/block_service.h"
-#include "block_service/block_service_manager.h"
-#include "common/backup_common.h"
-#include "common/replication.codes.h"
-#include "common/replication_enums.h"
-#include "dsn.layer2_types.h"
-#include "meta/backup_engine.h"
-#include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
-#include "meta/meta_state_service.h"
 #include "meta_backup_service.h"
 #include "meta_service.h"
-#include "runtime/api_layer1.h"
-#include "security/access_controller.h"
-#include "task/async_calls.h"
-#include "task/task_code.h"
-#include "server_state.h"
-#include "utils/autoref_ptr.h"
-#include "utils/blob.h"
-#include "utils/chrono_literals.h"
-#include "utils/defer.h"
 #include "utils/flags.h"
-#include "utils/fmt_logging.h"
-#include "utils/time_utils.h"
+#include "utils/metrics.h"
 
 DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
 DSN_DECLARE_int32(fd_lease_seconds);

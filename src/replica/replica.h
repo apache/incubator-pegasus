@@ -84,9 +84,6 @@ class access_controller;
 } // namespace security
 namespace replication {
 
-class backup_request;
-class backup_response;
-
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;
