@@ -26,7 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include "backup/cold_backup_context.h"
 #include "backup_types.h"
 #include "block_service/block_service.h"
 #include "block_service/block_service_manager.h"

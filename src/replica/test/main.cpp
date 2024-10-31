@@ -25,37 +25,11 @@
 #include "replication_service_test_app.h"
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
-#include "test_util/test_util.h"
 #include "utils/error_code.h"
 
 int gtest_flags = 0;
 int gtest_ret = 0;
 replication_service_test_app *app;
-
-class cold_backup_context_test : public pegasus::encrypt_data_test_base
-{
-};
-
-INSTANTIATE_TEST_SUITE_P(, cold_backup_context_test, ::testing::Values(false, true));
-
-TEST_P(cold_backup_context_test, check_backup_on_remote) { app->check_backup_on_remote_test(); }
-
-TEST_P(cold_backup_context_test, read_current_chkpt_file) { app->read_current_chkpt_file_test(); }
-
-TEST_P(cold_backup_context_test, remote_chkpt_dir_exist) { app->remote_chkpt_dir_exist_test(); }
-
-TEST_P(cold_backup_context_test, upload_checkpoint_to_remote)
-{
-    app->upload_checkpoint_to_remote_test();
-}
-
-TEST_P(cold_backup_context_test, read_backup_metadata) { app->read_backup_metadata_test(); }
-
-TEST_P(cold_backup_context_test, on_upload_chkpt_dir) { app->on_upload_chkpt_dir_test(); }
-
-TEST_P(cold_backup_context_test, write_metadata_file) { app->write_backup_metadata_test(); }
-
-TEST_P(cold_backup_context_test, write_current_chkpt_file) { app->write_current_chkpt_file_test(); }
 
 error_code replication_service_test_app::start(const std::vector<std::string> &args)
 {
