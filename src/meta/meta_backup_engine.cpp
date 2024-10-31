@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <algorithm>
 #include <chrono>
 #include <map>
 #include <memory>
@@ -25,7 +26,6 @@
 #include "absl/strings/string_view.h"
 #include "backup_types.h"
 #include "block_service/block_service.h"
-
 #include "common/backup_common.h"
 #include "common/gpid.h"
 #include "common/json_helper.h"

@@ -17,10 +17,11 @@
 
 #include "replica_backup_manager.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 
 #include "utils/flags.h"
 #include "utils/metrics.h"
+#include "replica/replica.h"
 
 METRIC_DEFINE_gauge_int64(replica,
                           backup_running_count,
