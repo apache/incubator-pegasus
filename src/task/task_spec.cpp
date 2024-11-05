@@ -197,7 +197,7 @@ bool task_spec::init()
 
     task_spec default_spec(
         0, "placeholder", TASK_TYPE_COMPUTE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
-    if (!read_config("task..default", default_spec))
+    if (!read_config("task..default", default_spec, nullptr))
         return false;
 
     for (int code = 0; code <= dsn::task_code::max(); code++) {

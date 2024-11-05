@@ -35,8 +35,7 @@
 /// please refer to "task_spec.h". it's a very good example
 
 #define CONFIG_BEGIN(t_struct)                                                                     \
-    inline bool read_config(                                                                       \
-        const char *section, /*out*/ t_struct &val, t_struct *default_value = nullptr)             \
+    inline bool read_config(const char *section, /*out*/ t_struct &val, t_struct *default_value)   \
     {
 
 #define CONFIG_END                                                                                 \

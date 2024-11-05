@@ -216,7 +216,7 @@ public:
     // return:
     //    true : change task state from TASK_STATE_RUNNING to TASK_STATE_READY succeed
     //    false : change task state failed
-    bool set_retry(bool enqueue_immediately = true);
+    bool set_retry(bool enqueue_immediately);
 
     void set_error_code(error_code err) { _error = err; }
     void set_delay(int delay_milliseconds) { _delay_milliseconds = delay_milliseconds; }

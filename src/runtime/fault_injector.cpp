@@ -317,7 +317,7 @@ void fault_injector::install(service_spec &spec)
 
     s_fj_opts = new fj_opt[dsn::task_code::max() + 1];
     fj_opt default_opt;
-    read_config("task..default", default_opt);
+    read_config("task..default", default_opt, nullptr);
 
     for (int i = 0; i <= dsn::task_code::max(); i++) {
         if (i == TASK_CODE_INVALID)

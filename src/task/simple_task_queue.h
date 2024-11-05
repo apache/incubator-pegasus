@@ -53,7 +53,7 @@ public:
     task *dequeue(/*inout*/ int &batch_size) override;
 
 private:
-    typedef utils::blocking_priority_queue<task *, TASK_PRIORITY_COUNT> tqueue;
+    using tqueue = utils::blocking_priority_queue<task *, TASK_PRIORITY_COUNT>;
     tqueue _samples;
 };
 

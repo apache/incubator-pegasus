@@ -79,7 +79,6 @@ public:
     {
     }
 
-public:
     void signal(int count) override;
     bool wait(int timeout_milliseconds) override;
 
@@ -91,7 +90,7 @@ private:
 class sim_lock_provider : public lock_provider
 {
 public:
-    sim_lock_provider(lock_provider *inner_provider);
+    explicit sim_lock_provider(lock_provider *inner_provider);
     ~sim_lock_provider() override;
 
     void lock() override;
@@ -118,6 +117,9 @@ private:
     int _lock_depth;     // 0 for not locked;
     int _current_holder; // -1 for invalid
     sim_semaphore_provider _sema;
+
+    DISALLOW_COPY_AND_ASSIGN(sim_lock_nr_provider);
+    DISALLOW_MOVE_AND_ASSIGN(sim_lock_nr_provider);
 };
 
 // degrade to lock_nr for simplicity
@@ -141,6 +143,9 @@ public:
 
 private:
     sim_lock_nr_provider _l;
+
+    DISALLOW_COPY_AND_ASSIGN(sim_rwlock_nr_provider);
+    DISALLOW_MOVE_AND_ASSIGN(sim_rwlock_nr_provider);
 };
 
 } // namespace tools
