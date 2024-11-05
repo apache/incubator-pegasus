@@ -70,21 +70,21 @@ void simple_timer_service::start(int thread_count)
     }
 
     for (uint32_t i = 0; i < thread_count; ++i) {
-    _workers.emplace_back([this]() {
-        task::set_tls_dsn_context(node(), nullptr);
+        _workers.emplace_back([this]() {
+            task::set_tls_dsn_context(node(), nullptr);
 
-        std::string name(fmt::format("{}.timer", get_service_node_name(node())));
+            std::string name(fmt::format("{}.timer", get_service_node_name(node())));
 
-        task_worker::set_name(name.c_str());
-        task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);
+            task_worker::set_name(name.c_str());
+            task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);
 
-        LOG_INFO("{} thread started", name);
+            LOG_INFO("{} thread started", name);
 
-        boost::asio::io_service::work work(_ios);
-        boost::system::error_code ec;
-        _ios.run(ec);
-        CHECK(!ec, "io_service in simple_timer_service run failed: {}", ec.message());
-    });
+            boost::asio::io_service::work work(_ios);
+            boost::system::error_code ec;
+            _ios.run(ec);
+            CHECK(!ec, "io_service in simple_timer_service run failed: {}", ec.message());
+        });
     }
 
     _is_running = true;
@@ -110,10 +110,11 @@ namespace {
 class simple_delay_timer : public dsn::task::delay_timer
 {
 public:
-    simple_delay_timer(const std::shared_ptr<boost::asio::deadline_timer> &timer): _timer(timer) {}
+    simple_delay_timer(const std::shared_ptr<boost::asio::deadline_timer> &timer) : _timer(timer) {}
     ~simple_delay_timer() override = default;
 
-    void cancel() override {
+    void cancel() override
+    {
         if (!_timer) {
             return;
         }
@@ -126,7 +127,7 @@ private:
 };
 
 } // anonymous namespace
-  
+
 void simple_timer_service::add_timer(task *task)
 {
     std::shared_ptr<boost::asio::deadline_timer> timer(new boost::asio::deadline_timer(_ios));

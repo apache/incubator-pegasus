@@ -108,17 +108,16 @@ void task_worker_pool::start()
         wk->start();
     }
 
-    LOG_INFO(
-        "[{}]: thread pool [{}] started, pool_code = {}, worker_count = {}, "
-        "timer_thread_count_per_worker = {}, worker_share_core = {}, "
-        "partitioned = {}, ...",
-        _node->full_name(),
-        _spec.name,
-        _spec.pool_code,
-        _spec.worker_count,
-        _spec.timer_thread_count_per_worker,
-        _spec.worker_share_core ? "true" : "false",
-        _spec.partitioned ? "true" : "false");
+    LOG_INFO("[{}]: thread pool [{}] started, pool_code = {}, worker_count = {}, "
+             "timer_thread_count_per_worker = {}, worker_share_core = {}, "
+             "partitioned = {}, ...",
+             _node->full_name(),
+             _spec.name,
+             _spec.pool_code,
+             _spec.worker_count,
+             _spec.timer_thread_count_per_worker,
+             _spec.worker_share_core ? "true" : "false",
+             _spec.partitioned ? "true" : "false");
 
     _is_running = true;
 }

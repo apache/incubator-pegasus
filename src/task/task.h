@@ -233,7 +233,8 @@ public:
     };
 
     void set_delay_timer(std::unique_ptr<delay_timer> timer) { _delay_timer = std::move(timer); }
-    void cancel_delay_timer() {
+    void cancel_delay_timer()
+    {
         if (!_delay_timer) {
             return;
         }
