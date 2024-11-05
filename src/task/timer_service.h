@@ -54,7 +54,7 @@ public:
 
     virtual ~timer_service() = default;
 
-    virtual void start() = 0;
+    virtual void start(int thread_count) = 0;
     virtual void stop() = 0;
 
     // after milliseconds, the provider should call task->enqueue()

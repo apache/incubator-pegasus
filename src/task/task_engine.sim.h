@@ -52,7 +52,7 @@ public:
     // after milliseconds, the provider should call task->enqueue()
     virtual void add_timer(task *task) override;
 
-    virtual void start() override {}
+    virtual void start(int thread_count) override {}
 
     virtual void stop() override {}
 };

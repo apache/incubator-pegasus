@@ -59,6 +59,7 @@ struct threadpool_spec
     std::string name;
     dsn::threadpool_code pool_code;
     int worker_count;
+    int timer_thread_count_per_worker;
     worker_priority_t worker_priority;
     bool worker_share_core;
     uint64_t worker_affinity_mask;
@@ -81,6 +82,7 @@ struct threadpool_spec
 CONFIG_BEGIN(threadpool_spec)
 CONFIG_FLD_STRING(name, "", "Thread pool name")
 CONFIG_FLD(int, uint64, worker_count, 4, "The number of threads in the thread pool")
+CONFIG_FLD(int, uint64, timer_thread_count_per_worker, 1, "The number of threads used for timers per worker")
 CONFIG_FLD(int,
            uint64,
            dequeue_batch_size,

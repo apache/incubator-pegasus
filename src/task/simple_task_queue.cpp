@@ -63,26 +63,30 @@ simple_timer_service::simple_timer_service(service_node *node, timer_service *in
 {
 }
 
-void simple_timer_service::start()
+void simple_timer_service::start(int thread_count)
 {
     if (_is_running) {
         return;
     }
 
-    _worker = std::thread([this]() {
+    for (uint32_t i = 0; i < thread_count; ++i) {
+    _workers.emplace_back([this]() {
         task::set_tls_dsn_context(node(), nullptr);
 
-        char buffer[128];
-        sprintf(buffer, "%s.timer", get_service_node_name(node()));
+        std::string name(fmt::format("{}.timer", get_service_node_name(node())));
 
-        task_worker::set_name(buffer);
+        task_worker::set_name(name.c_str());
         task_worker::set_priority(worker_priority_t::THREAD_xPRIORITY_ABOVE_NORMAL);
+
+        LOG_INFO("{} thread started", name);
 
         boost::asio::io_service::work work(_ios);
         boost::system::error_code ec;
         _ios.run(ec);
         CHECK(!ec, "io_service in simple_timer_service run failed: {}", ec.message());
     });
+    }
+
     _is_running = true;
 }
 
@@ -93,24 +97,54 @@ void simple_timer_service::stop()
     }
 
     _ios.stop();
-    _worker.join();
+
+    for (auto &worker : _workers) {
+        worker.join();
+    }
+
     _is_running = false;
 }
 
+namespace {
+
+class simple_delay_timer : public dsn::task::delay_timer
+{
+public:
+    simple_delay_timer(const std::shared_ptr<boost::asio::deadline_timer> &timer): _timer(timer) {}
+    ~simple_delay_timer() override = default;
+
+    void cancel() override {
+        if (!_timer) {
+            return;
+        }
+
+        _timer->cancel();
+    }
+
+private:
+    const std::shared_ptr<boost::asio::deadline_timer> _timer;
+};
+
+} // anonymous namespace
+  
 void simple_timer_service::add_timer(task *task)
 {
     std::shared_ptr<boost::asio::deadline_timer> timer(new boost::asio::deadline_timer(_ios));
     timer->expires_from_now(boost::posix_time::milliseconds(task->delay_milliseconds()));
     task->set_delay(0);
 
+    task->set_delay_timer(std::make_unique<simple_delay_timer>(timer));
+
     timer->async_wait([task, timer](const boost::system::error_code &ec) {
         if (!ec) {
             task->enqueue();
-        } else if (ec != ::boost::asio::error::operation_aborted) {
+        } else if (ec != boost::asio::error::operation_aborted) {
             LOG_FATAL("timer failed for task {}, err = {}", task->spec().name, ec.message());
         }
 
-        // to consume the added ref count by task::enqueue for add_timer
+        task->reset_delay_timer();
+
+        // To consume the added ref count by task::enqueue for add_timer.
         task->release_ref();
     });
 }

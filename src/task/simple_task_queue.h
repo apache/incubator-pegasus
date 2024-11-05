@@ -48,8 +48,8 @@ public:
 
     ~simple_task_queue() override = default;
 
-    virtual void enqueue(task *task) override;
-    virtual task *dequeue(/*inout*/ int &batch_size) override;
+    void enqueue(task *task) override;
+    task *dequeue(/*inout*/ int &batch_size) override;
 
 private:
     typedef utils::blocking_priority_queue<task *, TASK_PRIORITY_COUNT> tqueue;
@@ -64,15 +64,15 @@ public:
     ~simple_timer_service() override { stop(); }
 
     // after milliseconds, the provider should call task->enqueue()
-    virtual void add_timer(task *task) override;
+    void add_timer(task *task) override;
 
-    virtual void start() override;
+    void start(int thread_count) override;
 
-    virtual void stop() override;
+    void stop() override;
 
 private:
     boost::asio::io_service _ios;
-    std::thread _worker;
+    std::vector<std::thread> _workers;
     bool _is_running;
 };
 

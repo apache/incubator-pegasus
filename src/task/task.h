@@ -221,6 +221,27 @@ public:
     void set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
     void set_tracker(task_tracker *tracker) { _context_tracker.set_tracker(tracker, this); }
 
+    // Control the timer that is used to launch a task if it is delayed.
+    class delay_timer
+    {
+    public:
+        delay_timer() = default;
+        virtual ~delay_timer() = default;
+
+        // Cancel the timer.
+        virtual void cancel() = 0;
+    };
+
+    void set_delay_timer(std::unique_ptr<delay_timer> timer) { _delay_timer = std::move(timer); }
+    void cancel_delay_timer() {
+        if (!_delay_timer) {
+            return;
+        }
+
+        _delay_timer->cancel();
+    }
+    void reset_delay_timer() { _delay_timer.reset(); }
+
     uint64_t id() const { return _task_id; }
     task_state state() const { return _state.load(std::memory_order_acquire); }
     task_code code() const { return _spec->code; }
@@ -311,6 +332,8 @@ private:
     task_spec *_spec;
     service_node *_node;
     trackable_task _context_tracker; // when tracker is gone, the task is cancelled automatically
+
+    std::unique_ptr<delay_timer> _delay_timer;
 
 public:
     // used by task queue only

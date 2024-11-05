@@ -246,6 +246,7 @@ bool threadpool_spec::init(/*out*/ std::vector<threadpool_spec> &specs)
     /*
     [threadpool..default]
     worker_count = 4
+    timer_thread_count_per_worker = 1
     worker_priority = THREAD_xPRIORITY_NORMAL
     partitioned = false
     queue_aspects = xxx
