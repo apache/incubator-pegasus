@@ -108,11 +108,12 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
     DCHECK_NOTNULL(timeout_task, "rpc timeout task cannot be nullptr");
 
     if (timeout_task != task::get_current_task()) {
-        timeout_task->cancel(false); // no need to wait
+        timeout_task->cancel_delay_timer();
+        timeout_task->cancel(false); // No need to wait.
     }
 
-    auto req = call->get_request();
-    auto spec = task_spec::get(req->local_rpc_code);
+    auto *req = call->get_request();
+    auto *spec = task_spec::get(req->local_rpc_code);
 
     // if rpc is early terminated with empty reply
     if (nullptr == reply) {

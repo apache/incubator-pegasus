@@ -144,7 +144,7 @@ task::~task()
     }
 }
 
-bool task::set_retry(bool enqueue_immediately /*= true*/)
+bool task::set_retry(bool enqueue_immediately)
 {
     task_state RUNNING_STATE = TASK_STATE_RUNNING;
     if (_state.compare_exchange_strong(

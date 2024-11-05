@@ -160,6 +160,9 @@ dsn_threadpool_code_register.
   ; thread/worker count
   worker_count = 2
 
+  ; the number of threads used for timers per worker
+  timer_thread_count_per_worker = 1
+
   ; task worker provider name
   worker_factory_name =
 

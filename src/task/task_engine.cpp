@@ -58,8 +58,9 @@ task_worker_pool::task_worker_pool(const threadpool_spec &opts, task_engine *own
 
 void task_worker_pool::create()
 {
-    if (_is_running)
+    if (_is_running) {
         return;
+    }
 
     int qCount = _spec.partitioned ? _spec.worker_count : 1;
     for (int i = 0; i < qCount; i++) {
@@ -96,25 +97,28 @@ void task_worker_pool::create()
 
 void task_worker_pool::start()
 {
-    if (_is_running)
+    if (_is_running) {
         return;
+    }
 
     for (auto &tsvc : _per_queue_timer_svcs) {
-        tsvc->start();
+        tsvc->start(_spec.timer_thread_count_per_worker);
     }
+
     for (auto &wk : _workers) {
         wk->start();
     }
 
-    LOG_INFO(
-        "[{}]: thread pool [{}] started, pool_code = {}, worker_count = {}, worker_share_core = "
-        "{}, partitioned = {}, ...",
-        _node->full_name(),
-        _spec.name,
-        _spec.pool_code,
-        _spec.worker_count,
-        _spec.worker_share_core ? "true" : "false",
-        _spec.partitioned ? "true" : "false");
+    LOG_INFO("[{}]: thread pool [{}] started, pool_code = {}, worker_count = {}, "
+             "timer_thread_count_per_worker = {}, worker_share_core = {}, "
+             "partitioned = {}, ...",
+             _node->full_name(),
+             _spec.name,
+             _spec.pool_code,
+             _spec.worker_count,
+             _spec.timer_thread_count_per_worker,
+             _spec.worker_share_core ? "true" : "false",
+             _spec.partitioned ? "true" : "false");
 
     _is_running = true;
 }
@@ -128,9 +132,11 @@ void task_worker_pool::stop()
     for (auto &tsvc : _per_queue_timer_svcs) {
         tsvc->stop();
     }
+
     for (auto &wk : _workers) {
         wk->stop();
     }
+
     _is_running = false;
     LOG_INFO("[{}]: thread pool {} stopped", _node->full_name(), _spec.name);
 }
@@ -239,8 +245,9 @@ task_engine::task_engine(service_node *node)
 
 void task_engine::create(const std::list<threadpool_code> &pools)
 {
-    if (_is_running)
+    if (_is_running) {
         return;
+    }
 
     // init pools
     _pools.resize(threadpool_code::max() + 1, nullptr);
@@ -255,12 +262,16 @@ void task_engine::create(const std::list<threadpool_code> &pools)
 
 void task_engine::start()
 {
-    if (_is_running)
+    if (_is_running) {
         return;
+    }
 
     for (auto &pl : _pools) {
-        if (pl)
-            pl->start();
+        if (pl == nullptr) {
+            continue;
+        }
+
+        pl->start();
     }
     _is_running = true;
     LOG_INFO("[{}]: task engine started", _node->full_name());
@@ -273,9 +284,13 @@ void task_engine::stop()
     }
 
     for (auto &pl : _pools) {
-        if (pl)
-            pl->stop();
+        if (pl == nullptr) {
+            continue;
+        }
+
+        pl->stop();
     }
+
     _is_running = false;
     LOG_INFO("[{}]: task engine stopped", _node->full_name());
 }

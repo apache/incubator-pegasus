@@ -191,13 +191,9 @@ void sim_lock_provider::unlock()
 }
 
 sim_lock_nr_provider::sim_lock_nr_provider(lock_nr_provider *inner_provider)
-    : lock_nr_provider(inner_provider), _sema(1, nullptr)
+    : lock_nr_provider(inner_provider), _lock_depth(0), _current_holder(-1), _sema(1, nullptr)
 {
-    _current_holder = -1;
-    _lock_depth = 0;
 }
-
-sim_lock_nr_provider::~sim_lock_nr_provider() {}
 
 void sim_lock_nr_provider::lock()
 {

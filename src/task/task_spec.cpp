@@ -197,20 +197,23 @@ bool task_spec::init()
 
     task_spec default_spec(
         0, "placeholder", TASK_TYPE_COMPUTE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
-    if (!read_config("task..default", default_spec))
+    if (!read_config("task..default", default_spec, nullptr)) {
         return false;
+    }
 
     for (int code = 0; code <= dsn::task_code::max(); code++) {
-        if (code == TASK_CODE_INVALID)
+        if (code == TASK_CODE_INVALID) {
             continue;
+        }
 
         std::string section_name =
             std::string("task.") + std::string(dsn::task_code(code).to_string());
         task_spec *spec = task_spec::get(code);
         CHECK_NOTNULL(spec, "");
 
-        if (!read_config(section_name.c_str(), *spec, &default_spec))
+        if (!read_config(section_name.c_str(), *spec, &default_spec)) {
             return false;
+        }
 
         if (code == TASK_CODE_EXEC_INLINED) {
             spec->allow_inline = true;
@@ -246,6 +249,7 @@ bool threadpool_spec::init(/*out*/ std::vector<threadpool_spec> &specs)
     /*
     [threadpool..default]
     worker_count = 4
+    timer_thread_count_per_worker = 1
     worker_priority = THREAD_xPRIORITY_NORMAL
     partitioned = false
     queue_aspects = xxx

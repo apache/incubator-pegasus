@@ -32,6 +32,7 @@
 #include <chrono>
 #include <functional>
 #include <list>
+#include <memory>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -215,11 +216,37 @@ public:
     // return:
     //    true : change task state from TASK_STATE_RUNNING to TASK_STATE_READY succeed
     //    false : change task state failed
-    bool set_retry(bool enqueue_immediately = true);
+    bool set_retry(bool enqueue_immediately);
 
     void set_error_code(error_code err) { _error = err; }
-    void set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
+    void set_delay(int delay_milliseconds) { _delay_milliseconds = delay_milliseconds; }
     void set_tracker(task_tracker *tracker) { _context_tracker.set_tracker(tracker, this); }
+
+    // Control the timer that is used to launch a task if it is delayed.
+    class delay_timer
+    {
+    public:
+        delay_timer() = default;
+        virtual ~delay_timer() = default;
+
+        // Cancel the timer.
+        virtual void cancel() = 0;
+
+    private:
+        DISALLOW_COPY_AND_ASSIGN(delay_timer);
+        DISALLOW_MOVE_AND_ASSIGN(delay_timer);
+    };
+
+    void set_delay_timer(std::unique_ptr<delay_timer> timer) { _delay_timer = std::move(timer); }
+    void cancel_delay_timer()
+    {
+        if (!_delay_timer) {
+            return;
+        }
+
+        _delay_timer->cancel();
+    }
+    void reset_delay_timer() { _delay_timer.reset(); }
 
     uint64_t id() const { return _task_id; }
     task_state state() const { return _state.load(std::memory_order_acquire); }
@@ -311,6 +338,8 @@ private:
     task_spec *_spec;
     service_node *_node;
     trackable_task _context_tracker; // when tracker is gone, the task is cancelled automatically
+
+    std::unique_ptr<delay_timer> _delay_timer;
 
 public:
     // used by task queue only
