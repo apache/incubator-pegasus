@@ -101,6 +101,9 @@ private:
     int _lock_depth;     // 0 for not locked;
     int _current_holder; // -1 for invalid
     sim_semaphore_provider _sema;
+
+    DISALLOW_COPY_AND_ASSIGN(sim_lock_provider);
+    DISALLOW_MOVE_AND_ASSIGN(sim_lock_provider);
 };
 
 class sim_lock_nr_provider : public lock_nr_provider

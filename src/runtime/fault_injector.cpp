@@ -320,8 +320,9 @@ void fault_injector::install(service_spec &spec)
     read_config("task..default", default_opt, nullptr);
 
     for (int i = 0; i <= dsn::task_code::max(); i++) {
-        if (i == TASK_CODE_INVALID)
+        if (i == TASK_CODE_INVALID) {
             continue;
+        }
 
         std::string section_name = fmt::format("task.{}", dsn::task_code(i));
         task_spec *spec = task_spec::get(i);
@@ -330,8 +331,9 @@ void fault_injector::install(service_spec &spec)
         fj_opt &lopt = s_fj_opts[i];
         read_config(section_name.c_str(), lopt, &default_opt);
 
-        if (!lopt.fault_injection_enabled)
+        if (!lopt.fault_injection_enabled) {
             continue;
+        }
 
         spec->on_task_enqueue.put_back(fault_on_task_enqueue, "fault_injector");
         spec->on_task_begin.put_back(fault_on_task_begin, "fault_injector");
