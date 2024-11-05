@@ -197,8 +197,6 @@ sim_lock_nr_provider::sim_lock_nr_provider(lock_nr_provider *inner_provider)
     _lock_depth = 0;
 }
 
-sim_lock_nr_provider::~sim_lock_nr_provider() {}
-
 void sim_lock_nr_provider::lock()
 {
     // ignore locks inside schedulers

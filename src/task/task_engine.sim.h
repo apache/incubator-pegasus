@@ -49,12 +49,12 @@ public:
     {
     }
 
+    void start(int thread_count) override {}
+
+    void stop() override {}
+
     // after milliseconds, the provider should call task->enqueue()
-    virtual void add_timer(task *task) override;
-
-    virtual void start(int thread_count) override {}
-
-    virtual void stop() override {}
+    void add_timer(task *task) override;
 };
 
 class sim_task_queue : public task_queue
@@ -62,8 +62,8 @@ class sim_task_queue : public task_queue
 public:
     sim_task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
 
-    virtual void enqueue(task *task) override;
-    virtual task *dequeue(/*inout*/ int &batch_size) override;
+    void enqueue(task *task) override;
+    task *dequeue(/*inout*/ int &batch_size) override;
 
 private:
     std::map<uint32_t, task *> _tasks;
@@ -80,8 +80,8 @@ public:
     }
 
 public:
-    virtual void signal(int count);
-    virtual bool wait(int timeout_milliseconds);
+    void signal(int count) override;
+    bool wait(int timeout_milliseconds) override;
 
 private:
     int _count;
@@ -92,11 +92,11 @@ class sim_lock_provider : public lock_provider
 {
 public:
     sim_lock_provider(lock_provider *inner_provider);
-    virtual ~sim_lock_provider();
+    ~sim_lock_provider() override;
 
-    virtual void lock();
-    virtual bool try_lock();
-    virtual void unlock();
+    void lock() override;
+    bool try_lock() override;
+    void unlock() override;
 
 private:
     int _lock_depth;     // 0 for not locked;
@@ -107,12 +107,12 @@ private:
 class sim_lock_nr_provider : public lock_nr_provider
 {
 public:
-    sim_lock_nr_provider(lock_nr_provider *inner_provider);
-    virtual ~sim_lock_nr_provider();
+    explicit sim_lock_nr_provider(lock_nr_provider *inner_provider);
+    ~sim_lock_nr_provider() override = default;
 
-    virtual void lock();
-    virtual bool try_lock();
-    virtual void unlock();
+    void lock() override;
+    bool try_lock() override;
+    void unlock() override;
 
 private:
     int _lock_depth;     // 0 for not locked;
@@ -124,23 +124,24 @@ private:
 class sim_rwlock_nr_provider : public rwlock_nr_provider
 {
 public:
-    sim_rwlock_nr_provider(rwlock_nr_provider *inner_provider)
+    explicit sim_rwlock_nr_provider(rwlock_nr_provider *inner_provider)
         : rwlock_nr_provider(inner_provider), _l(nullptr)
     {
     }
 
-    virtual ~sim_rwlock_nr_provider() {}
+    ~sim_rwlock_nr_provider() override = default;
 
-    virtual void lock_read() { return _l.lock(); }
-    virtual void unlock_read() { return _l.unlock(); }
-    virtual bool try_lock_read() { return _l.try_lock(); }
+    void lock_read() override { return _l.lock(); }
+    void unlock_read() override { return _l.unlock(); }
+    bool try_lock_read() override { return _l.try_lock(); }
 
-    virtual void lock_write() { return _l.lock(); }
-    virtual void unlock_write() { return _l.unlock(); }
-    virtual bool try_lock_write() { return _l.try_lock(); }
+    void lock_write() override { return _l.lock(); }
+    void unlock_write() override { return _l.unlock(); }
+    bool try_lock_write() override { return _l.try_lock(); }
 
 private:
     sim_lock_nr_provider _l;
 };
+
 } // namespace tools
 } // namespace dsn

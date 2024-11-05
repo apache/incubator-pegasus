@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <thread>
+#include <vector>
 
 #include "boost/asio/io_service.hpp"
 #include "task_code.h"
@@ -61,7 +62,7 @@ class simple_timer_service : public timer_service
 public:
     simple_timer_service(service_node *node, timer_service *inner_provider);
 
-    ~simple_timer_service() override { stop(); }
+    ~simple_timer_service() override = default;
 
     // after milliseconds, the provider should call task->enqueue()
     void add_timer(task *task) override;

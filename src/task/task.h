@@ -32,6 +32,7 @@
 #include <chrono>
 #include <functional>
 #include <list>
+#include <memory>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -218,7 +219,7 @@ public:
     bool set_retry(bool enqueue_immediately = true);
 
     void set_error_code(error_code err) { _error = err; }
-    void set_delay(int delay_milliseconds = 0) { _delay_milliseconds = delay_milliseconds; }
+    void set_delay(int delay_milliseconds) { _delay_milliseconds = delay_milliseconds; }
     void set_tracker(task_tracker *tracker) { _context_tracker.set_tracker(tracker, this); }
 
     // Control the timer that is used to launch a task if it is delayed.
@@ -230,6 +231,10 @@ public:
 
         // Cancel the timer.
         virtual void cancel() = 0;
+
+    private:
+        DISALLOW_COPY_AND_ASSIGN(delay_timer);
+        DISALLOW_MOVE_AND_ASSIGN(delay_timer);
     };
 
     void set_delay_timer(std::unique_ptr<delay_timer> timer) { _delay_timer = std::move(timer); }

@@ -26,8 +26,9 @@
 
 #include "simple_task_queue.h"
 
-#include <cstdio>
+#include <stdint.h>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "boost/asio/basic_deadline_timer.hpp"
@@ -43,6 +44,7 @@
 #include "boost/asio/io_service.hpp"
 #include "boost/date_time/posix_time/posix_time_duration.hpp"
 #include "boost/system/detail/error_code.hpp"
+#include "fmt/core.h"
 #include "runtime/tool_api.h"
 #include "task.h"
 #include "task/task_queue.h"
@@ -110,7 +112,10 @@ namespace {
 class simple_delay_timer : public dsn::task::delay_timer
 {
 public:
-    simple_delay_timer(const std::shared_ptr<boost::asio::deadline_timer> &timer) : _timer(timer) {}
+    explicit simple_delay_timer(std::shared_ptr<boost::asio::deadline_timer> timer)
+        : _timer(std::move(timer))
+    {
+    }
     ~simple_delay_timer() override = default;
 
     void cancel() override
@@ -124,6 +129,9 @@ public:
 
 private:
     const std::shared_ptr<boost::asio::deadline_timer> _timer;
+
+    DISALLOW_COPY_AND_ASSIGN(simple_delay_timer);
+    DISALLOW_MOVE_AND_ASSIGN(simple_delay_timer);
 };
 
 } // anonymous namespace

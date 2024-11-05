@@ -112,7 +112,7 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
         timeout_task->cancel(false); // No need to wait.
     }
 
-    auto req = call->get_request();
+    auto *req = call->get_request();
     auto spec = task_spec::get(req->local_rpc_code);
 
     // if rpc is early terminated with empty reply
