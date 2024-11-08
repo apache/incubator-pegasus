@@ -83,6 +83,8 @@ typedef ::dsn::ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
 class rpc_write_stream : public binary_writer
 {
 public:
+    rpc_write_stream() = delete;
+
     rpc_write_stream(message_ex *msg)
         : _msg(msg), _last_write_next_committed(true), _last_write_next_total_size(0)
     {
@@ -136,10 +138,8 @@ private:
     message_ex *_msg;
     bool _last_write_next_committed;
     int _last_write_next_total_size;
-
-    rpc_write_stream() = delete;
 };
 
-typedef ::dsn::ref_ptr<rpc_write_stream> rpc_write_stream_ptr;
+using rpc_write_stream_ptr = dsn::ref_ptr<rpc_write_stream>;
 
 } // namespace dsn
