@@ -18,6 +18,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -36,6 +37,7 @@ class host_port;
 class zrwlock_nr;
 
 namespace replication {
+class configuration_create_app_response;
 class duplication_confirm_entry;
 class duplication_query_request;
 class duplication_query_response;

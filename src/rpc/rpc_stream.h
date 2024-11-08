@@ -104,13 +104,13 @@ public:
         }
     }
 
-    ~rpc_write_stream() override { flush(); }
-
-    void flush() override
+    ~rpc_write_stream() override
     {
-        binary_writer::flush();
-        commit_buffer();
+        // Avoid calling virtual functions in destructor.
+        flush_internal();
     }
+
+    void flush() override { flush_internal(); }
 
 private:
     void create_new_buffer(size_t size, /*out*/ blob &bb) override
@@ -127,7 +127,12 @@ private:
         _last_write_next_committed = false;
     }
 
-private:
+    void flush_internal()
+    {
+        binary_writer::flush();
+        commit_buffer();
+    }
+
     message_ex *_msg;
     bool _last_write_next_committed;
     int _last_write_next_total_size;

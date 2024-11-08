@@ -52,7 +52,7 @@ binary_writer::binary_writer(blob &buffer)
     : _buffers({buffer}),
       _current_buffer(const_cast<char *>(buffer.data())),
       _current_offset(0),
-      _current_buffer_length(buffer.length()),
+      _current_buffer_length(static_cast<int>(buffer.length())),
       _total_size(0),
       _reserved_size_per_buffer(kReservedSizePerBuffer)
 {

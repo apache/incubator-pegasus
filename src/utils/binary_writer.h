@@ -41,8 +41,8 @@ class binary_writer
 {
 public:
     binary_writer();
-    binary_writer(int reserved_buffer_size);
-    binary_writer(blob &buffer);
+    explicit binary_writer(int reserved_buffer_size);
+    explicit binary_writer(blob &buffer);
     virtual ~binary_writer() = default;
 
     virtual void flush();
