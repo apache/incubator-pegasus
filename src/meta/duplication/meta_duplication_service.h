@@ -103,6 +103,20 @@ private:
 
     void create_follower_app_for_duplication(const std::shared_ptr<duplication_info> &dup,
                                              const std::shared_ptr<app_state> &app);
+    void do_create_follower_app_for_duplication(
+        const std::shared_ptr<duplication_info> &dup,
+        const std::shared_ptr<app_state> &app,
+        const std::string &create_status,
+        std::function<void(error_code, configuration_create_app_response &&)> create_callback);
+    void mark_follower_app_created_for_duplication(const std::shared_ptr<duplication_info> &dup,
+                                                   const std::shared_ptr<app_state> &app);
+    void on_follower_app_creating_for_duplication(const std::shared_ptr<duplication_info> &dup,
+                                                  error_code err,
+                                                  configuration_create_app_response &&resp);
+    void on_follower_app_created_for_duplication(const std::shared_ptr<duplication_info> &dup,
+                                                 error_code err,
+                                                 configuration_create_app_response &&resp);
+
     void check_follower_app_if_create_completed(const std::shared_ptr<duplication_info> &dup);
 
     // Get zk path for duplication.

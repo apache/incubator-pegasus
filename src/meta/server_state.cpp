@@ -1078,6 +1078,22 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
         app_dir, LPC_META_STATE_HIGH, on_create_app_root, value);
 }
 
+namespace {
+
+bool is_follower_app_creating(const dsn::replication::app_state &app)
+{
+    const auto &iter = app.envs.find(
+        dsn::replication::duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
+    if (iter == app.envs.end()) {
+        return false;
+    }
+
+    return iter->second == dsn::replication::duplication_constants::
+                               kDuplicationEnvMasterCreateFollowerAppStatusCreating;
+}
+
+} // anonymous namespace
+
 void server_state::create_app(dsn::message_ex *msg)
 {
     configuration_create_app_request request;
@@ -3048,16 +3064,6 @@ bool validate_target_max_replica_count_internal(int32_t max_replica_count,
     }
 
     return true;
-}
-
-bool is_follower_app_creating(const dsn::replication::app_state &app)
-{
-    const auto &iter = app.envs.find(dsn::replication::duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
-    if (iter == app.envs.end()) {
-        return false;
-    }
-
-    return iter->second == dsn::replication::duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating;
 }
 
 } // anonymous namespace

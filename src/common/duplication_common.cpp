@@ -61,12 +61,14 @@ const std::string duplication_constants::kDuplicationEnvMasterMetasKey /*NOLINT*
     "duplication.master_metas";
 const std::string duplication_constants::kDuplicationEnvMasterAppNameKey /*NOLINT*/ =
     "duplication.master_app_name";
-const std::string duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey /*NOLINT*/ =
-    "duplication.master_create_follower_app_status";
-const std::string duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating /*NOLINT*/ =
-    "creating";
-const std::string duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated /*NOLINT*/ =
-    "created";
+const std::string duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey /*NOLINT*/
+    = "duplication.master_create_follower_app_status";
+const std::string
+    duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating /*NOLINT*/
+    = "creating";
+const std::string
+    duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated /*NOLINT*/
+    = "created";
 
 /*extern*/ const char *duplication_status_to_string(duplication_status::type status)
 {
