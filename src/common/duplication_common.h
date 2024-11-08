@@ -91,5 +91,6 @@ struct duplication_constants
 
 USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)
 USER_DEFINED_ENUM_FORMATTER(duplication_status::type)
+
 } // namespace replication
 } // namespace dsn

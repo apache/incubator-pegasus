@@ -40,9 +40,10 @@ namespace dsn {
 class binary_writer
 {
 public:
-    binary_writer(int reserved_buffer_size = 0);
+    binary_writer();
+    binary_writer(int reserved_buffer_size);
     binary_writer(blob &buffer);
-    virtual ~binary_writer();
+    virtual ~binary_writer() = default;
 
     virtual void flush();
 
@@ -95,7 +96,7 @@ private:
 
     int _total_size;
     int _reserved_size_per_buffer;
-    static int _reserved_size_per_buffer_static;
+    static const int kReservedSizePerBuffer;
 };
 
 //--------------- inline implementation -------------------

@@ -468,11 +468,9 @@ void meta_duplication_service::create_follower_app_for_duplication(
         dup,
         app,
         duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating,
-        std::bind(&meta_duplication_service::on_follower_app_creating_for_duplication,
-                  this,
-                  dup,
-                  std::placeholders::_1,
-                  std::placeholders::_2));
+        [this, dup](error_code err, configuration_create_app_response &&resp) {
+            on_follower_app_creating_for_duplication(dup, err, std::move(resp));
+        });
 }
 
 void meta_duplication_service::mark_follower_app_created_for_duplication(
@@ -482,11 +480,9 @@ void meta_duplication_service::mark_follower_app_created_for_duplication(
         dup,
         app,
         duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated,
-        std::bind(&meta_duplication_service::on_follower_app_created_for_duplication,
-                  this,
-                  dup,
-                  std::placeholders::_1,
-                  std::placeholders::_2));
+        [this, dup](error_code err, configuration_create_app_response &&resp) {
+            on_follower_app_created_for_duplication(dup, err, std::move(resp));
+        });
 }
 
 void meta_duplication_service::do_create_follower_app_for_duplication(
