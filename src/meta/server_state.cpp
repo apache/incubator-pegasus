@@ -126,8 +126,7 @@ DSN_DEFINE_int32(meta_server,
 
 DSN_DECLARE_bool(recover_from_replica_server);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 #define REPLY_TO_CLIENT(msg, response)                                                             \
     _meta_svc->reply_data(msg, response);                                                          \
@@ -1181,7 +1180,7 @@ void server_state::create_app(dsn::message_ex *msg)
     info.max_replica_count = request.options.replica_count;
     info.partition_count = request.options.partition_count;
     info.status = app_status::AS_CREATING;
-    info.create_second = dsn_now_ms() / 1000;
+    info.create_second = static_cast<int64_t>(dsn_now_s());
     info.init_partition_count = request.options.partition_count;
 
     app = app_state::create(info);
@@ -4136,5 +4135,4 @@ void server_state::recover_app_max_replica_count(std::shared_ptr<app_state> &app
 #undef REPLY_TO_CLIENT_AND_RETURN
 #undef REPLY_TO_CLIENT
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
