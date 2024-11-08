@@ -85,7 +85,7 @@ class rpc_write_stream : public binary_writer
 public:
     rpc_write_stream() = delete;
 
-    rpc_write_stream(message_ex *msg)
+    explicit rpc_write_stream(message_ex *msg)
         : _msg(msg), _last_write_next_committed(true), _last_write_next_total_size(0)
     {
     }
@@ -138,6 +138,9 @@ private:
     message_ex *_msg;
     bool _last_write_next_committed;
     int _last_write_next_total_size;
+
+    DISALLOW_COPY_AND_ASSIGN(rpc_write_stream);
+    DISALLOW_MOVE_AND_ASSIGN(rpc_write_stream);
 };
 
 using rpc_write_stream_ptr = dsn::ref_ptr<rpc_write_stream>;
