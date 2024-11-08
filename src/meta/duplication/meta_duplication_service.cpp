@@ -464,6 +464,18 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
 void meta_duplication_service::create_follower_app_for_duplication(
     const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app)
 {
+   do_create_follower_app_for_duplication(dup, app, duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating, std::bind(&meta_duplication_service::on_follower_app_creating_for_duplication, this, dup, std::placeholders::_1, std::placeholders::_2));
+}
+
+void meta_duplication_service::mark_follower_app_created_for_duplication(
+    const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app)
+{
+   do_create_follower_app_for_duplication(dup, app, duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated, std::bind(&meta_duplication_service::on_follower_app_created_for_duplication, this, dup, std::placeholders::_1, std::placeholders::_2));
+}
+
+void meta_duplication_service::do_create_follower_app_for_duplication(
+    const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app, const std::string &create_status, std::function<void(error_code, configuration_create_app_response &&)> create_callback)
+{
     configuration_create_app_request request;
     request.app_name = dup->remote_app_name;
     request.options.app_type = app->app_type;
@@ -483,6 +495,8 @@ void meta_duplication_service::create_follower_app_for_duplication(
                                  _meta_svc->get_meta_list_string());
     request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterAppNameKey,
                                  app->app_name);
+    request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+                                 create_status);
 
     host_port meta_servers;
     meta_servers.assign_group(dup->remote_cluster_name.c_str());
@@ -494,7 +508,10 @@ void meta_duplication_service::create_follower_app_for_duplication(
         dsn::dns_resolver::instance().resolve_address(meta_servers),
         msg,
         _meta_svc->tracker(),
-        [dup, this](error_code err, configuration_create_app_response &&resp) mutable {
+        std::move(create_callback));
+}
+
+void meta_duplication_service::on_follower_app_creating_for_duplication(const std::shared_ptr<duplication_info> &dup, error_code err, configuration_create_app_response &&resp) {
             FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
                                            [&err](std::string_view) -> void { err = ERR_OK; });
 
@@ -528,7 +545,14 @@ void meta_duplication_service::create_follower_app_for_duplication(
                           create_err,
                           update_err);
             }
-        });
+}
+
+void meta_duplication_service::on_follower_app_created_for_duplication(const std::shared_ptr<duplication_info> &dup, error_code err, configuration_create_app_response &&resp) {
+    if (err != ERR_OK || resp.err != ERR_OK) {
+        return;
+    }
+
+    check_follower_app_if_create_completed(dup);
 }
 
 namespace {

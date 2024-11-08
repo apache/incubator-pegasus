@@ -84,6 +84,9 @@ struct duplication_constants
     const static std::string kDuplicationEnvMasterClusterKey;
     const static std::string kDuplicationEnvMasterMetasKey;
     const static std::string kDuplicationEnvMasterAppNameKey;
+    const static std::string kDuplicationEnvMasterCreateFollowerAppStatusKey;
+    const static std::string kDuplicationEnvMasterCreateFollowerAppStatusCreating;
+    const static std::string kDuplicationEnvMasterCreateFollowerAppStatusCreated;
 };
 
 USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)

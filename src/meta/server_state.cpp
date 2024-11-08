@@ -1127,7 +1127,7 @@ void server_state::create_app(dsn::message_ex *msg)
             switch (app->status) {
             case app_status::AS_AVAILABLE:
                 if (!request.options.success_if_exist) {
-                    response.err = ERR_APP_EXIST;
+                    response.err = is_follower_app_creating(*app) ? ERR_OK : ERR_APP_EXIST;
                 } else if (!option_match_check(request.options, *app)) {
                     response.err = ERR_INVALID_PARAMETERS;
                 } else {
@@ -3048,6 +3048,16 @@ bool validate_target_max_replica_count_internal(int32_t max_replica_count,
     }
 
     return true;
+}
+
+bool is_follower_app_creating(const dsn::replication::app_state &app)
+{
+    const auto &iter = app.envs.find(dsn::replication::duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
+    if (iter == app.envs.end()) {
+        return false;
+    }
+
+    return iter->second == dsn::replication::duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating;
 }
 
 } // anonymous namespace
