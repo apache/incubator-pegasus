@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "blob.h"
+#include "utils/ports.h"
 
 namespace dsn {
 

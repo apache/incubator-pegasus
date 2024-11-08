@@ -421,7 +421,7 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
                 if (dup->status() == duplication_status::DS_PREPARE) {
                     create_follower_app_for_duplication(dup, app);
                 } else if (dup->status() == duplication_status::DS_APP) {
-                    check_follower_app_if_create_completed(dup);
+                    mark_follower_app_created_for_duplication(dup, app);
                 }
             }
 

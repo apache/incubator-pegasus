@@ -129,6 +129,14 @@ DSN_DECLARE_bool(recover_from_replica_server);
 namespace dsn {
 namespace replication {
 
+#define REPLY_TO_CLIENT(msg, response)                                                             \
+    _meta_svc->reply_data(msg, response);                                                          \
+    msg->release_ref()
+
+#define REPLY_TO_CLIENT_AND_RETURN(msg, response)                                                  \
+    REPLY_TO_CLIENT(msg, response);                                                                \
+    return
+
 static const char *lock_state = "lock";
 static const char *unlock_state = "unlock";
 
@@ -207,6 +215,14 @@ int server_state::count_staging_app()
     return ans;
 }
 
+#define INIT_CREATE_APP_RESPONSE_WITH_ERR(response, err_code)                                      \
+    configuration_create_app_response response;                                                    \
+    response.err = err_code
+
+#define SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, err_code)                     \
+    INIT_CREATE_APP_RESPONSE_WITH_ERR(response, err_code);                                         \
+    REPLY_TO_CLIENT_AND_RETURN(msg, response)
+
 void server_state::transition_staging_state(std::shared_ptr<app_state> &app)
 {
 #define send_response(meta, msg, response_data)                                                    \
@@ -221,8 +237,7 @@ void server_state::transition_staging_state(std::shared_ptr<app_state> &app)
     app_status::type old_status = app->status;
     if (app->status == app_status::AS_CREATING) {
         app->status = app_status::AS_AVAILABLE;
-        configuration_create_app_response resp;
-        resp.err = dsn::ERR_OK;
+        INIT_CREATE_APP_RESPONSE_WITH_ERR(resp, dsn::ERR_OK);
         resp.appid = app->app_id;
         send_response(_meta_svc, app->helpers->pending_response, resp);
     } else if (app->status == app_status::AS_DROPPING) {
@@ -1078,44 +1093,26 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
         app_dir, LPC_META_STATE_HIGH, on_create_app_root, value);
 }
 
-namespace {
-
-bool is_follower_app_creating(const dsn::replication::app_state &app)
-{
-    const auto &iter = app.envs.find(
-        dsn::replication::duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
-    if (iter == app.envs.end()) {
-        return false;
-    }
-
-    return iter->second == dsn::replication::duplication_constants::
-                               kDuplicationEnvMasterCreateFollowerAppStatusCreating;
-}
-
-} // anonymous namespace
-
 void server_state::create_app(dsn::message_ex *msg)
 {
     configuration_create_app_request request;
-    configuration_create_app_response response;
-    std::shared_ptr<app_state> app;
-    bool will_create_app = false;
     dsn::unmarshall(msg, request);
 
-    const auto &duplication_env_iterator =
+    const auto &master_cluster =
         request.options.envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
+    bool duplicating = master_cluster != request.options.envs.end();
     LOG_INFO("create app request, name({}), type({}), partition_count({}), replica_count({}), "
              "duplication({})",
              request.app_name,
              request.options.app_type,
              request.options.partition_count,
              request.options.replica_count,
-             duplication_env_iterator == request.options.envs.end()
-                 ? "false"
-                 : fmt::format(
+             duplicating
+                 ? fmt::format(
                        "{}.{}",
                        request.options.envs[duplication_constants::kDuplicationEnvMasterClusterKey],
-                       request.app_name));
+                       request.app_name)
+                 : "false");
 
     auto option_match_check = [](const create_app_options &opt, const app_state &exist_app) {
         return opt.partition_count == exist_app.partition_count &&
@@ -1127,71 +1124,136 @@ void server_state::create_app(dsn::message_ex *msg)
     auto level = _meta_svc->get_function_level();
     if (level <= meta_function_level::fl_freezed) {
         LOG_ERROR("current meta function level is freezed, since there are too few alive nodes");
-        response.err = ERR_STATE_FREEZED;
-        will_create_app = false;
-    } else if (request.options.partition_count <= 0 ||
-               !validate_target_max_replica_count(request.options.replica_count)) {
-        response.err = ERR_INVALID_PARAMETERS;
-        will_create_app = false;
-    } else if (!_app_env_validator.validate_app_envs(request.options.envs)) {
-        response.err = ERR_INVALID_PARAMETERS;
-        will_create_app = false;
-    } else {
-        zauto_write_lock l(_lock);
-        app = get_app(request.app_name);
-        if (nullptr != app) {
-            switch (app->status) {
-            case app_status::AS_AVAILABLE:
-                if (!request.options.success_if_exist) {
-                    response.err = is_follower_app_creating(*app) ? ERR_OK : ERR_APP_EXIST;
-                } else if (!option_match_check(request.options, *app)) {
-                    response.err = ERR_INVALID_PARAMETERS;
-                } else {
-                    response.err = ERR_OK;
-                    response.appid = app->app_id;
+        SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_STATE_FREEZED);
+    }
+
+    if (request.options.partition_count <= 0 ||
+        !validate_target_max_replica_count(request.options.replica_count)) {
+        SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_INVALID_PARAMETERS);
+    }
+
+    if (!_app_env_validator.validate_app_envs(request.options.envs)) {
+        SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_INVALID_PARAMETERS);
+    }
+
+    zauto_write_lock l(_lock);
+
+    auto app = get_app(request.app_name);
+    if (nullptr != app) {
+        configuration_create_app_response response;
+
+        switch (app->status) {
+        case app_status::AS_AVAILABLE:
+            if (!request.options.success_if_exist) {
+                if (duplicating) {
+                    process_create_follower_app_status(msg, request, *app, master_cluster->second);
+                    return;
                 }
-                break;
-            case app_status::AS_CREATING:
-            case app_status::AS_RECALLING:
-                response.err = ERR_BUSY_CREATING;
-                break;
-            case app_status::AS_DROPPING:
-                response.err = ERR_BUSY_DROPPING;
-                break;
-            default:
-                break;
+
+                response.err = ERR_APP_EXIST;
+            } else if (!option_match_check(request.options, *app)) {
+                response.err = ERR_INVALID_PARAMETERS;
+            } else {
+                response.err = ERR_OK;
+                response.appid = app->app_id;
             }
-        } else {
-            will_create_app = true;
-
-            app_info info;
-            info.app_id = next_app_id();
-            info.app_name = request.app_name;
-            info.app_type = request.options.app_type;
-            info.envs = std::move(request.options.envs);
-            info.is_stateful = request.options.is_stateful;
-            info.max_replica_count = request.options.replica_count;
-            info.partition_count = request.options.partition_count;
-            info.status = app_status::AS_CREATING;
-            info.create_second = dsn_now_ms() / 1000;
-            info.init_partition_count = request.options.partition_count;
-
-            app = app_state::create(info);
-            app->helpers->pending_response = msg;
-            app->helpers->partitions_in_progress.store(info.partition_count);
-
-            _all_apps.emplace(app->app_id, app);
-            _exist_apps.emplace(request.app_name, app);
-            _table_metric_entities.create_entity(app->app_id, app->partition_count);
+            break;
+        case app_status::AS_CREATING:
+        case app_status::AS_RECALLING:
+            response.err = ERR_BUSY_CREATING;
+            break;
+        case app_status::AS_DROPPING:
+            response.err = ERR_BUSY_DROPPING;
+            break;
+        default:
+            break;
         }
+
+        REPLY_TO_CLIENT_AND_RETURN(msg, response);
     }
 
-    if (will_create_app) {
-        do_app_create(app);
-    } else {
-        _meta_svc->reply_data(msg, response);
-        msg->release_ref();
+    app_info info;
+    info.app_id = next_app_id();
+    info.app_name = request.app_name;
+    info.app_type = request.options.app_type;
+    info.envs = std::move(request.options.envs);
+    info.is_stateful = request.options.is_stateful;
+    info.max_replica_count = request.options.replica_count;
+    info.partition_count = request.options.partition_count;
+    info.status = app_status::AS_CREATING;
+    info.create_second = dsn_now_ms() / 1000;
+    info.init_partition_count = request.options.partition_count;
+
+    app = app_state::create(info);
+    app->helpers->pending_response = msg;
+    app->helpers->partitions_in_progress.store(info.partition_count);
+
+    _all_apps.emplace(app->app_id, app);
+    _exist_apps.emplace(request.app_name, app);
+    _table_metric_entities.create_entity(app->app_id, app->partition_count);
+
+    do_app_create(app);
+}
+
+void server_state::process_create_follower_app_status(
+    message_ex *msg,
+    const configuration_create_app_request &request,
+    const app_state &app,
+    const std::string &req_master_cluster)
+{
+    const auto &req_status = request.options.envs.find(
+        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
+    if (req_status == request.options.envs.end()) {
+        SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_APP_EXIST);
     }
+
+    const auto &my_status =
+        app.envs.find(duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
+    if (my_status == app.envs.end()) {
+        return;
+    }
+
+    if (my_status->second ==
+        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
+        if (req_status->second ==
+            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
+            const auto &my_master_cluster =
+                app.envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
+            if (my_master_cluster == app.envs.end() ||
+                my_master_cluster->second != req_master_cluster) {
+                SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_APP_EXIST);
+            }
+
+            SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_OK);
+        }
+
+        if (req_status->second ==
+            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
+
+            return;
+        }
+
+        SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_INVALID_STATE);
+    }
+
+    if (my_status->second ==
+        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
+        if (req_status->second ==
+            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
+
+            SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_APP_EXIST);
+        }
+
+        if (req_status->second ==
+            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
+
+            SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_OK);
+        }
+
+        SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_INVALID_STATE);
+    }
+
+    SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_INVALID_STATE);
 }
 
 void server_state::do_app_drop(std::shared_ptr<app_state> &app)
@@ -1271,12 +1333,12 @@ void server_state::drop_app(dsn::message_ex *msg)
             }
         }
     }
-    if (do_dropping) {
-        do_app_drop(app);
-    } else {
-        _meta_svc->reply_data(msg, response);
-        msg->release_ref();
+
+    if (!do_dropping) {
+        REPLY_TO_CLIENT_AND_RETURN(msg, response);
     }
+
+    do_app_drop(app);
 }
 
 void server_state::rename_app(configuration_rename_app_rpc rpc)
@@ -1420,10 +1482,9 @@ void server_state::recall_app(dsn::message_ex *msg)
     }
 
     if (!do_recalling) {
-        _meta_svc->reply_data(msg, response);
-        msg->release_ref();
-        return;
+        REPLY_TO_CLIENT_AND_RETURN(msg, response);
     }
+
     do_app_recall(target_app);
 }
 
@@ -1759,8 +1820,7 @@ void server_state::on_update_configuration_on_remote_reply(
             configuration_update_response resp;
             resp.err = ERR_OK;
             resp.config = config_request->config;
-            _meta_svc->reply_data(cc.msg, resp);
-            cc.msg->release_ref();
+            REPLY_TO_CLIENT(cc.msg, resp);
             cc.msg = nullptr;
         }
 
@@ -2047,17 +2107,16 @@ void server_state::on_update_configuration(
     }
 
     if (response.err != ERR_IO_PENDING) {
-        _meta_svc->reply_data(msg, response);
-        msg->release_ref();
-    } else {
-        CHECK(config_status::not_pending == cc.stage,
-              "invalid config status, cc.stage = {}",
-              enum_to_string(cc.stage));
-        cc.stage = config_status::pending_remote_sync;
-        cc.pending_sync_request = cfg_request;
-        cc.msg = msg;
-        cc.pending_sync_task = update_configuration_on_remote(cfg_request);
+        REPLY_TO_CLIENT_AND_RETURN(msg, response);
     }
+
+    CHECK(config_status::not_pending == cc.stage,
+          "invalid config status, cc.stage = {}",
+          enum_to_string(cc.stage));
+    cc.stage = config_status::pending_remote_sync;
+    cc.pending_sync_request = cfg_request;
+    cc.msg = msg;
+    cc.pending_sync_task = update_configuration_on_remote(cfg_request);
 }
 
 void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
@@ -4070,6 +4129,12 @@ void server_state::recover_app_max_replica_count(std::shared_ptr<app_state> &app
         },
         &tracker);
 }
+
+#undef SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN
+#undef INIT_CREATE_APP_RESPONSE_WITH_ERR
+
+#undef REPLY_TO_CLIENT_AND_RETURN
+#undef REPLY_TO_CLIENT
 
 } // namespace replication
 } // namespace dsn

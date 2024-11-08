@@ -258,6 +258,11 @@ private:
         bool skip_lost_partitions,
         std::string &hint_message);
 
+    void process_create_follower_app_status(message_ex *msg,
+                                            const configuration_create_app_request &request,
+                                            const app_state &app,
+                                            const std::string &req_master_cluster);
+
     void do_app_create(std::shared_ptr<app_state> &app);
     void do_app_drop(std::shared_ptr<app_state> &app);
     void do_app_recall(std::shared_ptr<app_state> &app);
