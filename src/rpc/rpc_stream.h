@@ -136,6 +136,10 @@ private:
     message_ex *_msg;
     bool _last_write_next_committed;
     int _last_write_next_total_size;
+
+    rpc_write_stream() = delete;
 };
+
 typedef ::dsn::ref_ptr<rpc_write_stream> rpc_write_stream_ptr;
+
 } // namespace dsn

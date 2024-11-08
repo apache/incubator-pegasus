@@ -97,6 +97,9 @@ private:
     int _total_size;
     int _reserved_size_per_buffer;
     static const int kReservedSizePerBuffer;
+
+    DISALLOW_COPY_AND_ASSIGN(binary_writer);
+    DISALLOW_MOVE_AND_ASSIGN(binary_writer);
 };
 
 //--------------- inline implementation -------------------

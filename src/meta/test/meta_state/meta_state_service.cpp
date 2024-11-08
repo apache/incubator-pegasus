@@ -118,7 +118,9 @@ void provider_basic_test(const service_creator_func &service_creator,
                            CHECK_EQ(0xdeadbeef, read_value);
                        })
             ->wait();
-        writer = dsn::binary_writer();
+    }
+    {
+        dsn::binary_writer writer;
         writer.write(0xbeefdead);
         service
             ->set_data(
