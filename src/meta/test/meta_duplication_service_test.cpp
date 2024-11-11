@@ -204,7 +204,8 @@ public:
         dup_svc().mark_follower_app_created_for_duplication(dup, app);
     }
 
-    duplication_status::type next_status(const std::shared_ptr<duplication_info> &dup) const
+    [[nodiscard]] static duplication_status::type
+    next_status(const std::shared_ptr<duplication_info> &dup)
     {
         return dup->_next_status;
     }
@@ -970,93 +971,99 @@ TEST_F(meta_duplication_service_test, mark_follower_app_created_for_duplication)
 {
     struct test_case
     {
-        int32_t remote_replica_count;
         std::vector<std::string> fail_cfg_name;
         std::vector<std::string> fail_cfg_action;
-        bool is_altering;
+        int32_t remote_replica_count;
         duplication_status::type cur_status;
         duplication_status::type next_status;
+        bool is_altering;
     } test_cases[] = {// 3 remote replicas with both primary and secondaries valid.
-                      {3,
-                       {"on_follower_app_created", "create_app_ok"},
+                      {{"on_follower_app_created", "create_app_ok"},
                        {"void(ERR_OK)", "void(true,2,0)"},
-                       false,
+                       3,
                        duplication_status::DS_LOG,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
                       // The follower app failed to be marked as created.
-                      {3,
-                       {"on_follower_app_created", "create_app_ok"},
+                      {{"on_follower_app_created", "create_app_ok"},
                        {"void(ERR_TIMEOUT)", "void(true,2,0)"},
-                       false,
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
                       //
                       // 3 remote replicas with primary invalid and all secondaries valid.
-                      {3,
-                       {"on_follower_app_created", "create_app_ok"},
+                      {{"on_follower_app_created", "create_app_ok"},
                        {"void(ERR_OK)", "void(false,2,0)"},
-                       false,
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
                       // 3 remote replicas with primary valid and only one secondary present
                       // and valid.
-                      {3,
-                       {"on_follower_app_created", "create_app_ok"},
+                      {{"on_follower_app_created", "create_app_ok"},
                        {"void(ERR_OK)", "void(true,1,0)"},
-                       false,
+                       3,
                        duplication_status::DS_LOG,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
                       // 3 remote replicas with primary valid and one secondary invalid.
-                      {3,
-                       {"on_follower_app_created", "create_app_ok"},
+                      {{"on_follower_app_created", "create_app_ok"},
                        {"void(ERR_OK)", "void(true,1,1)"},
-                       false,
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
                       // 3 remote replicas with primary valid and only one secondary present
                       // and invalid.
-                      {3,
-                       {"on_follower_app_created", "create_app_ok"},
+                      {{"on_follower_app_created", "create_app_ok"},
                        {"void(ERR_OK)", "void(true,0,1)"},
-                       false,
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
                       // 3 remote replicas with primary valid and both secondaries absent.
-                      {3,
-                       {"on_follower_app_created", "create_app_ok"},
-                       {"void(ERR_OK)", "void(true,0,0)"},
-                       false,
-                       duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                      {
+                          {"on_follower_app_created", "create_app_ok"},
+                          {"void(ERR_OK)", "void(true,0,0)"},
+                          3,
+                          duplication_status::DS_APP,
+                          duplication_status::DS_INIT,
+                          false,
+                      },
                       // 1 remote replicas with primary valid.
-                      {1,
-                       {"on_follower_app_created", "create_app_ok"},
-                       {"void(ERR_OK)", "void(true,0,0)"},
-                       false,
-                       duplication_status::DS_LOG,
-                       duplication_status::DS_INIT},
+                      {
+                          {"on_follower_app_created", "create_app_ok"},
+                          {"void(ERR_OK)", "void(true,0,0)"},
+                          1,
+                          duplication_status::DS_LOG,
+                          duplication_status::DS_INIT,
+                          false,
+                      },
                       // 1 remote replicas with primary invalid.
-                      {1,
-                       {"on_follower_app_created", "create_app_ok"},
-                       {"void(ERR_OK)", "void(false,0,0)"},
-                       false,
-                       duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                      {
+                          {"on_follower_app_created", "create_app_ok"},
+                          {"void(ERR_OK)", "void(false,0,0)"},
+                          1,
+                          duplication_status::DS_APP,
+                          duplication_status::DS_INIT,
+                          false,
+                      },
                       // The case is just a "palace holder", actually
                       // `check_follower_app_if_create_completed` would fail by default
                       // in unit test.
-                      {3,
-                       {"on_follower_app_created", "create_app_failed"},
+                      {{"on_follower_app_created", "create_app_failed"},
                        {"void(ERR_OK)", "off()"},
-                       false,
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
-                      {3,
-                       {"on_follower_app_created", "create_app_ok", "persist_dup_status_failed"},
+                       duplication_status::DS_INIT,
+                       false},
+                      {{"on_follower_app_created", "create_app_ok", "persist_dup_status_failed"},
                        {"void(ERR_OK)", "void(true,2,0)", "return()"},
-                       true,
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_LOG}};
+                       duplication_status::DS_LOG,
+                       true}};
 
     size_t i = 0;
     for (const auto &test : test_cases) {
