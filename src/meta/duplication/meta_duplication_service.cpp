@@ -545,14 +545,7 @@ void meta_duplication_service::on_follower_app_creating_for_duplication(
 
     FAIL_POINT_INJECT_F("persist_dup_status_failed", [](std::string_view) -> void { return; });
 
-    if (update_err == ERR_OK) {
-        blob value = dup->to_json_blob();
-        // Note: this function is `async`, it may not be persisted completed
-        // after executing, now using `_is_altering` to judge whether `updating` or
-        // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
-        _meta_svc->get_meta_storage()->set_data(
-            std::string(dup->store_path), std::move(value), [dup]() { dup->persist_status(); });
-    } else {
+    if (update_err != ERR_OK) {
         LOG_ERROR("create follower app[{}.{}] to trigger duplicate checkpoint failed: "
                   "duplication_status = {}, create_err = {}, update_err = {}",
                   dup->remote_cluster_name,
@@ -560,7 +553,15 @@ void meta_duplication_service::on_follower_app_creating_for_duplication(
                   duplication_status_to_string(dup->status()),
                   create_err,
                   update_err);
+        return;
     }
+
+    blob value = dup->to_json_blob();
+    // Note: this function is `async`, it may not be persisted completed
+    // after executing, now using `_is_altering` to judge whether `updating` or
+    // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
+    _meta_svc->get_meta_storage()->set_data(
+        std::string(dup->store_path), std::move(value), [dup]() { dup->persist_status(); });
 }
 
 void meta_duplication_service::on_follower_app_created_for_duplication(
@@ -568,7 +569,18 @@ void meta_duplication_service::on_follower_app_created_for_duplication(
     error_code err,
     configuration_create_app_response &&resp)
 {
+    FAIL_POINT_INJECT_NOT_RETURN_F("on_follower_app_created", [&err](std::string_view s) -> void {
+        err = error_code(s.data());
+    });
+
     if (err != ERR_OK || resp.err != ERR_OK) {
+        LOG_ERROR("mark follower app[{}.{}] created failed: "
+                  "duplication_status = {}, err = {}, resp_err = {}",
+                  dup->remote_cluster_name,
+                  dup->remote_app_name,
+                  duplication_status_to_string(dup->status()),
+                  err,
+                  resp.err);
         return;
     }
 
@@ -697,15 +709,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
             FAIL_POINT_INJECT_F("persist_dup_status_failed",
                                 [](std::string_view) -> void { return; });
 
-            if (update_err == ERR_OK) {
-                blob value = dup->to_json_blob();
-                // Note: this function is `async`, it may not be persisted completed
-                // after executing, now using `_is_altering` to judge whether `updating` or
-                // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
-                _meta_svc->get_meta_storage()->set_data(std::string(dup->store_path),
-                                                        std::move(value),
-                                                        [dup]() { dup->persist_status(); });
-            } else {
+            if (update_err != ERR_OK) {
                 LOG_ERROR("query follower app[{}.{}] replica configuration completed, result: "
                           "duplication_status = {}, query_err = {}, update_err = {}",
                           dup->remote_cluster_name,
@@ -713,7 +717,15 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                           duplication_status_to_string(dup->status()),
                           query_err,
                           update_err);
+                return;
             }
+
+            blob value = dup->to_json_blob();
+            // Note: this function is `async`, it may not be persisted completed
+            // after executing, now using `_is_altering` to judge whether `updating` or
+            // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
+            _meta_svc->get_meta_storage()->set_data(
+                std::string(dup->store_path), std::move(value), [dup]() { dup->persist_status(); });
         });
 }
 
