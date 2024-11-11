@@ -261,8 +261,12 @@ private:
 
     void process_create_follower_app_status(message_ex *msg,
                                             const configuration_create_app_request &request,
-                                            const app_state &app,
-                                            const std::string &req_master_cluster);
+                                            const std::string &req_master_cluster,
+                                            std::shared_ptr<app_state> &app);
+    void update_create_follower_app_status(message_ex *msg,
+                                           const std::string &old_status,
+                                           const std::string &new_status,
+                                           std::shared_ptr<app_state> &app);
 
     void do_app_create(std::shared_ptr<app_state> &app);
     void do_app_drop(std::shared_ptr<app_state> &app);
