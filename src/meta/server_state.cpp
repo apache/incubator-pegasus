@@ -1287,7 +1287,7 @@ void server_state::update_create_follower_app_status(message_ex *msg,
                                                      const std::string &new_status,
                                                      std::shared_ptr<app_state> &app)
 {
-    auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
+    app_info ainfo = *app;
     ainfo.envs[duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey] = new_status;
     auto app_path = get_app_path(*app);
     do_update_app_info(
