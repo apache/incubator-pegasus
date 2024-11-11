@@ -44,21 +44,22 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
+#include "table_metrics.h"
 #include "task/task.h"
 #include "task/task_tracker.h"
-#include "table_metrics.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 class blob;
 class command_deregister;
-class message_ex;
 class host_port;
+class message_ex;
 
 namespace replication {
 class configuration_balancer_request;
 class configuration_balancer_response;
+class configuration_create_app_request;
 class configuration_list_apps_request;
 class configuration_list_apps_response;
 class configuration_proposal_action;
