@@ -1203,12 +1203,16 @@ void server_state::process_create_follower_app_status(
     const auto &req_status = request.options.envs.find(
         duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
     if (req_status == request.options.envs.end()) {
+        // Still reply with ERR_APP_EXIST to the master cluster of old versions.
         SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_APP_EXIST);
     }
 
     const auto &my_status =
         app.envs.find(duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
     if (my_status == app.envs.end()) {
+        // Since currently this table have been AS_AVAILABLE, it should have the env of
+        // creating status.
+        SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_INVALID_STATE);
         return;
     }
 
@@ -1220,38 +1224,48 @@ void server_state::process_create_follower_app_status(
                 app.envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
             if (my_master_cluster == app.envs.end() ||
                 my_master_cluster->second != req_master_cluster) {
+                // The source cluster is not matched.
                 SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_APP_EXIST);
             }
 
+            // It is idempotent for the repeated requests.
             SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_OK);
         }
 
         if (req_status->second ==
             duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
+            // Update the creating status both on the remote storage and local memory.
 
             return;
         }
 
+        // Some undefined creating status from the source table.
         SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_INVALID_STATE);
     }
 
     if (my_status->second ==
         duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
-        if (req_status->second ==
-            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
-
+        const auto &my_master_cluster =
+            app.envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
+        if (my_master_cluster == app.envs.end() ||
+            my_master_cluster->second != req_master_cluster) {
+            // The source cluster is not matched.
             SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_APP_EXIST);
         }
 
         if (req_status->second ==
-            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
-
+                duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating ||
+            req_status->second ==
+                duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
+            // It is idempotent for the repeated requests.
             SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_OK);
         }
 
+        // Some undefined creating status from the source table.
         SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_INVALID_STATE);
     }
 
+    // Some undefined creating status from the target table.
     SEND_CREATE_APP_RESPONSE_TO_CLIENT_AND_RETURN(msg, response, ERR_INVALID_STATE);
 }
 
