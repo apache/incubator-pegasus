@@ -25,7 +25,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include "common//duplication_common.h"
+#include "common/duplication_common.h"
 #include "common/common.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"

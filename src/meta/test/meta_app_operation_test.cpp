@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/duplication_common.h"
 #include "common/gpid.h"
 #include "common/json_helper.h"
 #include "common/replica_envs.h"
@@ -62,7 +63,7 @@ namespace replication {
 class meta_app_operation_test : public meta_test_base
 {
 public:
-    meta_app_operation_test() {}
+    meta_app_operation_test() = default;
 
     error_code create_app_test(int32_t partition_count,
                                int32_t replica_count,
@@ -320,6 +321,34 @@ public:
         tracker.wait_outstanding_tasks();
     }
 
+    void verify_app_envs(const std::string &app_name,
+                         const std::map<std::string, std::string> &expected_envs)
+    {
+        auto app = find_app(app_name);
+        CHECK(app, "app({}) does not exist", app_name);
+
+        auto app_path = _ss->get_app_path(*app);
+
+        dsn::task_tracker tracker;
+        _ms->get_remote_storage()->get_data(
+            app_path,
+            LPC_META_CALLBACK,
+            [app_name, expected_envs, app](error_code ec, const blob &value) {
+                ASSERT_EQ(ERR_OK, ec);
+
+                app_info ainfo;
+                dsn::json::json_forwarder<app_info>::decode(value, ainfo);
+
+                ASSERT_EQ(app_name, app->app_name);
+                ASSERT_EQ(app_name, ainfo.app_name);
+                ASSERT_EQ(app->app_id, ainfo.app_id);
+                ASSERT_EQ(expected_envs, app->envs);
+                ASSERT_EQ(expected_envs, ainfo.envs);
+            },
+            &tracker);
+        tracker.wait_outstanding_tasks();
+    }
+
     const std::string APP_NAME = "app_operation_test";
     const std::string OLD_APP_NAME = "old_app_operation";
 };
@@ -502,6 +531,34 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_OK,
          {{"rocksdb.write_buffer_size", "33554432"}}},
+        {APP_NAME + "_13",
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_OK,
+         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kDuplicationEnvMasterAppNameKey, APP_NAME + "_13_remote"},
+          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
+        {APP_NAME + "_13",
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_AVAILABLE,
+         ERR_OK,
+         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kDuplicationEnvMasterAppNameKey, APP_NAME + "_13_remote"},
+          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
     };
 
     clear_nodes();
@@ -546,12 +603,17 @@ TEST_F(meta_app_operation_test, create_app)
         } else if (test.before_status != app_status::AS_INVALID) {
             update_app_status(test.before_status);
         }
+
         auto err = create_app_test(test.partition_count,
                                    test.replica_count,
                                    test.success_if_exist,
                                    test.app_name,
                                    test.envs);
-        ASSERT_EQ(err, test.expected_err);
+        ASSERT_EQ(test.expected_err, err);
+
+        if (test.expected_err == ERR_OK) {
+            verify_app_envs(test.app_name, test.envs);
+        }
 
         _ms->set_node_state(nodes, true);
     }
@@ -570,38 +632,39 @@ TEST_F(meta_app_operation_test, create_app)
             ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
         }
     }
+
     // set FLAGS_min_allowed_replica_count successfully
     res = update_flag("min_allowed_replica_count", "2");
     ASSERT_TRUE(res.is_ok());
-    ASSERT_EQ(FLAGS_min_allowed_replica_count, 2);
+    ASSERT_EQ(2, FLAGS_min_allowed_replica_count);
 
     // set FLAGS_max_allowed_replica_count successfully
     res = update_flag("max_allowed_replica_count", "6");
     ASSERT_TRUE(res.is_ok());
-    ASSERT_EQ(FLAGS_max_allowed_replica_count, 6);
+    ASSERT_EQ(6, FLAGS_max_allowed_replica_count);
 
     // failed to set FLAGS_min_allowed_replica_count due to individual validation
     res = update_flag("min_allowed_replica_count", "0");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
-    ASSERT_EQ(FLAGS_min_allowed_replica_count, 2);
+    ASSERT_EQ(2, FLAGS_min_allowed_replica_count);
     std::cout << res.description() << std::endl;
 
     // failed to set FLAGS_max_allowed_replica_count due to individual validation
     res = update_flag("max_allowed_replica_count", "0");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
-    ASSERT_EQ(FLAGS_max_allowed_replica_count, 6);
+    ASSERT_EQ(6, FLAGS_max_allowed_replica_count);
     std::cout << res.description() << std::endl;
 
     // failed to set FLAGS_min_allowed_replica_count due to grouped validation
     res = update_flag("min_allowed_replica_count", "7");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
-    ASSERT_EQ(FLAGS_min_allowed_replica_count, 2);
+    ASSERT_EQ(2, FLAGS_min_allowed_replica_count);
     std::cout << res.description() << std::endl;
 
     // failed to set FLAGS_max_allowed_replica_count due to grouped validation
     res = update_flag("max_allowed_replica_count", "1");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
-    ASSERT_EQ(FLAGS_max_allowed_replica_count, 6);
+    ASSERT_EQ(6, FLAGS_max_allowed_replica_count);
     std::cout << res.description() << std::endl;
 
     // recover original FLAGS_min_allowed_replica_count
@@ -614,7 +677,7 @@ TEST_F(meta_app_operation_test, create_app)
     res = update_flag("max_allowed_replica_count",
                       std::to_string(reserved_max_allowed_replica_count));
     ASSERT_TRUE(res.is_ok());
-    ASSERT_EQ(FLAGS_max_allowed_replica_count, reserved_max_allowed_replica_count);
+    ASSERT_EQ(reserved_max_allowed_replica_count, FLAGS_max_allowed_replica_count);
 
     // recover original FLAGS_min_live_node_count_for_unfreeze
     set_min_live_node_count_for_unfreeze(reserved_min_live_node_count_for_unfreeze);

@@ -76,7 +76,7 @@ public:
     static const std::string kTestRemoteAppName;
     static const int32_t kTestRemoteReplicaCount;
 
-    meta_duplication_service_test() {}
+    meta_duplication_service_test() = default;
 
     duplication_add_response create_dup(const std::string &app_name,
                                         const std::string &remote_cluster,
