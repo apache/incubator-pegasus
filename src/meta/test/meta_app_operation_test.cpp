@@ -17,6 +17,7 @@
 
 #include <fmt/core.h>
 #include <stdint.h>
+#include <algorithm>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -356,51 +357,6 @@ public:
 TEST_F(meta_app_operation_test, create_app)
 {
     // Test cases: (assert min_allowed_replica_count <= max_allowed_replica_count)
-    // - wrong partition_count (< 0)
-    // - wrong partition_count (= 0)
-    // - wrong replica_count (< 0)
-    // - wrong replica_count (= 0)
-    // - wrong replica_count (> max_allowed_replica_count > alive_node_count)
-    // - wrong replica_count (> alive_node_count > max_allowed_replica_count)
-    // - wrong replica_count (> alive_node_count = max_allowed_replica_count)
-    // - wrong replica_count (= max_allowed_replica_count, and > alive_node_count)
-    // - wrong replica_count (< max_allowed_replica_count, and > alive_node_count)
-    // - wrong replica_count (= alive_node_count, and > max_allowed_replica_count)
-    // - wrong replica_count (< alive_node_count, and > max_allowed_replica_count)
-    // - valid replica_count (= max_allowed_replica_count, and = alive_node_count)
-    // - valid replica_count (= max_allowed_replica_count, and < alive_node_count)
-    // - valid replica_count (< max_allowed_replica_count, and = alive_node_count)
-    // - valid replica_count (< max_allowed_replica_count < alive_node_count)
-    // - valid replica_count (< alive_node_count < max_allowed_replica_count)
-    // - valid replica_count (< alive_node_count = max_allowed_replica_count)
-    // - wrong replica_count (< min_allowed_replica_count < alive_node_count)
-    // - wrong replica_count (< alive_node_count < min_allowed_replica_count)
-    // - wrong replica_count (< min_allowed_replica_count = alive_node_count)
-    // - wrong replica_count (< min_allowed_replica_count, and > alive_node_count)
-    // - wrong replica_count (< min_allowed_replica_count, and = alive_node_count)
-    // - wrong replica_count (= min_allowed_replica_count, and > alive_node_count)
-    // - valid replica_count (= min_allowed_replica_count, and < alive_node_count)
-    // - cluster freezed (alive_node_count = 0)
-    // - cluster freezed (alive_node_count = 1 < min_live_node_count_for_unfreeze)
-    // - cluster freezed (alive_node_count = 2 < min_live_node_count_for_unfreeze)
-    // - cluster not freezed (alive_node_count = min_live_node_count_for_unfreeze)
-    // - create succeed with single-replica
-    // - create succeed with double-replica
-    // - create app succeed
-    // - create failed with table existed
-    // - wrong app_status creating
-    // - wrong app_status recalling
-    // - wrong app_status dropping
-    // - create succeed with app_status dropped
-    // - create succeed with success_if_exist=true
-    // - wrong rocksdb.num_levels (< 1)
-    // - wrong rocksdb.num_levels (> 10)
-    // - wrong rocksdb.num_levels (non-digital character)
-    // - create app with rocksdb.num_levels (= 5) succeed
-    // - wrong rocksdb.write_buffer_size (< (16<<20))
-    // - wrong rocksdb.write_buffer_size (> (512<<20))
-    // - wrong rocksdb.write_buffer_size (non-digital character)
-    // - create app with rocksdb.write_buffer_size (= (32<<20)) succeed
     struct create_test
     {
         std::string app_name;
@@ -414,43 +370,81 @@ TEST_F(meta_app_operation_test, create_app)
         error_code expected_err;
         std::map<std::string, std::string> envs = {};
     } tests[] = {
+        // Wrong partition_count (< 0).
         {APP_NAME, -1, 3, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong partition_count (= 0).
         {APP_NAME, 0, 3, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (< 0).
         {APP_NAME, 4, -1, 1, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (= 0).
         {APP_NAME, 4, 0, 1, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (> max_allowed_replica_count > alive_node_count).
         {APP_NAME, 4, 6, 2, 4, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (> alive_node_count > max_allowed_replica_count).
         {APP_NAME, 4, 7, 2, 6, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (> alive_node_count = max_allowed_replica_count).
         {APP_NAME, 4, 6, 2, 5, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (= max_allowed_replica_count, and > alive_node_count).
         {APP_NAME, 4, 5, 2, 4, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (< max_allowed_replica_count, and > alive_node_count).
         {APP_NAME, 4, 4, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (= alive_node_count, and > max_allowed_replica_count).
         {APP_NAME, 4, 6, 2, 6, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (< alive_node_count, and > max_allowed_replica_count).
         {APP_NAME, 4, 6, 2, 7, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Valid replica_count (= max_allowed_replica_count, and = alive_node_count).
         {APP_NAME + "_1", 4, 5, 2, 5, 1, false, app_status::AS_INVALID, ERR_OK},
+        // Valid replica_count (= max_allowed_replica_count, and < alive_node_count).
         {APP_NAME + "_2", 4, 5, 2, 6, 1, false, app_status::AS_INVALID, ERR_OK},
+        // Valid replica_count (< max_allowed_replica_count, and = alive_node_count).
         {APP_NAME + "_3", 4, 4, 2, 4, 1, false, app_status::AS_INVALID, ERR_OK},
+        // Valid replica_count (< max_allowed_replica_count < alive_node_count).
         {APP_NAME + "_4", 4, 4, 2, 6, 1, false, app_status::AS_INVALID, ERR_OK},
+        // Valid replica_count (< alive_node_count < max_allowed_replica_count).
         {APP_NAME + "_5", 4, 3, 2, 4, 1, false, app_status::AS_INVALID, ERR_OK},
+        // Valid replica_count (< alive_node_count = max_allowed_replica_count).
         {APP_NAME + "_6", 4, 4, 2, 5, 1, false, app_status::AS_INVALID, ERR_OK},
+        // Wrong replica_count (< min_allowed_replica_count < alive_node_count).
         {APP_NAME, 4, 3, 2, 5, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (< alive_node_count < min_allowed_replica_count).
         {APP_NAME, 4, 3, 2, 4, 5, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (< min_allowed_replica_count = alive_node_count).
         {APP_NAME, 4, 3, 2, 4, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (< min_allowed_replica_count, and > alive_node_count).
         {APP_NAME, 4, 3, 2, 2, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (< min_allowed_replica_count, and = alive_node_count).
         {APP_NAME, 4, 3, 2, 3, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Wrong replica_count (= min_allowed_replica_count, and > alive_node_count).
         {APP_NAME, 4, 4, 2, 3, 4, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
+        // Valid replica_count (= min_allowed_replica_count, and < alive_node_count).
         {APP_NAME + "_7", 4, 3, 2, 4, 3, false, app_status::AS_INVALID, ERR_OK},
+        // Cluster freezed (alive_node_count = 0).
         {APP_NAME, 4, 1, 1, 0, 1, false, app_status::AS_INVALID, ERR_STATE_FREEZED},
+        // Cluster freezed (alive_node_count = 1 < min_live_node_count_for_unfreeze).
         {APP_NAME, 4, 2, 2, 1, 1, false, app_status::AS_INVALID, ERR_STATE_FREEZED},
+        // Cluster freezed (alive_node_count = 2 < min_live_node_count_for_unfreeze).
         {APP_NAME, 4, 3, 3, 2, 1, false, app_status::AS_INVALID, ERR_STATE_FREEZED},
+        // Cluster not freezed (alive_node_count = min_live_node_count_for_unfreeze).
         {APP_NAME + "_8", 4, 3, 3, 3, 1, false, app_status::AS_INVALID, ERR_OK},
+        // Create succeed with single-replica.
         {APP_NAME + "_9", 4, 1, 1, 1, 1, false, app_status::AS_INVALID, ERR_OK},
+        // Create succeed with double-replica.
         {APP_NAME + "_10", 4, 2, 1, 2, 2, false, app_status::AS_INVALID, ERR_OK},
+        // Create app succeed.
         {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_INVALID, ERR_OK},
+        // Create failed with table existed.
         {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_INVALID, ERR_APP_EXIST},
+        // Wrong app_status creating.
         {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_CREATING, ERR_BUSY_CREATING},
+        // Wrong app_status recalling.
         {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_RECALLING, ERR_BUSY_CREATING},
+        // Wrong app_status dropping.
         {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_DROPPING, ERR_BUSY_DROPPING},
+        // Create succeed with app_status dropped.
         {APP_NAME, 4, 3, 2, 3, 3, false, app_status::AS_DROPPED, ERR_OK},
+        // Create succeed with success_if_exist=true.
         {APP_NAME, 4, 3, 2, 3, 3, true, app_status::AS_INVALID, ERR_OK},
+        // Wrong rocksdb.num_levels (< 1).
         {APP_NAME,
          4,
          3,
@@ -461,6 +455,7 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_INVALID_PARAMETERS,
          {{"rocksdb.num_levels", "0"}}},
+        // Wrong rocksdb.num_levels (> 10).
         {APP_NAME,
          4,
          3,
@@ -471,6 +466,7 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_INVALID_PARAMETERS,
          {{"rocksdb.num_levels", "11"}}},
+        // Wrong rocksdb.num_levels (non-digital character).
         {APP_NAME + "_11",
          4,
          3,
@@ -481,6 +477,7 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_INVALID_PARAMETERS,
          {{"rocksdb.num_levels", "5i"}}},
+        // Create app with rocksdb.num_levels (= 5) succeed.
         {APP_NAME + "_11",
          4,
          3,
@@ -491,6 +488,7 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_OK,
          {{"rocksdb.num_levels", "5"}}},
+        // Wrong rocksdb.write_buffer_size (< (16<<20)).
         {APP_NAME,
          4,
          3,
@@ -501,6 +499,7 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_INVALID_PARAMETERS,
          {{"rocksdb.write_buffer_size", "1000"}}},
+        // Wrong rocksdb.write_buffer_size (> (512<<20)).
         {APP_NAME,
          4,
          3,
@@ -511,6 +510,7 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_INVALID_PARAMETERS,
          {{"rocksdb.write_buffer_size", "1073741824"}}},
+        // Wrong rocksdb.write_buffer_size (non-digital character).
         {APP_NAME,
          4,
          3,
@@ -521,6 +521,7 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_INVALID_PARAMETERS,
          {{"rocksdb.write_buffer_size", "n33554432"}}},
+        // Create app with rocksdb.write_buffer_size (= (32<<20)) succeed.
         {APP_NAME + "_12",
          4,
          3,
@@ -531,6 +532,8 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_INVALID,
          ERR_OK,
          {{"rocksdb.write_buffer_size", "33554432"}}},
+        // Process the first request of creating follower app for duplication from the
+        // source cluster.
         {APP_NAME + "_13",
          4,
          3,
@@ -545,6 +548,8 @@ TEST_F(meta_app_operation_test, create_app)
           {duplication_constants::kDuplicationEnvMasterAppNameKey, APP_NAME + "_13_remote"},
           {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
+        // Process the repeated request of creating follower app for duplication from the
+        // source cluster.
         {APP_NAME + "_13",
          4,
          3,
