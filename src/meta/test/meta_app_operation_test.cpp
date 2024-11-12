@@ -16,7 +16,7 @@
 // under the License.
 
 #include <fmt/core.h>
-#include <stdint.h>
+#include <cstdint>
 #include <algorithm>
 #include <functional>
 #include <iostream>
@@ -568,26 +568,26 @@ TEST_F(meta_app_operation_test, create_app)
 
     clear_nodes();
 
-    // keep the number of all nodes greater than that of alive nodes
+    // Keep the number of all nodes greater than that of alive nodes.
     const int total_node_count = 10;
     auto nodes = ensure_enough_alive_nodes(total_node_count);
 
-    // the meta function level will become freezed once
+    // The meta function level will become freezed once
     // alive_nodes * 100 < total_nodes * _node_live_percentage_threshold_for_update
     // even if alive_nodes >= min_live_node_count_for_unfreeze
     set_node_live_percentage_threshold_for_update(0);
 
-    // save original FLAGS_min_live_node_count_for_unfreeze
+    // Save original FLAGS_min_live_node_count_for_unfreeze
     auto reserved_min_live_node_count_for_unfreeze = FLAGS_min_live_node_count_for_unfreeze;
 
-    // save original FLAGS_max_allowed_replica_count
+    // Save original FLAGS_max_allowed_replica_count
     auto reserved_max_allowed_replica_count = FLAGS_max_allowed_replica_count;
 
-    // keep FLAGS_max_allowed_replica_count fixed in the tests
+    // Keep FLAGS_max_allowed_replica_count fixed in the tests
     auto res = update_flag("max_allowed_replica_count", "5");
     ASSERT_TRUE(res.is_ok());
 
-    // save original FLAGS_min_allowed_replica_count
+    // Save original FLAGS_min_allowed_replica_count.
     auto reserved_min_allowed_replica_count = FLAGS_min_allowed_replica_count;
 
     for (auto test : tests) {
