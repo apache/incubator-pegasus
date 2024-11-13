@@ -561,7 +561,14 @@ void meta_duplication_service::on_follower_app_creating_for_duplication(
     // after executing, now using `_is_altering` to judge whether `updating` or
     // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
     _meta_svc->get_meta_storage()->set_data(
-        std::string(dup->store_path), std::move(value), [dup]() { dup->persist_status(); });
+        std::string(dup->store_path), std::move(value), [dup]() {
+            dup->persist_status();
+            LOG_INFO("create follower app[{}.{}] to trigger duplicate checkpoint successfully: "
+                     "duplication_status = {}",
+                     dup->remote_cluster_name,
+                     dup->remote_app_name,
+                     duplication_status_to_string(dup->status()));
+        });
 }
 
 void meta_duplication_service::on_follower_app_created_for_duplication(
@@ -725,7 +732,14 @@ void meta_duplication_service::check_follower_app_if_create_completed(
             // after executing, now using `_is_altering` to judge whether `updating` or
             // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
             _meta_svc->get_meta_storage()->set_data(
-                std::string(dup->store_path), std::move(value), [dup]() { dup->persist_status(); });
+                std::string(dup->store_path), std::move(value), [dup]() {
+                    dup->persist_status();
+                    LOG_INFO("all of the replicas of follower app[{}.{}] have been ready: "
+                             "duplication_status = {}",
+                             dup->remote_cluster_name,
+                             dup->remote_app_name,
+                             duplication_status_to_string(dup->status()));
+                });
         });
 }
 

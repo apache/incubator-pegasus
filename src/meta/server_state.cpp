@@ -1220,12 +1220,12 @@ void server_state::create_app(dsn::message_ex *msg)
 
 #define FAIL_UNDEFINED_CREATE_FOLLOWER_APP_STATUS(val, desc)                                       \
     LOG_ERROR("undefined value({}) of env {} in the {}: app_name={}, app_id={}",                   \
-              (val),                                                                               \
+              val,                                                                                 \
               duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,              \
-              (desc),                                                                              \
+              desc,                                                                                \
               app->app_name,                                                                       \
               app->app_id);                                                                        \
-    FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_STATE)
+    FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_PARAMETERS)
 
 void server_state::process_create_follower_app_status(
     message_ex *msg,
@@ -1280,7 +1280,7 @@ void server_state::process_create_follower_app_status(
 
         if (req_status->second ==
             duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
-            // Update the creating status both on the remote storage and local memory.
+            // Mark the status as created both on the remote storage and local memory.
             update_create_follower_app_status(
                 msg,
                 duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating,
@@ -1306,7 +1306,7 @@ void server_state::process_create_follower_app_status(
                       my_status->second,
                       app->app_name,
                       app->app_id);
-            FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_STATE);
+            FAIL_CREATE_APP_RESPONSE(msg, response, ERR_APP_EXIST);
         }
 
         if (req_status->second ==
