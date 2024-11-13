@@ -352,6 +352,8 @@ public:
 
     const std::string APP_NAME = "app_operation_test";
     const std::string OLD_APP_NAME = "old_app_operation";
+    const std::string DUP_MASTER_APP_NAME = "dup_master_test";
+    const std::string DUP_FOLLOWER_APP_NAME = "dup_follower_test";
 };
 
 TEST_F(meta_app_operation_test, create_app)
@@ -534,7 +536,7 @@ TEST_F(meta_app_operation_test, create_app)
          {{"rocksdb.write_buffer_size", "33554432"}}},
         // Process the first request of creating follower app for duplication from the
         // source cluster.
-        {APP_NAME + "_13",
+        {DUP_FOLLOWER_APP_NAME,
          4,
          3,
          2,
@@ -545,12 +547,28 @@ TEST_F(meta_app_operation_test, create_app)
          ERR_OK,
          {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
           {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-          {duplication_constants::kDuplicationEnvMasterAppNameKey, APP_NAME + "_13_remote"},
+          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
+        // Process the request of creating follower app for duplication from the wrong
+        // source cluster.
+        {DUP_FOLLOWER_APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_AVAILABLE,
+         ERR_APP_EXIST,
+         {{duplication_constants::kDuplicationEnvMasterClusterKey, "another_source_cluster"},
+          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
           {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
         // Process the repeated request of creating follower app for duplication from the
         // source cluster.
-        {APP_NAME + "_13",
+        {DUP_FOLLOWER_APP_NAME,
          4,
          3,
          2,
@@ -561,9 +579,41 @@ TEST_F(meta_app_operation_test, create_app)
          ERR_OK,
          {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
           {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-          {duplication_constants::kDuplicationEnvMasterAppNameKey, APP_NAME + "_13_remote"},
+          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
           {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
+        // Process the request of marking follower app as created for duplication from the
+        // source cluster.
+        {DUP_FOLLOWER_APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_AVAILABLE,
+         ERR_OK,
+         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated}}},
+        // Process the repeated request of marking follower app as created for duplication
+        // from the source cluster.
+        {DUP_FOLLOWER_APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_AVAILABLE,
+         ERR_OK,
+         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated}}},
     };
 
     clear_nodes();
@@ -590,7 +640,7 @@ TEST_F(meta_app_operation_test, create_app)
     // Save original FLAGS_min_allowed_replica_count.
     auto reserved_min_allowed_replica_count = FLAGS_min_allowed_replica_count;
 
-    for (auto test : tests) {
+    for (const auto &test : tests) {
         res = update_flag("min_allowed_replica_count",
                           std::to_string(test.min_allowed_replica_count));
         ASSERT_TRUE(res.is_ok());
@@ -638,53 +688,53 @@ TEST_F(meta_app_operation_test, create_app)
         }
     }
 
-    // set FLAGS_min_allowed_replica_count successfully
+    // Set FLAGS_min_allowed_replica_count successfully.
     res = update_flag("min_allowed_replica_count", "2");
     ASSERT_TRUE(res.is_ok());
     ASSERT_EQ(2, FLAGS_min_allowed_replica_count);
 
-    // set FLAGS_max_allowed_replica_count successfully
+    // Set FLAGS_max_allowed_replica_count successfully.
     res = update_flag("max_allowed_replica_count", "6");
     ASSERT_TRUE(res.is_ok());
     ASSERT_EQ(6, FLAGS_max_allowed_replica_count);
 
-    // failed to set FLAGS_min_allowed_replica_count due to individual validation
+    // Failed to set FLAGS_min_allowed_replica_count due to individual validation.
     res = update_flag("min_allowed_replica_count", "0");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
     ASSERT_EQ(2, FLAGS_min_allowed_replica_count);
     std::cout << res.description() << std::endl;
 
-    // failed to set FLAGS_max_allowed_replica_count due to individual validation
+    // Failed to set FLAGS_max_allowed_replica_count due to individual validation.
     res = update_flag("max_allowed_replica_count", "0");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
     ASSERT_EQ(6, FLAGS_max_allowed_replica_count);
     std::cout << res.description() << std::endl;
 
-    // failed to set FLAGS_min_allowed_replica_count due to grouped validation
+    // Failed to set FLAGS_min_allowed_replica_count due to grouped validation.
     res = update_flag("min_allowed_replica_count", "7");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
     ASSERT_EQ(2, FLAGS_min_allowed_replica_count);
     std::cout << res.description() << std::endl;
 
-    // failed to set FLAGS_max_allowed_replica_count due to grouped validation
+    // Failed to set FLAGS_max_allowed_replica_count due to grouped validation.
     res = update_flag("max_allowed_replica_count", "1");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
     ASSERT_EQ(6, FLAGS_max_allowed_replica_count);
     std::cout << res.description() << std::endl;
 
-    // recover original FLAGS_min_allowed_replica_count
+    // Recover original FLAGS_min_allowed_replica_count.
     res = update_flag("min_allowed_replica_count",
                       std::to_string(reserved_min_allowed_replica_count));
     ASSERT_TRUE(res.is_ok());
     ASSERT_EQ(FLAGS_min_allowed_replica_count, reserved_min_allowed_replica_count);
 
-    // recover original FLAGS_max_allowed_replica_count
+    // Recover original FLAGS_max_allowed_replica_count.
     res = update_flag("max_allowed_replica_count",
                       std::to_string(reserved_max_allowed_replica_count));
     ASSERT_TRUE(res.is_ok());
     ASSERT_EQ(reserved_max_allowed_replica_count, FLAGS_max_allowed_replica_count);
 
-    // recover original FLAGS_min_live_node_count_for_unfreeze
+    // Recover original FLAGS_min_live_node_count_for_unfreeze.
     set_min_live_node_count_for_unfreeze(reserved_min_live_node_count_for_unfreeze);
 }
 

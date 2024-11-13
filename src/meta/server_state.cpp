@@ -223,11 +223,11 @@ int server_state::count_staging_app()
     response.err = dsn::ERR_OK;                                                                    \
     response.appid = app_id;
 
-#define FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, err_code)                               \
+#define FAIL_CREATE_APP_RESPONSE(msg, response, err_code)                                          \
     INIT_CREATE_APP_RESPONSE_WITH_ERR(response, err_code);                                         \
     REPLY_TO_CLIENT_AND_RETURN(msg, response)
 
-#define SUCC_CREATE_APP_RESPONSE_AND_RETURN(msg, response, app_id)                                 \
+#define SUCC_CREATE_APP_RESPONSE(msg, response, app_id)                                            \
     INIT_CREATE_APP_RESPONSE_WITH_OK(response, app_id);                                            \
     REPLY_TO_CLIENT_AND_RETURN(msg, response)
 
@@ -1132,16 +1132,20 @@ void server_state::create_app(dsn::message_ex *msg)
     auto level = _meta_svc->get_function_level();
     if (level <= meta_function_level::fl_freezed) {
         LOG_ERROR("current meta function level is freezed, since there are too few alive nodes");
-        FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_STATE_FREEZED);
+        FAIL_CREATE_APP_RESPONSE(msg, response, ERR_STATE_FREEZED);
     }
 
-    if (request.options.partition_count <= 0 ||
-        !validate_target_max_replica_count(request.options.replica_count)) {
-        FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_INVALID_PARAMETERS);
+    if (request.options.partition_count <= 0) {
+        LOG_ERROR("partition_count({}) is invalid", request.options.partition_count);
+        FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_PARAMETERS);
+    }
+
+    if (!validate_target_max_replica_count(request.options.replica_count)) {
+        FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_PARAMETERS);
     }
 
     if (!_app_env_validator.validate_app_envs(request.options.envs)) {
-        FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_INVALID_PARAMETERS);
+        FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_PARAMETERS);
     }
 
     zauto_write_lock l(_lock);
@@ -1203,17 +1207,55 @@ void server_state::create_app(dsn::message_ex *msg)
     do_app_create(app);
 }
 
+// It is idempotent for the repeated requests.
+#define SUCC_IDEMPOTENT_CREATE_FOLLOWER_APP_STATUS()                                               \
+    LOG_INFO("repeated request that updates env {} of the follower app from {} to {}, "            \
+             "just ignore: app_name={}, app_id={}",                                                \
+             duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,               \
+             my_status->second,                                                                    \
+             req_status->second,                                                                   \
+             app->app_name,                                                                        \
+             app->app_id);                                                                         \
+    SUCC_CREATE_APP_RESPONSE(msg, response, app->app_id)
+
+#define FAIL_UNDEFINED_CREATE_FOLLOWER_APP_STATUS(val, desc)                                       \
+    LOG_ERROR("undefined value({}) of env {} in the {}: app_name={}, app_id={}",                   \
+              (val),                                                                               \
+              duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,              \
+              (desc),                                                                              \
+              app->app_name,                                                                       \
+              app->app_id);                                                                        \
+    FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_STATE)
+
 void server_state::process_create_follower_app_status(
     message_ex *msg,
     const configuration_create_app_request &request,
     const std::string &req_master_cluster,
     std::shared_ptr<app_state> &app)
 {
+    const auto &my_master_cluster =
+        app->envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
+    if (my_master_cluster == app->envs.end() || my_master_cluster->second != req_master_cluster) {
+        // The source cluster is not matched.
+        LOG_ERROR("env {} are not matched between the request({}) and the follower "
+                  "app({}): app_name={}, app_id={}",
+                  duplication_constants::kDuplicationEnvMasterClusterKey,
+                  req_master_cluster,
+                  my_master_cluster == app->envs.end() ? "<nil>" : my_master_cluster->second,
+                  app->app_name,
+                  app->app_id);
+        FAIL_CREATE_APP_RESPONSE(msg, response, ERR_APP_EXIST);
+    }
+
     const auto &req_status = request.options.envs.find(
         duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
     if (req_status == request.options.envs.end()) {
         // Still reply with ERR_APP_EXIST to the master cluster of old versions.
-        FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_APP_EXIST);
+        LOG_ERROR("no env {} in the request: app_name={}, app_id={}",
+                  duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+                  app->app_name,
+                  app->app_id);
+        FAIL_CREATE_APP_RESPONSE(msg, response, ERR_APP_EXIST);
     }
 
     const auto &my_status =
@@ -1221,7 +1263,11 @@ void server_state::process_create_follower_app_status(
     if (my_status == app->envs.end()) {
         // Since currently this table have been AS_AVAILABLE, it should have the env of
         // creating status.
-        FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_INVALID_STATE);
+        LOG_ERROR("no env {} in the follower app: app_name={}, app_id={}",
+                  duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+                  app->app_name,
+                  app->app_id);
+        FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_STATE);
         return;
     }
 
@@ -1229,16 +1275,7 @@ void server_state::process_create_follower_app_status(
         duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
         if (req_status->second ==
             duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
-            const auto &my_master_cluster =
-                app->envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
-            if (my_master_cluster == app->envs.end() ||
-                my_master_cluster->second != req_master_cluster) {
-                // The source cluster is not matched.
-                FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_APP_EXIST);
-            }
-
-            // It is idempotent for the repeated requests.
-            SUCC_CREATE_APP_RESPONSE_AND_RETURN(msg, response, app->app_id);
+            SUCC_IDEMPOTENT_CREATE_FOLLOWER_APP_STATUS();
         }
 
         if (req_status->second ==
@@ -1252,35 +1289,40 @@ void server_state::process_create_follower_app_status(
             return;
         }
 
-        // Some undefined creating status from the source table.
-        FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_INVALID_STATE);
+        FAIL_UNDEFINED_CREATE_FOLLOWER_APP_STATUS(req_status->second, "request");
     }
 
     if (my_status->second ==
         duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
-        const auto &my_master_cluster =
-            app->envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
-        if (my_master_cluster == app->envs.end() ||
-            my_master_cluster->second != req_master_cluster) {
-            // The source cluster is not matched.
-            FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_APP_EXIST);
+        if (req_status->second ==
+            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
+            // The status of the duplication should have been DS_APP since the follower app
+            // has been marked as created. Thus, the master cluster should never send the
+            // request with creating status again.
+            LOG_ERROR("the master cluster should never send the request with env {} valued {} "
+                      "again since it has been {} in the follower app: app_name={}, app_id={}",
+                      duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+                      req_status->second,
+                      my_status->second,
+                      app->app_name,
+                      app->app_id);
+            FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_STATE);
         }
 
         if (req_status->second ==
-                duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating ||
-            req_status->second ==
-                duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
-            // It is idempotent for the repeated requests.
-            SUCC_CREATE_APP_RESPONSE_AND_RETURN(msg, response, app->app_id);
+            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
+            SUCC_IDEMPOTENT_CREATE_FOLLOWER_APP_STATUS();
         }
 
-        // Some undefined creating status from the source table.
-        FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_INVALID_STATE);
+        FAIL_UNDEFINED_CREATE_FOLLOWER_APP_STATUS(req_status->second, "request");
     }
 
     // Some undefined creating status from the target table.
-    FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ERR_INVALID_STATE);
+    FAIL_UNDEFINED_CREATE_FOLLOWER_APP_STATUS(my_status->second, "follower app");
 }
+
+#undef FAIL_UNDEFINED_CREATE_FOLLOWER_APP_STATUS
+#undef SUCC_IDEMPOTENT_CREATE_FOLLOWER_APP_STATUS
 
 void server_state::update_create_follower_app_status(message_ex *msg,
                                                      const std::string &old_status,
@@ -1290,6 +1332,14 @@ void server_state::update_create_follower_app_status(message_ex *msg,
     app_info ainfo = *app;
     ainfo.envs[duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey] = new_status;
     auto app_path = get_app_path(*app);
+
+    LOG_INFO("ready to update env {} of follower app from {} to {}, app_name={}, app_id={}, ",
+             duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+             old_status,
+             new_status,
+             app->app_name,
+             app->app_id);
+
     do_update_app_info(
         app_path, ainfo, [this, msg, old_status, new_status, app](error_code ec) mutable {
             {
@@ -1306,7 +1356,7 @@ void server_state::update_create_follower_app_status(message_ex *msg,
                         duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
                         old_status,
                         new_status);
-                    FAIL_CREATE_APP_RESPONSE_AND_RETURN(msg, response, ec);
+                    FAIL_CREATE_APP_RESPONSE(msg, response, ec);
                 }
 
                 app->envs[duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey] =
@@ -1318,7 +1368,7 @@ void server_state::update_create_follower_app_status(message_ex *msg,
                          duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
                          old_status,
                          new_status);
-                SUCC_CREATE_APP_RESPONSE_AND_RETURN(msg, response, app->app_id);
+                SUCC_CREATE_APP_RESPONSE(msg, response, app->app_id);
             }
         });
 }
@@ -4197,8 +4247,8 @@ void server_state::recover_app_max_replica_count(std::shared_ptr<app_state> &app
         &tracker);
 }
 
-#undef SUCC_CREATE_APP_RESPONSE_AND_RETURN
-#undef FAIL_CREATE_APP_RESPONSE_AND_RETURN
+#undef SUCC_CREATE_APP_RESPONSE
+#undef FAIL_CREATE_APP_RESPONSE
 #undef INIT_CREATE_APP_RESPONSE_WITH_OK
 #undef INIT_CREATE_APP_RESPONSE_WITH_ERR
 
