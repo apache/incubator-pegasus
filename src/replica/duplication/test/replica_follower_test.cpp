@@ -62,9 +62,8 @@ public:
     void update_mock_replica(const dsn::app_info &app)
     {
         bool is_duplication_follower =
-            (app.envs.find(duplication_constants::kDuplicationEnvMasterClusterKey) !=
-             app.envs.end()) &&
-            (app.envs.find(duplication_constants::kDuplicationEnvMasterMetasKey) != app.envs.end());
+            (app.envs.find(duplication_constants::kEnvMasterClusterKey) != app.envs.end()) &&
+            (app.envs.find(duplication_constants::kEnvMasterMetasKey) != app.envs.end());
         _mock_replica = stub->generate_replica_ptr(
             app, gpid(2, 1), partition_status::PS_PRIMARY, 1, false, is_duplication_follower);
     }
@@ -115,9 +114,8 @@ public:
 
     void test_init_master_info(const std::string &expected_master_app_name)
     {
-        _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
-                               kTestMasterClusterName);
-        _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+        _app_info.envs.emplace(duplication_constants::kEnvMasterClusterKey, kTestMasterClusterName);
+        _app_info.envs.emplace(duplication_constants::kEnvMasterMetasKey,
                                "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
         update_mock_replica(_app_info);
 
@@ -156,16 +154,14 @@ TEST_P(replica_follower_test, test_init_master_info_without_master_app_env)
 TEST_P(replica_follower_test, test_init_master_info_with_master_app_env)
 {
     static const std::string kTestAnotherMasterAppName("another_follower");
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterAppNameKey,
-                           kTestAnotherMasterAppName);
+    _app_info.envs.emplace(duplication_constants::kEnvMasterAppNameKey, kTestAnotherMasterAppName);
     test_init_master_info(kTestAnotherMasterAppName);
 }
 
 TEST_P(replica_follower_test, test_duplicate_checkpoint)
 {
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
-                           kTestMasterClusterName);
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+    _app_info.envs.emplace(duplication_constants::kEnvMasterClusterKey, kTestMasterClusterName);
+    _app_info.envs.emplace(duplication_constants::kEnvMasterMetasKey,
                            "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
     update_mock_replica(_app_info);
 
@@ -184,9 +180,8 @@ TEST_P(replica_follower_test, test_duplicate_checkpoint)
 
 TEST_P(replica_follower_test, test_async_duplicate_checkpoint_from_master_replica)
 {
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
-                           kTestMasterClusterName);
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+    _app_info.envs.emplace(duplication_constants::kEnvMasterClusterKey, kTestMasterClusterName);
+    _app_info.envs.emplace(duplication_constants::kEnvMasterMetasKey,
                            "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
     update_mock_replica(_app_info);
 
@@ -207,9 +202,8 @@ TEST_P(replica_follower_test, test_async_duplicate_checkpoint_from_master_replic
 
 TEST_P(replica_follower_test, test_update_master_replica_config)
 {
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
-                           kTestMasterClusterName);
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+    _app_info.envs.emplace(duplication_constants::kEnvMasterClusterKey, kTestMasterClusterName);
+    _app_info.envs.emplace(duplication_constants::kEnvMasterMetasKey,
                            "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
     update_mock_replica(_app_info);
     auto follower = _mock_replica->get_replica_follower();
@@ -265,9 +259,8 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
 
 TEST_P(replica_follower_test, test_nfs_copy_checkpoint)
 {
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
-                           kTestMasterClusterName);
-    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+    _app_info.envs.emplace(duplication_constants::kEnvMasterClusterKey, kTestMasterClusterName);
+    _app_info.envs.emplace(duplication_constants::kEnvMasterMetasKey,
                            "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
     update_mock_replica(_app_info);
     init_nfs();

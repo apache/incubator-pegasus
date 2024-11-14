@@ -341,11 +341,10 @@ void app_env_validator::register_all_validators()
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, mcblc},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, {ValueType::kString}},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, {ValueType::kString}},
-        {duplication_constants::kDuplicationEnvMasterClusterKey, {ValueType::kString}},
-        {duplication_constants::kDuplicationEnvMasterMetasKey, {ValueType::kString}},
-        {duplication_constants::kDuplicationEnvMasterAppNameKey, {ValueType::kString}},
-        {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
-         {ValueType::kString}},
+        {duplication_constants::kEnvMasterClusterKey, {ValueType::kString}},
+        {duplication_constants::kEnvMasterMetasKey, {ValueType::kString}},
+        {duplication_constants::kEnvMasterAppNameKey, {ValueType::kString}},
+        {duplication_constants::kEnvFollowerAppStatusKey, {ValueType::kString}},
     };
 }
 

@@ -545,11 +545,11 @@ TEST_F(meta_app_operation_test, create_app)
          false,
          app_status::AS_INVALID,
          ERR_OK,
-         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
-          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
-          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
-           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
+         {{duplication_constants::kEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kEnvFollowerAppStatusKey,
+           duplication_constants::kEnvFollowerAppStatusCreating}}},
         // Process the request of creating follower app for duplication from the wrong
         // source cluster.
         {DUP_FOLLOWER_APP_NAME,
@@ -561,11 +561,11 @@ TEST_F(meta_app_operation_test, create_app)
          false,
          app_status::AS_AVAILABLE,
          ERR_APP_EXIST,
-         {{duplication_constants::kDuplicationEnvMasterClusterKey, "another_source_cluster"},
-          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
-          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
-           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
+         {{duplication_constants::kEnvMasterClusterKey, "another_source_cluster"},
+          {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kEnvFollowerAppStatusKey,
+           duplication_constants::kEnvFollowerAppStatusCreating}}},
         // Process the request of creating follower app for duplication without the env of
         // creating status.
         {DUP_FOLLOWER_APP_NAME,
@@ -578,9 +578,9 @@ TEST_F(meta_app_operation_test, create_app)
          app_status::AS_AVAILABLE,
          ERR_APP_EXIST,
          {
-             {duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
-             {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-             {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+             {duplication_constants::kEnvMasterClusterKey, "source_cluster"},
+             {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
+             {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
          }},
         // Process the repeated request of creating follower app for duplication from the
         // source cluster.
@@ -593,11 +593,11 @@ TEST_F(meta_app_operation_test, create_app)
          false,
          app_status::AS_AVAILABLE,
          ERR_OK,
-         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
-          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
-          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
-           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
+         {{duplication_constants::kEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kEnvFollowerAppStatusKey,
+           duplication_constants::kEnvFollowerAppStatusCreating}}},
         // Process the request of marking follower app as created for duplication from the
         // source cluster.
         {DUP_FOLLOWER_APP_NAME,
@@ -609,11 +609,11 @@ TEST_F(meta_app_operation_test, create_app)
          false,
          app_status::AS_AVAILABLE,
          ERR_OK,
-         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
-          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
-          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
-           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated}}},
+         {{duplication_constants::kEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kEnvFollowerAppStatusKey,
+           duplication_constants::kEnvFollowerAppStatusCreated}}},
         // Process the request of creating follower app for duplication from the source
         // cluster while it has been marked as created.
         {DUP_FOLLOWER_APP_NAME,
@@ -625,11 +625,11 @@ TEST_F(meta_app_operation_test, create_app)
          false,
          app_status::AS_AVAILABLE,
          ERR_APP_EXIST,
-         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
-          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
-          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
-           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating}}},
+         {{duplication_constants::kEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kEnvFollowerAppStatusKey,
+           duplication_constants::kEnvFollowerAppStatusCreating}}},
         // Process the repeated request of marking follower app as created for duplication
         // from the source cluster.
         {DUP_FOLLOWER_APP_NAME,
@@ -641,11 +641,11 @@ TEST_F(meta_app_operation_test, create_app)
          false,
          app_status::AS_AVAILABLE,
          ERR_OK,
-         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
-          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
-          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
-           duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated}}},
+         {{duplication_constants::kEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kEnvFollowerAppStatusKey,
+           duplication_constants::kEnvFollowerAppStatusCreated}}},
         // Process the request of creating follower app for duplication with invalid creating
         // status.
         {DUP_FOLLOWER_APP_NAME,
@@ -657,11 +657,10 @@ TEST_F(meta_app_operation_test, create_app)
          false,
          app_status::AS_AVAILABLE,
          ERR_INVALID_PARAMETERS,
-         {{duplication_constants::kDuplicationEnvMasterClusterKey, "source_cluster"},
-          {duplication_constants::kDuplicationEnvMasterMetasKey, "10.1.2.3:34601"},
-          {duplication_constants::kDuplicationEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
-          {duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
-           "invalid_creating_status"}}},
+         {{duplication_constants::kEnvMasterClusterKey, "source_cluster"},
+          {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
+          {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
+          {duplication_constants::kEnvFollowerAppStatusKey, "invalid_creating_status"}}},
     };
 
     clear_nodes();

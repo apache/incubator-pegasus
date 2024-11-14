@@ -1107,7 +1107,7 @@ void server_state::create_app(dsn::message_ex *msg)
     dsn::unmarshall(msg, request);
 
     const auto &master_cluster =
-        request.options.envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
+        request.options.envs.find(duplication_constants::kEnvMasterClusterKey);
     bool duplicating = master_cluster != request.options.envs.end();
     LOG_INFO("create app request, name({}), type({}), partition_count({}), replica_count({}), "
              "duplication({})",
@@ -1116,10 +1116,9 @@ void server_state::create_app(dsn::message_ex *msg)
              request.options.partition_count,
              request.options.replica_count,
              duplicating
-                 ? fmt::format(
-                       "{}.{}",
-                       request.options.envs[duplication_constants::kDuplicationEnvMasterClusterKey],
-                       request.app_name)
+                 ? fmt::format("{}.{}",
+                               request.options.envs[duplication_constants::kEnvMasterClusterKey],
+                               request.app_name)
                  : "false");
 
     auto option_match_check = [](const create_app_options &opt, const app_state &exist_app) {
@@ -1211,7 +1210,7 @@ void server_state::create_app(dsn::message_ex *msg)
 #define SUCC_IDEMPOTENT_CREATE_FOLLOWER_APP_STATUS()                                               \
     LOG_INFO("repeated request that updates env {} of the follower app from {} to {}, "            \
              "just ignore: app_name={}, app_id={}",                                                \
-             duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,               \
+             duplication_constants::kEnvFollowerAppStatusKey,                                      \
              my_status->second,                                                                    \
              req_status->second,                                                                   \
              app->app_name,                                                                        \
@@ -1221,7 +1220,7 @@ void server_state::create_app(dsn::message_ex *msg)
 #define FAIL_UNDEFINED_CREATE_FOLLOWER_APP_STATUS(val, desc)                                       \
     LOG_ERROR("undefined value({}) of env {} in the {}: app_name={}, app_id={}",                   \
               val,                                                                                 \
-              duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,              \
+              duplication_constants::kEnvFollowerAppStatusKey,                                     \
               desc,                                                                                \
               app->app_name,                                                                       \
               app->app_id);                                                                        \
@@ -1233,13 +1232,12 @@ void server_state::process_create_follower_app_status(
     const std::string &req_master_cluster,
     std::shared_ptr<app_state> &app)
 {
-    const auto &my_master_cluster =
-        app->envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
+    const auto &my_master_cluster = app->envs.find(duplication_constants::kEnvMasterClusterKey);
     if (my_master_cluster == app->envs.end() || my_master_cluster->second != req_master_cluster) {
         // The source cluster is not matched.
         LOG_ERROR("env {} are not matched between the request({}) and the follower "
                   "app({}): app_name={}, app_id={}",
-                  duplication_constants::kDuplicationEnvMasterClusterKey,
+                  duplication_constants::kEnvMasterClusterKey,
                   req_master_cluster,
                   my_master_cluster == app->envs.end() ? "<nil>" : my_master_cluster->second,
                   app->app_name,
@@ -1247,61 +1245,54 @@ void server_state::process_create_follower_app_status(
         FAIL_CREATE_APP_RESPONSE(msg, response, ERR_APP_EXIST);
     }
 
-    const auto &req_status = request.options.envs.find(
-        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
+    const auto &req_status =
+        request.options.envs.find(duplication_constants::kEnvFollowerAppStatusKey);
     if (req_status == request.options.envs.end()) {
         // Still reply with ERR_APP_EXIST to the master cluster of old versions.
         LOG_ERROR("no env {} in the request: app_name={}, app_id={}",
-                  duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+                  duplication_constants::kEnvFollowerAppStatusKey,
                   app->app_name,
                   app->app_id);
         FAIL_CREATE_APP_RESPONSE(msg, response, ERR_APP_EXIST);
     }
 
-    const auto &my_status =
-        app->envs.find(duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey);
+    const auto &my_status = app->envs.find(duplication_constants::kEnvFollowerAppStatusKey);
     if (my_status == app->envs.end()) {
         // Since currently this table have been AS_AVAILABLE, it should have the env of
         // creating status.
         LOG_ERROR("no env {} in the follower app: app_name={}, app_id={}",
-                  duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+                  duplication_constants::kEnvFollowerAppStatusKey,
                   app->app_name,
                   app->app_id);
         FAIL_CREATE_APP_RESPONSE(msg, response, ERR_INVALID_STATE);
         return;
     }
 
-    if (my_status->second ==
-        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
-        if (req_status->second ==
-            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
+    if (my_status->second == duplication_constants::kEnvFollowerAppStatusCreating) {
+        if (req_status->second == duplication_constants::kEnvFollowerAppStatusCreating) {
             SUCC_IDEMPOTENT_CREATE_FOLLOWER_APP_STATUS();
         }
 
-        if (req_status->second ==
-            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
+        if (req_status->second == duplication_constants::kEnvFollowerAppStatusCreated) {
             // Mark the status as created both on the remote storage and local memory.
-            update_create_follower_app_status(
-                msg,
-                duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating,
-                duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated,
-                app);
+            update_create_follower_app_status(msg,
+                                              duplication_constants::kEnvFollowerAppStatusCreating,
+                                              duplication_constants::kEnvFollowerAppStatusCreated,
+                                              app);
             return;
         }
 
         FAIL_UNDEFINED_CREATE_FOLLOWER_APP_STATUS(req_status->second, "request");
     }
 
-    if (my_status->second ==
-        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
-        if (req_status->second ==
-            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating) {
+    if (my_status->second == duplication_constants::kEnvFollowerAppStatusCreated) {
+        if (req_status->second == duplication_constants::kEnvFollowerAppStatusCreating) {
             // The status of the duplication should have been DS_APP since the follower app
             // has been marked as created. Thus, the master cluster should never send the
             // request with creating status again.
             LOG_ERROR("the master cluster should never send the request with env {} valued {} "
                       "again since it has been {} in the follower app: app_name={}, app_id={}",
-                      duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+                      duplication_constants::kEnvFollowerAppStatusKey,
                       req_status->second,
                       my_status->second,
                       app->app_name,
@@ -1309,8 +1300,7 @@ void server_state::process_create_follower_app_status(
             FAIL_CREATE_APP_RESPONSE(msg, response, ERR_APP_EXIST);
         }
 
-        if (req_status->second ==
-            duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated) {
+        if (req_status->second == duplication_constants::kEnvFollowerAppStatusCreated) {
             SUCC_IDEMPOTENT_CREATE_FOLLOWER_APP_STATUS();
         }
 
@@ -1330,11 +1320,11 @@ void server_state::update_create_follower_app_status(message_ex *msg,
                                                      std::shared_ptr<app_state> &app)
 {
     app_info ainfo = *app;
-    ainfo.envs[duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey] = new_status;
+    ainfo.envs[duplication_constants::kEnvFollowerAppStatusKey] = new_status;
     auto app_path = get_app_path(*app);
 
     LOG_INFO("ready to update env {} of follower app from {} to {}, app_name={}, app_id={}, ",
-             duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+             duplication_constants::kEnvFollowerAppStatusKey,
              old_status,
              new_status,
              app->app_name,
@@ -1353,19 +1343,18 @@ void server_state::update_create_follower_app_status(message_ex *msg,
                         ec,
                         app->app_name,
                         app->app_id,
-                        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+                        duplication_constants::kEnvFollowerAppStatusKey,
                         old_status,
                         new_status);
                     FAIL_CREATE_APP_RESPONSE(msg, response, ec);
                 }
 
-                app->envs[duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey] =
-                    new_status;
+                app->envs[duplication_constants::kEnvFollowerAppStatusKey] = new_status;
                 LOG_INFO("both remote and local env of creating follower app status have been "
                          "updated successfully: app_name={}, app_id={}, {}={} => {}",
                          app->app_name,
                          app->app_id,
-                         duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey,
+                         duplication_constants::kEnvFollowerAppStatusKey,
                          old_status,
                          new_status);
                 SUCC_CREATE_APP_RESPONSE(msg, response, app->app_id);

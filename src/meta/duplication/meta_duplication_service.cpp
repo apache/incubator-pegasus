@@ -467,7 +467,7 @@ void meta_duplication_service::create_follower_app_for_duplication(
     do_create_follower_app_for_duplication(
         dup,
         app,
-        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreating,
+        duplication_constants::kEnvFollowerAppStatusCreating,
         [this, dup](error_code err, configuration_create_app_response &&resp) {
             on_follower_app_creating_for_duplication(dup, err, std::move(resp));
         });
@@ -479,7 +479,7 @@ void meta_duplication_service::mark_follower_app_created_for_duplication(
     do_create_follower_app_for_duplication(
         dup,
         app,
-        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusCreated,
+        duplication_constants::kEnvFollowerAppStatusCreated,
         [this, dup](error_code err, configuration_create_app_response &&resp) {
             on_follower_app_created_for_duplication(dup, err, std::move(resp));
         });
@@ -502,16 +502,14 @@ void meta_duplication_service::do_create_follower_app_for_duplication(
 
     // add envs for follower table, which will use it know itself is `follower` and load master info
     // - env map:
-    // `kDuplicationEnvMasterClusterKey=>{master_cluster_name}`
-    // `kDuplicationEnvMasterMetasKey=>{master_meta_list}`
-    request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
+    // `kEnvMasterClusterKey=>{master_cluster_name}`
+    // `kEnvMasterMetasKey=>{master_meta_list}`
+    request.options.envs.emplace(duplication_constants::kEnvMasterClusterKey,
                                  get_current_dup_cluster_name());
-    request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+    request.options.envs.emplace(duplication_constants::kEnvMasterMetasKey,
                                  _meta_svc->get_meta_list_string());
-    request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterAppNameKey,
-                                 app->app_name);
-    request.options.envs.emplace(
-        duplication_constants::kDuplicationEnvMasterCreateFollowerAppStatusKey, create_status);
+    request.options.envs.emplace(duplication_constants::kEnvMasterAppNameKey, app->app_name);
+    request.options.envs.emplace(duplication_constants::kEnvFollowerAppStatusKey, create_status);
 
     host_port meta_servers;
     meta_servers.assign_group(dup->remote_cluster_name.c_str());
