@@ -128,10 +128,12 @@ DSN_DECLARE_bool(recover_from_replica_server);
 
 namespace dsn::replication {
 
+// Reply to the client with specified response.
 #define REPLY_TO_CLIENT(msg, response)                                                             \
     _meta_svc->reply_data(msg, response);                                                          \
     msg->release_ref()
 
+// Reply to the client with specified response, and return from current function.
 #define REPLY_TO_CLIENT_AND_RETURN(msg, response)                                                  \
     REPLY_TO_CLIENT(msg, response);                                                                \
     return
@@ -214,19 +216,27 @@ int server_state::count_staging_app()
     return ans;
 }
 
+// Create a new variable of `configuration_create_app_response` and assign it with specified
+// error code.
 #define INIT_CREATE_APP_RESPONSE_WITH_ERR(response, err_code)                                      \
     configuration_create_app_response response;                                                    \
     response.err = err_code
 
+// Create a new variable of `configuration_create_app_response` and assign it with ERR_OK
+// and table id.
 #define INIT_CREATE_APP_RESPONSE_WITH_OK(response, app_id)                                         \
     configuration_create_app_response response;                                                    \
     response.err = dsn::ERR_OK;                                                                    \
     response.appid = app_id;
 
+// Reply to the client with a newly created failed `configuration_create_app_response` and return
+// from current function.
 #define FAIL_CREATE_APP_RESPONSE(msg, response, err_code)                                          \
     INIT_CREATE_APP_RESPONSE_WITH_ERR(response, err_code);                                         \
     REPLY_TO_CLIENT_AND_RETURN(msg, response)
 
+// Reply to the client with a newly created successful `configuration_create_app_response` and
+// return from current function.
 #define SUCC_CREATE_APP_RESPONSE(msg, response, app_id)                                            \
     INIT_CREATE_APP_RESPONSE_WITH_OK(response, app_id);                                            \
     REPLY_TO_CLIENT_AND_RETURN(msg, response)
@@ -1217,6 +1227,7 @@ void server_state::create_app(dsn::message_ex *msg)
              app->app_id);                                                                         \
     SUCC_CREATE_APP_RESPONSE(msg, response, app->app_id)
 
+// Failed due to invalid creating status.
 #define FAIL_UNDEFINED_CREATE_FOLLOWER_APP_STATUS(val, desc)                                       \
     LOG_ERROR("undefined value({}) of env {} in the {}: app_name={}, app_id={}",                   \
               val,                                                                                 \
@@ -1336,16 +1347,14 @@ void server_state::update_create_follower_app_status(message_ex *msg,
                 zauto_write_lock l(_lock);
 
                 if (ec != ERR_OK) {
-                    LOG_ERROR(
-
-                        "failed to update remote env of creating follower app status: "
-                        "error_code={}, app_name={}, app_id={}, {}={} => {}",
-                        ec,
-                        app->app_name,
-                        app->app_id,
-                        duplication_constants::kEnvFollowerAppStatusKey,
-                        old_status,
-                        new_status);
+                    LOG_ERROR("failed to update remote env of creating follower app status: "
+                              "error_code={}, app_name={}, app_id={}, {}={} => {}",
+                              ec,
+                              app->app_name,
+                              app->app_id,
+                              duplication_constants::kEnvFollowerAppStatusKey,
+                              old_status,
+                              new_status);
                     FAIL_CREATE_APP_RESPONSE(msg, response, ec);
                 }
 

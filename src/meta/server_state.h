@@ -259,10 +259,16 @@ private:
         bool skip_lost_partitions,
         std::string &hint_message);
 
+    // Process the status carried in the environment variables of creating table request while
+    // the table is at the status of AS_AVAILABLE, to update remote and local states and reply
+    // to the master cluster.
     void process_create_follower_app_status(message_ex *msg,
                                             const configuration_create_app_request &request,
                                             const std::string &req_master_cluster,
                                             std::shared_ptr<app_state> &app);
+
+    // Update the meta data with the new creating status both on the remote storage and local
+    // memory.
     void update_create_follower_app_status(message_ex *msg,
                                            const std::string &old_status,
                                            const std::string &new_status,
