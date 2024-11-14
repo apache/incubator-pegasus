@@ -99,7 +99,7 @@ void provider_basic_test(const service_creator_func &service_creator,
         service->delete_node("/1", false, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)
             ->wait();
     }
-    // set & get data
+    // create & get data
     {
         dsn::binary_writer writer;
         writer.write(0xdeadbeef);
@@ -119,6 +119,7 @@ void provider_basic_test(const service_creator_func &service_creator,
                        })
             ->wait();
     }
+    // set & get data
     {
         dsn::binary_writer writer;
         writer.write(0xbeefdead);

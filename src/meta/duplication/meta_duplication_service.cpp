@@ -464,6 +464,19 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
 void meta_duplication_service::create_follower_app_for_duplication(
     const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app)
 {
+    // The request of creating table might be issued to the follower cluster many times,
+    // since some error might occurred while the follower table is being created. For
+    // example, once the follower cluster could no connect to the master cluster, the
+    // checkpoint would not be duplicated to the master cluster then the follower table
+    // failed to be created; in this case, the master cluster would repeat this request
+    // until the follower is created.
+    //
+    // To make this request idempotent, it would carry a status marking the follower as
+    // creating by an environment variable. The follower cluster would also store the
+    // status with the table as an env. As long as the status of the table is creating,
+    // the follower cluster would accept the request even if it is repeated (actually
+    // just ignore) and reply with ok. On the side of master cluster, it would send the
+    // same request periodically as long as it is still at the status of DS_PREPARE.
     do_create_follower_app_for_duplication(
         dup,
         app,
@@ -476,6 +489,13 @@ void meta_duplication_service::create_follower_app_for_duplication(
 void meta_duplication_service::mark_follower_app_created_for_duplication(
     const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app)
 {
+    // Once the status of duplication has become DS_APP, the master cluster would send
+    // another request to the follower cluster to mark the table as created. If the
+    // table is at the status of creating, the follower cluster should accept the request
+    // and update its status as created. Similarly, the master cluster could send this
+    // request repeatedly and the follower would accept. The follower would reject if it
+    // receives some invalid request(for example, a request that tries to create the same
+    // table again.
     do_create_follower_app_for_duplication(
         dup,
         app,

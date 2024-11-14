@@ -206,7 +206,7 @@ TEST_P(replica_follower_test, test_update_master_replica_config)
     _app_info.envs.emplace(duplication_constants::kEnvMasterMetasKey,
                            "127.0.0.1:34801,127.0.0.1:34802,127.0.0.1:34803");
     update_mock_replica(_app_info);
-    auto follower = _mock_replica->get_replica_follower();
+    auto *follower = _mock_replica->get_replica_follower();
 
     query_cfg_response resp;
     ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INCONSISTENT_STATE);
