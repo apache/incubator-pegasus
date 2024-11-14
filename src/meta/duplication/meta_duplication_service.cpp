@@ -574,9 +574,11 @@ void meta_duplication_service::on_follower_app_creating_for_duplication(
 
     if (update_err != ERR_OK) {
         LOG_ERROR("create follower app(cluster_name={}, app_name={}) to trigger duplicate "
-                  "checkpoint failed: duplication_status={}, create_err={}, update_err={}",
+                  "checkpoint failed: master_app_name={}, duplication_status={}, "
+                  "create_err={}, update_err={}",
                   dup->remote_cluster_name,
                   dup->remote_app_name,
+                  dup->app_name,
                   duplication_status_to_string(dup->status()),
                   create_err,
                   update_err);
@@ -591,9 +593,10 @@ void meta_duplication_service::on_follower_app_creating_for_duplication(
         std::string(dup->store_path), std::move(value), [dup]() {
             dup->persist_status();
             LOG_INFO("create follower app(cluster_name={}, app_name={}) to trigger duplicate "
-                     "checkpoint successfully: duplication_status={}",
+                     "checkpoint successfully: master_app_name={}, duplication_status={}",
                      dup->remote_cluster_name,
                      dup->remote_app_name,
+                     dup->app_name,
                      duplication_status_to_string(dup->status()));
         });
 }
@@ -609,9 +612,10 @@ void meta_duplication_service::on_follower_app_created_for_duplication(
 
     if (err != ERR_OK || resp.err != ERR_OK) {
         LOG_ERROR("mark follower app(cluster_name={}, app_name={}) as created failed: "
-                  "duplication_status={}, callback_err={}, resp_err={}",
+                  "master_app_name={}, duplication_status={}, callback_err={}, resp_err={}",
                   dup->remote_cluster_name,
                   dup->remote_app_name,
+                  dup->app_name,
                   duplication_status_to_string(dup->status()),
                   err,
                   resp.err);
@@ -690,7 +694,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     dsn::marshall(msg, meta_config_request);
 
-    LOG_INFO("send request to check if all replicas of follower app(cluster_name={}, "
+    LOG_INFO("send request to check if all replicas of creating follower app(cluster_name={}, "
              "app_name={}) are ready: master_app_name={}, duplication_status={}",
              dup->remote_cluster_name,
              dup->remote_app_name,
@@ -752,11 +756,12 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                                 [](std::string_view) -> void { return; });
 
             if (update_err != ERR_OK) {
-                LOG_ERROR("query follower app(cluster_name={}, app_name={}) replica "
-                          "configuration completed, result: duplication_status={}, "
+                LOG_ERROR("check all replicas of creating follower app(cluster_name={}, "
+                          "app_name={}): master_app_name={}, duplication_status={}, "
                           "query_err={}, update_err={}",
                           dup->remote_cluster_name,
                           dup->remote_app_name,
+                          dup->app_name,
                           duplication_status_to_string(dup->status()),
                           query_err,
                           update_err);
@@ -771,9 +776,10 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                 std::string(dup->store_path), std::move(value), [dup]() {
                     dup->persist_status();
                     LOG_INFO("all replicas of follower app(cluster_name={}, app_name={}) "
-                             "have been ready: duplication_status={}",
+                             "have been ready: master_app_name={}, duplication_status={}",
                              dup->remote_cluster_name,
                              dup->remote_app_name,
+                             dup->app_name,
                              duplication_status_to_string(dup->status()));
                 });
         });
