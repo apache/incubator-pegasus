@@ -44,21 +44,22 @@
 #include "dsn.layer2_types.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
+#include "table_metrics.h"
 #include "task/task.h"
 #include "task/task_tracker.h"
-#include "table_metrics.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 class blob;
 class command_deregister;
-class message_ex;
 class host_port;
+class message_ex;
 
 namespace replication {
 class configuration_balancer_request;
 class configuration_balancer_response;
+class configuration_create_app_request;
 class configuration_list_apps_request;
 class configuration_list_apps_response;
 class configuration_proposal_action;
@@ -257,6 +258,21 @@ private:
         const std::vector<dsn::host_port> &replica_nodes,
         bool skip_lost_partitions,
         std::string &hint_message);
+
+    // Process the status carried in the environment variables of creating table request while
+    // the table is at the status of AS_AVAILABLE, to update remote and local states and reply
+    // to the master cluster.
+    void process_create_follower_app_status(message_ex *msg,
+                                            const configuration_create_app_request &request,
+                                            const std::string &req_master_cluster,
+                                            std::shared_ptr<app_state> &app);
+
+    // Update the meta data with the new creating status both on the remote storage and local
+    // memory.
+    void update_create_follower_app_status(message_ex *msg,
+                                           const std::string &old_status,
+                                           const std::string &new_status,
+                                           std::shared_ptr<app_state> &app);
 
     void do_app_create(std::shared_ptr<app_state> &app);
     void do_app_drop(std::shared_ptr<app_state> &app);

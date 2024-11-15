@@ -90,6 +90,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-modernize-avoid-c-arrays,"
                            "-modernize-replace-disallow-copy-and-assign-macro,"
                            "-modernize-use-trailing-return-type,"
+                           "-performance-unnecessary-value-param,"
                            "-readability-function-cognitive-complexity,"
                            "-readability-identifier-length,"
                            "-readability-magic-numbers,"

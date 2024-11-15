@@ -1844,10 +1844,8 @@ void replica_stub::open_replica(
         bool is_duplication_follower =
             ((configuration_update != nullptr) &&
              (configuration_update->type == config_type::CT_ASSIGN_PRIMARY) &&
-             (app.envs.find(duplication_constants::kDuplicationEnvMasterClusterKey) !=
-              app.envs.end()) &&
-             (app.envs.find(duplication_constants::kDuplicationEnvMasterMetasKey) !=
-              app.envs.end()));
+             (app.envs.find(duplication_constants::kEnvMasterClusterKey) != app.envs.end()) &&
+             (app.envs.find(duplication_constants::kEnvMasterMetasKey) != app.envs.end()));
 
         // NOTICE: when we don't need execute restore-process, we should remove a.b.pegasus
         // directory because it don't contain the valid data dir and also we need create a new

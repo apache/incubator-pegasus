@@ -63,9 +63,21 @@
 #define dsn_likely(pred) (__builtin_expect((pred), 1))
 #define dsn_unlikely(pred) (__builtin_expect((pred), 0))
 
-#define DISALLOW_COPY_AND_ASSIGN(TypeName)                                                         \
-    TypeName(const TypeName &) = delete;                                                           \
-    void operator=(const TypeName &) = delete
+#define DECLARE_COPY_AND_ASSIGN(type, action)                                                      \
+    type(const type &) = action;                                                                   \
+    type &operator=(const type &) = action
+
+#define DECLARE_MOVE_AND_ASSIGN(type, action)                                                      \
+    type(type &&) = action;                                                                        \
+    type &operator=(type &&) = action
+
+#define DEFAULT_COPY_AND_ASSIGN(type) DECLARE_COPY_AND_ASSIGN(type, default)
+
+#define DEFAULT_MOVE_AND_ASSIGN(type) DECLARE_MOVE_AND_ASSIGN(type, default)
+
+#define DISALLOW_COPY_AND_ASSIGN(type) DECLARE_COPY_AND_ASSIGN(type, delete)
+
+#define DISALLOW_MOVE_AND_ASSIGN(type) DECLARE_MOVE_AND_ASSIGN(type, delete)
 
 #if defined OS_LINUX || defined OS_CYGWIN
 

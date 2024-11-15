@@ -55,12 +55,17 @@ namespace replication {
 
 const std::string duplication_constants::kDuplicationCheckpointRootDir /*NOLINT*/ = "duplication";
 const std::string duplication_constants::kClustersSectionName /*NOLINT*/ = "pegasus.clusters";
-const std::string duplication_constants::kDuplicationEnvMasterClusterKey /*NOLINT*/ =
+const std::string duplication_constants::kEnvMasterClusterKey /*NOLINT*/ =
     "duplication.master_cluster";
-const std::string duplication_constants::kDuplicationEnvMasterMetasKey /*NOLINT*/ =
-    "duplication.master_metas";
-const std::string duplication_constants::kDuplicationEnvMasterAppNameKey /*NOLINT*/ =
+const std::string duplication_constants::kEnvMasterMetasKey /*NOLINT*/ = "duplication.master_metas";
+const std::string duplication_constants::kEnvMasterAppNameKey /*NOLINT*/ =
     "duplication.master_app_name";
+const std::string duplication_constants::kEnvFollowerAppStatusKey /*NOLINT*/
+    = "duplication.follower_app_status";
+const std::string duplication_constants::kEnvFollowerAppStatusCreating /*NOLINT*/
+    = "creating";
+const std::string duplication_constants::kEnvFollowerAppStatusCreated /*NOLINT*/
+    = "created";
 
 /*extern*/ const char *duplication_status_to_string(duplication_status::type status)
 {

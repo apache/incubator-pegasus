@@ -81,12 +81,16 @@ struct duplication_constants
     const static std::string kDuplicationCheckpointRootDir;
     const static std::string kClustersSectionName;
     // These will fill into app env and mark one app as a "follower app" and record master info
-    const static std::string kDuplicationEnvMasterClusterKey;
-    const static std::string kDuplicationEnvMasterMetasKey;
-    const static std::string kDuplicationEnvMasterAppNameKey;
+    const static std::string kEnvMasterClusterKey;
+    const static std::string kEnvMasterMetasKey;
+    const static std::string kEnvMasterAppNameKey;
+    const static std::string kEnvFollowerAppStatusKey;
+    const static std::string kEnvFollowerAppStatusCreating;
+    const static std::string kEnvFollowerAppStatusCreated;
 };
 
 USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)
 USER_DEFINED_ENUM_FORMATTER(duplication_status::type)
+
 } // namespace replication
 } // namespace dsn
