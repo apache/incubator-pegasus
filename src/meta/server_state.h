@@ -140,13 +140,14 @@ public:
 
     void lock_read(zauto_read_lock &other);
     void lock_write(zauto_write_lock &other);
-    const meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
+
+    meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
 
     std::shared_ptr<app_state> get_app(const std::string &name) const
     {
         const auto &iter = _exist_apps.find(name);
         if (iter == _exist_apps.end()) {
-            return std::shared_ptr<app_state>();
+            return {};
         }
 
         return iter->second;
@@ -156,7 +157,7 @@ public:
     {
         const auto &iter = _all_apps.find(app_id);
         if (iter == _all_apps.end()) {
-            return std::shared_ptr<app_state>();
+            return {};
         }
 
         return iter->second;

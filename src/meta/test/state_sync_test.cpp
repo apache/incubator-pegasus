@@ -393,7 +393,7 @@ void meta_service_test_app::construct_apps_test()
     generate_node_list(nodes, 1, 1);
     svc->_state->construct_apps({resp}, nodes, hint_message);
 
-    meta_view mv = svc->_state->get_meta_view();
+    const meta_view mv = svc->_state->get_meta_view();
     const app_mapper &mapper = *(mv.apps);
     ASSERT_EQ(6, mv.apps->size());
 
