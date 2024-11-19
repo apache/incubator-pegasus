@@ -3032,7 +3032,9 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         }
 
         if (app->status == app_status::AS_DROPPING) {
-            LOG_WARNING("set app envs failed since app(name={}, id={}) is being dropped", app_name, app->app_id);
+            LOG_WARNING("set app envs failed since app(name={}, id={}) is being dropped",
+                        app_name,
+                        app->app_id);
             env_rpc.response().err = ERR_BUSY_DROPPING;
             env_rpc.response().hint_message = "app is being dropped";
             return;
@@ -3059,9 +3061,11 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         // set, otherwise update might be missing. For example, an update is setting the envs
         // while another is dropping a table. The update setting the envs does not contain the
         // dropped state. Once it is applied by remote storage after another update dropping
-        // the table, the state of the table would always be non-dropped on remote storage. 
+        // the table, the state of the table would always be non-dropped on remote storage.
         if (!app) {
-            LOG_ERROR("set app envs failed since app(name={}, id={}) has just been dropped", app_name, app->app_id);
+            LOG_ERROR("set app envs failed since app(name={}, id={}) has just been dropped",
+                      app_name,
+                      app->app_id);
             env_rpc.response().err = ERR_APP_DROPPED;
             env_rpc.response().hint_message = "app has just been dropped";
             return;
