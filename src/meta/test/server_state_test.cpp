@@ -24,7 +24,11 @@
  * THE SOFTWARE.
  */
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <set>
@@ -42,6 +46,7 @@
 #include "meta/server_state.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
+#include "rpc/rpc_holder.h"
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
 #include "utils/error_code.h"

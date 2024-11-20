@@ -36,6 +36,7 @@
 #include <set>
 #include <sstream> // IWYU pragma: keep
 #include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 
