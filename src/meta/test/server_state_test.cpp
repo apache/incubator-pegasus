@@ -212,24 +212,36 @@ private:
 void meta_service_test_app::app_envs_basic_test()
 {
     server_state_test test;
-    test.load_apps({"test_app1", "test_set_app_envs_not_found"});
+    test.load_apps({"test_app1",
+                    "test_set_app_envs_not_found",
+                    "test_set_app_envs_dropping",
+                    "test_set_app_envs_dropped_after_update_remote_storage"});
 
-    std::cout << "test server_state::set_app_envs(not_found)..." << std::endl;
-    {
-        configuration_update_app_env_request request;
-        request.__set_app_name("test_set_app_envs_not_found");
-        request.__set_op(app_env_operation::type::APP_ENV_OP_SET);
-        request.__set_keys({replica_envs::ROCKSDB_WRITE_BUFFER_SIZE});
-        request.__set_values({"67108864"});
+#define TEST_SET_APP_ENVS_FAILED(action, err_code)                                                 \
+    std::cout << "test server_state::set_app_envs(" #action ")..." << std::endl;                   \
+    do {                                                                                           \
+        configuration_update_app_env_request request;                                              \
+        request.__set_app_name("test_set_app_envs_" #action);                                      \
+        request.__set_op(app_env_operation::type::APP_ENV_OP_SET);                                 \
+        request.__set_keys({replica_envs::ROCKSDB_WRITE_BUFFER_SIZE});                             \
+        request.__set_values({"67108864"});                                                        \
+                                                                                                   \
+        fail::setup();                                                                             \
+        fail::cfg("set_app_envs_failed", "void(" #action ")");                                     \
+                                                                                                   \
+        auto rpc = test.set_app_envs(request);                                                     \
+        ASSERT_EQ(err_code, rpc.response().err);                                                   \
+                                                                                                   \
+        fail::teardown();                                                                          \
+    } while (0)
 
-        fail::setup();
-        fail::cfg("set_app_envs_failed", "void(not_found)");
+    TEST_SET_APP_ENVS_FAILED(not_found, ERR_APP_NOT_EXIST);
 
-        auto rpc = test.set_app_envs(request);
-        ASSERT_EQ(ERR_APP_NOT_EXIST, rpc.response().err);
+    TEST_SET_APP_ENVS_FAILED(dropping, ERR_BUSY_DROPPING);
 
-        fail::teardown();
-    }
+    TEST_SET_APP_ENVS_FAILED(dropped_after_update_remote_storage, ERR_APP_DROPPED);
+
+#undef TEST_SET_APP_ENVS_FAILED
 
     std::cout << "test server_state::set_app_envs()..." << std::endl;
     {

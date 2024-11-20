@@ -3069,6 +3069,13 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         zauto_write_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
 
+        FAIL_POINT_INJECT_NOT_RETURN_F("set_app_envs_failed", [&app](std::string_view s) {
+            if (s == "dropped_after_update_remote_storage") {
+                app.reset();
+                return;
+            }
+        });
+
         // The table might be removed just before the callback function is invoked, thus we must
         // check if this table still exists.
         //
@@ -3078,9 +3085,7 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         // dropped state. Once it is applied by remote storage after another update dropping
         // the table, the state of the table would always be non-dropped on remote storage.
         if (!app) {
-            LOG_ERROR("set app envs failed since app(name={}, id={}) has just been dropped",
-                      app_name,
-                      app->app_id);
+            LOG_ERROR("set app envs failed since app({}) has just been dropped", app_name);
             env_rpc.response().err = ERR_APP_DROPPED;
             env_rpc.response().hint_message = "app has just been dropped";
             return;
