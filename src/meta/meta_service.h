@@ -332,6 +332,7 @@ private:
     friend class meta_partition_guardian_test;
     friend class meta_service_test;
     friend class meta_service_test_app;
+    friend class server_state_test;
     friend class meta_split_service_test;
     friend class meta_test_base;
     friend class policy_context_test;

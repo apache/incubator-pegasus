@@ -416,6 +416,7 @@ private:
     friend class meta_split_service;
     friend class meta_split_service_test;
     friend class meta_service_test_app;
+    friend class server_state_test;
     friend class meta_test_base;
     friend class test::test_checker;
     friend class server_state_restore_test;
