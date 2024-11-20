@@ -75,6 +75,7 @@
 #include "utils/blob.h"
 #include "utils/command_manager.h"
 #include "utils/config_api.h"
+#include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
@@ -3023,7 +3024,21 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
     std::string app_path;
     {
         zauto_read_lock l(_lock);
-        const auto &app = get_app(app_name);
+
+        auto app = get_app(app_name);
+
+        FAIL_POINT_INJECT_NOT_RETURN_F("set_app_envs_failed", [&app](std::string_view s) {
+            if (s == "not_found") {
+                app.reset();
+                return;
+            }
+
+            if (s == "dropping") {
+                app->status = app_status::AS_DROPPING;
+                return;
+            }
+        });
+
         if (!app) {
             LOG_WARNING("set app envs failed since app_name({}) cannot be found", app_name);
             env_rpc.response().err = ERR_APP_NOT_EXIST;

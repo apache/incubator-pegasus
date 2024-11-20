@@ -45,6 +45,7 @@
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
 #include "utils/error_code.h"
+#include "utils/fail_point.h"
 #include "utils/flags.h"
 
 DSN_DECLARE_string(cluster_root);
@@ -117,22 +118,31 @@ public:
         return _ss->get_app(app_name);
     }
 
-    void set_app_envs(const configuration_update_app_env_request &request)
+    app_env_rpc set_app_envs(const configuration_update_app_env_request &request)
     {
-        _ss->set_app_envs(create_app_env_rpc(request));
+        auto rpc = create_app_env_rpc(request);
+        _ss->set_app_envs(rpc);
         _ss->wait_all_task();
+
+        return rpc;
     }
 
-    void del_app_envs(const configuration_update_app_env_request &request)
+    app_env_rpc del_app_envs(const configuration_update_app_env_request &request)
     {
-        _ss->del_app_envs(create_app_env_rpc(request));
+        auto rpc = create_app_env_rpc(request);
+        _ss->del_app_envs(rpc);
         _ss->wait_all_task();
+
+        return rpc;
     }
 
-    void clear_app_envs(const configuration_update_app_env_request &request)
+    app_env_rpc clear_app_envs(const configuration_update_app_env_request &request)
     {
-        _ss->clear_app_envs(create_app_env_rpc(request));
+        auto rpc = create_app_env_rpc(request);
+        _ss->clear_app_envs(rpc);
         _ss->wait_all_task();
+
+        return rpc;
     }
 
 private:
@@ -202,27 +212,24 @@ private:
 void meta_service_test_app::app_envs_basic_test()
 {
     server_state_test test;
-    test.load_apps({"test_app1"});
+    test.load_apps({"test_app1", "test_set_app_envs_not_found"});
 
-    /* std::cout << "test server_state::set_app_envs()..." << std::endl;
+    std::cout << "test server_state::set_app_envs(not_found)..." << std::endl;
     {
         configuration_update_app_env_request request;
-        request.__set_app_name(fake_app->app_name);
+        request.__set_app_name("test_set_app_envs_not_found");
         request.__set_op(app_env_operation::type::APP_ENV_OP_SET);
         request.__set_keys({replica_envs::ROCKSDB_WRITE_BUFFER_SIZE});
         request.__set_values({"67108864"});
 
-        dsn::message_ptr binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
-        dsn::marshall(binary_req, request);
-        dsn::message_ex *recv_msg = create_corresponding_receive(binary_req);
-        app_env_rpc rpc(recv_msg); // don't need reply
-        ss->set_app_envs(rpc);
-        ss->wait_all_task();
-        std::shared_ptr<app_state> app = ss->get_app(fake_app->app_name);
-        ASSERT_TRUE(app != nullptr);
         fail::setup();
-        fail::cfg(test.fail_cfg_name, test.fail_cfg_action);
-    } */
+        fail::cfg("set_app_envs_failed", "void(not_found)");
+
+        auto rpc = test.set_app_envs(request);
+        ASSERT_EQ(ERR_APP_NOT_EXIST, rpc.response().err);
+
+        fail::teardown();
+    }
 
     std::cout << "test server_state::set_app_envs()..." << std::endl;
     {
@@ -232,7 +239,8 @@ void meta_service_test_app::app_envs_basic_test()
         request.__set_keys(keys);
         request.__set_values(values);
 
-        test.set_app_envs(request);
+        auto rpc = test.set_app_envs(request);
+        ASSERT_EQ(ERR_OK, rpc.response().err);
 
         const auto &app = test.get_app("test_app1");
         ASSERT_TRUE(app);
@@ -251,7 +259,8 @@ void meta_service_test_app::app_envs_basic_test()
         request.__set_op(app_env_operation::type::APP_ENV_OP_DEL);
         request.__set_keys(del_keys);
 
-        test.del_app_envs(request);
+        auto rpc = test.del_app_envs(request);
+        ASSERT_EQ(ERR_OK, rpc.response().err);
 
         const auto &app = test.get_app("test_app1");
         ASSERT_TRUE(app);
@@ -276,7 +285,8 @@ void meta_service_test_app::app_envs_basic_test()
             request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
             request.__set_clear_prefix(clear_prefix);
 
-            test.clear_app_envs(request);
+            auto rpc = test.clear_app_envs(request);
+            ASSERT_EQ(ERR_OK, rpc.response().err);
 
             const auto &app = test.get_app("test_app1");
             ASSERT_TRUE(app);
@@ -304,7 +314,8 @@ void meta_service_test_app::app_envs_basic_test()
             request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
             request.__set_clear_prefix("");
 
-            test.clear_app_envs(request);
+            auto rpc = test.clear_app_envs(request);
+            ASSERT_EQ(ERR_OK, rpc.response().err);
 
             const auto &app = test.get_app("test_app1");
             ASSERT_TRUE(app);
