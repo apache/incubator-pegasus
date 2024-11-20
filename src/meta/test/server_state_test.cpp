@@ -50,7 +50,8 @@
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
 
-namespace dsn::replication {
+namespace dsn {
+namespace replication {
 
 static const std::vector<std::string> keys = {
     dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
@@ -62,7 +63,6 @@ static const std::vector<std::string> keys = {
     dsn::replica_envs::ROCKSDB_USAGE_SCENARIO,
     dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT,
     dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS};
-
 static const std::vector<std::string> values = {
     "1712846598",
     "6",
@@ -78,7 +78,6 @@ static const std::vector<std::string> del_keys = {
     dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
     dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
     dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
-
 static const std::set<std::string> del_keys_set = {
     dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
     dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
@@ -315,4 +314,5 @@ void meta_service_test_app::app_envs_basic_test()
     }
 }
 
-} // namespace dsn::replication
+} // namespace replication
+} // namespace dsn
