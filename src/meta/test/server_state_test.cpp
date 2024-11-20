@@ -50,12 +50,9 @@
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
-namespace {
-
-const std::vector<std::string> keys = {
+static const std::vector<std::string> keys = {
     dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
     dsn::replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL,
     dsn::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION,
@@ -66,7 +63,7 @@ const std::vector<std::string> keys = {
     dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT,
     dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS};
 
-const std::vector<std::string> values = {
+static const std::vector<std::string> values = {
     "1712846598",
     "6",
     dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE,
@@ -77,19 +74,21 @@ const std::vector<std::string> values = {
     "1",
     "0"};
 
-const std::vector<std::string> del_keys = {dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
-                                           dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
-                                           dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
+static const std::vector<std::string> del_keys = {
+    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
+    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
+    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
 
-const std::set<std::string> del_keys_set = {dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
-                                            dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
-                                            dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
+static const std::set<std::string> del_keys_set = {
+    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
+    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
+    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
 
-const std::string clear_prefix = "rocksdb";
+static const std::string clear_prefix = "rocksdb";
 
 // if str = "prefix.xxx" then return prefix
 // else return ""
-std::string acquire_prefix(const std::string &str)
+static std::string acquire_prefix(const std::string &str)
 {
     auto index = str.find('.');
     if (index == std::string::npos) {
@@ -98,8 +97,6 @@ std::string acquire_prefix(const std::string &str)
         return str.substr(0, index);
     }
 }
-
-} // anonymous namespace
 
 class server_state_test
 {
@@ -191,7 +188,7 @@ private:
         return ss;
     }
 
-    app_env_rpc create_app_env_rpc(const configuration_update_app_env_request &request)
+    static app_env_rpc create_app_env_rpc(const configuration_update_app_env_request &request)
     {
         dsn::message_ptr binary_req(dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV));
         dsn::marshall(binary_req, request);
@@ -207,6 +204,26 @@ void meta_service_test_app::app_envs_basic_test()
 {
     server_state_test test;
     test.load_apps({"test_app1"});
+
+    /* std::cout << "test server_state::set_app_envs()..." << std::endl;
+    {
+        configuration_update_app_env_request request;
+        request.__set_app_name(fake_app->app_name);
+        request.__set_op(app_env_operation::type::APP_ENV_OP_SET);
+        request.__set_keys({replica_envs::ROCKSDB_WRITE_BUFFER_SIZE});
+        request.__set_values({"67108864"});
+
+        dsn::message_ptr binary_req = dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV);
+        dsn::marshall(binary_req, request);
+        dsn::message_ex *recv_msg = create_corresponding_receive(binary_req);
+        app_env_rpc rpc(recv_msg); // don't need reply
+        ss->set_app_envs(rpc);
+        ss->wait_all_task();
+        std::shared_ptr<app_state> app = ss->get_app(fake_app->app_name);
+        ASSERT_TRUE(app != nullptr);
+        fail::setup();
+        fail::cfg(test.fail_cfg_name, test.fail_cfg_action);
+    } */
 
     std::cout << "test server_state::set_app_envs()..." << std::endl;
     {
@@ -298,5 +315,4 @@ void meta_service_test_app::app_envs_basic_test()
     }
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
