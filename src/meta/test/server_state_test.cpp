@@ -118,7 +118,7 @@ public:
         ASSERT_EQ(dsn::ERR_OK, _ss->sync_apps_to_remote_storage());
     }
 
-    std::shared_ptr<app_state> get_app(const std::string &app_name) const
+    [[nodiscard]] std::shared_ptr<app_state> get_app(const std::string &app_name) const
     {
         return _ss->get_app(app_name);
     }
@@ -253,7 +253,7 @@ void meta_service_test_app::app_envs_basic_test()
 #undef TEST_SET_APP_ENVS_FAILED
 
     // Normal case for setting envs.
-    std::cout << "test server_state::set_app_envs()..." << std::endl;
+    std::cout << "test server_state::set_app_envs(success)..." << std::endl;
     {
         configuration_update_app_env_request request;
         request.__set_app_name("test_app1");
