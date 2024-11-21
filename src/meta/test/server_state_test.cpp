@@ -118,7 +118,7 @@ public:
         ASSERT_EQ(dsn::ERR_OK, _ss->sync_apps_to_remote_storage());
     }
 
-    std::shared_ptr<app_state> get_app(const std::string &app_name)
+    std::shared_ptr<app_state> get_app(const std::string &app_name) const
     {
         return _ss->get_app(app_name);
     }
@@ -240,14 +240,19 @@ void meta_service_test_app::app_envs_basic_test()
         fail::teardown();                                                                          \
     } while (0)
 
+    // Failed to setting envs while table was not found.
     TEST_SET_APP_ENVS_FAILED(not_found, ERR_APP_NOT_EXIST);
 
+    // Failed to setting envs while table was being dropped as the intermediate state.
     TEST_SET_APP_ENVS_FAILED(dropping, ERR_BUSY_DROPPING);
 
+    // The table was found dropped after the new envs have been persistent on the remote
+    // meta storage.
     TEST_SET_APP_ENVS_FAILED(dropped_after, ERR_APP_DROPPED);
 
 #undef TEST_SET_APP_ENVS_FAILED
 
+    // Normal case for setting envs.
     std::cout << "test server_state::set_app_envs()..." << std::endl;
     {
         configuration_update_app_env_request request;

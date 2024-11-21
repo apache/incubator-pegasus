@@ -3098,6 +3098,8 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         }
 
         const auto &old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+
+        // Update envs of local memory.
         for (size_t idx = 0; idx < keys.size(); ++idx) {
             app->envs[keys[idx]] = values[idx];
         }
