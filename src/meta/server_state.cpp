@@ -1006,7 +1006,7 @@ void server_state::query_configuration_by_index(const query_cfg_request &request
                                                 /*out*/ query_cfg_response &response)
 {
     zauto_read_lock l(_lock);
-    auto iter = _exist_apps.find(request.app_name.c_str());
+    auto iter = _exist_apps.find(request.app_name);
     if (iter == _exist_apps.end()) {
         response.err = ERR_OBJECT_NOT_FOUND;
         return;
@@ -3024,22 +3024,26 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
     app_info ainfo;
     std::string app_path;
     {
-        zauto_read_lock l(_lock);
+        FAIL_POINT_INJECT_NOT_RETURN_F("set_app_envs_failed", [app_name, this](std::string_view s) {
+            zauto_write_lock l(_lock);
 
-        auto app = get_app(app_name);
-
-        FAIL_POINT_INJECT_NOT_RETURN_F("set_app_envs_failed", [&app](std::string_view s) {
             if (s == "not_found") {
-                app.reset();
+                CHECK_EQ(_exist_apps.erase(app_name), 1);
                 return;
             }
 
             if (s == "dropping") {
-                app->status = app_status::AS_DROPPING;
+                const auto &iter = _exist_apps.find(app_name);
+                CHECK_TRUE(iter != _exist_apps.end());
+
+                iter->second->status = app_status::AS_DROPPING;
                 return;
             }
         });
 
+        zauto_read_lock l(_lock);
+
+        const auto &app = get_app(app_name);
         if (!app) {
             LOG_WARNING("set app envs failed since app_name({}) cannot be found", app_name);
             env_rpc.response().err = ERR_APP_NOT_EXIST;
@@ -3068,14 +3072,15 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         CHECK_EQ_MSG(ec, ERR_OK, "update app({}) info to remote storage failed", app_name);
 
         zauto_write_lock l(_lock);
-        std::shared_ptr<app_state> app = get_app(app_name);
 
-        FAIL_POINT_INJECT_NOT_RETURN_F("set_app_envs_failed", [&app](std::string_view s) {
-            if (s == "dropped_after_update_remote_storage") {
-                app.reset();
+        FAIL_POINT_INJECT_NOT_RETURN_F("set_app_envs_failed", [app_name, this](std::string_view s) {
+            if (s == "dropped_after") {
+                CHECK_EQ(_exist_apps.erase(app_name), 1);
                 return;
             }
         });
+
+        std::shared_ptr<app_state> app = get_app(app_name);
 
         // The table might be removed just before the callback function is invoked, thus we must
         // check if this table still exists.

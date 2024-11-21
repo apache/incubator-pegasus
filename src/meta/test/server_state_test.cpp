@@ -207,7 +207,7 @@ private:
         dsn::message_ptr binary_req(dsn::message_ex::create_request(RPC_CM_UPDATE_APP_ENV));
         dsn::marshall(binary_req, request);
         dsn::message_ex *recv_msg = create_corresponding_receive(binary_req);
-        return app_env_rpc(recv_msg); // don't need reply
+        return app_env_rpc(recv_msg); // Don't need to reply.
     }
 
     std::unique_ptr<meta_service> _ms;
@@ -220,7 +220,7 @@ void meta_service_test_app::app_envs_basic_test()
     test.load_apps({"test_app1",
                     "test_set_app_envs_not_found",
                     "test_set_app_envs_dropping",
-                    "test_set_app_envs_dropped_after_update_remote_storage"});
+                    "test_set_app_envs_dropped_after"});
 
 #define TEST_SET_APP_ENVS_FAILED(action, err_code)                                                 \
     std::cout << "test server_state::set_app_envs(" #action ")..." << std::endl;                   \
@@ -244,7 +244,7 @@ void meta_service_test_app::app_envs_basic_test()
 
     TEST_SET_APP_ENVS_FAILED(dropping, ERR_BUSY_DROPPING);
 
-    TEST_SET_APP_ENVS_FAILED(dropped_after_update_remote_storage, ERR_APP_DROPPED);
+    TEST_SET_APP_ENVS_FAILED(dropped_after, ERR_APP_DROPPED);
 
 #undef TEST_SET_APP_ENVS_FAILED
 
@@ -264,6 +264,8 @@ void meta_service_test_app::app_envs_basic_test()
 
         for (size_t idx = 0; idx < keys.size(); ++idx) {
             const auto &key = keys[idx];
+
+            // Every env should be inserted.
             ASSERT_EQ(1, app->envs.count(key));
             ASSERT_EQ(values[idx], app->envs.at(key));
         }
@@ -284,18 +286,21 @@ void meta_service_test_app::app_envs_basic_test()
 
         for (size_t idx = 0; idx < keys.size(); ++idx) {
             const std::string &key = keys[idx];
-            if (del_keys_set.count(key) >= 1) {
+            if (del_keys_set.count(key) > 0) {
+                // The env in `del_keys_set` should be deleted.
                 ASSERT_EQ(0, app->envs.count(key));
-            } else {
-                ASSERT_EQ(1, app->envs.count(key));
-                ASSERT_EQ(values[idx], app->envs.at(key));
+                continue;
             }
+
+            // The env should still exist if it is not in `del_keys_set`.
+            ASSERT_EQ(1, app->envs.count(key));
+            ASSERT_EQ(values[idx], app->envs.at(key));
         }
     }
 
     std::cout << "test server_state::clear_app_envs()..." << std::endl;
     {
-        // test specify prefix
+        // Test specifying prefix.
         {
             configuration_update_app_env_request request;
             request.__set_app_name("test_app1");
@@ -310,21 +315,25 @@ void meta_service_test_app::app_envs_basic_test()
 
             for (size_t idx = 0; idx < keys.size(); ++idx) {
                 const std::string &key = keys[idx];
-                if (del_keys_set.count(key) <= 0) {
-                    if (acquire_prefix(key) == clear_prefix) {
-                        ASSERT_EQ(0, app->envs.count(key));
-                    } else {
-                        ASSERT_EQ(1, app->envs.count(key));
-                        ASSERT_EQ(values[idx], app->envs.at(key));
-                    }
-                } else {
-                    // key already delete
+                if (del_keys_set.count(key) > 0) {
+                    // The env should have been deleted during test for `del_app_envs`.
                     ASSERT_EQ(0, app->envs.count(key));
+                    continue;
                 }
+
+                if (acquire_prefix(key) == clear_prefix) {
+                    // The env with specified prefix should be deleted.
+                    ASSERT_EQ(0, app->envs.count(key));
+                    continue;
+                }
+
+                // Otherwise, the env should still exist.
+                ASSERT_EQ(1, app->envs.count(key));
+                ASSERT_EQ(values[idx], app->envs.at(key));
             }
         }
 
-        // test clear all
+        // Test clearing all.
         {
             configuration_update_app_env_request request;
             request.__set_app_name("test_app1");
@@ -337,6 +346,7 @@ void meta_service_test_app::app_envs_basic_test()
             const auto &app = test.get_app("test_app1");
             ASSERT_TRUE(app);
 
+            // All envs should be cleared.
             ASSERT_TRUE(app->envs.empty());
         }
     }
