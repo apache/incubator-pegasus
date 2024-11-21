@@ -246,7 +246,7 @@ void meta_service_test_app::app_envs_basic_test()
     // Failed to setting envs while table was being dropped as the intermediate state.
     TEST_SET_APP_ENVS_FAILED(dropping, ERR_BUSY_DROPPING);
 
-    // The table was found dropped after the new envs have been persistent on the remote
+    // The table was found dropped after the new envs had been persistent on the remote
     // meta storage.
     TEST_SET_APP_ENVS_FAILED(dropped_after, ERR_APP_DROPPED);
 
