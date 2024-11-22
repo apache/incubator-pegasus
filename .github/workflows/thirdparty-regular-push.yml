@@ -49,8 +49,7 @@ jobs:
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          # TODO(wangdan): disable centos7 temporarily before image build-env-centos7-* is fixed.
-          # - centos7
+          - centos7
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -92,8 +91,7 @@ jobs:
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          # TODO(wangdan): disable centos7 temporarily before image build-env-centos7-* is fixed.
-          # - centos7
+          - centos7
     steps:
       # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
@@ -137,8 +135,7 @@ jobs:
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          # TODO(wangdan): disable centos7 temporarily before image build-env-centos7-* is fixed.
-          # - centos7
+          - centos7
     steps:
       # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
