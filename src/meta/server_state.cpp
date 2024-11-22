@@ -28,11 +28,11 @@
 #include <boost/lexical_cast.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
-#include <string.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <set>
 #include <sstream> // IWYU pragma: keep
 #include <string>

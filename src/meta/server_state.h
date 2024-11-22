@@ -29,7 +29,7 @@
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
 #include <gtest/gtest_prod.h>
-#include <stdint.h>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
