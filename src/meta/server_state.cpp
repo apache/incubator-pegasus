@@ -3033,10 +3033,7 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
             }
 
             if (s == "dropping") {
-                const auto &iter = _exist_apps.find(app_name);
-                CHECK_TRUE(iter != _exist_apps.end());
-
-                iter->second->status = app_status::AS_DROPPING;
+                gutil::FindOrDie(_exist_apps, app_name)->status = app_status::AS_DROPPING;
                 return;
             }
         });

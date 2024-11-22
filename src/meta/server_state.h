@@ -42,6 +42,7 @@
 #include "common/gpid.h"
 #include "common/manual_compact.h"
 #include "dsn.layer2_types.h"
+#include "gutil/map_util.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
 #include "table_metrics.h"
@@ -143,24 +144,14 @@ public:
 
     meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
 
-    std::shared_ptr<app_state> get_app(const std::string &name) const
+    std::shared_ptr<app_state> get_app(const std::string &app_name) const
     {
-        const auto &iter = _exist_apps.find(name);
-        if (iter == _exist_apps.end()) {
-            return {};
-        }
-
-        return iter->second;
+        return gutil::FindWithDefault(_exist_apps, app_name);
     }
 
     std::shared_ptr<app_state> get_app(int32_t app_id) const
     {
-        const auto &iter = _all_apps.find(app_id);
-        if (iter == _all_apps.end()) {
-            return {};
-        }
-
-        return iter->second;
+        return gutil::FindWithDefault(_all_apps, app_id);
     }
 
     void query_configuration_by_index(const query_cfg_request &request,
