@@ -29,7 +29,7 @@
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
 #include <gtest/gtest_prod.h>
-#include <stdint.h>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -42,6 +42,7 @@
 #include "common/gpid.h"
 #include "common/manual_compact.h"
 #include "dsn.layer2_types.h"
+#include "gutil/map_util.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
 #include "table_metrics.h"
@@ -140,20 +141,17 @@ public:
 
     void lock_read(zauto_read_lock &other);
     void lock_write(zauto_write_lock &other);
-    const meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
-    std::shared_ptr<app_state> get_app(const std::string &name) const
+
+    meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
+
+    std::shared_ptr<app_state> get_app(const std::string &app_name) const
     {
-        auto iter = _exist_apps.find(name);
-        if (iter == _exist_apps.end())
-            return nullptr;
-        return iter->second;
+        return gutil::FindWithDefault(_exist_apps, app_name);
     }
+
     std::shared_ptr<app_state> get_app(int32_t app_id) const
     {
-        auto iter = _all_apps.find(app_id);
-        if (iter == _all_apps.end())
-            return nullptr;
-        return iter->second;
+        return gutil::FindWithDefault(_all_apps, app_id);
     }
 
     void query_configuration_by_index(const query_cfg_request &request,
@@ -409,6 +407,7 @@ private:
     friend class meta_split_service;
     friend class meta_split_service_test;
     friend class meta_service_test_app;
+    friend class server_state_test;
     friend class meta_test_base;
     friend class test::test_checker;
     friend class server_state_restore_test;
