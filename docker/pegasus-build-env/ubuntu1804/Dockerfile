@@ -65,7 +65,7 @@ RUN wget --progress=dot:giga https://archive.apache.org/dist/thrift/0.11.0/thrif
     cd /opt/thrift && tar xzf thrift-0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
     ./configure --enable-libs=no && \
     make -j$(($(nproc)/2+1)) && make install && cd - && \
-    rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz 
+    rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz
 
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 ENV CLASSPATH=$JAVA_HOME/lib/
