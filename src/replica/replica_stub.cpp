@@ -229,6 +229,7 @@ METRIC_DEFINE_gauge_int64(server,
                           "The max size of copied files among all splitting replicas");
 
 DSN_DECLARE_bool(duplication_enabled);
+DSN_DECLARE_bool(empty_write_disabled);
 DSN_DECLARE_bool(enable_acl);
 DSN_DECLARE_bool(encrypt_data_at_rest);
 DSN_DECLARE_int32(fd_beacon_interval_seconds);
@@ -2353,6 +2354,12 @@ void replica_stub::register_ctrl_command()
                     return out.str();
                 });
             }));
+
+        _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
+            FLAGS_empty_write_disabled,
+            FLAGS_empty_write_disabled,
+            "replica.disable-empty-write",
+            "whether to disable empty writes"));
 
 #ifdef DSN_ENABLE_GPERF
         _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
