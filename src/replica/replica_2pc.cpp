@@ -188,6 +188,16 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
+    if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
+        _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
+        response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
+        return;
+    }
+
+    if (!ignore_throttling && throttle_write_request(request)) {
+        return;
+    }
+
     if (request->rpc_code() == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
         auto cur_bulk_load_status = _bulk_loader->get_bulk_load_status();
         if (cur_bulk_load_status != bulk_load_status::BLS_DOWNLOADED &&
@@ -209,15 +219,6 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         _bulk_load_ingestion_start_time_ms = dsn_now_ms();
     }
 
-    if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
-        _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
-        response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
-        return;
-    }
-
-    if (!ignore_throttling && throttle_write_request(request)) {
-        return;
-    }
 
     LOG_DEBUG_PREFIX("got write request from {}", request->header->from_address);
     auto mu = _primary_states.write_queue.add_work(request->rpc_code(), request, this);
