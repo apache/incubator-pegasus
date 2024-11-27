@@ -68,11 +68,11 @@ RUN wget --progress=dot:giga https://archive.apache.org/dist/maven/maven-3/3.8.3
     && tar -zxf apache-maven-3.8.3-bin.tar.gz \
     && rm apache-maven-3.8.3-bin.tar.gz
 
-RUN wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -P /opt/thrift && \
-    cd /opt/thrift && tar xzf 0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
+RUN wget --progress=dot:giga https://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz -P /opt/thrift && \
+    cd /opt/thrift && tar xzf thrift-0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
     ./configure --enable-libs=no && \
     make -j$(($(nproc)/2+1)) && make install && cd - && \
-    rm -rf thrift-0.11.0 0.11.0.tar.gz
+    rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz
 
 ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk
 ENV PATH="/opt/maven/apache-maven-3.8.3/bin:${PATH}"
