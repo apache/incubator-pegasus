@@ -2357,7 +2357,6 @@ void replica_stub::register_ctrl_command()
 
         _cmds.emplace_back(::dsn::command_manager::instance().register_bool_command(
             FLAGS_empty_write_disabled,
-            FLAGS_empty_write_disabled,
             "replica.disable-empty-write",
             "whether to disable empty writes"));
 
