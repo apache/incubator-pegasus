@@ -172,7 +172,6 @@ void benchmark::write_random(thread_arg *thread)
 {
     // do write operation num times
     uint64_t bytes = 0;
-    int count = 0;
     for (int i = 0; i < FLAGS_benchmark_num; i++) {
         // generate hash key and sort key
         std::string hashkey, sortkey, value;
@@ -185,7 +184,6 @@ void benchmark::write_random(thread_arg *thread)
             int ret = _client->set(hashkey, sortkey, value, FLAGS_pegasus_timeout_ms);
             if (ret == ::pegasus::PERR_OK) {
                 bytes += FLAGS_value_size + FLAGS_hashkey_size + FLAGS_sortkey_size;
-                count++;
                 break;
             } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
                 fmt::print(stderr, "Set returned an error: {}\n", _client->get_error_string(ret));

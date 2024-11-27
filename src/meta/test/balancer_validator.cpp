@@ -118,8 +118,8 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
     CHECK(node != nodes.end(), "");
     ns = &node->second;
     SET_OBJ_IP_AND_HOST_PORT(pc, primary, act, node);
-    std::remove(pc.secondaries.begin(), pc.secondaries.end(), pc.primary);
-    std::remove(pc.hp_secondaries.begin(), pc.hp_secondaries.end(), pc.hp_primary);
+    (void)std::remove(pc.secondaries.begin(), pc.secondaries.end(), pc.primary);
+    (void)std::remove(pc.hp_secondaries.begin(), pc.hp_secondaries.end(), pc.hp_primary);
     CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
     ns->put_partition(pc.pid, true);
 }
