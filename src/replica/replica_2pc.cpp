@@ -219,7 +219,6 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         _bulk_load_ingestion_start_time_ms = dsn_now_ms();
     }
 
-
     LOG_DEBUG_PREFIX("got write request from {}", request->header->from_address);
     auto mu = _primary_states.write_queue.add_work(request->rpc_code(), request, this);
     if (mu) {
