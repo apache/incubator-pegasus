@@ -791,31 +791,34 @@ void meta_duplication_service::do_update_partition_confirmed(
     int32_t partition_idx,
     const duplication_confirm_entry &confirm_entry)
 {
-    if (dup->alter_progress(partition_idx, confirm_entry)) {
-        std::string path = get_partition_path(dup, std::to_string(partition_idx));
-        blob value = blob::create_from_bytes(std::to_string(confirm_entry.confirmed_decree));
+    if (!dup->alter_progress(partition_idx, confirm_entry)) {
+        return;
+    }
 
-        _meta_svc->get_meta_storage()->get_data(std::string(path), [=](const blob &data) mutable {
-            if (data.length() == 0) {
+        const auto &path = get_partition_path(dup, std::to_string(partition_idx));
+        const auto &value = blob::create_from_bytes(std::to_string(confirm_entry.confirmed_decree));
+
+        _meta_svc->get_meta_storage()->get_data(path, [=](const blob &data) mutable {
+            if (data.empty()) {
                 _meta_svc->get_meta_storage()->create_node(
-                    std::string(path), std::move(value), [=]() mutable {
+                    path, std::move(value), [=]() mutable {
                         dup->persist_progress(partition_idx);
                         rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
                             confirm_entry.confirmed_decree;
                     });
-            } else {
+                return;
+            } 
+
                 _meta_svc->get_meta_storage()->set_data(
-                    std::string(path), std::move(value), [=]() mutable {
+                    path, std::move(value), [=]() mutable {
                         dup->persist_progress(partition_idx);
                         rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
                             confirm_entry.confirmed_decree;
                     });
-            }
 
             // duplication_sync_rpc will finally be replied when confirmed points
             // of all partitions are stored.
         });
-    }
 }
 
 std::shared_ptr<duplication_info>

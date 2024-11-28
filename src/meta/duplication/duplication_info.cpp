@@ -22,6 +22,16 @@
 #include "runtime/api_layer1.h"
 #include "utils/fmt_logging.h"
 
+DSN_DEFINE_uint64(replication,
+                  dup_progress_min_update_period_ms,
+                  5000,
+                  "The minimum period in milliseconds that progress of duplication is updated");
+
+DSN_DEFINE_uint64(replication,
+                  dup_progress_min_report_period_ms,
+                  5 * 60 * 1000,
+                  "The minimum period in milliseconds that progress of duplication is reported");
+
 namespace dsn {
 namespace replication {
 
@@ -133,19 +143,27 @@ bool duplication_info::alter_progress(int partition_index,
         return false;
     }
 
+    if (confirm_entry.__isset.last_committed_decree) {
+    p.last_committed_decree = confirm_entry.last_committed_decree;
+    }
+
     p.checkpoint_prepared = confirm_entry.checkpoint_prepared;
     if (p.volatile_decree < confirm_entry.confirmed_decree) {
         p.volatile_decree = confirm_entry.confirmed_decree;
     }
-    if (p.volatile_decree != p.stored_decree) {
-        // progress update is not supposed to be too frequent.
-        if (dsn_now_ms() > p.last_progress_update_ms + PROGRESS_UPDATE_PERIOD_MS) {
+
+    if (p.volatile_decree == p.stored_decree) {
+    return false;
+    }
+
+        // Progress update is not supposed to be too frequent.
+        if (dsn_now_ms() < p.last_progress_update_ms + FLAGS_dup_progress_min_update_period_ms) {
+    return false;
+        }
+
             p.is_altering = true;
             p.last_progress_update_ms = dsn_now_ms();
             return true;
-        }
-    }
-    return false;
 }
 
 void duplication_info::persist_progress(int partition_index)
@@ -163,13 +181,26 @@ void duplication_info::persist_status()
     zauto_write_lock l(_lock);
 
     if (!_is_altering) {
-        LOG_ERROR_PREFIX("callers never write a duplication that is not altering to meta store");
-        return;
-    }
-    LOG_INFO_PREFIX("change duplication status from {} to {} successfully [app_id: {}]",
+        LOG_ERROR_PREFIX("the status of this duplication is not being altered: status={}, "
+                "next_status={}, master_app_id={}, master_app_name={}, "
+                    "follower_cluster_name={}, follower_app_name={}"
                     duplication_status_to_string(_status),
                     duplication_status_to_string(_next_status),
-                    app_id);
+                    app_id,
+                    app_name,
+                    remote_cluster_name,
+                    remote_app_name);
+        return;
+    }
+
+    LOG_INFO_PREFIX("change duplication status from {} to {} successfully: master_app_id={}, "
+                    "master_app_name={}, follower_cluster_name={}, follower_app_name={}",
+                    duplication_status_to_string(_status),
+                    duplication_status_to_string(_next_status),
+                    app_id,
+                    app_name,
+                    remote_cluster_name,
+                    remote_app_name);
 
     _is_altering = false;
     _status = _next_status;
@@ -197,11 +228,13 @@ blob duplication_info::to_json_blob() const
 
 void duplication_info::report_progress_if_time_up()
 {
-    // progress report is not supposed to be too frequent.
-    if (dsn_now_ms() > _last_progress_report_ms + PROGRESS_REPORT_PERIOD_MS) {
+    // Progress report is not supposed to be too frequent.
+    if (dsn_now_ms() < _last_progress_report_ms + FLAGS_dup_progress_min_report_period_ms) {
+        return;
+    }
+
         _last_progress_report_ms = dsn_now_ms();
         LOG_INFO("duplication report: {}", to_string());
-    }
 }
 
 duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
