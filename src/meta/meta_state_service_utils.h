@@ -69,7 +69,7 @@ struct meta_storage
     /// Will fatal if node doesn't exists.
     void set_data(std::string &&node, blob &&value, std::function<void()> &&cb);
 
-    void set_data(const std::string &node, blob &&value, std::function<void()> &&cb);
+    void set_data(const std::string &node, blob &&value, std::function<void()> &&cb)
     {
         set_data(std::string(node), std::move(value), std::move(cb));
     }

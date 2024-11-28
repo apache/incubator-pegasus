@@ -1130,7 +1130,8 @@ void server_state::create_app(dsn::message_ex *msg)
              duplicating
                  ? fmt::format("master_cluster_name={}, master_app_name={}",
                                master_cluster->second,
-                               gutil::FindWithDefault(request.options.envs, duplication_constants::kEnvMasterAppNameKey))
+                               gutil::FindWithDefault(request.options.envs,
+                                                      duplication_constants::kEnvMasterAppNameKey))
                  : "false");
 
     auto option_match_check = [](const create_app_options &opt, const app_state &exist_app) {

@@ -144,7 +144,7 @@ bool duplication_info::alter_progress(int partition_index,
     }
 
     if (confirm_entry.__isset.last_committed_decree) {
-    p.last_committed_decree = confirm_entry.last_committed_decree;
+        p.last_committed_decree = confirm_entry.last_committed_decree;
     }
 
     p.checkpoint_prepared = confirm_entry.checkpoint_prepared;
@@ -153,17 +153,17 @@ bool duplication_info::alter_progress(int partition_index,
     }
 
     if (p.volatile_decree == p.stored_decree) {
-    return false;
+        return false;
     }
 
-        // Progress update is not supposed to be too frequent.
-        if (dsn_now_ms() < p.last_progress_update_ms + FLAGS_dup_progress_min_update_period_ms) {
-    return false;
-        }
+    // Progress update is not supposed to be too frequent.
+    if (dsn_now_ms() < p.last_progress_update_ms + FLAGS_dup_progress_min_update_period_ms) {
+        return false;
+    }
 
-            p.is_altering = true;
-            p.last_progress_update_ms = dsn_now_ms();
-            return true;
+    p.is_altering = true;
+    p.last_progress_update_ms = dsn_now_ms();
+    return true;
 }
 
 void duplication_info::persist_progress(int partition_index)
@@ -182,14 +182,14 @@ void duplication_info::persist_status()
 
     if (!_is_altering) {
         LOG_ERROR_PREFIX("the status of this duplication is not being altered: status={}, "
-                "next_status={}, master_app_id={}, master_app_name={}, "
-                    "follower_cluster_name={}, follower_app_name={}"
-                    duplication_status_to_string(_status),
-                    duplication_status_to_string(_next_status),
-                    app_id,
-                    app_name,
-                    remote_cluster_name,
-                    remote_app_name);
+                         "next_status={}, master_app_id={}, master_app_name={}, "
+                         "follower_cluster_name={}, follower_app_name={}",
+                         duplication_status_to_string(_status),
+                         duplication_status_to_string(_next_status),
+                         app_id,
+                         app_name,
+                         remote_cluster_name,
+                         remote_app_name);
         return;
     }
 
@@ -233,8 +233,8 @@ void duplication_info::report_progress_if_time_up()
         return;
     }
 
-        _last_progress_report_ms = dsn_now_ms();
-        LOG_INFO("duplication report: {}", to_string());
+    _last_progress_report_ms = dsn_now_ms();
+    LOG_INFO("duplication report: {}", to_string());
 }
 
 duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,

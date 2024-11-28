@@ -795,26 +795,28 @@ void meta_duplication_service::do_update_partition_confirmed(
         return;
     }
 
-        const auto &path = get_partition_path(dup, std::to_string(partition_idx));
-        const auto &value = blob::create_from_bytes(std::to_string(confirm_entry.confirmed_decree));
+    const auto &path = get_partition_path(dup, std::to_string(partition_idx));
 
-        _meta_svc->get_meta_storage()->get_data(path, [=](const blob &data) mutable {
+    _meta_svc->get_meta_storage()->get_data(
+        path, [dup, rpc, partition_idx, confirm_entry, path, this](const blob &data) mutable {
+            auto value = blob::create_from_bytes(std::to_string(confirm_entry.confirmed_decree));
+
             if (data.empty()) {
                 _meta_svc->get_meta_storage()->create_node(
-                    path, std::move(value), [=]() mutable {
+                    path, std::move(value), [dup, rpc, partition_idx, confirm_entry]() mutable {
                         dup->persist_progress(partition_idx);
                         rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
                             confirm_entry.confirmed_decree;
                     });
                 return;
-            } 
+            }
 
-                _meta_svc->get_meta_storage()->set_data(
-                    path, std::move(value), [=]() mutable {
-                        dup->persist_progress(partition_idx);
-                        rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
-                            confirm_entry.confirmed_decree;
-                    });
+            _meta_svc->get_meta_storage()->set_data(
+                path, std::move(value), [dup, rpc, partition_idx, confirm_entry]() mutable {
+                    dup->persist_progress(partition_idx);
+                    rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
+                        confirm_entry.confirmed_decree;
+                });
 
             // duplication_sync_rpc will finally be replied when confirmed points
             // of all partitions are stored.

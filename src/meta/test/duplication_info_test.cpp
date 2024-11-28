@@ -31,7 +31,7 @@
 #include "gtest/gtest.h"
 #include "runtime/app_model.h"
 
-DSN_DECLARE_uint64(dup_progress_min_update_period_ms)
+DSN_DECLARE_uint64(dup_progress_min_update_period_ms);
 
 namespace dsn {
 namespace replication {
@@ -96,8 +96,7 @@ public:
         ASSERT_FALSE(dup.alter_progress(1, entry));
         ASSERT_FALSE(dup._progress[1].is_altering);
 
-        dup._progress[1].last_progress_update_ms -=
-            FLAGS_dup_progress_min_update_period_ms + 100;
+        dup._progress[1].last_progress_update_ms -= FLAGS_dup_progress_min_update_period_ms + 100;
 
         entry.confirmed_decree = 15;
         entry.checkpoint_prepared = true;
