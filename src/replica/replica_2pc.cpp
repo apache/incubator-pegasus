@@ -221,7 +221,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 
     LOG_DEBUG_PREFIX("got write request from {}", request->header->from_address);
     auto mu = _primary_states.write_queue.add_work(request->rpc_code(), request, this);
-    if (mu) {
+    if (mu != nullptr) {
         init_prepare(mu, false);
     }
 }
