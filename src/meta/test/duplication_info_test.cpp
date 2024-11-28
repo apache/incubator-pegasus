@@ -33,8 +33,7 @@
 
 DSN_DECLARE_uint64(dup_progress_min_update_period_ms);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class duplication_info_test : public testing::Test
 {
@@ -359,5 +358,4 @@ TEST_F(duplication_info_test, is_valid)
     ASSERT_TRUE(dup.is_invalid_status());
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

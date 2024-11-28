@@ -29,11 +29,10 @@ DSN_DEFINE_uint64(replication,
 
 DSN_DEFINE_uint64(replication,
                   dup_progress_min_report_period_ms,
-                  5 * 60 * 1000,
+                  static_cast<uint64_t>(5) * 60 * 1000,
                   "The minimum period in milliseconds that progress of duplication is reported");
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 /*extern*/ void json_encode(dsn::json::JsonWriter &out, const duplication_status::type &s)
 {
@@ -296,5 +295,4 @@ void duplication_info::append_if_valid_for_query(
     ent.__isset.progress = false;
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
