@@ -20,11 +20,14 @@
 #include <functional>
 #include <queue>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "utils/blob.h"
+
 namespace dsn {
-class blob;
 class task_tracker;
+
 namespace dist {
 class meta_state_service;
 } // namespace dist

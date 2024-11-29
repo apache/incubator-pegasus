@@ -20,6 +20,7 @@
 #include "common/duplication_common.h"
 #include "meta/meta_data.h"
 #include "runtime/api_layer1.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
 DSN_DEFINE_uint64(replication,

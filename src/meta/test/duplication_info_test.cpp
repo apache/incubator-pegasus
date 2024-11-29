@@ -31,6 +31,7 @@
 #include "gtest/gtest.h"
 #include "runtime/app_model.h"
 #include "test_util/test_util.h"
+#include "utils/flags.h"
 
 DSN_DECLARE_uint64(dup_progress_min_update_period_ms);
 
