@@ -183,8 +183,9 @@ void prepare_list::commit(decree d, commit_type ct)
         return;
     }
     case COMMIT_ALL_READY: {
-        if (d != last_committed_decree() + 1)
+        if (d != last_committed_decree() + 1) {
             return;
+        }
 
         mutation_ptr mu = get_mutation_by_decree(last_committed_decree() + 1);
 

@@ -93,7 +93,7 @@ void meta_state_service_simple::write_log(blob &&log_blob,
         CHECK(log_succeed, "we cannot handle logging failure now");
         __err_cb_bind_and_enqueue(task, internal_operation(), 0);
     }));
-    auto continuation_task_ptr = continuation_task.get();
+    auto* continuation_task_ptr = continuation_task.get();
     _task_queue.emplace(std::move(continuation_task));
     _log_lock.unlock();
 
@@ -525,7 +525,7 @@ task_ptr meta_state_service_simple::get_children(const std::string &node,
             result.push_back(child_pair.first);
         }
         return tasking::enqueue(
-            cb_code, tracker, [=]() mutable { cb_get_children(ERR_OK, std::move(result)); });
+            cb_code, tracker, [=]() mutable { cb_get_children(ERR_OK, result); });
     }
 }
 
