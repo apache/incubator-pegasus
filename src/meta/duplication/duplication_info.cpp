@@ -125,8 +125,13 @@ void duplication_info::init_progress(int partition_index, decree d)
     zauto_write_lock l(_lock);
 
     auto &p = _progress[partition_index];
+
+    p.last_committed_decree = invalid_decree;
     p.volatile_decree = p.stored_decree = d;
+    p.is_altering = false;
+    p.last_progress_update_ms = 0;
     p.is_inited = true;
+    p.checkpoint_prepared = false;
 }
 
 bool duplication_info::alter_progress(int partition_index,
@@ -135,15 +140,20 @@ bool duplication_info::alter_progress(int partition_index,
     zauto_write_lock l(_lock);
 
     partition_progress &p = _progress[partition_index];
+
+    // last_committed_decree could be update at any time no matter whether progress is
+    // initialized or busy updating, since it is not persisted to remote meta storage.
+    // It is just collected from the primary replica of each partition.
+    if (confirm_entry.__isset.last_committed_decree) {
+        p.last_committed_decree = confirm_entry.last_committed_decree;
+    }
+
     if (!p.is_inited) {
         return false;
     }
+
     if (p.is_altering) {
         return false;
-    }
-
-    if (confirm_entry.__isset.last_committed_decree) {
-        p.last_committed_decree = confirm_entry.last_committed_decree;
     }
 
     p.checkpoint_prepared = confirm_entry.checkpoint_prepared;

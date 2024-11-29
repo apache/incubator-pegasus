@@ -218,11 +218,12 @@ private:
 
     struct partition_progress
     {
+        // last committed decree collected from the primary replica of each partition.
+        // Not persisted to remote meta storage.
+        int64_t last_committed_decree{invalid_decree};
+
         int64_t volatile_decree{invalid_decree};
         int64_t stored_decree{invalid_decree};
-
-        //
-        int64_t last_committed_decree{invalid_decree};
 
         bool is_altering{false};
         uint64_t last_progress_update_ms{0};
