@@ -1163,7 +1163,7 @@ void server_state::create_app(dsn::message_ex *msg)
     zauto_write_lock l(_lock);
 
     auto app = get_app(request.app_name);
-    if (!app) {
+    if (app) {
         configuration_create_app_response response;
 
         switch (app->status) {
