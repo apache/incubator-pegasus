@@ -20,11 +20,14 @@
 #include <functional>
 #include <queue>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "utils/blob.h"
+
 namespace dsn {
-class blob;
 class task_tracker;
+
 namespace dist {
 class meta_state_service;
 } // namespace dist
@@ -57,6 +60,11 @@ struct meta_storage
 
     void create_node(std::string &&node, blob &&value, std::function<void()> &&cb);
 
+    void create_node(const std::string &node, blob &&value, std::function<void()> &&cb)
+    {
+        create_node(std::string(node), std::move(value), std::move(cb));
+    }
+
     void delete_node_recursively(std::string &&node, std::function<void()> &&cb);
 
     void delete_node(std::string &&node, std::function<void()> &&cb);
@@ -64,8 +72,18 @@ struct meta_storage
     /// Will fatal if node doesn't exists.
     void set_data(std::string &&node, blob &&value, std::function<void()> &&cb);
 
+    void set_data(const std::string &node, blob &&value, std::function<void()> &&cb)
+    {
+        set_data(std::string(node), std::move(value), std::move(cb));
+    }
+
     /// If node does not exist, cb will receive an empty blob.
     void get_data(std::string &&node, std::function<void(const blob &)> &&cb);
+
+    void get_data(const std::string &node, std::function<void(const blob &)> &&cb)
+    {
+        get_data(std::string(node), std::move(cb));
+    }
 
     /// \param cb: void (bool node_exists, const std::vector<std::string> &children)
     ///            `children` contains the name (not full path) of children nodes.

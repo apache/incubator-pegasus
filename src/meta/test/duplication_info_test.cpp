@@ -30,9 +30,12 @@
 
 #include "gtest/gtest.h"
 #include "runtime/app_model.h"
+#include "test_util/test_util.h"
+#include "utils/flags.h"
 
-namespace dsn {
-namespace replication {
+DSN_DECLARE_uint64(dup_progress_min_update_period_ms);
+
+namespace dsn::replication {
 
 class duplication_info_test : public testing::Test
 {
@@ -48,9 +51,22 @@ public:
         dup._status = status;
     }
 
+    static void test_init_progress(duplication_info &dup, int partition_idx, decree expected_decree)
+    {
+        dup.init_progress(partition_idx, expected_decree);
+
+        const auto &progress = dup._progress[partition_idx];
+        ASSERT_EQ(invalid_decree, progress.last_committed_decree);
+        ASSERT_EQ(expected_decree, progress.volatile_decree);
+        ASSERT_EQ(expected_decree, progress.stored_decree);
+        ASSERT_FALSE(progress.is_altering);
+        ASSERT_EQ(0, progress.last_progress_update_ms);
+        ASSERT_TRUE(progress.is_inited);
+        ASSERT_FALSE(progress.checkpoint_prepared);
+    }
+
     static void test_alter_progress()
     {
-
         duplication_info dup(1,
                              1,
                              kTestAppName,
@@ -61,46 +77,91 @@ public:
                              kTestRemoteAppName,
                              std::vector<host_port>(),
                              kTestMetaStorePath);
-        duplication_confirm_entry entry;
-        ASSERT_FALSE(dup.alter_progress(0, entry));
 
-        dup.init_progress(0, invalid_decree);
+        // Failed to alter progres for partition 0 since it has not been initialized.
+        ASSERT_FALSE(dup.alter_progress(0, duplication_confirm_entry()));
+
+        // Initialize progress for partition 0.
+        test_init_progress(dup, 0, invalid_decree);
+
+        // Alter progress with specified decrees for partition 0.
+        duplication_confirm_entry entry;
+        entry.__set_last_committed_decree(8);
         entry.confirmed_decree = 5;
         entry.checkpoint_prepared = true;
         ASSERT_TRUE(dup.alter_progress(0, entry));
-        ASSERT_EQ(dup._progress[0].volatile_decree, 5);
+
+        ASSERT_EQ(8, dup._progress[0].last_committed_decree);
+        ASSERT_EQ(5, dup._progress[0].volatile_decree);
+        ASSERT_EQ(invalid_decree, dup._progress[0].stored_decree);
         ASSERT_TRUE(dup._progress[0].is_altering);
         ASSERT_TRUE(dup._progress[0].checkpoint_prepared);
 
-        // busy updating
+        // Busy updating.
+        entry.__set_last_committed_decree(15);
         entry.confirmed_decree = 10;
         entry.checkpoint_prepared = false;
         ASSERT_FALSE(dup.alter_progress(0, entry));
-        ASSERT_EQ(dup._progress[0].volatile_decree, 5);
+
+        // last_committed_decree could be updated at any time.
+        ASSERT_EQ(15, dup._progress[0].last_committed_decree);
+        ASSERT_EQ(5, dup._progress[0].volatile_decree);
+        ASSERT_EQ(invalid_decree, dup._progress[0].stored_decree);
         ASSERT_TRUE(dup._progress[0].is_altering);
         ASSERT_TRUE(dup._progress[0].checkpoint_prepared);
 
+        // Persist progress for partition 0.
         dup.persist_progress(0);
-        ASSERT_EQ(dup._progress[0].stored_decree, 5);
+
+        ASSERT_EQ(15, dup._progress[0].last_committed_decree);
+        ASSERT_EQ(5, dup._progress[0].volatile_decree);
+        ASSERT_EQ(5, dup._progress[0].stored_decree);
         ASSERT_FALSE(dup._progress[0].is_altering);
         ASSERT_TRUE(dup._progress[0].checkpoint_prepared);
 
-        // too frequent to update
-        dup.init_progress(1, invalid_decree);
+        // Initialize progress for partition 1.
+        test_init_progress(dup, 1, 5);
+
+        // Alter progress for partition 1.
         ASSERT_TRUE(dup.alter_progress(1, entry));
+
+        ASSERT_EQ(15, dup._progress[1].last_committed_decree);
+        ASSERT_EQ(10, dup._progress[1].volatile_decree);
+        ASSERT_EQ(5, dup._progress[1].stored_decree);
         ASSERT_TRUE(dup._progress[1].is_altering);
+        ASSERT_FALSE(dup._progress[1].checkpoint_prepared);
+
+        // Persist progress for partition 1.
         dup.persist_progress(1);
 
-        ASSERT_FALSE(dup.alter_progress(1, entry));
-        ASSERT_FALSE(dup._progress[1].is_altering);
-
-        dup._progress[1].last_progress_update_ms -=
-            duplication_info::PROGRESS_UPDATE_PERIOD_MS + 100;
-
+        // It is too frequent to alter progress.
+        PRESERVE_FLAG(dup_progress_min_update_period_ms);
+        FLAGS_dup_progress_min_update_period_ms = 10000;
+        entry.__set_last_committed_decree(25);
         entry.confirmed_decree = 15;
         entry.checkpoint_prepared = true;
+        ASSERT_FALSE(dup.alter_progress(1, entry));
+        ASSERT_EQ(25, dup._progress[1].last_committed_decree);
+        // volatile_decree would be updated successfully even if it is too frequent.
+        ASSERT_EQ(15, dup._progress[1].volatile_decree);
+        ASSERT_EQ(10, dup._progress[1].stored_decree);
+        ASSERT_FALSE(dup._progress[1].is_altering);
+        // checkpoint_prepared would be updated successfully even if it is too frequent.
+        ASSERT_TRUE(dup._progress[1].checkpoint_prepared);
+
+        // Reduce last update timestamp to make it infrequent.
+        dup._progress[1].last_progress_update_ms -= FLAGS_dup_progress_min_update_period_ms + 100;
+        entry.__set_last_committed_decree(26);
+        entry.confirmed_decree = 25;
+
         ASSERT_TRUE(dup.alter_progress(1, entry));
+        ASSERT_EQ(26, dup._progress[1].last_committed_decree);
+        ASSERT_EQ(25, dup._progress[1].volatile_decree);
+        ASSERT_EQ(10, dup._progress[1].stored_decree);
         ASSERT_TRUE(dup._progress[1].is_altering);
+        ASSERT_TRUE(dup._progress[1].checkpoint_prepared);
+
+        // Checkpoint are ready for both partition 0 and 1.
         ASSERT_TRUE(dup.all_checkpoint_has_prepared());
     }
 
@@ -128,8 +189,9 @@ public:
         for (int i = 0; i < 4; i++) {
             dup.init_progress(i, invalid_decree);
         }
+
         for (auto kv : dup_ent.progress) {
-            ASSERT_EQ(kv.second, invalid_decree);
+            ASSERT_EQ(invalid_decree, kv.second);
         }
 
         dup.start();
@@ -153,8 +215,8 @@ public:
         dup.start();
 
         dup.persist_status();
-        ASSERT_EQ(dup._status, duplication_status::DS_PREPARE);
-        ASSERT_EQ(dup._next_status, duplication_status::DS_INIT);
+        ASSERT_EQ(duplication_status::DS_PREPARE, dup._status);
+        ASSERT_EQ(duplication_status::DS_INIT, dup._next_status);
         ASSERT_FALSE(dup.is_altering());
     }
 
@@ -358,5 +420,4 @@ TEST_F(duplication_info_test, is_valid)
     ASSERT_TRUE(dup.is_invalid_status());
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

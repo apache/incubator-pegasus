@@ -791,31 +791,36 @@ void meta_duplication_service::do_update_partition_confirmed(
     int32_t partition_idx,
     const duplication_confirm_entry &confirm_entry)
 {
-    if (dup->alter_progress(partition_idx, confirm_entry)) {
-        std::string path = get_partition_path(dup, std::to_string(partition_idx));
-        blob value = blob::create_from_bytes(std::to_string(confirm_entry.confirmed_decree));
+    if (!dup->alter_progress(partition_idx, confirm_entry)) {
+        return;
+    }
 
-        _meta_svc->get_meta_storage()->get_data(std::string(path), [=](const blob &data) mutable {
-            if (data.length() == 0) {
+    const auto &path = get_partition_path(dup, std::to_string(partition_idx));
+
+    _meta_svc->get_meta_storage()->get_data(
+        path, [dup, rpc, partition_idx, confirm_entry, path, this](const blob &data) mutable {
+            auto value = blob::create_from_bytes(std::to_string(confirm_entry.confirmed_decree));
+
+            if (data.empty()) {
                 _meta_svc->get_meta_storage()->create_node(
-                    std::string(path), std::move(value), [=]() mutable {
+                    path, std::move(value), [dup, rpc, partition_idx, confirm_entry]() mutable {
                         dup->persist_progress(partition_idx);
                         rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
                             confirm_entry.confirmed_decree;
                     });
-            } else {
-                _meta_svc->get_meta_storage()->set_data(
-                    std::string(path), std::move(value), [=]() mutable {
-                        dup->persist_progress(partition_idx);
-                        rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
-                            confirm_entry.confirmed_decree;
-                    });
+                return;
             }
+
+            _meta_svc->get_meta_storage()->set_data(
+                path, std::move(value), [dup, rpc, partition_idx, confirm_entry]() mutable {
+                    dup->persist_progress(partition_idx);
+                    rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
+                        confirm_entry.confirmed_decree;
+                });
 
             // duplication_sync_rpc will finally be replied when confirmed points
             // of all partitions are stored.
         });
-    }
 }
 
 std::shared_ptr<duplication_info>
@@ -908,7 +913,7 @@ void meta_duplication_service::do_restore_duplication_progress(
             std::move(partition_path), [dup, partition_idx](const blob &value) {
                 // value is confirmed_decree encoded in string.
 
-                if (value.size() == 0) {
+                if (value.empty()) {
                     // not found
                     dup->init_progress(partition_idx, invalid_decree);
                     return;
@@ -953,10 +958,11 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
                                                           app->max_replica_count,
                                                           store_path,
                                                           json);
-            if (nullptr == dup) {
+            if (!dup) {
                 LOG_ERROR("failed to decode json \"{}\" on path {}", json, store_path);
                 return; // fail fast
             }
+
             if (!dup->is_invalid_status()) {
                 app->duplications[dup->id] = dup;
                 refresh_duplicating_no_lock(app);

@@ -1128,9 +1128,10 @@ void server_state::create_app(dsn::message_ex *msg)
              request.options.partition_count,
              request.options.replica_count,
              duplicating
-                 ? fmt::format("{}.{}",
-                               request.options.envs[duplication_constants::kEnvMasterClusterKey],
-                               request.app_name)
+                 ? fmt::format("master_cluster_name={}, master_app_name={}",
+                               master_cluster->second,
+                               gutil::FindWithDefault(request.options.envs,
+                                                      duplication_constants::kEnvMasterAppNameKey))
                  : "false");
 
     auto option_match_check = [](const create_app_options &opt, const app_state &exist_app) {
@@ -1162,7 +1163,7 @@ void server_state::create_app(dsn::message_ex *msg)
     zauto_write_lock l(_lock);
 
     auto app = get_app(request.app_name);
-    if (nullptr != app) {
+    if (app) {
         configuration_create_app_response response;
 
         switch (app->status) {

@@ -94,6 +94,7 @@ replica_duplicator_manager::get_duplication_confirms_to_update() const
         entry.dupid = dup->id();
         entry.confirmed_decree = progress.last_decree;
         entry.__set_checkpoint_prepared(progress.checkpoint_has_prepared);
+        entry.__set_last_committed_decree(_replica->last_committed_decree());
         updates.emplace_back(entry);
     }
     return updates;

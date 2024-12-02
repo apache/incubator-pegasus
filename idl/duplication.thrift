@@ -172,6 +172,10 @@ struct duplication_confirm_entry
     1:i32       dupid;
     2:i64       confirmed_decree;
     3:optional bool checkpoint_prepared = false;
+
+    // Last committed decree from the primary replica of each partition, collected by
+    // meta server and used to be compared with duplicating progress of follower table.
+    4:optional i64 last_committed_decree;
 }
 
 // This is an internal RPC sent from replica server to meta.
