@@ -677,11 +677,11 @@ TEST_F(meta_duplication_service_test, remove_dup)
 TEST_F(meta_duplication_service_test, duplication_sync)
 {
     const auto &server_nodes = ensure_enough_alive_nodes(3);
-    const std::string test_app = "test_app_0";
+    const std::string test_app("test_app_0");
     create_app(test_app);
     auto app = find_app(test_app);
 
-    // generate all primaries on node[0]
+    // Generate all primaries on node[0].
     for (auto &pc : app->pcs) {
         pc.ballot = random32(1, 10000);
         SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, server_nodes[0]);
@@ -696,6 +696,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
     for (int i = 0; i < app->partition_count; i++) {
         dup->init_progress(i, invalid_decree);
     }
+
     {
         std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list;
 
@@ -712,20 +713,20 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         confirm_list[gpid(app->app_id, 3)].push_back(ce);
 
         duplication_sync_response resp = duplication_sync(node, confirm_list);
-        ASSERT_EQ(resp.err, ERR_OK);
-        ASSERT_EQ(resp.dup_map.size(), 1);
-        ASSERT_EQ(resp.dup_map[app->app_id].size(), 1);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].dupid, dupid);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].status, duplication_status::DS_PREPARE);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].create_ts, dup->create_timestamp_ms);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].remote, dup->remote_cluster_name);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].fail_mode, dup->fail_mode());
+        ASSERT_EQ(ERR_OK, resp.err);
+        ASSERT_EQ(1, resp.dup_map.size());
+        ASSERT_EQ(1, resp.dup_map[app->app_id].size());
+        ASSERT_EQ(dupid, resp.dup_map[app->app_id][dupid].dupid);
+        ASSERT_EQ(duplication_status::DS_PREPARE, resp.dup_map[app->app_id][dupid].status);
+        ASSERT_EQ(dup->create_timestamp_ms, resp.dup_map[app->app_id][dupid].create_ts);
+        ASSERT_EQ(dup->remote_cluster_name, resp.dup_map[app->app_id][dupid].remote);
+        ASSERT_EQ(dup->fail_mode(), resp.dup_map[app->app_id][dupid].fail_mode);
 
         auto progress_map = resp.dup_map[app->app_id][dupid].progress;
-        ASSERT_EQ(progress_map.size(), 8);
-        ASSERT_EQ(progress_map[1], 5);
-        ASSERT_EQ(progress_map[2], 6);
-        ASSERT_EQ(progress_map[3], 7);
+        ASSERT_EQ(8, progress_map.size());
+        ASSERT_EQ(5, progress_map[1]);
+        ASSERT_EQ(6, progress_map[2]);
+        ASSERT_EQ(7, progress_map[3]);
 
         // ensure no updated progresses will also be included in response
         for (int p = 4; p < 8; p++) {
