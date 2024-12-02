@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/apache/incubator-pegasus/admin-cli/client"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
@@ -45,6 +46,7 @@ type Client struct {
 }
 
 // NewClient creates a client for accessing Pegasus cluster for use of admin-cli.
+// This function will call os.Exit.
 func NewClient(writer io.Writer, metaAddrs []string) *Client {
 	meta := client.NewRPCBasedMeta(metaAddrs)
 
@@ -66,4 +68,47 @@ func NewClient(writer io.Writer, metaAddrs []string) *Client {
 		Nodes:  util.NewPegasusNodeManager(metaAddrs, replicaAddrs),
 		Perf:   aggregate.NewPerfClient(metaAddrs),
 	}
+}
+
+// NewClientWithoutExit creates a client for accessing Pegasus cluster for use of admin-cli.
+// This function will not call os.Exit.
+func NewClientWithoutExit(writer io.Writer, metaAddrs []string) (*Client, error) {
+	meta := client.NewRPCBasedMeta(metaAddrs)
+
+	nodes, err := meta.ListNodes()
+	if err != nil {
+		fmt.Fprintf(writer, "fatal: failed to list nodes [%s]\n", err)
+		return nil, fmt.Errorf("fatal: failed to list nodes [%s]", err)
+	}
+
+	var replicaAddrs []string
+	for _, node := range nodes {
+		replicaAddrs = append(replicaAddrs, node.Address.GetAddress())
+	}
+
+	return &Client{
+		Writer: writer,
+		Meta:   meta,
+		Nodes:  util.NewPegasusNodeManager(metaAddrs, replicaAddrs),
+		Perf:   aggregate.NewPerfClient(metaAddrs),
+	}, nil
+}
+
+func CloseClient(writer io.Writer, client *Client) error {
+	var errorStrings []string
+	err := client.Meta.Close()
+	if err != nil {
+		fmt.Fprintf(writer, "fatal: failed to close meta session [%s]\n", err)
+		errorStrings = append(errorStrings, err.Error())
+	}
+
+	client.Perf.Close()
+
+	err = client.Nodes.CloseAllNodes()
+	if err != nil {
+		fmt.Fprintf(writer, "fatal: failed to close nodes session [%s]\n", err)
+		errorStrings = append(errorStrings, err.Error())
+	}
+
+	return fmt.Errorf("%s", strings.Join(errorStrings, "\n"))
 }
