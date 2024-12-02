@@ -114,15 +114,18 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
     dupid_t dupid = ent.dupid;
     duplication_status::type next_status = ent.status;
 
-    replica_duplicator_u_ptr &dup = _duplications[dupid];
-    if (dup == nullptr) {
+    auto &dup = _duplications[dupid];
+    if (!dup) {
         if (!is_duplication_status_invalid(next_status)) {
             dup = std::make_unique<replica_duplicator>(ent, _replica);
         } else {
             LOG_ERROR_PREFIX("illegal duplication status: {}",
                              duplication_status_to_string(next_status));
         }
-    } else {
+
+        return;
+    } 
+
         // update progress
         duplication_progress newp = dup->progress().set_confirmed_decree(it->second);
         CHECK_EQ_PREFIX(dup->update_progress(newp), error_s::ok());
@@ -130,7 +133,6 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
         if (ent.__isset.fail_mode) {
             dup->update_fail_mode(ent.fail_mode);
         }
-    }
 }
 
 decree replica_duplicator_manager::min_confirmed_decree() const

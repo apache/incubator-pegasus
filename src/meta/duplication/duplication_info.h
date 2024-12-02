@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <iosfwd>
 #include <map>
 #include <memory>
@@ -46,6 +47,13 @@ class app_state;
 class duplication_info;
 
 using duplication_info_s_ptr = std::shared_ptr<duplication_info>;
+
+    enum class duplication_entry_type: int
+    {
+        kDuplicationLevelInfo,
+        kPartitionLevelSync,
+        kPartitionLevelList,
+    };
 
 /// This class is thread-safe.
 class duplication_info
@@ -152,7 +160,7 @@ public:
     void append_if_valid_for_query(const app_state &app,
                                    /*out*/ std::vector<duplication_entry> &entry_list) const;
 
-    duplication_entry to_duplication_entry() const
+    duplication_entry to_duplication_entry(duplication_entry_type type) const
     {
         duplication_entry entry;
         entry.dupid = id;
@@ -162,13 +170,24 @@ public:
         entry.__set_fail_mode(_fail_mode);
         entry.__set_remote_app_name(remote_app_name);
         entry.__set_remote_replica_count(remote_replica_count);
-        entry.__isset.progress = true;
-        for (const auto &kv : _progress) {
-            if (!kv.second.is_inited) {
-                continue;
-            }
-            entry.progress[kv.first] = kv.second.stored_decree;
+
+        if (type == duplication_entry_type::kDuplicationLevelInfo) {
+            return entry;
         }
+
+        if (type == duplication_entry_type::kPartitionLevelSync) {
+        entry.__isset.progress = true;
+        insert_into_entry([](int partition_id, const partition_progress &partition_state, duplication_entry& entry){
+            entry.progress.emplace(partition_id, partition_state.stored_decree);
+                }, entry);
+        }
+         else if (type == duplication_entry_type::kPartitionLevelList) {
+        entry.__isset.partition_states= true;
+        insert_into_entry([](int partition_id, const partition_progress &partition_state, duplication_entry& entry){
+            entry.partition_states.emplace(partition_id, {partition_state.stored_decree, partition_state.last_committed_decree});
+                }, entry);
+        }
+
         return entry;
     }
 
@@ -207,6 +226,17 @@ public:
 private:
     // To json encoded string.
     std::string to_string() const;
+
+    void insert_into_entry(std::function<int, const partition_progress &, duplication_entry&> inserter, duplication_entry &entry) const
+    {
+        for (const auto &[partition_id, partition_state] : _progress) {
+            if (!partition_state.is_inited) {
+                continue;
+            }
+
+            inserter(partition_id,partition_state, entry);
+        }
+    }
 
     friend class duplication_info_test;
     friend class meta_duplication_service_test;
