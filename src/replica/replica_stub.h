@@ -528,6 +528,8 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(opening_replicas);
     METRIC_VAR_DECLARE_gauge_int64(closing_replicas);
 
+    METRIC_VAR_DECLARE_gauge_int64(primary_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(secondary_replicas);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_file_bytes);
