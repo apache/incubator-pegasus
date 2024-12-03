@@ -39,8 +39,7 @@
 #include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class duplication_info;
 
@@ -314,7 +313,6 @@ extern void json_encode(dsn::json::JsonWriter &out, const duplication_fail_mode:
 
 extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::type &s);
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::duplication_info);
