@@ -20,6 +20,7 @@
 #include <nlohmann/json.hpp>
 #include <cstdint>
 #include <map>
+#include <type_traits>
 #include <utility>
 #include <vector>
 

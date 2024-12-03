@@ -20,11 +20,11 @@
 #include <fmt/core.h>
 #include <algorithm>
 #include <cstdint>
-#include <functional>
 #include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -41,8 +41,6 @@
 
 namespace dsn {
 namespace replication {
-
-class app_state;
 
 class duplication_info;
 
