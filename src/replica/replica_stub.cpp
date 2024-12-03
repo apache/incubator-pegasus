@@ -116,6 +116,16 @@ METRIC_DEFINE_gauge_int64(server,
                           "The number of closing replicas");
 
 METRIC_DEFINE_gauge_int64(server,
+                          inactive_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of inactive replicas");
+
+METRIC_DEFINE_gauge_int64(server,
+                          error_replicas,
+                          dsn::metric_unit::kReplicas,
+                          "The number of replicas with errors");
+
+METRIC_DEFINE_gauge_int64(server,
                           primary_replicas,
                           dsn::metric_unit::kReplicas,
                           "The number of primary replicas");
@@ -246,7 +256,6 @@ DSN_DECLARE_int32(fd_beacon_interval_seconds);
 DSN_DECLARE_int32(fd_check_interval_seconds);
 DSN_DECLARE_int32(fd_grace_seconds);
 DSN_DECLARE_int32(fd_lease_seconds);
-DSN_DECLARE_int32(gc_interval_ms);
 DSN_DECLARE_string(data_dirs);
 DSN_DECLARE_string(encryption_cluster_key_name);
 DSN_DECLARE_string(server_key);
@@ -332,6 +341,13 @@ bool check_mem_release_max_reserved_mem_percentage(int32_t value)
 DSN_DEFINE_validator(mem_release_max_reserved_mem_percentage,
                      &check_mem_release_max_reserved_mem_percentage);
 
+DSN_DEFINE_uint32(replication,
+                  replicas_stat_interval_ms,
+                  30000,
+                  "period in milliseconds that stats for replicas are calculated");
+DSN_TAG_VARIABLE(replicas_stat_interval_ms, FT_MUTABLE);
+DSN_DEFINE_validator(replicas_stat_interval_ms, [](uint32_t value) -> bool { return value > 0; });
+
 DSN_DEFINE_string(
     pegasus.server,
     hadoop_kms_url,
@@ -378,6 +394,8 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(total_replicas),
       METRIC_VAR_INIT_server(opening_replicas),
       METRIC_VAR_INIT_server(closing_replicas),
+      METRIC_VAR_INIT_server(inactive_replicas),
+      METRIC_VAR_INIT_server(error_replicas),
       METRIC_VAR_INIT_server(primary_replicas),
       METRIC_VAR_INIT_server(secondary_replicas),
       METRIC_VAR_INIT_server(learning_replicas),
@@ -617,9 +635,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
             &_tracker,
             [this] { on_replicas_stat(); },
-            std::chrono::milliseconds(FLAGS_gc_interval_ms),
+            std::chrono::milliseconds(FLAGS_replicas_stat_interval_ms),
             0,
-            std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms)));
+            std::chrono::milliseconds(rand::next_u32(0, FLAGS_replicas_stat_interval_ms)));
     }
 
     // disk stat
@@ -1687,6 +1705,8 @@ void replica_stub::on_replicas_stat()
         }
     }
 
+    METRIC_VAR_SET(inactive_replicas, status_counts[partition_status::PS_INACTIVE]);
+    METRIC_VAR_SET(error_replicas, status_counts[partition_status::PS_ERROR]);
     METRIC_VAR_SET(primary_replicas, status_counts[partition_status::PS_PRIMARY]);
     METRIC_VAR_SET(secondary_replicas, status_counts[partition_status::PS_SECONDARY]);
     METRIC_VAR_SET(learning_replicas, status_counts[partition_status::PS_POTENTIAL_SECONDARY]);
