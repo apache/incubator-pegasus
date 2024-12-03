@@ -150,8 +150,7 @@ public:
 
     // duplication_query_rpc is handled in THREAD_POOL_META_SERVER,
     // which is not thread safe for read.
-    void append_if_valid_for_query(const app_state &app,
-                                   /*out*/ std::vector<duplication_entry> &entry_list) const;
+    void append_as_entry(std::vector<duplication_entry> &entry_list) const;
 
     duplication_entry to_duplication_level_entry() const
     {
@@ -196,6 +195,7 @@ public:
             duplication_partition_state partition_state;
             partition_state.confirmed_decree = state.stored_decree;
             partition_state.last_committed_decree = state.last_committed_decree;
+
             entry.partition_states.emplace(partition_id, partition_state);
         }
 

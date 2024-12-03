@@ -22,6 +22,12 @@ namespace cpp dsn.replication
 namespace go admin
 namespace java org.apache.pegasus.replication
 
+enum duplication_mode
+{
+    FULL = 0,
+    INCREMENTAL,
+}
+
 //  - INIT  -> PREPARE
 //  - PREPARE -> APP
 //  - APP -> LOG
@@ -158,9 +164,12 @@ struct duplication_entry
     // For versions < v2.6.0, this must be the same with source replica_count.
     9:optional i32 remote_replica_count;
 
+    // TODO(wangdan)
+    10:optional duplication_mode mode;
+
     // Used for listing duplications(client -> meta server).
     // partition index => partition states.
-    10:optional map<i32, duplication_partition_state> partition_states;
+    11:optional map<i32, duplication_partition_state> partition_states;
 }
 
 // This request is sent from client to meta.

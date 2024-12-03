@@ -293,17 +293,11 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
     return dup;
 }
 
-void duplication_info::append_if_valid_for_query(
-    const app_state &app,
-    /*out*/ std::vector<duplication_entry> &entry_list) const
+void duplication_info::append_as_entry(std::vector<duplication_entry> &entry_list) const
 {
     zauto_read_lock l(_lock);
 
     entry_list.emplace_back(to_duplication_level_entry());
-    duplication_entry &ent = entry_list.back();
-    // the confirmed decree is not useful for displaying
-    // the overall state of duplication
-    // ent.__isset.progress = false;
 }
 
 } // namespace dsn::replication
