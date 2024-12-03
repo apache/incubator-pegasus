@@ -181,7 +181,7 @@ public:
         ASSERT_EQ(duplication_status::DS_INIT, dup._status);
         ASSERT_EQ(duplication_status::DS_INIT, dup._next_status);
 
-        auto dup_ent = dup.to_duplication_entry(duplication_entry_type::kPartitionLevelSync);
+        auto dup_ent = dup.to_partition_level_entry_for_sync();
         ASSERT_EQ(0, dup_ent.progress.size());
         ASSERT_EQ(kTestRemoteAppName, dup_ent.remote_app_name);
         ASSERT_EQ(kTestRemoteReplicaCount, dup_ent.remote_replica_count);

@@ -221,7 +221,7 @@ void duplication_info::persist_status()
 
 std::string duplication_info::to_string() const
 {
-    return duplication_entry_to_string(to_duplication_entry(duplication_entry_type::kPartitionLevelList));
+    return duplication_entry_to_string(to_partition_level_entry_for_list());
 }
 
 blob duplication_info::to_json_blob() const
@@ -299,7 +299,7 @@ void duplication_info::append_if_valid_for_query(
 {
     zauto_read_lock l(_lock);
 
-    entry_list.emplace_back(to_duplication_entry(duplication_entry_type::kDuplicationLevelInfo));
+    entry_list.emplace_back(to_duplication_level_entry());
     duplication_entry &ent = entry_list.back();
     // the confirmed decree is not useful for displaying
     // the overall state of duplication

@@ -233,7 +233,7 @@ public:
             ASSERT_EQ(duplication_status::DS_INIT, dup->_status);
             ASSERT_EQ(duplication_status::DS_INIT, dup->_next_status);
 
-            auto ent = dup->to_duplication_entry(duplication_entry_type::kPartitionLevelSync);
+            auto ent = dup->to_partition_level_entry_for_sync();
             for (int j = 0; j < app->partition_count; j++) {
                 ASSERT_EQ(invalid_decree, ent.progress[j]);
             }

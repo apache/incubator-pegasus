@@ -102,9 +102,9 @@ replica_duplicator_manager::get_duplication_confirms_to_update() const
 
 void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
 {
-    // state is inconsistent with meta-server
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it == ent.progress.end()) {
+        // Inconsistent with the meta server.
         _duplications.erase(ent.dupid);
         return;
     }
@@ -124,15 +124,15 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
         }
 
         return;
-    } 
+    }
 
-        // update progress
-        duplication_progress newp = dup->progress().set_confirmed_decree(it->second);
-        CHECK_EQ_PREFIX(dup->update_progress(newp), error_s::ok());
-        dup->update_status_if_needed(next_status);
-        if (ent.__isset.fail_mode) {
-            dup->update_fail_mode(ent.fail_mode);
-        }
+    // Update progress.
+    duplication_progress newp = dup->progress().set_confirmed_decree(it->second);
+    CHECK_EQ_PREFIX(dup->update_progress(newp), error_s::ok());
+    dup->update_status_if_needed(next_status);
+    if (ent.__isset.fail_mode) {
+        dup->update_fail_mode(ent.fail_mode);
+    }
 }
 
 decree replica_duplicator_manager::min_confirmed_decree() const

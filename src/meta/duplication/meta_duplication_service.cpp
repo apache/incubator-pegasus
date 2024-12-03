@@ -425,7 +425,7 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
                 }
             }
 
-            response.dup_map[app_id][dup_id] = dup->to_duplication_entry(duplication_entry_type::kPartitionLevelSync);
+            response.dup_map[app_id][dup_id] = dup->to_partition_level_entry_for_sync();
 
             // report progress periodically for each duplications
             dup->report_progress_if_time_up();
