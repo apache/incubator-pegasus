@@ -182,8 +182,8 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
 
     if (ent.__isset.progress) {
         nlohmann::json progress;
-        for (const auto &[partition_id, state] : ent.progress) {
-            progress[std::to_string(partition_id)] = state;
+        for (const auto &[partition_index, state] : ent.progress) {
+            progress[std::to_string(partition_index)] = state;
         }
 
         json["progress"] = progress;
@@ -201,12 +201,12 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
 
     if (ent.__isset.partition_states) {
         nlohmann::json partition_states;
-        for (const auto &[partition_id, state] : ent.partition_states) {
+        for (const auto &[partition_index, state] : ent.partition_states) {
             nlohmann::json partition_state;
             partition_state["confirmed_decree"] = state.confirmed_decree;
             partition_state["last_committed_decree"] = state.last_committed_decree;
 
-            partition_states[std::to_string(partition_id)] = partition_state;
+            partition_states[std::to_string(partition_index)] = partition_state;
         }
 
         json["partition_states"] = partition_states;

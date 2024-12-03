@@ -152,6 +152,7 @@ public:
     // which is not thread safe for read.
     void append_as_entry(std::vector<duplication_entry> &entry_list) const;
 
+    // Build an entry including only duplication-level info.
     duplication_entry to_duplication_level_entry() const
     {
         duplication_entry entry;
@@ -166,28 +167,32 @@ public:
         return entry;
     }
 
+    // Build an entry including also partition-level progress used for sync besides
+    // duplication-level info.
     duplication_entry to_partition_level_entry_for_sync() const
     {
         auto entry = to_duplication_level_entry();
 
         entry.__isset.progress = true;
-        for (const auto &[partition_id, state] : _progress) {
+        for (const auto &[partition_index, state] : _progress) {
             if (!state.is_inited) {
                 continue;
             }
 
-            entry.progress.emplace(partition_id, state.stored_decree);
+            entry.progress.emplace(partition_index, state.stored_decree);
         }
 
         return entry;
     }
 
+    // Build an entry including also partition-level detailed states used for list
+    // besides duplication-level info.
     duplication_entry to_partition_level_entry_for_list() const
     {
         auto entry = to_duplication_level_entry();
 
         entry.__isset.partition_states = true;
-        for (const auto &[partition_id, state] : _progress) {
+        for (const auto &[partition_index, state] : _progress) {
             if (!state.is_inited) {
                 continue;
             }
@@ -196,7 +201,7 @@ public:
             partition_state.confirmed_decree = state.stored_decree;
             partition_state.last_committed_decree = state.last_committed_decree;
 
-            entry.partition_states.emplace(partition_id, partition_state);
+            entry.partition_states.emplace(partition_index, partition_state);
         }
 
         return entry;
@@ -261,7 +266,7 @@ private:
         bool checkpoint_prepared{false};
     };
 
-    // partition_idx => progress
+    // partition_index => progress
     std::map<int, partition_progress> _progress;
 
     uint64_t _last_progress_report_ms{0};
