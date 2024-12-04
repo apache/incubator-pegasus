@@ -102,9 +102,9 @@ replica_duplicator_manager::get_duplication_confirms_to_update() const
 
 void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
 {
-    // state is inconsistent with meta-server
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it == ent.progress.end()) {
+        // Inconsistent with the meta server.
         _duplications.erase(ent.dupid);
         return;
     }
@@ -114,22 +114,24 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
     dupid_t dupid = ent.dupid;
     duplication_status::type next_status = ent.status;
 
-    replica_duplicator_u_ptr &dup = _duplications[dupid];
-    if (dup == nullptr) {
+    auto &dup = _duplications[dupid];
+    if (!dup) {
         if (!is_duplication_status_invalid(next_status)) {
             dup = std::make_unique<replica_duplicator>(ent, _replica);
         } else {
             LOG_ERROR_PREFIX("illegal duplication status: {}",
                              duplication_status_to_string(next_status));
         }
-    } else {
-        // update progress
-        duplication_progress newp = dup->progress().set_confirmed_decree(it->second);
-        CHECK_EQ_PREFIX(dup->update_progress(newp), error_s::ok());
-        dup->update_status_if_needed(next_status);
-        if (ent.__isset.fail_mode) {
-            dup->update_fail_mode(ent.fail_mode);
-        }
+
+        return;
+    }
+
+    // Update progress.
+    CHECK_EQ_PREFIX(dup->update_progress(dup->progress().set_confirmed_decree(it->second)),
+                    error_s::ok());
+    dup->update_status_if_needed(next_status);
+    if (ent.__isset.fail_mode) {
+        dup->update_fail_mode(ent.fail_mode);
     }
 }
 

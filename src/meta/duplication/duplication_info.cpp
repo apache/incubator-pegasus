@@ -18,7 +18,6 @@
 #include "duplication_info.h"
 
 #include "common/duplication_common.h"
-#include "meta/meta_data.h"
 #include "runtime/api_layer1.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -221,7 +220,7 @@ void duplication_info::persist_status()
 
 std::string duplication_info::to_string() const
 {
-    return duplication_entry_to_string(to_duplication_entry());
+    return duplication_entry_to_string(to_partition_level_entry_for_list());
 }
 
 blob duplication_info::to_json_blob() const
@@ -293,17 +292,11 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
     return dup;
 }
 
-void duplication_info::append_if_valid_for_query(
-    const app_state &app,
-    /*out*/ std::vector<duplication_entry> &entry_list) const
+void duplication_info::append_as_entry(std::vector<duplication_entry> &entry_list) const
 {
     zauto_read_lock l(_lock);
 
-    entry_list.emplace_back(to_duplication_entry());
-    duplication_entry &ent = entry_list.back();
-    // the confirmed decree is not useful for displaying
-    // the overall state of duplication
-    ent.__isset.progress = false;
+    entry_list.emplace_back(to_duplication_level_entry());
 }
 
 } // namespace dsn::replication

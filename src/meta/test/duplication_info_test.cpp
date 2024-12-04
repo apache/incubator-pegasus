@@ -29,6 +29,7 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #include "gtest/gtest.h"
+#include "gutil/map_util.h"
 #include "runtime/app_model.h"
 #include "test_util/test_util.h"
 #include "utils/flags.h"
@@ -51,11 +52,46 @@ public:
         dup._status = status;
     }
 
-    static void test_init_progress(duplication_info &dup, int partition_idx, decree expected_decree)
+    static void test_duplication_entry_for_sync(const duplication_info &dup,
+                                                int partition_index,
+                                                decree expected_confirmed_decree)
     {
-        dup.init_progress(partition_idx, expected_decree);
+        const auto &entry = dup.to_partition_level_entry_for_sync();
+        ASSERT_TRUE(gutil::ContainsKey(entry.progress, partition_index));
+        ASSERT_EQ(expected_confirmed_decree, gutil::FindOrDie(entry.progress, partition_index));
+    }
 
-        const auto &progress = dup._progress[partition_idx];
+    static void test_duplication_entry_for_list(const duplication_info &dup,
+                                                int partition_index,
+                                                decree expected_confirmed_decree,
+                                                decree expected_last_committed_decree)
+    {
+        const auto &entry = dup.to_partition_level_entry_for_list();
+        ASSERT_TRUE(gutil::ContainsKey(entry.partition_states, partition_index));
+
+        const auto &state = gutil::FindOrDie(entry.partition_states, partition_index);
+        ASSERT_EQ(expected_confirmed_decree, state.confirmed_decree);
+        ASSERT_EQ(expected_last_committed_decree, state.last_committed_decree);
+    }
+
+    static void test_duplication_entry(const duplication_info &dup,
+                                       int partition_index,
+                                       decree expected_confirmed_decree,
+                                       decree expected_last_committed_decree)
+    {
+        test_duplication_entry_for_sync(dup, partition_index, expected_confirmed_decree);
+        test_duplication_entry_for_list(
+            dup, partition_index, expected_confirmed_decree, expected_last_committed_decree);
+    }
+
+    static void
+    test_init_progress(duplication_info &dup, int partition_index, decree expected_decree)
+    {
+        dup.init_progress(partition_index, expected_decree);
+
+        ASSERT_TRUE(gutil::ContainsKey(dup._progress, partition_index));
+
+        const auto &progress = dup._progress[partition_index];
         ASSERT_EQ(invalid_decree, progress.last_committed_decree);
         ASSERT_EQ(expected_decree, progress.volatile_decree);
         ASSERT_EQ(expected_decree, progress.stored_decree);
@@ -63,6 +99,8 @@ public:
         ASSERT_EQ(0, progress.last_progress_update_ms);
         ASSERT_TRUE(progress.is_inited);
         ASSERT_FALSE(progress.checkpoint_prepared);
+
+        test_duplication_entry(dup, partition_index, expected_decree, invalid_decree);
     }
 
     static void test_alter_progress()
@@ -96,6 +134,7 @@ public:
         ASSERT_EQ(invalid_decree, dup._progress[0].stored_decree);
         ASSERT_TRUE(dup._progress[0].is_altering);
         ASSERT_TRUE(dup._progress[0].checkpoint_prepared);
+        test_duplication_entry(dup, 0, invalid_decree, 8);
 
         // Busy updating.
         entry.__set_last_committed_decree(15);
@@ -109,6 +148,7 @@ public:
         ASSERT_EQ(invalid_decree, dup._progress[0].stored_decree);
         ASSERT_TRUE(dup._progress[0].is_altering);
         ASSERT_TRUE(dup._progress[0].checkpoint_prepared);
+        test_duplication_entry(dup, 0, invalid_decree, 15);
 
         // Persist progress for partition 0.
         dup.persist_progress(0);
@@ -118,6 +158,7 @@ public:
         ASSERT_EQ(5, dup._progress[0].stored_decree);
         ASSERT_FALSE(dup._progress[0].is_altering);
         ASSERT_TRUE(dup._progress[0].checkpoint_prepared);
+        test_duplication_entry(dup, 0, 5, 15);
 
         // Initialize progress for partition 1.
         test_init_progress(dup, 1, 5);
@@ -130,6 +171,7 @@ public:
         ASSERT_EQ(5, dup._progress[1].stored_decree);
         ASSERT_TRUE(dup._progress[1].is_altering);
         ASSERT_FALSE(dup._progress[1].checkpoint_prepared);
+        test_duplication_entry(dup, 1, 5, 15);
 
         // Persist progress for partition 1.
         dup.persist_progress(1);
@@ -148,6 +190,7 @@ public:
         ASSERT_FALSE(dup._progress[1].is_altering);
         // checkpoint_prepared would be updated successfully even if it is too frequent.
         ASSERT_TRUE(dup._progress[1].checkpoint_prepared);
+        test_duplication_entry(dup, 1, 10, 25);
 
         // Reduce last update timestamp to make it infrequent.
         dup._progress[1].last_progress_update_ms -= FLAGS_dup_progress_min_update_period_ms + 100;
@@ -160,6 +203,7 @@ public:
         ASSERT_EQ(10, dup._progress[1].stored_decree);
         ASSERT_TRUE(dup._progress[1].is_altering);
         ASSERT_TRUE(dup._progress[1].checkpoint_prepared);
+        test_duplication_entry(dup, 1, 10, 26);
 
         // Checkpoint are ready for both partition 0 and 1.
         ASSERT_TRUE(dup.all_checkpoint_has_prepared());
@@ -181,17 +225,24 @@ public:
         ASSERT_EQ(duplication_status::DS_INIT, dup._status);
         ASSERT_EQ(duplication_status::DS_INIT, dup._next_status);
 
-        auto dup_ent = dup.to_duplication_entry();
-        ASSERT_EQ(0, dup_ent.progress.size());
-        ASSERT_EQ(kTestRemoteAppName, dup_ent.remote_app_name);
-        ASSERT_EQ(kTestRemoteReplicaCount, dup_ent.remote_replica_count);
+        {
+            const auto &entry = dup.to_partition_level_entry_for_sync();
+            ASSERT_TRUE(entry.progress.empty());
+            ASSERT_EQ(kTestRemoteAppName, entry.remote_app_name);
+            ASSERT_EQ(kTestRemoteReplicaCount, entry.remote_replica_count);
+        }
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; ++i) {
             dup.init_progress(i, invalid_decree);
         }
 
-        for (auto kv : dup_ent.progress) {
-            ASSERT_EQ(invalid_decree, kv.second);
+        {
+            const auto &entry = dup.to_partition_level_entry_for_sync();
+            ASSERT_EQ(4, entry.progress.size());
+            for (int partition_index = 0; partition_index < 4; ++partition_index) {
+                ASSERT_TRUE(gutil::ContainsKey(entry.progress, partition_index));
+                ASSERT_EQ(invalid_decree, gutil::FindOrDie(entry.progress, partition_index));
+            }
         }
 
         dup.start();

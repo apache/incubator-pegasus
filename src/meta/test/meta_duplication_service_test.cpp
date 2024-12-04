@@ -46,6 +46,7 @@
 #include "dsn.layer2_types.h"
 #include "duplication_types.h"
 #include "gtest/gtest.h"
+#include "gutil/map_util.h"
 #include "http/http_server.h"
 #include "http/http_status_code.h"
 #include "meta/duplication/duplication_info.h"
@@ -233,9 +234,12 @@ public:
             ASSERT_EQ(duplication_status::DS_INIT, dup->_status);
             ASSERT_EQ(duplication_status::DS_INIT, dup->_next_status);
 
-            auto ent = dup->to_duplication_entry();
-            for (int j = 0; j < app->partition_count; j++) {
-                ASSERT_EQ(invalid_decree, ent.progress[j]);
+            const auto &entry = dup->to_partition_level_entry_for_sync();
+            ASSERT_EQ(app->partition_count, entry.progress.size());
+            for (int partition_index = 0; partition_index < app->partition_count;
+                 ++partition_index) {
+                ASSERT_TRUE(gutil::ContainsKey(entry.progress, partition_index));
+                ASSERT_EQ(invalid_decree, gutil::FindOrDie(entry.progress, partition_index));
             }
 
             if (last_dup != 0) {

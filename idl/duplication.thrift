@@ -22,6 +22,15 @@ namespace cpp dsn.replication
 namespace go admin
 namespace java org.apache.pegasus.replication
 
+// Indicate which data of a table needs to be duplicated:
+// * FULL: all of the data of the table needs to be duplicated.
+// * INCREMENTAL: only incremental data of the table would be duplicated.
+enum duplication_mode
+{
+    FULL = 0,
+    INCREMENTAL,
+}
+
 //  - INIT  -> PREPARE
 //  - PREPARE -> APP
 //  - APP -> LOG
@@ -129,6 +138,16 @@ struct duplication_modify_response
     2:i32              appid;
 }
 
+// The states tracking each partition for duplication.
+struct duplication_partition_state
+{
+    // The max decree of this partition that has been confirmed to be received by follower.
+    1:i64 confirmed_decree;
+
+    // The max decree that has been committed by this partition.
+    2:i64 last_committed_decree;
+}
+
 struct duplication_entry
 {
     1:i32                  dupid;
@@ -136,7 +155,8 @@ struct duplication_entry
     3:string               remote;
     4:i64                  create_ts;
 
-    // partition_index => confirmed decree
+    // Used for syncing duplications with partition-level progress (replica server -> meta server).
+    // partition index => confirmed decree.
     5:optional map<i32, i64> progress;
 
     7:optional duplication_fail_mode fail_mode;
@@ -150,6 +170,13 @@ struct duplication_entry
     // For versions >= v2.6.0, this could be specified by client.
     // For versions < v2.6.0, this must be the same with source replica_count.
     9:optional i32 remote_replica_count;
+
+    // TODO(wangdan): would be supported later.
+    10:optional duplication_mode mode;
+
+    // Used for listing duplications with partition-level details (client -> meta server).
+    // partition index => partition states.
+    11:optional map<i32, duplication_partition_state> partition_states;
 }
 
 // This request is sent from client to meta.
