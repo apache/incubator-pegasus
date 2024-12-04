@@ -1070,9 +1070,8 @@ void meta_service::register_duplication_rpc_handlers()
                                          &meta_service::on_query_duplication_info);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_DUPLICATION_SYNC, "sync duplication", &meta_service::on_duplication_sync);
-    register_rpc_handler_with_rpc_holder(RPC_CM_LIST_DUPLICATION,
-                                         "list_duplication_info",
-                                         &meta_service::on_list_duplication_info);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_LIST_DUPLICATION, "list_duplication_info", &meta_service::on_list_duplication_info);
 }
 
 void meta_service::initialize_duplication_service()

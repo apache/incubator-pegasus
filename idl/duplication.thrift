@@ -17,6 +17,7 @@
 
 include "dsn.thrift"
 include "dsn.layer2.thrift"
+include "utils.thrift"
 
 namespace cpp dsn.replication
 namespace go admin
@@ -247,8 +248,8 @@ struct duplication_sync_response
 // per-duplication info and progress of each partition for one or multiple tables.
 struct duplication_list_request
 {
-    1:string            app_name_pattern;
-    2:app_name_match    match_type;
+    1:string                            app_name_pattern;
+    2:utils.string_match                match_type;
 }
 
 struct duplication_list_response

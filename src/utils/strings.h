@@ -34,8 +34,19 @@
 #include <unordered_set>
 #include <vector>
 
+#include "utils_types.h"
+#include "utils/enum_helper.h"
+
 namespace dsn {
 namespace utils {
+
+ENUM_BEGIN2(string_match::type, string_match, string_match::SM_INVALID)
+ENUM_REG(string_match::SM_MATCH_EXACT)
+ENUM_REG(string_match::SM_MATCH_ANYWHERE)
+ENUM_REG(string_match::SM_MATCH_PREFIX)
+ENUM_REG(string_match::SM_MATCH_POSTFIX)
+ENUM_REG(string_match::SM_MATCH_REGEX)
+ENUM_END2(string_match::type, string_match)
 
 inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
 
