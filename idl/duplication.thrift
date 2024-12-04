@@ -249,7 +249,7 @@ struct duplication_sync_response
 struct duplication_list_request
 {
     1:string                            app_name_pattern;
-    2:utils.string_match                match_type;
+    2:utils.pattern_match_type          match_type;
 }
 
 struct duplication_list_response

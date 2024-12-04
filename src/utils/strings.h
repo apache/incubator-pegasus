@@ -40,13 +40,13 @@
 namespace dsn {
 namespace utils {
 
-ENUM_BEGIN2(string_match::type, string_match, string_match::SM_INVALID)
-ENUM_REG(string_match::SM_MATCH_EXACT)
-ENUM_REG(string_match::SM_MATCH_ANYWHERE)
-ENUM_REG(string_match::SM_MATCH_PREFIX)
-ENUM_REG(string_match::SM_MATCH_POSTFIX)
-ENUM_REG(string_match::SM_MATCH_REGEX)
-ENUM_END2(string_match::type, string_match)
+ENUM_BEGIN2(pattern_match_type::type, pattern_match_type, pattern_match_type::PMT_INVALID)
+ENUM_REG(pattern_match_type::PMT_MATCH_EXACT)
+ENUM_REG(pattern_match_type::PMT_MATCH_ANYWHERE)
+ENUM_REG(pattern_match_type::PMT_MATCH_PREFIX)
+ENUM_REG(pattern_match_type::PMT_MATCH_POSTFIX)
+ENUM_REG(pattern_match_type::PMT_MATCH_REGEX)
+ENUM_END2(pattern_match_type::type, pattern_match_type)
 
 inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
 
@@ -72,6 +72,8 @@ bool iequals(const char *lhs, const std::string &rhs, size_t n);
 
 // Decide whether the first n bytes of two memory areas are equal, even if one of them is NULL.
 bool mequals(const void *lhs, const void *rhs, size_t n);
+
+bool pattern_match(const std::string &str, const std::string &pattern, pattern_match_type::type match_type);
 
 // Split the `input` string by the only character `separator` into tokens. Leading and trailing
 // spaces of each token will be stripped. Once the token is empty, or become empty after

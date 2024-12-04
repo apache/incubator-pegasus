@@ -25,6 +25,7 @@
  */
 
 #include <absl/strings/ascii.h>
+#include <boost/algorithm/string.hpp>
 #include <openssl/md5.h>
 #include <stdio.h>
 #include <strings.h>
@@ -112,6 +113,28 @@ bool mequals(const void *lhs, const void *rhs, size_t n)
 }
 
 #undef CHECK_NULL_PTR
+
+bool pattern_match(const std::string &str, const std::string &pattern, pattern_match_type::type match_type)
+{
+    switch(match_type) {
+        case pattern_match_type::PMT_MATCH_EXACT:
+            return str == pattern;
+
+        case pattern_match_type::PMT_MATCH_ANYWHERE:
+            return boost::algorithm::contains(str, pattern);
+
+        case pattern_match_type::PMT_MATCH_PREFIX:
+            return boost::algorithm::starts_with(str, pattern);
+
+        case pattern_match_type::PMT_MATCH_POSTFIX:
+            return boost::algorithm::ends_with(str, pattern);
+
+        // TODO(wangdan): support case pattern_match_type::PMT_MATCH_REGEX
+
+        default:
+            return false;
+    }
+}
 
 std::string get_last_component(const std::string &input, const char splitters[])
 {
