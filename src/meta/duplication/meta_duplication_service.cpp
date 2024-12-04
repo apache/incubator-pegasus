@@ -89,6 +89,16 @@ void meta_duplication_service::query_duplication_info(const duplication_query_re
     }
 }
 
+// ThreadPool(READ): THREAD_POOL_META_SERVER
+void meta_duplication_service::list_duplication_info(const duplication_list_request &request,
+                                                      duplication_list_response &response)
+{
+    LOG_INFO("list duplication info: app_name_pattern={}, match_type={}", request.app_name_pattern, enum_to_string(request.match_type));
+
+    response.err = ERR_OK;
+    zauto_read_lock l(app_lock());
+}
+
 // ThreadPool(WRITE): THREAD_POOL_META_STATE
 void meta_duplication_service::modify_duplication(duplication_modify_rpc rpc)
 {

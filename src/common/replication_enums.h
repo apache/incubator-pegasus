@@ -35,6 +35,15 @@
 #include "utils/fmt_utils.h"
 
 namespace dsn {
+
+ENUM_BEGIN2(app_name_match::type, app_name_match, app_name_match::ANM_INVALID)
+ENUM_REG(app_name_match::ANM_MATCH_EXACT)
+ENUM_REG(app_name_match::ANM_MATCH_ANYWHERE)
+ENUM_REG(app_name_match::ANM_MATCH_PREFIX)
+ENUM_REG(app_name_match::ANM_MATCH_POSTFIX)
+ENUM_REG(app_name_match::ANM_MATCH_REGEX)
+ENUM_END2(app_name_match::type, app_name_match)
+
 ENUM_BEGIN2(app_status::type, app_status, app_status::AS_INVALID)
 ENUM_REG(app_status::AS_AVAILABLE)
 ENUM_REG(app_status::AS_CREATING)

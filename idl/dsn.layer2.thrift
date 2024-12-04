@@ -71,6 +71,27 @@ struct request_meta {
     5:bool is_backup_request;
 }
 
+// How an app name matches to a given string(pattern).
+enum app_name_match
+{
+    ANM_INVALID = 0,
+
+    // The app name must exactly equal to the given string.
+    ANM_MATCH_EXACT,
+
+    // The app name must appear anywhere in the given string.
+    ANM_MATCH_ANYWHERE,
+
+    // The app name must start with the given string.
+    ANM_MATCH_PREFIX,
+
+    // The app name must end with the given string.
+    ANM_MATCH_POSTFIX,
+
+    // The app name must match the given pattern as a regular expression.
+    ANM_MATCH_REGEX,
+}
+
 enum app_status
 {
     AS_INVALID,

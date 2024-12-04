@@ -38,6 +38,7 @@ typedef rpc_holder<duplication_modify_request, duplication_modify_response> dupl
 typedef rpc_holder<duplication_add_request, duplication_add_response> duplication_add_rpc;
 typedef rpc_holder<duplication_query_request, duplication_query_response> duplication_query_rpc;
 typedef rpc_holder<duplication_sync_request, duplication_sync_response> duplication_sync_rpc;
+typedef rpc_holder<duplication_list_request, duplication_list_response> duplication_list_rpc;
 
 typedef int32_t dupid_t;
 

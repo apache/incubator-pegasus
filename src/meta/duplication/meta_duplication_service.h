@@ -71,6 +71,8 @@ public:
 
     void query_duplication_info(const duplication_query_request &, duplication_query_response &);
 
+    void list_duplication_info(const duplication_list_request &, duplication_list_response &);
+
     void add_duplication(duplication_add_rpc rpc);
 
     void modify_duplication(duplication_modify_rpc rpc);

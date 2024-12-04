@@ -179,6 +179,14 @@ struct duplication_entry
     11:optional map<i32, duplication_partition_state> partition_states;
 }
 
+struct duplication_app_state
+{
+    1:i32                               appid;
+
+    // dup id => per-duplication properties
+    2:map<i32, duplication_entry>       duplications;
+}
+
 // This request is sent from client to meta.
 struct duplication_query_request
 {
@@ -233,4 +241,21 @@ struct duplication_sync_response
     // appid -> map<dupid, dup_entry>
     // this rpc will not return the apps that were not assigned duplication.
     2:map<i32, map<i32, duplication_entry>>            dup_map;
+}
+
+// This request is sent from client to meta server, to list duplications with their
+// per-duplication info and progress of each partition for one or multiple tables.
+struct duplication_list_request
+{
+    1:string            app_name_pattern;
+    2:app_name_match    match_type;
+}
+
+struct duplication_list_response
+{
+    1:dsn.error_code                        err;
+    2:string                                hint_message;
+
+    // app name => duplications owned by an app
+    3:map<string, duplication_app_state>    app_state;
 }
