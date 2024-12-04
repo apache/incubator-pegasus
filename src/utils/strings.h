@@ -73,7 +73,9 @@ bool iequals(const char *lhs, const std::string &rhs, size_t n);
 // Decide whether the first n bytes of two memory areas are equal, even if one of them is NULL.
 bool mequals(const void *lhs, const void *rhs, size_t n);
 
-bool pattern_match(const std::string &str, const std::string &pattern, pattern_match_type::type match_type);
+bool pattern_match(const std::string &str,
+                   const std::string &pattern,
+                   pattern_match_type::type match_type);
 
 // Split the `input` string by the only character `separator` into tokens. Leading and trailing
 // spaces of each token will be stripped. Once the token is empty, or become empty after
