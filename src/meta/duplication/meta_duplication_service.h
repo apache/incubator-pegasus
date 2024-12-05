@@ -39,6 +39,8 @@ class zrwlock_nr;
 namespace replication {
 class configuration_create_app_response;
 class duplication_confirm_entry;
+class duplication_list_request;
+class duplication_list_response;
 class duplication_query_request;
 class duplication_query_response;
 class meta_service;

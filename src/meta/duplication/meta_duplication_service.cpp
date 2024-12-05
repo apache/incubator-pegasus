@@ -74,18 +74,18 @@ void meta_duplication_service::query_duplication_info(const duplication_query_re
     LOG_INFO("query duplication info for app: {}", request.app_name);
 
     response.err = ERR_OK;
-    {
-        zauto_read_lock l(app_lock());
-        std::shared_ptr<app_state> app = _state->get_app(request.app_name);
-        if (!app || app->status != app_status::AS_AVAILABLE) {
-            response.err = ERR_APP_NOT_EXIST;
-            return;
-        }
 
-        response.appid = app->app_id;
-        for (const auto &[_, dup] : app->duplications) {
-            dup->append_as_entry(response.entry_list);
-        }
+    zauto_read_lock l(app_lock());
+
+    std::shared_ptr<app_state> app = _state->get_app(request.app_name);
+    if (!app || app->status != app_status::AS_AVAILABLE) {
+        response.err = ERR_APP_NOT_EXIST;
+        return;
+    }
+
+    response.appid = app->app_id;
+    for (const auto &[_, dup] : app->duplications) {
+        dup->append_as_entry(response.entry_list);
     }
 }
 
@@ -98,7 +98,32 @@ void meta_duplication_service::list_duplication_info(const duplication_list_requ
              enum_to_string(request.match_type));
 
     response.err = ERR_OK;
+
     zauto_read_lock l(app_lock());
+
+    for (const auto &[app_name, state] : _state->_exist_apps) {
+        const auto &err =
+            utils::pattern_match(app_name, request.app_name_pattern, request.match_type);
+        if (err == ERR_NOT_MATCHED) {
+            continue;
+        }
+
+        if (err == ERR_NOT_IMPLEMENTED) {
+            const auto &msg = fmt::format("match_type {} is not supported now",
+                                          static_cast<int>(request.match_type));
+            response.err = err;
+            response.hint_message = msg;
+
+            LOG_ERROR("{}: app_name_pattern={}", msg, request.app_name_pattern);
+
+            return;
+        }
+
+        if (err != ERR_OK) {
+            response.err = err;
+            return;
+        }
+    }
 }
 
 // ThreadPool(WRITE): THREAD_POOL_META_STATE

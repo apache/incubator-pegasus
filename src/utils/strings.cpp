@@ -25,9 +25,9 @@
  */
 
 #include <absl/strings/ascii.h>
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <cstdio>
 #include <openssl/md5.h>
-#include <stdio.h>
 #include <strings.h>
 #include <algorithm>
 #include <cstring>
@@ -114,28 +114,42 @@ bool mequals(const void *lhs, const void *rhs, size_t n)
 
 #undef CHECK_NULL_PTR
 
-bool pattern_match(const std::string &str,
-                   const std::string &pattern,
-                   pattern_match_type::type match_type)
+error_code pattern_match(const std::string &str,
+                         const std::string &pattern,
+                         pattern_match_type::type match_type)
 {
+    if (pattern.empty()) {
+        // Empty pattern means everything is matched.
+        return ERR_OK;
+    }
+
+    bool matched = false;
     switch (match_type) {
     case pattern_match_type::PMT_MATCH_EXACT:
-        return str == pattern;
+        matched = str == pattern;
+        break;
 
     case pattern_match_type::PMT_MATCH_ANYWHERE:
-        return boost::algorithm::contains(str, pattern);
+        matched = boost::algorithm::contains(str, pattern);
+        break;
 
     case pattern_match_type::PMT_MATCH_PREFIX:
-        return boost::algorithm::starts_with(str, pattern);
+        matched = boost::algorithm::starts_with(str, pattern);
+        break;
 
     case pattern_match_type::PMT_MATCH_POSTFIX:
-        return boost::algorithm::ends_with(str, pattern);
+        matched = boost::algorithm::ends_with(str, pattern);
+        break;
 
-        // TODO(wangdan): support case pattern_match_type::PMT_MATCH_REGEX
+    // TODO(wangdan): PMT_MATCH_REGEX would be supported soon.
+    case pattern_match_type::PMT_MATCH_REGEX:
+        return ERR_NOT_IMPLEMENTED;
 
     default:
-        return false;
+        return ERR_NOT_IMPLEMENTED;
     }
+
+    return matched ? ERR_OK : ERR_NOT_MATCHED;
 }
 
 std::string get_last_component(const std::string &input, const char splitters[])
