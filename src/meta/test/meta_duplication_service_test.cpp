@@ -553,10 +553,6 @@ public:
     {
         const auto &resp = list_dup_info(app_name_pattern, match_type);
 
-        for (const auto &[app_name, _] : resp.app_states) {
-            std::cout << app_name << std::endl;
-        }
-
         ASSERT_EQ(ERR_OK, resp.err);
         ASSERT_EQ(app_names.size(), resp.app_states.size());
 
