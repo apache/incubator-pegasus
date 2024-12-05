@@ -118,13 +118,13 @@ error_code pattern_match(const std::string &str,
                          const std::string &pattern,
                          pattern_match_type::type match_type)
 {
-    if (pattern.empty()) {
-        // Empty pattern means everything is matched.
-        return ERR_OK;
-    }
-
     bool matched = false;
     switch (match_type) {
+    case pattern_match_type::PMT_MATCH_ALL:
+        // Everything is matched.
+        matched = true;
+        break;
+
     case pattern_match_type::PMT_MATCH_EXACT:
         matched = str == pattern;
         break;

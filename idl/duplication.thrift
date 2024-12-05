@@ -258,5 +258,5 @@ struct duplication_list_response
     2:string                                hint_message;
 
     // app name => duplications owned by an app
-    3:map<string, duplication_app_state>    app_state;
+    3:map<string, duplication_app_state>    app_states;
 }

@@ -222,6 +222,13 @@ void meta_test_base::drop_app(const std::string &name)
     ASSERT_TRUE(_ss->spin_wait_staging(30));
 }
 
+void meta_test_base::clear_apps()
+{
+    zauto_write_lock l(_ss->_lock);
+    _ss->_exist_apps.clear();
+    _ss->_all_apps.clear();
+}
+
 std::shared_ptr<app_state> meta_test_base::find_app(const std::string &name)
 {
     return _ss->get_app(name);

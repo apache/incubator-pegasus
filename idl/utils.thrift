@@ -24,6 +24,9 @@ enum pattern_match_type
 {
     PMT_INVALID = 0,
 
+    // The string always matches no matter what the given pattern is.
+    PMT_MATCH_ALL,
+
     // The string must exactly equal to the given pattern.
     PMT_MATCH_EXACT,
 

@@ -51,7 +51,7 @@
 
 namespace dsn {
 
-service_node::service_node(service_app_spec &app_spec) { _app_spec = app_spec; }
+service_node::service_node(service_app_spec &app_spec) : _app_spec(app_spec) {}
 
 bool service_node::rpc_register_handler(task_code code,
                                         const char *extra_name,

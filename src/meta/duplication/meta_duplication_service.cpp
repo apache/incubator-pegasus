@@ -135,7 +135,7 @@ void meta_duplication_service::list_duplication_info(const duplication_list_requ
             dup_app.duplications.emplace(dup_id, dup->to_partition_level_entry_for_list());
         }
 
-        response.app_state.emplace(app_name, dup_app);
+        response.app_states.emplace(app_name, dup_app);
     }
 }
 
