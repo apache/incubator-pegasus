@@ -41,8 +41,8 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
-#include "utils/strings.h"
 #include "utils/utils.h"
+#include "utils_types.h"
 
 // init common for all per-node providers
 DSN_DEFINE_uint32(core,

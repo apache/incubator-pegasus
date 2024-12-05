@@ -102,6 +102,10 @@ void meta_duplication_service::list_duplication_info(const duplication_list_requ
     zauto_read_lock l(app_lock());
 
     for (const auto &[app_name, app] : _state->_exist_apps) {
+        if (app->status != app_status::AS_AVAILABLE) {
+            continue;
+        }
+
         const auto &err =
             utils::pattern_match(app_name, request.app_name_pattern, request.match_type);
         if (err == ERR_NOT_MATCHED) {
