@@ -45,9 +45,9 @@
 #include "utils/rand.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+#include "utils_types.h"
 
-namespace dsn {
-namespace utils {
+namespace dsn::utils {
 
 TEST(core, get_last_component)
 {
@@ -669,5 +669,4 @@ const std::vector<has_space_case> has_space_tests = {
 
 INSTANTIATE_TEST_SUITE_P(StringTest, HasSpaceTest, testing::ValuesIn(has_space_tests));
 
-} // namespace utils
-} // namespace dsn
+} // namespace dsn::utils
