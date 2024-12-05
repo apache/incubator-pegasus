@@ -65,6 +65,7 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/time_utils.h"
+#include "utils_types.h"
 
 namespace dsn {
 namespace replication {
@@ -138,6 +139,19 @@ public:
 
         duplication_query_rpc rpc(std::move(req), RPC_CM_QUERY_DUPLICATION);
         dup_svc().query_duplication_info(rpc.request(), rpc.response());
+
+        return rpc.response();
+    }
+
+    duplication_list_response list_dup_info(const std::string &app_name_pattern,
+                                            utils::pattern_match_type::type match_type)
+    {
+        auto req = std::make_unique<duplication_list_request>();
+        req->app_name_pattern = app_name_pattern;
+        req->match_type = match_type;
+
+        duplication_list_rpc rpc(std::move(req), RPC_CM_LIST_DUPLICATION);
+        dup_svc().list_duplication_info(rpc.request(), rpc.response());
 
         return rpc.response();
     }
@@ -797,15 +811,15 @@ TEST_F(meta_duplication_service_test, query_duplication_info)
 
     auto resp = query_dup_info(kTestAppName);
     ASSERT_EQ(resp.err, ERR_OK);
-    ASSERT_EQ(resp.entry_list.size(), 1);
-    ASSERT_EQ(resp.entry_list.back().status, duplication_status::DS_PREPARE);
-    ASSERT_EQ(resp.entry_list.back().dupid, test_dup);
-    ASSERT_EQ(resp.appid, app->app_id);
+    ASSERT_EQ(1, resp.entry_list.size());
+    ASSERT_EQ(duplication_status::DS_PREPARE, resp.entry_list.back().status);
+    ASSERT_EQ(test_dup, resp.entry_list.back().dupid);
+    ASSERT_EQ(app->app_id, resp.appid);
 
     change_dup_status(kTestAppName, test_dup, duplication_status::DS_REMOVED);
     resp = query_dup_info(kTestAppName);
-    ASSERT_EQ(resp.err, ERR_OK);
-    ASSERT_EQ(resp.entry_list.size(), 0);
+    ASSERT_EQ(ERR_OK, resp.err);
+    ASSERT_TRUE(resp.entry_list.empty());
 }
 
 TEST_F(meta_duplication_service_test, re_add_duplication)

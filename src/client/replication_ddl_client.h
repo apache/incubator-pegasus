@@ -60,6 +60,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
+#include "utils_types.h"
 
 DSN_DECLARE_uint32(ddl_client_max_attempt_count);
 DSN_DECLARE_uint32(ddl_client_retry_interval_ms);
@@ -153,6 +154,9 @@ public:
     update_dup_fail_mode(const std::string &app_name, int dupid, duplication_fail_mode::type fmode);
 
     error_with<duplication_query_response> query_dup(const std::string &app_name);
+
+    error_with<duplication_list_response> list_dups(const std::string &app_name_pattern,
+                                                    utils::pattern_match_type::type match_type);
 
     dsn::error_code do_restore(const std::string &backup_provider_name,
                                const std::string &cluster_name,

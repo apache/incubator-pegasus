@@ -1416,6 +1416,16 @@ replication_ddl_client::query_dup(const std::string &app_name)
     return call_rpc_sync(duplication_query_rpc(std::move(req), RPC_CM_QUERY_DUPLICATION));
 }
 
+error_with<duplication_list_response>
+replication_ddl_client::list_dups(const std::string &app_name_pattern,
+                                  utils::pattern_match_type::type match_type)
+{
+    auto req = std::make_unique<duplication_list_request>();
+    req->app_name_pattern = app_name_pattern;
+    req->match_type = match_type;
+    return call_rpc_sync(duplication_list_rpc(std::move(req), RPC_CM_LIST_DUPLICATION));
+}
+
 namespace {
 
 bool need_retry(uint32_t attempt_count, const dsn::error_code &err)

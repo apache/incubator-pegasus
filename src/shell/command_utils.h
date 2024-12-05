@@ -32,7 +32,8 @@
 
 namespace dsn {
 class host_port;
-}
+} // namespace dsn
+
 struct shell_context;
 
 inline bool validate_cmd(const argh::parser &cmd,

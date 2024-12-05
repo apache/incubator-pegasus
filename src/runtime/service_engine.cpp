@@ -48,7 +48,6 @@
 #include "utils/join_point.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
-#include "utils_types.h"
 
 namespace dsn {
 
