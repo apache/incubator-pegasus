@@ -143,7 +143,6 @@ error_code pattern_match(const std::string &str,
 
     // TODO(wangdan): PMT_MATCH_REGEX would be supported soon.
     case pattern_match_type::PMT_MATCH_REGEX:
-        return ERR_NOT_IMPLEMENTED;
 
     default:
         return ERR_NOT_IMPLEMENTED;

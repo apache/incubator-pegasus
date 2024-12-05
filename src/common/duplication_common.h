@@ -31,8 +31,7 @@
 
 DSN_DECLARE_uint32(duplicate_log_batch_bytes);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 using duplication_modify_rpc = rpc_holder<duplication_modify_request, duplication_modify_response>;
 using duplication_add_rpc = rpc_holder<duplication_add_request, duplication_add_response>;
@@ -93,5 +92,4 @@ struct duplication_constants
 USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)
 USER_DEFINED_ENUM_FORMATTER(duplication_status::type)
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
