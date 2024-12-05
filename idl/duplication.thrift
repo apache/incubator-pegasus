@@ -180,6 +180,7 @@ struct duplication_entry
     11:optional map<i32, duplication_partition_state> partition_states;
 }
 
+// States for the duplications of a table.
 struct duplication_app_state
 {
     1:i32                               appid;
@@ -248,6 +249,7 @@ struct duplication_sync_response
 // per-duplication info and progress of each partition for one or multiple tables.
 struct duplication_list_request
 {
+    // The pattern used to match an app name, whose type is specified by `match_type`.
     1:string                            app_name_pattern;
     2:utils.pattern_match_type          match_type;
 }

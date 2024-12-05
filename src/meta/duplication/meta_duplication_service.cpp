@@ -103,6 +103,7 @@ void meta_duplication_service::list_duplication_info(const duplication_list_requ
 
     for (const auto &[app_name, app] : _state->_exist_apps) {
         if (app->status != app_status::AS_AVAILABLE) {
+            // Unavailable tables would not be listed for duplications.
             continue;
         }
 

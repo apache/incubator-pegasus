@@ -536,12 +536,19 @@ public:
     void test_list_dup_app_state(const std::string &app_name, const duplication_app_state &state)
     {
         const auto &app = find_app(app_name);
+
+        // Each app id should be matched.
         ASSERT_EQ(app->app_id, state.appid);
 
+        // The number of returned duplications for each table should be as expected.
         ASSERT_EQ(app->duplications.size(), state.duplications.size());
+
         for (const auto &[dup_id, dup] : app->duplications) {
+            // Each dup id should be matched.
             ASSERT_TRUE(gutil::ContainsKey(state.duplications, dup_id));
             ASSERT_EQ(dup_id, gutil::FindOrDie(state.duplications, dup_id).dupid);
+
+            // The number of returned partitions should be as expected.
             ASSERT_EQ(app->partition_count,
                       gutil::FindOrDie(state.duplications, dup_id).partition_states.size());
         }
@@ -553,11 +560,17 @@ public:
     {
         const auto &resp = list_dup_info(app_name_pattern, match_type);
 
+        // Request for listing duplications should be successful.
         ASSERT_EQ(ERR_OK, resp.err);
+
+        // The number of returned tables should be as expected.
         ASSERT_EQ(app_names.size(), resp.app_states.size());
 
         for (const auto &app_name : app_names) {
+            // Each table name should be in the returned list.
             ASSERT_TRUE(gutil::ContainsKey(resp.app_states, app_name));
+
+            // Test the states of each table.
             test_list_dup_app_state(app_name, gutil::FindOrDie(resp.app_states, app_name));
         }
     }
@@ -852,8 +865,10 @@ TEST_F(meta_duplication_service_test, query_duplication_info)
 
 TEST_F(meta_duplication_service_test, list_duplication_info)
 {
+    // Remove all tables from memory to prevent later tests from interference.
     clear_apps();
 
+    // Create some tables with some partitions and duplications randomly.
     create_app(kTestAppName, 8);
     create_dup(kTestAppName);
     create_dup(kTestAppName);
@@ -871,19 +886,24 @@ TEST_F(meta_duplication_service_test, list_duplication_info)
     create_dup(app_name_3);
     create_dup(app_name_3);
 
+    // Test for returning all of the existing tables.
     test_list_dup_info({kTestAppName, app_name_1, app_name_2, app_name_3},
                        {},
                        utils::pattern_match_type::PMT_MATCH_ALL);
 
+    // Test for returning the tables whose name are matched exactly.
     test_list_dup_info({app_name_2}, app_name_2, utils::pattern_match_type::PMT_MATCH_EXACT);
 
+    // Test for returning the tables whose name are matched with pattern anywhere.
     test_list_dup_info(
         {kTestAppName, app_name_2}, "app", utils::pattern_match_type::PMT_MATCH_ANYWHERE);
 
+    // Test for returning the tables whose name are matched with pattern as prefix.
     test_list_dup_info({kTestAppName, app_name_1, app_name_3},
                        "test",
                        utils::pattern_match_type::PMT_MATCH_PREFIX);
 
+    // Test for returning the tables whose name are matched with pattern as postfix.
     test_list_dup_info({app_name_2}, "test", utils::pattern_match_type::PMT_MATCH_POSTFIX);
 }
 
