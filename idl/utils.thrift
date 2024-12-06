@@ -19,7 +19,7 @@ namespace cpp dsn.utils
 namespace go utils
 namespace java org.apache.pegasus.utils
 
-// How an string matches to a given pattern.
+// How a string matches to a given pattern.
 enum pattern_match_type
 {
     PMT_INVALID = 0,

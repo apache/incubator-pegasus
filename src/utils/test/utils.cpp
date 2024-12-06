@@ -267,6 +267,8 @@ const std::vector<pattern_match_case> pattern_match_tests = {
     {"abc", "xyz", pattern_match_type::PMT_MATCH_ALL, ERR_OK},
     // It is matched exactly.
     {"abc", "abc", pattern_match_type::PMT_MATCH_EXACT, ERR_OK},
+    // Empty string is matched exactly with empty pattern.
+    {"", "", pattern_match_type::PMT_MATCH_EXACT, ERR_OK},
     // Non-empty string cannot be matched exactly with empty pattern.
     {"abc", "", pattern_match_type::PMT_MATCH_EXACT, ERR_NOT_MATCHED},
     // The string whose content is different from pattern would not be matched.
