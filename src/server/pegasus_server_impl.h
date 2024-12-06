@@ -301,9 +301,9 @@ private:
     }
 
     // return true if the data is valid for the filter
-    bool validate_filter(::dsn::apps::filter_type::type filter_type,
-                         const ::dsn::blob &filter_pattern,
-                         const ::dsn::blob &value);
+    static bool validate_filter(::dsn::apps::filter_type::type filter_type,
+                                const ::dsn::blob &filter_pattern,
+                                const ::dsn::blob &value);
 
     void update_replica_rocksdb_statistics();
 
