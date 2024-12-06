@@ -296,7 +296,7 @@ void duplication_info::append_as_entry(std::vector<duplication_entry> &entry_lis
 {
     zauto_read_lock l(_lock);
 
-    entry_list.emplace_back(to_duplication_level_entry());
+    entry_list.emplace_back(to_partition_level_entry_for_list());
 }
 
 } // namespace dsn::replication

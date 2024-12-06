@@ -49,11 +49,9 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-using namespace dsn::utils;
-
 namespace dsn {
 
-service_node::service_node(service_app_spec &app_spec) { _app_spec = app_spec; }
+service_node::service_node(service_app_spec &app_spec) : _app_spec(app_spec) {}
 
 bool service_node::rpc_register_handler(task_code code,
                                         const char *extra_name,
@@ -211,7 +209,7 @@ void service_engine::init_before_toollets(const service_spec &spec) { _spec = sp
 void service_engine::init_after_toollets()
 {
     // init common providers (second half)
-    _env = factory_store<env_provider>::create(
+    _env = utils::factory_store<env_provider>::create(
         _spec.env_factory_name.c_str(), PROVIDER_TYPE_MAIN, nullptr);
     tls_dsn.env = _env;
 }

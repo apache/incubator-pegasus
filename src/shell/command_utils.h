@@ -27,11 +27,13 @@
 #include <utility>
 
 #include "shell/argh.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
 
 namespace dsn {
 class host_port;
-}
+} // namespace dsn
+
 struct shell_context;
 
 inline bool validate_cmd(const argh::parser &cmd,

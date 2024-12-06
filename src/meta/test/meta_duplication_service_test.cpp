@@ -65,9 +65,9 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/time_utils.h"
+#include "utils_types.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class meta_duplication_service_test : public meta_test_base
 {
@@ -138,6 +138,19 @@ public:
 
         duplication_query_rpc rpc(std::move(req), RPC_CM_QUERY_DUPLICATION);
         dup_svc().query_duplication_info(rpc.request(), rpc.response());
+
+        return rpc.response();
+    }
+
+    duplication_list_response list_dup_info(const std::string &app_name_pattern,
+                                            utils::pattern_match_type::type match_type)
+    {
+        auto req = std::make_unique<duplication_list_request>();
+        req->app_name_pattern = app_name_pattern;
+        req->match_type = match_type;
+
+        duplication_list_rpc rpc(std::move(req), RPC_CM_LIST_DUPLICATION);
+        dup_svc().list_duplication_info(rpc.request(), rpc.response());
 
         return rpc.response();
     }
@@ -519,6 +532,48 @@ public:
             ASSERT_TRUE(app->duplicating);
         }
     }
+
+    void test_list_dup_app_state(const std::string &app_name, const duplication_app_state &state)
+    {
+        const auto &app = find_app(app_name);
+
+        // Each app id should be matched.
+        ASSERT_EQ(app->app_id, state.appid);
+
+        // The number of returned duplications for each table should be as expected.
+        ASSERT_EQ(app->duplications.size(), state.duplications.size());
+
+        for (const auto &[dup_id, dup] : app->duplications) {
+            // Each dup id should be matched.
+            ASSERT_TRUE(gutil::ContainsKey(state.duplications, dup_id));
+            ASSERT_EQ(dup_id, gutil::FindOrDie(state.duplications, dup_id).dupid);
+
+            // The number of returned partitions should be as expected.
+            ASSERT_EQ(app->partition_count,
+                      gutil::FindOrDie(state.duplications, dup_id).partition_states.size());
+        }
+    }
+
+    void test_list_dup_info(const std::vector<std::string> &app_names,
+                            const std::string &app_name_pattern,
+                            utils::pattern_match_type::type match_type)
+    {
+        const auto &resp = list_dup_info(app_name_pattern, match_type);
+
+        // Request for listing duplications should be successful.
+        ASSERT_EQ(ERR_OK, resp.err);
+
+        // The number of returned tables should be as expected.
+        ASSERT_EQ(app_names.size(), resp.app_states.size());
+
+        for (const auto &app_name : app_names) {
+            // Each table name should be in the returned list.
+            ASSERT_TRUE(gutil::ContainsKey(resp.app_states, app_name));
+
+            // Test the states of each table.
+            test_list_dup_app_state(app_name, gutil::FindOrDie(resp.app_states, app_name));
+        }
+    }
 };
 
 const std::string meta_duplication_service_test::kTestAppName = "test_app";
@@ -796,16 +851,60 @@ TEST_F(meta_duplication_service_test, query_duplication_info)
     change_dup_status(kTestAppName, test_dup, duplication_status::DS_PAUSE);
 
     auto resp = query_dup_info(kTestAppName);
-    ASSERT_EQ(resp.err, ERR_OK);
-    ASSERT_EQ(resp.entry_list.size(), 1);
-    ASSERT_EQ(resp.entry_list.back().status, duplication_status::DS_PREPARE);
-    ASSERT_EQ(resp.entry_list.back().dupid, test_dup);
-    ASSERT_EQ(resp.appid, app->app_id);
+    ASSERT_EQ(ERR_OK, resp.err);
+    ASSERT_EQ(1, resp.entry_list.size());
+    ASSERT_EQ(duplication_status::DS_PREPARE, resp.entry_list.back().status);
+    ASSERT_EQ(test_dup, resp.entry_list.back().dupid);
+    ASSERT_EQ(app->app_id, resp.appid);
 
     change_dup_status(kTestAppName, test_dup, duplication_status::DS_REMOVED);
     resp = query_dup_info(kTestAppName);
-    ASSERT_EQ(resp.err, ERR_OK);
-    ASSERT_EQ(resp.entry_list.size(), 0);
+    ASSERT_EQ(ERR_OK, resp.err);
+    ASSERT_TRUE(resp.entry_list.empty());
+}
+
+TEST_F(meta_duplication_service_test, list_duplication_info)
+{
+    // Remove all tables from memory to prevent later tests from interference.
+    clear_apps();
+
+    // Create some tables with some partitions and duplications randomly.
+    create_app(kTestAppName, 8);
+    create_dup(kTestAppName);
+    create_dup(kTestAppName);
+
+    std::string app_name_1("test_list_dup");
+    create_app(app_name_1, 4);
+    create_dup(app_name_1);
+
+    std::string app_name_2("list_apps_test");
+    create_app(app_name_2, 8);
+
+    std::string app_name_3("test_dup_list");
+    create_app(app_name_3, 8);
+    create_dup(app_name_3);
+    create_dup(app_name_3);
+    create_dup(app_name_3);
+
+    // Test for returning all of the existing tables.
+    test_list_dup_info({kTestAppName, app_name_1, app_name_2, app_name_3},
+                       {},
+                       utils::pattern_match_type::PMT_MATCH_ALL);
+
+    // Test for returning the tables whose name are matched exactly.
+    test_list_dup_info({app_name_2}, app_name_2, utils::pattern_match_type::PMT_MATCH_EXACT);
+
+    // Test for returning the tables whose name are matched with pattern anywhere.
+    test_list_dup_info(
+        {kTestAppName, app_name_2}, "app", utils::pattern_match_type::PMT_MATCH_ANYWHERE);
+
+    // Test for returning the tables whose name are matched with pattern as prefix.
+    test_list_dup_info({kTestAppName, app_name_1, app_name_3},
+                       "test",
+                       utils::pattern_match_type::PMT_MATCH_PREFIX);
+
+    // Test for returning the tables whose name are matched with pattern as postfix.
+    test_list_dup_info({app_name_2}, "test", utils::pattern_match_type::PMT_MATCH_POSTFIX);
 }
 
 TEST_F(meta_duplication_service_test, re_add_duplication)
@@ -873,9 +972,17 @@ TEST_F(meta_duplication_service_test, query_duplication_handler)
         static_cast<uint64_t>(dup->create_timestamp_ms), ts_buf, sizeof(ts_buf));
     ASSERT_EQ(std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
                   std::to_string(dup->id) +
-                  R"(,"fail_mode":"FAIL_SLOW","remote":"slave-cluster")"
-                  R"(,"remote_app_name":"remote_test_app","remote_replica_count":3)"
-                  R"(,"status":"DS_PREPARE"},"appid":2})",
+                  R"(,"fail_mode":"FAIL_SLOW","partition_states":{)"
+                  R"("0":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("1":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("2":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("3":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("4":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("5":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("6":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("7":{"confirmed_decree":-1,"last_committed_decree":-1})"
+                  R"(},"remote":"slave-cluster","remote_app_name":"remote_test_app",)"
+                  R"("remote_replica_count":3,"status":"DS_PREPARE"},"appid":2})",
               fake_resp.body);
 }
 
@@ -1098,5 +1205,4 @@ TEST_F(meta_duplication_service_test, mark_follower_app_created_for_duplication)
     }
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

@@ -2338,6 +2338,7 @@ int64_t pegasus_server_impl::last_flushed_decree() const
     return static_cast<int64_t>(decree);
 }
 
+// TODO(wangdan): consider using dsn::utils::pattern_match().
 bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_type,
                                           const ::dsn::blob &filter_pattern,
                                           const ::dsn::blob &value)

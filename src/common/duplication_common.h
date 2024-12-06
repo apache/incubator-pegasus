@@ -31,15 +31,15 @@
 
 DSN_DECLARE_uint32(duplicate_log_batch_bytes);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
-typedef rpc_holder<duplication_modify_request, duplication_modify_response> duplication_modify_rpc;
-typedef rpc_holder<duplication_add_request, duplication_add_response> duplication_add_rpc;
-typedef rpc_holder<duplication_query_request, duplication_query_response> duplication_query_rpc;
-typedef rpc_holder<duplication_sync_request, duplication_sync_response> duplication_sync_rpc;
+using duplication_modify_rpc = rpc_holder<duplication_modify_request, duplication_modify_response>;
+using duplication_add_rpc = rpc_holder<duplication_add_request, duplication_add_response>;
+using duplication_query_rpc = rpc_holder<duplication_query_request, duplication_query_response>;
+using duplication_sync_rpc = rpc_holder<duplication_sync_request, duplication_sync_response>;
+using duplication_list_rpc = rpc_holder<duplication_list_request, duplication_list_response>;
 
-typedef int32_t dupid_t;
+using dupid_t = int32_t;
 
 extern const char *duplication_status_to_string(duplication_status::type status);
 
@@ -92,5 +92,4 @@ struct duplication_constants
 USER_DEFINED_ENUM_FORMATTER(duplication_fail_mode::type)
 USER_DEFINED_ENUM_FORMATTER(duplication_status::type)
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

@@ -87,6 +87,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-llvm-include-order,"
                            "-misc-definitions-in-headers,"
                            "-misc-non-private-member-variables-in-classes,"
+                           "-misc-unused-parameters,"
                            "-modernize-avoid-c-arrays,"
                            "-modernize-replace-disallow-copy-and-assign-macro,"
                            "-modernize-use-trailing-return-type,"

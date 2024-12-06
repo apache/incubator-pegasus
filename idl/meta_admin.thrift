@@ -447,6 +447,8 @@ service admin_client
 
     duplication.duplication_modify_response modify_duplication(1: duplication.duplication_modify_request req);
 
+    duplication.duplication_list_response list_duplication(1: duplication.duplication_list_request req);
+
     query_app_info_response query_app_info(1: query_app_info_request req);
 
     configuration_update_app_env_response update_app_env(1: configuration_update_app_env_request req);

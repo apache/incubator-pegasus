@@ -39,6 +39,8 @@ class zrwlock_nr;
 namespace replication {
 class configuration_create_app_response;
 class duplication_confirm_entry;
+class duplication_list_request;
+class duplication_list_response;
 class duplication_query_request;
 class duplication_query_response;
 class meta_service;
@@ -69,7 +71,11 @@ public:
 
     /// See replication.thrift for possible errors for each rpc.
 
+    // Query duplications for one table.
     void query_duplication_info(const duplication_query_request &, duplication_query_response &);
+
+    // List duplications for one or multiple tables.
+    void list_duplication_info(const duplication_list_request &, duplication_list_response &);
 
     void add_duplication(duplication_add_rpc rpc);
 

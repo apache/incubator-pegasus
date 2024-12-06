@@ -262,6 +262,7 @@ private:
     void on_modify_duplication(duplication_modify_rpc rpc);
     void on_query_duplication_info(duplication_query_rpc rpc);
     void on_duplication_sync(duplication_sync_rpc rpc);
+    void on_list_duplication_info(duplication_list_rpc rpc);
     void register_duplication_rpc_handlers();
     void recover_duplication_from_meta_state();
     void initialize_duplication_service();

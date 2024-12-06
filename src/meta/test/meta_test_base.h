@@ -70,6 +70,8 @@ public:
     // drop an app for test.
     void drop_app(const std::string &name);
 
+    void clear_apps();
+
     configuration_update_app_env_response update_app_envs(const std::string &app_name,
                                                           const std::vector<std::string> &env_keys,
                                                           const std::vector<std::string> &env_vals);

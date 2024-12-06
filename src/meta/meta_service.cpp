@@ -1038,6 +1038,20 @@ void meta_service::on_duplication_sync(duplication_sync_rpc rpc)
         server_state::sStateHash);
 }
 
+void meta_service::on_list_duplication_info(duplication_list_rpc rpc)
+{
+    if (!check_status_and_authz(rpc)) {
+        return;
+    }
+
+    if (!_dup_svc) {
+        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+        return;
+    }
+
+    _dup_svc->list_duplication_info(rpc.request(), rpc.response());
+}
+
 void meta_service::recover_duplication_from_meta_state()
 {
     if (_dup_svc) {
@@ -1056,6 +1070,8 @@ void meta_service::register_duplication_rpc_handlers()
                                          &meta_service::on_query_duplication_info);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_DUPLICATION_SYNC, "sync duplication", &meta_service::on_duplication_sync);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_LIST_DUPLICATION, "list_duplication_info", &meta_service::on_list_duplication_info);
 }
 
 void meta_service::initialize_duplication_service()
