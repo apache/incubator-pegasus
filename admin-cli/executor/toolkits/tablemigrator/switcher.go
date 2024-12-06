@@ -59,7 +59,8 @@ func SwitchMetaAddrs(client *executor.Client, zkAddr string, zkRoot string, tabl
 
 	originMeta := client.Meta
 	targetAddrList := strings.Split(targetAddrs, ",")
-	targetMeta := executor.NewClient(os.Stdout, targetAddrList).Meta
+	pegasusClient, _ := executor.NewClient(os.Stdout, targetAddrList, true)
+	targetMeta := pegasusClient.Meta
 	env := map[string]string{
 		"replica.deny_client_request": "reconfig*all",
 	}

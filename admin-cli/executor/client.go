@@ -46,39 +46,18 @@ type Client struct {
 }
 
 // NewClient creates a client for accessing Pegasus cluster for use of admin-cli.
-// This function will call os.Exit.
-func NewClient(writer io.Writer, metaAddrs []string) *Client {
+// When listing nodes fails, willExit == true means call os.Exit().
+func NewClient(writer io.Writer, metaAddrs []string, willExit bool) (*Client, error) {
 	meta := client.NewRPCBasedMeta(metaAddrs)
 
 	// TODO(wutao): initialize replica-nodes lazily
 	nodes, err := meta.ListNodes()
 	if err != nil {
-		fmt.Fprintf(writer, "fatal: failed to list nodes [%s]\n", err)
-		os.Exit(1)
-	}
-
-	var replicaAddrs []string
-	for _, node := range nodes {
-		replicaAddrs = append(replicaAddrs, node.Address.GetAddress())
-	}
-
-	return &Client{
-		Writer: writer,
-		Meta:   meta,
-		Nodes:  util.NewPegasusNodeManager(metaAddrs, replicaAddrs),
-		Perf:   aggregate.NewPerfClient(metaAddrs),
-	}
-}
-
-// NewClientWithoutExit creates a client for accessing Pegasus cluster for use of admin-cli.
-// This function will not call os.Exit.
-func NewClientWithoutExit(writer io.Writer, metaAddrs []string) (*Client, error) {
-	meta := client.NewRPCBasedMeta(metaAddrs)
-
-	nodes, err := meta.ListNodes()
-	if err != nil {
-		fmt.Fprintf(writer, "fatal: failed to list nodes [%s]\n", err)
-		return nil, fmt.Errorf("fatal: failed to list nodes [%s]", err)
+		fmt.Printf("Error: failed to list nodes [%s]\n", err)
+		if willExit {
+			os.Exit(1)
+		}
+		return nil, fmt.Errorf("failed to list nodes [%s]", err)
 	}
 
 	var replicaAddrs []string
