@@ -22,10 +22,12 @@ package executor
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/apache/incubator-pegasus/admin-cli/tabular"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/radmin"
 	"github.com/apache/incubator-pegasus/go-client/session"
@@ -45,7 +47,7 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 }
 
 func GetDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, print bool) ([]interface{}, error) {
-	resp, err := sendQueryDiskInfoRequest(client, replicaServer, tableName)
+	resp, err := SendQueryDiskInfoRequest(client, replicaServer, tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +62,7 @@ func GetDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, ta
 	}
 }
 
-func sendQueryDiskInfoRequest(client *Client, replicaServer string, tableName string) (*radmin.QueryDiskInfoResponse, error) {
+func SendQueryDiskInfoRequest(client *Client, replicaServer string, tableName string) (*radmin.QueryDiskInfoResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -88,9 +90,34 @@ func QueryAllNodesDiskInfo(client *Client, tableName string) (map[string]*radmin
 	}
 	for _, nodeInfo := range nodeInfos {
 		address := nodeInfo.GetAddress().GetAddress()
-		resp, err := sendQueryDiskInfoRequest(client, address, tableName)
+		resp, err := SendQueryDiskInfoRequest(client, address, tableName)
 		if err != nil {
 			return respMap, err
+		}
+		respMap[address] = resp
+	}
+	return respMap, nil
+}
+
+func QueryAliveNodesDiskInfo(client *Client, tableName string) (map[string]*radmin.QueryDiskInfoResponse, error) {
+	respMap := make(map[string]*radmin.QueryDiskInfoResponse)
+	nodeInfos, err := client.Meta.ListNodes()
+	if err != nil {
+		return respMap, err
+	}
+	for _, nodeInfo := range nodeInfos {
+		if nodeInfo.Status != admin.NodeStatus_NS_ALIVE {
+			continue
+		}
+		address := nodeInfo.GetAddress().GetAddress()
+		resp, err := SendQueryDiskInfoRequest(client, address, tableName)
+		if err != nil {
+			// this replica server haven't the table partition.
+			if strings.Contains(err.Error(), "ERR_OBJECT_NOT_FOUND") {
+				continue
+			} else {
+				return respMap, err
+			}
 		}
 		respMap[address] = resp
 	}
