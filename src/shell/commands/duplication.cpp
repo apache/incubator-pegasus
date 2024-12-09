@@ -56,6 +56,8 @@ struct list_dups_options
     bool show_unfinishd{false};
 };
 
+using selected_app_dups_map = std::map<std::string, std::map<int32_t, std::set<int32_t>>>;
+
 struct list_dups_stat
 {
     size_t total_app_count{0};
@@ -66,37 +68,12 @@ struct list_dups_stat
     size_t duplicating_partition_count{0};
     size_t unfinished_partition_count{0};
 
-    std::map<std::string, dsn::replication::duplication_app_state> unfinished_apps{};
+    selected_app_dups_map unfinished_apps{};
 };
 
-void print_dups(const list_dups_options &options,
-                const std::map<std::string, dsn::replication::duplication_app_state> &app_states)
-{
-    dsn::utils::table_printer printer("duplications");
-    printer.add_title("app_name");
-    printer.add_column("dup_id", tp_alignment::kRight);
-    printer.add_column("create_time", tp_alignment::kRight);
-    printer.add_column("status", tp_alignment::kRight);
-    printer.add_column("fail_mode", tp_alignment::kRight);
-    printer.add_column("remote_cluster", tp_alignment::kRight);
-    printer.add_column("remote_app_name", tp_alignment::kRight);
-
-    for (auto app : app_states) {
-        /*std::string create_time;
-        dsn::utils::time_ms_to_string(info.create_ts, create_time);
-
-        printer.add_row(info.dupid);
-        printer.append_data(duplication_status_to_string(info.status));
-        printer.append_data(info.remote);
-        printer.append_data(create_time);
-
-        printer.output(std::cout);
-        std::cout << std::endl;*/
-    }
-}
-
-void stat_dups(const list_dups_options &options,
+void stat_dups(
                 const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
+    uint32_t progress_gap,
                 list_dups_stat &stat)
 {
     stat.total_app_count = app_states.size();
@@ -110,14 +87,14 @@ void stat_dups(const list_dups_options &options,
         ++stat.duplicating_app_count ;
         stat.duplicating_partition_count += app.partition_count;
 
-        bool app_unfinished= false;
-        std::vector<size_t> unfinished_partitions(app.partition_count);
+        size_t unfinished_app_counter= 0;
+        std::vector<size_t> unfinished_partition_counters(app.partition_count);
+
         for (const auto &[dup_id, dup]: dups) {
             if (!dup.__isset.partition_states) {
                 continue;
             }
 
-            duplication_app_state unfinished_app;
             for(const auto &[partition_id, partition_state]: dup.partition_states)
             {
                 if (partition_state.last_committed_decree < partition_state.confirmed_decree)
@@ -126,25 +103,78 @@ void stat_dups(const list_dups_options &options,
                 }
                 
                 if (partition_state.last_committed_decree - partition_state.confirmed_decree
-                        <= options.progress_gap) {
+                        <= progress_gap) {
                     continue;
                 }
 
-                app_unfinished= true;
-                if (unfinished_partitions[i] == 0) {
-                    unfinished_partitions[i] = 1;
+                unfinished_app_counter= 1;
+                if (unfinished_partition_counters[i] == 0) {
+                    unfinished_partition_counters[i] = 1;
                 }
+
+                stat.unfinished_apps[app_name][dup_id].insert(partition_id); 
             }
         }
 
-        for (const auto &val:unfinished_partitions) {
-            stat.unfinished_partition_count += val;
+        for (const auto &counter:unfinished_partition_counters) {
+            stat.unfinished_partition_count += counter;
         }
 
-        if (app_unfinished) {
-            ++stat.unfinished_app_count;
-        }
+        stat.unfinished_app_count+=unfinished_app_counter;
     }
+}
+
+void print_dups(
+                const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
+                bool list_partitions)
+{
+    dsn::utils::table_printer printer("duplications");
+    printer.add_title("app_name");
+    printer.add_column("dup_id", tp_alignment::kRight);
+    printer.add_column("create_time", tp_alignment::kRight);
+    printer.add_column("status", tp_alignment::kRight);
+    printer.add_column("remote_cluster", tp_alignment::kRight);
+    printer.add_column("remote_app_name", tp_alignment::kRight);
+
+    if (list_partitions)
+    {
+        printer.add_column("partition_id");
+        printer.add_column("confirmed_decree");
+        printer.add_column("last_committed_decree");
+    }
+
+    for (const auto &[app_name,app]: app_states) {
+        if (app.duplications.empty()) {
+            continue;
+        }
+
+
+        for (const auto &[dup_id, dup]: dups) {
+            if (!list_partitions) {
+                continue;
+            }
+
+            if (!dup.__isset.partition_states) {
+                continue;
+            }
+
+            printer.add_row(app_name);
+            printer.append_data(dup_id);
+
+            std::string create_time;
+            dsn::utils::time_ms_to_string(info.create_ts, create_time);
+            printer.append_data(create_time);
+
+            printer.append_data(dsn::replication::duplication_status_to_string(dup.status));
+            printer.append_data(dup.remote);
+            printer.append_data(dup.__isset.remote_app_name ? dup.remote_app_name:app_name);
+
+        }
+
+    }
+
+    printer.output(std::cout);
+    std::cout << std::endl;
 }
 
 void check_dups(const list_dups_options &options,
@@ -153,11 +183,12 @@ void check_dups(const list_dups_options &options,
 
 }
 
-void show_dups(const list_dups_options &options,
-                const std::map<std::string, dsn::replication::duplication_app_state> &app_states)
+void show_dups(
+                const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
+                const list_dups_options &options)
 {
     list_dups_stat stat;
-    stat_dups(options, app_states, stat);
+    stat_dups(app_states, options.progress_gap, stat);
 
     if (options.check_progress) {
         check_dup_progress(options, app_states);
@@ -429,7 +460,7 @@ bool ls_dups(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    show_dups(options, result.get_value().app_states);
+    show_dups(result.get_value().app_states, options);
     return true;
 }
 
