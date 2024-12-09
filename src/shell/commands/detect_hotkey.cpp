@@ -72,7 +72,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     // detect_hotkey
     // <-a|--app_id str><-p|--partition_index num><-t|--hotkey_type read|write>
     // <-c|--detect_action start|stop|query><-d|--address str>
-    const std::set<std::string> params = {"a",
+    static const std::set<std::string> params = {"a",
                                           "app_id",
                                           "p",
                                           "partition_index",
@@ -82,9 +82,14 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
                                           "hotkey_type",
                                           "d",
                                           "address"};
-    const std::set<std::string> flags = {};
+    static const std::set<std::string> flags = {};
+
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
-    if (!validate_cmd(cmd, params, flags)) {
+
+    const auto &check = validate_cmd(cmd, params, flags, empty_pos_args);
+    if (!check) {
+        // TODO(wangdan): use SHELL_PRINT* macros instead.
+        fmt::print(stderr, "{}\n", check.description());
         return false;
     }
 

@@ -41,11 +41,13 @@
 namespace dsn::utils {
 
 ENUM_BEGIN2(pattern_match_type::type, pattern_match_type, pattern_match_type::PMT_INVALID)
-ENUM_REG(pattern_match_type::PMT_MATCH_EXACT)
-ENUM_REG(pattern_match_type::PMT_MATCH_ANYWHERE)
-ENUM_REG(pattern_match_type::PMT_MATCH_PREFIX)
-ENUM_REG(pattern_match_type::PMT_MATCH_POSTFIX)
-ENUM_REG(pattern_match_type::PMT_MATCH_REGEX)
+ ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_INVALID, invalid)
+ ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_ALL, all)
+ ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_EXACT, exact)
+ ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_ANYWHERE, anywhere)
+ ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_PREFIX, prefix)
+ ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_POSTFIX, postfix)
+ ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_REGEX, regex)
 ENUM_END2(pattern_match_type::type, pattern_match_type)
 
 inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }

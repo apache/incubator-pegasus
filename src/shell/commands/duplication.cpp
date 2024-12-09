@@ -221,7 +221,7 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
     const auto &resp = err_resp.get_value();
     fmt::println("duplications of app [{}] are listed as below:", app_name);
 
-    dsn::utils::table_printer printer;
+    dsn::utils::table_printer printer();
     printer.add_title("dup_id");
     printer.add_column("status");
     printer.add_column("remote cluster");
@@ -240,6 +240,96 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
         std::cout << std::endl;
     }
 
+    return true;
+}
+
+namespace {
+
+struct list_dups_options
+{
+    bool without_base{false};
+    bool list_partitions{false};
+    bool check_progress{false};
+    uint32_t progress_gap{0};
+    bool show_unfinishd{false};
+};
+
+void print_dups(const list_dups_options &options, const std::map<std::string, dsn::replication::duplication_app_state> &app_states)
+{
+    dsn::utils::table_printer printer("duplications");
+    printer.add_title("app_name");
+    printer.add_column("dup_id", tp_alignment::kRight);
+    printer.add_column("create_time", tp_alignment::kRight);
+    printer.add_column("status", tp_alignment::kRight);
+    printer.add_column("fail_mode", tp_alignment::kRight);
+    printer.add_column("remote_cluster", tp_alignment::kRight);
+    printer.add_column("remote_app_name", tp_alignment::kRight);
+
+    for (auto app : app_states) {
+        std::string create_time;
+        dsn::utils::time_ms_to_string(info.create_ts, create_time);
+
+        printer.add_row(info.dupid);
+        printer.append_data(duplication_status_to_string(info.status));
+        printer.append_data(info.remote);
+        printer.append_data(create_time);
+
+        printer.output(std::cout);
+        std::cout << std::endl;
+    }
+
+}
+
+} // anonymous namespace
+  
+bool ls_dups(command_executor *e, shell_context *sc, arguments args)
+{
+    // dups [-a|--app_name_pattern str] [-m|--match_type str] [-i|--without_base]
+    // [-p|--list_partitions] [-c|--check_progress] [-g|--progress_gap num]
+    // [-u|--show_unfinishd]
+
+    static const std::set<std::string> params = {"a",
+                                          "app_name_pattern",
+                                          "m",
+                                          "match_type",
+                                          "g",
+                                          "progress_gap"};
+    static const std::set<std::string> flags = {"i", "without_base",
+        "p", "list_partitions", "c", "check_progress",
+    "u", "show_unfinishd"};
+
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+
+    const auto &check = validate_cmd(cmd, params, flags, empty_pos_args);
+    if (!check) {
+        SHELL_PRINTLN_ERROR("{}", check.description());
+        return false;
+    }
+
+    const std::string app_name_pattern(cmd({"-a", "--app_name_pattern"}, {}).str());
+
+    auto match_type = dsn::utils::pattern_match_type::PMT_MATCH_ALL;
+    PARSE_OPT_ENUM(match_type, dsn::utils::pattern_match_type::PMT_INVALID, {"-m", "--match_type"});
+
+    list_dups_options options;
+    options.without_base = cmd[{"-p", "--list_partitions"}]
+    options.list_partitions = cmd[{"-p", "--list_partitions"}];
+    options.check_progress =  cmd[{"-c", "--check_progress"}];
+    PARSE_OPT_UINT(options.progress_gap, 0, {"-g", "--progress_gap"});
+    options.show_unfinishd =  cmd[{"-u", "--show_unfinishd"}];
+
+    const auto &result= sc->ddl_client->list_dups(app_name_pattern, match_type);
+    auto status = result.get_error();
+    if (status) {
+        status = FMT_ERR(result.get_value().err, result.get_value().hint_message);
+    }
+
+    if (!status) {
+        SHELL_PRINTLN_ERROR("list duplications failed, error={}", status);
+        return true;
+    }
+
+    print_dups(options, result.get_value().app_states);
     return true;
 }
 

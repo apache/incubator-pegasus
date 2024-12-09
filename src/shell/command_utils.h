@@ -20,6 +20,7 @@
 #pragma once
 
 #include <fmt/core.h>
+#include <functional>
 #include <stdio.h>
 #include <map>
 #include <set>
@@ -27,6 +28,7 @@
 #include <utility>
 
 #include "shell/argh.h"
+#include "utils/errors.h"
 #include "utils/ports.h"
 #include "utils/strings.h"
 
@@ -36,35 +38,42 @@ class host_port;
 
 struct shell_context;
 
-inline bool validate_cmd(const argh::parser &cmd,
-                         const std::set<std::string> &params,
-                         const std::set<std::string> &flags)
+inline dsn::error_s empty_pos_args(const argh::parser &cmd)
 {
-    if (cmd.size() > 1) {
-        fmt::print(stderr, "too many params!\n");
-        return false;
+    if (cmd.size() > 0) {
+        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "there shouldn't be any positional arguments");
+    }
+
+    return dsn::error_s::ok();
+}
+
+inline dsn::error_s validate_cmd(const argh::parser &cmd,
+                         const std::set<std::string> &params,
+                         const std::set<std::string> &flags,
+                         std::function<dsn::error_s(const argh::parser &cmd)> pos_args_checker)
+{
+    const auto &result = pos_args_checker(cmd);
+    if (!result) {
+        return result;
     }
 
     for (const auto &param : cmd.params()) {
         if (params.find(param.first) == params.end()) {
-            fmt::print(stderr, "unknown param {} = {}\n", param.first, param.second);
-            return false;
+            return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "unknown param {} = {}", param.first, param.second);
         }
     }
 
     for (const auto &flag : cmd.flags()) {
         if (params.find(flag) != params.end()) {
-            fmt::print(stderr, "missing value of {}\n", flag);
-            return false;
+            return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "missing value of {}", flag);
         }
 
         if (flags.find(flag) == flags.end()) {
-            fmt::print(stderr, "unknown flag {}\n", flag);
-            return false;
+            return FMT_ERR(dsn:ERR_INVALID_PARAMETERS, "unknown flag\n", flag);
         }
     }
 
-    return true;
+    return dsn::error_s::ok();
 }
 
 bool validate_ip(shell_context *sc,

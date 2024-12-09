@@ -260,6 +260,8 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool query_dup(command_executor *e, shell_context *sc, arguments args);
 
+bool ls_dups(command_executor *e, shell_context *sc, arguments args);
+
 bool remove_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool start_dup(command_executor *e, shell_context *sc, arguments args);
