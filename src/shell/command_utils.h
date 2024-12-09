@@ -47,10 +47,11 @@ inline dsn::error_s empty_pos_args(const argh::parser &cmd)
     return dsn::error_s::ok();
 }
 
-inline dsn::error_s validate_cmd(const argh::parser &cmd,
-                         const std::set<std::string> &params,
-                         const std::set<std::string> &flags,
-                         std::function<dsn::error_s(const argh::parser &cmd)> pos_args_checker)
+inline dsn::error_s
+validate_cmd(const argh::parser &cmd,
+             const std::set<std::string> &params,
+             const std::set<std::string> &flags,
+             std::function<dsn::error_s(const argh::parser &cmd)> pos_args_checker)
 {
     const auto &result = pos_args_checker(cmd);
     if (!result) {
@@ -59,7 +60,8 @@ inline dsn::error_s validate_cmd(const argh::parser &cmd,
 
     for (const auto &param : cmd.params()) {
         if (params.find(param.first) == params.end()) {
-            return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "unknown param {} = {}", param.first, param.second);
+            return FMT_ERR(
+                dsn::ERR_INVALID_PARAMETERS, "unknown param {} = {}", param.first, param.second);
         }
     }
 
@@ -69,7 +71,7 @@ inline dsn::error_s validate_cmd(const argh::parser &cmd,
         }
 
         if (flags.find(flag) == flags.end()) {
-            return FMT_ERR(dsn:ERR_INVALID_PARAMETERS, "unknown flag\n", flag);
+            return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "unknown flag\n", flag);
         }
     }
 

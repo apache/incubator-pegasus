@@ -73,15 +73,15 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     // <-a|--app_id str><-p|--partition_index num><-t|--hotkey_type read|write>
     // <-c|--detect_action start|stop|query><-d|--address str>
     static const std::set<std::string> params = {"a",
-                                          "app_id",
-                                          "p",
-                                          "partition_index",
-                                          "c",
-                                          "hotkey_action",
-                                          "t",
-                                          "hotkey_type",
-                                          "d",
-                                          "address"};
+                                                 "app_id",
+                                                 "p",
+                                                 "partition_index",
+                                                 "c",
+                                                 "hotkey_action",
+                                                 "t",
+                                                 "hotkey_type",
+                                                 "d",
+                                                 "address"};
     static const std::set<std::string> flags = {};
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);

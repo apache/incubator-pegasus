@@ -980,15 +980,15 @@ private:
         const auto param = cmd(param_index++).str();                                               \
         ::dsn::utils::split_args(param.c_str(), container, ',');                                   \
         if (container.empty()) {                                                                   \
-            SHELL_PRINTLN_ERROR(                                                                     \
-                       "invalid command, '{}' should be in the form of 'val1,val2,val3' and "      \
-                       "should not be empty",                                                    \
-                       param);                                                                     \
+            SHELL_PRINTLN_ERROR(                                                                   \
+                "invalid command, '{}' should be in the form of 'val1,val2,val3' and "             \
+                "should not be empty",                                                             \
+                param);                                                                            \
             return false;                                                                          \
         }                                                                                          \
         std::set<std::string> str_set(container.begin(), container.end());                         \
         if (str_set.size() != container.size()) {                                                  \
-            SHELL_PRINTLN_ERROR("invalid command, '{}' has duplicate values", param);             \
+            SHELL_PRINTLN_ERROR("invalid command, '{}' has duplicate values", param);              \
             return false;                                                                          \
         }                                                                                          \
     } while (false)
@@ -1005,7 +1005,7 @@ private:
     do {                                                                                           \
         const auto param = cmd(param_index++).str();                                               \
         if (!::dsn::buf2uint32(param, value)) {                                                    \
-            SHELL_PRINTLN_ERROR("invalid command, '{}' should be an unsigned integer", param);    \
+            SHELL_PRINTLN_ERROR("invalid command, '{}' should be an unsigned integer", param);     \
             return false;                                                                          \
         }                                                                                          \
     } while (false)
@@ -1019,7 +1019,7 @@ private:
     do {                                                                                           \
         const auto param = cmd(__VA_ARGS__, (def_val)).str();                                      \
         if (!::dsn::buf2uint32(param, value)) {                                                    \
-            SHELL_PRINTLN_ERROR("invalid command, '{}' should be an unsigned integer", param);    \
+            SHELL_PRINTLN_ERROR("invalid command, '{}' should be an unsigned integer", param);     \
             return false;                                                                          \
         }                                                                                          \
     } while (false)
@@ -1034,24 +1034,24 @@ private:
         for (const auto &str : strs) {                                                             \
             uint32_t v;                                                                            \
             if (!::dsn::buf2uint32(str, v)) {                                                      \
-                SHELL_PRINTLN_ERROR("invalid command, '{}' should be an unsigned integer", str);  \
+                SHELL_PRINTLN_ERROR("invalid command, '{}' should be an unsigned integer", str);   \
                 return false;                                                                      \
             }                                                                                      \
             container.insert(v);                                                                   \
         }                                                                                          \
     } while (false)
 
-#define PARSE_OPT_ENUM(enum_val, invalid_val, ...)                                                        \
+#define PARSE_OPT_ENUM(enum_val, invalid_val, ...)                                                 \
     do {                                                                                           \
-    const std::string __str(cmd(__VA_ARGS__, {}).str());\
-    if (!__str.empty()) { \
-    const auto &__val= enum_from_string(__str.c_str(), invalid_val);\
-    if (__val==invalid_val) {\
-        SHELL_PRINTLN_ERROR("invalid enum {}", __str);\
-            return false;                                                                          \
+        const std::string __str(cmd(__VA_ARGS__, "").str());                                       \
+        if (!__str.empty()) {                                                                      \
+            const auto &__val = enum_from_string(__str.c_str(), invalid_val);                      \
+            if (__val == invalid_val) {                                                            \
+                SHELL_PRINTLN_ERROR("invalid enum {}", __str);                                     \
+                return false;                                                                      \
+            }                                                                                      \
+            enum_val = __val;                                                                      \
         }                                                                                          \
-        enum_val = __val;\
-    } \
     } while (false)
 
 #define RETURN_FALSE_IF_NOT(expr, ...)                                                             \
