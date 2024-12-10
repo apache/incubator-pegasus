@@ -49,9 +49,7 @@ namespace {
 
 struct list_dups_options
 {
-    bool without_base{false};
     bool list_partitions{false};
-    bool check_progress{false};
     uint32_t progress_gap{0};
     bool show_unfinishd{false};
 };
@@ -89,7 +87,7 @@ void stat_dups(const std::map<std::string, dsn::replication::duplication_app_sta
         size_t unfinished_app_counter = 0;
         std::vector<size_t> unfinished_partition_counters(app.partition_count);
 
-        for (const auto &[dup_id, dup] : dups) {
+        for (const auto &[dup_id, dup] : app.duplications) {
             if (!dup.__isset.partition_states) {
                 continue;
             }
@@ -105,9 +103,9 @@ void stat_dups(const std::map<std::string, dsn::replication::duplication_app_sta
                 }
 
                 unfinished_app_counter = 1;
-                if (unfinished_partition_counters[i] == 0) {
-                    unfinished_partition_counters[i] = 1;
-                }
+
+                CHECK_LT(partition_id, unfinished_partition_counters.size());
+                unfinished_partition_counters[partition_id] = 1;
 
                 stat.unfinished_apps[app_name][dup_id].insert(partition_id);
             }
@@ -137,23 +135,26 @@ void add_titles_for_dups(dsn::utils::table_printer &printer, bool list_partition
     }
 }
 
-void add_base_row_for_dups(dsn::utils::table_printer &printer, 
-        const std::string &app_name, const dsn::replication::duplication_entry &dup)
+void add_base_row_for_dups(dsn::utils::table_printer &printer,
+                           const std::string &app_name,
+                           const dsn::replication::duplication_entry &dup)
 {
-            printer.add_row(app_name);
-            printer.append_data(dup.dupid);
+    printer.add_row(app_name);
+    printer.append_data(dup.dupid);
 
-            std::string create_time;
-            dsn::utils::time_ms_to_string(dup.create_ts, create_time);
-            printer.append_data(create_time);
+    std::string create_time;
+    dsn::utils::time_ms_to_string(dup.create_ts, create_time);
+    printer.append_data(create_time);
 
-            printer.append_data(dsn::replication::duplication_status_to_string(dup.status));
-            printer.append_data(dup.remote);
-            printer.append_data(dup.__isset.remote_app_name ? dup.remote_app_name : app_name);
+    printer.append_data(dsn::replication::duplication_status_to_string(dup.status));
+    printer.append_data(dup.remote);
+    printer.append_data(dup.__isset.remote_app_name ? dup.remote_app_name : app_name);
 }
 
-void add_row_for_dups(dsn::utils::table_printer &printer, bool list_partitions,
-        const std::string &app_name, const dsn::replication::duplication_entry &dup)
+void add_row_for_dups(dsn::utils::table_printer &printer,
+                      bool list_partitions,
+                      const std::string &app_name,
+                      const dsn::replication::duplication_entry &dup)
 {
     if (list_partitions) {
         add_base_row_for_dups(printer, app_name, dup);
@@ -179,7 +180,7 @@ void print_dups(const std::map<std::string, dsn::replication::duplication_app_st
             continue;
         }
 
-        for (const auto &[dup_id, dup] : dups) {
+        for (const auto &[_, dup] : app.duplications) {
             if (!list_partitions) {
                 continue;
             }
@@ -197,8 +198,8 @@ void print_dups(const std::map<std::string, dsn::replication::duplication_app_st
 }
 
 void print_selected_dups(
-                const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
-                const selected_app_dups_map &selected_apps)
+    const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
+    const selected_app_dups_map &selected_apps)
 {
 }
 
@@ -418,14 +419,14 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
 
 bool ls_dups(command_executor *e, shell_context *sc, arguments args)
 {
-    // dups [-a|--app_name_pattern str] [-m|--match_type str] [-i|--without_base]
-    // [-p|--list_partitions] [-c|--check_progress] [-g|--progress_gap num]
+    // dups [-a|--app_name_pattern str] [-m|--match_type str]
+    // [-p|--list_partitions] [-g|--progress_gap num]
     // [-u|--show_unfinishd]
 
     static const std::set<std::string> params = {
         "a", "app_name_pattern", "m", "match_type", "g", "progress_gap"};
     static const std::set<std::string> flags = {
-        "i", "without_base", "p", "list_partitions", "c", "check_progress", "u", "show_unfinishd"};
+        "p", "list_partitions", "u", "show_unfinishd"};
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
@@ -441,9 +442,7 @@ bool ls_dups(command_executor *e, shell_context *sc, arguments args)
     PARSE_OPT_ENUM(match_type, dsn::utils::pattern_match_type::PMT_INVALID, {"-m", "--match_type"});
 
     list_dups_options options;
-    options.without_base = cmd[{"-p", "--list_partitions"}];
     options.list_partitions = cmd[{"-p", "--list_partitions"}];
-    options.check_progress = cmd[{"-c", "--check_progress"}];
     PARSE_OPT_UINT(options.progress_gap, 0, {"-g", "--progress_gap"});
     options.show_unfinishd = cmd[{"-u", "--show_unfinishd"}];
 
