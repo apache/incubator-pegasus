@@ -617,7 +617,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     }
 
     // print configuration_list_nodes_response
-    std::streambuf *buf;
+    std::streambuf *buf = nullptr;
     std::ofstream of;
 
     // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.

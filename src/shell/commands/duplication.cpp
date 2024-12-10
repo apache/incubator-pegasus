@@ -119,10 +119,12 @@ void attach_dups_stat(const list_dups_stat &stat, dsn::utils::multi_table_printe
 {
     dsn::utils::table_printer printer("summary");
 
+    // Add stats for tables.
     printer.add_row_name_and_data("total_app_count", stat.total_app_count);
     printer.add_row_name_and_data("duplicating_app_count", stat.duplicating_app_count);
     printer.add_row_name_and_data("unfinished_app_count", stat.unfinished_app_count);
 
+    // Add stats for duplications.
     printer.add_row_name_and_data("duplication_count", stat.duplication_count);
     for (const auto &[status, cnt] : stat.dup_status_stats) {
         printer.add_row_name_and_data(fmt::format("{}_count", status), cnt);
@@ -131,6 +133,7 @@ void attach_dups_stat(const list_dups_stat &stat, dsn::utils::multi_table_printe
         printer.add_row_name_and_data(fmt::format("{}_count", remote_cluster), cnt);
     }
 
+    // Add stats for partitions.
     printer.add_row_name_and_data("total_partition_count", stat.total_partition_count);
     printer.add_row_name_and_data("duplicating_partition_count", stat.duplicating_partition_count);
     printer.add_row_name_and_data("unfinished_partition_count", stat.unfinished_partition_count);
@@ -138,56 +141,75 @@ void attach_dups_stat(const list_dups_stat &stat, dsn::utils::multi_table_printe
     multi_printer.add(std::move(printer));
 }
 
+// Stats for listed duplications.
 void stat_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
                uint32_t progress_gap,
                list_dups_stat &stat)
 {
+    // Record as the number of all listed tables.
     stat.total_app_count = app_states.size();
 
     for (const auto &[app_name, app] : app_states) {
+        // Sum up as the total number of all listed partitions.
         stat.total_partition_count += app.partition_count;
+
         if (app.duplications.empty()) {
+            // No need to stat other items since there is no duplications for this table.
             continue;
         }
 
+        // There's at least 1 duplication for this table. Sum up for duplicating tables
+        // with all partitions of each table marked as duplicating.
         ++stat.duplicating_app_count;
         stat.duplicating_partition_count += app.partition_count;
 
+        // Use individual variables as counter for "unfinished" tables and partitions in
+        // case one stat is calculated multiple times. Record 1 as the table and partition
+        // are "unfinished", while keeping 0 as both are "finished".Initialize all of them
+        // with 0 to sum up later.
         size_t unfinished_app_counter = 0;
         std::vector<size_t> unfinished_partition_counters(app.partition_count);
 
         for (const auto &[dup_id, dup] : app.duplications) {
+            // Count for all duplication-level stats.
             ++stat.duplication_count;
             ++stat.dup_status_stats[dsn::replication::duplication_status_to_string(dup.status)];
             ++stat.dup_remote_cluster_stats[dup.remote];
 
             if (!dup.__isset.partition_states) {
+                // Partition-level states are not set. Only to be compatible with old version
+                // where there is no this field for duplication entry.
                 continue;
             }
 
             for (const auto &[partition_id, partition_state] : dup.partition_states) {
                 if (partition_state.last_committed_decree < partition_state.confirmed_decree) {
+                    // This is unlikely to happen.
                     continue;
                 }
 
                 if (partition_state.last_committed_decree - partition_state.confirmed_decree <=
                     progress_gap) {
+                    // This partition is defined as "finished".
                     continue;
                 }
 
+                // Just assign with 1 to dedup, in case calculated multiple times.
                 unfinished_app_counter = 1;
-
                 CHECK_LT(partition_id, unfinished_partition_counters.size());
                 unfinished_partition_counters[partition_id] = 1;
 
+                // Record the partitions that are still "unfinished".
                 stat.unfinished_apps[app_name][dup_id].insert(partition_id);
             }
         }
 
+        // Sum up for each "unfinished" partition.
         for (const auto &counter : unfinished_partition_counters) {
             stat.unfinished_partition_count += counter;
         }
 
+        // Sum up if table is "unfinished".
         stat.unfinished_app_count += unfinished_app_counter;
     }
 }

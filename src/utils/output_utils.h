@@ -21,7 +21,6 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <algorithm>
 #include <cmath> // IWYU pragma: keep
-#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
