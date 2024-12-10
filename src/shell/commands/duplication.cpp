@@ -214,8 +214,10 @@ void stat_dups(const std::map<std::string, dsn::replication::duplication_app_sta
     }
 }
 
-void add_titles_for_dups(dsn::utils::table_printer &printer, bool list_partitions)
+// Add table headers for listed duplications.
+void add_titles_for_dups(bool list_partitions, dsn::utils::table_printer &printer)
 {
+    // Base columns for table-level and duplication-level info.
     printer.add_title("app_name");
     printer.add_column("dup_id", tp_alignment::kRight);
     printer.add_column("create_time", tp_alignment::kRight);
@@ -224,15 +226,18 @@ void add_titles_for_dups(dsn::utils::table_printer &printer, bool list_partition
     printer.add_column("remote_app_name", tp_alignment::kRight);
 
     if (list_partitions) {
+        // Partition-level info.
         printer.add_column("partition_id", tp_alignment::kRight);
         printer.add_column("confirmed_decree", tp_alignment::kRight);
         printer.add_column("last_committed_decree", tp_alignment::kRight);
     }
 }
 
-void add_base_row_for_dups(dsn::utils::table_printer &printer,
-                           const std::string &app_name,
-                           const dsn::replication::duplication_entry &dup)
+// Add table rows only with table-level and duplicating-level columns for listed
+// duplications.
+void add_base_row_for_dups(const std::string &app_name,
+                           const dsn::replication::duplication_entry &dup,
+                           dsn::utils::table_printer &printer)
 {
     printer.add_row(app_name);
     printer.append_data(dup.dupid);
@@ -246,14 +251,16 @@ void add_base_row_for_dups(dsn::utils::table_printer &printer,
     printer.append_data(dup.__isset.remote_app_name ? dup.remote_app_name : app_name);
 }
 
-void add_row_for_dups(dsn::utils::table_printer &printer,
-                      bool list_partitions,
-                      const std::string &app_name,
+// Add table rows including table-level, duplicating-level and partition-level columns
+// for listed duplications.
+void add_row_for_dups(const std::string &app_name,
                       const dsn::replication::duplication_entry &dup,
-                      std::function<bool(int32_t)> partition_selector)
+                      bool list_partitions,
+                      std::function<bool(int32_t)> partition_selector,
+                      dsn::utils::table_printer &printer)
 {
     if (!list_partitions) {
-        add_base_row_for_dups(printer, app_name, dup);
+        add_base_row_for_dups(app_name, dup, printer);
         return;
     }
 
@@ -262,19 +269,19 @@ void add_row_for_dups(dsn::utils::table_printer &printer,
             continue;
         }
 
-        add_base_row_for_dups(printer, app_name, dup);
+        add_base_row_for_dups(app_name, dup, printer);
         printer.append_data(partition_id);
         printer.append_data(partition_state.confirmed_decree);
         printer.append_data(partition_state.last_committed_decree);
     }
 }
 
-void add_row_for_dups(dsn::utils::table_printer &printer,
+void add_row_for_dups(const std::string &app_name,
+                      const dsn::replication::duplication_entry &dup,
                       bool list_partitions,
-                      const std::string &app_name,
-                      const dsn::replication::duplication_entry &dup)
+                      dsn::utils::table_printer &printer)
 {
-    add_row_for_dups(printer, list_partitions, app_name, dup, std::function<bool(int32_t)>());
+    add_row_for_dups(app_name, dup, list_partitions, std::function<bool(int32_t)>(), printer);
 }
 
 void attach_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
@@ -282,7 +289,7 @@ void attach_dups(const std::map<std::string, dsn::replication::duplication_app_s
                  dsn::utils::multi_table_printer &multi_printer)
 {
     dsn::utils::table_printer printer("duplications");
-    add_titles_for_dups(printer, list_partitions);
+    add_titles_for_dups(list_partitions, printer);
 
     for (const auto &[app_name, app] : app_states) {
         if (app.duplications.empty()) {
@@ -298,7 +305,7 @@ void attach_dups(const std::map<std::string, dsn::replication::duplication_app_s
                 continue;
             }
 
-            add_row_for_dups(printer, list_partitions, app_name, dup);
+            add_row_for_dups(app_name, dup, list_partitions, printer);
         }
     }
 
@@ -312,7 +319,7 @@ void attach_selected_dups(
     dsn::utils::multi_table_printer &multi_printer)
 {
     dsn::utils::table_printer printer(topic);
-    add_titles_for_dups(printer, true);
+    add_titles_for_dups(true, printer);
 
     auto selected_app_iter = selected_apps.begin();
     for (const auto &[app_name, app] : app_states) {
@@ -339,9 +346,13 @@ void attach_selected_dups(
             }
 
             add_row_for_dups(
-                printer, true, app_name, dup, [selected_dup_iter](int32_t partition_id) {
+                app_name,
+                dup,
+                true,
+                [selected_dup_iter](int32_t partition_id) {
                     return gutil::ContainsKey(selected_dup_iter->second, partition_id);
-                });
+                },
+                printer);
         }
     }
 
