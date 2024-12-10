@@ -425,8 +425,7 @@ bool ls_dups(command_executor *e, shell_context *sc, arguments args)
 
     static const std::set<std::string> params = {
         "a", "app_name_pattern", "m", "match_type", "g", "progress_gap"};
-    static const std::set<std::string> flags = {
-        "p", "list_partitions", "u", "show_unfinishd"};
+    static const std::set<std::string> flags = {"p", "list_partitions", "u", "show_unfinishd"};
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
