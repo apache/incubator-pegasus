@@ -123,7 +123,7 @@ private:
     {
         bool done;
         std::function<void(bool)> cb;
-        operation(bool done, std::function<void(bool)> &&cb) : done(done), cb(move(cb)) {}
+        operation(bool done, std::function<void(bool)> &&cb) : done(done), cb(std::move(cb)) {}
     };
 
 #pragma pack(push, 1)
