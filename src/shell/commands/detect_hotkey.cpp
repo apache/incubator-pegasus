@@ -30,6 +30,7 @@
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
@@ -72,19 +73,24 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     // detect_hotkey
     // <-a|--app_id str><-p|--partition_index num><-t|--hotkey_type read|write>
     // <-c|--detect_action start|stop|query><-d|--address str>
-    const std::set<std::string> params = {"a",
-                                          "app_id",
-                                          "p",
-                                          "partition_index",
-                                          "c",
-                                          "hotkey_action",
-                                          "t",
-                                          "hotkey_type",
-                                          "d",
-                                          "address"};
-    const std::set<std::string> flags = {};
+    static const std::set<std::string> params = {"a",
+                                                 "app_id",
+                                                 "p",
+                                                 "partition_index",
+                                                 "c",
+                                                 "hotkey_action",
+                                                 "t",
+                                                 "hotkey_type",
+                                                 "d",
+                                                 "address"};
+    static const std::set<std::string> flags = {};
+
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
-    if (!validate_cmd(cmd, params, flags)) {
+
+    const auto &check = validate_cmd(cmd, params, flags, empty_pos_args);
+    if (!check) {
+        // TODO(wangdan): use SHELL_PRINT* macros instead.
+        fmt::print(stderr, "{}\n", check.description());
         return false;
     }
 

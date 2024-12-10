@@ -187,6 +187,8 @@ struct duplication_app_state
 
     // dup id => per-duplication properties
     2:map<i32, duplication_entry>       duplications;
+
+    3:i32                               partition_count;
 }
 
 // This request is sent from client to meta.
