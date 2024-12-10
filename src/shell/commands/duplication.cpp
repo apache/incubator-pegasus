@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <initializer_list>
 #include <iostream>
 #include <map>
@@ -160,19 +161,32 @@ void add_base_row_for_dups(dsn::utils::table_printer &printer,
 void add_row_for_dups(dsn::utils::table_printer &printer,
                       bool list_partitions,
                       const std::string &app_name,
-                      const dsn::replication::duplication_entry &dup)
+                      const dsn::replication::duplication_entry &dup,
+                      std::function<bool(int32_t)> partition_selector)
 {
-    if (list_partitions) {
+    if (!list_partitions) {
         add_base_row_for_dups(printer, app_name, dup);
         return;
     }
 
     for (const auto &[partition_id, partition_state] : dup.partition_states) {
+        if (partition_selector && !partition_selector(partition_id)) {
+            continue;
+        }
+
         add_base_row_for_dups(printer, app_name, dup);
         printer.append_data(partition_id);
         printer.append_data(partition_state.confirmed_decree);
         printer.append_data(partition_state.last_committed_decree);
     }
+}
+
+void add_row_for_dups(dsn::utils::table_printer &printer,
+                      bool list_partitions,
+                      const std::string &app_name,
+                      const dsn::replication::duplication_entry &dup)
+{
+    add_row_for_dups(printer, list_partitions, app_name, dup, std::function<bool(int32_t)>());
 }
 
 void print_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
@@ -205,8 +219,45 @@ void print_dups(const std::map<std::string, dsn::replication::duplication_app_st
 
 void print_selected_dups(
     const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
-    const selected_app_dups_map &selected_apps)
+    const selected_app_dups_map &selected_apps,
+    const std::string &topic)
 {
+    dsn::utils::table_printer printer(topic);
+    add_titles_for_dups(printer, true);
+
+    auto selected_app_iter = selected_apps.begin();
+    for (const auto &[app_name, app] : app_states) {
+        if (selected_app_iter == selected_apps.end()) {
+            break;
+        }
+
+        if (selected_app_iter->first != app_name) {
+            continue;
+        }
+
+        for (const auto &[dup_id, dup] : app.duplications) {
+            auto selected_dup_iter = selected_app_iter->second.begin();
+            if (selected_dup_iter == selected_app_iter->second.end()) {
+                break;
+            }
+
+            if (selected_dup_iter->first != dup_id) {
+                continue;
+            }
+
+            if (!dup.__isset.partition_states) {
+                continue;
+            }
+
+            add_row_for_dups(
+                printer, true, app_name, dup, [selected_dup_iter](int32_t partition_id) {
+                    return gutil::ContainsKey(selected_dup_iter->second, partition_id);
+                });
+        }
+    }
+
+    printer.output(std::cout);
+    std::cout << std::endl;
 }
 
 void show_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
@@ -218,8 +269,7 @@ void show_dups(const std::map<std::string, dsn::replication::duplication_app_sta
     print_dups(app_states, options.list_partitions);
 
     if (options.show_unfinishd) {
-        print_selected_dups(app_states, stat.unfinished_apps);
-        return;
+        print_selected_dups(app_states, stat.unfinished_apps, "unfinished");
     }
 }
 
