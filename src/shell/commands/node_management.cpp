@@ -620,6 +620,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     std::streambuf *buf;
     std::ofstream of;
 
+    // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.
     if (!output_file.empty()) {
         of.open(output_file);
         buf = of.rdbuf();
@@ -701,6 +702,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     tp_count.add_row_name_and_data("unalive_node_count", status_by_hp.size() - alive_node_count);
     mtp.add(std::move(tp_count));
 
+    // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.
     mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
     return true;

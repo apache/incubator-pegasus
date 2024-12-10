@@ -67,26 +67,54 @@ struct list_dups_options
     // Whether partitions with "unfinished" progress should be shown.
     bool show_unfinishd{false};
 
+    // Specify a file path to output listed duplication info. Empty value means stdout.
     std::string output_file{};
 
+    // Whether output as json format.
     bool json{false};
 };
 
 using selected_app_dups_map = std::map<std::string, std::map<int32_t, std::set<int32_t>>>;
+using dup_status_stat_map = std::map<std::string, size_t>;
+using dup_remote_cluster_stat_map = std::map<std::string, size_t>;
 
 struct list_dups_stat
 {
+    // Total number of returned tables with specified table name pattern.
     size_t total_app_count{0};
+
+    // The number of returned tables that are duplicating.
     size_t duplicating_app_count{0};
+
+    // The number of "unfinished" tables for duplication according to specified
+    // `progress_gap`.
     size_t unfinished_app_count{0};
 
+    // The number of listed duplications.
+    size_t duplication_count{0};
+
+    // The number of listed duplications for each dup status.
+    dup_status_stat_map dup_status_stats{};
+
+    // The number of listed duplications for each remote cluster.
+    dup_remote_cluster_stat_map dup_remote_cluster_stats{};
+
+    // Total number of returned partitions with specified table name pattern.
     size_t total_partition_count{0};
+
+    // The number of returned partitions that are duplicating.
     size_t duplicating_partition_count{0};
+
+    // The number of "unfinished" partitions for duplication according to specified
+    // `progress_gap`.
     size_t unfinished_partition_count{0};
 
+    // All partitions that are not "unfinished" according to specified `progress_gap`
+    // organized as each table.
     selected_app_dups_map unfinished_apps{};
 };
 
+// Attach to printer the summary stats for listed duplications.
 void attach_dups_stat(const list_dups_stat &stat, dsn::utils::multi_table_printer &multi_printer)
 {
     dsn::utils::table_printer printer("summary");
@@ -94,6 +122,14 @@ void attach_dups_stat(const list_dups_stat &stat, dsn::utils::multi_table_printe
     printer.add_row_name_and_data("total_app_count", stat.total_app_count);
     printer.add_row_name_and_data("duplicating_app_count", stat.duplicating_app_count);
     printer.add_row_name_and_data("unfinished_app_count", stat.unfinished_app_count);
+
+    printer.add_row_name_and_data("duplication_count", stat.duplication_count);
+    for (const auto &[status, cnt] : stat.dup_status_stats) {
+        printer.add_row_name_and_data(fmt::format("{}_count", status), cnt);
+    }
+    for (const auto &[remote_cluster, cnt] : stat.dup_remote_cluster_stats) {
+        printer.add_row_name_and_data(fmt::format("{}_count", remote_cluster), cnt);
+    }
 
     printer.add_row_name_and_data("total_partition_count", stat.total_partition_count);
     printer.add_row_name_and_data("duplicating_partition_count", stat.duplicating_partition_count);
@@ -121,6 +157,10 @@ void stat_dups(const std::map<std::string, dsn::replication::duplication_app_sta
         std::vector<size_t> unfinished_partition_counters(app.partition_count);
 
         for (const auto &[dup_id, dup] : app.duplications) {
+            ++stat.duplication_count;
+            ++stat.dup_status_stats[dsn::replication::duplication_status_to_string(dup.status)];
+            ++stat.dup_remote_cluster_stats[dup.remote];
+
             if (!dup.__isset.partition_states) {
                 continue;
             }

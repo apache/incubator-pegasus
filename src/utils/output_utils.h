@@ -19,9 +19,9 @@
 
 // IWYU pragma: no_include <bits/std_abs.h>
 #include <rapidjson/ostreamwrapper.h>
-#include <stdlib.h>
 #include <algorithm>
 #include <cmath> // IWYU pragma: keep
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -225,10 +225,11 @@ private:
         out << std::endl;
     }
 
-private:
     std::vector<table_printer> _tps;
 };
 
+// Used as a general interface for printer to output to a file, typically `table_printer`
+// and `multi_table_printer`.
 template <typename Printer>
 void output(const std::string &file_path, bool json, const Printer &printer)
 {
@@ -249,6 +250,8 @@ void output(const std::string &file_path, bool json, const Printer &printer)
                         : table_printer::output_format::kTabular);
 }
 
+// Used as a general interface for printer to output to stdout, typically `table_printer`
+// and `multi_table_printer`.
 template <typename Printer>
 void output(bool json, const Printer &printer)
 {

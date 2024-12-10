@@ -481,6 +481,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
     }
     mtp.add(std::move(tp_count));
 
+    // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.
     mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
     return dsn::ERR_OK;

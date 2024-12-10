@@ -188,6 +188,7 @@ struct duplication_app_state
     // dup id => per-duplication properties
     2:map<i32, duplication_entry>       duplications;
 
+    // The number of partitions for this table.
     3:i32                               partition_count;
 }
 

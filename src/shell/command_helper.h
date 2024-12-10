@@ -1041,6 +1041,7 @@ private:
         }                                                                                          \
     } while (false)
 
+// Parse enum value from the parameters of command line.
 #define PARSE_OPT_ENUM(enum_val, invalid_val, ...)                                                 \
     do {                                                                                           \
         const std::string __str(cmd(__VA_ARGS__, "").str());                                       \
