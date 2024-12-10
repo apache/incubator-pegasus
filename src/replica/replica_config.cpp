@@ -175,8 +175,9 @@ void replica::assign_primary(configuration_update_request &proposal)
     SET_IP_AND_HOST_PORT(
         proposal.config, primary, _stub->primary_address(), _stub->primary_host_port());
     replica_helper::remove_node(_stub->primary_address(), proposal.config.secondaries);
+    CHECK(proposal.config.__isset.hp_secondaries,
+          "The proposal's partition_configuration is not normalized");
     replica_helper::remove_node(_stub->primary_host_port(), proposal.config.hp_secondaries);
-
     update_configuration_on_meta_server(proposal.type, node, proposal.config);
 }
 
@@ -191,15 +192,24 @@ void replica::add_potential_secondary(const configuration_update_request &propos
 
     CHECK_EQ(proposal.config.ballot, get_ballot());
     CHECK_EQ(proposal.config.pid, _primary_states.pc.pid);
-    CHECK_EQ(proposal.config.hp_primary, _primary_states.pc.hp_primary);
-    CHECK(proposal.config.hp_secondaries == _primary_states.pc.hp_secondaries, "");
-
+    CHECK_EQ(proposal.config.primary, _primary_states.pc.primary);
+    CHECK(proposal.config.secondaries == _primary_states.pc.secondaries, "");
+    dsn::host_port primary;
+    GET_HOST_PORT(proposal.config, primary, primary);
+    // The local host_port type 'hp_primary' field must be set.
+    CHECK(_primary_states.pc.__isset.hp_primary, "");
+    CHECK_EQ(primary, _primary_states.pc.hp_primary);
+    std::vector<dsn::host_port> secondaries;
+    GET_HOST_PORTS(proposal.config, secondaries, secondaries);
+    // The local host_port type 'hp_secondaries' field must be set.
+    CHECK(_primary_states.pc.__isset.hp_secondaries, "");
+    CHECK(secondaries == _primary_states.pc.hp_secondaries, "");
     host_port node;
     GET_HOST_PORT(proposal, node, node);
     CHECK(!_primary_states.check_exist(node, partition_status::PS_PRIMARY), "node = {}", node);
     CHECK(!_primary_states.check_exist(node, partition_status::PS_SECONDARY), "node = {}", node);
 
-    int potential_secondaries_count =
+    const int potential_secondaries_count =
         _primary_states.pc.hp_secondaries.size() + _primary_states.learners.size();
     if (potential_secondaries_count >= _primary_states.pc.max_replica_count - 1) {
         if (proposal.type == config_type::CT_ADD_SECONDARY) {
@@ -271,9 +281,19 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request &pr
     }
 
     CHECK_EQ(proposal.config.pid, _primary_states.pc.pid);
-    CHECK_EQ(proposal.config.hp_primary, _primary_states.pc.hp_primary);
-    CHECK(proposal.config.hp_secondaries == _primary_states.pc.hp_secondaries, "");
-    CHECK_EQ(proposal.hp_node, proposal.config.hp_primary);
+    dsn::host_port primary;
+    GET_HOST_PORT(proposal.config, primary, primary);
+    // The local host_port type 'hp_primary' field must be set.
+    CHECK(_primary_states.pc.__isset.hp_primary, "");
+    CHECK_EQ(primary, _primary_states.pc.hp_primary);
+    std::vector<dsn::host_port> secondaries;
+    GET_HOST_PORTS(proposal.config, secondaries, secondaries);
+    // The local host_port type 'hp_secondaries' field must be set.
+    CHECK(_primary_states.pc.__isset.hp_secondaries, "");
+    CHECK(secondaries == _primary_states.pc.hp_secondaries, "");
+    dsn::host_port node;
+    GET_HOST_PORT(proposal, node, node);
+    CHECK_EQ(node, primary);
     CHECK_EQ(proposal.node, proposal.config.primary);
 
     RESET_IP_AND_HOST_PORT(proposal.config, primary);
@@ -288,12 +308,20 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request &pro
         return;
 
     CHECK_EQ(proposal.config.pid, _primary_states.pc.pid);
-    CHECK_EQ(proposal.config.hp_primary, _primary_states.pc.hp_primary);
-    CHECK(proposal.config.hp_secondaries == _primary_states.pc.hp_secondaries, "");
+    dsn::host_port primary;
+    GET_HOST_PORT(proposal.config, primary, primary);
+    // The local host_port type 'hp_primary' field must be set.
+    CHECK(_primary_states.pc.__isset.hp_primary, "");
+    CHECK_EQ(primary, _primary_states.pc.hp_primary);
+    std::vector<dsn::host_port> secondaries;
+    GET_HOST_PORTS(proposal.config, secondaries, secondaries);
+    // The local host_port type 'hp_secondaries' field must be set.
+    CHECK(_primary_states.pc.__isset.hp_secondaries, "");
+    CHECK(secondaries == _primary_states.pc.hp_secondaries, "");
 
     host_port node;
     GET_HOST_PORT(proposal, node, node);
-    if (node == proposal.config.hp_primary) {
+    if (node == primary) {
         CHECK_EQ(proposal.node, proposal.config.primary);
         RESET_IP_AND_HOST_PORT(proposal.config, primary);
     } else {
@@ -301,6 +329,8 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request &pro
         CHECK(replica_helper::remove_node(proposal.node, proposal.config.secondaries),
               "remove node failed, node = {}",
               proposal.node);
+        CHECK(proposal.config.__isset.hp_secondaries,
+              "The proposal's partition_configuration is not normalized");
         CHECK(replica_helper::remove_node(node, proposal.config.hp_secondaries),
               "remove node failed, node = {}",
               node);
@@ -316,8 +346,18 @@ void replica::remove(configuration_update_request &proposal)
         return;
 
     CHECK_EQ(proposal.config.pid, _primary_states.pc.pid);
-    CHECK_EQ(proposal.config.hp_primary, _primary_states.pc.hp_primary);
-    CHECK(proposal.config.hp_secondaries == _primary_states.pc.hp_secondaries, "");
+    CHECK_EQ(proposal.config.primary, _primary_states.pc.primary);
+    dsn::host_port primary;
+    GET_HOST_PORT(proposal.config, primary, primary);
+    // The local host_port type 'hp_primary' field must be set.
+    CHECK(_primary_states.pc.__isset.hp_primary, "");
+    CHECK_EQ(primary, _primary_states.pc.hp_primary);
+    CHECK(proposal.config.secondaries == _primary_states.pc.secondaries, "");
+    std::vector<dsn::host_port> secondaries;
+    GET_HOST_PORTS(proposal.config, secondaries, secondaries);
+    // The local host_port type 'hp_secondaries' field must be set.
+    CHECK(_primary_states.pc.__isset.hp_secondaries, "");
+    CHECK(secondaries == _primary_states.pc.hp_secondaries, "");
 
     host_port node;
     GET_HOST_PORT(proposal, node, node);
@@ -325,7 +365,7 @@ void replica::remove(configuration_update_request &proposal)
 
     switch (st) {
     case partition_status::PS_PRIMARY:
-        CHECK_EQ(proposal.config.hp_primary, node);
+        CHECK_EQ(primary, node);
         CHECK_EQ(proposal.config.primary, proposal.node);
         RESET_IP_AND_HOST_PORT(proposal.config, primary);
         break;
@@ -333,6 +373,8 @@ void replica::remove(configuration_update_request &proposal)
         CHECK(replica_helper::remove_node(proposal.node, proposal.config.secondaries),
               "remove node failed, node = {}",
               proposal.node);
+        CHECK(proposal.config.__isset.hp_secondaries,
+              "The proposal's partition_configuration is not normalized");
         CHECK(replica_helper::remove_node(node, proposal.config.hp_secondaries),
               "remove_node failed, node = {}",
               node);
@@ -389,7 +431,9 @@ void replica::update_configuration_on_meta_server(config_type::type type,
         CHECK(status() == partition_status::PS_INACTIVE && _inactive_is_transient &&
                   _is_initializing,
               "");
-        CHECK_EQ(new_pc.hp_primary, node);
+        dsn::host_port primary;
+        GET_HOST_PORT(new_pc, primary, primary);
+        CHECK_EQ(primary, node);
     } else if (type != config_type::CT_ASSIGN_PRIMARY &&
                type != config_type::CT_UPGRADE_TO_PRIMARY) {
         CHECK_EQ(status(), partition_status::PS_PRIMARY);
@@ -503,8 +547,18 @@ void replica::on_update_configuration_on_meta_server_reply(
     // post-update work items?
     if (resp.err == ERR_OK) {
         CHECK_EQ(req->config.pid, resp.config.pid);
-        CHECK_EQ(req->config.hp_primary, resp.config.hp_primary);
-        CHECK(req->config.hp_secondaries == resp.config.hp_secondaries, "");
+        CHECK_EQ(req->config.primary, resp.config.primary);
+        dsn::host_port req_primary;
+        GET_HOST_PORT(req->config, primary, req_primary);
+        dsn::host_port resp_primary;
+        GET_HOST_PORT(resp.config, primary, resp_primary);
+        CHECK_EQ(req_primary, resp_primary);
+        CHECK(req->config.secondaries == resp.config.secondaries, "");
+        std::vector<dsn::host_port> req_secondaries;
+        GET_HOST_PORTS(req->config, secondaries, req_secondaries);
+        std::vector<dsn::host_port> resp_secondaries;
+        GET_HOST_PORTS(resp.config, secondaries, resp_secondaries);
+        CHECK(req_secondaries == resp_secondaries, "");
 
         switch (req->type) {
         case config_type::CT_UPGRADE_TO_PRIMARY:
@@ -657,7 +711,9 @@ bool replica::update_configuration(const partition_configuration &pc)
 
     if (rconfig.status == partition_status::PS_PRIMARY &&
         (rconfig.ballot > get_ballot() || status() != partition_status::PS_PRIMARY)) {
-        _primary_states.reset_membership(pc, pc.hp_primary != _stub->primary_host_port());
+        dsn::host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
+        _primary_states.reset_membership(pc, primary != _stub->primary_host_port());
     }
 
     if (pc.ballot > get_ballot() ||
@@ -1045,9 +1101,9 @@ bool replica::update_local_configuration(const replica_configuration &config,
             init_prepare(next, false);
         }
 
-        CHECK(_primary_states.pc.__isset.hp_secondaries, "");
-        if (_primary_states.pc.hp_secondaries.size() + 1 <
-            _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
+        if (_primary_states.pc.__isset.hp_secondaries &&
+            _primary_states.pc.hp_secondaries.size() + 1 <
+                _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
             std::vector<mutation_ptr> queued;
             _primary_states.write_queue.clear(queued);
             for (auto &m : queued) {
@@ -1087,6 +1143,8 @@ void replica::on_config_sync(const app_info &info,
     update_app_envs(info.envs);
     _is_duplication_master = info.duplicating;
 
+    dsn::host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
     if (status() == partition_status::PS_PRIMARY) {
         if (nullptr != _primary_states.reconfiguration_task) {
             // already under reconfiguration, skip configuration sync
@@ -1096,10 +1154,10 @@ void replica::on_config_sync(const app_info &info,
     } else {
         if (_is_initializing) {
             // in initializing, when replica still primary, need to inc ballot
-            if (pc.hp_primary == _stub->primary_host_port() &&
+            if (primary == _stub->primary_host_port() &&
                 status() == partition_status::PS_INACTIVE && _inactive_is_transient) {
                 update_configuration_on_meta_server(config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT,
-                                                    pc.hp_primary,
+                                                    primary,
                                                     const_cast<partition_configuration &>(pc));
                 return;
             }
@@ -1109,8 +1167,8 @@ void replica::on_config_sync(const app_info &info,
         update_configuration(pc);
 
         if (status() == partition_status::PS_INACTIVE && !_inactive_is_transient) {
-            if (pc.hp_primary == _stub->primary_host_port() // dead primary
-                || !pc.hp_primary // primary is dead (otherwise let primary remove this)
+            if (primary == _stub->primary_host_port() // dead primary
+                || !primary // primary is dead (otherwise let primary remove this)
             ) {
                 LOG_INFO_PREFIX("downgrade myself as inactive is not transient, remote_config({})",
                                 boost::lexical_cast<std::string>(pc));
