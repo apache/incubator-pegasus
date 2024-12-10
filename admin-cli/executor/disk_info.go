@@ -22,12 +22,10 @@ package executor
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/apache/incubator-pegasus/admin-cli/tabular"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
-	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/radmin"
 	"github.com/apache/incubator-pegasus/go-client/session"
@@ -93,31 +91,6 @@ func QueryAllNodesDiskInfo(client *Client, tableName string) (map[string]*radmin
 		resp, err := SendQueryDiskInfoRequest(client, address, tableName)
 		if err != nil {
 			return respMap, err
-		}
-		respMap[address] = resp
-	}
-	return respMap, nil
-}
-
-func QueryAliveNodesDiskInfo(client *Client, tableName string) (map[string]*radmin.QueryDiskInfoResponse, error) {
-	respMap := make(map[string]*radmin.QueryDiskInfoResponse)
-	nodeInfos, err := client.Meta.ListNodes()
-	if err != nil {
-		return respMap, err
-	}
-	for _, nodeInfo := range nodeInfos {
-		if nodeInfo.Status != admin.NodeStatus_NS_ALIVE {
-			continue
-		}
-		address := nodeInfo.GetAddress().GetAddress()
-		resp, err := SendQueryDiskInfoRequest(client, address, tableName)
-		if err != nil {
-			// this replica server haven't the table partition.
-			if strings.Contains(err.Error(), "ERR_OBJECT_NOT_FOUND") {
-				continue
-			} else {
-				return respMap, err
-			}
 		}
 		respMap[address] = resp
 	}
