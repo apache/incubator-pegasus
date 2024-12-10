@@ -30,6 +30,7 @@
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 

@@ -18,12 +18,16 @@
  */
 
 #include <fmt/core.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <initializer_list>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "client/partition_resolver.h"
@@ -33,6 +37,7 @@
 #include "shell/argh.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
+#include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
 #include "utils/error_code.h"
@@ -41,6 +46,7 @@
 #include "utils/output_utils.h"
 #include "utils/string_conv.h"
 #include "utils/time_utils.h"
+#include "utils_types.h"
 
 using dsn::replication::dupid_t;
 using dsn::replication::duplication_status;
