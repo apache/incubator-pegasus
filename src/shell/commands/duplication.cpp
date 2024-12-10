@@ -35,6 +35,7 @@
 #include "client/replication_ddl_client.h"
 #include "common//duplication_common.h"
 #include "duplication_types.h"
+#include "gutil/map_util.h"
 #include "shell/argh.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
@@ -56,9 +57,19 @@ namespace {
 
 struct list_dups_options
 {
+    // To list partition-level states for a duplication, typically progress info.
     bool list_partitions{false};
+
+    // The given max gap between confirmed decree and last committed decree, any gap
+    // larger than this would be considered as "unfinished".
     uint32_t progress_gap{0};
+
+    // Whether partitions with "unfinished" progress should be shown.
     bool show_unfinishd{false};
+
+    std::string output_file{};
+
+    bool json{false};
 };
 
 using selected_app_dups_map = std::map<std::string, std::map<int32_t, std::set<int32_t>>>;
@@ -75,6 +86,21 @@ struct list_dups_stat
 
     selected_app_dups_map unfinished_apps{};
 };
+
+void attach_dups_stat(const list_dups_stat &stat, dsn::utils::multi_table_printer &multi_printer)
+{
+    dsn::utils::table_printer printer("summary");
+
+    printer.add_row_name_and_data("total_app_count", stat.total_app_count);
+    printer.add_row_name_and_data("duplicating_app_count", stat.duplicating_app_count);
+    printer.add_row_name_and_data("unfinished_app_count", stat.unfinished_app_count);
+
+    printer.add_row_name_and_data("total_partition_count", stat.total_partition_count);
+    printer.add_row_name_and_data("duplicating_partition_count", stat.duplicating_partition_count);
+    printer.add_row_name_and_data("unfinished_partition_count", stat.unfinished_partition_count);
+
+    multi_printer.add(std::move(printer));
+}
 
 void stat_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
                uint32_t progress_gap,
@@ -189,8 +215,9 @@ void add_row_for_dups(dsn::utils::table_printer &printer,
     add_row_for_dups(printer, list_partitions, app_name, dup, std::function<bool(int32_t)>());
 }
 
-void print_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
-                bool list_partitions)
+void attach_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
+                 bool list_partitions,
+                 dsn::utils::multi_table_printer &multi_printer)
 {
     dsn::utils::table_printer printer("duplications");
     add_titles_for_dups(printer, list_partitions);
@@ -213,14 +240,14 @@ void print_dups(const std::map<std::string, dsn::replication::duplication_app_st
         }
     }
 
-    printer.output(std::cout);
-    std::cout << std::endl;
+    multi_printer.add(std::move(printer));
 }
 
-void print_selected_dups(
+void attach_selected_dups(
     const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
     const selected_app_dups_map &selected_apps,
-    const std::string &topic)
+    const std::string &topic,
+    dsn::utils::multi_table_printer &multi_printer)
 {
     dsn::utils::table_printer printer(topic);
     add_titles_for_dups(printer, true);
@@ -256,8 +283,7 @@ void print_selected_dups(
         }
     }
 
-    printer.output(std::cout);
-    std::cout << std::endl;
+    multi_printer.add(std::move(printer));
 }
 
 void show_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
@@ -266,11 +292,16 @@ void show_dups(const std::map<std::string, dsn::replication::duplication_app_sta
     list_dups_stat stat;
     stat_dups(app_states, options.progress_gap, stat);
 
-    print_dups(app_states, options.list_partitions);
+    dsn::utils::multi_table_printer multi_printer;
 
+    attach_dups(app_states, options.list_partitions, multi_printer);
+
+    attach_dups_stat(stat, multi_printer);
     if (options.show_unfinishd) {
-        print_selected_dups(app_states, stat.unfinished_apps, "unfinished");
+        attach_selected_dups(app_states, stat.unfinished_apps, "unfinished", multi_printer);
     }
+
+    dsn::utils::output(options.output_file, options.json, multi_printer);
 }
 
 } // anonymous namespace
@@ -473,33 +504,42 @@ bool query_dup(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+// List duplications of one or multiple tables with both duplication-level and partition-level
+// info.
 bool ls_dups(command_executor *e, shell_context *sc, arguments args)
 {
-    // dups [-a|--app_name_pattern str] [-m|--match_type str]
-    // [-p|--list_partitions] [-g|--progress_gap num]
-    // [-u|--show_unfinishd]
+    // dups [-a|--app_name_pattern str] [-m|--match_type str] [-p|--list_partitions]
+    // [-g|--progress_gap num] [-u|--show_unfinishd] [-o|--output file_name] [-j|--json]
 
+    // All valid parameters and flags are given as follows.
     static const std::set<std::string> params = {
         "a", "app_name_pattern", "m", "match_type", "g", "progress_gap"};
     static const std::set<std::string> flags = {"p", "list_partitions", "u", "show_unfinishd"};
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
+    // Check if input parameters and flags are valid.
     const auto &check = validate_cmd(cmd, params, flags, empty_pos_args);
     if (!check) {
         SHELL_PRINTLN_ERROR("{}", check.description());
         return false;
     }
 
+    // Read the parttern of table name with empty string as default.
     const std::string app_name_pattern(cmd({"-a", "--app_name_pattern"}, "").str());
 
+    // Read the match type of the pattern for table name with "matching all" as default, typically
+    // requesting all tables owned by this cluster.
     auto match_type = dsn::utils::pattern_match_type::PMT_MATCH_ALL;
     PARSE_OPT_ENUM(match_type, dsn::utils::pattern_match_type::PMT_INVALID, {"-m", "--match_type"});
 
+    // Initialize options for listing duplications.
     list_dups_options options;
     options.list_partitions = cmd[{"-p", "--list_partitions"}];
     PARSE_OPT_UINT(options.progress_gap, 0, {"-g", "--progress_gap"});
     options.show_unfinishd = cmd[{"-u", "--show_unfinishd"}];
+    options.output_file = cmd({"-o", "--output"}, "").str();
+    options.json = cmd[{"-j", "--json"}];
 
     const auto &result = sc->ddl_client->list_dups(app_name_pattern, match_type);
     auto status = result.get_error();

@@ -38,6 +38,8 @@ class host_port;
 
 struct shell_context;
 
+// Check if positional arguments are empty, and they should also be empty, which means only
+// parameters and flags are needed.
 inline dsn::error_s empty_pos_args(const argh::parser &cmd)
 {
     if (cmd.size() > 0) {
@@ -47,6 +49,7 @@ inline dsn::error_s empty_pos_args(const argh::parser &cmd)
     return dsn::error_s::ok();
 }
 
+// Check if the positional arguments are valid, and the parameters and flags are in the given set.
 inline dsn::error_s
 validate_cmd(const argh::parser &cmd,
              const std::set<std::string> &params,
