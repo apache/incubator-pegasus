@@ -71,61 +71,57 @@ struct list_dups_stat
     selected_app_dups_map unfinished_apps{};
 };
 
-void stat_dups(
-                const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
-    uint32_t progress_gap,
-                list_dups_stat &stat)
+void stat_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
+               uint32_t progress_gap,
+               list_dups_stat &stat)
 {
     stat.total_app_count = app_states.size();
 
-    for (const auto &[app_name,app]: app_states) {
+    for (const auto &[app_name, app] : app_states) {
         stat.total_partition_count += app.partition_count;
         if (app.duplications.empty()) {
             continue;
         }
 
-        ++stat.duplicating_app_count ;
+        ++stat.duplicating_app_count;
         stat.duplicating_partition_count += app.partition_count;
 
-        size_t unfinished_app_counter= 0;
+        size_t unfinished_app_counter = 0;
         std::vector<size_t> unfinished_partition_counters(app.partition_count);
 
-        for (const auto &[dup_id, dup]: dups) {
+        for (const auto &[dup_id, dup] : dups) {
             if (!dup.__isset.partition_states) {
                 continue;
             }
 
-            for(const auto &[partition_id, partition_state]: dup.partition_states)
-            {
-                if (partition_state.last_committed_decree < partition_state.confirmed_decree)
-                {
-                    continue;
-                }
-                
-                if (partition_state.last_committed_decree - partition_state.confirmed_decree
-                        <= progress_gap) {
+            for (const auto &[partition_id, partition_state] : dup.partition_states) {
+                if (partition_state.last_committed_decree < partition_state.confirmed_decree) {
                     continue;
                 }
 
-                unfinished_app_counter= 1;
+                if (partition_state.last_committed_decree - partition_state.confirmed_decree <=
+                    progress_gap) {
+                    continue;
+                }
+
+                unfinished_app_counter = 1;
                 if (unfinished_partition_counters[i] == 0) {
                     unfinished_partition_counters[i] = 1;
                 }
 
-                stat.unfinished_apps[app_name][dup_id].insert(partition_id); 
+                stat.unfinished_apps[app_name][dup_id].insert(partition_id);
             }
         }
 
-        for (const auto &counter:unfinished_partition_counters) {
+        for (const auto &counter : unfinished_partition_counters) {
             stat.unfinished_partition_count += counter;
         }
 
-        stat.unfinished_app_count+=unfinished_app_counter;
+        stat.unfinished_app_count += unfinished_app_counter;
     }
 }
 
-void print_dups(
-                const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
+void print_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
                 bool list_partitions)
 {
     dsn::utils::table_printer printer("duplications");
@@ -136,20 +132,18 @@ void print_dups(
     printer.add_column("remote_cluster", tp_alignment::kRight);
     printer.add_column("remote_app_name", tp_alignment::kRight);
 
-    if (list_partitions)
-    {
+    if (list_partitions) {
         printer.add_column("partition_id");
         printer.add_column("confirmed_decree");
         printer.add_column("last_committed_decree");
     }
 
-    for (const auto &[app_name,app]: app_states) {
+    for (const auto &[app_name, app] : app_states) {
         if (app.duplications.empty()) {
             continue;
         }
 
-
-        for (const auto &[dup_id, dup]: dups) {
+        for (const auto &[dup_id, dup] : dups) {
             if (!list_partitions) {
                 continue;
             }
@@ -167,10 +161,8 @@ void print_dups(
 
             printer.append_data(dsn::replication::duplication_status_to_string(dup.status));
             printer.append_data(dup.remote);
-            printer.append_data(dup.__isset.remote_app_name ? dup.remote_app_name:app_name);
-
+            printer.append_data(dup.__isset.remote_app_name ? dup.remote_app_name : app_name);
         }
-
     }
 
     printer.output(std::cout);
@@ -180,12 +172,10 @@ void print_dups(
 void check_dups(const list_dups_options &options,
                 const std::map<std::string, dsn::replication::duplication_app_state> &app_states)
 {
-
 }
 
-void show_dups(
-                const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
-                const list_dups_options &options)
+void show_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
+               const list_dups_options &options)
 {
     list_dups_stat stat;
     stat_dups(app_states, options.progress_gap, stat);
