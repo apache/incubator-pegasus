@@ -18,6 +18,7 @@
  */
 
 #include <fmt/core.h>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -74,9 +75,17 @@ struct list_dups_options
     bool json{false};
 };
 
-using selected_app_dups_map = std::map<std::string, std::map<int32_t, std::set<int32_t>>>;
+// app id => (dup id => partition ids)
+using selected_app_dups_map = std::map<int32_t, std::map<int32_t, std::set<int32_t>>>;
+
+// dup status string => dup count
 using dup_status_stat_map = std::map<std::string, size_t>;
+
+// dup remote cluster => dup count
 using dup_remote_cluster_stat_map = std::map<std::string, size_t>;
+
+// app id => duplication_app_state
+using ls_app_dups_map = std::map<int32_t, dsn::replication::duplication_app_state>;
 
 struct list_dups_stat
 {
@@ -142,14 +151,12 @@ void attach_dups_stat(const list_dups_stat &stat, dsn::utils::multi_table_printe
 }
 
 // Stats for listed duplications.
-void stat_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
-               uint32_t progress_gap,
-               list_dups_stat &stat)
+void stat_dups(const ls_app_dups_map &app_states, uint32_t progress_gap, list_dups_stat &stat)
 {
     // Record as the number of all listed tables.
     stat.total_app_count = app_states.size();
 
-    for (const auto &[app_name, app] : app_states) {
+    for (const auto &[app_id, app] : app_states) {
         // Sum up as the total number of all listed partitions.
         stat.total_partition_count += app.partition_count;
 
@@ -200,7 +207,7 @@ void stat_dups(const std::map<std::string, dsn::replication::duplication_app_sta
                 unfinished_partition_counters[partition_id] = 1;
 
                 // Record the partitions that are still "unfinished".
-                stat.unfinished_apps[app_name][dup_id].insert(partition_id);
+                stat.unfinished_apps[app_id][dup_id].insert(partition_id);
             }
         }
 
@@ -218,7 +225,8 @@ void stat_dups(const std::map<std::string, dsn::replication::duplication_app_sta
 void add_titles_for_dups(bool list_partitions, dsn::utils::table_printer &printer)
 {
     // Base columns for table-level and duplication-level info.
-    printer.add_title("app_name");
+    printer.add_title("app_id");
+    printer.add_column("app_name", tp_alignment::kRight);
     printer.add_column("dup_id", tp_alignment::kRight);
     printer.add_column("create_time", tp_alignment::kRight);
     printer.add_column("status", tp_alignment::kRight);
@@ -235,11 +243,14 @@ void add_titles_for_dups(bool list_partitions, dsn::utils::table_printer &printe
 
 // Add table rows only with table-level and duplicating-level columns for listed
 // duplications.
-void add_base_row_for_dups(const std::string &app_name,
+void add_base_row_for_dups(int32_t app_id,
+                           const std::string &app_name,
                            const dsn::replication::duplication_entry &dup,
                            dsn::utils::table_printer &printer)
 {
-    printer.add_row(app_name);
+    // The appending order should be consistent with that the column titles are added.
+    printer.add_row(app_id);
+    printer.append_data(app_name);
     printer.append_data(dup.dupid);
 
     std::string create_time;
@@ -253,127 +264,160 @@ void add_base_row_for_dups(const std::string &app_name,
 
 // Add table rows including table-level, duplicating-level and partition-level columns
 // for listed duplications.
-void add_row_for_dups(const std::string &app_name,
+//
+// `partition_selector` is used to filter partitions as needed. Empty value means all
+// partitions for this duplication.
+void add_row_for_dups(int32_t app_id,
+                      const std::string &app_name,
                       const dsn::replication::duplication_entry &dup,
                       bool list_partitions,
                       std::function<bool(int32_t)> partition_selector,
                       dsn::utils::table_printer &printer)
 {
     if (!list_partitions) {
-        add_base_row_for_dups(app_name, dup, printer);
+        // Only add table-level and duplication-level columns.
+        add_base_row_for_dups(app_id, app_name, dup, printer);
+        return;
+    }
+
+    if (!dup.__isset.partition_states) {
+        // Partition-level states are not set. Only to be compatible with old version
+        // where there is no this field for duplication entry.
         return;
     }
 
     for (const auto &[partition_id, partition_state] : dup.partition_states) {
         if (partition_selector && !partition_selector(partition_id)) {
+            // This partition is excluded according to the selector.
             continue;
         }
 
-        add_base_row_for_dups(app_name, dup, printer);
+        // Add table-level and duplication-level columns.
+        add_base_row_for_dups(app_id, app_name, dup, printer);
+
+        // Add partition-level columns.
         printer.append_data(partition_id);
         printer.append_data(partition_state.confirmed_decree);
         printer.append_data(partition_state.last_committed_decree);
     }
 }
 
-void add_row_for_dups(const std::string &app_name,
+// All partitions for the duplication would be selected into the printer.
+void add_row_for_dups(int32_t app_id,
+                      const std::string &app_name,
                       const dsn::replication::duplication_entry &dup,
                       bool list_partitions,
                       dsn::utils::table_printer &printer)
 {
-    add_row_for_dups(app_name, dup, list_partitions, std::function<bool(int32_t)>(), printer);
+    add_row_for_dups(
+        app_id, app_name, dup, list_partitions, std::function<bool(int32_t)>(), printer);
 }
 
-void attach_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
+// Attach listed duplications to the printer.
+void attach_dups(const ls_app_dups_map &app_states,
                  bool list_partitions,
                  dsn::utils::multi_table_printer &multi_printer)
 {
     dsn::utils::table_printer printer("duplications");
     add_titles_for_dups(list_partitions, printer);
 
-    for (const auto &[app_name, app] : app_states) {
+    for (const auto &[app_id, app] : app_states) {
         if (app.duplications.empty()) {
+            // Skip if there is no duplications for this table.
             continue;
         }
 
         for (const auto &[_, dup] : app.duplications) {
-            if (!list_partitions) {
-                continue;
-            }
-
-            if (!dup.__isset.partition_states) {
-                continue;
-            }
-
-            add_row_for_dups(app_name, dup, list_partitions, printer);
+            add_row_for_dups(app_id, app.app_name, dup, list_partitions, printer);
         }
     }
 
     multi_printer.add(std::move(printer));
 }
 
-void attach_selected_dups(
-    const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
-    const selected_app_dups_map &selected_apps,
-    const std::string &topic,
-    dsn::utils::multi_table_printer &multi_printer)
+// Attach selected duplications to the printer.
+void attach_selected_dups(const ls_app_dups_map &app_states,
+                          const selected_app_dups_map &selected_apps,
+                          const std::string &topic,
+                          dsn::utils::multi_table_printer &multi_printer)
 {
     dsn::utils::table_printer printer(topic);
+
+    // Show partition-level columns.
     add_titles_for_dups(true, printer);
 
+    // Find the intersection between listed and selected tables.
+    auto listed_app_iter = app_states.begin();
     auto selected_app_iter = selected_apps.begin();
-    for (const auto &[app_name, app] : app_states) {
-        if (selected_app_iter == selected_apps.end()) {
-            break;
-        }
-
-        if (selected_app_iter->first != app_name) {
+    while (listed_app_iter != app_states.end() && selected_app_iter != selected_apps.end()) {
+        if (listed_app_iter->first < selected_app_iter->first) {
+            ++listed_app_iter;
             continue;
         }
 
-        for (const auto &[dup_id, dup] : app.duplications) {
-            auto selected_dup_iter = selected_app_iter->second.begin();
-            if (selected_dup_iter == selected_app_iter->second.end()) {
-                break;
-            }
+        if (listed_app_iter->first > selected_app_iter->first) {
+            ++selected_app_iter;
+            continue;
+        }
 
-            if (selected_dup_iter->first != dup_id) {
+        // Find the intersection between listed and selected duplications.
+        auto listed_dup_iter = listed_app_iter->second.duplications.begin();
+        auto selected_dup_iter = selected_app_iter->second.begin();
+        while (listed_dup_iter != listed_app_iter->second.duplications.end() &&
+               selected_dup_iter != selected_app_iter->second.end()) {
+            if (listed_dup_iter->first < selected_dup_iter->first) {
+                ++listed_dup_iter;
                 continue;
             }
 
-            if (!dup.__isset.partition_states) {
+            if (listed_dup_iter->first > selected_dup_iter->first) {
+                ++selected_dup_iter;
                 continue;
             }
 
             add_row_for_dups(
-                app_name,
-                dup,
+                listed_app_iter->first,
+                listed_app_iter->second.app_name,
+                listed_dup_iter->second,
                 true,
                 [selected_dup_iter](int32_t partition_id) {
                     return gutil::ContainsKey(selected_dup_iter->second, partition_id);
                 },
                 printer);
+
+            ++listed_dup_iter;
+            ++selected_dup_iter;
         }
+
+        ++listed_app_iter;
+        ++selected_app_iter;
     }
 
     multi_printer.add(std::move(printer));
 }
 
-void show_dups(const std::map<std::string, dsn::replication::duplication_app_state> &app_states,
-               const list_dups_options &options)
+// Print duplications.
+void show_dups(const ls_app_dups_map &app_states, const list_dups_options &options)
 {
+    // Calculate stats for duplications.
     list_dups_stat stat;
     stat_dups(app_states, options.progress_gap, stat);
 
     dsn::utils::multi_table_printer multi_printer;
 
+    // Attach listed duplications to printer.
     attach_dups(app_states, options.list_partitions, multi_printer);
 
+    // Attach stats to printer.
     attach_dups_stat(stat, multi_printer);
+
     if (options.show_unfinishd) {
+        // Attach unfinished duplications with partition-level info to printer. Use "unfinished"
+        // as the selector to extract all "unfinished" partitions.
         attach_selected_dups(app_states, stat.unfinished_apps, "unfinished", multi_printer);
     }
 
+    // Printer output info to target file/stdout.
     dsn::utils::output(options.output_file, options.json, multi_printer);
 }
 
@@ -614,18 +658,31 @@ bool ls_dups(command_executor *e, shell_context *sc, arguments args)
     options.output_file = cmd({"-o", "--output"}, "").str();
     options.json = cmd[{"-j", "--json"}];
 
-    const auto &result = sc->ddl_client->list_dups(app_name_pattern, match_type);
-    auto status = result.get_error();
-    if (status) {
-        status = FMT_ERR(result.get_value().err, result.get_value().hint_message);
+    ls_app_dups_map ls_app_dups;
+    {
+        const auto &result = sc->ddl_client->list_dups(app_name_pattern, match_type);
+        auto status = result.get_error();
+        if (status) {
+            status = FMT_ERR(result.get_value().err, result.get_value().hint_message);
+        }
+
+        if (!status) {
+            SHELL_PRINTLN_ERROR("list duplications failed, error={}", status);
+            return true;
+        }
+
+        // Change the key from app name to id, to list tables in the order of app id.
+        const auto &app_states = result.get_value().app_states;
+        std::transform(
+            app_states.begin(),
+            app_states.end(),
+            std::inserter(ls_app_dups, ls_app_dups.end()),
+            [](const std::pair<std::string, dsn::replication::duplication_app_state> &app) {
+                return std::make_pair(app.second.appid, app.second);
+            });
     }
 
-    if (!status) {
-        SHELL_PRINTLN_ERROR("list duplications failed, error={}", status);
-        return true;
-    }
-
-    show_dups(result.get_value().app_states, options);
+    show_dups(ls_app_dups, options);
     return true;
 }
 

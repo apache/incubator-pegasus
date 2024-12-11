@@ -131,6 +131,7 @@ void meta_duplication_service::list_duplication_info(const duplication_list_requ
 
         duplication_app_state dup_app;
         dup_app.appid = app->app_id;
+        dup_app.app_name = app_name;
         dup_app.partition_count = app->partition_count;
 
         for (const auto &[dup_id, dup] : app->duplications) {
