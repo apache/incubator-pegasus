@@ -140,7 +140,8 @@ void attach_dups_stat(const list_dups_stat &stat, dsn::utils::multi_table_printe
         printer.add_row_name_and_data(fmt::format("duplication_count_by_status({})", status), cnt);
     }
     for (const auto &[remote_cluster, cnt] : stat.dup_remote_cluster_stats) {
-        printer.add_row_name_and_data(fmt::format("duplication_count_by_follower_cluster({})", remote_cluster), cnt);
+        printer.add_row_name_and_data(
+            fmt::format("duplication_count_by_follower_cluster({})", remote_cluster), cnt);
     }
 
     // Add stats for partitions.
@@ -193,16 +194,16 @@ void stat_dups(const ls_app_dups_map &app_states, uint32_t progress_gap, list_du
             for (const auto &[partition_id, partition_state] : dup.partition_states) {
                 // A duplication could be "finished" only in the status of `DS_LOG`.
                 if (dup.status == duplication_status::DS_LOG) {
-                if (partition_state.last_committed_decree < partition_state.confirmed_decree) {
-                    // This is unlikely to happen.
-                    continue;
-                }
+                    if (partition_state.last_committed_decree < partition_state.confirmed_decree) {
+                        // This is unlikely to happen.
+                        continue;
+                    }
 
-                if (partition_state.last_committed_decree - partition_state.confirmed_decree <=
-                    progress_gap) {
-                    // This partition is defined as "finished".
-                    continue;
-                }
+                    if (partition_state.last_committed_decree - partition_state.confirmed_decree <=
+                        progress_gap) {
+                        // This partition is defined as "finished".
+                        continue;
+                    }
                 }
 
                 // Just assign with 1 to dedup, in case calculated multiple times.
@@ -304,7 +305,8 @@ void add_row_for_dups(int32_t app_id,
         printer.append_data(partition_id);
         printer.append_data(partition_state.confirmed_decree);
         printer.append_data(partition_state.last_committed_decree);
-        printer.append_data(partition_state.last_committed_decree - partition_state.confirmed_decree);
+        printer.append_data(partition_state.last_committed_decree -
+                            partition_state.confirmed_decree);
     }
 }
 
