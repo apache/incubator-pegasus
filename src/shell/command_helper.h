@@ -1048,7 +1048,7 @@ private:
         if (!__str.empty()) {                                                                      \
             const auto &__val = enum_from_string(__str.c_str(), invalid_val);                      \
             if (__val == invalid_val) {                                                            \
-                SHELL_PRINTLN_ERROR("invalid enum: '{}'", __str);                                     \
+                SHELL_PRINTLN_ERROR("invalid enum: '{}'", __str);                                  \
                 return false;                                                                      \
             }                                                                                      \
             enum_val = __val;                                                                      \
