@@ -651,6 +651,8 @@ bool app_stat(command_executor *, shell_context *sc, arguments args)
                              (row.rdb_bf_point_positive_total - row.rdb_bf_point_positive_true) +
                                  row.rdb_bf_point_negatives));
     }
+
+    // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.
     tp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
     return true;

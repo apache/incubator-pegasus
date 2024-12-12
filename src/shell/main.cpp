@@ -540,6 +540,12 @@ static command_executor commands[] = {
      "[-r|--remote_replica_count num]",
      add_dup},
     {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
+    {"dups",
+     "list duplications of one or multiple tables with specified pattern",
+     "[-a|--app_name_pattern str] [-m|--match_type str] [-p|--list_partitions] "
+     "[-g|--progress_gap num] [-u|--show_unfinishd] [-o|--output file_name] "
+     "[-j|--json]",
+     ls_dups},
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
     {"pause_dup", "pause duplication", "<app_name> <dup_id>", pause_dup},
