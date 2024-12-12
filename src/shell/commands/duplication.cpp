@@ -192,7 +192,7 @@ void stat_dups(const ls_app_dups_map &app_states, uint32_t progress_gap, list_du
             }
 
             for (const auto &[partition_id, partition_state] : dup.partition_states) {
-                // A duplication could be "finished" only in the status of `DS_LOG`.
+                // Only in the status of `DS_LOG`could a duplication be considered as "finished".
                 if (dup.status == duplication_status::DS_LOG) {
                     if (partition_state.last_committed_decree < partition_state.confirmed_decree) {
                         // This is unlikely to happen.
