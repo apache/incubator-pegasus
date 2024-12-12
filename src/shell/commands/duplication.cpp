@@ -135,12 +135,12 @@ void attach_dups_stat(const list_dups_stat &stat, dsn::utils::multi_table_printe
     printer.add_row_name_and_data("unfinished_app_count", stat.unfinished_app_count);
 
     // Add stats for duplications.
-    printer.add_row_name_and_data("duplication_count", stat.duplication_count);
+    printer.add_row_name_and_data("total_duplication_count", stat.duplication_count);
     for (const auto &[status, cnt] : stat.dup_status_stats) {
-        printer.add_row_name_and_data(fmt::format("{}_count", status), cnt);
+        printer.add_row_name_and_data(fmt::format("duplication_count_by_status({})", status), cnt);
     }
     for (const auto &[remote_cluster, cnt] : stat.dup_remote_cluster_stats) {
-        printer.add_row_name_and_data(fmt::format("{}_count", remote_cluster), cnt);
+        printer.add_row_name_and_data(fmt::format("duplication_count_by_follower_cluster({})", remote_cluster), cnt);
     }
 
     // Add stats for partitions.
@@ -191,6 +191,8 @@ void stat_dups(const ls_app_dups_map &app_states, uint32_t progress_gap, list_du
             }
 
             for (const auto &[partition_id, partition_state] : dup.partition_states) {
+                // A duplication could be "finished" only in the status of `DS_LOG`.
+                if (dup.status == duplication_status::DS_LOG) {
                 if (partition_state.last_committed_decree < partition_state.confirmed_decree) {
                     // This is unlikely to happen.
                     continue;
@@ -200,6 +202,7 @@ void stat_dups(const ls_app_dups_map &app_states, uint32_t progress_gap, list_du
                     progress_gap) {
                     // This partition is defined as "finished".
                     continue;
+                }
                 }
 
                 // Just assign with 1 to dedup, in case calculated multiple times.
@@ -231,14 +234,15 @@ void add_titles_for_dups(bool list_partitions, dsn::utils::table_printer &printe
     printer.add_column("dup_id", tp_alignment::kRight);
     printer.add_column("create_time", tp_alignment::kRight);
     printer.add_column("status", tp_alignment::kRight);
-    printer.add_column("remote_cluster", tp_alignment::kRight);
-    printer.add_column("remote_app_name", tp_alignment::kRight);
+    printer.add_column("follower_cluster", tp_alignment::kRight);
+    printer.add_column("follower_app_name", tp_alignment::kRight);
 
     if (list_partitions) {
         // Partition-level info.
         printer.add_column("partition_id", tp_alignment::kRight);
         printer.add_column("confirmed_decree", tp_alignment::kRight);
         printer.add_column("last_committed_decree", tp_alignment::kRight);
+        printer.add_column("decree_gap", tp_alignment::kRight);
     }
 }
 
@@ -300,6 +304,7 @@ void add_row_for_dups(int32_t app_id,
         printer.append_data(partition_id);
         printer.append_data(partition_state.confirmed_decree);
         printer.append_data(partition_state.last_committed_decree);
+        printer.append_data(partition_state.last_committed_decree - partition_state.confirmed_decree);
     }
 }
 
