@@ -638,8 +638,9 @@ bool ls_dups(command_executor *e, shell_context *sc, arguments args)
 
     // All valid parameters and flags are given as follows.
     static const std::set<std::string> params = {
-        "a", "app_name_pattern", "m", "match_type", "g", "progress_gap"};
-    static const std::set<std::string> flags = {"p", "list_partitions", "u", "show_unfinishd"};
+        "a", "app_name_pattern", "m", "match_type", "g", "progress_gap", "o", "output"};
+    static const std::set<std::string> flags = {
+        "p", "list_partitions", "u", "show_unfinishd", "j", "json"};
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
