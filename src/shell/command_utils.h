@@ -38,12 +38,13 @@ class host_port;
 
 struct shell_context;
 
-// Check if positional arguments are empty, and they should also be empty, which means only
+// Check if there is not any other positional argument except the command, which means only
 // parameters and flags are needed.
-inline dsn::error_s empty_pos_args(const argh::parser &cmd)
+inline dsn::error_s no_pos_arg(const argh::parser &cmd)
 {
-    if (cmd.size() > 0) {
-        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "there shouldn't be any positional arguments");
+    // 1 means there is not any other positional argument except the command.
+    if (cmd.size() > 1) {
+        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "there shouldn't be any positional argument");
     }
 
     return dsn::error_s::ok();
@@ -74,11 +75,21 @@ validate_cmd(const argh::parser &cmd,
         }
 
         if (flags.find(flag) == flags.end()) {
-            return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "unknown flag\n", flag);
+            return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "unknown flag", flag);
         }
     }
 
     return dsn::error_s::ok();
+}
+
+// Check if the parameters and flags are in the given set while there is not any positional
+// argument.
+inline dsn::error_s
+validate_cmd(const argh::parser &cmd,
+             const std::set<std::string> &params,
+             const std::set<std::string> &flags)
+{
+    return validate_cmd(cmd, params, flags, no_pos_arg);
 }
 
 bool validate_ip(shell_context *sc,
