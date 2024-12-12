@@ -84,10 +84,9 @@ validate_cmd(const argh::parser &cmd,
 
 // Check if the parameters and flags are in the given set while there is not any positional
 // argument.
-inline dsn::error_s
-validate_cmd(const argh::parser &cmd,
-             const std::set<std::string> &params,
-             const std::set<std::string> &flags)
+inline dsn::error_s validate_cmd(const argh::parser &cmd,
+                                 const std::set<std::string> &params,
+                                 const std::set<std::string> &flags)
 {
     return validate_cmd(cmd, params, flags, no_pos_arg);
 }
