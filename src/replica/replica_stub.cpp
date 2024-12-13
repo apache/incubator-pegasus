@@ -276,11 +276,6 @@ DSN_DEFINE_bool(replication,
                 mem_release_enabled,
                 true,
                 "whether to enable periodic memory release");
-DSN_DEFINE_bool(
-    replication,
-    gc_disabled,
-    false,
-    "Whether to disable replica statistics. The name contains 'gc' is for legacy reason");
 DSN_DEFINE_bool(replication, disk_stat_disabled, false, "whether to disable disk stat");
 DSN_DEFINE_bool(
     replication,
@@ -340,6 +335,8 @@ bool check_mem_release_max_reserved_mem_percentage(int32_t value)
 }
 DSN_DEFINE_validator(mem_release_max_reserved_mem_percentage,
                      &check_mem_release_max_reserved_mem_percentage);
+
+DSN_DEFINE_bool(replication, replicas_stat_disabled, false, "whether to disable replicas stat");
 
 DSN_DEFINE_uint32(replication,
                   replicas_stat_interval_ms,
@@ -630,9 +627,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     }
 
     // replicas stat
-    if (!FLAGS_gc_disabled) {
+    if (!FLAGS_replicas_stat_disabled) {
         _replicas_stat_timer_task = tasking::enqueue_timer(
-            LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
+            LPC_REPLICAS_STAT,
             &_tracker,
             [this] { on_replicas_stat(); },
             std::chrono::milliseconds(FLAGS_replicas_stat_interval_ms),
