@@ -132,6 +132,21 @@ public:
         return rpc;
     }
 
+    void test_set_app_envs(const std::string &app_name,
+                           const std::vector<std::string> &env_keys,
+                           const std::vector<std::string> &env_vals,
+                           const error_code expected_err)
+    {
+        configuration_update_app_env_request request;
+        request.__set_app_name(app_name);
+        request.__set_op(app_env_operation::type::APP_ENV_OP_SET);
+        request.__set_keys(env_keys);
+        request.__set_values(env_vals);
+
+        auto rpc = set_app_envs(request);
+        ASSERT_EQ(expected_err, rpc.response().err);
+    }
+
     app_env_rpc del_app_envs(const configuration_update_app_env_request &request)
     {
         auto rpc = create_app_env_rpc(request);
@@ -139,6 +154,19 @@ public:
         _ss->wait_all_task();
 
         return rpc;
+    }
+
+    void test_del_app_envs(const std::string &app_name,
+                           const std::vector<std::string> &env_keys,
+                           const error_code expected_err)
+    {
+        configuration_update_app_env_request request;
+        request.__set_app_name(app_name);
+        request.__set_op(app_env_operation::type::APP_ENV_OP_DEL);
+        request.__set_keys(env_keys);
+
+        auto rpc = del_app_envs(request);
+        ASSERT_EQ(expected_err, rpc.response().err);
     }
 
     app_env_rpc clear_app_envs(const configuration_update_app_env_request &request)
@@ -220,22 +248,21 @@ void meta_service_test_app::app_envs_basic_test()
     test.load_apps({"test_app1",
                     "test_set_app_envs_not_found",
                     "test_set_app_envs_dropping",
-                    "test_set_app_envs_dropped_after"});
+                    "test_set_app_envs_dropped_after",
+                    "test_del_app_envs_not_found",
+                    "test_del_app_envs_dropping",
+                    "test_del_app_envs_dropped_after"});
 
 #define TEST_SET_APP_ENVS_FAILED(action, err_code)                                                 \
     std::cout << "test server_state::set_app_envs(" #action ")..." << std::endl;                   \
     do {                                                                                           \
-        configuration_update_app_env_request request;                                              \
-        request.__set_app_name("test_set_app_envs_" #action);                                      \
-        request.__set_op(app_env_operation::type::APP_ENV_OP_SET);                                 \
-        request.__set_keys({replica_envs::ROCKSDB_WRITE_BUFFER_SIZE});                             \
-        request.__set_values({"67108864"});                                                        \
-                                                                                                   \
         fail::setup();                                                                             \
         fail::cfg("set_app_envs_failed", "void(" #action ")");                                     \
                                                                                                    \
-        auto rpc = test.set_app_envs(request);                                                     \
-        ASSERT_EQ(err_code, rpc.response().err);                                                   \
+        test.test_set_app_envs("test_set_app_envs_" #action,                                       \
+                               {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE},                          \
+                               {"67108864"},                                                       \
+                               err_code);                                                          \
                                                                                                    \
         fail::teardown();                                                                          \
     } while (0)
@@ -255,14 +282,7 @@ void meta_service_test_app::app_envs_basic_test()
     // Normal case for setting envs.
     std::cout << "test server_state::set_app_envs(success)..." << std::endl;
     {
-        configuration_update_app_env_request request;
-        request.__set_app_name("test_app1");
-        request.__set_op(app_env_operation::type::APP_ENV_OP_SET);
-        request.__set_keys(keys);
-        request.__set_values(values);
-
-        auto rpc = test.set_app_envs(request);
-        ASSERT_EQ(ERR_OK, rpc.response().err);
+        test.test_set_app_envs("test_app1", keys, values, ERR_OK);
 
         const auto &app = test.get_app("test_app1");
         ASSERT_TRUE(app);
@@ -276,15 +296,39 @@ void meta_service_test_app::app_envs_basic_test()
         }
     }
 
-    std::cout << "test server_state::del_app_envs()..." << std::endl;
-    {
-        configuration_update_app_env_request request;
-        request.__set_app_name("test_app1");
-        request.__set_op(app_env_operation::type::APP_ENV_OP_DEL);
-        request.__set_keys(del_keys);
+#define TEST_DEL_APP_ENVS_FAILED(action, err_code)                                                 \
+    std::cout << "test server_state::del_app_envs(" #action ")..." << std::endl;                   \
+    do {                                                                                           \
+        test.test_set_app_envs("test_del_app_envs_" #action,                                       \
+                               {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE},                          \
+                               {"67108864"},                                                       \
+                               ERR_OK);                                                            \
+                                                                                                   \
+        fail::setup();                                                                             \
+        fail::cfg("del_app_envs_failed", "void(" #action ")");                                     \
+                                                                                                   \
+        test.test_del_app_envs(                                                                    \
+            "test_del_app_envs_" #action, {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE}, err_code);    \
+                                                                                                   \
+        fail::teardown();                                                                          \
+    } while (0)
 
-        auto rpc = test.del_app_envs(request);
-        ASSERT_EQ(ERR_OK, rpc.response().err);
+    // Failed to deleting envs while table was not found.
+    TEST_DEL_APP_ENVS_FAILED(not_found, ERR_APP_NOT_EXIST);
+
+    // Failed to deleting envs while table was being dropped as the intermediate state.
+    TEST_DEL_APP_ENVS_FAILED(dropping, ERR_BUSY_DROPPING);
+
+    // The table was found dropped after the new envs had been persistent on the remote
+    // meta storage.
+    TEST_DEL_APP_ENVS_FAILED(dropped_after, ERR_APP_DROPPED);
+
+#undef TEST_DEL_APP_ENVS_FAILED
+
+    // Normal case for deleting envs.
+    std::cout << "test server_state::del_app_envs(success)..." << std::endl;
+    {
+        test.test_del_app_envs("test_app1", del_keys, ERR_OK);
 
         const auto &app = test.get_app("test_app1");
         ASSERT_TRUE(app);

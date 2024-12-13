@@ -3096,6 +3096,8 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
             return;
         }
 
+        env_rpc.response().err = ERR_OK;
+
         const auto &old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
 
         // Update envs of local memory.
@@ -3177,9 +3179,9 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
     }
 
     if (deleted_count == 0) {
-        std::string hint_message("no key need to delete");
-        LOG_INFO(hint_message);
-        env_rpc.response().hint_message = std::move(hint_message);
+        LOG_INFO("no key needs to be deleted for app({})", app_name);
+        env_rpc.response().err = ERR_OK;
+        env_rpc.response().hint_message = "no key needs to be deleted";
         return;
     }
 
@@ -3214,7 +3216,10 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
             return;
         }
 
+        env_rpc.response().err = ERR_OK;
+
         const auto &old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+
         for (const auto &key : keys) {
             app->envs.erase(key);
         }
