@@ -3161,8 +3161,8 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
             return;
         }
 
-            ainfo = *app;
-            app_path = get_app_path(*app);
+        ainfo = *app;
+        app_path = get_app_path(*app);
     }
 
     std::string deleted_keys_info("deleted keys:");
@@ -3172,8 +3172,8 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
             continue;
         }
 
-            deleted_keys_info += fmt::format("\n    {}", key);
-            ++deleted_count;
+        deleted_keys_info += fmt::format("\n    {}", key);
+        ++deleted_count;
     }
 
     if (deleted_count == 0) {
@@ -3181,9 +3181,9 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
         LOG_INFO(hint_message);
         env_rpc.response().hint_message = std::move(hint_message);
         return;
-    } 
+    }
 
-        env_rpc.response().hint_message = std::move(deleted_keys_info);
+    env_rpc.response().hint_message = std::move(deleted_keys_info);
 
     do_update_app_info(app_path, ainfo, [this, app_name, keys, env_rpc](error_code ec) {
         CHECK_EQ_MSG(ec, ERR_OK, "update app({}) info to remote storage failed", app_name);
