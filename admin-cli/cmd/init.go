@@ -34,5 +34,5 @@ var pegasusClient *executor.Client
 func Init(metaList []string) {
 	globalMetaList = metaList
 
-	pegasusClient = executor.NewClient(os.Stdout, globalMetaList)
+	pegasusClient, _ = executor.NewClient(os.Stdout, globalMetaList, true)
 }
