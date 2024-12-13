@@ -73,11 +73,11 @@ func NewClient(writer io.Writer, metaAddrs []string, willExit bool) (*Client, er
 	}, nil
 }
 
-func CloseClient(writer io.Writer, client *Client) error {
+func CloseClient(client *Client) error {
 	var errorStrings []string
 	err := client.Meta.Close()
 	if err != nil {
-		fmt.Fprintf(writer, "fatal: failed to close meta session [%s]\n", err)
+		fmt.Printf("Error: failed to close meta session [%s]\n", err)
 		errorStrings = append(errorStrings, err.Error())
 	}
 
@@ -85,7 +85,7 @@ func CloseClient(writer io.Writer, client *Client) error {
 
 	err = client.Nodes.CloseAllNodes()
 	if err != nil {
-		fmt.Fprintf(writer, "fatal: failed to close nodes session [%s]\n", err)
+		fmt.Printf("Error: failed to close nodes session [%s]\n", err)
 		errorStrings = append(errorStrings, err.Error())
 	}
 
