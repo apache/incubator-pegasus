@@ -214,13 +214,13 @@ class LoadReplicasTest : public testing::TestWithParam<load_replicas_case>
 public:
     LoadReplicasTest()
     {
+        _stub.remove_disk_dirs();
+
         const auto &load_case = GetParam();
         _stub.initialize(load_case.dirs_by_tag, load_case.replicas_by_tag);
     }
 
-    ~LoadReplicasTest() override = default;
-
-    void TearDown() override { _stub.remove_disk_dirs(); }
+    ~LoadReplicasTest() override { _stub.remove_disk_dirs(); }
 
     void test_load_replicas(bool test_load_order, uint64_t max_replicas_on_load_for_each_disk)
     {
