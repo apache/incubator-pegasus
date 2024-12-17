@@ -464,9 +464,9 @@ void replica_stub::initialize(bool clear /* = false*/)
     _access_controller = std::make_unique<dsn::security::access_controller>();
 }
 
-replica_stub::disk_dirs replica_stub::get_all_disk_dirs() const
+std::vector<replica_stub::disk_replicas_info> replica_stub::get_all_disk_dirs() const
 {
-    disk_dirs disks;
+    std::vector<disk_replicas_info> disks;
     for (const auto &dn : _fs_manager.get_dir_nodes()) {
         if (dsn_unlikely(dn->status == disk_status::IO_ERROR)) {
             // Skip disks with IO errors.
@@ -477,12 +477,14 @@ replica_stub::disk_dirs replica_stub::get_all_disk_dirs() const
         CHECK(dsn::utils::filesystem::get_subdirectories(dn->full_dir, sub_dirs, false),
               "failed to get sub_directories in {}",
               dn->full_dir);
-        disks.emplace_back(dn.get(), std::move(sub_dirs));
+        disks.push_back(disk_replicas_info{dn.get(), std::move(sub_dirs)});
     }
 
     return disks;
 }
 
+// TaskCode: LPC_REPLICATION_INIT_LOAD
+// ThreadPool: THREAD_POOL_LOCAL_APP
 void replica_stub::load_replica(dir_node *dn,
                                 const std::string &dir,
                                 utils::ex_lock &reps_lock,
@@ -493,8 +495,9 @@ void replica_stub::load_replica(dir_node *dn,
     const auto *const worker = task::get_current_worker2();
     if (worker != nullptr) {
         CHECK(!(worker->pool()->spec().partitioned),
-              "The thread pool LPC_REPLICATION_INIT_LOAD for loading replicas must not be "
-              "partitioned since load balancing is required among multiple threads");
+              "The thread pool THREAD_POOL_LOCAL_APP(task code: LPC_REPLICATION_INIT_LOAD) "
+              "for loading replicas must not be partitioned since load balancing is required "
+              "among multiple threads");
     }
 
     auto rep = load_replica(dn, dir.c_str());
@@ -544,16 +547,17 @@ void replica_stub::load_replicas(replicas &reps)
         // For each round, start loading one replica for each disk in case there are too many
         // replicas in a disk, except that all of the replicas of this disk are being loaded.
         for (size_t disk_index = 0; disk_index < disks.size(); ++disk_index) {
-            // Structured bindings can be captured by closures in g++, while not supported
-            // well by clang. Thus we do not use following statement to bind both variables
-            // until clang has been upgraded to version 16 which could support that well:
+            // TODO(wangdan): Structured bindings can be captured by closures in g++, while
+            // not supported well by clang. Thus we do not use following statement to bind
+            // both variables until clang has been upgraded to version 16 which could support
+            // that well:
             //
             //     const auto &[dn, dirs] = disks[disk_index];
             //
             // For the docs of clang 16 please see:
             //
             // https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#c-20-feature-support.
-            const auto &dirs = disks[disk_index].second;
+            const auto &dirs = disks[disk_index].replica_dirs;
 
             auto &dir_index = dir_indexes[disk_index];
             if (dir_index >= dirs.size()) {
@@ -563,7 +567,7 @@ void replica_stub::load_replicas(replicas &reps)
                 continue;
             }
 
-            const auto &dn = disks[disk_index].first;
+            const auto &dn = disks[disk_index].disk_node;
             auto &load_disk_queue = load_disk_queues[disk_index];
             if (load_disk_queue.size() >= FLAGS_max_replicas_on_load_for_each_disk) {
                 // Loading replicas should be throttled in case that disk IO is saturated.
@@ -2235,7 +2239,8 @@ replica_ptr replica_stub::load_replica(dir_node *dn, const char *replica_dir)
     }
 
     // The replica's directory must exist when creating a replica.
-    CHECK_EQ(replica_dir, dn->replica_dir(ai.app_type, pid));
+    CHECK_EQ(dn->replica_dir(ai.app_type, pid), replica_dir);
+
     auto *rep = new replica(this, pid, ai, dn, false);
     const auto err = rep->initialize_on_load();
     if (err != ERR_OK) {

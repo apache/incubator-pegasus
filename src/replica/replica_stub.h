@@ -372,10 +372,17 @@ private:
                          bool restore_if_necessary,
                          bool is_duplication_follower);
 
-    using disk_dirs = std::vector<std::pair<dir_node *, std::vector<std::string>>>;
+    struct disk_replicas_info
+    {
+        // `dir_node` for each disk.
+        dir_node *disk_node;
+
+        // All replica dirs on each disk.
+        std::vector<std::string> replica_dirs;
+    };
 
     // Get the absolute dirs of all replicas for all disks.
-    disk_dirs get_all_disk_dirs() const;
+    std::vector<disk_replicas_info> get_all_disk_dirs() const;
 
     // Get the dir name for a replica from a potentially longer path (both absolute and
     // relative paths are possible).
