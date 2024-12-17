@@ -3174,7 +3174,7 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
             continue;
         }
 
-        deleted_keys_info += fmt::format("\n    {}", key);
+        fmt::format_to(std::back_inserter(deleted_keys_info), "\n    {}", key);
         ++deleted_count;
     }
 
