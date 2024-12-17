@@ -34,6 +34,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <set>
 #include <sstream> // IWYU pragma: keep
 #include <string>
