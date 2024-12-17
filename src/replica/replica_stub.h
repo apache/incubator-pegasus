@@ -184,7 +184,6 @@ public:
     //
     void on_meta_server_connected();
     void on_meta_server_disconnected();
-    void on_replicas_stat();
     void on_disk_stat();
 
     //
@@ -384,6 +383,8 @@ private:
         decree last_durable_decree;
     };
     using replica_stat_info_by_gpid = std::unordered_map<gpid, replica_stat_info>;
+
+    void on_replicas_stat();
 
     void response_client(gpid id,
                          bool is_read,
