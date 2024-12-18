@@ -103,7 +103,7 @@ public:
         PRESERVE_FLAG(max_replicas_on_load_for_each_disk);
         FLAGS_max_replicas_on_load_for_each_disk = max_replicas_on_load_for_each_disk;
 
-        replicas actual_loaded_replicas;
+        replica_stub::replica_map_by_gpid actual_loaded_replicas;
         load_replicas(actual_loaded_replicas);
         ASSERT_EQ(_expected_loaded_replicas, actual_loaded_replicas);
 
@@ -197,7 +197,7 @@ private:
     std::vector<size_t> _disk_loaded_replicas_for_order;
 
     mutable std::mutex _mtx;
-    replicas _expected_loaded_replicas;
+    replica_stub::replica_map_by_gpid _expected_loaded_replicas;
 
     DISALLOW_COPY_AND_ASSIGN(mock_load_replica);
     DISALLOW_MOVE_AND_ASSIGN(mock_load_replica);

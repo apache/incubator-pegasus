@@ -27,7 +27,6 @@
 #pragma once
 
 #include <gtest/gtest_prod.h>
-#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <functional>
@@ -122,11 +121,10 @@ class test_checker;
 }
 class cold_backup_context;
 class replica_split_manager;
-typedef std::function<void(const ::dsn::host_port & /*from*/,
-                           const replica_configuration & /*new_config*/,
-                           bool /*is_closing*/)>
-    replica_state_subscriber;
-typedef std::unordered_map<gpid, replica_ptr> replicas;
+
+using replica_state_subscriber = std::function<void(const ::dsn::host_port & /*from*/,
+                                                    const replica_configuration & /*new_config*/,
+                                                    bool /*is_closing*/)>;
 
 class replica_stub;
 
@@ -397,15 +395,17 @@ private:
     // directory for a replica.
     virtual replica_ptr load_replica(dir_node *dn, const std::string &replica_dir);
 
+    using replica_map_by_gpid = std::unordered_map<gpid, replica_ptr>;
+
     // The same as the above `load_replica` function, except that this function is to load
     // each replica to `reps` with protection from `reps_lock`.
     void load_replica(dir_node *dn,
                       const std::string &replica_dir,
                       utils::ex_lock &reps_lock,
-                      replicas &reps);
+                      replica_map_by_gpid &reps);
 
     // Load all replicas simultaneously from all disks to `reps`.
-    void load_replicas(replicas &reps);
+    void load_replicas(replica_map_by_gpid &reps);
 
     // Clean up the memory state and on disk data if creating replica failed.
     void clear_on_failure(replica *rep);
@@ -497,17 +497,19 @@ private:
     FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
     FRIEND_TEST(replica_test, test_clear_on_failure);
 
-    typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
-    typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
-        closing_replicas; // <gpid, <close_task, replica, app_info, replica_info> >
-    typedef std::map<gpid, std::pair<app_info, replica_info>>
-        closed_replicas; // <gpid, <app_info, replica_info> >
+    using opening_replica_map_by_gpid = std::unordered_map<gpid, task_ptr>;
+
+    // `task_ptr` is the task being closed.
+    using closing_replica_map_by_gpid =
+        std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>;
+
+    using closed_replica_map_by_gpid = std::map<gpid, std::pair<app_info, replica_info>>;
 
     mutable zrwlock_nr _replicas_lock;
-    replicas _replicas;
-    opening_replicas _opening_replicas;
-    closing_replicas _closing_replicas;
-    closed_replicas _closed_replicas;
+    replica_map_by_gpid _replicas;
+    opening_replica_map_by_gpid _opening_replicas;
+    closing_replica_map_by_gpid _closing_replicas;
+    closed_replica_map_by_gpid _closed_replicas;
 
     ::dsn::host_port _primary_host_port;
     // The stringify of '_primary_host_port', used by logging usually.
