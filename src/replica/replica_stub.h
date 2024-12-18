@@ -393,14 +393,16 @@ private:
     parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type);
 
     // Load an existing replica which is located in `dn` with `replica_dir`. Usually each
-    // different `dn` represents a unique disk. `dir` is the absolute path of the directory
-    // for a replica.
-    virtual replica_ptr load_replica(dir_node *dn, const char *replica_dir);
+    // different `dn` represents a unique disk. `replica_dir` is the absolute path of the
+    // directory for a replica.
+    virtual replica_ptr load_replica(dir_node *dn, const std::string &replica_dir);
 
     // The same as the above `load_replica` function, except that this function is to load
     // each replica to `reps` with protection from `reps_lock`.
-    void
-    load_replica(dir_node *dn, const std::string &dir, utils::ex_lock &reps_lock, replicas &reps);
+    void load_replica(dir_node *dn,
+                      const std::string &replica_dir,
+                      utils::ex_lock &reps_lock,
+                      replicas &reps);
 
     // Load all replicas simultaneously from all disks to `reps`.
     void load_replicas(replicas &reps);

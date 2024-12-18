@@ -122,11 +122,11 @@ public:
     }
 
 private:
-    void load_replica_for_test(dir_node *dn, const char *dir, replica_ptr &rep)
+    void load_replica_for_test(dir_node *dn, const std::string &replica_dir, replica_ptr &rep)
     {
-        ASSERT_TRUE(utils::filesystem::directory_exists(dir));
+        ASSERT_TRUE(utils::filesystem::directory_exists(replica_dir));
 
-        const auto &dir_name = get_replica_dir_name(dir);
+        const auto &dir_name = get_replica_dir_name(replica_dir);
 
         gpid pid;
         std::string app_type;
@@ -165,7 +165,7 @@ private:
         }
 
         // Check the absolute dir of this replica.
-        ASSERT_EQ(dn->replica_dir("pegasus", pid), dir);
+        ASSERT_EQ(dn->replica_dir("pegasus", pid), replica_dir);
 
         app_info ai;
         ai.app_type = "pegasus";
@@ -180,10 +180,10 @@ private:
     }
 
     // Mock the process of loading a replica.
-    replica_ptr load_replica(dir_node *dn, const char *dir) override
+    replica_ptr load_replica(dir_node *dn, const std::string &replica_dir) override
     {
         replica_ptr rep;
-        load_replica_for_test(dn, dir, rep);
+        load_replica_for_test(dn, replica_dir, rep);
         return rep;
     }
 

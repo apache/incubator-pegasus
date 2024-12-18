@@ -486,11 +486,11 @@ std::vector<replica_stub::disk_replicas_info> replica_stub::get_all_disk_dirs() 
 // TaskCode: LPC_REPLICATION_INIT_LOAD
 // ThreadPool: THREAD_POOL_LOCAL_APP
 void replica_stub::load_replica(dir_node *dn,
-                                const std::string &dir,
+                                const std::string &replica_dir,
                                 utils::ex_lock &reps_lock,
                                 replicas &reps)
 {
-    LOG_INFO("loading replica: tag={}, dir={}", dn->tag, dir);
+    LOG_INFO("loading replica: tag={}, replica_dir={}", dn->tag, replica_dir);
 
     const auto *const worker = task::get_current_worker2();
     if (worker != nullptr) {
@@ -500,17 +500,17 @@ void replica_stub::load_replica(dir_node *dn,
               "among multiple threads");
     }
 
-    auto rep = load_replica(dn, dir.c_str());
+    auto rep = load_replica(dn, replica_dir);
     if (rep == nullptr) {
         return;
     }
 
-    LOG_INFO("{}@{}: load replica successfully, tag={}, dir={}, last_durable_decree={}, "
+    LOG_INFO("{}@{}: load replica successfully, tag={}, replica_dir={}, last_durable_decree={}, "
              "last_committed_decree={}, last_prepared_decree={}",
              rep->get_gpid(),
              dsn_primary_host_port(),
              dn->tag,
-             dir,
+             replica_dir,
              rep->last_durable_decree(),
              rep->last_committed_decree(),
              rep->last_prepared_decree());
@@ -1972,7 +1972,7 @@ void replica_stub::open_replica(
                  _primary_host_port_cache,
                  group_check ? "with" : "without",
                  dir);
-        rep = load_replica(dn, dir.c_str());
+        rep = load_replica(dn, dir);
 
         // if load data failed, re-open the `*.ori` folder which is the origin replica dir of disk
         // migration
@@ -1997,7 +1997,7 @@ void replica_stub::open_replica(
                 boost::replace_first(
                     origin_dir, replica_disk_migrator::kReplicaDirOriginSuffix, "");
                 dsn::utils::filesystem::rename_path(origin_tmp_dir, origin_dir);
-                rep = load_replica(origin_dn, origin_dir.c_str());
+                rep = load_replica(origin_dn, origin_dir);
 
                 FAIL_POINT_INJECT_F("mock_replica_load", [&](std::string_view) -> void {});
             }
@@ -2225,7 +2225,7 @@ bool replica_stub::validate_replica_dir(const std::string &dir,
     return true;
 }
 
-replica_ptr replica_stub::load_replica(dir_node *dn, const char *replica_dir)
+replica_ptr replica_stub::load_replica(dir_node *dn, const std::string &replica_dir)
 {
     FAIL_POINT_INJECT_F("mock_replica_load",
                         [&](std::string_view) -> replica * { return nullptr; });
@@ -2234,7 +2234,7 @@ replica_ptr replica_stub::load_replica(dir_node *dn, const char *replica_dir)
     gpid pid;
     std::string hint_message;
     if (!validate_replica_dir(replica_dir, ai, pid, hint_message)) {
-        LOG_ERROR("invalid replica dir '{}', hint: {}", replica_dir, hint_message);
+        LOG_ERROR("invalid replica dir '{}', hint={}", replica_dir, hint_message);
         return nullptr;
     }
 
@@ -2244,7 +2244,11 @@ replica_ptr replica_stub::load_replica(dir_node *dn, const char *replica_dir)
     auto *rep = new replica(this, pid, ai, dn, false);
     const auto err = rep->initialize_on_load();
     if (err != ERR_OK) {
-        LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
+        LOG_ERROR("{}: load replica failed, tag={}, replica_dir={}, err={}",
+                  rep->name(),
+                  dn->tag,
+                  replica_dir,
+                  err);
         delete rep;
         rep = nullptr;
 
@@ -2258,7 +2262,7 @@ replica_ptr replica_stub::load_replica(dir_node *dn, const char *replica_dir)
         return nullptr;
     }
 
-    LOG_INFO("{}: load replica succeed", rep->name());
+    LOG_INFO("{}: load replica succeed, tag={}, replica_dir={}", rep->name(), dn->tag, replica_dir);
     return rep;
 }
 
