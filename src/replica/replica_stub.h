@@ -118,7 +118,8 @@ typedef rpc_holder<add_new_disk_request, add_new_disk_response> add_new_disk_rpc
 
 namespace test {
 class test_checker;
-}
+} // namespace test
+
 class cold_backup_context;
 class replica_split_manager;
 
