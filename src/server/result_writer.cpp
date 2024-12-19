@@ -21,7 +21,6 @@
 
 #include <pegasus/error.h>
 #include <chrono>
-#include <type_traits>
 #include <utility>
 
 #include "pegasus/client.h"

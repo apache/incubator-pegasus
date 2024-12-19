@@ -36,6 +36,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "utils/fmt_logging.h"

@@ -229,9 +229,9 @@ public:
     //   - if allow_empty_args = false, you should specify at least one argument.
     // each argument should be in format of:
     //     id1,id2... (where id is 'app_id' or 'app_id.partition_id')
-    std::string exec_command_on_replica(const std::vector<std::string> &args,
+    std::string exec_command_on_replica(const std::vector<std::string> &arg_str_list,
                                         bool allow_empty_args,
-                                        std::function<std::string(const replica_ptr &rep)> func);
+                                        std::function<std::string(const replica_ptr &)> func);
 
     //
     // partition split

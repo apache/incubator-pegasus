@@ -29,6 +29,7 @@
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <nlohmann/json.hpp>
 #include <rapidjson/ostreamwrapper.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -413,30 +414,33 @@ namespace {
 void register_flags_ctrl_command()
 {
     static std::once_flag flag;
-    static std::vector<std::unique_ptr<dsn::command_deregister>> cmds;
     std::call_once(flag, []() mutable {
-        cmds.emplace_back(dsn::command_manager::instance().register_int_command(
-            FLAGS_max_replicas_on_load_for_each_disk,
-            FLAGS_max_replicas_on_load_for_each_disk,
-            "replica.max-replicas-on-load-for-each-disk",
-            kMaxReplicasOnLoadForEachDiskDesc));
+        dsn::command_manager::instance().add_global_cmd(
+            dsn::command_manager::instance().register_int_command(
+                FLAGS_max_replicas_on_load_for_each_disk,
+                FLAGS_max_replicas_on_load_for_each_disk,
+                "replica.max-replicas-on-load-for-each-disk",
+                kMaxReplicasOnLoadForEachDiskDesc));
 
-        cmds.emplace_back(dsn::command_manager::instance().register_int_command(
-            FLAGS_load_replica_max_wait_time_ms,
-            FLAGS_load_replica_max_wait_time_ms,
-            "replica.load-replica-max-wait-time-ms",
-            kLoadReplicaMaxWaitTimeMsDesc));
+        dsn::command_manager::instance().add_global_cmd(
+            dsn::command_manager::instance().register_int_command(
+                FLAGS_load_replica_max_wait_time_ms,
+                FLAGS_load_replica_max_wait_time_ms,
+                "replica.load-replica-max-wait-time-ms",
+                kLoadReplicaMaxWaitTimeMsDesc));
 
-        cmds.emplace_back(dsn::command_manager::instance().register_bool_command(
-            FLAGS_empty_write_disabled,
-            "replica.disable-empty-write",
-            "whether to disable empty writes"));
+        dsn::command_manager::instance().add_global_cmd(
+            dsn::command_manager::instance().register_bool_command(
+                FLAGS_empty_write_disabled,
+                "replica.disable-empty-write",
+                "whether to disable empty writes"));
 
-        cmds.emplace_back(::dsn::command_manager::instance().register_int_command(
-            FLAGS_max_concurrent_bulk_load_downloading_count,
-            FLAGS_max_concurrent_bulk_load_downloading_count,
-            "replica.max-concurrent-bulk-load-downloading-count",
-            kMaxConcurrentBulkLoadDownloadingCountDesc));
+        dsn::command_manager::instance().add_global_cmd(
+            dsn::command_manager::instance().register_int_command(
+                FLAGS_max_concurrent_bulk_load_downloading_count,
+                FLAGS_max_concurrent_bulk_load_downloading_count,
+                "replica.max-concurrent-bulk-load-downloading-count",
+                kMaxConcurrentBulkLoadDownloadingCountDesc));
     });
 }
 
@@ -445,6 +449,9 @@ void register_flags_ctrl_command()
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
                            bool is_long_subscriber /* = true*/)
     : serverlet("replica_stub"),
+      _state(NS_Disconnected),
+      _replica_state_subscriber(subscriber),
+      _is_long_subscriber(is_long_subscriber),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
@@ -454,6 +461,9 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _bulk_load_downloading_count(0),
       _manual_emergency_checkpointing_count(0),
       _is_running(false),
+#ifdef DSN_ENABLE_GPERF
+      _is_releasing_memory(false),
+#endif
       METRIC_VAR_INIT_server(total_replicas),
       METRIC_VAR_INIT_server(opening_replicas),
       METRIC_VAR_INIT_server(closing_replicas),
@@ -486,18 +496,10 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(splitting_replicas_async_learn_max_duration_ms),
       METRIC_VAR_INIT_server(splitting_replicas_max_copy_file_bytes)
 {
-#ifdef DSN_ENABLE_GPERF
-    _is_releasing_memory = false;
-#endif
-    _replica_state_subscriber = subscriber;
-    _is_long_subscriber = is_long_subscriber;
-    _failure_detector = nullptr;
-    _state = NS_Disconnected;
-
     register_flags_ctrl_command();
 }
 
-replica_stub::~replica_stub(void) { close(); }
+replica_stub::~replica_stub() { close(); }
 
 void replica_stub::initialize(bool clear /* = false*/)
 {
@@ -2680,7 +2682,7 @@ void replica_stub::register_ctrl_command()
 std::string
 replica_stub::exec_command_on_replica(const std::vector<std::string> &arg_str_list,
                                       bool allow_empty_args,
-                                      std::function<std::string(const replica_ptr &rep)> func)
+                                      std::function<std::string(const replica_ptr &)> func)
 {
     static const std::string kInvalidArguments("invalid arguments");
 
@@ -2710,7 +2712,6 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &arg_str_li
                 }
 
                 gpid id;
-                int pid;
                 if (id.parse_from(arg.c_str())) {
                     // app_id.partition_index
                     required_ids.insert(id);
@@ -2718,16 +2719,21 @@ replica_stub::exec_command_on_replica(const std::vector<std::string> &arg_str_li
                     if (find != rs.end()) {
                         choosed_rs[id] = find->second;
                     }
-                } else if (sscanf(arg.c_str(), "%d", &pid) == 1) {
-                    // app_id
-                    for (auto kv : rs) {
-                        id = kv.second->get_gpid();
-                        if (id.get_app_id() == pid) {
-                            choosed_rs[id] = kv.second;
-                        }
-                    }
-                } else {
+
+                    continue;
+                }
+
+                int pid = 0;
+                if (sscanf(arg.c_str(), "%d", &pid) != 1) {
                     return kInvalidArguments;
+                }
+
+                // app_id
+                for (const auto &[_, rep] : rs) {
+                    id = rep->get_gpid();
+                    if (id.get_app_id() == pid) {
+                        choosed_rs[id] = rep;
+                    }
                 }
             }
         }
