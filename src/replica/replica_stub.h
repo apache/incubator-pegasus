@@ -394,16 +394,18 @@ private:
     // Load an existing replica which is located in `dn` with `replica_dir`. Usually each
     // different `dn` represents a unique disk. `replica_dir` is the absolute path of the
     // directory for a replica.
-    virtual replica_ptr load_replica(dir_node *dn, const std::string &replica_dir);
+    virtual replica_ptr load_replica(dir_node *disk_node, const std::string &replica_dir);
 
     using replica_map_by_gpid = std::unordered_map<gpid, replica_ptr>;
 
     // The same as the above `load_replica` function, except that this function is to load
     // each replica to `reps` with protection from `reps_lock`.
-    void load_replica(dir_node *dn,
+    void load_replica(dir_node *disk_node,
                       const std::string &replica_dir,
+                      const size_t total_dir_count,
                       utils::ex_lock &reps_lock,
-                      replica_map_by_gpid &reps);
+                      replica_map_by_gpid &reps,
+                      std::atomic<size_t> &finished_dir_count);
 
     // Load all replicas simultaneously from all disks to `reps`.
     void load_replicas(replica_map_by_gpid &reps);
