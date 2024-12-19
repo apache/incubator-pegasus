@@ -402,7 +402,7 @@ private:
     // each replica to `reps` with protection from `reps_lock`.
     void load_replica(dir_node *disk_node,
                       const std::string &replica_dir,
-                      const size_t total_dir_count,
+                      size_t total_dir_count,
                       utils::ex_lock &reps_lock,
                       replica_map_by_gpid &reps,
                       std::atomic<size_t> &finished_dir_count);

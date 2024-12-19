@@ -535,7 +535,7 @@ std::vector<replica_stub::disk_replicas_info> replica_stub::get_all_disk_dirs() 
 // ThreadPool: THREAD_POOL_LOCAL_APP
 void replica_stub::load_replica(dir_node *disk_node,
                                 const std::string &replica_dir,
-                                const size_t total_dir_count,
+                                size_t total_dir_count,
                                 utils::ex_lock &reps_lock,
                                 replica_map_by_gpid &reps,
                                 std::atomic<size_t> &finished_dir_count)
@@ -707,7 +707,7 @@ void replica_stub::load_replicas(replica_map_by_gpid &reps)
                     &_tracker,
                     std::bind(static_cast<void (replica_stub::*)(dir_node *,
                                                                  const std::string &,
-                                                                 const size_t,
+                                                                 size_t,
                                                                  utils::ex_lock &,
                                                                  replica_map_by_gpid &,
                                                                  std::atomic<size_t> &)>(
