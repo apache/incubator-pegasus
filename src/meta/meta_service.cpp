@@ -29,6 +29,7 @@
 #include <boost/lexical_cast.hpp>
 #include <algorithm> // for std::remove_if
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <ostream>
 #include <string_view>
