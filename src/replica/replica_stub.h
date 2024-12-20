@@ -359,19 +359,22 @@ private:
                       gpid id,
                       const std::shared_ptr<group_check_request> &req,
                       const std::shared_ptr<configuration_update_request> &req2);
-    // Create a new replica according to the parameters.
-    // 'parent_dir' is used in partition split for create_child_replica_dir().
+
+    // Create a child replica for partition split, with 'parent_dir' specified as the parent
+    // replica dir used for `create_child_replica_dir()`.
     replica *new_replica(gpid gpid,
                          const app_info &app,
                          bool restore_if_necessary,
                          bool is_duplication_follower,
                          const std::string &parent_dir);
 
+    // Create a new replica, choosing and assigning the best dir for it.
     replica *new_replica(gpid gpid,
                          const app_info &app,
                          bool restore_if_necessary,
                          bool is_duplication_follower);
 
+    // Each disk with its candidate replica dirs, used to load replicas while initializing.
     struct disk_replicas_info
     {
         // `dir_node` for each disk.
@@ -384,11 +387,11 @@ private:
     // Get the absolute dirs of all replicas for all disks.
     std::vector<disk_replicas_info> get_all_disk_dirs() const;
 
-    // Get the dir name for a replica from a potentially longer path (both absolute and
-    // relative paths are possible).
+    // Get the replica dir name from a potentially longer path (`dir` could be an absolute
+    // or relative path).
     static std::string get_replica_dir_name(const std::string &dir);
 
-    // Parse app id, partition id and app type from the dir name of a replica.
+    // Parse app id, partition id and app type from the replica dir name.
     static bool
     parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type);
 
@@ -503,7 +506,7 @@ private:
 
     using opening_replica_map_by_gpid = std::unordered_map<gpid, task_ptr>;
 
-    // `task_ptr` is the task being closed.
+    // `task_ptr` is the task closing a replica.
     using closing_replica_map_by_gpid =
         std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>;
 

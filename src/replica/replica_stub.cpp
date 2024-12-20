@@ -34,7 +34,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <iterator>
 #include <mutex>
@@ -2228,7 +2227,7 @@ replica *replica_stub::new_replica(gpid gpid,
                                    bool restore_if_necessary,
                                    bool is_duplication_follower)
 {
-    return new_replica(gpid, app, restore_if_necessary, is_duplication_follower, "");
+    return new_replica(gpid, app, restore_if_necessary, is_duplication_follower, {});
 }
 
 /*static*/ std::string replica_stub::get_replica_dir_name(const std::string &dir)
@@ -3017,27 +3016,33 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
         });
 
     zauto_write_lock l(_replicas_lock);
-    auto it = _replicas.find(child_pid);
+
+    const auto it = _replicas.find(child_pid);
     if (it != _replicas.end()) {
         return it->second;
-    } else {
-        if (_opening_replicas.find(child_pid) != _opening_replicas.end()) {
-            LOG_WARNING("failed create child replica({}) because it is under open", child_pid);
-            return nullptr;
-        } else if (_closing_replicas.find(child_pid) != _closing_replicas.end()) {
-            LOG_WARNING("failed create child replica({}) because it is under close", child_pid);
-            return nullptr;
-        } else {
-            replica *rep = new_replica(child_pid, *app, false, false, parent_dir);
-            if (rep != nullptr) {
-                auto pr = _replicas.insert(replica_map_by_gpid::value_type(child_pid, rep));
-                CHECK(pr.second, "child replica {} has been existed", rep->name());
-                METRIC_VAR_INCREMENT(total_replicas);
-                _closed_replicas.erase(child_pid);
-            }
-            return rep;
-        }
     }
+
+    if (_opening_replicas.find(child_pid) != _opening_replicas.end()) {
+        LOG_WARNING("failed create child replica({}) because it is under open", child_pid);
+        return nullptr;
+    }
+
+    if (_closing_replicas.find(child_pid) != _closing_replicas.end()) {
+        LOG_WARNING("failed create child replica({}) because it is under close", child_pid);
+        return nullptr;
+    }
+
+    replica *rep = new_replica(child_pid, *app, false, false, parent_dir);
+    if (rep == nullptr) {
+        return nullptr;
+    }
+
+    const auto pr = _replicas.insert(replica_map_by_gpid::value_type(child_pid, rep));
+    CHECK(pr.second, "child replica {} has been existed", rep->name());
+    METRIC_VAR_INCREMENT(total_replicas);
+    _closed_replicas.erase(child_pid);
+
+    return rep;
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
