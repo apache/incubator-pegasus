@@ -384,7 +384,7 @@ private:
         std::vector<std::string> replica_dirs;
     };
 
-    // Get the absolute dirs of all replicas for all disks.
+    // Get the absolute dirs of all replicas for all healthy disks without IO errors.
     std::vector<disk_replicas_info> get_all_disk_dirs() const;
 
     // Get the replica dir name from a potentially longer path (`dir` could be an absolute
