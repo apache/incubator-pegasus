@@ -499,6 +499,9 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       METRIC_VAR_INIT_server(splitting_replicas_async_learn_max_duration_ms),
       METRIC_VAR_INIT_server(splitting_replicas_max_copy_file_bytes)
 {
+    // Some flags might need to be tuned on the stage of loading replicas (during
+    // replica_stub::initialize()), thus register their control command just in the
+    // constructor.
     register_flags_ctrl_command();
 }
 
@@ -522,7 +525,7 @@ std::vector<replica_stub::disk_replicas_info> replica_stub::get_all_disk_dirs() 
         }
 
         std::vector<std::string> sub_dirs;
-        CHECK(dsn::utils::filesystem::get_subdirectories(disk_node->full_dir, sub_dirs, false),
+        CHECK(utils::filesystem::get_subdirectories(disk_node->full_dir, sub_dirs, false),
               "failed to get sub_directories in {}",
               disk_node->full_dir);
         disks.push_back(disk_replicas_info{disk_node.get(), std::move(sub_dirs)});
