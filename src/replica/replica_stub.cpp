@@ -2317,10 +2317,9 @@ bool replica_stub::validate_replica_dir(const std::string &dir,
         return false;
     }
 
-    // When the online partition split function aborted, the garbage partitions are with pidx in
-    // the range of [ai.partition_count, 2 * ai.partition_count), which means the partitions with
-    // pidx >= ai.partition_count are garbage partitions.
-    if (ai.partition_count <= pid.get_partition_index()) {
+    if (pid.get_partition_index() >= ai.partition_count) {
+        // Once the online partition split aborted, the partitions within the range of
+        // [ai.partition_count, 2 * ai.partition_count) would become garbage.
         hint_message = fmt::format(
             "partition[{}], count={}, this replica may be partition split garbage partition, "
             "ignore it",

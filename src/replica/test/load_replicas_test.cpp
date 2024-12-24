@@ -261,11 +261,11 @@ load_replicas_case generate_load_replicas_case(const std::vector<size_t> &disk_r
         dirs_by_tag.emplace(fmt::format("data{}", disk_index), fmt::format("disk{}", disk_index));
     }
 
-    static const int32_t kNumBitsPartitions = 3;
-    static const int32_t kNumPartitions = 1 << kNumBitsPartitions;
+    static const uint32_t kNumBitsPartitions = 3;
+    static const uint32_t kNumPartitions = 1U << kNumBitsPartitions;
 
-    int32_t app_id = 1;
-    int32_t partition_id = 0;
+    uint32_t app_id = 1;
+    uint32_t partition_id = 0;
 
     std::map<std::string, std::vector<gpid>> replicas_by_tag;
 
@@ -281,7 +281,8 @@ load_replicas_case generate_load_replicas_case(const std::vector<size_t> &disk_r
             }
 
             // Generate a replica with current app id and partition index.
-            replica_list.emplace_back(app_id, partition_id);
+            replica_list.emplace_back(static_cast<int32_t>(app_id),
+                                      static_cast<int32_t>(partition_id));
 
             // Once next partition index is found 0, increment app id to turn to next table.
             app_id += ((partition_id + 1) & kNumPartitions) >> kNumBitsPartitions;
