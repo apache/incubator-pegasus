@@ -34,6 +34,7 @@
 #include "meta_admin_types.h"
 #include "rpc/rpc_host_port.h"
 #include "shell/command_executor.h"
+#include "shell/command_helper.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
@@ -49,8 +50,8 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
     l = type_from_string(_meta_function_level_VALUES_TO_NAMES,
                          std::string("fl_") + args.argv[1],
                          meta_function_level::fl_invalid);
-    PRINT_AND_RETURN_FALSE_IF_NOT(l != meta_function_level::fl_invalid,
-                                  "parse {} as meta function level failed\n",
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(l != meta_function_level::fl_invalid,
+                                  "parse {} as meta function level failed",
                                   args.argv[1]);
 
     configuration_meta_control_response resp = sc->ddl_client->control_meta_function_level(l);
@@ -106,31 +107,31 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'g':
             ans = request.gpid.parse_from(optarg);
-            PRINT_AND_RETURN_FALSE_IF_NOT(ans, "parse {} as gpid failed\n", optarg);
+            SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(ans, "parse {} as gpid failed", optarg);
             break;
         case 'p':
             proposal_type += optarg;
             break;
         case 't':
             target = dsn::host_port::from_string(optarg);
-            PRINT_AND_RETURN_FALSE_IF_NOT(target, "parse {} as target_host_port failed\n", optarg);
+            SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(target, "parse {} as target_host_port failed", optarg);
             break;
         case 'n':
             node = dsn::host_port::from_string(optarg);
-            PRINT_AND_RETURN_FALSE_IF_NOT(target, "parse {}  as node failed\n", optarg);
+            SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(target, "parse {}  as node failed", optarg);
             break;
         default:
             return false;
         }
     }
 
-    PRINT_AND_RETURN_FALSE_IF_NOT(target, "need set target by -t\n");
-    PRINT_AND_RETURN_FALSE_IF_NOT(node, "need set node by -n\n");
-    PRINT_AND_RETURN_FALSE_IF_NOT(request.gpid.get_app_id() != -1, "need set gpid by -g\n");
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(target, "need set target by -t");
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(node, "need set node by -n");
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(request.gpid.get_app_id() != -1, "need set gpid by -g");
 
     config_type::type tp =
         type_from_string(_config_type_VALUES_TO_NAMES, proposal_type, config_type::CT_INVALID);
-    PRINT_AND_RETURN_FALSE_IF_NOT(
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(
         tp != config_type::CT_INVALID, "parse {} as config_type failed.\n", proposal_type);
     request.action_list = {new_proposal_action(target, node, tp)};
     dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);

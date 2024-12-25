@@ -286,11 +286,15 @@ dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::st
         resp.info.app_name, resp.info.partition_count, resp.info.max_replica_count);
 }
 
-dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status,
+dsn::error_code replication_ddl_client::list_apps(dsn::app_status::type status,
+const std::string &app_name_pattern,
+                                  utils::pattern_match_type::type match_type,
                                                   std::vector<::dsn::app_info> &apps)
 {
     auto req = std::make_shared<configuration_list_apps_request>();
     req->status = status;
+    req->__set_app_name_pattern(app_name_pattern);
+    req->__set_match_type(match_type);
 
     auto resp_task = request_meta(RPC_CM_LIST_APPS, req);
     resp_task->wait();
@@ -310,28 +314,26 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
 }
 
 dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status,
+                                                  std::vector<::dsn::app_info> &apps)
+{
+    return list_apps(status, {}, utils::pattern_match_type::MATCH_ALL, apps);
+}
+
+dsn::error_code replication_ddl_client::list_apps(
                                                   bool show_all,
                                                   bool detailed,
                                                   bool json,
-                                                  const std::string &file_name)
+                                                  const std::string &output_file,
+dsn::app_status::type status,
+const std::string &app_name_pattern,
+                                  utils::pattern_match_type::type match_type
+                                                  )
 {
     std::vector<::dsn::app_info> apps;
-    auto r = list_apps(status, apps);
+    auto r = list_apps(status, app_name_pattern, match_type,apps);
     if (r != dsn::ERR_OK) {
         return r;
     }
-
-    // print configuration_list_apps_response
-    std::streambuf *buf;
-    std::ofstream of;
-
-    if (!file_name.empty()) {
-        of.open(file_name);
-        buf = of.rdbuf();
-    } else {
-        buf = std::cout.rdbuf();
-    }
-    std::ostream out(buf);
 
     size_t max_app_name_size = 20;
     for (int i = 0; i < apps.size(); i++) {
@@ -342,7 +344,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         max_app_name_size = std::max(max_app_name_size, info.app_name.size() + 2);
     }
 
-    dsn::utils::multi_table_printer mtp;
+    dsn::utils::multi_table_printer multi_printer;
     dsn::utils::table_printer tp_general("general_info");
     tp_general.add_title("app_id");
     tp_general.add_column("status");
@@ -401,7 +403,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         tp_general.append_data(drop_expire_time);
         tp_general.append_data(info.envs.size());
     }
-    mtp.add(std::move(tp_general));
+    multi_printer.add(std::move(tp_general));
 
     int total_fully_healthy_app_count = 0;
     int total_unhealthy_app_count = 0;
@@ -467,7 +469,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             if (read_unhealthy > 0)
                 total_read_unhealthy_app_count++;
         }
-        mtp.add(std::move(tp_health));
+        multi_printer.add(std::move(tp_health));
     }
 
     dsn::utils::table_printer tp_count("summary");
@@ -479,12 +481,21 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                                        total_write_unhealthy_app_count);
         tp_count.add_row_name_and_data("read_unhealthy_app_count", total_read_unhealthy_app_count);
     }
-    mtp.add(std::move(tp_count));
+    multi_printer.add(std::move(tp_count));
 
-    // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.
-    mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
+    dsn::utils::output(output_file, json, multi_printer);
 
     return dsn::ERR_OK;
+}
+
+dsn::error_code replication_ddl_client::list_apps(
+                                                  bool show_all,
+                                                  bool detailed,
+                                                  bool json,
+                                                  const std::string &output_file,
+                                                  const dsn::app_status::type status)
+{
+    return list_apps(show_all, detailed, json, output_file, status, {}, utils::pattern_match_type::MATCH_ALL);
 }
 
 dsn::error_code replication_ddl_client::list_nodes(
@@ -1478,7 +1489,7 @@ dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name
                                                      std::map<std::string, std::string> &envs)
 {
     std::vector<::dsn::app_info> apps;
-    auto r = list_apps(dsn::app_status::AS_AVAILABLE, apps);
+    auto r = list_apps(dsn::app_status::AS_AVAILABLE, app_name, utils::pattern_match_type::PMT_MATCH_EXACT, apps);
     if (r != dsn::ERR_OK) {
         return r;
     }

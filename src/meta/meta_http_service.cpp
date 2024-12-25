@@ -208,16 +208,20 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
 void meta_http_service::list_app_handler(const http_request &req, http_response &resp)
 {
     bool detailed = false;
-    for (const auto &p : req.query_args) {
-        if (p.first == "detail") {
+    for (const auto &[name, value] : req.query_args) {
+        if (name == "detail") {
             detailed = true;
-        } else {
+            continue;
+        }
+
             resp.status_code = http_status_code::kBadRequest;
             return;
-        }
     }
-    if (!redirect_if_not_primary(req, resp))
+
+    if (!redirect_if_not_primary(req, resp)) {
         return;
+    }
+
     configuration_list_apps_response response;
     configuration_list_apps_request request;
     request.status = dsn::app_status::AS_INVALID;

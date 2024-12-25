@@ -63,57 +63,55 @@ double convert_to_ratio(double hit, double total)
 
 bool ls_apps(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"all", no_argument, 0, 'a'},
-                                           {"detailed", no_argument, 0, 'd'},
-                                           {"json", no_argument, 0, 'j'},
-                                           {"status", required_argument, 0, 's'},
-                                           {"output", required_argument, 0, 'o'},
-                                           {0, 0, 0, 0}};
+    // ls [-a|--all] [-d|--detailed] [-j|--json] [-o|--output file_name]
+    // [-s|--status all|available|creating|dropping|dropped] "
+    // [-p|--app_name_pattern str] [-m|--match_type all|exact|anywhere|prefix|postfix]"
 
-    bool show_all = false;
-    bool detailed = false;
-    bool json = false;
-    std::string status;
-    std::string output_file;
-    optind = 0;
-    while (true) {
-        int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "adjs:o:", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 'a':
-            show_all = true;
-            break;
-        case 'd':
-            detailed = true;
-            break;
-        case 'j':
-            json = true;
-            break;
-        case 's':
-            status = optarg;
-            break;
-        case 'o':
-            output_file = optarg;
-            break;
-        default:
-            return false;
-        }
+    // All valid parameters and flags are given as follows.
+    static const std::set<std::string> params = {
+        "o", "output", "s", "status",
+        "p", "app_name_pattern", "m", "match_type"};
+    static const std::set<std::string> flags = {
+        "a", "all", "d", "detailed", "j", "json"};
+
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+
+    // Check if input parameters and flags are valid.
+    const auto &check = validate_cmd(cmd, params, flags);
+    if (!check) {
+        SHELL_PRINTLN_ERROR("{}", check.description());
+        return false;
     }
 
-    ::dsn::app_status::type s = ::dsn::app_status::AS_INVALID;
-    if (!status.empty() && status != "all") {
-        s = type_from_string(::dsn::_app_status_VALUES_TO_NAMES,
-                             std::string("as_") + status,
-                             ::dsn::app_status::AS_INVALID);
-        PRINT_AND_RETURN_FALSE_IF_NOT(
-            s != ::dsn::app_status::AS_INVALID, "parse {} as app_status::type failed", status);
+    bool show_all = cmd[{"-a", "--all"}];
+    bool detailed = cmd[{"-d", "--detailed"}];
+    bool json = cmd[{"-j", "--json"}];
+
+    const std::string output_file(cmd({"-o", "--output"}, "").str());
+
+    const std::string status_str(cmd({"-s", "--status"}, "").str());
+    auto status = dsn::app_status::AS_INVALID;
+    if (!status_str.empty() && status_str != "all") {
+        status = type_from_string(dsn::_app_status_VALUES_TO_NAMES,
+                             fmt::format("as_{}", status_str),
+                             dsn::app_status::AS_INVALID);
+        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(
+            status != dsn::app_status::AS_INVALID, "parse {} as app_status::type failed", status_str);
     }
-    ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
-    if (err != ::dsn::ERR_OK)
+
+    // Read the parttern of table name with empty string as default.
+    const std::string app_name_pattern(cmd({"-p", "--app_name_pattern"}, "").str());
+
+    // Read the match type of the pattern for table name with "matching all" as default,
+    // typically requesting all tables owned by this cluster.
+    auto match_type = dsn::utils::pattern_match_type::PMT_MATCH_ALL;
+    PARSE_OPT_ENUM(match_type, dsn::utils::pattern_match_type::PMT_INVALID, {"-m", "--match_type"});
+
+    const auto &err = sc->ddl_client->list_apps( show_all, detailed, json, output_file,status, app_name_pattern, match_type);
+    if (err != ::dsn::ERR_OK) {
         std::cout << "list apps failed, error=" << err << std::endl;
+    }
+
     return true;
 }
 

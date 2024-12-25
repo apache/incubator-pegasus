@@ -469,7 +469,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         s = type_from_string(dsn::replication::_node_status_VALUES_TO_NAMES,
                              std::string("ns_") + status,
                              ::dsn::replication::node_status::NS_INVALID);
-        PRINT_AND_RETURN_FALSE_IF_NOT(s != ::dsn::replication::node_status::NS_INVALID,
+        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(s != ::dsn::replication::node_status::NS_INVALID,
                                       "parse {} as node_status::type failed",
                                       status);
     }
