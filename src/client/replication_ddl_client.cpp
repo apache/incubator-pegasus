@@ -287,8 +287,8 @@ dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::st
 }
 
 dsn::error_code replication_ddl_client::list_apps(dsn::app_status::type status,
-const std::string &app_name_pattern,
-                                  utils::pattern_match_type::type match_type,
+                                                  const std::string &app_name_pattern,
+                                                  utils::pattern_match_type::type match_type,
                                                   std::vector<::dsn::app_info> &apps)
 {
     auto req = std::make_shared<configuration_list_apps_request>();
@@ -316,21 +316,19 @@ const std::string &app_name_pattern,
 dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status,
                                                   std::vector<::dsn::app_info> &apps)
 {
-    return list_apps(status, {}, utils::pattern_match_type::MATCH_ALL, apps);
+    return list_apps(status, {}, utils::pattern_match_type::PMT_MATCH_ALL, apps);
 }
 
-dsn::error_code replication_ddl_client::list_apps(
-                                                  bool show_all,
+dsn::error_code replication_ddl_client::list_apps(bool show_all,
                                                   bool detailed,
                                                   bool json,
                                                   const std::string &output_file,
-dsn::app_status::type status,
-const std::string &app_name_pattern,
-                                  utils::pattern_match_type::type match_type
-                                                  )
+                                                  dsn::app_status::type status,
+                                                  const std::string &app_name_pattern,
+                                                  utils::pattern_match_type::type match_type)
 {
     std::vector<::dsn::app_info> apps;
-    auto r = list_apps(status, app_name_pattern, match_type,apps);
+    auto r = list_apps(status, app_name_pattern, match_type, apps);
     if (r != dsn::ERR_OK) {
         return r;
     }
@@ -488,14 +486,19 @@ const std::string &app_name_pattern,
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::list_apps(
-                                                  bool show_all,
+dsn::error_code replication_ddl_client::list_apps(bool show_all,
                                                   bool detailed,
                                                   bool json,
                                                   const std::string &output_file,
                                                   const dsn::app_status::type status)
 {
-    return list_apps(show_all, detailed, json, output_file, status, {}, utils::pattern_match_type::MATCH_ALL);
+    return list_apps(show_all,
+                     detailed,
+                     json,
+                     output_file,
+                     status,
+                     {},
+                     utils::pattern_match_type::PMT_MATCH_ALL);
 }
 
 dsn::error_code replication_ddl_client::list_nodes(
@@ -1489,7 +1492,8 @@ dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name
                                                      std::map<std::string, std::string> &envs)
 {
     std::vector<::dsn::app_info> apps;
-    auto r = list_apps(dsn::app_status::AS_AVAILABLE, app_name, utils::pattern_match_type::PMT_MATCH_EXACT, apps);
+    auto r = list_apps(
+        dsn::app_status::AS_AVAILABLE, app_name, utils::pattern_match_type::PMT_MATCH_EXACT, apps);
     if (r != dsn::ERR_OK) {
         return r;
     }

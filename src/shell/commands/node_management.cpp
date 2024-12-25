@@ -470,8 +470,8 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
                              std::string("ns_") + status,
                              ::dsn::replication::node_status::NS_INVALID);
         SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(s != ::dsn::replication::node_status::NS_INVALID,
-                                      "parse {} as node_status::type failed",
-                                      status);
+                                            "parse {} as node_status::type failed",
+                                            status);
     }
 
     std::map<dsn::host_port, dsn::replication::node_status::type> status_by_hp;

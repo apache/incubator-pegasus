@@ -51,8 +51,8 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
                          std::string("fl_") + args.argv[1],
                          meta_function_level::fl_invalid);
     SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(l != meta_function_level::fl_invalid,
-                                  "parse {} as meta function level failed",
-                                  args.argv[1]);
+                                        "parse {} as meta function level failed",
+                                        args.argv[1]);
 
     configuration_meta_control_response resp = sc->ddl_client->control_meta_function_level(l);
     if (resp.err == dsn::ERR_OK) {
@@ -114,7 +114,8 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
             break;
         case 't':
             target = dsn::host_port::from_string(optarg);
-            SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(target, "parse {} as target_host_port failed", optarg);
+            SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(
+                target, "parse {} as target_host_port failed", optarg);
             break;
         case 'n':
             node = dsn::host_port::from_string(optarg);

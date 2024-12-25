@@ -1613,44 +1613,48 @@ void server_state::list_apps(const configuration_list_apps_request &request,
                              dsn::message_ex *msg) const
 {
     LOG_DEBUG("list app request: {}{}status={}",
-            request.__isset.app_name_pattern ? fmt::format("app_name_pattern={}, ", request.app_name_pattern) :"",
-            request.__isset.match_type ? fmt::format("match_type={}, ", enum_to_string(request.match_type)):"",
-            request.status);
+              request.__isset.app_name_pattern
+                  ? fmt::format("app_name_pattern={}, ", request.app_name_pattern)
+                  : "",
+              request.__isset.match_type
+                  ? fmt::format("match_type={}, ", enum_to_string(request.match_type))
+                  : "",
+              request.status);
 
     zauto_read_lock l(_lock);
 
     for (const auto &[_, app] : _all_apps) {
         if (request.__isset.app_name_pattern && request.__isset.match_type) {
-        const auto &err =
-        utils::pattern_match(app->app_name, request.app_name_pattern, request.match_type);
-        if (err == ERR_NOT_MATCHED) {
-            continue;
-        }
+            const auto &err =
+                utils::pattern_match(app->app_name, request.app_name_pattern, request.match_type);
+            if (err == ERR_NOT_MATCHED) {
+                continue;
+            }
 
-        if (err == ERR_NOT_IMPLEMENTED) {
-            const auto &msg = fmt::format("match_type {} is not supported now",
-                                          static_cast<int>(request.match_type));
-            response.err = err;
-            response.__set_hint_message(msg);
+            if (err == ERR_NOT_IMPLEMENTED) {
+                const auto &msg = fmt::format("match_type {} is not supported now",
+                                              static_cast<int>(request.match_type));
+                response.err = err;
+                response.__set_hint_message(msg);
 
-            LOG_ERROR("{}: app_name_pattern={}", msg, request.app_name_pattern);
+                LOG_ERROR("{}: app_name_pattern={}", msg, request.app_name_pattern);
 
-            return;
-        }
+                return;
+            }
 
-        if (err != ERR_OK) {
-            response.err = err;
-            return;
-        }
+            if (err != ERR_OK) {
+                response.err = err;
+                return;
+            }
         }
 
         if (request.status != app_status::AS_INVALID && request.status != app->status) {
             continue;
         }
 
-            if (msg ==  nullptr|| _meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
-                response.infos.push_back(*app);
-            }
+        if (msg == nullptr || _meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
+            response.infos.push_back(*app);
+        }
     }
 
     response.err = dsn::ERR_OK;

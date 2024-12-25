@@ -69,10 +69,8 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
 
     // All valid parameters and flags are given as follows.
     static const std::set<std::string> params = {
-        "o", "output", "s", "status",
-        "p", "app_name_pattern", "m", "match_type"};
-    static const std::set<std::string> flags = {
-        "a", "all", "d", "detailed", "j", "json"};
+        "o", "output", "s", "status", "p", "app_name_pattern", "m", "match_type"};
+    static const std::set<std::string> flags = {"a", "all", "d", "detailed", "j", "json"};
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
@@ -93,10 +91,11 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     auto status = dsn::app_status::AS_INVALID;
     if (!status_str.empty() && status_str != "all") {
         status = type_from_string(dsn::_app_status_VALUES_TO_NAMES,
-                             fmt::format("as_{}", status_str),
-                             dsn::app_status::AS_INVALID);
-        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(
-            status != dsn::app_status::AS_INVALID, "parse {} as app_status::type failed", status_str);
+                                  fmt::format("as_{}", status_str),
+                                  dsn::app_status::AS_INVALID);
+        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(status != dsn::app_status::AS_INVALID,
+                                            "parse {} as app_status::type failed",
+                                            status_str);
     }
 
     // Read the parttern of table name with empty string as default.
@@ -107,7 +106,8 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     auto match_type = dsn::utils::pattern_match_type::PMT_MATCH_ALL;
     PARSE_OPT_ENUM(match_type, dsn::utils::pattern_match_type::PMT_INVALID, {"-m", "--match_type"});
 
-    const auto &err = sc->ddl_client->list_apps( show_all, detailed, json, output_file,status, app_name_pattern, match_type);
+    const auto &err = sc->ddl_client->list_apps(
+        show_all, detailed, json, output_file, status, app_name_pattern, match_type);
     if (err != ::dsn::ERR_OK) {
         std::cout << "list apps failed, error=" << err << std::endl;
     }

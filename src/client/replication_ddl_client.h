@@ -95,27 +95,23 @@ public:
     error_with<configuration_rename_app_response> rename_app(const std::string &old_app_name,
                                                              const std::string &new_app_name);
 
-    dsn::error_code list_apps(
-                              bool show_all,
+    dsn::error_code list_apps(bool show_all,
                               bool detailed,
                               bool json,
                               const std::string &output_file,
                               dsn::app_status::type status,
-const std::string &app_name_pattern,
-                                  utils::pattern_match_type::type match_type
-                              );
+                              const std::string &app_name_pattern,
+                              utils::pattern_match_type::type match_type);
 
-    dsn::error_code list_apps(
-                              bool show_all,
+    dsn::error_code list_apps(bool show_all,
                               bool detailed,
                               bool json,
                               const std::string &output_file,
                               dsn::app_status::type status);
 
-    dsn::error_code list_apps(
-                                  dsn::app_status::type status,
-const std::string &app_name_pattern,
-                                  utils::pattern_match_type::type match_type,
+    dsn::error_code list_apps(dsn::app_status::type status,
+                              const std::string &app_name_pattern,
+                              utils::pattern_match_type::type match_type,
                               std::vector<::dsn::app_info> &apps);
 
     dsn::error_code list_apps(const dsn::app_status::type status,

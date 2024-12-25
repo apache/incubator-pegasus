@@ -214,8 +214,8 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             continue;
         }
 
-            resp.status_code = http_status_code::kBadRequest;
-            return;
+        resp.status_code = http_status_code::kBadRequest;
+        return;
     }
 
     if (!redirect_if_not_primary(req, resp)) {
