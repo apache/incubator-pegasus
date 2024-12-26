@@ -303,7 +303,7 @@ error_s replication_ddl_client::list_apps(dsn::app_status::type status,
     }
 
     if (resp.err != dsn::ERR_OK) {
-        return FMT_ERR(resp.err, resp.hint_message);
+        return error_s::make(resp.err, resp.hint_message);
     }
 
     apps = std::move(resp.infos);
@@ -425,7 +425,7 @@ error_s replication_ddl_client::list_apps(bool show_all,
             const auto &err = list_app(info.app_name, app_id, partition_count, pcs);
             if (err != ERR_OK) {
                 LOG_ERROR("list app({}) failed, err={}", info.app_name, err);
-                return FMT_ERR(err, "");
+                return error_s::make(err);
             }
             CHECK_EQ(info.app_id, app_id);
             CHECK_EQ(info.partition_count, partition_count);

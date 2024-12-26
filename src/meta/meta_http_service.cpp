@@ -52,6 +52,7 @@
 #include "server_load_balancer.h"
 #include "server_state.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
@@ -229,7 +230,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
     _service->_state->list_apps(request, response);
 
     if (response.err != dsn::ERR_OK) {
-        resp.body = response.err;
+        resp.body = error_s::make(response.err, response.hint_message).description();
         resp.status_code = http_status_code::kInternalServerError;
         return;
     }
@@ -524,7 +525,7 @@ void meta_http_service::get_app_envs_handler(const http_request &req, http_respo
     request.status = dsn::app_status::AS_AVAILABLE;
     _service->_state->list_apps(request, response);
     if (response.err != dsn::ERR_OK) {
-        resp.body = response.err.to_string();
+        resp.body = error_s::make(response.err, response.hint_message).description();
         resp.status_code = http_status_code::kInternalServerError;
         return;
     }
