@@ -610,6 +610,7 @@ private:
     friend class replica_disk_test;
     friend class replica_disk_migrate_test;
     friend class open_replica_test;
+    friend class mock_load_replica;
     friend class replica_follower;
     friend class ::pegasus::server::pegasus_server_test_base;
     friend class ::pegasus::server::rocksdb_wrapper_test;

@@ -88,6 +88,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-misc-definitions-in-headers,"
                            "-misc-non-private-member-variables-in-classes,"
                            "-misc-unused-parameters,"
+                           "-modernize-avoid-bind,"
                            "-modernize-avoid-c-arrays,"
                            "-modernize-replace-disallow-copy-and-assign-macro,"
                            "-modernize-use-trailing-return-type,"
@@ -95,7 +96,8 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-readability-function-cognitive-complexity,"
                            "-readability-identifier-length,"
                            "-readability-magic-numbers,"
-                           "-readability-named-parameter",
+                           "-readability-named-parameter,"
+                           "-readability-suspicious-call-argument",
                    "-extra-arg=-language=c++",
                    "-extra-arg=-std=c++17",
                    "-extra-arg=-Ithirdparty/output/include"]
