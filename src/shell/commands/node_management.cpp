@@ -494,9 +494,9 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
 
     if (detailed) {
         std::vector<::dsn::app_info> apps;
-        r = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
-        if (r != dsn::ERR_OK) {
-            std::cout << "list apps failed, error=" << r << std::endl;
+        const auto &result = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
+        if (!result) {
+            std::cout << "list apps failed, error=" << result << std::endl;
             return true;
         }
 

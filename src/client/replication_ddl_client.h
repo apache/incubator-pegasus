@@ -95,27 +95,26 @@ public:
     error_with<configuration_rename_app_response> rename_app(const std::string &old_app_name,
                                                              const std::string &new_app_name);
 
-    dsn::error_code list_apps(bool show_all,
-                              bool detailed,
-                              bool json,
-                              const std::string &output_file,
-                              dsn::app_status::type status,
-                              const std::string &app_name_pattern,
-                              utils::pattern_match_type::type match_type);
+    error_s list_apps(bool show_all,
+                      bool detailed,
+                      bool json,
+                      const std::string &output_file,
+                      dsn::app_status::type status,
+                      const std::string &app_name_pattern,
+                      utils::pattern_match_type::type match_type);
 
-    dsn::error_code list_apps(bool show_all,
-                              bool detailed,
-                              bool json,
-                              const std::string &output_file,
-                              dsn::app_status::type status);
+    error_s list_apps(bool show_all,
+                      bool detailed,
+                      bool json,
+                      const std::string &output_file,
+                      dsn::app_status::type status);
 
-    dsn::error_code list_apps(dsn::app_status::type status,
-                              const std::string &app_name_pattern,
-                              utils::pattern_match_type::type match_type,
-                              std::vector<::dsn::app_info> &apps);
+    error_s list_apps(dsn::app_status::type status,
+                      const std::string &app_name_pattern,
+                      utils::pattern_match_type::type match_type,
+                      std::vector<::dsn::app_info> &apps);
 
-    dsn::error_code list_apps(const dsn::app_status::type status,
-                              std::vector<::dsn::app_info> &apps);
+    error_s list_apps(dsn::app_status::type status, std::vector<::dsn::app_info> &apps);
 
     dsn::error_code list_nodes(const dsn::replication::node_status::type status,
                                bool detailed,
@@ -303,8 +302,8 @@ private:
     template <typename TRequest>
     rpc_response_task_ptr request_meta(const dsn::task_code &code,
                                        std::shared_ptr<TRequest> &req,
-                                       int timeout_milliseconds = 0,
-                                       int reply_thread_hash = 0)
+                                       int timeout_milliseconds,
+                                       int reply_thread_hash)
     {
         auto msg = dsn::message_ex::create_request(code, timeout_milliseconds);
         dsn::marshall(msg, *req);
@@ -325,28 +324,44 @@ private:
         return task;
     }
 
+    template <typename TRequest>
+    rpc_response_task_ptr request_meta(const dsn::task_code &code,
+                                       std::shared_ptr<TRequest> &req,
+                                       int timeout_milliseconds)
+    {
+        return request_meta(code, req, timeout_milliseconds, 0);
+    }
+
+    template <typename TRequest>
+    rpc_response_task_ptr request_meta(const dsn::task_code &code, std::shared_ptr<TRequest> &req)
+    {
+        return request_meta(code, req, 0);
+    }
+
     static inline bool is_busy(const dsn::error_code &err)
     {
         return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
     }
 
     template <typename TRequest, typename TResponse>
-    rpc_response_task_ptr request_meta_and_wait_response(const dsn::task_code &code,
-                                                         std::shared_ptr<TRequest> &req,
-                                                         TResponse &resp,
-                                                         int timeout_milliseconds = 0,
-                                                         int reply_thread_hash = 0)
+    error_s request_meta_and_wait_response(const dsn::task_code &code,
+                                           std::shared_ptr<TRequest> &req,
+                                           TResponse &resp,
+                                           int timeout_milliseconds,
+                                           int reply_thread_hash)
     {
-        rpc_response_task_ptr resp_task;
         for (uint32_t i = 1; i <= FLAGS_ddl_client_max_attempt_count; ++i) {
-            resp_task = request_meta(code, req, timeout_milliseconds, reply_thread_hash);
+            auto resp_task = request_meta(code, req, timeout_milliseconds, reply_thread_hash);
             resp_task->wait();
 
             // Failed to send request to meta server. The possible reason might be:
             // * cannot connect to meta server (such as ERR_NETWORK_FAILURE);
             // * do not receive any response from meta server (such as ERR_TIMEOUT)
             if (resp_task->error() != dsn::ERR_OK) {
-                return resp_task;
+                return FMT_ERR(resp_task->error(),
+                               "request meta failed: task={}, error={}",
+                               code,
+                               resp_task->error());
             }
 
             // Once response is nullptr, it must be mocked by unit tests since network is
@@ -371,7 +386,7 @@ private:
             // Once `err` field in the received response is ERR_OK or some non-busy error, do not
             // attempt again.
             if (resp.err == dsn::ERR_OK || !is_busy(resp.err)) {
-                return resp_task;
+                return error_s::ok();
             }
 
             // Would not sleep for the last attempt.
@@ -384,7 +399,25 @@ private:
                     std::chrono::milliseconds(FLAGS_ddl_client_retry_interval_ms));
             }
         }
-        return resp_task;
+
+        return error_s::ok();
+    }
+
+    template <typename TRequest, typename TResponse>
+    error_s request_meta_and_wait_response(const dsn::task_code &code,
+                                           std::shared_ptr<TRequest> &req,
+                                           TResponse &resp,
+                                           int timeout_milliseconds)
+    {
+        return request_meta_and_wait_response(code, req, resp, timeout_milliseconds, 0);
+    }
+
+    template <typename TRequest, typename TResponse>
+    error_s request_meta_and_wait_response(const dsn::task_code &code,
+                                           std::shared_ptr<TRequest> &req,
+                                           TResponse &resp)
+    {
+        return request_meta_and_wait_response(code, req, resp, 0);
     }
 
     /// Send request to meta server synchronously.

@@ -103,11 +103,16 @@ public:
         if (!_info) {
             return ERR_OK.to_string();
         }
-        std::string code = _info->code.to_string();
-        return _info->msg.empty() ? code : code + ": " + _info->msg;
+
+        std::string msg(_info->code.to_string());
+        if (!_info->msg.empty()) {
+            fmt::format_to(std::back_inserter(msg), ": {}", _info->msg);
+        }
+
+        return msg;
     }
 
-    error_code code() const { return _info ? error_code(_info->code) : ERR_OK; }
+    error_code code() const { return _info ? _info->code : ERR_OK; }
 
     error_s &operator<<(const char str[])
     {

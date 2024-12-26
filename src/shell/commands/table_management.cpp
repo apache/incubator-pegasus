@@ -26,9 +26,11 @@
 #include <algorithm>
 #include <cstdint>
 #include <fstream>
+#include <initializer_list>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -39,6 +41,7 @@
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
 #include "rpc/rpc_host_port.h"
+#include "shell/argh.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
@@ -52,6 +55,7 @@
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
+#include "utils_types.h"
 
 DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
 DSN_DEFINE_validator(tables_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
@@ -106,10 +110,10 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     auto match_type = dsn::utils::pattern_match_type::PMT_MATCH_ALL;
     PARSE_OPT_ENUM(match_type, dsn::utils::pattern_match_type::PMT_INVALID, {"-m", "--match_type"});
 
-    const auto &err = sc->ddl_client->list_apps(
+    const auto &result = sc->ddl_client->list_apps(
         show_all, detailed, json, output_file, status, app_name_pattern, match_type);
-    if (err != ::dsn::ERR_OK) {
-        std::cout << "list apps failed, error=" << err << std::endl;
+    if (!result) {
+        std::cout << "list apps failed, error=" << result << std::endl;
     }
 
     return true;

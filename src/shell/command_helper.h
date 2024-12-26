@@ -104,8 +104,6 @@
                                         optarg);                                                   \
     SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(sample_interval_ms > 0, "sample_interval_ms should be > 0")
 
-using namespace dsn::replication;
-
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_GET_METRICS, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
@@ -1861,11 +1859,12 @@ inline bool get_apps_and_nodes(shell_context *sc,
                                std::vector<::dsn::app_info> &apps,
                                std::vector<node_desc> &nodes)
 {
-    dsn::error_code err = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
-    if (err != dsn::ERR_OK) {
-        LOG_ERROR("list apps failed, error = {}", err);
+    const auto &result = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
+    if (!result) {
+        LOG_ERROR("list apps failed, error={}", result);
         return false;
     }
+
     if (!fill_nodes(sc, "replica-server", nodes)) {
         LOG_ERROR("get replica server node list failed");
         return false;

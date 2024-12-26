@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <cstdio>
 #include <functional>
 #include <map>
 #include <set>
@@ -29,7 +28,6 @@
 #include "shell/argh.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/ports.h"
 #include "utils/strings.h"
 
 namespace dsn {
