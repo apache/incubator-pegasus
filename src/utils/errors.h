@@ -112,7 +112,7 @@ public:
         return msg;
     }
 
-    error_code code() const { return _info ? _info->code : ERR_OK; }
+    [[nodiscard]] error_code code() const { return _info ? _info->code : ERR_OK; }
 
     error_s &operator<<(const char str[])
     {

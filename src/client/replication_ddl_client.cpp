@@ -249,7 +249,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, in
     dsn::replication::configuration_drop_app_response resp;
     const auto &req_status = request_meta_and_wait_response(RPC_CM_DROP_APP, req, resp);
 
-    if (!req_status.code()) {
+    if (!req_status) {
         return req_status.code();
     }
 
@@ -419,8 +419,8 @@ error_s replication_ddl_client::list_apps(bool show_all,
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
             }
-            int32_t app_id;
-            int32_t partition_count;
+            int32_t app_id = 0;
+            int32_t partition_count = 0;
             std::vector<partition_configuration> pcs;
             const auto &err = list_app(info.app_name, app_id, partition_count, pcs);
             if (err != ERR_OK) {
@@ -457,14 +457,17 @@ error_s replication_ddl_client::list_apps(bool show_all,
             tp_health.append_data(write_unhealthy);
             tp_health.append_data(read_unhealthy);
 
-            if (fully_healthy == info.partition_count)
-                total_fully_healthy_app_count++;
-            else
-                total_unhealthy_app_count++;
-            if (write_unhealthy > 0)
-                total_write_unhealthy_app_count++;
-            if (read_unhealthy > 0)
-                total_read_unhealthy_app_count++;
+            if (fully_healthy == info.partition_count) {
+                ++total_fully_healthy_app_count;
+            } else {
+                ++total_unhealthy_app_count;
+            }
+            if (write_unhealthy > 0) {
+                ++total_write_unhealthy_app_count;
+            }
+            if (read_unhealthy > 0) {
+                ++total_read_unhealthy_app_count;
+            }
         }
         multi_printer.add(std::move(tp_health));
     }
@@ -501,7 +504,7 @@ error_s replication_ddl_client::list_apps(bool show_all,
 }
 
 dsn::error_code replication_ddl_client::list_nodes(
-    const dsn::replication::node_status::type status,
+    dsn::replication::node_status::type status,
     std::map<dsn::host_port, dsn::replication::node_status::type> &nodes)
 {
     auto req = std::make_shared<configuration_list_nodes_request>();
@@ -548,7 +551,7 @@ std::string replication_ddl_client::node_name(const host_port &hp, bool resolve_
     return dns_resolver::instance().resolve_address(hp).to_string();
 }
 
-dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status,
+dsn::error_code replication_ddl_client::list_nodes(dsn::replication::node_status::type status,
                                                    bool detailed,
                                                    const std::string &file_name,
                                                    bool resolve_ip)

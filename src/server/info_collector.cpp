@@ -86,7 +86,8 @@ info_collector::info_collector()
     _shell_context = std::make_shared<shell_context>();
     _shell_context->current_cluster_name = _cluster_name;
     _shell_context->meta_list = meta_servers;
-    _shell_context->ddl_client.reset(new dsn::replication::replication_ddl_client(meta_servers));
+    _shell_context->ddl_client =
+        std::make_unique<dsn::replication::replication_ddl_client>(meta_servers);
 
     // initialize the _client.
     CHECK(pegasus_client_factory::initialize(nullptr), "Initialize the pegasus client failed");

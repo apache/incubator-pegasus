@@ -116,13 +116,13 @@ public:
 
     error_s list_apps(dsn::app_status::type status, std::vector<::dsn::app_info> &apps);
 
-    dsn::error_code list_nodes(const dsn::replication::node_status::type status,
+    dsn::error_code list_nodes(dsn::replication::node_status::type status,
                                bool detailed,
                                const std::string &file_name,
                                bool resolve_ip = false);
 
     dsn::error_code
-    list_nodes(const dsn::replication::node_status::type status,
+    list_nodes(dsn::replication::node_status::type status,
                std::map<dsn::host_port, dsn::replication::node_status::type> &nodes);
 
     dsn::error_code cluster_name(int64_t timeout_ms, std::string &cluster_name);
@@ -305,7 +305,7 @@ private:
                                        int timeout_milliseconds,
                                        int reply_thread_hash)
     {
-        auto msg = dsn::message_ex::create_request(code, timeout_milliseconds);
+        auto *msg = dsn::message_ex::create_request(code, timeout_milliseconds);
         dsn::marshall(msg, *req);
 
         auto task =
