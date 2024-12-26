@@ -28,8 +28,6 @@
 #include "meta_admin_types.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "task/task.h"
-#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fail_point.h"

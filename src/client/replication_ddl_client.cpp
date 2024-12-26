@@ -649,6 +649,13 @@ dsn::error_code replication_ddl_client::list_nodes(dsn::replication::node_status
 #undef RESOLVE
 }
 
+dsn::error_code replication_ddl_client::list_nodes(dsn::replication::node_status::type status,
+                                                   bool detailed,
+                                                   const std::string &file_name)
+{
+    return list_nodes(status, detailed, file_name, false);
+}
+
 dsn::error_code replication_ddl_client::cluster_name(int64_t timeout_ms, std::string &cluster_name)
 {
     auto req = std::make_shared<configuration_cluster_info_request>();

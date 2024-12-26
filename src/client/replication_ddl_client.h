@@ -119,7 +119,11 @@ public:
     dsn::error_code list_nodes(dsn::replication::node_status::type status,
                                bool detailed,
                                const std::string &file_name,
-                               bool resolve_ip = false);
+                               bool resolve_ip);
+
+    dsn::error_code list_nodes(dsn::replication::node_status::type status,
+                               bool detailed,
+                               const std::string &file_name);
 
     dsn::error_code
     list_nodes(dsn::replication::node_status::type status,
