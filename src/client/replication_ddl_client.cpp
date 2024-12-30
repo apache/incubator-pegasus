@@ -218,22 +218,23 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
     const auto &req_status = request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
 
     if (!req_status) {
-        std::cout << "create app " << app_name
-                  << " failed: [create] call server error: " << req_status << std::endl;
+        fmt::println("create app {} failed: [create] call server error: {}", app_name, req_status);
         return req_status.code();
     }
 
     if (resp.err != dsn::ERR_OK) {
-        std::cout << "create app " << app_name
-                  << " failed: [create] received server error: " << resp.err << std::endl;
+        fmt::println(
+            "create app {} failed: [create] received server error: {}", app_name, resp.err);
         return resp.err;
     }
 
-    std::cout << "create app " << app_name << " succeed, waiting for app ready" << std::endl;
+    fmt::println("create app {} succeed, waiting for app ready", app_name);
 
     dsn::error_code error = wait_app_ready(app_name, partition_count, replica_count);
-    if (error == dsn::ERR_OK)
-        std::cout << app_name << " is ready now!" << std::endl;
+    if (error == dsn::ERR_OK) {
+        fmt::println("{} is ready now!", app_name);
+    }
+
     return error;
 }
 

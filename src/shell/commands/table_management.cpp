@@ -113,7 +113,7 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     const auto &result = sc->ddl_client->list_apps(
         show_all, detailed, json, output_file, status, app_name_pattern, match_type);
     if (!result) {
-        std::cout << "list apps failed, error=" << result << std::endl;
+        fmt::println("list apps failed, error={}", result);
     }
 
     return true;

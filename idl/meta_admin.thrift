@@ -199,7 +199,7 @@ struct configuration_list_apps_request
 {
     1:dsn.layer2.app_status                 status = app_status.AS_INVALID;
 
-    // The pattern used to match an app name, whose type is specified by `match_type`.
+    // The pattern is used to match an app name, whose type is specified by `match_type`.
     2:optional string                       app_name_pattern;
     3:optional utils.pattern_match_type     match_type;
 }
@@ -209,6 +209,7 @@ struct configuration_list_apps_response
     1:dsn.error_code                err;
     2:list<dsn.layer2.app_info>     infos;
 
+    // Extra message to describe the error.
     3:optional string               hint_message;
 }
 

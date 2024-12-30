@@ -254,7 +254,7 @@ struct duplication_sync_response
 // per-duplication info and progress of each partition for one or multiple tables.
 struct duplication_list_request
 {
-    // The pattern used to match an app name, whose type is specified by `match_type`.
+    // The pattern is used to match an app name, whose type is specified by `match_type`.
     1:string                            app_name_pattern;
     2:utils.pattern_match_type          match_type;
 }

@@ -75,6 +75,20 @@ struct list_nodes_helper
     }
 };
 
+#define INIT_AND_CALL_LIST_APPS(target_status, list_apps_req, list_apps_resp, http_resp)           \
+    configuration_list_apps_request list_apps_req;                                                 \
+    configuration_list_apps_response list_apps_resp;                                               \
+    do {                                                                                           \
+        list_apps_req.status = target_status;                                                      \
+        _service->_state->list_apps(list_apps_req, list_apps_resp);                                \
+        if (list_apps_resp.err != ERR_OK) {                                                        \
+            http_resp.status_code = http_status_code::kInternalServerError;                        \
+            http_resp.body =                                                                       \
+                error_s::make(list_apps_resp.err, list_apps_resp.hint_message).description();      \
+            return;                                                                                \
+        }                                                                                          \
+    } while (false)
+
 void meta_http_service::get_app_handler(const http_request &req, http_response &resp)
 {
     std::string app_name;
@@ -223,18 +237,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         return;
     }
 
-    configuration_list_apps_response response;
-    configuration_list_apps_request request;
-    request.status = dsn::app_status::AS_INVALID;
-
-    _service->_state->list_apps(request, response);
-
-    if (response.err != dsn::ERR_OK) {
-        resp.body = error_s::make(response.err, response.hint_message).description();
-        resp.status_code = http_status_code::kInternalServerError;
-        return;
-    }
-    std::vector<::dsn::app_info> &apps = response.infos;
+    INIT_AND_CALL_LIST_APPS(app_status::AS_INVALID, list_apps_req, list_apps_resp, resp);
 
     // output as json format
     std::ostringstream out;
@@ -252,7 +255,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
     tp_general.add_column("drop_time");
     tp_general.add_column("drop_expire");
     tp_general.add_column("envs_count");
-    for (const auto &app : apps) {
+    for (const auto &app : list_apps_resp.infos) {
         if (app.status != dsn::app_status::AS_AVAILABLE) {
             continue;
         }
@@ -308,7 +311,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         tp_health.add_column("unhealthy");
         tp_health.add_column("write_unhealthy");
         tp_health.add_column("read_unhealthy");
-        for (auto &info : apps) {
+        for (auto &info : list_apps_resp.infos) {
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
             }
@@ -400,11 +403,9 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
     int unalive_node_count = (_service->_dead_set).size();
 
     if (detailed) {
-        configuration_list_apps_response response;
-        configuration_list_apps_request request;
-        request.status = dsn::app_status::AS_AVAILABLE;
-        _service->_state->list_apps(request, response);
-        for (const auto &app : response.infos) {
+        INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_req, list_apps_resp, resp);
+
+        for (const auto &app : list_apps_resp.infos) {
             query_cfg_request request_app;
             query_cfg_response response_app;
             request_app.app_name = app.app_name;
@@ -520,19 +521,11 @@ void meta_http_service::get_app_envs_handler(const http_request &req, http_respo
     }
 
     // get all of the apps
-    configuration_list_apps_response response;
-    configuration_list_apps_request request;
-    request.status = dsn::app_status::AS_AVAILABLE;
-    _service->_state->list_apps(request, response);
-    if (response.err != dsn::ERR_OK) {
-        resp.body = error_s::make(response.err, response.hint_message).description();
-        resp.status_code = http_status_code::kInternalServerError;
-        return;
-    }
+    INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_req, list_apps_resp, resp);
 
     // using app envs to generate a table_printer
     dsn::utils::table_printer tp;
-    for (auto &app : response.infos) {
+    for (auto &app : list_apps_resp.infos) {
         if (app.app_name == app_name) {
             for (auto env : app.envs) {
                 tp.add_row_name_and_data(env.first, env.second);
