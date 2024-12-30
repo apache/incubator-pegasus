@@ -457,10 +457,12 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     dsn::utils::multi_table_printer multi_printer;
     if (!(status.empty() && output_file.empty())) {
         dsn::utils::table_printer tp("parameters");
-        if (!status.empty())
+        if (!status.empty()) {
             tp.add_row_name_and_data("status", status);
-        if (!output_file.empty())
+        }
+        if (!output_file.empty()) {
             tp.add_row_name_and_data("out_file", output_file);
+        }
         multi_printer.add(std::move(tp));
     }
 

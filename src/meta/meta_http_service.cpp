@@ -399,8 +399,9 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
     for (const auto &node : _service->_dead_set) {
         tmp_map.emplace(node, list_nodes_helper(node.to_string(), "UNALIVE"));
     }
-    int alive_node_count = (_service->_alive_set).size();
-    int unalive_node_count = (_service->_dead_set).size();
+
+    size_t alive_node_count = (_service->_alive_set).size();
+    size_t unalive_node_count = (_service->_dead_set).size();
 
     if (detailed) {
         INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_req, list_apps_resp, resp);
@@ -527,7 +528,7 @@ void meta_http_service::get_app_envs_handler(const http_request &req, http_respo
     dsn::utils::table_printer tp;
     for (auto &app : list_apps_resp.infos) {
         if (app.app_name == app_name) {
-            for (auto env : app.envs) {
+            for (const auto &env : app.envs) {
                 tp.add_row_name_and_data(env.first, env.second);
             }
             break;
