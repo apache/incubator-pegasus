@@ -27,8 +27,7 @@
 #include "task/task_code.h"
 #pragma once
 
-namespace dsn {
-namespace service {
+namespace dsn::service {
 // define RPC task code for service 'nfs'
 DEFINE_TASK_CODE_RPC(RPC_NFS_COPY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_BLOCK_SERVICE)
 DEFINE_TASK_CODE_RPC(RPC_NFS_GET_FILE_SIZE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_BLOCK_SERVICE)
@@ -41,5 +40,4 @@ DEFINE_TASK_CODE(LPC_NFS_FILE_CLOSE_TIMER, TASK_PRIORITY_COMMON, ::dsn::THREAD_P
 DEFINE_TASK_CODE_AIO(LPC_NFS_WRITE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_BLOCK_SERVICE)
 
 DEFINE_TASK_CODE_AIO(LPC_NFS_COPY_FILE, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_BLOCK_SERVICE)
-} // namespace service
-} // namespace dsn
+} // namespace dsn::service

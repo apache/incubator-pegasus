@@ -44,7 +44,7 @@ namespace dist {
 namespace block_service {
 
 class block_file;
-typedef dsn::ref_ptr<block_file> block_file_ptr;
+using block_file_ptr = dsn::ref_ptr<block_file>;
 
 /**
  * @brief The ls_request struct, use to list all the files and directories under the dir_name
