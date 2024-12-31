@@ -88,6 +88,8 @@ func CloseClient(client *Client) error {
 		fmt.Printf("Error: failed to close nodes session [%s]\n", err)
 		errorStrings = append(errorStrings, err.Error())
 	}
-
-	return fmt.Errorf("%s", strings.Join(errorStrings, "\n"))
+	if len(errorStrings) != 0 {
+		return fmt.Errorf("%s", strings.Join(errorStrings, "\n"))
+	}
+	return nil
 }
