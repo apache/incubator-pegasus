@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include "task/task_code.h"
 #pragma once
 
 namespace dsn {
