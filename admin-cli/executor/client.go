@@ -77,7 +77,7 @@ func CloseClient(client *Client) error {
 	var errorStrings []string
 	err := client.Meta.Close()
 	if err != nil {
-		fmt.Printf("Error: failed to close meta session [%s]\n", err)
+		fmt.Printf("Error: failed to close meta session [%s].\n", err)
 		errorStrings = append(errorStrings, err.Error())
 	}
 
@@ -85,7 +85,7 @@ func CloseClient(client *Client) error {
 
 	err = client.Nodes.CloseAllNodes()
 	if err != nil {
-		fmt.Printf("Error: failed to close nodes session [%s]\n", err)
+		fmt.Printf("Error: failed to close nodes session [%s].\n", err)
 		errorStrings = append(errorStrings, err.Error())
 	}
 	if len(errorStrings) != 0 {
