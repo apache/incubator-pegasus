@@ -1624,6 +1624,7 @@ void server_state::list_apps(const configuration_list_apps_request &request,
     zauto_read_lock l(_lock);
 
     for (const auto &[_, app] : _all_apps) {
+        // Any table chosen to be listed must match the pattern, if any.
         if (request.__isset.app_name_pattern && request.__isset.match_type) {
             const auto &err =
                 utils::pattern_match(app->app_name, request.app_name_pattern, request.match_type);
@@ -1648,6 +1649,12 @@ void server_state::list_apps(const configuration_list_apps_request &request,
             }
         }
 
+        // Only in the following two cases would a table be chosen to be listed, according to
+        // the requested status:
+        //
+        // * `app_status::AS_INVALID` means no filter, in other words, any table with any status
+        // could be chosen;
+        // * or, current status of a table is the same as the requested status.
         if (request.status != app_status::AS_INVALID && request.status != app->status) {
             continue;
         }

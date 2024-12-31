@@ -95,6 +95,18 @@ public:
     error_with<configuration_rename_app_response> rename_app(const std::string &old_app_name,
                                                              const std::string &new_app_name);
 
+    // Choose tables and list them to a file, with path specified as `output_file`. Once
+    // `output_file` is empty, tables would be listed to stdout.
+    //
+    // Choose tables according to following parameters:
+    // `show_all`: whether to show all tables, not only the available, but also the ones in
+    // other status, e.g. the dropped tables.
+    // `detailed`: whether to show healthy/unhealthy details.
+    // `json`: whether to output as json format.
+    // `status`: the status of the tables chosen to be listed. `app_status::AS_INVALID` means
+    // no restriction.
+    // `app_name_pattern`: the name pattern of the tables chosen to be listed.
+    // `match_type`: the type in which the name pattern would be matched.
     error_s list_apps(bool show_all,
                       bool detailed,
                       bool json,
@@ -103,28 +115,37 @@ public:
                       const std::string &app_name_pattern,
                       utils::pattern_match_type::type match_type);
 
+    // The same as the above, except that there's no restriction on table name; in other
+    // words, the match type is `PMT_MATCH_ALL`.
     error_s list_apps(bool show_all,
                       bool detailed,
                       bool json,
                       const std::string &output_file,
                       dsn::app_status::type status);
 
+    // Create and send request to meta server to get the tables chosen to be listed according
+    // to the following parameters:
+    // `status`: the status of the tables chosen to be listed. `app_status::AS_INVALID` means
+    // no restriction.
+    // `app_name_pattern`: the name pattern of the tables chosen to be listed.
+    // `match_type`: the type in which the name pattern would be matched.
+    //
+    // `apps` is just the tables chosen to be listed.
     error_s list_apps(dsn::app_status::type status,
                       const std::string &app_name_pattern,
                       utils::pattern_match_type::type match_type,
                       std::vector<::dsn::app_info> &apps);
 
+    // The same as the above, except that there's no restriction on table name; in other
+    // words, the match type is `PMT_MATCH_ALL`.
     error_s list_apps(dsn::app_status::type status, std::vector<::dsn::app_info> &apps);
 
-    dsn::error_code list_nodes(dsn::replication::node_status::type status,
-                               bool detailed,
-                               const std::string &file_name,
-                               bool resolve_ip);
-
-    dsn::error_code list_nodes(dsn::replication::node_status::type status,
-                               bool detailed,
-                               const std::string &file_name);
-
+    // Create and send request to meta server to get the nodes chosen to be listed according
+    // to the following parameters:
+    // `status`: the status of the nodes chosen to be listed. `node_status::NS_INVALID` means
+    // no restriction.
+    //
+    // `nodes` is just the nodes chosen to be listed.
     dsn::error_code
     list_nodes(dsn::replication::node_status::type status,
                std::map<dsn::host_port, dsn::replication::node_status::type> &nodes);

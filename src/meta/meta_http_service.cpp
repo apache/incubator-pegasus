@@ -76,10 +76,10 @@ struct list_nodes_helper
     }
 };
 
-#define INIT_AND_CALL_LIST_APPS(target_status, list_apps_req, list_apps_resp, http_resp)           \
-    configuration_list_apps_request list_apps_req;                                                 \
+#define INIT_AND_CALL_LIST_APPS(target_status, list_apps_resp, http_resp)                          \
     configuration_list_apps_response list_apps_resp;                                               \
     do {                                                                                           \
+        configuration_list_apps_request list_apps_req;                                             \
         list_apps_req.status = target_status;                                                      \
         _service->_state->list_apps(list_apps_req, list_apps_resp);                                \
         if (list_apps_resp.err != ERR_OK) {                                                        \
@@ -238,7 +238,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         return;
     }
 
-    INIT_AND_CALL_LIST_APPS(app_status::AS_INVALID, list_apps_req, list_apps_resp, resp);
+    INIT_AND_CALL_LIST_APPS(app_status::AS_INVALID, list_apps_resp, resp);
 
     // output as json format
     std::ostringstream out;
@@ -312,7 +312,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         tp_health.add_column("unhealthy");
         tp_health.add_column("write_unhealthy");
         tp_health.add_column("read_unhealthy");
-        for (auto &info : list_apps_resp.infos) {
+        for (const auto &info : list_apps_resp.infos) {
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
             }
@@ -405,7 +405,7 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
     size_t unalive_node_count = (_service->_dead_set).size();
 
     if (detailed) {
-        INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_req, list_apps_resp, resp);
+        INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_resp, resp);
 
         for (const auto &app : list_apps_resp.infos) {
             query_cfg_request request_app;
@@ -523,11 +523,11 @@ void meta_http_service::get_app_envs_handler(const http_request &req, http_respo
     }
 
     // get all of the apps
-    INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_req, list_apps_resp, resp);
+    INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_resp, resp);
 
     // using app envs to generate a table_printer
     dsn::utils::table_printer tp;
-    for (auto &app : list_apps_resp.infos) {
+    for (const auto &app : list_apps_resp.infos) {
         if (app.app_name == app_name) {
             for (const auto &env : app.envs) {
                 tp.add_row_name_and_data(env.first, env.second);
