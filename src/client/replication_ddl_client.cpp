@@ -1396,6 +1396,8 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
 dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name,
                                                      std::map<std::string, std::string> &envs)
 {
+    // Just match the table with the provided name exactly since we want to get the envs from
+    // a specific table.
     std::vector<::dsn::app_info> apps;
     const auto &result = list_apps(
         dsn::app_status::AS_AVAILABLE, app_name, utils::pattern_match_type::PMT_MATCH_EXACT, apps);
@@ -1403,11 +1405,13 @@ dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name
         return result.code();
     }
 
-    for (auto &app : apps) {
-        if (app.app_name == app_name) {
-            envs = app.envs;
-            return dsn::ERR_OK;
+    for (const auto &app : apps) {
+        if (app.app_name != app_name) {
+            continue;
         }
+
+        envs = app.envs;
+        return dsn::ERR_OK;
     }
 
     return dsn::ERR_OBJECT_NOT_FOUND;
