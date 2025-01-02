@@ -215,11 +215,11 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
     req->options.is_stateful = !is_stateless;
 
     dsn::replication::configuration_create_app_response resp;
-    const auto &req_status = request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
+    const auto &req_result = request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
 
-    if (!req_status) {
-        fmt::println("create app {} failed: [create] call server error: {}", app_name, req_status);
-        return req_status.code();
+    if (!req_result) {
+        fmt::println("create app {} failed: [create] call server error: {}", app_name, req_result);
+        return req_result.code();
     }
 
     if (resp.err != dsn::ERR_OK) {
@@ -248,10 +248,10 @@ dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, in
     req->options.__set_reserve_seconds(reserve_seconds);
 
     dsn::replication::configuration_drop_app_response resp;
-    const auto &req_status = request_meta_and_wait_response(RPC_CM_DROP_APP, req, resp);
+    const auto &req_result = request_meta_and_wait_response(RPC_CM_DROP_APP, req, resp);
 
-    if (!req_status) {
-        return req_status.code();
+    if (!req_result) {
+        return req_result.code();
     }
 
     if (resp.err != dsn::ERR_OK) {
@@ -270,10 +270,10 @@ dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::st
     req->new_app_name = new_app_name;
 
     dsn::replication::configuration_recall_app_response resp;
-    const auto &req_status = request_meta_and_wait_response(RPC_CM_RECALL_APP, req, resp);
+    const auto &req_result = request_meta_and_wait_response(RPC_CM_RECALL_APP, req, resp);
 
-    if (!req_status) {
-        return req_status.code();
+    if (!req_result) {
+        return req_result.code();
     }
 
     if (resp.err != dsn::ERR_OK) {
@@ -298,9 +298,9 @@ error_s replication_ddl_client::list_apps(dsn::app_status::type status,
     req->__set_match_type(match_type);
 
     dsn::replication::configuration_list_apps_response resp;
-    const auto &req_status = request_meta_and_wait_response(RPC_CM_LIST_APPS, req, resp);
-    if (!req_status) {
-        return req_status;
+    const auto &req_result = request_meta_and_wait_response(RPC_CM_LIST_APPS, req, resp);
+    if (!req_result) {
+        return req_result;
     }
 
     if (resp.err != dsn::ERR_OK) {

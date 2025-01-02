@@ -324,6 +324,11 @@ private:
                           dsn::message_ex *request,
                           dsn::message_ex *resp);
 
+    // Send RPC request `req` with `code` to meta server:
+    // * `timeout_milliseconds`: timeout for the request;
+    // * `reply_thread_hash`: thread hash for the RPC response task.
+    //
+    // Return the RPC response task.
     template <typename TRequest>
     rpc_response_task_ptr request_meta(const dsn::task_code &code,
                                        std::shared_ptr<TRequest> &req,
@@ -349,6 +354,7 @@ private:
         return task;
     }
 
+    // The same as the above, except that the thread hash for the RPC response task is set to 0.
     template <typename TRequest>
     rpc_response_task_ptr request_meta(const dsn::task_code &code,
                                        std::shared_ptr<TRequest> &req,
@@ -357,6 +363,7 @@ private:
         return request_meta(code, req, timeout_milliseconds, 0);
     }
 
+    // The same as the above, except that the timeout for the RPC request is set to 0.
     template <typename TRequest>
     rpc_response_task_ptr request_meta(const dsn::task_code &code, std::shared_ptr<TRequest> &req)
     {
@@ -368,6 +375,12 @@ private:
         return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
     }
 
+    // The same as `request_meta()`, except that it would retry multiple times as configured
+    // once failed or busy, and return error status for the response task. If succeed, `resp`
+    // would be set as the response.
+    //
+    // NOTE: the returned error is just for the RPC request; please also check the possible
+    // error status in `resp` if the RPC request succeeds.
     template <typename TRequest, typename TResponse>
     error_s request_meta_and_wait_response(const dsn::task_code &code,
                                            std::shared_ptr<TRequest> &req,
@@ -428,6 +441,7 @@ private:
         return error_s::ok();
     }
 
+    // The same as the above, except that the thread hash for the RPC response task is set to 0.
     template <typename TRequest, typename TResponse>
     error_s request_meta_and_wait_response(const dsn::task_code &code,
                                            std::shared_ptr<TRequest> &req,
@@ -437,6 +451,7 @@ private:
         return request_meta_and_wait_response(code, req, resp, timeout_milliseconds, 0);
     }
 
+    // The same as the above, except that the timeout for the RPC request is set to 0.
     template <typename TRequest, typename TResponse>
     error_s request_meta_and_wait_response(const dsn::task_code &code,
                                            std::shared_ptr<TRequest> &req,
