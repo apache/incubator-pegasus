@@ -227,8 +227,8 @@ private:
     std::vector<table_printer> _tps;
 };
 
-// Used as a general interface for printer to output to a file, typically `table_printer`
-// and `multi_table_printer`.
+// Used as a general interface for printer to output to a file in json or tabular format,
+// typically `table_printer` and `multi_table_printer`.
 template <typename Printer>
 void output(const std::string &file_path, bool json, const Printer &printer)
 {
@@ -249,8 +249,16 @@ void output(const std::string &file_path, bool json, const Printer &printer)
                         : table_printer::output_format::kTabular);
 }
 
-// Used as a general interface for printer to output to stdout, typically `table_printer`
-// and `multi_table_printer`.
+// Used as a general interface for printer to output to a file in tabular format, typically
+// `table_printer` and `multi_table_printer`.
+template <typename Printer>
+void output(const std::string &file_path, const Printer &printer)
+{
+    output(file_path, false, printer);
+}
+
+// Used as a general interface for printer to output to stdout in json or tabular format,
+// typically `table_printer` and `multi_table_printer`.
 template <typename Printer>
 void output(bool json, const Printer &printer)
 {

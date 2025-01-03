@@ -31,6 +31,7 @@ include "dsn.layer2.thrift"
 include "duplication.thrift"
 include "metadata.thrift"
 include "partition_split.thrift"
+include "utils.thrift"
 
 namespace cpp dsn.replication
 namespace go admin
@@ -196,13 +197,20 @@ struct configuration_recall_app_response
 
 struct configuration_list_apps_request
 {
-    1:dsn.layer2.app_status    status = app_status.AS_INVALID;
+    1:dsn.layer2.app_status                 status = app_status.AS_INVALID;
+
+    // The pattern is used to match an app name, whose type is specified by `match_type`.
+    2:optional string                       app_name_pattern;
+    3:optional utils.pattern_match_type     match_type;
 }
 
 struct configuration_list_apps_response
 {
-    1:dsn.error_code              err;
-    2:list<dsn.layer2.app_info>   infos;
+    1:dsn.error_code                err;
+    2:list<dsn.layer2.app_info>     infos;
+
+    // Extra message to describe the error.
+    3:optional string               hint_message;
 }
 
 struct query_app_info_request

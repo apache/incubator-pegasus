@@ -91,7 +91,8 @@ private:
     // hotkey on the replica automatically
     std::vector<std::array<int, 2>> _hotpartition_counter;
 
-    typedef dsn::rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
+    using detect_hotkey_rpc = dsn::rpc_holder<dsn::replication::detect_hotkey_request,
+                                              dsn::replication::detect_hotkey_response>;
 
     friend class hotspot_partition_test;
 };
