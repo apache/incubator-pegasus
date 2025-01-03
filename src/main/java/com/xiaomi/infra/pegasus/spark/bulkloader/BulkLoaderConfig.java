@@ -30,6 +30,7 @@ public class BulkLoaderConfig extends CommonConfig {
   private DataVersion tableDataVersion;
   private int tableId;
   private int tablePartitionCount;
+  private long singleFileSizeThreshold; //(before compression)
 
   public BulkLoaderConfig(HDFSConfig hdfsConfig, String clusterName, String tableName)
       throws PegasusSparkException {
@@ -42,6 +43,7 @@ public class BulkLoaderConfig extends CommonConfig {
       throws PegasusSparkException {
     super(fdsConfig, clusterName, tableName);
     initTableInfo(); // table id, partitionCount, version are fetched via gateway by default.
+    singleFileSizeThreshold = 64 * 1024 * 1024; // default single file size
     // Pegasus Server Version  2.2.0 required
   }
 
@@ -123,6 +125,18 @@ public class BulkLoaderConfig extends CommonConfig {
     return this;
   }
 
+  /**
+   * Set single sst file size. Default single file size is 64MB(64*1024*1024).
+   *
+   * @param singleFileSize
+   * @return this
+   */
+  public BulkLoaderConfig setSingleFileSizeThreshold(long singleFileSize) {
+    this.singleFileSizeThreshold = singleFileSize;
+    LOG.info(String.format("Change sst single file size to ", this.singleFileSizeThreshold));
+    return this;
+  }
+
   public DataVersion getDataVersion() {
     return tableDataVersion;
   }
@@ -134,6 +148,8 @@ public class BulkLoaderConfig extends CommonConfig {
   public int getTablePartitionCount() {
     return tablePartitionCount;
   }
+
+  public long getSingleFileSizeThreshold() { return singleFileSizeThreshold; }
 
   public AdvancedConfig getAdvancedConfig() {
     return advancedConfig;
