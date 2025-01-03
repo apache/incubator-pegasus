@@ -45,7 +45,7 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 }
 
 func GetDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, print bool) ([]interface{}, error) {
-	resp, err := sendQueryDiskInfoRequest(client, replicaServer, tableName)
+	resp, err := SendQueryDiskInfoRequest(client, replicaServer, tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func GetDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, ta
 	}
 }
 
-func sendQueryDiskInfoRequest(client *Client, replicaServer string, tableName string) (*radmin.QueryDiskInfoResponse, error) {
+func SendQueryDiskInfoRequest(client *Client, replicaServer string, tableName string) (*radmin.QueryDiskInfoResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -88,7 +88,7 @@ func QueryAllNodesDiskInfo(client *Client, tableName string) (map[string]*radmin
 	}
 	for _, nodeInfo := range nodeInfos {
 		address := nodeInfo.GetAddress().GetAddress()
-		resp, err := sendQueryDiskInfoRequest(client, address, tableName)
+		resp, err := SendQueryDiskInfoRequest(client, address, tableName)
 		if err != nil {
 			return respMap, err
 		}
