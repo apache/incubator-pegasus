@@ -313,7 +313,7 @@ TEST_P(PatternMatchTest, PatternMatch)
 {
     const auto &test_case = GetParam();
     const auto actual_err = pattern_match(test_case.str, test_case.pattern, test_case.match_type);
-    EXPECT_EQ(test_case.expected_err, actual_err);
+    EXPECT_EQ(test_case.expected_err, actual_err.code());
 }
 
 INSTANTIATE_TEST_SUITE_P(StringTest, PatternMatchTest, testing::ValuesIn(pattern_match_tests));

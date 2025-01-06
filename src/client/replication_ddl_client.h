@@ -99,16 +99,13 @@ public:
     // `output_file` is empty, tables would be listed to stdout.
     //
     // Choose tables according to following parameters:
-    // `show_all`: whether to show all tables, not only the available, but also the ones in
-    // other status, e.g. the dropped tables.
     // `detailed`: whether to show healthy/unhealthy details.
     // `json`: whether to output as json format.
     // `status`: the status of the tables chosen to be listed. `app_status::AS_INVALID` means
     // no restriction.
     // `app_name_pattern`: the name pattern of the tables chosen to be listed.
     // `match_type`: the type in which the name pattern would be matched.
-    error_s list_apps(bool show_all,
-                      bool detailed,
+    error_s list_apps(bool detailed,
                       bool json,
                       const std::string &output_file,
                       dsn::app_status::type status,
@@ -117,8 +114,7 @@ public:
 
     // The same as the above, except that there's no restriction on table name; in other
     // words, the match type is `PMT_MATCH_ALL`.
-    error_s list_apps(bool show_all,
-                      bool detailed,
+    error_s list_apps(bool detailed,
                       bool json,
                       const std::string &output_file,
                       dsn::app_status::type status);
@@ -363,7 +359,9 @@ private:
         return request_meta(code, req, timeout_milliseconds, 0);
     }
 
-    // The same as the above, except that the timeout for the RPC request is set to 0.
+    // The same as the above, except that `timeout_milliseconds` for the RPC request is set to
+    // 0, which means `rpc_timeout_milliseconds` configured for each task would be used as the
+    // timeout. See `message_ex::create_request()` for details.
     template <typename TRequest>
     rpc_response_task_ptr request_meta(const dsn::task_code &code, std::shared_ptr<TRequest> &req)
     {
@@ -451,7 +449,9 @@ private:
         return request_meta_and_wait_response(code, req, resp, timeout_milliseconds, 0);
     }
 
-    // The same as the above, except that the timeout for the RPC request is set to 0.
+    // The same as the above, except that `timeout_milliseconds` for the RPC request is set to
+    // 0, which means `rpc_timeout_milliseconds` configured for each task would be used as the
+    // timeout. See `message_ex::create_request()` for details.
     template <typename TRequest, typename TResponse>
     error_s request_meta_and_wait_response(const dsn::task_code &code,
                                            std::shared_ptr<TRequest> &req,

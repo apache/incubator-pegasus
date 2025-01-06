@@ -114,6 +114,8 @@ public:
 
     [[nodiscard]] error_code code() const { return _info ? _info->code : ERR_OK; }
 
+    [[nodiscard]] std::string message() const { return _info ? _info->msg : ""; }
+
     error_s &operator<<(const char str[])
     {
         if (_info) {

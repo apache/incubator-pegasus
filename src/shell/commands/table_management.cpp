@@ -93,7 +93,13 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
 
     const std::string status_str(cmd({"-s", "--status"}, "").str());
     auto status = dsn::app_status::AS_INVALID;
-    if (!status_str.empty() && status_str != "all") {
+    if (status_str.empty()) {
+        // `show_all` functions only when target `status` is not specified.
+        if (!show_all) {
+            // That `show_all` is not given means just showing available tables.
+            status = dsn::app_status::AS_AVAILABLE;
+        }
+    } else if (status_str != "all") {
         status = type_from_string(dsn::_app_status_VALUES_TO_NAMES,
                                   fmt::format("as_{}", status_str),
                                   dsn::app_status::AS_INVALID);
@@ -111,7 +117,7 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     PARSE_OPT_ENUM(match_type, dsn::utils::pattern_match_type::PMT_INVALID, {"-m", "--match_type"});
 
     const auto &result = sc->ddl_client->list_apps(
-        show_all, detailed, json, output_file, status, app_name_pattern, match_type);
+        detailed, json, output_file, status, app_name_pattern, match_type);
     if (!result) {
         fmt::println("list apps failed, error={}", result);
     }

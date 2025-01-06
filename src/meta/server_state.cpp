@@ -1626,35 +1626,27 @@ void server_state::list_apps(const configuration_list_apps_request &request,
     for (const auto &[_, app] : _all_apps) {
         // Any table chosen to be listed must match the pattern, if any.
         if (request.__isset.app_name_pattern && request.__isset.match_type) {
-            const auto &err =
+            const auto &result =
                 utils::pattern_match(app->app_name, request.app_name_pattern, request.match_type);
-            if (err == ERR_NOT_MATCHED) {
+            if (result.code() == ERR_NOT_MATCHED) {
                 continue;
             }
 
-            if (err == ERR_NOT_IMPLEMENTED) {
-                const auto &msg = fmt::format("match_type {} is not supported now",
-                                              static_cast<int>(request.match_type));
-                response.err = err;
-                response.__set_hint_message(msg);
+            if (result.code() != ERR_OK) {
+                response.err = result.code();
+                response.__set_hint_message(result.message());
+                LOG_ERROR(
+                    "{}, app_name_pattern={}", result.description(), request.app_name_pattern);
 
-                LOG_ERROR("{}: app_name_pattern={}", msg, request.app_name_pattern);
-
-                return;
-            }
-
-            if (err != ERR_OK) {
-                response.err = err;
                 return;
             }
         }
 
         // Only in the following two cases would a table be chosen to be listed, according to
         // the requested status:
-        //
-        // * `app_status::AS_INVALID` means no filter, in other words, any table with any status
+        // - `app_status::AS_INVALID` means no filter, in other words, any table with any status
         // could be chosen;
-        // * or, current status of a table is the same as the requested status.
+        // - or, current status of a table is the same as the requested status.
         if (request.status != app_status::AS_INVALID && request.status != app->status) {
             continue;
         }

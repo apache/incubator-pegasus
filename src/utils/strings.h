@@ -36,7 +36,7 @@
 
 #include "utils_types.h"
 #include "utils/enum_helper.h"
-#include "utils/error_code.h"
+#include "utils/errors.h"
 
 namespace dsn::utils {
 
@@ -75,9 +75,14 @@ bool iequals(const char *lhs, const std::string &rhs, size_t n);
 // Decide whether the first n bytes of two memory areas are equal, even if one of them is NULL.
 bool mequals(const void *lhs, const void *rhs, size_t n);
 
-error_code pattern_match(const std::string &str,
-                         const std::string &pattern,
-                         pattern_match_type::type match_type);
+// Try to match target string `str` with provided `pattern` in `match_type`. Return the code
+// representing matched, not matched, or some error with additional message(if any) as follows:
+// - ERR_OK:                matched;
+// - ERR_NOT_MATCHED:       not matched;
+// - ERR_NOT_IMPLEMENTED:   `match_type` is not supported.
+error_s pattern_match(const std::string &str,
+                      const std::string &pattern,
+                      pattern_match_type::type match_type);
 
 // Split the `input` string by the only character `separator` into tokens. Leading and trailing
 // spaces of each token will be stripped. Once the token is empty, or become empty after

@@ -318,8 +318,7 @@ error_s replication_ddl_client::list_apps(dsn::app_status::type status,
     return list_apps(status, {}, utils::pattern_match_type::PMT_MATCH_ALL, apps);
 }
 
-error_s replication_ddl_client::list_apps(bool show_all,
-                                          bool detailed,
+error_s replication_ddl_client::list_apps(bool detailed,
                                           bool json,
                                           const std::string &output_file,
                                           dsn::app_status::type status,
@@ -336,9 +335,6 @@ error_s replication_ddl_client::list_apps(bool show_all,
 
     size_t max_app_name_size = 20;
     for (const auto &app : apps) {
-        if (!show_all && app.status != app_status::AS_AVAILABLE) {
-            continue;
-        }
         max_app_name_size = std::max(max_app_name_size, app.app_name.size() + 2);
     }
 
@@ -357,11 +353,7 @@ error_s replication_ddl_client::list_apps(bool show_all,
     tp_general.add_column("envs_count");
 
     int available_app_count = 0;
-    for (int i = 0; i < apps.size(); i++) {
-        dsn::app_info info = apps[i];
-        if (!show_all && info.status != app_status::AS_AVAILABLE) {
-            continue;
-        }
+    for (const auto &info : apps) {
         std::string status_str = enum_to_string(info.status);
         status_str = status_str.substr(status_str.find("AS_") + 3);
         std::string create_time = "-";
@@ -416,7 +408,7 @@ error_s replication_ddl_client::list_apps(bool show_all,
         tp_health.add_column("unhealthy");
         tp_health.add_column("write_unhealthy");
         tp_health.add_column("read_unhealthy");
-        for (auto &info : apps) {
+        for (const auto &info : apps) {
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
             }
@@ -489,19 +481,13 @@ error_s replication_ddl_client::list_apps(bool show_all,
     return error_s::ok();
 }
 
-error_s replication_ddl_client::list_apps(bool show_all,
-                                          bool detailed,
+error_s replication_ddl_client::list_apps(bool detailed,
                                           bool json,
                                           const std::string &output_file,
                                           const dsn::app_status::type status)
 {
-    return list_apps(show_all,
-                     detailed,
-                     json,
-                     output_file,
-                     status,
-                     {},
-                     utils::pattern_match_type::PMT_MATCH_ALL);
+    return list_apps(
+        detailed, json, output_file, status, {}, utils::pattern_match_type::PMT_MATCH_ALL);
 }
 
 dsn::error_code replication_ddl_client::list_nodes(
@@ -1406,6 +1392,9 @@ dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name
     }
 
     for (const auto &app : apps) {
+        // Once the meta server does not support `app_name` and `match_type` (still the old
+        // version) for `RPC_CM_LIST_APPS`, the response would include all available tables.
+        // Thus here we should still check if the table name in the response is the target.
         if (app.app_name != app_name) {
             continue;
         }

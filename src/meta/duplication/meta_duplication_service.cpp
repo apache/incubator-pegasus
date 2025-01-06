@@ -107,25 +107,17 @@ void meta_duplication_service::list_duplication_info(const duplication_list_requ
             continue;
         }
 
-        const auto &err =
+        const auto &result =
             utils::pattern_match(app_name, request.app_name_pattern, request.match_type);
-        if (err == ERR_NOT_MATCHED) {
+        if (result.code() == ERR_NOT_MATCHED) {
             continue;
         }
 
-        if (err == ERR_NOT_IMPLEMENTED) {
-            const auto &msg = fmt::format("match_type {} is not supported now",
-                                          static_cast<int>(request.match_type));
-            response.err = err;
-            response.hint_message = msg;
+        if (result.code() != ERR_OK) {
+            response.err = result.code();
+            response.hint_message = result.message();
+            LOG_ERROR("{}, app_name_pattern={}", result.description(), request.app_name_pattern);
 
-            LOG_ERROR("{}: app_name_pattern={}", msg, request.app_name_pattern);
-
-            return;
-        }
-
-        if (err != ERR_OK) {
-            response.err = err;
             return;
         }
 

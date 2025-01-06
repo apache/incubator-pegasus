@@ -401,8 +401,8 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
         tmp_map.emplace(node, list_nodes_helper(node.to_string(), "UNALIVE"));
     }
 
-    size_t alive_node_count = (_service->_alive_set).size();
-    size_t unalive_node_count = (_service->_dead_set).size();
+    size_t alive_node_count = _service->_alive_set.size();
+    size_t unalive_node_count = _service->_dead_set.size();
 
     if (detailed) {
         INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_resp, resp);
