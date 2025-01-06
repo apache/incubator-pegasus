@@ -152,7 +152,10 @@ public:
     }
 
 private:
-    error_s(error_code code, std::string_view msg) noexcept : _info(new error_info(code, msg)) {}
+    error_s(error_code code, std::string_view msg) noexcept
+        : _info(std::make_unique<error_info>(code, msg))
+    {
+    }
 
     struct error_info
     {
