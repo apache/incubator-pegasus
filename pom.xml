@@ -7,7 +7,7 @@
 
   <groupId>com.xiaomi.infra</groupId>
   <artifactId>pegasus-spark</artifactId>
-  <version>1.1.0-mdh-2.3.0-SNAPSHOT</version>
+  <version>1.1.0-mdh-2.3.1-SNAPSHOT</version>
 
   <name>pegasus-spark</name>
 
@@ -147,6 +147,11 @@
       <version>3.1.2</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.typesafe.play</groupId>
+      <artifactId>play-json_2.12</artifactId>
+      <version>2.7.0</version>
+    </dependency>
 </dependencies>
 
   <build>
@@ -161,6 +166,37 @@
               <goal>compile</goal>
               <goal>testCompile</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.4.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer
+                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.xiaomi.infra.pegasus.spark.toolkits.TaskRunner</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
           </execution>
         </executions>
       </plugin>

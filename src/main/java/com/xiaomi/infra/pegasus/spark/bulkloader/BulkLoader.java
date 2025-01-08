@@ -20,7 +20,6 @@ import scala.Tuple2;
 class BulkLoader {
   private static final Log LOG = LogFactory.getLog(BulkLoader.class);
 
-  public static final int SINGLE_FILE_SIZE_THRESHOLD = 64 * 1024 * 1024;
   public static final String BULK_LOAD_INFO = "bulk_load_info";
   public static final String BULK_LOAD_METADATA = "bulk_load_metadata";
   public static final String BULK_DATA_FILE_SUFFIX = ".sst";
@@ -28,7 +27,6 @@ class BulkLoader {
   private final AtomicLong totalSize = new AtomicLong();
   private final int partitionId;
   private int curFileIndex = 1;
-  private Long curFileSize = 0L;
 
   private BulkLoaderConfig config;
 
@@ -158,18 +156,21 @@ class BulkLoader {
     }
 
     long start = System.currentTimeMillis();
-    long count = 0;
-
+    long count = 0L;
+    long curFileSize = 0L;
+    long kvcount = 0L;
     String curSSTFileName = curFileIndex + BULK_DATA_FILE_SUFFIX;
     sstFileWriterWrapper.openWithRetry(partitionPath + curSSTFileName);
     while (dataResourceIterator.hasNext()) {
       count++;
+      kvcount++;
       Tuple2<PegasusKey, PegasusValue> record = dataResourceIterator.next();
-      if (curFileSize > SINGLE_FILE_SIZE_THRESHOLD) {
+      if (curFileSize > this.config.getSingleFileSizeThreshold()) {
         sstFileWriterWrapper.closeWithRetry();
-        LOG.debug(curFileIndex + BULK_DATA_FILE_SUFFIX + " writes complete!");
+        LOG.info(String.format("%s writes complete! kvCount = %d ,kvLength = %d",curFileIndex + BULK_DATA_FILE_SUFFIX,curFileSize,kvcount,curFileSize));
 
         curFileIndex++;
+        kvcount=0L;
         curFileSize = 0L;
         curSSTFileName = curFileIndex + BULK_DATA_FILE_SUFFIX;
 
