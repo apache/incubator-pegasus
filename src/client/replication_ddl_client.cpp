@@ -192,13 +192,12 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
                                                    bool success_if_exist)
 {
     if (partition_count < 1) {
-        std::cout << "create app " << app_name << " failed: partition_count should >= 1"
-                  << std::endl;
+        fmt::println(stderr, "create app {} failed: partition_count should >= 1", app_name);
         return ERR_INVALID_PARAMETERS;
     }
 
     if (replica_count < 1) {
-        std::cout << "create app " << app_name << " failed: replica_count should >= 1" << std::endl;
+        fmt::println(stderr, "create app {} failed: replica_count should >= 1", app_name);
         return ERR_INVALID_PARAMETERS;
     }
 
@@ -215,16 +214,13 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
     req->options.is_stateful = !is_stateless;
 
     dsn::replication::configuration_create_app_response resp;
-    const auto &req_result = request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
-
-    if (!req_result) {
-        fmt::println("create app {} failed: [create] call server error: {}", app_name, req_result);
-        return req_result.code();
-    }
+    RETURN_EC_NOT_OK_MSG(request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp),
+                         "create app {} failed: [create] call server error",
+                         app_name);
 
     if (resp.err != dsn::ERR_OK) {
         fmt::println(
-            "create app {} failed: [create] received server error: {}", app_name, resp.err);
+            stderr, "{}: create app {} failed: [create] received server error", resp.err, app_name);
         return resp.err;
     }
 
@@ -248,11 +244,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, in
     req->options.__set_reserve_seconds(reserve_seconds);
 
     dsn::replication::configuration_drop_app_response resp;
-    const auto &req_result = request_meta_and_wait_response(RPC_CM_DROP_APP, req, resp);
-
-    if (!req_result) {
-        return req_result.code();
-    }
+    RETURN_EC_NOT_OK(request_meta_and_wait_response(RPC_CM_DROP_APP, req, resp));
 
     if (resp.err != dsn::ERR_OK) {
         return resp.err;
@@ -270,11 +262,7 @@ dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::st
     req->new_app_name = new_app_name;
 
     dsn::replication::configuration_recall_app_response resp;
-    const auto &req_result = request_meta_and_wait_response(RPC_CM_RECALL_APP, req, resp);
-
-    if (!req_result) {
-        return req_result.code();
-    }
+    RETURN_EC_NOT_OK(request_meta_and_wait_response(RPC_CM_RECALL_APP, req, resp));
 
     if (resp.err != dsn::ERR_OK) {
         return resp.err;
@@ -1385,11 +1373,8 @@ dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name
     // Just match the table with the provided name exactly since we want to get the envs from
     // a specific table.
     std::vector<::dsn::app_info> apps;
-    const auto &result = list_apps(
-        dsn::app_status::AS_AVAILABLE, app_name, utils::pattern_match_type::PMT_MATCH_EXACT, apps);
-    if (!result) {
-        return result.code();
-    }
+    RETURN_EC_NOT_OK(list_apps(
+        dsn::app_status::AS_AVAILABLE, app_name, utils::pattern_match_type::PMT_MATCH_EXACT, apps));
 
     for (const auto &app : apps) {
         // Once the meta server does not support `app_name` and `match_type` (still the old

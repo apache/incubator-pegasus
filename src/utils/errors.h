@@ -246,11 +246,19 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
         }                                                                                          \
     } while (false)
 
+#define RETURN_EC_NOT_OK(s)                                                                        \
+    do {                                                                                           \
+        const ::dsn::error_s &_s = (s);                                                            \
+        if (dsn_unlikely(!_s)) {                                                                   \
+            return _s.code();                                                                      \
+        }                                                                                          \
+    } while (false)
+
 #define RETURN_ES_NOT_OK_MSG(s, ...)                                                               \
     do {                                                                                           \
         const ::dsn::error_s &_s = (s);                                                            \
         if (dsn_unlikely(!_s)) {                                                                   \
-            fmt::print(stderr, "{}: {}\n", _s.description(), fmt::format(__VA_ARGS__));            \
+            fmt::println(stderr, "{}: {}", _s, fmt::format(__VA_ARGS__));                          \
             return _s;                                                                             \
         }                                                                                          \
     } while (false)
@@ -259,7 +267,7 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
     do {                                                                                           \
         const ::dsn::error_s &_s = (s);                                                            \
         if (dsn_unlikely(!_s)) {                                                                   \
-            fmt::print(stderr, "{}: {}\n", _s.description(), fmt::format(__VA_ARGS__));            \
+            fmt::println(stderr, "{}: {}", _s, fmt::format(__VA_ARGS__));                          \
             return _s.code();                                                                      \
         }                                                                                          \
     } while (false)
@@ -268,7 +276,7 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
     do {                                                                                           \
         ::dsn::error_s _s = (s);                                                                   \
         if (dsn_unlikely(!_s)) {                                                                   \
-            fmt::print(stderr, "{}: {}\n", _s.description(), fmt::format(__VA_ARGS__));            \
+            fmt::println(stderr, "{}: {}", _s, fmt::format(__VA_ARGS__));                          \
             return dsn::error_with<T>(std::move(_s));                                              \
         }                                                                                          \
     } while (false)
