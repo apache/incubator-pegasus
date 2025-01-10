@@ -85,9 +85,9 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    bool show_all = cmd[{"-a", "--all"}];
-    bool detailed = cmd[{"-d", "--detailed"}];
-    bool json = cmd[{"-j", "--json"}];
+    const bool show_all = cmd[{"-a", "--all"}];
+    const bool detailed = cmd[{"-d", "--detailed"}];
+    const bool json = cmd[{"-j", "--json"}];
 
     const std::string output_file(cmd({"-o", "--output"}, "").str());
 

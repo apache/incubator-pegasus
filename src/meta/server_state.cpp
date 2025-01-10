@@ -1625,7 +1625,7 @@ void server_state::list_apps(const configuration_list_apps_request &request,
     zauto_read_lock l(_lock);
 
     for (const auto &[_, app] : _all_apps) {
-        // Any table chosen to be listed must match the pattern, if any.
+        // If the pattern is provided in the request, any table chosen to be listed must match it.
         if (request.__isset.app_name_pattern && request.__isset.match_type) {
             const auto &result =
                 utils::pattern_match(app->app_name, request.app_name_pattern, request.match_type);
@@ -1636,8 +1636,7 @@ void server_state::list_apps(const configuration_list_apps_request &request,
             if (result.code() != ERR_OK) {
                 response.err = result.code();
                 response.__set_hint_message(result.message());
-                LOG_ERROR(
-                    "{}, app_name_pattern={}", result.description(), request.app_name_pattern);
+                LOG_ERROR("{}, app_name_pattern={}", result, request.app_name_pattern);
 
                 return;
             }

@@ -116,7 +116,7 @@ void meta_duplication_service::list_duplication_info(const duplication_list_requ
         if (result.code() != ERR_OK) {
             response.err = result.code();
             response.hint_message = result.message();
-            LOG_ERROR("{}, app_name_pattern={}", result.description(), request.app_name_pattern);
+            LOG_ERROR("{}, app_name_pattern={}", result, request.app_name_pattern);
 
             return;
         }
