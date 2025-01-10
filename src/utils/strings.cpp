@@ -152,7 +152,11 @@ error_s pattern_match(const std::string &str,
                        enum_to_string(match_type));
     }
 
-    return matched ? error_s::ok() : error_s::make(ERR_NOT_MATCHED);
+    if (!matched) {
+        return error_s::make(ERR_NOT_MATCHED);
+    }
+
+    return error_s::ok();
 }
 
 std::string get_last_component(const std::string &input, const char splitters[])
