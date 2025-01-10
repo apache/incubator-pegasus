@@ -64,6 +64,10 @@ public:
     error_s(const error_s &rhs) noexcept { copy(rhs); }
     error_s &operator=(const error_s &rhs) noexcept
     {
+        if (this == &rhs) {
+            return *this;
+        }
+
         copy(rhs);
         return *this;
     }
@@ -72,7 +76,7 @@ public:
     error_s(error_s &&) noexcept = default;
     error_s &operator=(error_s &&) noexcept = default;
 
-    static error_s make(error_code code, std::string_view reason) { return error_s(code, reason); }
+    static error_s make(error_code code, std::string_view reason) { return {code, reason}; }
 
     static error_s make(error_code code)
     {
