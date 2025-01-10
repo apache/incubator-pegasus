@@ -78,6 +78,7 @@
 #include "utils/blob.h"
 #include "utils/command_manager.h"
 #include "utils/config_api.h"
+#include "utils/errors.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

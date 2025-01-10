@@ -41,6 +41,7 @@
 #include "utils/binary_writer.h"
 #include "utils/crc.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/link.h"
 #include "utils/rand.h"
 #include "utils/strings.h"

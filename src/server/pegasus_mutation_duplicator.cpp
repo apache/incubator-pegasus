@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <set>
 #include <string_view>
 #include <tuple>
 #include <utility>
@@ -34,6 +35,7 @@
 #include "client_lib/pegasus_client_impl.h"
 #include "common/common.h"
 #include "common/duplication_common.h"
+#include "common/replication.codes.h"
 #include "duplication_internal_types.h"
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"

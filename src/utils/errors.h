@@ -162,7 +162,7 @@ private:
         error_code code;
         std::string msg; // TODO(wutao1): use raw char* to improve performance?
 
-        error_info(error_code c, std::string_view s) : code(c), msg(s) {}
+        error_info(error_code c, std::string_view s) noexcept : code(c), msg(s) {}
     };
 
     void copy(const error_s &rhs)
@@ -180,7 +180,6 @@ private:
         }
     }
 
-private:
     std::unique_ptr<error_info> _info;
 };
 
