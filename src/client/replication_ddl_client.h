@@ -99,12 +99,12 @@ public:
     // `output_file` is empty, tables would be listed to stdout.
     //
     // Choose tables according to following parameters:
-    // `detailed`: whether to show healthy/unhealthy details.
-    // `json`: whether to output as json format.
-    // `status`: the status of the tables chosen to be listed. `app_status::AS_INVALID` means
+    // - `detailed`: whether to show healthy/unhealthy details.
+    // - `json`: whether to output as json format.
+    // - `status`: the status of the tables chosen to be listed. `app_status::AS_INVALID` means
     // no restriction.
-    // `app_name_pattern`: the name pattern of the tables chosen to be listed.
-    // `match_type`: the type in which the name pattern would be matched.
+    // - `app_name_pattern`: the name pattern of the tables chosen to be listed.
+    // - `match_type`: the type in which the name pattern would be matched.
     error_s list_apps(bool detailed,
                       bool json,
                       const std::string &output_file,
@@ -119,14 +119,9 @@ public:
                       const std::string &output_file,
                       dsn::app_status::type status);
 
-    // Create and send request to meta server to get the tables chosen to be listed according
-    // to the following parameters:
-    // `status`: the status of the tables chosen to be listed. `app_status::AS_INVALID` means
-    // no restriction.
-    // `app_name_pattern`: the name pattern of the tables chosen to be listed.
-    // `match_type`: the type in which the name pattern would be matched.
-    //
-    // `apps` is just the tables chosen to be listed.
+    // Create and send request to meta server to get the tables chosen to be listed. `status`,
+    // `app_name_pattern` and `match_type` are the same as the above. `apps` is the output
+    // parameter, which is just the tables chosen to be listed.
     error_s list_apps(dsn::app_status::type status,
                       const std::string &app_name_pattern,
                       utils::pattern_match_type::type match_type,
@@ -138,10 +133,9 @@ public:
 
     // Create and send request to meta server to get the nodes chosen to be listed according
     // to the following parameters:
-    // `status`: the status of the nodes chosen to be listed. `node_status::NS_INVALID` means
+    // - `status`: the status of the nodes chosen to be listed. `node_status::NS_INVALID` means
     // no restriction.
-    //
-    // `nodes` is just the nodes chosen to be listed.
+    // - `nodes`: the output parameter, which is just the nodes chosen to be listed.
     dsn::error_code
     list_nodes(dsn::replication::node_status::type status,
                std::map<dsn::host_port, dsn::replication::node_status::type> &nodes);
