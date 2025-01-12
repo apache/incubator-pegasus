@@ -444,8 +444,8 @@ jobs:
           ./run.sh build --test --skip_thirdparty -j $(sysctl -n hw.physicalcpu)
           ccache -s
 
-  build_debug_on_centos7:
-    name: Build Debug on CentOS 7
+  build_debug_on_rockylinux9:
+    name: Build Debug on Rockylinux 9
     needs:
       - cpp_clang_format_linter
     runs-on: ubuntu-latest
@@ -453,10 +453,8 @@ jobs:
       USE_JEMALLOC: OFF
       BUILD_OPTIONS: -t debug --test --separate_servers
       PACK_OPTIONS: --separate_servers
-      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     container:
-      image: apache/pegasus:thirdparties-bin-centos7-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-rockylinux9-${{ github.base_ref }}
     steps:
       - name: Clone code
         uses: actions/checkout@v3

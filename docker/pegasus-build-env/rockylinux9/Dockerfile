@@ -15,16 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM rockylinux/rockylinux:9.5-minimal
+FROM rockylinux/rockylinux:9.5.20241118
 
-RUN dnf upgrade --refresh \
-    dnf -y install autoconf \
+RUN dnf -y install autoconf \
                    automake \
                    bison \
                    cmake \
                    cyrus-sasl-devel \
                    file \
                    flex \
+                   gcc-c++ \
                    gdb \
                    git \
                    java-1.8.0-openjdk-devel \
@@ -45,7 +45,7 @@ RUN dnf upgrade --refresh \
                    zlib \
                    zlib-devel && \
     dnf clean all && \
-    rm -rf /var/cache/dnf;
+    rm -rf /var/cache/dnf
 
 RUN wget --progress=dot:giga https://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz -P /opt/thrift && \
     cd /opt/thrift && tar xzf thrift-0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
