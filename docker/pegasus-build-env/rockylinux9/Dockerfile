@@ -17,9 +17,11 @@
 
 FROM rockylinux/rockylinux:9.5.20241118
 
-RUN dnf -y install autoconf \
+RUN dnf -y install epel-release && \
+    dnf -y install autoconf \
                    automake \
                    bison \
+                   ccache \
                    cmake \
                    cyrus-sasl-devel \
                    file \
