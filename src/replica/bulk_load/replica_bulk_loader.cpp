@@ -596,12 +596,12 @@ void replica_bulk_loader::download_sst_file(
         return;
     }
     // download file succeed, update progress
-    download_file_metas.pop_back();
     update_bulk_load_download_progress(f_size, f_meta.name);
     METRIC_VAR_INCREMENT(bulk_load_download_file_successful_count);
     METRIC_VAR_INCREMENT_BY(bulk_load_download_file_bytes, f_size);
 
     // download next file
+    download_file_metas.pop_back();
     if (!download_file_metas.empty()) {
         _download_files_task[download_file_metas.back().name] = tasking::enqueue(
             LPC_BACKGROUND_BULK_LOAD,
