@@ -178,6 +178,19 @@ public:
         return rpc;
     }
 
+    void test_clear_app_envs(const std::string &app_name,
+                             const std::string &prefix,
+                             const error_code expected_err)
+    {
+        configuration_update_app_env_request request;
+        request.__set_app_name(app_name);
+        request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
+        request.__set_clear_prefix(prefix);
+
+        auto rpc = clear_app_envs(request);
+        ASSERT_EQ(expected_err, rpc.response().err);
+    }
+
 private:
     static std::shared_ptr<app_state> fake_app_state(const std::string &app_name,
                                                      const int32_t app_id)
@@ -251,7 +264,10 @@ void meta_service_test_app::app_envs_basic_test()
                     "test_set_app_envs_dropped_after",
                     "test_del_app_envs_not_found",
                     "test_del_app_envs_dropping",
-                    "test_del_app_envs_dropped_after"});
+                    "test_del_app_envs_dropped_after",
+                    "test_clear_app_envs_not_found",
+                    "test_clear_app_envs_dropping",
+                    "test_clear_app_envs_dropped_after"});
 
 #define TEST_SET_APP_ENVS_FAILED(action, err_code)                                                 \
     std::cout << "test server_state::set_app_envs(" #action ")..." << std::endl;                   \
@@ -347,17 +363,39 @@ void meta_service_test_app::app_envs_basic_test()
         }
     }
 
-    std::cout << "test server_state::clear_app_envs()..." << std::endl;
+#define TEST_CLEAR_APP_ENVS_FAILED(action, err_code)                                               \
+    std::cout << "test server_state::clear_app_envs(" #action ")..." << std::endl;                 \
+    do {                                                                                           \
+        test.test_set_app_envs("test_clear_app_envs_" #action,                                     \
+                               {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE},                          \
+                               {"67108864"},                                                       \
+                               ERR_OK);                                                            \
+                                                                                                   \
+        fail::setup();                                                                             \
+        fail::cfg("clear_app_envs_failed", "void(" #action ")");                                   \
+                                                                                                   \
+        test.test_clear_app_envs("test_clear_app_envs_" #action, "", err_code);                    \
+                                                                                                   \
+        fail::teardown();                                                                          \
+    } while (0)
+
+    // Failed to clearing envs while table was not found.
+    TEST_CLEAR_APP_ENVS_FAILED(not_found, ERR_APP_NOT_EXIST);
+
+    // Failed to clearing envs while table was being dropped as the intermediate state.
+    TEST_CLEAR_APP_ENVS_FAILED(dropping, ERR_BUSY_DROPPING);
+
+    // The table was found dropped after the new envs had been persistent on the remote
+    // meta storage.
+    TEST_CLEAR_APP_ENVS_FAILED(dropped_after, ERR_APP_DROPPED);
+
+#undef TEST_CLEAR_APP_ENVS_FAILED
+
+    std::cout << "test server_state::clear_app_envs(success)..." << std::endl;
     {
         // Test specifying prefix.
         {
-            configuration_update_app_env_request request;
-            request.__set_app_name("test_app1");
-            request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
-            request.__set_clear_prefix(clear_prefix);
-
-            auto rpc = test.clear_app_envs(request);
-            ASSERT_EQ(ERR_OK, rpc.response().err);
+            test.test_clear_app_envs("test_app1", clear_prefix, ERR_OK);
 
             const auto &app = test.get_app("test_app1");
             ASSERT_TRUE(app);
@@ -384,13 +422,7 @@ void meta_service_test_app::app_envs_basic_test()
 
         // Test clearing all.
         {
-            configuration_update_app_env_request request;
-            request.__set_app_name("test_app1");
-            request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
-            request.__set_clear_prefix("");
-
-            auto rpc = test.clear_app_envs(request);
-            ASSERT_EQ(ERR_OK, rpc.response().err);
+            test.test_clear_app_envs("test_app1", "", ERR_OK);
 
             const auto &app = test.get_app("test_app1");
             ASSERT_TRUE(app);
