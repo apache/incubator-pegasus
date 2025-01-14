@@ -3330,98 +3330,100 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
         return;
     }
 
-    std::set<std::string> erase_keys;
+    std::set<std::string> deleted_keys;
     std::string deleted_keys_info("deleted keys:");
 
     if (prefix.empty()) {
-        // ignore prefix
+        // Empty prefix means deleting all environments.
         for (const auto &[key, _] : ainfo.envs) {
             fmt::format_to(std::back_inserter(deleted_keys_info), "\n    {}", key);
         }
         ainfo.envs.clear();
     } else {
-        // acquire key
-        const size_t prefix_len = prefix.size() + sizeof('.');
+        // The full prefix is the prefix plus the separator dot(.).
+        const size_t full_prefix_len = prefix.size() + sizeof('.');
         for (const auto &[key, _] : ainfo.envs) {
-            // normal : key = prefix.xxx
-            if (key.size() <= prefix_len) {
+            // The key is not the target if it is shorter than, or just has the same length
+            // as the full prefix.
+            if (key.size() <= full_prefix_len) {
                 continue;
             }
 
+            // The key is not the target if the prefix is not matched.
             if (!boost::algorithm::starts_with(key, prefix)) {
                 continue;
             }
 
+            // The key is not the target if the separator is not dot(.).
             if (key[prefix.size()] != '.') {
                 continue;
             }
 
-            erase_keys.emplace(key);
+            deleted_keys.emplace(key);
         }
 
-        // erase
-        for (const auto &key : erase_keys) {
+        for (const auto &key : deleted_keys) {
             fmt::format_to(std::back_inserter(deleted_keys_info), "\n    {}", key);
             ainfo.envs.erase(key);
         }
-    }
 
-    if (!prefix.empty() && erase_keys.empty()) {
-        // no need update app_info
-        LOG_INFO("no key needs to be deleted for app({})", app_name);
-        env_rpc.response().err = ERR_OK;
-        env_rpc.response().hint_message = "no key needs to be deleted";
-        return;
+        if (deleted_keys.empty()) {
+            LOG_INFO("no key needs to be deleted for app({})", app_name);
+            env_rpc.response().err = ERR_OK;
+            env_rpc.response().hint_message = "no key needs to be deleted";
+            return;
+        }
     }
 
     env_rpc.response().hint_message = std::move(deleted_keys_info);
 
-    do_update_app_info(
-        app_path, ainfo, [this, app_name, prefix, erase_keys, env_rpc](error_code ec) {
-            CHECK_EQ_MSG(ec, ERR_OK, "update app({}) info to remote storage failed", app_name);
+    do_update_app_info(app_path, ainfo, [this, app_name, deleted_keys, env_rpc](error_code ec) {
+        CHECK_EQ_MSG(ec, ERR_OK, "update app({}) info to remote storage failed", app_name);
 
-            zauto_write_lock l(_lock);
+        zauto_write_lock l(_lock);
 
-            FAIL_POINT_INJECT_NOT_RETURN_F("clear_app_envs_failed",
-                                           [app_name, this](std::string_view s) {
-                                               if (s == "dropped_after") {
-                                                   CHECK_EQ(_exist_apps.erase(app_name), 1);
-                                                   return;
-                                               }
-                                           });
+        FAIL_POINT_INJECT_NOT_RETURN_F("clear_app_envs_failed",
+                                       [app_name, this](std::string_view s) {
+                                           if (s == "dropped_after") {
+                                               CHECK_EQ(_exist_apps.erase(app_name), 1);
+                                               return;
+                                           }
+                                       });
 
-            auto app = get_app(app_name);
+        auto app = get_app(app_name);
 
-            // The table might be removed just before the callback function is invoked, thus we must
-            // check if this table still exists.
-            //
-            // TODO(wangdan): should make updates to remote storage sequential by supporting atomic
-            // set, otherwise update might be missing. For example, an update is setting the envs
-            // while another is dropping a table. The update setting the envs does not contain the
-            // dropped state. Once it is applied by remote storage after another update dropping
-            // the table, the state of the table would always be non-dropped on remote storage.
-            if (!app) {
-                LOG_ERROR("clear app envs failed since app({}) has just been dropped", app_name);
-                env_rpc.response().err = ERR_APP_DROPPED;
-                env_rpc.response().hint_message = "app has just been dropped";
-                return;
+        // The table might be removed just before the callback function is invoked, thus we must
+        // check if this table still exists.
+        //
+        // TODO(wangdan): should make updates to remote storage sequential by supporting atomic
+        // set, otherwise update might be missing. For example, an update is setting the envs
+        // while another is dropping a table. The update setting the envs does not contain the
+        // dropped state. Once it is applied by remote storage after another update dropping
+        // the table, the state of the table would always be non-dropped on remote storage.
+        if (!app) {
+            LOG_ERROR("clear app envs failed since app({}) has just been dropped", app_name);
+            env_rpc.response().err = ERR_APP_DROPPED;
+            env_rpc.response().hint_message = "app has just been dropped";
+            return;
+        }
+
+        env_rpc.response().err = ERR_OK;
+
+        const auto &old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+
+        if (deleted_keys.empty()) {
+            // `deleted_keys` would be empty only when `prefix` is empty. Therefore, empty
+            // `deleted_keys` means deleting all environments.
+            app->envs.clear();
+        } else {
+            for (const auto &key : deleted_keys) {
+                app->envs.erase(key);
             }
+        }
 
-            env_rpc.response().err = ERR_OK;
-
-            const auto &old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
-
-            if (prefix.empty()) {
-                app->envs.clear();
-            } else {
-                for (const auto &key : erase_keys) {
-                    app->envs.erase(key);
-                }
-            }
-
-            const auto &new_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
-            LOG_INFO("app envs changed: old_envs = {}, new_envs = {}", old_envs, new_envs);
-        });
+        const auto &new_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+        LOG_INFO("app envs changed: old_envs = {}, new_envs = {}", old_envs, new_envs);
+    });
 }
 
 namespace {

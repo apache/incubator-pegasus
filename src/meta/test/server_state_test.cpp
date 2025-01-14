@@ -59,7 +59,9 @@ DSN_DECLARE_string(meta_state_service_type);
 namespace dsn {
 namespace replication {
 
-static const std::vector<std::string> keys = {
+namespace {
+
+const std::vector<std::string> keys = {
     dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
     dsn::replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL,
     dsn::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION,
@@ -69,7 +71,7 @@ static const std::vector<std::string> keys = {
     dsn::replica_envs::ROCKSDB_USAGE_SCENARIO,
     dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT,
     dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS};
-static const std::vector<std::string> values = {
+const std::vector<std::string> values = {
     "1712846598",
     "6",
     dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE,
@@ -80,28 +82,27 @@ static const std::vector<std::string> values = {
     "1",
     "0"};
 
-static const std::vector<std::string> del_keys = {
-    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
-    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
-    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
-static const std::set<std::string> del_keys_set = {
-    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
-    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
-    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
+const std::vector<std::string> del_keys = {dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
+                                           dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
+                                           dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
+const std::set<std::string> del_keys_set = {dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
+                                            dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
+                                            dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
 
-static const std::string clear_prefix = "rocksdb";
+const std::string clear_prefix = "rocksdb";
 
-// if str = "prefix.xxx" then return prefix
-// else return ""
-static std::string acquire_prefix(const std::string &str)
+// If `str` is <prefix>.xxx, return <prefix>; otherwise return empty string("").
+std::string acquire_prefix(const std::string &str)
 {
-    auto index = str.find('.');
-    if (index == std::string::npos) {
-        return "";
-    } else {
-        return str.substr(0, index);
+    const auto &dot = str.find('.');
+    if (dot == std::string::npos) {
+        return {};
     }
+
+    return str.substr(0, dot);
 }
+
+} // anonymous namespace
 
 class server_state_test
 {
