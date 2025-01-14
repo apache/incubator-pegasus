@@ -26,6 +26,7 @@
 
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
@@ -3266,15 +3267,15 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
 
 void server_state::clear_app_envs(const app_env_rpc &env_rpc)
 {
-    const configuration_update_app_env_request &request = env_rpc.request();
+    const auto &request = env_rpc.request();
     if (!request.__isset.clear_prefix) {
         env_rpc.response().err = ERR_INVALID_PARAMETERS;
         LOG_WARNING("clear app envs failed with invalid request");
         return;
     }
 
-    const std::string &prefix = request.clear_prefix;
-    const std::string &app_name = request.app_name;
+    const auto &prefix = request.clear_prefix;
+    const auto &app_name = request.app_name;
     LOG_INFO("clear app envs for app({}) from remote({}): prefix = {}",
              app_name,
              env_rpc.remote_address(),
@@ -3283,69 +3284,130 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
     app_info ainfo;
     std::string app_path;
     {
+        FAIL_POINT_INJECT_NOT_RETURN_F("clear_app_envs_failed", [app_name, this](std::string_view s) {
+            zauto_write_lock l(_lock);
+
+            if (s == "not_found") {
+                CHECK_EQ(_exist_apps.erase(app_name), 1);
+                return;
+            }
+
+            if (s == "dropping") {
+                gutil::FindOrDie(_exist_apps, app_name)->status = app_status::AS_DROPPING;
+                return;
+            }
+        });
+
         zauto_read_lock l(_lock);
-        std::shared_ptr<app_state> app = get_app(app_name);
-        if (app == nullptr) {
-            LOG_WARNING("clear app envs failed with invalid app_name({})", app_name);
-            env_rpc.response().err = ERR_INVALID_PARAMETERS;
-            env_rpc.response().hint_message = "invalid app name";
+
+        const auto &app = get_app(app_name);
+        if (!app) {
+            LOG_WARNING("clear app envs failed since app_name({}) cannot be found", app_name);
+            env_rpc.response().err = ERR_APP_NOT_EXIST;
+            env_rpc.response().hint_message = "app cannot be found";
             return;
-        } else {
-            ainfo = *(reinterpret_cast<app_info *>(app.get()));
-            app_path = get_app_path(*app);
+        } 
+
+        if (app->status == app_status::AS_DROPPING) {
+            LOG_WARNING("clear app envs failed since app(name={}, id={}) is being dropped",
+                        app_name,
+                        app->app_id);
+            env_rpc.response().err = ERR_BUSY_DROPPING;
+            env_rpc.response().hint_message = "app is being dropped";
+            return;
         }
+
+        ainfo = *app;
+            app_path = get_app_path(*app);
     }
 
     if (ainfo.envs.empty()) {
-        LOG_INFO("no key need to delete");
-        env_rpc.response().hint_message = "no key need to delete";
+        LOG_INFO("no key needs to be deleted for app({})", app_name);
+        env_rpc.response().err = ERR_OK;
+        env_rpc.response().hint_message = "no key needs to be deleted";
         return;
     }
 
     std::set<std::string> erase_keys;
-    std::ostringstream oss;
-    oss << "deleted keys:";
+    std::string deleted_keys_info("deleted keys:");
 
     if (prefix.empty()) {
         // ignore prefix
-        for (auto &kv : ainfo.envs) {
-            oss << std::endl << "    " << kv.first;
+        for (const auto &[key,_] : ainfo.envs) {
+            fmt::format_to(std::back_inserter(deleted_keys_info), "\n    {}", key);
         }
         ainfo.envs.clear();
     } else {
         // acquire key
-        for (const auto &pair : ainfo.envs) {
-            const std::string &key = pair.first;
+        const size_t prefix_len = prefix.size() + sizeof('.');
+        for (const auto &[key,_]: ainfo.envs) {
             // normal : key = prefix.xxx
-            if (key.size() > prefix.size() + 1) {
-                if (key.substr(0, prefix.size()) == prefix && key.at(prefix.size()) == '.') {
-                    erase_keys.emplace(key);
-                }
+            if (key.size() <= prefix_len) {
+                continue;
             }
+
+                if (!boost::algorithm::starts_with(key, prefix)) {
+                continue;
+                }
+
+                if (key[prefix.size()] != '.') {
+                continue;
+                }
+
+                    erase_keys.emplace(key);
         }
+
         // erase
         for (const auto &key : erase_keys) {
-            oss << std::endl << "    " << key;
+            fmt::format_to(std::back_inserter(deleted_keys_info), "\n    {}", key);
             ainfo.envs.erase(key);
         }
     }
 
     if (!prefix.empty() && erase_keys.empty()) {
         // no need update app_info
-        LOG_INFO("no key need to delete");
-        env_rpc.response().hint_message = "no key need to delete";
+        LOG_INFO("no key needs to be deleted for app({})", app_name);
+        env_rpc.response().err = ERR_OK;
+        env_rpc.response().hint_message = "no key needs to be deleted";
         return;
-    } else {
-        env_rpc.response().hint_message = oss.str();
-    }
+    } 
+
+        env_rpc.response().hint_message = std::move(deleted_keys_info);
 
     do_update_app_info(
         app_path, ainfo, [this, app_name, prefix, erase_keys, env_rpc](error_code ec) {
-            CHECK_EQ_MSG(ec, ERR_OK, "update app info to remote storage failed");
+            CHECK_EQ_MSG(ec, ERR_OK, "update app({}) info to remote storage failed", app_name);
 
             zauto_write_lock l(_lock);
-            std::shared_ptr<app_state> app = get_app(app_name);
-            std::string old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+
+        FAIL_POINT_INJECT_NOT_RETURN_F("clear_app_envs_failed", [app_name, this](std::string_view s) {
+            if (s == "dropped_after") {
+                CHECK_EQ(_exist_apps.erase(app_name), 1);
+                return;
+            }
+        });
+
+        auto app = get_app(app_name);
+
+        // The table might be removed just before the callback function is invoked, thus we must
+        // check if this table still exists.
+        //
+        // TODO(wangdan): should make updates to remote storage sequential by supporting atomic
+        // set, otherwise update might be missing. For example, an update is setting the envs
+        // while another is dropping a table. The update setting the envs does not contain the
+        // dropped state. Once it is applied by remote storage after another update dropping
+        // the table, the state of the table would always be non-dropped on remote storage.
+        if (!app) {
+            LOG_ERROR("clear app envs failed since app({}) has just been dropped", app_name);
+            env_rpc.response().err = ERR_APP_DROPPED;
+            env_rpc.response().hint_message = "app has just been dropped";
+            return;
+        }
+
+        env_rpc.response().err = ERR_OK;
+
+            const auto &old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+
             if (prefix.empty()) {
                 app->envs.clear();
             } else {
@@ -3353,7 +3415,8 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
                     app->envs.erase(key);
                 }
             }
-            std::string new_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+
+            const auto &new_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
             LOG_INFO("app envs changed: old_envs = {}, new_envs = {}", old_envs, new_envs);
         });
 }
