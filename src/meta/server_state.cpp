@@ -3284,19 +3284,20 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
     app_info ainfo;
     std::string app_path;
     {
-        FAIL_POINT_INJECT_NOT_RETURN_F("clear_app_envs_failed", [app_name, this](std::string_view s) {
-            zauto_write_lock l(_lock);
+        FAIL_POINT_INJECT_NOT_RETURN_F(
+            "clear_app_envs_failed", [app_name, this](std::string_view s) {
+                zauto_write_lock l(_lock);
 
-            if (s == "not_found") {
-                CHECK_EQ(_exist_apps.erase(app_name), 1);
-                return;
-            }
+                if (s == "not_found") {
+                    CHECK_EQ(_exist_apps.erase(app_name), 1);
+                    return;
+                }
 
-            if (s == "dropping") {
-                gutil::FindOrDie(_exist_apps, app_name)->status = app_status::AS_DROPPING;
-                return;
-            }
-        });
+                if (s == "dropping") {
+                    gutil::FindOrDie(_exist_apps, app_name)->status = app_status::AS_DROPPING;
+                    return;
+                }
+            });
 
         zauto_read_lock l(_lock);
 
@@ -3306,7 +3307,7 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
             env_rpc.response().err = ERR_APP_NOT_EXIST;
             env_rpc.response().hint_message = "app cannot be found";
             return;
-        } 
+        }
 
         if (app->status == app_status::AS_DROPPING) {
             LOG_WARNING("clear app envs failed since app(name={}, id={}) is being dropped",
@@ -3318,7 +3319,7 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
         }
 
         ainfo = *app;
-            app_path = get_app_path(*app);
+        app_path = get_app_path(*app);
     }
 
     if (ainfo.envs.empty()) {
@@ -3333,28 +3334,28 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
 
     if (prefix.empty()) {
         // ignore prefix
-        for (const auto &[key,_] : ainfo.envs) {
+        for (const auto &[key, _] : ainfo.envs) {
             fmt::format_to(std::back_inserter(deleted_keys_info), "\n    {}", key);
         }
         ainfo.envs.clear();
     } else {
         // acquire key
         const size_t prefix_len = prefix.size() + sizeof('.');
-        for (const auto &[key,_]: ainfo.envs) {
+        for (const auto &[key, _] : ainfo.envs) {
             // normal : key = prefix.xxx
             if (key.size() <= prefix_len) {
                 continue;
             }
 
-                if (!boost::algorithm::starts_with(key, prefix)) {
+            if (!boost::algorithm::starts_with(key, prefix)) {
                 continue;
-                }
+            }
 
-                if (key[prefix.size()] != '.') {
+            if (key[prefix.size()] != '.') {
                 continue;
-                }
+            }
 
-                    erase_keys.emplace(key);
+            erase_keys.emplace(key);
         }
 
         // erase
@@ -3370,9 +3371,9 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
         env_rpc.response().err = ERR_OK;
         env_rpc.response().hint_message = "no key needs to be deleted";
         return;
-    } 
+    }
 
-        env_rpc.response().hint_message = std::move(deleted_keys_info);
+    env_rpc.response().hint_message = std::move(deleted_keys_info);
 
     do_update_app_info(
         app_path, ainfo, [this, app_name, prefix, erase_keys, env_rpc](error_code ec) {
@@ -3380,31 +3381,32 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
 
             zauto_write_lock l(_lock);
 
-        FAIL_POINT_INJECT_NOT_RETURN_F("clear_app_envs_failed", [app_name, this](std::string_view s) {
-            if (s == "dropped_after") {
-                CHECK_EQ(_exist_apps.erase(app_name), 1);
+            FAIL_POINT_INJECT_NOT_RETURN_F("clear_app_envs_failed",
+                                           [app_name, this](std::string_view s) {
+                                               if (s == "dropped_after") {
+                                                   CHECK_EQ(_exist_apps.erase(app_name), 1);
+                                                   return;
+                                               }
+                                           });
+
+            auto app = get_app(app_name);
+
+            // The table might be removed just before the callback function is invoked, thus we must
+            // check if this table still exists.
+            //
+            // TODO(wangdan): should make updates to remote storage sequential by supporting atomic
+            // set, otherwise update might be missing. For example, an update is setting the envs
+            // while another is dropping a table. The update setting the envs does not contain the
+            // dropped state. Once it is applied by remote storage after another update dropping
+            // the table, the state of the table would always be non-dropped on remote storage.
+            if (!app) {
+                LOG_ERROR("clear app envs failed since app({}) has just been dropped", app_name);
+                env_rpc.response().err = ERR_APP_DROPPED;
+                env_rpc.response().hint_message = "app has just been dropped";
                 return;
             }
-        });
 
-        auto app = get_app(app_name);
-
-        // The table might be removed just before the callback function is invoked, thus we must
-        // check if this table still exists.
-        //
-        // TODO(wangdan): should make updates to remote storage sequential by supporting atomic
-        // set, otherwise update might be missing. For example, an update is setting the envs
-        // while another is dropping a table. The update setting the envs does not contain the
-        // dropped state. Once it is applied by remote storage after another update dropping
-        // the table, the state of the table would always be non-dropped on remote storage.
-        if (!app) {
-            LOG_ERROR("clear app envs failed since app({}) has just been dropped", app_name);
-            env_rpc.response().err = ERR_APP_DROPPED;
-            env_rpc.response().hint_message = "app has just been dropped";
-            return;
-        }
-
-        env_rpc.response().err = ERR_OK;
+            env_rpc.response().err = ERR_OK;
 
             const auto &old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
 
