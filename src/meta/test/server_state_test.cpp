@@ -227,17 +227,6 @@ private:
 
 void meta_service_test_app::app_envs_basic_test()
 {
-    static const std::vector<std::string> kValues = {
-        "1712846598",
-        "6",
-        dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE,
-        "1712846598",
-        "-1",
-        dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP,
-        dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL,
-        "1",
-        "0"};
-
     static const std::vector<std::string> kKeys = {
         dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
         dsn::replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL,
@@ -248,6 +237,17 @@ void meta_service_test_app::app_envs_basic_test()
         dsn::replica_envs::ROCKSDB_USAGE_SCENARIO,
         dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT,
         dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS};
+
+    static const std::vector<std::string> kValues = {
+        "1712846598",
+        "6",
+        dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE,
+        "1712846598",
+        "-1",
+        dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP,
+        dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL,
+        "1",
+        "0"};
 
     server_state_test test;
     test.load_apps({"test_app1",
