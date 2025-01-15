@@ -80,7 +80,7 @@ int rocksdb_wrapper::get(std::string_view raw_key, /*out*/ db_get_context *ctx)
     FAIL_POINT_INJECT_F("db_get", [](std::string_view) -> int { return FAIL_DB_GET; });
 
     rocksdb::Status s =
-        _db->Get(_rd_opts, _data_cf, utils::to_rocksdb_slice(raw_key), &(ctx->raw_value));
+        _db->Get(_rd_opts, _data_cf, utils::to_rocksdb_slice(raw_key), &ctx->raw_value);
     if (dsn_likely(s.ok())) {
         // success
         ctx->found = true;
@@ -96,7 +96,8 @@ int rocksdb_wrapper::get(std::string_view raw_key, /*out*/ db_get_context *ctx)
         return rocksdb::Status::kOk;
     }
 
-    dsn::blob hash_key, sort_key;
+    dsn::blob hash_key;
+    dsn::blob sort_key;
     pegasus_restore_key(dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
     LOG_ERROR_ROCKSDB("Get",
                       s.ToString(),
@@ -156,7 +157,8 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
         _pegasus_data_version, value, db_expire_ts(expire_sec), new_timetag);
     rocksdb::Status s = _write_batch->Put(_data_cf, skey_parts, svalue);
     if (dsn_unlikely(!s.ok())) {
-        ::dsn::blob hash_key, sort_key;
+        dsn::blob hash_key;
+        dsn::blob sort_key;
         pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
         LOG_ERROR_ROCKSDB("WriteBatchPut",
                           s.ToString(),
@@ -203,7 +205,8 @@ int rocksdb_wrapper::write_batch_delete(int64_t decree, std::string_view raw_key
 
     rocksdb::Status s = _write_batch->Delete(_data_cf, utils::to_rocksdb_slice(raw_key));
     if (dsn_unlikely(!s.ok())) {
-        dsn::blob hash_key, sort_key;
+        dsn::blob hash_key;
+        dsn::blob sort_key;
         pegasus_restore_key(dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
         LOG_ERROR_ROCKSDB("write_batch_delete",
                           s.ToString(),
