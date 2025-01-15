@@ -78,6 +78,7 @@
 #include "utils/blob.h"
 #include "utils/command_manager.h"
 #include "utils/config_api.h"
+#include "utils/errors.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -1612,16 +1613,49 @@ void server_state::list_apps(const configuration_list_apps_request &request,
                              configuration_list_apps_response &response,
                              dsn::message_ex *msg) const
 {
-    LOG_DEBUG("list app request, status({})", request.status);
+    LOG_DEBUG("list app request: {}{}status={}",
+              request.__isset.app_name_pattern
+                  ? fmt::format("app_name_pattern={}, ", request.app_name_pattern)
+                  : "",
+              request.__isset.match_type
+                  ? fmt::format("match_type={}, ", enum_to_string(request.match_type))
+                  : "",
+              request.status);
+
     zauto_read_lock l(_lock);
-    for (const auto &kv : _all_apps) {
-        app_state &app = *(kv.second);
-        if (request.status == app_status::AS_INVALID || request.status == app.status) {
-            if (nullptr == msg || _meta_svc->get_access_controller()->allowed(msg, app.app_name)) {
-                response.infos.push_back(app);
+
+    for (const auto &[_, app] : _all_apps) {
+        // If the pattern is provided in the request, any table chosen to be listed must match it.
+        if (request.__isset.app_name_pattern && request.__isset.match_type) {
+            const auto &result =
+                utils::pattern_match(app->app_name, request.app_name_pattern, request.match_type);
+            if (result.code() == ERR_NOT_MATCHED) {
+                continue;
+            }
+
+            if (result.code() != ERR_OK) {
+                response.err = result.code();
+                response.__set_hint_message(result.message());
+                LOG_ERROR("{}, app_name_pattern={}", result, request.app_name_pattern);
+
+                return;
             }
         }
+
+        // Only in the following two cases would a table be chosen to be listed, according to
+        // the requested status:
+        // - `app_status::AS_INVALID` means no filter, in other words, any table with any status
+        // could be chosen;
+        // - or, current status of a table is the same as the requested status.
+        if (request.status != app_status::AS_INVALID && request.status != app->status) {
+            continue;
+        }
+
+        if (msg == nullptr || _meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
+            response.infos.push_back(*app);
+        }
     }
+
     response.err = dsn::ERR_OK;
 }
 

@@ -27,7 +27,6 @@
 #include <algorithm>
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <chrono>
-#include <fstream>
 #include <initializer_list>
 #include <iostream>
 #include <map>
@@ -454,14 +453,16 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         }
     }
 
-    dsn::utils::multi_table_printer mtp;
+    dsn::utils::multi_table_printer multi_printer;
     if (!(status.empty() && output_file.empty())) {
         dsn::utils::table_printer tp("parameters");
-        if (!status.empty())
+        if (!status.empty()) {
             tp.add_row_name_and_data("status", status);
-        if (!output_file.empty())
+        }
+        if (!output_file.empty()) {
             tp.add_row_name_and_data("out_file", output_file);
-        mtp.add(std::move(tp));
+        }
+        multi_printer.add(std::move(tp));
     }
 
     ::dsn::replication::node_status::type s = ::dsn::replication::node_status::NS_INVALID;
@@ -469,15 +470,15 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         s = type_from_string(dsn::replication::_node_status_VALUES_TO_NAMES,
                              std::string("ns_") + status,
                              ::dsn::replication::node_status::NS_INVALID);
-        PRINT_AND_RETURN_FALSE_IF_NOT(s != ::dsn::replication::node_status::NS_INVALID,
-                                      "parse {} as node_status::type failed",
-                                      status);
+        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(s != ::dsn::replication::node_status::NS_INVALID,
+                                            "parse {} as node_status::type failed",
+                                            status);
     }
 
     std::map<dsn::host_port, dsn::replication::node_status::type> status_by_hp;
     auto r = sc->ddl_client->list_nodes(s, status_by_hp);
     if (r != dsn::ERR_OK) {
-        std::cout << "list nodes failed, error=" << r << std::endl;
+        fmt::println("list nodes failed, error={}", r);
         return true;
     }
 
@@ -494,9 +495,9 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
 
     if (detailed) {
         std::vector<::dsn::app_info> apps;
-        r = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
-        if (r != dsn::ERR_OK) {
-            std::cout << "list apps failed, error=" << r << std::endl;
+        const auto &result = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
+        if (!result) {
+            fmt::println("list apps failed, error={}", result);
             return true;
         }
 
@@ -506,7 +507,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
             std::vector<dsn::partition_configuration> pcs;
             r = sc->ddl_client->list_app(app.app_name, app_id, partition_count, pcs);
             if (r != dsn::ERR_OK) {
-                std::cout << "list app " << app.app_name << " failed, error=" << r << std::endl;
+                fmt::println("list app {} failed, error={}", app.app_name, r);
                 return true;
             }
 
@@ -530,7 +531,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     if (resource_usage) {
         std::vector<node_desc> nodes;
         if (!fill_nodes(sc, "replica-server", nodes)) {
-            std::cout << "get replica server node list failed" << std::endl;
+            fmt::println("get replica server node list failed");
             return true;
         }
 
@@ -553,7 +554,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     if (show_qps) {
         std::vector<node_desc> nodes;
         if (!fill_nodes(sc, "replica-server", nodes)) {
-            std::cout << "get replica server node list failed" << std::endl;
+            fmt::println("get replica server node list failed");
             return true;
         }
 
@@ -595,7 +596,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     if (show_latency) {
         std::vector<node_desc> nodes;
         if (!fill_nodes(sc, "replica-server", nodes)) {
-            std::cout << "get replica server node list failed" << std::endl;
+            fmt::println("get replica server node list failed");
             return true;
         }
 
@@ -615,19 +616,6 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
                                                  "parse profiler latency");
         }
     }
-
-    // print configuration_list_nodes_response
-    std::streambuf *buf = nullptr;
-    std::ofstream of;
-
-    // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.
-    if (!output_file.empty()) {
-        of.open(output_file);
-        buf = of.rdbuf();
-    } else {
-        buf = std::cout.rdbuf();
-    }
-    std::ostream out(buf);
 
     dsn::utils::table_printer tp("details");
     tp.add_title("address");
@@ -694,16 +682,15 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
             tp.append_data(kv.second.multi_put_p99 / 1e6);
         }
     }
-    mtp.add(std::move(tp));
+    multi_printer.add(std::move(tp));
 
     dsn::utils::table_printer tp_count("summary");
     tp_count.add_row_name_and_data("total_node_count", status_by_hp.size());
     tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
     tp_count.add_row_name_and_data("unalive_node_count", status_by_hp.size() - alive_node_count);
-    mtp.add(std::move(tp_count));
+    multi_printer.add(std::move(tp_count));
 
-    // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.
-    mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
+    dsn::utils::output(output_file, json, multi_printer);
 
     return true;
 }

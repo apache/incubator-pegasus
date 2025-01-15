@@ -95,22 +95,49 @@ public:
     error_with<configuration_rename_app_response> rename_app(const std::string &old_app_name,
                                                              const std::string &new_app_name);
 
-    dsn::error_code list_apps(const dsn::app_status::type status,
-                              bool show_all,
-                              bool detailed,
-                              bool json,
-                              const std::string &file_name);
+    // Choose tables and list them to a file, with path specified as `output_file`. Once
+    // `output_file` is empty, tables would be listed to stdout.
+    //
+    // Choose tables according to following parameters:
+    // - `detailed`: whether to show healthy/unhealthy details.
+    // - `json`: whether to output as json format.
+    // - `status`: the status of the tables chosen to be listed. `app_status::AS_INVALID` means
+    // no restriction.
+    // - `app_name_pattern`: the name pattern of the tables chosen to be listed.
+    // - `match_type`: the type in which the name pattern would be matched.
+    error_s list_apps(bool detailed,
+                      bool json,
+                      const std::string &output_file,
+                      dsn::app_status::type status,
+                      const std::string &app_name_pattern,
+                      utils::pattern_match_type::type match_type);
 
-    dsn::error_code list_apps(const dsn::app_status::type status,
-                              std::vector<::dsn::app_info> &apps);
+    // The same as the above, except that there's no restriction on table name; in other
+    // words, the match type is `PMT_MATCH_ALL`.
+    error_s list_apps(bool detailed,
+                      bool json,
+                      const std::string &output_file,
+                      dsn::app_status::type status);
 
-    dsn::error_code list_nodes(const dsn::replication::node_status::type status,
-                               bool detailed,
-                               const std::string &file_name,
-                               bool resolve_ip = false);
+    // Create and send request to meta server to get the tables chosen to be listed. `status`,
+    // `app_name_pattern` and `match_type` are the same as the above. `apps` is the output
+    // parameter, which is just the tables chosen to be listed.
+    error_s list_apps(dsn::app_status::type status,
+                      const std::string &app_name_pattern,
+                      utils::pattern_match_type::type match_type,
+                      std::vector<::dsn::app_info> &apps);
 
+    // The same as the above, except that there's no restriction on table name; in other
+    // words, the match type is `PMT_MATCH_ALL`.
+    error_s list_apps(dsn::app_status::type status, std::vector<::dsn::app_info> &apps);
+
+    // Create and send request to meta server to get the nodes chosen to be listed according
+    // to the following parameters:
+    // - `status`: the status of the nodes chosen to be listed. `node_status::NS_INVALID` means
+    // no restriction.
+    // - `nodes`: the output parameter, which is just the nodes chosen to be listed.
     dsn::error_code
-    list_nodes(const dsn::replication::node_status::type status,
+    list_nodes(dsn::replication::node_status::type status,
                std::map<dsn::host_port, dsn::replication::node_status::type> &nodes);
 
     dsn::error_code cluster_name(int64_t timeout_ms, std::string &cluster_name);
@@ -287,13 +314,18 @@ private:
                           dsn::message_ex *request,
                           dsn::message_ex *resp);
 
+    // Send RPC request `req` with `code` to meta server:
+    // * `timeout_milliseconds`: timeout for the request;
+    // * `reply_thread_hash`: thread hash for the RPC response task.
+    //
+    // Return the RPC response task.
     template <typename TRequest>
     rpc_response_task_ptr request_meta(const dsn::task_code &code,
                                        std::shared_ptr<TRequest> &req,
-                                       int timeout_milliseconds = 0,
-                                       int reply_thread_hash = 0)
+                                       int timeout_milliseconds,
+                                       int reply_thread_hash)
     {
-        auto msg = dsn::message_ex::create_request(code, timeout_milliseconds);
+        auto *msg = dsn::message_ex::create_request(code, timeout_milliseconds);
         dsn::marshall(msg, *req);
 
         auto task =
@@ -312,28 +344,54 @@ private:
         return task;
     }
 
+    // The same as the above, except that the thread hash for the RPC response task is set to 0.
+    template <typename TRequest>
+    rpc_response_task_ptr request_meta(const dsn::task_code &code,
+                                       std::shared_ptr<TRequest> &req,
+                                       int timeout_milliseconds)
+    {
+        return request_meta(code, req, timeout_milliseconds, 0);
+    }
+
+    // The same as the above, except that `timeout_milliseconds` for the RPC request is set to
+    // 0, which means `rpc_timeout_milliseconds` configured for each task would be used as the
+    // timeout. See `message_ex::create_request()` for details.
+    template <typename TRequest>
+    rpc_response_task_ptr request_meta(const dsn::task_code &code, std::shared_ptr<TRequest> &req)
+    {
+        return request_meta(code, req, 0);
+    }
+
     static inline bool is_busy(const dsn::error_code &err)
     {
         return err == dsn::ERR_BUSY_CREATING || err == dsn::ERR_BUSY_DROPPING;
     }
 
+    // The same as `request_meta()`, except that it would retry multiple times as configured
+    // once failed or busy, and return error status for the response task. If succeed, `resp`
+    // would be set as the response.
+    //
+    // NOTE: the returned error is just for the RPC request; please also check the possible
+    // error status in `resp` if the RPC request succeeds.
     template <typename TRequest, typename TResponse>
-    rpc_response_task_ptr request_meta_and_wait_response(const dsn::task_code &code,
-                                                         std::shared_ptr<TRequest> &req,
-                                                         TResponse &resp,
-                                                         int timeout_milliseconds = 0,
-                                                         int reply_thread_hash = 0)
+    error_s request_meta_and_wait_response(const dsn::task_code &code,
+                                           std::shared_ptr<TRequest> &req,
+                                           TResponse &resp,
+                                           int timeout_milliseconds,
+                                           int reply_thread_hash)
     {
-        rpc_response_task_ptr resp_task;
         for (uint32_t i = 1; i <= FLAGS_ddl_client_max_attempt_count; ++i) {
-            resp_task = request_meta(code, req, timeout_milliseconds, reply_thread_hash);
+            auto resp_task = request_meta(code, req, timeout_milliseconds, reply_thread_hash);
             resp_task->wait();
 
             // Failed to send request to meta server. The possible reason might be:
             // * cannot connect to meta server (such as ERR_NETWORK_FAILURE);
             // * do not receive any response from meta server (such as ERR_TIMEOUT)
             if (resp_task->error() != dsn::ERR_OK) {
-                return resp_task;
+                return FMT_ERR(resp_task->error(),
+                               "request meta failed: task={}, error={}",
+                               code,
+                               resp_task->error());
             }
 
             // Once response is nullptr, it must be mocked by unit tests since network is
@@ -358,7 +416,7 @@ private:
             // Once `err` field in the received response is ERR_OK or some non-busy error, do not
             // attempt again.
             if (resp.err == dsn::ERR_OK || !is_busy(resp.err)) {
-                return resp_task;
+                return error_s::ok();
             }
 
             // Would not sleep for the last attempt.
@@ -371,7 +429,29 @@ private:
                     std::chrono::milliseconds(FLAGS_ddl_client_retry_interval_ms));
             }
         }
-        return resp_task;
+
+        return error_s::ok();
+    }
+
+    // The same as the above, except that the thread hash for the RPC response task is set to 0.
+    template <typename TRequest, typename TResponse>
+    error_s request_meta_and_wait_response(const dsn::task_code &code,
+                                           std::shared_ptr<TRequest> &req,
+                                           TResponse &resp,
+                                           int timeout_milliseconds)
+    {
+        return request_meta_and_wait_response(code, req, resp, timeout_milliseconds, 0);
+    }
+
+    // The same as the above, except that `timeout_milliseconds` for the RPC request is set to
+    // 0, which means `rpc_timeout_milliseconds` configured for each task would be used as the
+    // timeout. See `message_ex::create_request()` for details.
+    template <typename TRequest, typename TResponse>
+    error_s request_meta_and_wait_response(const dsn::task_code &code,
+                                           std::shared_ptr<TRequest> &req,
+                                           TResponse &resp)
+    {
+        return request_meta_and_wait_response(code, req, resp, 0);
     }
 
     /// Send request to meta server synchronously.

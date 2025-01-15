@@ -26,14 +26,15 @@
 
 #include <absl/strings/ascii.h>
 #include <boost/algorithm/string/predicate.hpp>
-#include <cstdio>
 #include <openssl/md5.h>
 #include <strings.h>
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <sstream> // IWYU pragma: keep
 #include <utility>
 
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
@@ -114,9 +115,9 @@ bool mequals(const void *lhs, const void *rhs, size_t n)
 
 #undef CHECK_NULL_PTR
 
-error_code pattern_match(const std::string &str,
-                         const std::string &pattern,
-                         pattern_match_type::type match_type)
+error_s pattern_match(const std::string &str,
+                      const std::string &pattern,
+                      pattern_match_type::type match_type)
 {
     bool matched = false;
     switch (match_type) {
@@ -145,10 +146,17 @@ error_code pattern_match(const std::string &str,
     case pattern_match_type::PMT_MATCH_REGEX:
 
     default:
-        return ERR_NOT_IMPLEMENTED;
+        return FMT_ERR(ERR_NOT_IMPLEMENTED,
+                       "match_type is not supported: val={}, str={}",
+                       static_cast<int>(match_type),
+                       enum_to_string(match_type));
     }
 
-    return matched ? ERR_OK : ERR_NOT_MATCHED;
+    if (!matched) {
+        return error_s::make(ERR_NOT_MATCHED);
+    }
+
+    return error_s::ok();
 }
 
 std::string get_last_component(const std::string &input, const char splitters[])

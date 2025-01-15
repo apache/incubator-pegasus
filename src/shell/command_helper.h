@@ -89,16 +89,23 @@
 
 #define SHELL_PRINTLN_OK(msg, ...) SHELL_PRINT_OK_BASE("{}\n", fmt::format(msg, ##__VA_ARGS__))
 
-using namespace dsn::replication;
+// Print messages to stderr and return false if `exp` is evaluated to false.
+#define SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(exp, ...)                                              \
+    do {                                                                                           \
+        if (dsn_unlikely(!(exp))) {                                                                \
+            SHELL_PRINTLN_ERROR(__VA_ARGS__);                                                      \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
+
+#define RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID()                                               \
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(dsn::buf2uint32(optarg, sample_interval_ms),               \
+                                        "parse sample_interval_ms({}) failed",                     \
+                                        optarg);                                                   \
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(sample_interval_ms > 0, "sample_interval_ms should be > 0")
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_GET_METRICS, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-
-#define RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID()                                               \
-    PRINT_AND_RETURN_FALSE_IF_NOT(dsn::buf2uint32(optarg, sample_interval_ms),                     \
-                                  "parse sample_interval_ms({}) failed\n",                         \
-                                  optarg);                                                         \
-    PRINT_AND_RETURN_FALSE_IF_NOT(sample_interval_ms > 0, "sample_interval_ms should be > 0\n")
 
 enum scan_data_operator
 {
@@ -1852,11 +1859,12 @@ inline bool get_apps_and_nodes(shell_context *sc,
                                std::vector<::dsn::app_info> &apps,
                                std::vector<node_desc> &nodes)
 {
-    dsn::error_code err = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
-    if (err != dsn::ERR_OK) {
-        LOG_ERROR("list apps failed, error = {}", err);
+    const auto &result = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
+    if (!result) {
+        LOG_ERROR("list apps failed, error={}", result);
         return false;
     }
+
     if (!fill_nodes(sc, "replica-server", nodes)) {
         LOG_ERROR("get replica server node list failed");
         return false;

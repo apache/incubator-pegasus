@@ -91,9 +91,10 @@ static command_executor commands[] = {
     },
     {
         "ls",
-        "list all apps",
-        "[-a|-all] [-d|--detailed] [-j|--json] [-o|--output file_name] "
-        "[-s|--status all|available|creating|dropping|dropped]",
+        "list tables with specified status or pattern",
+        "[-a|--all] [-d|--detailed] [-j|--json] [-o|--output file_name] "
+        "[-s|--status all|available|creating|dropping|dropped] "
+        "[-p|--app_name_pattern str] [-m|--match_type all|exact|anywhere|prefix|postfix]",
         ls_apps,
     },
     {
@@ -542,9 +543,9 @@ static command_executor commands[] = {
     {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
     {"dups",
      "list duplications of one or multiple tables with specified pattern",
-     "[-a|--app_name_pattern str] [-m|--match_type str] [-p|--list_partitions] "
-     "[-g|--progress_gap num] [-u|--show_unfinishd] [-o|--output file_name] "
-     "[-j|--json]",
+     "[-a|--app_name_pattern str] [-m|--match_type all|exact|anywhere|prefix|postfix] "
+     "[-p|--list_partitions] [-g|--progress_gap num] [-u|--show_unfinishd] "
+     "[-o|--output file_name] [-j|--json]",
      ls_dups},
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},

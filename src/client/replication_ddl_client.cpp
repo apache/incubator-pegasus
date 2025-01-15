@@ -27,10 +27,11 @@
 #include "replication_ddl_client.h"
 
 // IWYU pragma: no_include <ext/alloc_traits.h>
-#include <string.h>
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -192,13 +193,12 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
                                                    bool success_if_exist)
 {
     if (partition_count < 1) {
-        std::cout << "create app " << app_name << " failed: partition_count should >= 1"
-                  << std::endl;
+        fmt::println(stderr, "create app {} failed: partition_count should >= 1", app_name);
         return ERR_INVALID_PARAMETERS;
     }
 
     if (replica_count < 1) {
-        std::cout << "create app " << app_name << " failed: replica_count should >= 1" << std::endl;
+        fmt::println(stderr, "create app {} failed: replica_count should >= 1", app_name);
         return ERR_INVALID_PARAMETERS;
     }
 
@@ -215,25 +215,23 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
     req->options.is_stateful = !is_stateless;
 
     dsn::replication::configuration_create_app_response resp;
-    auto resp_task = request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
-
-    if (resp_task->error() != dsn::ERR_OK) {
-        std::cout << "create app " << app_name
-                  << " failed: [create] call server error: " << resp_task->error() << std::endl;
-        return resp_task->error();
-    }
+    RETURN_EC_NOT_OK_MSG(request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp),
+                         "create app {} failed: [create] call server error",
+                         app_name);
 
     if (resp.err != dsn::ERR_OK) {
-        std::cout << "create app " << app_name
-                  << " failed: [create] received server error: " << resp.err << std::endl;
+        fmt::println(
+            stderr, "{}: create app {} failed: [create] received server error", resp.err, app_name);
         return resp.err;
     }
 
-    std::cout << "create app " << app_name << " succeed, waiting for app ready" << std::endl;
+    fmt::println("create app {} succeed, waiting for app ready", app_name);
 
     dsn::error_code error = wait_app_ready(app_name, partition_count, replica_count);
-    if (error == dsn::ERR_OK)
-        std::cout << app_name << " is ready now!" << std::endl;
+    if (error == dsn::ERR_OK) {
+        fmt::println("{} is ready now!", app_name);
+    }
+
     return error;
 }
 
@@ -247,11 +245,7 @@ dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, in
     req->options.__set_reserve_seconds(reserve_seconds);
 
     dsn::replication::configuration_drop_app_response resp;
-    auto resp_task = request_meta_and_wait_response(RPC_CM_DROP_APP, req, resp);
-
-    if (resp_task->error() != dsn::ERR_OK) {
-        return resp_task->error();
-    }
+    RETURN_EC_NOT_OK(request_meta_and_wait_response(RPC_CM_DROP_APP, req, resp));
 
     if (resp.err != dsn::ERR_OK) {
         return resp.err;
@@ -269,11 +263,7 @@ dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::st
     req->new_app_name = new_app_name;
 
     dsn::replication::configuration_recall_app_response resp;
-    auto resp_task = request_meta_and_wait_response(RPC_CM_RECALL_APP, req, resp);
-
-    if (resp_task->error() != dsn::ERR_OK) {
-        return resp_task->error();
-    }
+    RETURN_EC_NOT_OK(request_meta_and_wait_response(RPC_CM_RECALL_APP, req, resp));
 
     if (resp.err != dsn::ERR_OK) {
         return resp.err;
@@ -286,63 +276,58 @@ dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::st
         resp.info.app_name, resp.info.partition_count, resp.info.max_replica_count);
 }
 
-dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status,
-                                                  std::vector<::dsn::app_info> &apps)
+error_s replication_ddl_client::list_apps(dsn::app_status::type status,
+                                          const std::string &app_name_pattern,
+                                          utils::pattern_match_type::type match_type,
+                                          std::vector<::dsn::app_info> &apps)
 {
     auto req = std::make_shared<configuration_list_apps_request>();
     req->status = status;
-
-    auto resp_task = request_meta(RPC_CM_LIST_APPS, req);
-    resp_task->wait();
-    if (resp_task->error() != dsn::ERR_OK) {
-        return resp_task->error();
-    }
+    req->__set_app_name_pattern(app_name_pattern);
+    req->__set_match_type(match_type);
 
     dsn::replication::configuration_list_apps_response resp;
-    ::dsn::unmarshall(resp_task->get_response(), resp);
-    if (resp.err != dsn::ERR_OK) {
-        return resp.err;
+    const auto &req_result = request_meta_and_wait_response(RPC_CM_LIST_APPS, req, resp);
+    if (!req_result) {
+        return req_result;
     }
 
-    apps = resp.infos;
+    if (resp.err != dsn::ERR_OK) {
+        return error_s::make(resp.err, resp.hint_message);
+    }
 
-    return dsn::ERR_OK;
+    apps = std::move(resp.infos);
+
+    return error_s::ok();
 }
 
-dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type status,
-                                                  bool show_all,
-                                                  bool detailed,
-                                                  bool json,
-                                                  const std::string &file_name)
+error_s replication_ddl_client::list_apps(dsn::app_status::type status,
+                                          std::vector<::dsn::app_info> &apps)
+{
+    return list_apps(status, {}, utils::pattern_match_type::PMT_MATCH_ALL, apps);
+}
+
+error_s replication_ddl_client::list_apps(bool detailed,
+                                          bool json,
+                                          const std::string &output_file,
+                                          dsn::app_status::type status,
+                                          const std::string &app_name_pattern,
+                                          utils::pattern_match_type::type match_type)
 {
     std::vector<::dsn::app_info> apps;
-    auto r = list_apps(status, apps);
-    if (r != dsn::ERR_OK) {
-        return r;
+    {
+        const auto &result = list_apps(status, app_name_pattern, match_type, apps);
+        if (!result) {
+            return result;
+        }
     }
-
-    // print configuration_list_apps_response
-    std::streambuf *buf;
-    std::ofstream of;
-
-    if (!file_name.empty()) {
-        of.open(file_name);
-        buf = of.rdbuf();
-    } else {
-        buf = std::cout.rdbuf();
-    }
-    std::ostream out(buf);
 
     size_t max_app_name_size = 20;
-    for (int i = 0; i < apps.size(); i++) {
-        dsn::app_info info = apps[i];
-        if (!show_all && info.status != app_status::AS_AVAILABLE) {
-            continue;
-        }
-        max_app_name_size = std::max(max_app_name_size, info.app_name.size() + 2);
+    for (const auto &app : apps) {
+        max_app_name_size = std::max(max_app_name_size, app.app_name.size() + 2);
     }
 
-    dsn::utils::multi_table_printer mtp;
+    dsn::utils::multi_table_printer multi_printer;
     dsn::utils::table_printer tp_general("general_info");
     tp_general.add_title("app_id");
     tp_general.add_column("status");
@@ -357,11 +342,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
     tp_general.add_column("envs_count");
 
     int available_app_count = 0;
-    for (int i = 0; i < apps.size(); i++) {
-        dsn::app_info info = apps[i];
-        if (!show_all && info.status != app_status::AS_AVAILABLE) {
-            continue;
-        }
+    for (const auto &info : apps) {
         std::string status_str = enum_to_string(info.status);
         status_str = status_str.substr(status_str.find("AS_") + 3);
         std::string create_time = "-";
@@ -401,7 +382,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         tp_general.append_data(drop_expire_time);
         tp_general.append_data(info.envs.size());
     }
-    mtp.add(std::move(tp_general));
+    multi_printer.add(std::move(tp_general));
 
     int total_fully_healthy_app_count = 0;
     int total_unhealthy_app_count = 0;
@@ -416,17 +397,17 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
         tp_health.add_column("unhealthy");
         tp_health.add_column("write_unhealthy");
         tp_health.add_column("read_unhealthy");
-        for (auto &info : apps) {
+        for (const auto &info : apps) {
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
             }
-            int32_t app_id;
-            int32_t partition_count;
+            int32_t app_id = 0;
+            int32_t partition_count = 0;
             std::vector<partition_configuration> pcs;
-            r = list_app(info.app_name, app_id, partition_count, pcs);
-            if (r != dsn::ERR_OK) {
-                LOG_ERROR("list app({}) failed, err = {}", info.app_name, r);
-                return r;
+            const auto &err = list_app(info.app_name, app_id, partition_count, pcs);
+            if (err != ERR_OK) {
+                LOG_ERROR("list app({}) failed, err={}", info.app_name, err);
+                return error_s::make(err);
             }
             CHECK_EQ(info.app_id, app_id);
             CHECK_EQ(info.partition_count, partition_count);
@@ -458,16 +439,19 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             tp_health.append_data(write_unhealthy);
             tp_health.append_data(read_unhealthy);
 
-            if (fully_healthy == info.partition_count)
-                total_fully_healthy_app_count++;
-            else
-                total_unhealthy_app_count++;
-            if (write_unhealthy > 0)
-                total_write_unhealthy_app_count++;
-            if (read_unhealthy > 0)
-                total_read_unhealthy_app_count++;
+            if (fully_healthy == info.partition_count) {
+                ++total_fully_healthy_app_count;
+            } else {
+                ++total_unhealthy_app_count;
+            }
+            if (write_unhealthy > 0) {
+                ++total_write_unhealthy_app_count;
+            }
+            if (read_unhealthy > 0) {
+                ++total_read_unhealthy_app_count;
+            }
         }
-        mtp.add(std::move(tp_health));
+        multi_printer.add(std::move(tp_health));
     }
 
     dsn::utils::table_printer tp_count("summary");
@@ -479,16 +463,24 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                                        total_write_unhealthy_app_count);
         tp_count.add_row_name_and_data("read_unhealthy_app_count", total_read_unhealthy_app_count);
     }
-    mtp.add(std::move(tp_count));
+    multi_printer.add(std::move(tp_count));
 
-    // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.
-    mtp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
+    dsn::utils::output(output_file, json, multi_printer);
 
-    return dsn::ERR_OK;
+    return error_s::ok();
+}
+
+error_s replication_ddl_client::list_apps(bool detailed,
+                                          bool json,
+                                          const std::string &output_file,
+                                          const dsn::app_status::type status)
+{
+    return list_apps(
+        detailed, json, output_file, status, {}, utils::pattern_match_type::PMT_MATCH_ALL);
 }
 
 dsn::error_code replication_ddl_client::list_nodes(
-    const dsn::replication::node_status::type status,
+    dsn::replication::node_status::type status,
     std::map<dsn::host_port, dsn::replication::node_status::type> &nodes)
 {
     auto req = std::make_shared<configuration_list_nodes_request>();
@@ -533,104 +525,6 @@ std::string replication_ddl_client::node_name(const host_port &hp, bool resolve_
     }
 
     return dns_resolver::instance().resolve_address(hp).to_string();
-}
-
-dsn::error_code replication_ddl_client::list_nodes(const dsn::replication::node_status::type status,
-                                                   bool detailed,
-                                                   const std::string &file_name,
-                                                   bool resolve_ip)
-{
-    std::map<dsn::host_port, dsn::replication::node_status::type> nodes;
-    auto r = list_nodes(status, nodes);
-    if (r != dsn::ERR_OK) {
-        return r;
-    }
-
-    std::map<dsn::host_port, list_nodes_helper> tmp_map;
-    int alive_node_count = 0;
-    for (const auto &[hp, type] : nodes) {
-        if (type == dsn::replication::node_status::NS_ALIVE) {
-            alive_node_count++;
-        }
-        std::string status_str = enum_to_string(type);
-        status_str = status_str.substr(status_str.find("NS_") + 3);
-        tmp_map.emplace(hp, list_nodes_helper(node_name(hp, resolve_ip), status_str));
-    }
-
-    if (detailed) {
-        std::vector<::dsn::app_info> apps;
-        r = list_apps(dsn::app_status::AS_AVAILABLE, apps);
-        if (r != dsn::ERR_OK) {
-            return r;
-        }
-
-        for (auto &app : apps) {
-            int32_t app_id;
-            int32_t partition_count;
-            std::vector<partition_configuration> pcs;
-            r = list_app(app.app_name, app_id, partition_count, pcs);
-            if (r != dsn::ERR_OK) {
-                return r;
-            }
-
-            for (const auto &pc : pcs) {
-                if (pc.hp_primary) {
-                    auto find = tmp_map.find(pc.hp_primary);
-                    if (find != tmp_map.end()) {
-                        find->second.primary_count++;
-                    }
-                }
-                for (const auto &secondary : pc.hp_secondaries) {
-                    auto find = tmp_map.find(secondary);
-                    if (find != tmp_map.end()) {
-                        find->second.secondary_count++;
-                    }
-                }
-            }
-        }
-    }
-
-    // print configuration_list_nodes_response
-    std::streambuf *buf;
-    std::ofstream of;
-
-    if (!file_name.empty()) {
-        of.open(file_name);
-        buf = of.rdbuf();
-    } else {
-        buf = std::cout.rdbuf();
-    }
-    std::ostream out(buf);
-
-    dsn::utils::table_printer tp;
-    tp.add_title("address");
-    tp.add_column("status");
-    if (detailed) {
-        tp.add_column("replica_count");
-        tp.add_column("primary_count");
-        tp.add_column("secondary_count");
-    }
-    for (auto &kv : tmp_map) {
-        tp.add_row(kv.second.node_name);
-        tp.append_data(kv.second.node_status);
-        if (detailed) {
-            tp.append_data(kv.second.primary_count + kv.second.secondary_count);
-            tp.append_data(kv.second.primary_count);
-            tp.append_data(kv.second.secondary_count);
-        }
-    }
-    tp.output(out);
-    out << std::endl;
-
-    dsn::utils::table_printer tp_count;
-    tp_count.add_row_name_and_data("total_node_count", nodes.size());
-    tp_count.add_row_name_and_data("alive_node_count", alive_node_count);
-    tp_count.add_row_name_and_data("unalive_node_count", nodes.size() - alive_node_count);
-    tp_count.output(out);
-    out << std::endl;
-
-    return dsn::ERR_OK;
-#undef RESOLVE
 }
 
 dsn::error_code replication_ddl_client::cluster_name(int64_t timeout_ms, std::string &cluster_name)
@@ -1477,17 +1371,22 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
 dsn::error_code replication_ddl_client::get_app_envs(const std::string &app_name,
                                                      std::map<std::string, std::string> &envs)
 {
+    // Just match the table with the provided name exactly since we want to get the envs from
+    // a specific table.
     std::vector<::dsn::app_info> apps;
-    auto r = list_apps(dsn::app_status::AS_AVAILABLE, apps);
-    if (r != dsn::ERR_OK) {
-        return r;
-    }
+    RETURN_EC_NOT_OK(list_apps(
+        dsn::app_status::AS_AVAILABLE, app_name, utils::pattern_match_type::PMT_MATCH_EXACT, apps));
 
-    for (auto &app : apps) {
-        if (app.app_name == app_name) {
-            envs = app.envs;
-            return dsn::ERR_OK;
+    for (const auto &app : apps) {
+        // Once the meta server does not support `app_name` and `match_type` (still the old
+        // version) for `RPC_CM_LIST_APPS`, the response would include all available tables.
+        // Thus here we should still check if the table name in the response is the target.
+        if (app.app_name != app_name) {
+            continue;
         }
+
+        envs = app.envs;
+        return dsn::ERR_OK;
     }
 
     return dsn::ERR_OBJECT_NOT_FOUND;

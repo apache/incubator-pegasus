@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <cstdio>
 #include <functional>
 #include <map>
 #include <set>
@@ -29,7 +28,6 @@
 #include "shell/argh.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/ports.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -95,15 +93,6 @@ bool validate_ip(shell_context *sc,
                  const std::string &host_port_str,
                  /*out*/ dsn::host_port &target_hp,
                  /*out*/ std::string &err_info);
-
-// Print messages to stderr and return false if `exp` is evaluated to false.
-#define PRINT_AND_RETURN_FALSE_IF_NOT(exp, ...)                                                    \
-    do {                                                                                           \
-        if (dsn_unlikely(!(exp))) {                                                                \
-            fmt::print(stderr, __VA_ARGS__);                                                       \
-            return false;                                                                          \
-        }                                                                                          \
-    } while (0)
 
 template <typename EnumType>
 EnumType type_from_string(const std::map<int, const char *> &type_maps,
