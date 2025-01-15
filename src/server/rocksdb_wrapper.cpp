@@ -79,7 +79,8 @@ int rocksdb_wrapper::get(std::string_view raw_key, /*out*/ db_get_context *ctx)
 {
     FAIL_POINT_INJECT_F("db_get", [](std::string_view) -> int { return FAIL_DB_GET; });
 
-    rocksdb::Status s = _db->Get(_rd_opts, _data_cf, utils::to_rocksdb_slice(raw_key), &(ctx->raw_value));
+    rocksdb::Status s =
+        _db->Get(_rd_opts, _data_cf, utils::to_rocksdb_slice(raw_key), &(ctx->raw_value));
     if (dsn_likely(s.ok())) {
         // success
         ctx->found = true;
