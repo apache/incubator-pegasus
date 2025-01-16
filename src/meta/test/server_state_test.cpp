@@ -56,52 +56,22 @@
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
-static const std::vector<std::string> keys = {
-    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
-    dsn::replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL,
-    dsn::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION,
-    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
-    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL,
-    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION,
-    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO,
-    dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT,
-    dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS};
-static const std::vector<std::string> values = {
-    "1712846598",
-    "6",
-    dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE,
-    "1712846598",
-    "-1",
-    dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP,
-    dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL,
-    "1",
-    "0"};
+namespace {
 
-static const std::vector<std::string> del_keys = {
-    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
-    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
-    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
-static const std::set<std::string> del_keys_set = {
-    dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
-    dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
-    dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
-
-static const std::string clear_prefix = "rocksdb";
-
-// if str = "prefix.xxx" then return prefix
-// else return ""
-static std::string acquire_prefix(const std::string &str)
+// If `str` is <prefix>.xxx, return <prefix>; otherwise return empty string("").
+std::string acquire_prefix(const std::string &str)
 {
-    auto index = str.find('.');
-    if (index == std::string::npos) {
-        return "";
-    } else {
-        return str.substr(0, index);
+    const auto &dot = str.find('.');
+    if (dot == std::string::npos) {
+        return {};
     }
+
+    return str.substr(0, dot);
 }
+
+} // anonymous namespace
 
 class server_state_test
 {
@@ -178,6 +148,19 @@ public:
         return rpc;
     }
 
+    void test_clear_app_envs(const std::string &app_name,
+                             const std::string &prefix,
+                             const error_code expected_err)
+    {
+        configuration_update_app_env_request request;
+        request.__set_app_name(app_name);
+        request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
+        request.__set_clear_prefix(prefix);
+
+        auto rpc = clear_app_envs(request);
+        ASSERT_EQ(expected_err, rpc.response().err);
+    }
+
 private:
     static std::shared_ptr<app_state> fake_app_state(const std::string &app_name,
                                                      const int32_t app_id)
@@ -244,6 +227,28 @@ private:
 
 void meta_service_test_app::app_envs_basic_test()
 {
+    static const std::vector<std::string> kKeys = {
+        dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
+        dsn::replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL,
+        dsn::replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION,
+        dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
+        dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TARGET_LEVEL,
+        dsn::replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION,
+        dsn::replica_envs::ROCKSDB_USAGE_SCENARIO,
+        dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_MIN_COUNT,
+        dsn::replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS};
+
+    static const std::vector<std::string> kValues = {
+        "1712846598",
+        "6",
+        dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_FORCE,
+        "1712846598",
+        "-1",
+        dsn::replica_envs::MANUAL_COMPACT_BOTTOMMOST_LEVEL_COMPACTION_SKIP,
+        dsn::replica_envs::ROCKSDB_ENV_USAGE_SCENARIO_NORMAL,
+        "1",
+        "0"};
+
     server_state_test test;
     test.load_apps({"test_app1",
                     "test_set_app_envs_not_found",
@@ -251,7 +256,10 @@ void meta_service_test_app::app_envs_basic_test()
                     "test_set_app_envs_dropped_after",
                     "test_del_app_envs_not_found",
                     "test_del_app_envs_dropping",
-                    "test_del_app_envs_dropped_after"});
+                    "test_del_app_envs_dropped_after",
+                    "test_clear_app_envs_not_found",
+                    "test_clear_app_envs_dropping",
+                    "test_clear_app_envs_dropped_after"});
 
 #define TEST_SET_APP_ENVS_FAILED(action, err_code)                                                 \
     std::cout << "test server_state::set_app_envs(" #action ")..." << std::endl;                   \
@@ -282,17 +290,17 @@ void meta_service_test_app::app_envs_basic_test()
     // Normal case for setting envs.
     std::cout << "test server_state::set_app_envs(success)..." << std::endl;
     {
-        test.test_set_app_envs("test_app1", keys, values, ERR_OK);
+        test.test_set_app_envs("test_app1", kKeys, kValues, ERR_OK);
 
         const auto &app = test.get_app("test_app1");
         ASSERT_TRUE(app);
 
-        for (size_t idx = 0; idx < keys.size(); ++idx) {
-            const auto &key = keys[idx];
+        for (size_t idx = 0; idx < kKeys.size(); ++idx) {
+            const auto &key = kKeys[idx];
 
             // Every env should be inserted.
             ASSERT_EQ(1, app->envs.count(key));
-            ASSERT_EQ(values[idx], app->envs.at(key));
+            ASSERT_EQ(kValues[idx], app->envs.at(key));
         }
     }
 
@@ -325,52 +333,81 @@ void meta_service_test_app::app_envs_basic_test()
 
 #undef TEST_DEL_APP_ENVS_FAILED
 
+    static const std::vector<std::string> kDelKeyList = {
+        dsn::replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME,
+        dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME,
+        dsn::replica_envs::ROCKSDB_USAGE_SCENARIO};
+    static const std::set<std::string> kDelKeySet(kDelKeyList.begin(), kDelKeyList.end());
+
     // Normal case for deleting envs.
     std::cout << "test server_state::del_app_envs(success)..." << std::endl;
     {
-        test.test_del_app_envs("test_app1", del_keys, ERR_OK);
+        test.test_del_app_envs("test_app1", kDelKeyList, ERR_OK);
 
         const auto &app = test.get_app("test_app1");
         ASSERT_TRUE(app);
 
-        for (size_t idx = 0; idx < keys.size(); ++idx) {
-            const std::string &key = keys[idx];
-            if (del_keys_set.count(key) > 0) {
-                // The env in `del_keys_set` should be deleted.
+        for (size_t idx = 0; idx < kKeys.size(); ++idx) {
+            const std::string &key = kKeys[idx];
+            if (kDelKeySet.count(key) > 0) {
+                // The env in `kDelKeySet` should be deleted.
                 ASSERT_EQ(0, app->envs.count(key));
                 continue;
             }
 
-            // The env should still exist if it is not in `del_keys_set`.
+            // The env should still exist if it is not in `kDelKeySet`.
             ASSERT_EQ(1, app->envs.count(key));
-            ASSERT_EQ(values[idx], app->envs.at(key));
+            ASSERT_EQ(kValues[idx], app->envs.at(key));
         }
     }
 
-    std::cout << "test server_state::clear_app_envs()..." << std::endl;
+#define TEST_CLEAR_APP_ENVS_FAILED(action, err_code)                                               \
+    std::cout << "test server_state::clear_app_envs(" #action ")..." << std::endl;                 \
+    do {                                                                                           \
+        test.test_set_app_envs("test_clear_app_envs_" #action,                                     \
+                               {replica_envs::ROCKSDB_WRITE_BUFFER_SIZE},                          \
+                               {"67108864"},                                                       \
+                               ERR_OK);                                                            \
+                                                                                                   \
+        fail::setup();                                                                             \
+        fail::cfg("clear_app_envs_failed", "void(" #action ")");                                   \
+                                                                                                   \
+        test.test_clear_app_envs("test_clear_app_envs_" #action, "", err_code);                    \
+                                                                                                   \
+        fail::teardown();                                                                          \
+    } while (0)
+
+    // Failed to clearing envs while table was not found.
+    TEST_CLEAR_APP_ENVS_FAILED(not_found, ERR_APP_NOT_EXIST);
+
+    // Failed to clearing envs while table was being dropped as the intermediate state.
+    TEST_CLEAR_APP_ENVS_FAILED(dropping, ERR_BUSY_DROPPING);
+
+    // The table was found dropped after the new envs had been persistent on the remote
+    // meta storage.
+    TEST_CLEAR_APP_ENVS_FAILED(dropped_after, ERR_APP_DROPPED);
+
+#undef TEST_CLEAR_APP_ENVS_FAILED
+
+    std::cout << "test server_state::clear_app_envs(success)..." << std::endl;
     {
         // Test specifying prefix.
         {
-            configuration_update_app_env_request request;
-            request.__set_app_name("test_app1");
-            request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
-            request.__set_clear_prefix(clear_prefix);
-
-            auto rpc = test.clear_app_envs(request);
-            ASSERT_EQ(ERR_OK, rpc.response().err);
+            static const std::string kClearPrefix = "rocksdb";
+            test.test_clear_app_envs("test_app1", kClearPrefix, ERR_OK);
 
             const auto &app = test.get_app("test_app1");
             ASSERT_TRUE(app);
 
-            for (size_t idx = 0; idx < keys.size(); ++idx) {
-                const std::string &key = keys[idx];
-                if (del_keys_set.count(key) > 0) {
+            for (size_t idx = 0; idx < kKeys.size(); ++idx) {
+                const std::string &key = kKeys[idx];
+                if (kDelKeySet.count(key) > 0) {
                     // The env should have been deleted during test for `del_app_envs`.
                     ASSERT_EQ(0, app->envs.count(key));
                     continue;
                 }
 
-                if (acquire_prefix(key) == clear_prefix) {
+                if (acquire_prefix(key) == kClearPrefix) {
                     // The env with specified prefix should be deleted.
                     ASSERT_EQ(0, app->envs.count(key));
                     continue;
@@ -378,19 +415,13 @@ void meta_service_test_app::app_envs_basic_test()
 
                 // Otherwise, the env should still exist.
                 ASSERT_EQ(1, app->envs.count(key));
-                ASSERT_EQ(values[idx], app->envs.at(key));
+                ASSERT_EQ(kValues[idx], app->envs.at(key));
             }
         }
 
         // Test clearing all.
         {
-            configuration_update_app_env_request request;
-            request.__set_app_name("test_app1");
-            request.__set_op(app_env_operation::type::APP_ENV_OP_CLEAR);
-            request.__set_clear_prefix("");
-
-            auto rpc = test.clear_app_envs(request);
-            ASSERT_EQ(ERR_OK, rpc.response().err);
+            test.test_clear_app_envs("test_app1", "", ERR_OK);
 
             const auto &app = test.get_app("test_app1");
             ASSERT_TRUE(app);
@@ -401,5 +432,4 @@ void meta_service_test_app::app_envs_basic_test()
     }
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
