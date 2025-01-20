@@ -161,7 +161,7 @@ void replica_duplicator::start_dup_log()
     _load = std::make_unique<load_mutation>(this, _replica, _load_private.get());
 
     from(*_load).link(*_ship).link(*_load);
-    fork(*_load_private, LPC_REPLICATION_LONG_LOW, 0).link(*_ship);
+    fork(*_load_private, LPC_REPLICATION_LONG_COMMON, 0).link(*_ship);
 
     run_pipeline();
 }
