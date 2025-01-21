@@ -189,10 +189,7 @@ public:
             // its value is 0 before incr; thus the final result for incr could be set as
             // the value of the single-put request, i.e. req.increment.
             return make_idempotent_request_for_incr(
-                req.key,
-                req.increment,
-                req.expire_ts_seconds > 0 ? req.expire_ts_seconds : 0,
-                update);
+                req.key, req.increment, calc_expire_on_non_existent(req), update);
         }
 
         dsn::blob old_value;
@@ -205,7 +202,7 @@ public:
             new_int = req.increment;
         } else {
             int64_t old_int = 0;
-            if (!dsn::buf2int64(old_value.to_string_view(), old_int)) {
+            if (dsn_unlikely(!dsn::buf2int64(old_value.to_string_view(), old_int))) {
                 // Old value is not valid int64.
                 LOG_ERROR_PREFIX("incr failed: error = old value \"{}\" "
                                  "is not an integer or out of range",
@@ -214,8 +211,8 @@ public:
             }
 
             new_int = old_int + req.increment;
-            if ((req.increment > 0 && new_int < old_int) ||
-                (req.increment < 0 && new_int > old_int)) {
+            if (dsn_unlikely((req.increment > 0 && new_int < old_int) ||
+                             (req.increment < 0 && new_int > old_int))) {
                 // New value overflows, just respond with the old value.
                 LOG_ERROR_PREFIX("incr failed: error = new value is out of range, "
                                  "old_value = {}, increment = {}, new_value = {}",
@@ -226,17 +223,8 @@ public:
             }
         }
 
-        // Set new TTL.
-        uint32_t new_expire_ts = 0;
-        if (req.expire_ts_seconds == 0) {
-            new_expire_ts = get_ctx.expire_ts;
-        } else if (req.expire_ts_seconds < 0) {
-            new_expire_ts = 0;
-        } else { // req.expire_ts_seconds > 0
-            new_expire_ts = req.expire_ts_seconds;
-        }
-
-        return make_idempotent_request_for_incr(req.key, new_int, new_expire_ts, update);
+        return make_idempotent_request_for_incr(
+            req.key, new_int, calc_expire_on_existing(req, get_ctx), update);
     }
 
     // Apply single-put request translated from incr request into RocksDB, and build response
@@ -673,10 +661,31 @@ private:
         return raw_key;
     }
 
+    template <typename TRequest>
+    static inline int32_t calc_expire_on_non_existent(const TRequest &req)
+    {
+        return req.expire_ts_seconds > 0 ? req.expire_ts_seconds : 0;
+    }
+
+    template <typename TRequest>
+    static inline int32_t calc_expire_on_existing(const TRequest &req,
+                                                  const db_get_context &get_ctx)
+    {
+        if (req.expire_ts_seconds == 0) {
+            return static_cast<int32_t>(get_ctx.expire_ts);
+        }
+
+        if (req.expire_ts_seconds < 0) {
+            return 0;
+        }
+
+        return req.expire_ts_seconds;
+    }
+
     // Build a single-put request by provided int64-typed value.
     static inline void make_idempotent_request(const dsn::blob &key,
                                                int64_t value,
-                                               uint32_t expire_ts_seconds,
+                                               int32_t expire_ts_seconds,
                                                dsn::apps::update_type::type type,
                                                dsn::apps::update_request &update)
     {
@@ -690,7 +699,7 @@ private:
     // for RocksDB, i.e. kOk.
     static inline int make_idempotent_request_for_incr(const dsn::blob &key,
                                                        int64_t value,
-                                                       uint32_t expire_ts_seconds,
+                                                       int32_t expire_ts_seconds,
                                                        dsn::apps::update_request &update)
     {
         make_idempotent_request(
