@@ -104,7 +104,7 @@ public class ReplicaSessionTest {
       }
     }
 
-    ReplicaSession finalRs = rs;
+    final ReplicaSession finalRs = rs;
     assertTrue(
         Toollet.waitCondition(
             () -> ReplicaSession.ConnState.DISCONNECTED == finalRs.getState(), 5));
@@ -163,7 +163,7 @@ public class ReplicaSessionTest {
       try {
         Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
       } catch (ExecutionException e) {
-        e.printStackTrace();
+        logger.error("failed while waiting for callback: ", e);
         fail();
       }
     }

@@ -23,9 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -45,8 +43,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
 
 public class MetaSessionTest {
+  private static final Logger logger = org.slf4j.LoggerFactory.getLogger(MetaSessionTest.class);
 
   // "Mockito.when(meta.resolve(("localhost:34601"))).thenReturn(addrs)" is for simulating DNS
   // resolution: <localhost:34601>-><addrs>
@@ -66,13 +66,13 @@ public class MetaSessionTest {
     try {
       Thread.sleep(1000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      logger.error("failed while sleeping: ", e);
     }
     Toollet.tryStartServer(addr);
     try {
       Thread.sleep(1000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      logger.error("failed while sleeping: ", e);
     }
   }
 
@@ -113,7 +113,7 @@ public class MetaSessionTest {
       try {
         Tools.waitUninterruptable(cb, Integer.MAX_VALUE);
       } catch (ExecutionException e) {
-        e.printStackTrace();
+        logger.error("failed while waiting for callback", e);
         fail();
       }
     }
@@ -256,7 +256,7 @@ public class MetaSessionTest {
     FieldUtils.writeField(op, "response", new query_cfg_response(), true);
     op.get_response().err = new error_code();
     op.get_response().err.errno = error_code.error_types.ERR_FORWARD_TO_OTHERS;
-    op.get_response().partitions = Arrays.asList(new partition_configuration[1]);
+    op.get_response().partitions = Collections.singletonList(new partition_configuration[1]);
     op.get_response().partitions.set(0, new partition_configuration());
     op.get_response().partitions.get(0).primary = rpc_address.fromIpPort("172.0.0.3:34601");
     MetaSession.MetaRequestRound round =
@@ -292,9 +292,15 @@ public class MetaSessionTest {
 
     List<ReplicaSession> metaList = metaMock.getMetaList();
     metaList.remove(0); // del the "localhost:34601"
-    metaList.add(manager.getReplicaSession(rpc_address.fromIpPort("172.0.0.1:34602")));
-    metaList.add(manager.getReplicaSession(rpc_address.fromIpPort("172.0.0.1:34603")));
-    metaList.add(manager.getReplicaSession(rpc_address.fromIpPort("172.0.0.1:34601")));
+    metaList.add(
+        manager.getReplicaSession(
+            Objects.requireNonNull(rpc_address.fromIpPort("172.0.0.1:34602"))));
+    metaList.add(
+        manager.getReplicaSession(
+            Objects.requireNonNull(rpc_address.fromIpPort("172.0.0.1:34603"))));
+    metaList.add(
+        manager.getReplicaSession(
+            Objects.requireNonNull(rpc_address.fromIpPort("172.0.0.1:34601"))));
 
     rpc_address[] newAddrs = new rpc_address[5];
     newAddrs[0] = rpc_address.fromIpPort("137.0.0.1:34602");
@@ -330,9 +336,15 @@ public class MetaSessionTest {
     MetaSession metaMock = Mockito.spy(manager.getMetaSession());
     List<ReplicaSession> metaList = metaMock.getMetaList();
     metaList.clear(); // del the "localhost:34601" resolve right results
-    metaList.add(manager.getReplicaSession(rpc_address.fromIpPort("172.0.0.1:34602")));
-    metaList.add(manager.getReplicaSession(rpc_address.fromIpPort("172.0.0.1:34603")));
-    metaList.add(manager.getReplicaSession(rpc_address.fromIpPort("172.0.0.1:34601")));
+    metaList.add(
+        manager.getReplicaSession(
+            Objects.requireNonNull(rpc_address.fromIpPort("172.0.0.1:34602"))));
+    metaList.add(
+        manager.getReplicaSession(
+            Objects.requireNonNull(rpc_address.fromIpPort("172.0.0.1:34603"))));
+    metaList.add(
+        manager.getReplicaSession(
+            Objects.requireNonNull(rpc_address.fromIpPort("172.0.0.1:34601"))));
     rpc_address[] newAddrs =
         new rpc_address[] {
           rpc_address.fromIpPort("137.0.0.1:34602"),
