@@ -20,15 +20,11 @@ package org.apache.pegasus.rpc.async;
 
 import com.google.common.net.InetAddresses;
 import io.netty.channel.EventLoopGroup;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.operator.client_operator;
@@ -269,10 +265,10 @@ public class MetaSession extends HostNameResolver {
     }
 
     Set<rpc_address> newSet = new TreeSet<>(Arrays.asList(addrs));
-    Set<rpc_address> oldSet = new TreeSet<>();
-    for (ReplicaSession meta : metaList) {
-      oldSet.add(meta.getAddress());
-    }
+    Set<rpc_address> oldSet =
+        metaList.stream()
+            .map(ReplicaSession::getAddress)
+            .collect(Collectors.toCollection(TreeSet::new));
 
     // fast path: do nothing if meta list is unchanged.
     if (newSet.equals(oldSet)) {
@@ -280,24 +276,29 @@ public class MetaSession extends HostNameResolver {
     }
 
     // removed metas
-    Set<rpc_address> removed = new HashSet<>(oldSet);
-    removed.removeAll(newSet);
-    for (rpc_address addr : removed) {
-      logger.info("meta server {} was removed", addr);
-      for (int i = 0; i < metaList.size(); i++) {
-        if (metaList.get(i).getAddress().equals(addr)) {
-          ReplicaSession session = metaList.remove(i);
-          session.closeSession();
-        }
+    Set<rpc_address> removedSet = new HashSet<>(oldSet);
+    removedSet.removeAll(newSet);
+
+    Iterator<ReplicaSession> iterator = metaList.iterator();
+    while (iterator.hasNext()) {
+      ReplicaSession session = iterator.next();
+      rpc_address addr = session.getAddress();
+      if (!removedSet.contains(addr)) {
+        continue;
       }
+
+      session.closeSession();
+      iterator.remove();
+      logger.info("meta server {} was removed", addr);
     }
 
     // newly added metas
-    Set<rpc_address> added = new HashSet<>(newSet);
-    added.removeAll(oldSet);
-    for (rpc_address addr : added) {
-      logger.info("meta server {} was added", addr);
+    Set<rpc_address> addedSet = new HashSet<>(newSet);
+    addedSet.removeAll(oldSet);
+
+    for (rpc_address addr : addedSet) {
       metaList.add(clusterManager.getReplicaSession(addr));
+      logger.info("meta server {} was added", addr);
     }
   }
 
