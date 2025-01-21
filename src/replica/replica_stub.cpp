@@ -74,7 +74,6 @@
 #include "task/task.h"
 #include "task/task_engine.h"
 #include "task/task_worker.h"
-#include "utils/api_utilities.h"
 #include "utils/command_manager.h"
 #include "utils/env.h"
 #include "utils/errors.h"
