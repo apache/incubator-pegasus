@@ -188,10 +188,11 @@ public:
             // Once the provided key is not found or has been expired, we could assume that
             // its value is 0 before incr; thus the final result for incr could be set as
             // the value of the single-put request, i.e. req.increment.
-            return make_idempotent_request_for_incr(req.key,
-                                             req.increment,
-                                             req.expire_ts_seconds > 0 ? req.expire_ts_seconds : 0,
-                                             update);
+            return make_idempotent_request_for_incr(
+                req.key,
+                req.increment,
+                req.expire_ts_seconds > 0 ? req.expire_ts_seconds : 0,
+                update);
         }
 
         dsn::blob old_value;
@@ -204,11 +205,11 @@ public:
             new_int = req.increment;
         } else {
             int64_t old_int = 0;
-            if (!dsn::buf2int64(old_value, old_int)) {
+            if (!dsn::buf2int64(old_value.to_string_view(), old_int)) {
                 // Old value is not valid int64.
                 LOG_ERROR_PREFIX("incr failed: error = old value \"{}\" "
-                               "is not an integer or out of range",
-                               utils::c_escape_sensitive_string(old_value));
+                                 "is not an integer or out of range",
+                                 utils::c_escape_sensitive_string(old_value));
                 return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
             }
 
@@ -217,10 +218,10 @@ public:
                 (req.increment < 0 && new_int > old_int)) {
                 // New value overflows, just respond with the old value.
                 LOG_ERROR_PREFIX("incr failed: error = new value is out of range, "
-                               "old_value = {}, increment = {}, new_value = {}",
-                               old_int,
-                               req.increment,
-                               new_int);
+                                 "old_value = {}, increment = {}, new_value = {}",
+                                 old_int,
+                                 req.increment,
+                                 new_int);
                 return make_error_response(rocksdb::Status::kInvalidArgument, old_int, err_resp);
             }
         }
@@ -251,8 +252,11 @@ public:
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
 
-        resp.error = _rocksdb_wrapper->write_batch_put_ctx(
-            ctx, update.key.to_string_view(), update.value.to_string_view(), static_cast<uint32_t>(update.expire_ts_seconds));
+        resp.error =
+            _rocksdb_wrapper->write_batch_put_ctx(ctx,
+                                                  update.key.to_string_view(),
+                                                  update.value.to_string_view(),
+                                                  static_cast<uint32_t>(update.expire_ts_seconds));
         if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
             return resp.error;
         }
@@ -262,10 +266,10 @@ public:
             return resp.error;
         }
 
-        CHECK(dsn::buf2int64(update.value, resp.new_value),
-                  "invalid int64 value for put incr: key={}, value={}",
-                  update.key,
-                  update.value);
+        CHECK(dsn::buf2int64(update.value.to_string_view(), resp.new_value),
+              "invalid int64 value for put incr: key={}, value={}",
+              update.key,
+              update.value);
 
         return resp.error;
     }
@@ -685,9 +689,9 @@ private:
     // Build corresponding single-put request for a incr request, and return current status
     // for RocksDB, i.e. kOk.
     static inline int make_idempotent_request_for_incr(const dsn::blob &key,
-                                                        int64_t value,
-                                                        uint32_t expire_ts_seconds,
-                                                        dsn::apps::update_request &update)
+                                                       int64_t value,
+                                                       uint32_t expire_ts_seconds,
+                                                       dsn::apps::update_request &update)
     {
         make_idempotent_request(
             key, value, expire_ts_seconds, dsn::apps::update_type::UT_INCR, update);
@@ -697,7 +701,7 @@ private:
     // Build incr response only for error, and return the current error status for RocksDB.
     inline int make_error_response(int err, dsn::apps::incr_response &resp)
     {
-        CHECK_NE_MSG(err, rocksdb::Status::kOk, "this incr response is built only for error");
+        CHECK(err != rocksdb::Status::kOk, "this incr response is built only for error");
         resp.error = err;
 
         const auto pid = get_gpid();
