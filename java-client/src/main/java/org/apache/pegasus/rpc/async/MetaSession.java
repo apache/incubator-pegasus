@@ -54,8 +54,8 @@ public class MetaSession extends HostNameResolver {
       }
     } else {
       for (String addr : addrList) {
-        rpc_address rpcAddr = new rpc_address();
-        if (rpcAddr.fromString(addr)) {
+        rpc_address rpcAddr = rpc_address.fromIpPort(addr);
+        if (rpcAddr != null) {
           logger.info("add {} as meta server", addr);
           metaList.add(clusterManager.getReplicaSession(rpcAddr));
         } else {
@@ -105,9 +105,14 @@ public class MetaSession extends HostNameResolver {
       }
 
       java.util.List<partition_configuration> partitions = op.get_response().getPartitions();
-      if (partitions == null || partitions.isEmpty()) return null;
+      if (partitions == null || partitions.isEmpty()) {
+        return null;
+      }
+
       addr = partitions.get(0).getPrimary();
-      if (addr == null || addr.isInvalid()) return null;
+      if (addr == null || addr.isInvalid()) {
+        return null;
+      }
     }
 
     return addr;
