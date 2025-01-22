@@ -256,7 +256,7 @@ public class MetaSessionTest {
     FieldUtils.writeField(op, "response", new query_cfg_response(), true);
     op.get_response().err = new error_code();
     op.get_response().err.errno = error_code.error_types.ERR_FORWARD_TO_OTHERS;
-    op.get_response().partitions = Collections.singletonList(new partition_configuration[1]);
+    op.get_response().partitions = Collections.singletonList(new partition_configuration());
     op.get_response().partitions.set(0, new partition_configuration());
     op.get_response().partitions.get(0).primary = rpc_address.fromIpPort("172.0.0.3:34601");
     MetaSession.MetaRequestRound round =

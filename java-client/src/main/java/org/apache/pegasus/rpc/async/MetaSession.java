@@ -264,26 +264,30 @@ public class MetaSession extends HostNameResolver {
       return;
     }
 
-    Set<rpc_address> newSet = new TreeSet<>(Arrays.asList(addrs));
     Set<rpc_address> oldSet =
         metaList.stream()
             .map(ReplicaSession::getAddress)
             .collect(Collectors.toCollection(TreeSet::new));
+    Set<rpc_address> newSet = new TreeSet<>(Arrays.asList(addrs));
 
-    // fast path: do nothing if meta list is unchanged.
+    // Do nothing if meta list is unchanged.
     if (newSet.equals(oldSet)) {
       return;
     }
 
-    // removed metas
+    // Find the meta servers that should be removed.
     Set<rpc_address> removedSet = new HashSet<>(oldSet);
     removedSet.removeAll(newSet);
 
+    // Iterate over the current meta list: once a meta server is found in the removed set,
+    // it would be removed from the meta list after its session is closed.
     Iterator<ReplicaSession> iterator = metaList.iterator();
     while (iterator.hasNext()) {
       ReplicaSession session = iterator.next();
       rpc_address addr = session.getAddress();
       if (!removedSet.contains(addr)) {
+        // This meta server is not found in the removed set, which means it should just be
+        // retained.
         continue;
       }
 
@@ -292,10 +296,11 @@ public class MetaSession extends HostNameResolver {
       logger.info("meta server {} was removed", addr);
     }
 
-    // newly added metas
+    // Find the meta servers that should be added.
     Set<rpc_address> addedSet = new HashSet<>(newSet);
     addedSet.removeAll(oldSet);
 
+    // Add each new meta servers to the meta list.
     for (rpc_address addr : addedSet) {
       metaList.add(clusterManager.getReplicaSession(addr));
       logger.info("meta server {} was added", addr);
