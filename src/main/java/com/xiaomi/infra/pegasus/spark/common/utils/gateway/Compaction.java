@@ -6,6 +6,12 @@ import org.apache.commons.logging.LogFactory;
 
 public class Compaction {
 
+  public Compaction(Compaction compaction) {
+    this.concurrent = compaction.concurrent;
+    this.triggerAfterLoaded = compaction.triggerAfterLoaded;
+    this.periodicTriggerTime = compaction.periodicTriggerTime;
+  }
+
   public static class Error {
     public String Errno;
 

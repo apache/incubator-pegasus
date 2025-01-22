@@ -1,10 +1,12 @@
 package com.xiaomi.infra.pegasus.spark.common.utils.gateway;
 
 import com.google.gson.reflect.TypeToken;
+import com.xiaomi.infra.pegasus.spark.bulkloader.StartBulkloadInfo;
 import com.xiaomi.infra.pegasus.spark.common.PegasusSparkException;
 import com.xiaomi.infra.pegasus.spark.common.utils.HttpClient;
 import com.xiaomi.infra.pegasus.spark.common.utils.JsonParser;
 import com.xiaomi.infra.pegasus.spark.common.utils.metaproxy.ClusterStateInfo;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.*;
@@ -15,6 +17,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Cluster {
   private static final Log LOG = LogFactory.getLog(Cluster.class);
@@ -78,6 +83,35 @@ public class Cluster {
               "parser the response to tableInfo failed: %s\n%s", e.getMessage(), respString));
     }
     return tableInfo;
+  }
+
+  public static TableDupInfo getTableDupInfo(String cluster,String table) throws PegasusSparkException {
+    String path = String.format("%s%s/meta/app/duplication?name=%s", metaGateWay, cluster,table);
+
+    TableDupInfo tableDupInfo = null;
+    String respString = "";
+    HttpResponse httpResponse = HttpClient.get(path, new HashMap<>());
+    try {
+      int code = httpResponse.getStatusLine().getStatusCode();
+      respString = EntityUtils.toString(httpResponse.getEntity(), "UTF-8");
+      if (code != 200) {
+        throw new PegasusSparkException(
+                String.format(
+                        "get cluster[%s] table[%s] dup info from gateway failed, ErrCode = %d, err = %s",
+                        cluster, table,code, respString));
+      }
+      LOG.info(String.format("url=%s, Get dup info string %s",path,respString));
+      tableDupInfo = TableDupInfo.fromJson(respString);
+    } catch (IOException e) {
+      throw new PegasusSparkException(
+              String.format("format the response to tableDupInfo failed: %s", e.getMessage()));
+    } catch (RuntimeException e) {
+      throw new PegasusSparkException(
+              String.format(
+                      "parser the response to tableDupInfo failed: %s\n%s", e.getMessage(), respString));
+    }
+
+    return tableDupInfo;
   }
 
   public static int getTableVersion(String cluster, String table) throws PegasusSparkException {
@@ -265,6 +299,61 @@ public class Cluster {
     return queryResponse;
   }
 
+  public static ConcurrentHashMap<String, Boolean> startBulkLoad(String cluster,
+                                                                 String table,
+                                                                 String remoteFileSystem,
+                                                                 String remotePath,
+                                                                 Compaction compaction,
+                                                                 boolean enableDetectDup) throws PegasusSparkException {
+    Map<String, StartBulkloadInfo> bulkloadInfoMap = new HashMap<>();
+    String masterClusterTable = String.format("%s.%s", cluster, table);
+    StartBulkloadInfo masterinfo = new StartBulkloadInfo(cluster, table, remoteFileSystem, remotePath, compaction);
+    bulkloadInfoMap.put(masterClusterTable, masterinfo);
+
+    if (enableDetectDup) {
+      TableDupInfo dupinfo = getTableDupInfo(cluster, table);
+      if (dupinfo == null || dupinfo.duplications.isEmpty()) {
+        throw new PegasusSparkException(String.format("cannot get duplication info from gateway! Maybe %s not master, or not create duplication.", cluster));
+      }
+      LOG.info(String.format("Get duplication info:%s", dupinfo));
+      for (Map.Entry<Integer, TableDupInfo.DupInfo> entry : dupinfo.duplications.entrySet()) {
+        TableDupInfo.DupInfo value = entry.getValue();
+        StartBulkloadInfo slaveinfo = new StartBulkloadInfo(masterinfo);
+        slaveinfo.cluster = value.remote;
+        String slaveClusterTable = String.format("%s.%s", slaveinfo.cluster, slaveinfo.table);
+        if (bulkloadInfoMap.containsKey(slaveClusterTable)) {
+          throw new PegasusSparkException(String.format("%s only supports one bulkload operation simultaneously.", slaveClusterTable));
+        } else {
+          bulkloadInfoMap.put(slaveClusterTable, slaveinfo);
+        }
+      }
+    }
+
+    ConcurrentHashMap<String, Boolean> resultMap = new ConcurrentHashMap<>();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    for (Map.Entry<String, StartBulkloadInfo> entry : bulkloadInfoMap.entrySet()) {
+      StartBulkloadInfo info = entry.getValue();
+      String key = entry.getKey();
+      futures.add(
+              CompletableFuture.supplyAsync(() -> {
+                try {
+                  LOG.info(String.format("ConcurrentStartBulkloads, info is %s", info.toString()));
+                  startBulkLoad(info.cluster, info.table, info.remoteFileSystem, info.remotePath, info.compaction);
+                  return true;
+                } catch (PegasusSparkException | InterruptedException e) {
+                  LOG.info(String.format("%s bulkload encounter exception %s", key, e.getMessage()));
+                  return false;
+                }
+              }).exceptionally(ex -> {
+                LOG.info(String.format("%s bulkload encounter exception, hint %s", key, ex.getMessage()));
+                return false;
+              }).thenAccept(result -> resultMap.put(key, result)));
+    }
+    CompletableFuture<Void> futureAll = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+    futureAll.join();
+    return resultMap;
+  }
+
   public static void startBulkLoad(
       String cluster, String table, String remoteFileSystem, String remotePath)
       throws PegasusSparkException, InterruptedException {
@@ -280,8 +369,8 @@ public class Cluster {
       throws InterruptedException, PegasusSparkException {
     LOG.info(
         String.format(
-            "start import hdfs %s/%s to pegasus %s.%s",
-            remoteFileSystem, remotePath, cluster, table));
+            "start import hdfs %s/%s to pegasus %s.%s, time=%d",
+            remoteFileSystem, remotePath, cluster, table,System.currentTimeMillis()));
 
     BulkLoadInfo.QueryResponse queryResponse = queryBulkLoadResult(cluster, table);
     if (queryResponse.app_status.contains("BLS_CANCEL")) {
