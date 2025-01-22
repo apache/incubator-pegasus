@@ -18,16 +18,15 @@
 #include <gtest/gtest.h>
 #include <memory>
 
+#include "runtime/app_model.h"
 #include "utils/flags.h"
-#include "utils/logging_provider.h"
+#include "utils/logging.h"
 
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
-
-    dsn_log_init("dsn::tools::simple_logger", "./", "test", nullptr);
-
+    dsn_log_init("./", "test");
+    dsn_run_config("config.ini", false);
     dsn::flags_initialize();
-
     return RUN_ALL_TESTS();
 }
