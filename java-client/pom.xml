@@ -427,6 +427,7 @@
             <excludes>
               <exclude>src/main/java/org/apache/pegasus/apps/*</exclude>
               <exclude>src/main/java/org/apache/pegasus/replication/*</exclude>
+              <exclude>src/main/java/org/apache/pegasus/utils/*</exclude>
             </excludes>
             <googleJavaFormat>
               <version>1.7</version>
@@ -487,6 +488,7 @@
             <include>partition_split.thrift</include>
             <include>rrdb.thrift</include>
             <include>security.thrift</include>
+            <include>utils.thrift</include>
           </includes>
           <thriftExecutable>thrift</thriftExecutable>
           <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
