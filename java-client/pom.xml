@@ -427,6 +427,7 @@
             <excludes>
               <exclude>src/main/java/org/apache/pegasus/apps/*</exclude>
               <exclude>src/main/java/org/apache/pegasus/replication/*</exclude>
+              <exclude>src/main/java/org/apache/pegasus/utils/*</exclude>
             </excludes>
             <googleJavaFormat>
               <version>1.7</version>
