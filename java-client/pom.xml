@@ -487,6 +487,7 @@
             <include>partition_split.thrift</include>
             <include>rrdb.thrift</include>
             <include>security.thrift</include>
+            <include>utils.thrift</include>
           </includes>
           <thriftExecutable>thrift</thriftExecutable>
           <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
