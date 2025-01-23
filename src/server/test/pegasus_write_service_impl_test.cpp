@@ -33,11 +33,11 @@
 #include "server/pegasus_write_service_impl.h"
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
+#include "utils/defer.h"
 #include "utils/fail_point.h"
 #include <string_view>
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 class PegasusWriteServiceImplTest : public pegasus_server_test_base
 {
@@ -150,18 +150,18 @@ public:
     }
 
     // Test if the result in response is correct while no error is returned.
-    virtual void test_incr(const int64_t base, const int64_t increment) = 0;
+    virtual void test_incr(int64_t base, int64_t increment) = 0;
 
     // Test if both the result in response and the value in db are correct while no error
     // is returned.
-    void test_incr_and_check_db_record(const int64_t base, const int64_t increment)
+    void test_incr_and_check_db_record(int64_t base, int64_t increment)
     {
         test_incr(base, increment);
         check_db_record(base + increment);
     }
 
     // Test if incr could be executed correctly while the key does not exist in db previously.
-    void test_incr_on_absent_record(const int64_t increment)
+    void test_incr_on_absent_record(int64_t increment)
     {
         // Ensure that the key is absent.
         db_get_context get_ctx;
@@ -173,7 +173,7 @@ public:
     }
 
     // Test if incr could be executed correctly while the key has existed in db.
-    void test_incr_on_existing_record(const int64_t base, const int64_t increment)
+    void test_incr_on_existing_record(int64_t base, int64_t increment)
     {
         // Load a record beforehand as the existing one.
         single_set(req.key, dsn::blob::create_from_numeric(base));
@@ -188,16 +188,14 @@ public:
 class NonIdempotentIncrTest : public IncrTest
 {
 public:
-    void test_non_idempotent_incr(const int64_t increment,
-                                  const int expected_ret_err,
-                                  const int expected_resp_err)
+    void test_non_idempotent_incr(int64_t increment, int expected_ret_err, int expected_resp_err)
     {
         req.increment = increment;
         ASSERT_EQ(expected_ret_err, _write_impl->incr(0, req, resp));
         ASSERT_EQ(expected_resp_err, resp.error);
     }
 
-    void test_incr(const int64_t base, const int64_t increment) override
+    void test_incr(int64_t base, int64_t increment) override
     {
         test_non_idempotent_incr(increment, rocksdb::Status::kOk, rocksdb::Status::kOk);
         ASSERT_EQ(base + increment, resp.new_value);
@@ -292,7 +290,7 @@ class IdempotentIncrTest : public IncrTest
 {
 public:
     // Test make_idempotent for incr.
-    void test_make_idempotent(const int64_t increment, const int expected_err)
+    void test_make_idempotent(int64_t increment, int expected_err)
     {
         req.increment = increment;
         const int err = _write_impl->make_idempotent(req, err_resp, update);
@@ -306,7 +304,7 @@ public:
 
     // Test if make_idempotent for incr is successful; then, write the idempotent put
     // request into db.
-    void test_idempotent_incr(const int64_t increment, const int expected_err)
+    void test_idempotent_incr(int64_t increment, int expected_err)
     {
         test_make_idempotent(increment, rocksdb::Status::kOk);
 
@@ -315,7 +313,7 @@ public:
         ASSERT_EQ(expected_err, resp.error);
     }
 
-    void test_incr(const int64_t base, const int64_t increment) override
+    void test_incr(int64_t base, int64_t increment) override
     {
         test_idempotent_incr(increment, rocksdb::Status::kOk);
         ASSERT_EQ(base + increment, resp.new_value);
@@ -404,5 +402,4 @@ INSTANTIATE_TEST_SUITE_P(PegasusWriteServiceImplTest,
                          IdempotentIncrTest,
                          testing::Values(false, true));
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

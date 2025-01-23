@@ -847,7 +847,6 @@ private:
         return false;
     }
 
-private:
     friend class pegasus_write_service_test;
     friend class pegasus_server_write_test;
     friend class PegasusWriteServiceImplTest;
