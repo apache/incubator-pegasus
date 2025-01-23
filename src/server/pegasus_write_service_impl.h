@@ -661,21 +661,27 @@ private:
         return raw_key;
     }
 
+    // Calculate expire timestamp in seconds according to `req`, for the keys not present
+    // in the storage.
     template <typename TRequest>
     static inline int32_t calc_expire_on_non_existent(const TRequest &req)
     {
         return req.expire_ts_seconds > 0 ? req.expire_ts_seconds : 0;
     }
 
+    // Calculate expire timestamp in seconds according to `req` and the old value in `get_ctx`,
+    // for the keys existing in the storage.
     template <typename TRequest>
     static inline int32_t calc_expire_on_existing(const TRequest &req,
                                                   const db_get_context &get_ctx)
     {
         if (req.expire_ts_seconds == 0) {
+            // Use the old value for the existing key in `get_ctx` as the expire timestamp.
             return static_cast<int32_t>(get_ctx.expire_ts);
         }
 
         if (req.expire_ts_seconds < 0) {
+            // Reset expire timestamp to 0.
             return 0;
         }
 
@@ -844,10 +850,8 @@ private:
 private:
     friend class pegasus_write_service_test;
     friend class pegasus_server_write_test;
-    friend class pegasus_write_service_impl_test;
+    friend class PegasusWriteServiceImplTest;
     friend class rocksdb_wrapper_test;
-    FRIEND_TEST(pegasus_write_service_impl_test, put_verify_timetag);
-    FRIEND_TEST(pegasus_write_service_impl_test, verify_timetag_compatible_with_version_0);
 
     const std::string _primary_host_port;
     const uint32_t _pegasus_data_version;
