@@ -23,10 +23,13 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <utility>
 
 #include "gtest/gtest.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
+#include "pegasus_value_schema.h"
 #include "rrdb/rrdb_types.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service.h"
@@ -34,8 +37,11 @@
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
+#include "utils/error_code.h"
 #include "utils/fail_point.h"
-#include <string_view>
+#include "utils/string_conv.h"
+
+// IWYU pragma: no_forward_declare <gtest/gtest.h>
 
 namespace pegasus::server {
 
@@ -202,38 +208,35 @@ public:
     }
 };
 
-TEST_P(NonIdempotentIncrTest, incr_one_on_absent_record) { test_incr_on_absent_record(1); }
+TEST_P(NonIdempotentIncrTest, IncrOneOnAbsentRecord) { test_incr_on_absent_record(1); }
 
-TEST_P(NonIdempotentIncrTest, incr_big_on_absent_record) { test_incr_on_absent_record(1); }
+TEST_P(NonIdempotentIncrTest, IncrBigOnAbsentRecord) { test_incr_on_absent_record(1); }
 
-TEST_P(NonIdempotentIncrTest, incr_one_on_existing_record) { test_incr_on_existing_record(10, 1); }
+TEST_P(NonIdempotentIncrTest, IncrOneOnExistingRecord) { test_incr_on_existing_record(10, 1); }
 
-TEST_P(NonIdempotentIncrTest, incr_big_on_existing_record)
-{
-    test_incr_on_existing_record(10, 100);
-}
+TEST_P(NonIdempotentIncrTest, IncrBigOnExistingRecord) { test_incr_on_existing_record(10, 100); }
 
-TEST_P(NonIdempotentIncrTest, incr_negative)
+TEST_P(NonIdempotentIncrTest, IncrNegative)
 {
     test_incr_on_absent_record(-100);
     test_incr_and_check_db_record(-100, -1);
 }
 
-TEST_P(NonIdempotentIncrTest, incr_zero)
+TEST_P(NonIdempotentIncrTest, IncrZero)
 {
     test_incr_on_absent_record(0);
     test_incr_on_existing_record(10, 0);
     test_incr_on_existing_record(-10, 0);
 }
 
-TEST_P(NonIdempotentIncrTest, incr_on_non_numeric_record)
+TEST_P(NonIdempotentIncrTest, IncrOnNonNumericRecord)
 {
     PUT_BASE_VALUE_STRING("abc");
 
     test_non_idempotent_incr(1, rocksdb::Status::kOk, rocksdb::Status::kInvalidArgument);
 }
 
-TEST_P(NonIdempotentIncrTest, incr_overflowed)
+TEST_P(NonIdempotentIncrTest, IncrOverflowed)
 {
     PUT_BASE_VALUE_INT64(100);
 
@@ -243,7 +246,7 @@ TEST_P(NonIdempotentIncrTest, incr_overflowed)
     ASSERT_EQ(kBaseValue, resp.new_value);
 }
 
-TEST_P(NonIdempotentIncrTest, fail_on_get)
+TEST_P(NonIdempotentIncrTest, FailOnGet)
 {
     PUT_BASE_VALUE_INT64(100);
 
@@ -256,7 +259,7 @@ TEST_P(NonIdempotentIncrTest, fail_on_get)
     dsn::fail::teardown();
 }
 
-TEST_P(NonIdempotentIncrTest, fail_on_put)
+TEST_P(NonIdempotentIncrTest, FailOnPut)
 {
     PUT_BASE_VALUE_INT64(100);
 
@@ -269,7 +272,7 @@ TEST_P(NonIdempotentIncrTest, fail_on_put)
     dsn::fail::teardown();
 }
 
-TEST_P(NonIdempotentIncrTest, incr_on_expire_record)
+TEST_P(NonIdempotentIncrTest, IncrOnExpireRecord)
 {
     // Make the key expired.
     req.expire_ts_seconds = 1;
@@ -323,35 +326,35 @@ public:
     dsn::apps::update_request update;
 };
 
-TEST_P(IdempotentIncrTest, incr_one_on_absent_record) { test_incr_on_absent_record(1); }
+TEST_P(IdempotentIncrTest, IncrOneOnAbsentRecord) { test_incr_on_absent_record(1); }
 
-TEST_P(IdempotentIncrTest, incr_big_on_absent_record) { test_incr_on_absent_record(100); }
+TEST_P(IdempotentIncrTest, IncrBigOnAbsentRecord) { test_incr_on_absent_record(100); }
 
-TEST_P(IdempotentIncrTest, incr_one_on_existing_record) { test_incr_on_existing_record(10, 1); }
+TEST_P(IdempotentIncrTest, IncrOneOnExistingRecord) { test_incr_on_existing_record(10, 1); }
 
-TEST_P(IdempotentIncrTest, incr_big_on_existing_record) { test_incr_on_existing_record(10, 100); }
+TEST_P(IdempotentIncrTest, IncrBigOnExistingRecord) { test_incr_on_existing_record(10, 100); }
 
-TEST_P(IdempotentIncrTest, incr_negative)
+TEST_P(IdempotentIncrTest, IncrNegative)
 {
     test_incr_on_absent_record(-100);
     test_incr_and_check_db_record(-100, -1);
 }
 
-TEST_P(IdempotentIncrTest, incr_zero)
+TEST_P(IdempotentIncrTest, IncrZero)
 {
     test_incr_on_absent_record(0);
     test_incr_on_existing_record(10, 0);
     test_incr_on_existing_record(-10, 0);
 }
 
-TEST_P(IdempotentIncrTest, incr_on_non_numeric_record)
+TEST_P(IdempotentIncrTest, IncrOnNonNumericRecord)
 {
     PUT_BASE_VALUE_STRING("abc");
 
     test_make_idempotent(1, rocksdb::Status::kInvalidArgument);
 }
 
-TEST_P(IdempotentIncrTest, incr_overflowed)
+TEST_P(IdempotentIncrTest, IncrOverflowed)
 {
     PUT_BASE_VALUE_INT64(100);
 
@@ -359,7 +362,7 @@ TEST_P(IdempotentIncrTest, incr_overflowed)
     ASSERT_EQ(kBaseValue, err_resp.new_value);
 }
 
-TEST_P(IdempotentIncrTest, fail_on_get)
+TEST_P(IdempotentIncrTest, FailOnGet)
 {
     PUT_BASE_VALUE_INT64(100);
 
@@ -372,7 +375,7 @@ TEST_P(IdempotentIncrTest, fail_on_get)
     dsn::fail::teardown();
 }
 
-TEST_P(IdempotentIncrTest, fail_on_put)
+TEST_P(IdempotentIncrTest, FailOnPut)
 {
     PUT_BASE_VALUE_INT64(100);
 
@@ -385,7 +388,7 @@ TEST_P(IdempotentIncrTest, fail_on_put)
     dsn::fail::teardown();
 }
 
-TEST_P(IdempotentIncrTest, incr_on_expire_record)
+TEST_P(IdempotentIncrTest, IncrOnExpireRecord)
 {
     // Make the key expired.
     req.expire_ts_seconds = 1;
