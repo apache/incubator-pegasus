@@ -41,7 +41,14 @@
 #include "utils/fail_point.h"
 #include "utils/string_conv.h"
 
-// IWYU pragma: no_forward_declare <gtest/gtest.h>
+// IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_FailOnGet_Test
+// IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_FailOnPut_Test
+// IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_IncrOnNonNumericRecord_Test
+// IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_IncrOverflowed_Test
+// IWYU pragma: no_forward_declare pegasus::server::NonIdempotentIncrTest_FailOnGet_Test
+// IWYU pragma: no_forward_declare pegasus::server::NonIdempotentIncrTest_FailOnPut_Test
+// IWYU pragma: no_forward_declare pegasus::server::NonIdempotentIncrTest_IncrOnNonNumericRecord_Test
+// IWYU pragma: no_forward_declare pegasus::server::NonIdempotentIncrTest_IncrOverflowed_Test
 
 namespace pegasus::server {
 
