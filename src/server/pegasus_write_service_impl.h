@@ -179,7 +179,7 @@ public:
     {
         // Get old value from the RocksDB instance according to the provided key.
         db_get_context get_ctx;
-        int err = _rocksdb_wrapper->get(req.key.to_string_view(), &get_ctx);
+        const int err = _rocksdb_wrapper->get(req.key.to_string_view(), &get_ctx);
         if (dsn_unlikely(err != rocksdb::Status::kOk)) {
             return make_error_response(err, err_resp);
         }
@@ -254,8 +254,9 @@ public:
             return resp.error;
         }
 
+        // Shouldn't fail to parse since the value must be a valid int64.
         CHECK(dsn::buf2int64(update.value.to_string_view(), resp.new_value),
-              "invalid int64 value for put incr: key={}, value={}",
+              "invalid int64 value for put idempotent incr: key={}, value={}",
               update.key,
               update.value);
 
