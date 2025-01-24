@@ -68,6 +68,11 @@ protected:
     }
 
 public:
+    // Given `raw_key`, get its value from DB with the result stored in `get_ctx`. Should
+    // never fail. There are only 3 possible results:
+    // - the key is found and its value is read successfully;
+    // - the key is found but expired;
+    // - the key is not found.
     void db_get(std::string_view raw_key, db_get_context *get_ctx)
     {
         ASSERT_EQ(rocksdb::Status::kOk, _rocksdb_wrapper->get(raw_key, get_ctx));
@@ -78,7 +83,9 @@ public:
         db_get(raw_key.to_string_view(), get_ctx);
     }
 
-    void single_set(dsn::blob raw_key, dsn::blob user_value)
+    // Apply single put into DB. Should never fail. `raw_key`/`user_value` would always
+    // be applied successfully.
+    void single_set(const dsn::blob &raw_key, const dsn::blob &user_value)
     {
         dsn::apps::update_request put;
         put.key = raw_key;
@@ -90,6 +97,7 @@ public:
         ASSERT_EQ(rocksdb::Status::kOk, _write_impl->batch_commit(0));
     }
 
+    // Extract `user_data` as string from `raw_value` in DB.
     void extract_user_data(std::string &&raw_value, std::string &user_data)
     {
         dsn::blob data;
@@ -97,6 +105,7 @@ public:
         user_data = data.to_string();
     }
 
+    // Extract `user_data` as int64 from `raw_value` in DB.
     void extract_user_data(std::string &&raw_value, int64_t &user_data)
     {
         std::string data;
@@ -105,22 +114,22 @@ public:
     }
 };
 
-// Define a base value and a checker that check if the value in db is just the base value
-// at the end of the scope.
-#define DEFINE_BASE_VALUE_AND_CHECKER(type, val)                                                   \
-    static const type kBaseValue = val;                                                            \
+// Initialize a base value with a checker deciding if the base value is still the same as
+// it is in DB at the end of the scope.
+#define INIT_BASE_VALUE_AND_CHECKER(type, val)                                                     \
+    static const type kBaseValue = (val);                                                          \
     auto kBaseValueChecker = dsn::defer([this]() { check_db_record(kBaseValue); })
 
-// Put a string value and check if the value in db is just the string value at the end of
-// the scope.
+// Put a string value into DB and check if it is still the same as it is in DB at the end
+// of the scope.
 #define PUT_BASE_VALUE_STRING(val)                                                                 \
-    DEFINE_BASE_VALUE_AND_CHECKER(std::string, val);                                               \
+    INIT_BASE_VALUE_AND_CHECKER(std::string, val);                                                 \
     single_set(req.key, dsn::blob::create_from_bytes(std::string(kBaseValue)))
 
-// Put a int64 value and check if the value in db is just the int64 value at the end of
-// the scope.
+// Put an int64 value into DB and check if it is still the same as it is in DB at the end
+// of the scope.
 #define PUT_BASE_VALUE_INT64(val)                                                                  \
-    DEFINE_BASE_VALUE_AND_CHECKER(int64_t, val);                                                   \
+    INIT_BASE_VALUE_AND_CHECKER(int64_t, val);                                                     \
     single_set(req.key, dsn::blob::create_from_numeric(kBaseValue))
 
 class IncrTest : public PegasusWriteServiceImplTest
@@ -139,7 +148,7 @@ public:
         pegasus_generate_key(req.key, hash_key, sort_key);
     }
 
-    // Check whether the value is expected.
+    // Check that the key must exist in DB and its value should be the same as `expected_value`.
     template <typename TVal>
     void check_db_record(const TVal &expected_value)
     {
@@ -153,7 +162,7 @@ public:
         ASSERT_EQ(expected_value, actual_value);
     }
 
-    // Check whether the key is expired.
+    // Check that the key must be found in DB but expired.
     void check_db_record_expired()
     {
         db_get_context get_ctx;
@@ -162,18 +171,18 @@ public:
         ASSERT_TRUE(get_ctx.expired);
     }
 
-    // Test if the result in response is correct while no error is returned.
+    // Test if the incr result in response is correct while there is not any error during incr.
     virtual void test_incr(int64_t base, int64_t increment) = 0;
 
-    // Test if both the result in response and the value in db are correct while no error
-    // is returned.
+    // Test if both the incr result in response and the value in DB are correct while there is
+    // not any error during incr.
     void test_incr_and_check_db_record(int64_t base, int64_t increment)
     {
         test_incr(base, increment);
         check_db_record(base + increment);
     }
 
-    // Test if incr could be executed correctly while the key does not exist in db previously.
+    // Test if incr could be executed correctly while the key did not exist in DB previously.
     void test_incr_on_absent_record(int64_t increment)
     {
         // Ensure that the key is absent.
@@ -185,10 +194,10 @@ public:
         test_incr_and_check_db_record(0, increment);
     }
 
-    // Test if incr could be executed correctly while the key has existed in db.
+    // Test if incr could be executed correctly while the key has been present in DB.
     void test_incr_on_existing_record(int64_t base, int64_t increment)
     {
-        // Load a record beforehand as the existing one.
+        // Preload the record into DB as the existing key.
         single_set(req.key, dsn::blob::create_from_numeric(base));
 
         test_incr_and_check_db_record(base, increment);

@@ -82,7 +82,7 @@ int rocksdb_wrapper::get(std::string_view raw_key, /*out*/ db_get_context *ctx)
     const rocksdb::Status s =
         _db->Get(_rd_opts, _data_cf, utils::to_rocksdb_slice(raw_key), &ctx->raw_value);
     if (dsn_likely(s.ok())) {
-        // The key is found and read successfully.
+        // The key is found and its value is read successfully.
         ctx->found = true;
         ctx->expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, ctx->raw_value);
         if (check_if_ts_expired(utils::epoch_now(), ctx->expire_ts)) {
