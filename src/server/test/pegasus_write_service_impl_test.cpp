@@ -191,6 +191,7 @@ public:
         ASSERT_FALSE(get_ctx.found);
         ASSERT_FALSE(get_ctx.expired);
 
+        // The base value should be 0 as the record is absent.
         test_incr_and_check_db_record(0, increment);
     }
 
@@ -210,6 +211,7 @@ public:
 class NonIdempotentIncrTest : public IncrTest
 {
 public:
+    // Test `incr` with both returned error and error in response as expected.
     void test_non_idempotent_incr(int64_t increment, int expected_ret_err, int expected_resp_err)
     {
         req.increment = increment;
@@ -267,9 +269,9 @@ TEST_P(NonIdempotentIncrTest, FailOnGet)
     PUT_BASE_VALUE_INT64(100);
 
     dsn::fail::setup();
-    // When db_get failed, incr should return an error.
-    dsn::fail::cfg("db_get", "100%1*return()");
 
+    // `incr` should return an error once failed to get current value from DB.
+    dsn::fail::cfg("db_get", "100%1*return()");
     test_non_idempotent_incr(10, FAIL_DB_GET, FAIL_DB_GET);
 
     dsn::fail::teardown();
@@ -280,9 +282,9 @@ TEST_P(NonIdempotentIncrTest, FailOnPut)
     PUT_BASE_VALUE_INT64(100);
 
     dsn::fail::setup();
-    // When rocksdb put failed, incr should return an error.
-    dsn::fail::cfg("db_write_batch_put", "100%1*return()");
 
+    // `incr` should return an error once failed to write into batch.
+    dsn::fail::cfg("db_write_batch_put", "100%1*return()");
     test_non_idempotent_incr(10, FAIL_DB_WRITE_BATCH_PUT, FAIL_DB_WRITE_BATCH_PUT);
 
     dsn::fail::teardown();
@@ -290,10 +292,11 @@ TEST_P(NonIdempotentIncrTest, FailOnPut)
 
 TEST_P(NonIdempotentIncrTest, IncrOnExpireRecord)
 {
-    // Make the key expired.
+    // Make the record expired.
     req.expire_ts_seconds = 1;
     test_non_idempotent_incr(10, rocksdb::Status::kOk, rocksdb::Status::kOk);
 
+    // Now the record should be expired.
     check_db_record_expired();
 
     // Incr the expired key.
@@ -308,7 +311,7 @@ INSTANTIATE_TEST_SUITE_P(PegasusWriteServiceImplTest,
 class IdempotentIncrTest : public IncrTest
 {
 public:
-    // Test make_idempotent for incr.
+    // Test make_idempotent for the incr request.
     void test_make_idempotent(int64_t increment, int expected_err)
     {
         req.increment = increment;
@@ -321,8 +324,9 @@ public:
         ASSERT_EQ(expected_err, err_resp.error);
     }
 
-    // Test if make_idempotent for incr is successful; then, write the idempotent put
-    // request into db.
+    // Test idempotent write for the incr request:
+    // - make_idempotent for incr should be successful;
+    // - then, apply the idempotent put request into DB.
     void test_idempotent_incr(int64_t increment, int expected_err)
     {
         test_make_idempotent(increment, rocksdb::Status::kOk);
@@ -383,9 +387,9 @@ TEST_P(IdempotentIncrTest, FailOnGet)
     PUT_BASE_VALUE_INT64(100);
 
     dsn::fail::setup();
-    // When db_get failed, make_idempotent should return an error.
-    dsn::fail::cfg("db_get", "100%1*return()");
 
+    // `make_idempotent` should return an error once failed to get current value from DB.
+    dsn::fail::cfg("db_get", "100%1*return()");
     test_make_idempotent(10, FAIL_DB_GET);
 
     dsn::fail::teardown();
@@ -396,9 +400,9 @@ TEST_P(IdempotentIncrTest, FailOnPut)
     PUT_BASE_VALUE_INT64(100);
 
     dsn::fail::setup();
-    // When rocksdb put failed, it should return an error while writing put request.
-    dsn::fail::cfg("db_write_batch_put", "100%1*return()");
 
+    // `put` should return an error once failed to write into batch.
+    dsn::fail::cfg("db_write_batch_put", "100%1*return()");
     test_idempotent_incr(10, FAIL_DB_WRITE_BATCH_PUT);
 
     dsn::fail::teardown();
@@ -406,10 +410,11 @@ TEST_P(IdempotentIncrTest, FailOnPut)
 
 TEST_P(IdempotentIncrTest, IncrOnExpireRecord)
 {
-    // Make the key expired.
+    // Make the record expired.
     req.expire_ts_seconds = 1;
     test_idempotent_incr(10, rocksdb::Status::kOk);
 
+    // Now the record should be expired.
     check_db_record_expired();
 
     // Incr the expired key.
