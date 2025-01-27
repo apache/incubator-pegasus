@@ -703,7 +703,7 @@ private:
         update.__set_type(type);
     }
 
-    // Build corresponding single-put request for a incr request, and return current status
+    // Build corresponding single-put request for an incr request, and return current status
     // for RocksDB, i.e. kOk.
     static inline int make_idempotent_request_for_incr(const dsn::blob &key,
                                                        int64_t value,
