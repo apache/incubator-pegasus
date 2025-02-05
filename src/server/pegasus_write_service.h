@@ -189,9 +189,8 @@ public:
 private:
     void clear_up_batch_states();
 
-private:
     friend class pegasus_write_service_test;
-    friend class pegasus_write_service_impl_test;
+    friend class PegasusWriteServiceImplTest;
     friend class pegasus_server_write_test;
     friend class rocksdb_wrapper_test;
 

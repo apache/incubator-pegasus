@@ -89,7 +89,7 @@ private:
 
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;
-    friend class pegasus_write_service_impl_test;
+    friend class PegasusWriteServiceImplTest;
     friend class rocksdb_wrapper_test;
 
     std::unique_ptr<pegasus_write_service> _write_svc;

@@ -26,10 +26,12 @@
 
 #pragma once
 
-#include <memory>
+#include <fmt/core.h>
 #include <cstring>
-
+#include <memory>
 #include <string_view>
+#include <type_traits>
+
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/protocol/TProtocol.h>
 
@@ -124,6 +126,13 @@ public:
         auto *s = new std::string(std::move(bytes));
         std::shared_ptr<char> buf(const_cast<char *>(s->data()), [s](char *) { delete s; });
         return {std::move(buf), static_cast<unsigned int>(s->length())};
+    }
+
+    template <typename TNum,
+              typename = typename std::enable_if<std::is_arithmetic<TNum>::value>::type>
+    [[nodiscard]] static blob create_from_numeric(TNum val)
+    {
+        return create_from_bytes(fmt::format("{}", val));
     }
 
     void assign(const std::shared_ptr<char> &buffer, int offset, unsigned int length)
