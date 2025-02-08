@@ -44,6 +44,13 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kMutations,
                       "The number of confirmed mutations for dup");
 
+DSN_DEFINE_bool("replication",
+                load_from_private_log_level_common,
+                false,
+                "The level of load_from_private_log when doing a duplication.Be false means the "
+                "task level of replaing plog is low, otherwise the task level is common");
+DSN_TAG_VARIABLE(load_from_private_log_level_common, FT_MUTABLE);
+
 namespace dsn {
 namespace replication {
 
@@ -161,7 +168,10 @@ void replica_duplicator::start_dup_log()
     _load = std::make_unique<load_mutation>(this, _replica, _load_private.get());
 
     from(*_load).link(*_ship).link(*_load);
-    fork(*_load_private, LPC_REPLICATION_LONG_COMMON, 0).link(*_ship);
+    const dsn::task_code load_from_private_log_level = FLAGS_load_from_private_log_level_common
+                                                           ? LPC_REPLICATION_LONG_COMMON
+                                                           : LPC_REPLICATION_LONG_LOW;
+    fork(*_load_private, load_from_private_log_level, 0).link(*_ship);
 
     run_pipeline();
 }
