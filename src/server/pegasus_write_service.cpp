@@ -404,11 +404,11 @@ void pegasus_write_service::clear_up_batch_states()
 }
 
 int pegasus_write_service::duplicate(int64_t decree,
-                                     const dsn::apps::duplicate_request &requests,
+                                     const dsn::apps::duplicate_request &update,
                                      dsn::apps::duplicate_response &resp)
 {
     // Verifies the cluster_id.
-    for (const auto &request : requests.entries) {
+    for (const auto &request : update.entries) {
         if (!dsn::replication::is_dup_cluster_id_configured(request.cluster_id)) {
             resp.__set_error(rocksdb::Status::kInvalidArgument);
             resp.__set_error_hint("request cluster id is unconfigured");
