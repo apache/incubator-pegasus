@@ -136,7 +136,17 @@ public:
                      const dsn::apps::multi_remove_request &update,
                      dsn::apps::multi_remove_response &resp);
 
-    // Write INCR record.
+    // Translate an INCR request into an idempotent PUT request.
+    int make_idempotent(const dsn::apps::incr_request &req,
+                        dsn::apps::incr_response &err_resp,
+                        std::vector<dsn::apps::update_request> &updates);
+
+    // Write an idempotent INCR record and reply to the client with INCR response.
+    int put(const db_write_context &ctx,
+            const dsn::apps::update_request &update,
+            dsn::apps::incr_response &resp);
+
+    // Write a non-idempotent INCR record.
     int incr(int64_t decree, const dsn::apps::incr_request &update, dsn::apps::incr_response &resp);
 
     // Write CHECK_AND_SET record.
@@ -202,6 +212,11 @@ private:
 
     uint64_t _batch_start_time;
 
+    // Only used for primary replica to calculate the duration that an incr request from
+    // the client is translated to an idempotent request (i.e. a put request) before appended
+    // to plog.
+    uint64_t _make_incr_idempotent_duration_ns;
+
     capacity_unit_calculator *_cu_calculator;
 
     METRIC_VAR_DECLARE_counter(put_requests);
@@ -224,9 +239,15 @@ private:
     METRIC_VAR_DECLARE_percentile_int64(dup_time_lag_ms);
     METRIC_VAR_DECLARE_counter(dup_lagging_writes);
 
-    // Record batch size for put and remove requests.
+    // Measure the size of single-put requests in batch applied into RocksDB for metrics.
     uint32_t _put_batch_size;
+
+    // Measure the size of single-remove requests in batch applied into RocksDB for metrics.
     uint32_t _remove_batch_size;
+
+    // Measure the size of incr requests (with each translated into an idempotent put request)
+    // in batch applied into RocksDB for metrics.
+    uint32_t _incr_batch_size;
 
     // TODO(wutao1): add metrics for failed rpc.
 };

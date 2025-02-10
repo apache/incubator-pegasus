@@ -171,8 +171,8 @@ public:
         return resp.error;
     }
 
-    // Tranlate an incr request which is certainly non-idempotent into a single-put request
-    // which is certainly idempotent. Return current status for RocksDB.
+    // Tranlate an incr request into a single-put request which is certainly idempotent.
+    // Return current status for RocksDB.
     int make_idempotent(const dsn::apps::incr_request &req,
                         dsn::apps::incr_response &err_resp,
                         dsn::apps::update_request &update)

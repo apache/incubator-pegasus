@@ -86,7 +86,7 @@ struct update_request
     // single-put request from the one translated from a non-idempotent atomic write request:
     // - a general single-put request, if `type` is UT_PUT or not set by default as it's
     // optional, or
-    // - a put request translated from a non-idempotent incr request, if `type` is UT_INCR.
+    // - a put request translated from an incr request, if `type` is UT_INCR.
     4:optional update_type type;
 }
 
