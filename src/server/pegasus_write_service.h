@@ -139,7 +139,7 @@ public:
     // Translate an INCR request into an idempotent PUT request.
     int make_idempotent(const dsn::apps::incr_request &req,
                         dsn::apps::incr_response &err_resp,
-                        std::vector<dsn::apps::update_request> &updates);
+                        dsn::apps::update_request &update);
 
     // Write an idempotent INCR record and reply to the client with INCR response.
     int put(const db_write_context &ctx,

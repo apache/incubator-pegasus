@@ -215,11 +215,11 @@ int pegasus_write_service::multi_remove(int64_t decree,
 
 int pegasus_write_service::make_idempotent(const dsn::apps::incr_request &req,
                                            dsn::apps::incr_response &err_resp,
-                                           std::vector<dsn::apps::update_request> &updates)
+                                           dsn::apps::update_request &update)
 {
     const uint64_t start_time = dsn_now_ns();
 
-    const int err = _impl->make_idempotent(req, err_resp, updates);
+    const int err = _impl->make_idempotent(req, err_resp, update);
 
     // Record the duration that a incr request is translated into a put request.
     _make_incr_idempotent_duration_ns = dsn_now_ns() - start_time;
@@ -379,7 +379,7 @@ void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_t
 
 void pegasus_write_service::clear_up_batch_states()
 {
-#define UPDATE_WRITE_BATCH_METRICS(op)                                                                    \
+#define UPDATE_WRITE_BATCH_METRICS(op)                                                             \
     do {                                                                                           \
         METRIC_VAR_INCREMENT_BY(op##_requests, static_cast<int64_t>(_##op##_batch_size));          \
         METRIC_VAR_SET(op##_latency_ns, static_cast<size_t>(_##op##_batch_size), latency_ns);      \
