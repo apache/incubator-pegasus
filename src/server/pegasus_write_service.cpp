@@ -221,7 +221,7 @@ int pegasus_write_service::make_idempotent(const dsn::apps::incr_request &req,
 
     const int err = _impl->make_idempotent(req, err_resp, update);
 
-    // Record the duration that a incr request is translated into a put request.
+    // Calculate the duration that an incr request is translated into an idempotent put request.
     _make_incr_idempotent_duration_ns = dsn_now_ns() - start_time;
 
     return err;
