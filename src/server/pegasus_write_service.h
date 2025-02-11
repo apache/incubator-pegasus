@@ -136,12 +136,14 @@ public:
                      const dsn::apps::multi_remove_request &update,
                      dsn::apps::multi_remove_response &resp);
 
-    // Translate an INCR request into an idempotent PUT request.
+    // Translate an INCR request into an idempotent PUT request. Only called by primary
+    // replicas.
     int make_idempotent(const dsn::apps::incr_request &req,
                         dsn::apps::incr_response &err_resp,
                         dsn::apps::update_request &update);
 
-    // Write an idempotent INCR record and reply to the client with INCR response.
+    // Write an idempotent INCR record (i.e. a PUT record) and reply to the client with INCR
+    // response. Only called by primary replicas.
     int put(const db_write_context &ctx,
             const dsn::apps::update_request &update,
             dsn::apps::incr_response &resp);
@@ -177,6 +179,8 @@ public:
     // Add PUT record in batch write.
     // \returns rocksdb::Status::Code.
     // NOTE that `resp` should not be moved or freed while the batch is not committed.
+    // When called by secondary replicas, this put request may be translated from an incr
+    // request for idempotence.
     int batch_put(const db_write_context &ctx,
                   const dsn::apps::update_request &update,
                   dsn::apps::update_response &resp);
@@ -213,8 +217,9 @@ private:
     uint64_t _batch_start_time;
 
     // Only used for primary replica to calculate the duration that an incr request from
-    // the client is translated to an idempotent request (i.e. a put request) before appended
-    // to plog.
+    // the client is translated into an idempotent put request before appended to plog,
+    // including reading the current value from RocksDB and incrementing it by a given
+    // amount.
     uint64_t _make_incr_idempotent_duration_ns;
 
     capacity_unit_calculator *_cu_calculator;

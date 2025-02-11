@@ -172,7 +172,7 @@ public:
     }
 
     // Tranlate an incr request into a single-put request which is certainly idempotent.
-    // Return current status for RocksDB.
+    // Return current status for RocksDB. Only called by primary replicas.
     int make_idempotent(const dsn::apps::incr_request &req,
                         dsn::apps::incr_response &err_resp,
                         dsn::apps::update_request &update)
@@ -229,7 +229,7 @@ public:
     }
 
     // Apply single-put request translated from incr request into RocksDB, and build response
-    // for incr. Return current status for RocksDB.
+    // for incr. Return current status for RocksDB. Only called by primary replicas.
     int put(const db_write_context &ctx,
             const dsn::apps::update_request &update,
             dsn::apps::incr_response &resp)

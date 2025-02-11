@@ -231,12 +231,8 @@ int pegasus_write_service::put(const db_write_context &ctx,
                                const dsn::apps::update_request &update,
                                dsn::apps::incr_response &resp)
 {
-    // The total latency should also include the duration that an idempotent incr request
-    // is built based on the original non-idempotent incr request (i.e. read current value
-    // from rocksdb and add increment on it).
+    // The total latency should also include the duration of the translation.
     METRIC_VAR_AUTO_LATENCY(incr_latency_ns, dsn_now_ns() - _make_incr_idempotent_duration_ns);
-    _make_incr_idempotent_duration_ns = 0;
-
     METRIC_VAR_INCREMENT(incr_requests);
 
     const int err = _impl->put(ctx, update, resp);
