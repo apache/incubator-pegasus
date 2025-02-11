@@ -46,15 +46,14 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kMutations,
                       "The number of confirmed mutations for dup");
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 load_from_private_log_level_common,
                 false,
                 "The level of load_from_private_log when doing a duplication.Be false means the "
                 "task level of replaing plog is low, otherwise the task level is common");
 DSN_TAG_VARIABLE(load_from_private_log_level_common, FT_MUTABLE);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     : replica_base(r),
@@ -329,5 +328,5 @@ void replica_duplicator::set_duplication_plog_checking(bool checking)
     _replica->set_duplication_plog_checking(checking);
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
+
