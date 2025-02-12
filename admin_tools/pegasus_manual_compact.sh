@@ -119,10 +119,10 @@ function wait_manual_compact()
         query_log_file="/tmp/$UID.$PID.pegasus.query_compact.${app_id}"
         echo "${query_cmd}" | ./run.sh shell --cluster ${cluster} &>${query_log_file}
 
-        queue_count=$(awk 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); if (enqueue[1] != "-" && start[1] == "-") {count++}} END {print count}' "$query_log_file")
-        running_count=$(awk 'BEGIN {count=0} {match($0, /"recent_start_at":"([^"]+)"/, start); if (start[1] != "-" && length(start[1]) > 0) {count++}} END {print count}' "$query_log_file")
+        queue_count=$(awk 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); if (1 in enqueue && enqueue[1] != "-" && start[1] == "-") {count++}} END {print count}' "$query_log_file")
+        running_count=$(awk 'BEGIN {count=0} {match($0, /"recent_start_at":"([^"]+)"/, start); if (1 in start && start[1] != "-") {count++}} END {print count}' "$query_log_file")
         processing_count=$((queue_count+running_count))
-        finish_count=$(awk 'BEGIN {count=0} {match($0, /"last_finish":"([^"]+)"/, finish); if (finish[1] != "-" && length(finish[1]) > 0) {count++}} END {print count}' "$query_log_file")
+        finish_count=$(awk 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); match($0, /"last_finish":"([^"]+)"/, finish); if (enqueue[1] == "-" && start[1] == "-" && 1 in finish && finish[1] != "-") {count++}} END {print count}' "$query_log_file")
         not_finish_count=$((total_replica_count-finish_count))
 
         if [ ${processing_count} -eq 0 -a ${finish_count} -eq ${total_replica_count} ]; then
