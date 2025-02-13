@@ -329,4 +329,3 @@ void replica_duplicator::set_duplication_plog_checking(bool checking)
 }
 
 } // namespace dsn::replication
-
