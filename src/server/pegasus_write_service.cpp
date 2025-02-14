@@ -358,7 +358,7 @@ int pegasus_write_service::batch_commit(int64_t decree)
     CHECK_GT_MSG(_batch_start_time, 0, "batch_commit must be called after batch_prepare");
 
     int err = _impl->batch_commit(decree);
-    clear_up_batch_states();
+    batch_finish();
     return err;
 }
 
@@ -368,12 +368,12 @@ void pegasus_write_service::batch_abort(int64_t decree, int err)
     CHECK(err, "must abort on non-zero err");
 
     _impl->batch_abort(decree, err);
-    clear_up_batch_states();
+    batch_finish();
 }
 
 void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_ttl(ttl); }
 
-void pegasus_write_service::clear_up_batch_states()
+void pegasus_write_service::batch_finish()
 {
 #define UPDATE_WRITE_BATCH_METRICS(op)                                                             \
     do {                                                                                           \

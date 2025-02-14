@@ -1344,7 +1344,7 @@ public:
 
     // Set the same value for n times, used to treat a single value as the result of multiple
     // observations, e.g. taking the latency of executing the entire batch as the latency for
-    // processing each request within it (see pegasus_write_service::clear_up_batch_states()).
+    // processing each request within it (see pegasus_write_service::batch_finish()).
     void set(size_t n, const value_type &val)
     {
         for (size_t i = 0; i < n; ++i) {

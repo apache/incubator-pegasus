@@ -201,7 +201,8 @@ public:
     void set_default_ttl(uint32_t ttl);
 
 private:
-    void clear_up_batch_states();
+    // Finish batch write with metrics such as latencies calculated and some states cleared.
+    void batch_finish();
 
     friend class pegasus_write_service_test;
     friend class PegasusWriteServiceImplTest;
@@ -220,6 +221,20 @@ private:
     // the client is translated into an idempotent put request before appended to plog,
     // including reading the current value from RocksDB and incrementing it by a given
     // amount.
+    //
+    // This variable is defined as per-replica rather than per-request, for the reason
+    // that the current design for implementing idempotence is to make sure there is only
+    // one atomic request being processed in the write pipeline for each replica. This
+    // pipeline consists of the following stages:
+    // (1) read the current value from RocksDB and built the idempotent request based on
+    // it;
+    // (2) append the corresponding mutation to plog;
+    // (3) broadcast the prepare requests;
+    // (4) apply the result for atomic operation back to RocksDB ultimately.
+    // For a request, this variable will be set in stage (1) and read in stage (4); since
+    // there is only one request in the pipeline, this variable is guaranteed not to be
+    // set for another request before stage (4) is finished. Therefore, it is safe to
+    // define this variable as per-replica.
     uint64_t _make_incr_idempotent_duration_ns;
 
     capacity_unit_calculator *_cu_calculator;
