@@ -122,7 +122,7 @@ function wait_manual_compact()
         queue_count=$(awk 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); if (1 in enqueue && enqueue[1] != "-" && start[1] == "-") {count++}} END {print count}' "$query_log_file")
         running_count=$(awk 'BEGIN {count=0} {match($0, /"recent_start_at":"([^"]+)"/, start); if (1 in start && start[1] != "-") {count++}} END {print count}' "$query_log_file")
         processing_count=$((queue_count+running_count))
-        finish_count=$(awk 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); match($0, /"last_finish":"([^"]+)"/, finish); if (enqueue[1] == "-" && start[1] == "-" && 1 in finish && finish[1] != "-") {count++}} END {print count}' "$query_log_file")
+        finish_count=$(awk -v date="$earliest_finish_time_ms" 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); match($0, /"last_finish":"([^"]+)"/, finish); if (enqueue[1] == "-" && start[1] == "-" && 1 in finish && finish[1] >= date) {count++}} END {print count}' "$query_log_file")
         not_finish_count=$((total_replica_count-finish_count))
 
         if [ ${processing_count} -eq 0 -a ${finish_count} -eq ${total_replica_count} ]; then
