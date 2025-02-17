@@ -587,11 +587,14 @@ void bulk_load_service::try_resend_bulk_load_request(const std::string &app_name
     FAIL_POINT_INJECT_F("meta_bulk_load_resend_request", [](std::string_view) {});
     zauto_read_lock l(_lock);
     if (is_app_bulk_loading_unlocked(pid.get_app_id())) {
+        int32_t interval = _partition_bulk_load_info[pid].status == bulk_load_status::BLS_INGESTING
+                               ? bulk_load_constant::BULK_LOAD_INGEST_REQUEST_INTERVAL
+                               : bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL;
         tasking::enqueue(LPC_META_STATE_NORMAL,
                          _meta_svc->tracker(),
                          std::bind(&bulk_load_service::partition_bulk_load, this, app_name, pid),
                          0,
-                         std::chrono::seconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
+                         std::chrono::milliseconds(interval));
     }
 }
 
@@ -1267,7 +1270,7 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
                          _meta_svc->tracker(),
                          std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
                          pid.thread_hash(),
-                         std::chrono::seconds(5));
+                         std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_INGEST_REQUEST_INTERVAL));
         return;
     }
 
@@ -1279,7 +1282,7 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         std::bind(
             &bulk_load_service::send_ingestion_request, this, app_name, pid, primary, meta_ballot),
         0,
-        std::chrono::seconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
+        std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
