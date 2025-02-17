@@ -1342,6 +1342,9 @@ public:
         _samples.get()[index & (_sample_size - 1)] = val;
     }
 
+    // Set the same value for n times, used to treat a single value as the result of multiple
+    // observations, e.g. taking the latency of executing the entire batch as the latency for
+    // processing each request within it (see pegasus_write_service::batch_finish()).
     void set(size_t n, const value_type &val)
     {
         for (size_t i = 0; i < n; ++i) {
