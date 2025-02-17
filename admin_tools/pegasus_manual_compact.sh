@@ -119,10 +119,10 @@ function wait_manual_compact()
         query_log_file="/tmp/$UID.$PID.pegasus.query_compact.${app_id}"
         echo "${query_cmd}" | ./run.sh shell --cluster ${cluster} &>${query_log_file}
 
-        queue_count=`grep 'recent enqueue at' ${query_log_file} | grep -v 'recent start at' | wc -l`
-        running_count=`grep 'recent start at' ${query_log_file} | wc -l`
+        queue_count=$(awk 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); if (1 in enqueue && enqueue[1] != "-" && start[1] == "-") {count++}} END {print count}' "$query_log_file")
+        running_count=$(awk 'BEGIN {count=0} {match($0, /"recent_start_at":"([^"]+)"/, start); if (1 in start && start[1] != "-") {count++}} END {print count}' "$query_log_file")
         processing_count=$((queue_count+running_count))
-        finish_count=`grep "last finish at" ${query_log_file} | grep -v "recent enqueue at" | grep -v "recent start at" | grep -o 'last finish at [^,]*' | sed 's/\[/,/;s/\]//' | awk -F"," -v date="$earliest_finish_time_ms" 'BEGIN{count=0}{if(length($2)==23 && $2>=date){count++;}}END{print count}'`
+        finish_count=$(awk -v date="$earliest_finish_time_ms" 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); match($0, /"last_finish":"([^"]+)"/, finish); if (enqueue[1] == "-" && start[1] == "-" && 1 in finish && finish[1] >= date) {count++}} END {print count}' "$query_log_file")
         not_finish_count=$((total_replica_count-finish_count))
 
         if [ ${processing_count} -eq 0 -a ${finish_count} -eq ${total_replica_count} ]; then
