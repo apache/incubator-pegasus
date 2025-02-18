@@ -54,12 +54,15 @@ public:
     void set_read_msg(message_ex *msg)
     {
         _msg = msg;
-        if (nullptr != _msg) {
-            ::dsn::blob bb;
-            CHECK(((::dsn::message_ex *)_msg)->read_next(bb),
-                  "read msg must have one segment of buffer ready");
-            init(std::move(bb));
+        if (_msg == nullptr) {
+            return;
         }
+
+        dsn::blob bb;
+        CHECK(_msg->read_next(bb),
+                "read msg must have one segment of buffer ready");
+
+        init(std::move(bb));
     }
 
     int read(char *buffer, int sz) { return inner_read(buffer, sz); }

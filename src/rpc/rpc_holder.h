@@ -224,13 +224,17 @@ public:
         dsn_rpc_forward(dsn_request(), addr);
     }
 
+    inline void set_auto_reply(bool auto_reply) { _i->auto_reply = auto_reply; }
+
+    inline void enable_auto_reply() { set_auto_reply(true); }
+
     // Returns an rpc_holder that will reply the request after its lifetime ends.
     // By default rpc_holder never replies.
     // SEE: serverlet<T>::register_rpc_handler_with_rpc_holder
     static inline rpc_holder auto_reply(message_ex *req)
     {
         rpc_holder rpc(req);
-        rpc._i->auto_reply = true;
+        rpc.enable_auto_reply();
         return rpc;
     }
 
