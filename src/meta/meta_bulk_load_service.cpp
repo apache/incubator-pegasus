@@ -1266,11 +1266,12 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
     if (!try_partition_ingestion(pc, app->helpers->contexts[pid.get_partition_index()])) {
         LOG_WARNING(
             "app({}) partition({}) couldn't execute ingestion, wait and try later", app_name, pid);
-        tasking::enqueue(LPC_META_STATE_NORMAL,
-                         _meta_svc->tracker(),
-                         std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
-                         pid.thread_hash(),
-                         std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_INGEST_REQUEST_INTERVAL));
+        tasking::enqueue(
+            LPC_META_STATE_NORMAL,
+            _meta_svc->tracker(),
+            std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
+            pid.thread_hash(),
+            std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_INGEST_REQUEST_INTERVAL));
         return;
     }
 
