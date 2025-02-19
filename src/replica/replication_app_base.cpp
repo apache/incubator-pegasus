@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <alloca.h>
 #include <fmt/core.h>
 #include <rocksdb/env.h>
 #include <rocksdb/status.h>
@@ -47,6 +46,7 @@
 #include "rpc/serialization.h"
 #include "task/task_code.h"
 #include "task/task_spec.h"
+#include "utils/alloc.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
@@ -294,8 +294,8 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
 
     bool has_ingestion_request = false;
     const int request_count = static_cast<int>(mu->client_requests.size());
-    message_ex **batched_requests = (message_ex **)alloca(sizeof(message_ex *) * request_count);
-    message_ex **faked_requests = (message_ex **)alloca(sizeof(message_ex *) * request_count);
+    auto **batched_requests = alloc_stack<message_ex *>(request_count);
+    auto **faked_requests = alloc_stack<message_ex *>(request_count);
     int batched_count = 0; // write-empties are not included.
     int faked_count = 0;
     for (int i = 0; i < request_count; ++i) {

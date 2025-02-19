@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <alloca.h>
 #include <algorithm> // IWYU pragma: keep
 #include <cstddef>
 #include <functional>
@@ -83,6 +84,12 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len, const T &val)
     }
 
     return array;
+}
+
+template <typename TObject>
+inline TObject *alloc_stack(size_t num_objects)
+{
+    return static_cast<TObject *>(alloca(sizeof(TObject) * num_objects));
 }
 
 } // namespace dsn

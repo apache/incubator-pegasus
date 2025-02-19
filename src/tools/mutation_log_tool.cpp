@@ -103,8 +103,7 @@ bool mutation_log_tool::dump(
                                   log_length,
                                   mu->data.updates.size());
             if (callback && !mu->data.updates.empty()) {
-                dsn::message_ex **batched_requests =
-                    (dsn::message_ex **)alloca(sizeof(dsn::message_ex *) * mu->data.updates.size());
+                auto **batched_requests = alloc_stack<message_ex *>(mu->data.updates.size());
                 int batched_count = 0;
                 for (mutation_update &update : mu->data.updates) {
                     dsn::message_ex *req = dsn::message_ex::create_received_request(
