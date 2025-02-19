@@ -18,7 +18,9 @@
 #include "server/hotkey_collector.h"
 
 #include <fmt/core.h>
+#include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <string_view>
 #include <thread>
 #include <vector>

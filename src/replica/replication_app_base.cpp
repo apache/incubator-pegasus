@@ -293,12 +293,12 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
     }
 
     bool has_ingestion_request = false;
-    int request_count = static_cast<int>(mu->client_requests.size());
+    const int request_count = static_cast<int>(mu->client_requests.size());
     message_ex **batched_requests = (message_ex **)alloca(sizeof(message_ex *) * request_count);
     message_ex **faked_requests = (message_ex **)alloca(sizeof(message_ex *) * request_count);
     int batched_count = 0; // write-empties are not included.
     int faked_count = 0;
-    for (int i = 0; i < request_count; i++) {
+    for (int i = 0; i < request_count; ++i) {
         const mutation_update &update = mu->data.updates[i];
         LOG_DEBUG_PREFIX("mutation {} #{}: dispatch rpc call {}", mu->name(), i, update.code);
         if (update.code == RPC_REPLICATION_WRITE_EMPTY) {
@@ -321,14 +321,14 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
         }
     }
 
-    int storage_error = on_batched_write_requests(mu->data.header.decree,
-                                                  mu->data.header.timestamp,
-                                                  batched_requests,
-                                                  batched_count,
-                                                  mu->original_request);
+    const int storage_error = on_batched_write_requests(mu->data.header.decree,
+                                                        mu->data.header.timestamp,
+                                                        batched_requests,
+                                                        batched_count,
+                                                        mu->original_request);
 
     // release faked requests
-    for (int i = 0; i < faked_count; i++) {
+    for (int i = 0; i < faked_count; ++i) {
         faked_requests[i]->release_ref();
     }
 

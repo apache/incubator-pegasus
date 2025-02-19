@@ -71,8 +71,8 @@ int pegasus_server_write::make_idempotent(dsn::message_ex *request, dsn::message
         return iter->second(request, new_request);
     }
 
-    // The requests not in the handlers are considered as idempotent. Always be
-    // successful for them.
+    // Those requests not in the handlers are considered as idempotent. Always be successful
+    // for them.
     return rocksdb::Status::kOk;
 }
 
@@ -145,72 +145,68 @@ void pegasus_server_write::set_default_ttl(uint32_t ttl) { _write_svc->set_defau
 
 int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int count)
 {
+    _write_svc->batch_prepare(_decree);
+
     int err = rocksdb::Status::kOk;
-    {
-        _write_svc->batch_prepare(_decree);
+    for (int i = 0; i < count; ++i) {
+        CHECK_NOTNULL(requests[i], "request[{}] is null", i);
 
-        for (int i = 0; i < count; ++i) {
-            CHECK_NOTNULL(requests[i], "request[{}] is null", i);
-
-            // Make sure all writes are batched even if they are failed,
-            // since we need to record the total qps and rpc latencies,
-            // and respond for all RPCs regardless of their result.
-            int local_err = rocksdb::Status::kOk;
-            try {
-                dsn::task_code rpc_code(requests[i]->rpc_code());
-                if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
-                    // Once this single-put request is found originating from an atomic
-                    // request, there's no need to reply to the client since now we must
-                    // be in one of the following situations:
-                    // - now we are replaying plog into RocksDB at startup of this replica.
-                    // - now we are in a secondary replica: just received a prepare request
-                    // and appended it to plog, now we are applying it into RocksDB.
-                    auto rpc = put_rpc(requests[i]);
-                    const auto &update = rpc.request();
-                    if (!update.__isset.type || update.type == dsn::apps::update_type::UT_PUT) {
-                        // We must reply to the client for the plain single-put request.
-                        rpc.enable_auto_reply();
-                    } else if (update.type == dsn::apps::update_type::UT_INCR) {
-                        // This put request must originate from an incr request and never
-                        // be batched in plog.
-                        CHECK_EQ(count, 1);
-                    }
-
-                    local_err = on_single_put_in_batch(rpc);
-                    _put_rpc_batch.emplace_back(std::move(rpc));
-                } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
-                    auto rpc = remove_rpc::auto_reply(requests[i]);
-                    local_err = on_single_remove_in_batch(rpc);
-                    _remove_rpc_batch.emplace_back(std::move(rpc));
-                } else {
-                    if (_non_batch_write_handlers.find(rpc_code) !=
-                        _non_batch_write_handlers.end()) {
-                        LOG_FATAL("rpc code not allow batch: {}", rpc_code);
-                    } else {
-                        LOG_FATAL("rpc code not handled: {}", rpc_code);
-                    }
+        // Make sure all writes are batched even if some of them failed, since we need to record
+        // the total QPS and RPC latencies, and respond for all RPCs regardless of their result.
+        int local_err = rocksdb::Status::kOk;
+        try {
+            dsn::task_code rpc_code(requests[i]->rpc_code());
+            if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
+                // Once this single-put request is found originating from an atomic request,
+                // there's no need to reply to the client since now we must be in one of the
+                // following situations:
+                // - now we are replaying plog into RocksDB at startup of this replica.
+                // - now we are in a secondary replica: just received a prepare request and
+                // appended it to plog, now we are applying it into RocksDB.
+                auto rpc = put_rpc(requests[i]);
+                const auto &update = rpc.request();
+                if (!update.__isset.type || update.type == dsn::apps::update_type::UT_PUT) {
+                    // We must reply to the client for the plain single-put request.
+                    rpc.enable_auto_reply();
+                } else if (update.type == dsn::apps::update_type::UT_INCR) {
+                    // This put request must originate from an incr request and never be
+                    // batched in plog.
+                    CHECK_EQ(count, 1);
                 }
-            } catch (TTransportException &ex) {
-                METRIC_VAR_INCREMENT(corrupt_writes);
-                LOG_ERROR_PREFIX("pegasus batch writes handler failed, from = {}, exception = {}",
-                                 requests[i]->header->from_address,
-                                 ex.what());
-                // The corrupt write is likely to be an attack or a scan for security. Since it has
-                // been in plog, just ignore it.
-                // See https://github.com/apache/incubator-pegasus/pull/798.
-            }
 
-            if (err == rocksdb::Status::kOk && local_err != rocksdb::Status::kOk) {
-                err = local_err;
+                local_err = on_single_put_in_batch(rpc);
+                _put_rpc_batch.emplace_back(std::move(rpc));
+            } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+                auto rpc = remove_rpc::auto_reply(requests[i]);
+                local_err = on_single_remove_in_batch(rpc);
+                _remove_rpc_batch.emplace_back(std::move(rpc));
+            } else {
+                if (_non_batch_write_handlers.find(rpc_code) != _non_batch_write_handlers.end()) {
+                    LOG_FATAL("rpc code not allow batch: {}", rpc_code);
+                } else {
+                    LOG_FATAL("rpc code not handled: {}", rpc_code);
+                }
             }
+        } catch (TTransportException &ex) {
+            METRIC_VAR_INCREMENT(corrupt_writes);
+            LOG_ERROR_PREFIX("pegasus batch writes handler failed, from = {}, exception = {}",
+                             requests[i]->header->from_address,
+                             ex.what());
+            // The corrupt write is likely to be an attack or a scan for security. Since it has
+            // been in plog, just ignore it.
+            // See https://github.com/apache/incubator-pegasus/pull/798.
         }
 
-        if (dsn_unlikely(err != rocksdb::Status::kOk ||
-                         (_put_rpc_batch.empty() && _remove_rpc_batch.empty()))) {
-            _write_svc->batch_abort(_decree, err == rocksdb::Status::kOk ? -1 : err);
-        } else {
-            err = _write_svc->batch_commit(_decree);
+        if (err == rocksdb::Status::kOk && local_err != rocksdb::Status::kOk) {
+            err = local_err;
         }
+    }
+
+    if (dsn_unlikely(err != rocksdb::Status::kOk ||
+                     (_put_rpc_batch.empty() && _remove_rpc_batch.empty()))) {
+        _write_svc->batch_abort(_decree, err == rocksdb::Status::kOk ? -1 : err);
+    } else {
+        err = _write_svc->batch_commit(_decree);
     }
 
     // reply the batched RPCs
