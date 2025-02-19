@@ -258,7 +258,7 @@ public:
         _server->on_detect_hotkey(req, resp);
     }
 
-    get_rpc generate_get_rpc(const std::string &hash_key)
+    static get_rpc generate_get_rpc(const std::string &hash_key)
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, std::string("sortkey"));
@@ -266,7 +266,7 @@ public:
         return rpc;
     }
 
-    dsn::apps::update_request generate_set_req(const std::string &hash_key)
+    static dsn::apps::update_request generate_set_req(const std::string &hash_key)
     {
         dsn::apps::update_request req;
         dsn::blob raw_key;

@@ -70,9 +70,11 @@ public:
 
     ~rpc_read_stream() override
     {
-        if (_msg) {
-            _msg->read_commit((size_t)(total_size() - get_remaining_size()));
+        if (_msg == nullptr) {
+            return;
         }
+
+        _msg->read_commit(static_cast<size_t>(total_size() - get_remaining_size()));
     }
 
 private:
