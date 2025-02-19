@@ -148,7 +148,7 @@ message_ex *message_ex::create_received_request(dsn::task_code code,
                                                 uint64_t partition_hash)
 {
     dsn::blob bb(buffer, 0, size);
-    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
+    auto *msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = code;
     const char *name = code.to_string();
     strncpy(msg->header->rpc_name, name, sizeof(msg->header->rpc_name) - 1);

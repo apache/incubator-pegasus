@@ -382,8 +382,7 @@ TEST_P(hotkey_collector_test, data_completeness)
     for (int i = 0; i < WRITE_REQUEST_COUNT; i++) {
         writes[i] = create_put_request(generate_set_req(std::to_string(i)));
     }
-    _server->on_batched_write_requests(
-        int64_t(0), uint64_t(0), writes, WRITE_REQUEST_COUNT, nullptr);
+    _server->on_batched_write_requests(0, 0, writes, WRITE_REQUEST_COUNT, nullptr);
 
     for (int i = 0; i < WRITE_REQUEST_COUNT; i++) {
         auto rpc = generate_get_rpc(std::to_string(i));

@@ -65,7 +65,7 @@ pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
 
 int pegasus_server_write::make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request)
 {
-    make_idempotent_map::const_iterator iter = _make_idempotent_handlers.find(request->rpc_code());
+    auto iter = std::as_const(_make_idempotent_handlers).find(request->rpc_code());
     if (iter != _make_idempotent_handlers.end()) {
         return iter->second(request, new_request);
     }
@@ -92,8 +92,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
     }
 
     try {
-        non_batch_write_map::const_iterator iter =
-            _non_batch_write_handlers.find(requests[0]->rpc_code());
+        auto iter = std::as_const(_non_batch_write_handlers).find(requests[0]->rpc_code());
         if (iter != _non_batch_write_handlers.end()) {
             CHECK_EQ(count, 1);
             return iter->second(requests[0]);
@@ -122,7 +121,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
 int pegasus_server_write::on_idempotent(dsn::message_ex *request, dsn::message_ex *original_request)
 {
     try {
-        on_idempotent_map::const_iterator iter = _on_idempotent_handlers.find(request->rpc_code());
+        auto iter = std::as_const(_on_idempotent_handlers).find(request->rpc_code());
         if (iter != _on_idempotent_handlers.end()) {
             return iter->second(request, original_request);
         }

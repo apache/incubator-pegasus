@@ -45,7 +45,7 @@ class pegasus_server_impl;
 class pegasus_server_write : public dsn::replication::replica_base
 {
 public:
-    pegasus_server_write(pegasus_server_impl *server);
+    explicit pegasus_server_write(pegasus_server_impl *server);
 
     // See replication_app_base::make_idempotent() for details.
     int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request);

@@ -167,7 +167,7 @@ TEST(rpc_message_test, message_ex)
 
         message_ex *receive = message_ex::create_received_request(
             request->local_rpc_code,
-            (dsn_msg_serialize_format)request->header->context.u.serialize_format,
+            static_cast<dsn_msg_serialize_format>(request->header->context.u.serialize_format),
             request->buffers[1].data(),
             request->buffers[1].size(),
             request->header->client.thread_hash,

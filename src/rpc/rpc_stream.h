@@ -64,9 +64,9 @@ public:
         init(std::move(bb));
     }
 
-    int read(char *buffer, int sz) { return inner_read(buffer, sz); }
+    int read(char *buffer, int sz) override { return inner_read(buffer, sz); }
 
-    int read(blob &blob, int len) { return inner_read(blob, len); }
+    int read(blob &blob, int len) override { return inner_read(blob, len); }
 
     ~rpc_read_stream()
     {

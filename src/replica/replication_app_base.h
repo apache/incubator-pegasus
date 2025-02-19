@@ -282,7 +282,7 @@ public:
                                           message_ex *original_request);
 
     // query compact state.
-    virtual std::string query_compact_state() const = 0;
+    [[nodiscard]] virtual std::string query_compact_state() const = 0;
 
     // update app envs.
     virtual void update_app_envs(const std::map<std::string, std::string> &envs) = 0;

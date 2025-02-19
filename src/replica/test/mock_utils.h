@@ -82,7 +82,7 @@ public:
     {
         return 0;
     }
-    std::string query_compact_state() const { return ""; };
+    [[nodiscard]] std::string query_compact_state() const override { return ""; };
 
     // we mock the followings
     void update_app_envs(const std::map<std::string, std::string> &envs) override { _envs = envs; }
