@@ -22,6 +22,7 @@
 #include <thrift/transport/TTransportException.h>
 #include <algorithm>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "base/pegasus_key_schema.h"

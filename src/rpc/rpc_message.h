@@ -175,14 +175,14 @@ public:
     static message_ex *create_received_request(dsn::task_code rpc_code,
                                                dsn_msg_serialize_format format,
                                                const char *buffer,
-                                               int size,
+                                               unsigned int size,
                                                int thread_hash,
                                                uint64_t partition_hash);
 
     static message_ex *create_received_request(dsn::task_code rpc_code,
                                                dsn_msg_serialize_format format,
                                                const char *buffer,
-                                               int size)
+                                               unsigned int size)
     {
         return create_received_request(rpc_code, format, buffer, size, 0, 0);
     }

@@ -68,7 +68,7 @@ public:
 
     int read(blob &blob, int len) override { return inner_read(blob, len); }
 
-    ~rpc_read_stream()
+    ~rpc_read_stream() override
     {
         if (_msg) {
             _msg->read_commit((size_t)(total_size() - get_remaining_size()));

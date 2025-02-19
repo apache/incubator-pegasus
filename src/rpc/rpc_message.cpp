@@ -143,7 +143,7 @@ message_ex *message_ex::create_receive_message(const blob &data)
 message_ex *message_ex::create_received_request(dsn::task_code code,
                                                 dsn_msg_serialize_format format,
                                                 const char *buffer,
-                                                int size,
+                                                unsigned int size,
                                                 int thread_hash,
                                                 uint64_t partition_hash)
 {
