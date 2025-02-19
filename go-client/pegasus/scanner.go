@@ -49,6 +49,10 @@ const (
 	batchUnknownError = -4 // rpc succeed, but operation encounter some unknown error in server side
 )
 
+const (
+	defaultScannerBatchSize = 1000
+)
+
 // Scanner defines the interface of client-side scanning.
 type Scanner interface {
 	// Grabs the next entry.
@@ -83,7 +87,7 @@ type pegasusScanner struct {
 // NewScanOptions returns the default ScannerOptions.
 func NewScanOptions() *ScannerOptions {
 	return &ScannerOptions{
-		BatchSize:      1000,
+		BatchSize:      defaultScannerBatchSize,
 		StartInclusive: true,
 		StopInclusive:  false,
 		HashKeyFilter:  Filter{Type: FilterTypeNoFilter, Pattern: nil},
