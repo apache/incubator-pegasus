@@ -294,8 +294,8 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
 
     bool has_ingestion_request = false;
     const int request_count = static_cast<int>(mu->client_requests.size());
-    auto **batched_requests = alloc_stack<message_ex *>(request_count);
-    auto **faked_requests = alloc_stack<message_ex *>(request_count);
+    auto **batched_requests = ALLOC_STACK(message_ex *, request_count);
+    auto **faked_requests = ALLOC_STACK(message_ex *, request_count);
     int batched_count = 0; // write-empties are not included.
     int faked_count = 0;
     for (int i = 0; i < request_count; ++i) {
