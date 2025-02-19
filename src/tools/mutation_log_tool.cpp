@@ -110,7 +110,7 @@ bool mutation_log_tool::dump(
                     dsn::message_ex *req = dsn::message_ex::create_received_request(
                         update.code,
                         (dsn_msg_serialize_format)update.serialization_type,
-                        (void *)update.data.data(),
+                        update.data.data(),
                         update.data.length());
                     batched_requests[batched_count++] = req;
                 }

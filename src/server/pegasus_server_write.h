@@ -109,8 +109,7 @@ private:
 
     // Handlers that make an atomic request idempotent.
     using make_idempotent_map =
-        std::map<dsn::task_code,
-                 std::function<int(dsn::message_ex *, dsn::message_ex **)>>;
+        std::map<dsn::task_code, std::function<int(dsn::message_ex *, dsn::message_ex **)>>;
     make_idempotent_map _make_idempotent_handlers;
 
     // Handlers that process a request could not be batched, e.g. multi put/remove.

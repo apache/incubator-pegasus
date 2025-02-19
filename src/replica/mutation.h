@@ -153,6 +153,9 @@ public:
     // user requests
     std::vector<dsn::message_ex *> client_requests;
 
+    // Original non-idempotent request is used to reply to the client.
+    dsn::message_ptr original_request;
+
     // used by pending mutation queue only
     mutation *next;
 

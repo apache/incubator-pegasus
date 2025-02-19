@@ -115,13 +115,13 @@ public:
     static dsn::message_ex *create_message(const char *data)
     {
         return dsn::message_ex::create_received_request(
-            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, strlen(data));
+            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, data, strlen(data));
     }
 
     static dsn::message_ex *create_message(const char *data, int length)
     {
         return dsn::message_ex::create_received_request(
-            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, length);
+            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, data, length);
     }
 
     static dsn::message_ex *marshalling_array(const redis_request &request)

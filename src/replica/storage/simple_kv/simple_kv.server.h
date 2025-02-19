@@ -47,6 +47,11 @@ public:
         return handle_request(request);
     }
 
+    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) override
+    {
+        return 0;
+    }
+
 protected:
     // all service handlers to be implemented further
     // RPC_SIMPLE_KV_SIMPLE_KV_READ

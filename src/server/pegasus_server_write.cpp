@@ -35,6 +35,7 @@
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
+#include "runtime/message_utils.h"
 #include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
@@ -62,11 +63,9 @@ pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
     init_on_idempotent_handlers();
 }
 
-int pegasus_server_write::make_idempotent(dsn::message_ex *request,
-                                          dsn::message_ex ** new_request)
+int pegasus_server_write::make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request)
 {
-    make_idempotent_map::const_iterator iter =
-        _make_idempotent_handlers.find(request->rpc_code());
+    make_idempotent_map::const_iterator iter = _make_idempotent_handlers.find(request->rpc_code());
     if (iter != _make_idempotent_handlers.end()) {
         return iter->second(request, new_request);
     }
@@ -114,26 +113,24 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
     if (original_request != nullptr) {
         // The request is regarded as idempotent once its original request is attached.
         CHECK_EQ(count, 1);
-        return on_idempotent(request, original_request);
+        return on_idempotent(requests[0], original_request);
     }
 
     return on_batched_writes(requests, count);
 }
 
-int pegasus_server_write::on_idempotent(dsn::message_ex *request,
-                                              dsn::message_ex *original_request)
+int pegasus_server_write::on_idempotent(dsn::message_ex *request, dsn::message_ex *original_request)
 {
     try {
-        on_idempotent_map::const_iterator iter =
-            _on_idempotent_handlers.find(request->rpc_code());
+        on_idempotent_map::const_iterator iter = _on_idempotent_handlers.find(request->rpc_code());
         if (iter != _on_idempotent_handlers.end()) {
             return iter->second(request, original_request);
         }
     } catch (TTransportException &ex) {
-        _pfc_recent_corrupt_write_count->increment();
-        derror_replica("pegasus idempotent write handler failed, from = {}, exception = {}",
-                       request->header->from_address,
-                       ex.what());
+        METRIC_VAR_INCREMENT(corrupt_writes);
+        LOG_ERROR_PREFIX("pegasus on idempotent handler failed, from = {}, exception = {}",
+                         request->header->from_address,
+                         ex.what());
         // The corrupt write is likely to be an attack or a scan for security. Since it has
         // been in plog, just return rocksdb::Status::kOk to ignore it.
         // See https://github.com/apache/incubator-pegasus/pull/798.
@@ -314,7 +311,7 @@ void pegasus_server_write::init_non_batch_write_handlers()
 
 void pegasus_server_write::init_on_idempotent_handlers()
 {
-    _on_idempotent_handlers= {
+    _on_idempotent_handlers = {
         {dsn::apps::RPC_RRDB_RRDB_PUT,
          [this](dsn::message_ex *request, dsn::message_ex *original_request) -> int {
              auto put = put_rpc(request);
@@ -327,8 +324,9 @@ void pegasus_server_write::init_on_idempotent_handlers()
                  return _write_svc->put(_write_ctx, update, incr.response());
              }
 
-             CHECK(
-                 false, "unsupported update_request::type for idempotent write {}", update.type);
+             CHECK(false,
+                   "unsupported update_request::type for idempotent write {}",
+                   static_cast<int>(update.type));
              return rocksdb::Status::kNotSupported;
          }},
     };

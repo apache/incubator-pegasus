@@ -78,6 +78,10 @@ public:
         return ERR_OK;
     }
     int on_request(message_ex *request) override WARN_UNUSED_RESULT { return 0; }
+    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) override
+    {
+        return 0;
+    }
     std::string query_compact_state() const { return ""; };
 
     // we mock the followings

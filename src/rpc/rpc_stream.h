@@ -59,8 +59,7 @@ public:
         }
 
         dsn::blob bb;
-        CHECK(_msg->read_next(bb),
-                "read msg must have one segment of buffer ready");
+        CHECK(_msg->read_next(bb), "read msg must have one segment of buffer ready");
 
         init(std::move(bb));
     }
