@@ -40,7 +40,6 @@ class simple_kv_service : public replication_app_base, public storage_serverlet<
 {
 public:
     explicit simple_kv_service(replica *r) : replication_app_base(r) {}
-    ~simple_kv_service() override = default;
 
     int on_request(dsn::message_ex *request) override WARN_UNUSED_RESULT
     {

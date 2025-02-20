@@ -134,9 +134,9 @@ public:
     [[nodiscard]] bool is_primary() const;
 
     // Whether this replica is duplicating as master.
-    virtual bool is_duplication_master() const;
+    [[nodiscard]] virtual bool is_duplication_master() const;
     // Whether this replica is duplicating as follower.
-    virtual bool is_duplication_follower() const;
+    [[nodiscard]] virtual bool is_duplication_follower() const;
 
     const ballot &get_ballot() const;
 
