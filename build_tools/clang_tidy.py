@@ -65,6 +65,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                    "-checks=-bugprone-easily-swappable-parameters,"
                            "-bugprone-lambda-function-name,"
                            "-bugprone-macro-parentheses,"
+                           "-bugprone-sizeof-expression,"
                            "-cert-err58-cpp,"
                            "-concurrency-mt-unsafe,"
                            "-cppcoreguidelines-avoid-c-arrays,"

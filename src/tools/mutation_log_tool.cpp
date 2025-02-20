@@ -26,7 +26,6 @@
 
 #include "mutation_log_tool.h"
 
-#include <alloca.h>
 #include <memory>
 #include <vector>
 
@@ -41,6 +40,7 @@
 #include "replica/replica_stub.h"
 #include "rpc/rpc_message.h"
 #include "task/task_spec.h"
+#include "utils/alloc.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
