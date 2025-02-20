@@ -153,7 +153,9 @@ public:
     // user requests
     std::vector<dsn::message_ex *> client_requests;
 
-    // Original non-idempotent request is used to reply to the client.
+    // The original request received from the client. While making an atomic request (incr,
+    // check_and_set and check_and_mutate) idempotent, an extra variable is needed to hold
+    // its original request for the purpose of replying to the client.
     dsn::message_ptr original_request;
 
     // used by pending mutation queue only

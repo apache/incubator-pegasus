@@ -40,16 +40,16 @@ class simple_kv_service : public replication_app_base, public storage_serverlet<
 {
 public:
     simple_kv_service(replica *r) : replication_app_base(r) {}
-    virtual ~simple_kv_service() {}
+    ~simple_kv_service() override = default;
 
-    virtual int on_request(dsn::message_ex *request) override WARN_UNUSED_RESULT
+    int on_request(dsn::message_ex *request) override WARN_UNUSED_RESULT
     {
         return handle_request(request);
     }
 
     int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) override
     {
-        return 0;
+        return rocksdb::Status::kOk;
     }
 
 protected:

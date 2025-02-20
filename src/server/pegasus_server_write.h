@@ -50,6 +50,8 @@ public:
     // See replication_app_base::make_idempotent() for details.
     int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request);
 
+    // See replication_app_base::on_batched_write_requests() for details.
+    //
     /// \return error code returned by rocksdb, i.e rocksdb::Status::code.
     /// **NOTE**
     /// Error returned is regarded as the failure of replica, thus will trigger

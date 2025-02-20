@@ -80,7 +80,7 @@ public:
     int on_request(message_ex *request) override WARN_UNUSED_RESULT { return 0; }
     int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) override
     {
-        return 0;
+        return rocksdb::Status::kOk;
     }
     [[nodiscard]] std::string query_compact_state() const override { return ""; };
 
