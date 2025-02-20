@@ -131,7 +131,7 @@ public:
 
     virtual ~replication_app_base() = default;
 
-    bool is_primary() const;
+    [[nodiscard]] bool is_primary() const;
 
     // Whether this replica is duplicating as master.
     virtual bool is_duplication_master() const;
