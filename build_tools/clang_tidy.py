@@ -79,6 +79,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-cppcoreguidelines-pro-type-const-cast,"
                            "-cppcoreguidelines-pro-type-union-access,"
                            "-fuchsia-default-arguments-calls,"
+                           "-fuchsia-multiple-inheritance,"
                            "-fuchsia-overloaded-operator,"
                            "-fuchsia-statically-constructed-objects,"
                            "-google-readability-avoid-underscore-in-googletest-name,"

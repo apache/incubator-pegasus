@@ -138,7 +138,7 @@ public:
     // Whether this replica is duplicating as follower.
     [[nodiscard]] virtual bool is_duplication_follower() const;
 
-    const ballot &get_ballot() const;
+    [[nodiscard]] const ballot &get_ballot() const;
 
     //
     // Open the app.
