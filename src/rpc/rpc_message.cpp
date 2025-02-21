@@ -142,13 +142,13 @@ message_ex *message_ex::create_receive_message(const blob &data)
 
 message_ex *message_ex::create_received_request(dsn::task_code code,
                                                 dsn_msg_serialize_format format,
-                                                void *buffer,
-                                                int size,
+                                                const char *buffer,
+                                                unsigned int size,
                                                 int thread_hash,
                                                 uint64_t partition_hash)
 {
-    ::dsn::blob bb((const char *)buffer, 0, size);
-    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
+    dsn::blob bb(buffer, 0, size);
+    auto *msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
     msg->local_rpc_code = code;
     const char *name = code.to_string();
     strncpy(msg->header->rpc_name, name, sizeof(msg->header->rpc_name) - 1);

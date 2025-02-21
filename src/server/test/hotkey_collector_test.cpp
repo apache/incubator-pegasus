@@ -18,9 +18,12 @@
 #include "server/hotkey_collector.h"
 
 #include <fmt/core.h>
+#include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <string_view>
 #include <thread>
+#include <vector>
 
 #include "base/pegasus_key_schema.h"
 #include "common/gpid.h"
@@ -257,7 +260,7 @@ public:
         _server->on_detect_hotkey(req, resp);
     }
 
-    get_rpc generate_get_rpc(std::string hash_key)
+    static get_rpc generate_get_rpc(const std::string &hash_key)
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, std::string("sortkey"));
@@ -265,7 +268,7 @@ public:
         return rpc;
     }
 
-    dsn::apps::update_request generate_set_req(std::string hash_key)
+    static dsn::apps::update_request generate_set_req(const std::string &hash_key)
     {
         dsn::apps::update_request req;
         dsn::blob raw_key;
@@ -377,14 +380,15 @@ TEST_P(hotkey_collector_test, data_completeness)
                      resp);
     ASSERT_EQ(resp.err, dsn::ERR_OK);
 
-    const uint16_t WRITE_REQUEST_COUNT = 1000;
-    dsn::message_ex *writes[WRITE_REQUEST_COUNT];
-    for (int i = 0; i < WRITE_REQUEST_COUNT; i++) {
-        writes[i] = create_put_request(generate_set_req(std::to_string(i)));
+    static const size_t kWriteRequestCount = 1000;
+    std::vector<dsn::message_ex *> writes;
+    writes.reserve(kWriteRequestCount);
+    for (size_t i = 0; i < kWriteRequestCount; ++i) {
+        writes.push_back(create_put_request(generate_set_req(std::to_string(i))));
     }
-    _server->on_batched_write_requests(int64_t(0), uint64_t(0), writes, WRITE_REQUEST_COUNT);
+    _server->on_batched_write_requests(0, 0, writes.data(), kWriteRequestCount, nullptr);
 
-    for (int i = 0; i < WRITE_REQUEST_COUNT; i++) {
+    for (size_t i = 0; i < kWriteRequestCount; ++i) {
         auto rpc = generate_get_rpc(std::to_string(i));
         _server->on_get(rpc);
         auto value = rpc.response().value.to_string();

@@ -350,15 +350,24 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
                     max_d);
 }
 
+int pegasus_server_impl::make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request)
+{
+    CHECK_TRUE(_is_open);
+
+    return _server_write->make_idempotent(request, new_request);
+}
+
 int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                                                    uint64_t timestamp,
                                                    dsn::message_ex **requests,
-                                                   int count)
+                                                   int count,
+                                                   dsn::message_ex *original_request)
 {
-    CHECK(_is_open, "");
+    CHECK_TRUE(_is_open);
     CHECK_NOTNULL(requests, "");
 
-    return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
+    return _server_write->on_batched_write_requests(
+        requests, count, decree, timestamp, original_request);
 }
 
 // Since LOG_ERROR_PREFIX depends on log_prefix(), this method could not be declared as static or

@@ -112,16 +112,15 @@ public:
         _reserved_entry[index]->request.sub_requests = std::move(msg.sub_requests);
     }
 
-    static dsn::message_ex *create_message(const char *data)
+    static dsn::message_ex *create_message(const char *data, unsigned int length)
     {
         return dsn::message_ex::create_received_request(
-            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, strlen(data));
+            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, data, length);
     }
 
-    static dsn::message_ex *create_message(const char *data, int length)
+    static dsn::message_ex *create_message(const char *data)
     {
-        return dsn::message_ex::create_received_request(
-            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, length);
+        return create_message(data, strlen(data));
     }
 
     static dsn::message_ex *marshalling_array(const redis_request &request)
@@ -379,7 +378,7 @@ TEST_F(proxy_test, test_random_cases)
         offsets.insert(total_body_size);
 
         int last_offset = 0;
-        for (int offset : offsets) {
+        for (auto offset : offsets) {
             dsn::message_ex *msg = redis_test_parser::create_message(msg_buffer_ptr + last_offset,
                                                                      offset - last_offset);
             ASSERT_TRUE(parse(msg));

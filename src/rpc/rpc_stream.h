@@ -54,23 +54,27 @@ public:
     void set_read_msg(message_ex *msg)
     {
         _msg = msg;
-        if (nullptr != _msg) {
-            ::dsn::blob bb;
-            CHECK(((::dsn::message_ex *)_msg)->read_next(bb),
-                  "read msg must have one segment of buffer ready");
-            init(std::move(bb));
+        if (_msg == nullptr) {
+            return;
         }
+
+        dsn::blob bb;
+        CHECK(_msg->read_next(bb), "read msg must have one segment of buffer ready");
+
+        init(std::move(bb));
     }
 
-    int read(char *buffer, int sz) { return inner_read(buffer, sz); }
+    int read(char *buffer, int sz) override { return inner_read(buffer, sz); }
 
-    int read(blob &blob, int len) { return inner_read(blob, len); }
+    int read(blob &blob, int len) override { return inner_read(blob, len); }
 
-    ~rpc_read_stream()
+    ~rpc_read_stream() override
     {
-        if (_msg) {
-            _msg->read_commit((size_t)(total_size() - get_remaining_size()));
+        if (_msg == nullptr) {
+            return;
         }
+
+        _msg->read_commit(static_cast<size_t>(total_size() - get_remaining_size()));
     }
 
 private:

@@ -91,8 +91,8 @@ public:
                     writes[i] = pegasus::create_remove_request(key);
                 }
 
-                int err =
-                    _server_write->on_batched_write_requests(writes, total_rpc_cnt, decree, 0);
+                int err = _server_write->on_batched_write_requests(
+                    writes, total_rpc_cnt, decree, 0, nullptr);
                 switch (err) {
                 case FAIL_DB_WRITE_BATCH_PUT:
                 case FAIL_DB_WRITE_BATCH_DELETE:
