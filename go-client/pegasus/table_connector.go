@@ -497,13 +497,7 @@ func (p *pegasusTableConnector) DelRangeOpt(ctx context.Context, hashKey []byte,
 		}
 		defer scanner.Close()
 
-		var (
-			sortKeys [][]byte
-			wg       sync.WaitGroup
-			errs     []error
-			errsMu   sync.Mutex
-		)
-
+		var sortKeys [][]byte
 		index := 0
 		for {
 			completed, _, s, _, err := scanner.Next(ctx)
@@ -514,52 +508,30 @@ func (p *pegasusTableConnector) DelRangeOpt(ctx context.Context, hashKey []byte,
 				break
 			}
 			sortKeys = append(sortKeys, s)
-
-			// When reaching BatchSize, start a Goroutine for concurrent deletion
 			if len(sortKeys) >= scannerOptions.BatchSize {
-				keysCopy := make([][]byte, len(sortKeys))
-				copy(keysCopy, sortKeys)
-
-				wg.Add(1)
-				go func(keys [][]byte, startIndex int) {
-					defer wg.Done()
-					if err := p.MultiDel(ctx, hashKey, keys); err != nil {
-						s := fmt.Sprintf("DelRange of hashKey: %s from sortKey: %s index: %d failed", hashKey, keys[0], startIndex)
-						errsMu.Lock()
-						errs = append(errs, fmt.Errorf(s, err))
-						errsMu.Unlock()
+				if err := p.MultiDel(ctx, hashKey, sortKeys); err != nil {
+					switch {
+					case errors.Is(err, context.DeadlineExceeded):
+						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] timeout", hashKey, sortKeys[0], index)
+					default:
+						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] failed", hashKey, sortKeys[0], index)
 					}
-				}(keysCopy, index)
+				}
 				sortKeys = nil
 				index += scannerOptions.BatchSize
 			}
 		}
 
-		// Delete remaining sortKeys
 		if len(sortKeys) > 0 {
-			keysCopy := make([][]byte, len(sortKeys))
-			copy(keysCopy, sortKeys)
-
-			wg.Add(1)
-			go func(keys [][]byte, startIndex int) {
-				defer wg.Done()
-				if err := p.MultiDel(ctx, hashKey, keys); err != nil {
-					s := fmt.Sprintf("DelRange of hashKey: %s from sortKey: %s index: %d failed", hashKey, keys[0], startIndex)
-					errsMu.Lock()
-					errs = append(errs, fmt.Errorf(s, err))
-					errsMu.Unlock()
+			if err := p.MultiDel(ctx, hashKey, sortKeys); err != nil {
+				switch {
+				case errors.Is(err, context.DeadlineExceeded):
+					return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] timeout", hashKey, sortKeys[0], index)
+				default:
+					return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] failed", hashKey, sortKeys[0], index)
 				}
-			}(keysCopy, index)
-		}
-		wg.Wait()
-
-		if len(errs) > 0 {
-			var errorMessages []string
-			for _, err := range errs {
-				errorMessages = append(errorMessages, err.Error())
 			}
-			compositeErr := fmt.Errorf("error(s) occurred: %v", errorMessages)
-			return compositeErr
+			sortKeys = nil
 		}
 		return nil
 	}()
