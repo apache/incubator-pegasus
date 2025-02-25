@@ -384,7 +384,7 @@ private:
     // 2pc
 
     // - spec: should never be NULL (otherwise the behaviour is undefined).
-    bool need_reject_non_idempotent(dsn::message_ex *request, task_spec *spec);
+    bool need_reject_non_idempotent(task_spec *spec);
 
     // Decide if it is needed to make the request idempotent.
     // - spec: should never be NULL (otherwise the behaviour is undefined).

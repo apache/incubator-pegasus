@@ -306,7 +306,7 @@ int replica::make_idempotent(mutation_ptr &mu)
     }
 
     CHECK_NOTNULL(new_request,
-            "new_request should not be null since its original write request must be atomic");
+                  "new_request should not be null since its original write request must be atomic");
 
     // During make_idempotent(), request has been deserialized (i.e. unmarshall() in
     // rpc_holder::internal). Once deserialize it again, assertion would fail for

@@ -240,8 +240,8 @@ public:
     mutation_ptr check_possible_work(int current_running_count);
 
 private:
-    mutation_ptr try_unblock();                                                     
-    mutation_ptr try_block(mutation_ptr &mu);                                                     
+    mutation_ptr try_unblock();
+    mutation_ptr try_block(mutation_ptr &mu);
 
     mutation_ptr unlink_next_workload()
     {

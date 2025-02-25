@@ -345,7 +345,10 @@ mutation_queue::mutation_queue(replica *r,
                                gpid gpid,
                                int max_concurrent_op,
                                bool batch_write_disabled)
-    : _replica(r),_current_op_count(0), _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
+    : _replica(r),
+      _current_op_count(0),
+      _max_concurrent_op(max_concurrent_op),
+      _batch_write_disabled(batch_write_disabled)
 {
     CHECK_NE_MSG(gpid.get_app_id(), 0, "invalid gpid");
     _pcount = dsn_task_queue_virtual_length_ptr(RPC_PREPARE, gpid.thread_hash());
@@ -353,41 +356,41 @@ mutation_queue::mutation_queue(replica *r,
 
 // Once the blocking mutation is set, any mutation would not be popped until all previous
 // mutations have been committed and applied into the rocksdb.
-mutation_ptr mutation_queue::try_unblock()                                                     
+mutation_ptr mutation_queue::try_unblock()
 {
-    CHECK_NOTNULL(_blocking_mutation, "");                                                      
+    CHECK_NOTNULL(_blocking_mutation, "");
 
     // All of the mutations before the blocking mutation must have been in prepare list.
-    const auto max_prepared_decree = _replica->max_prepared_decree();                      
-    const auto last_applied_decree = _replica->last_applied_decree();                      
-    if (max_prepared_decree > last_applied_decree) {                                       
+    const auto max_prepared_decree = _replica->max_prepared_decree();
+    const auto last_applied_decree = _replica->last_applied_decree();
+    if (max_prepared_decree > last_applied_decree) {
         return {};
-    }                                                                                      
+    }
 
-    CHECK_EQ(max_prepared_decree, last_applied_decree);                                   
+    CHECK_EQ(max_prepared_decree, last_applied_decree);
 
-    mutation_ptr mu = _blocking_mutation;                                                
-    _blocking_mutation = nullptr;                                                          
+    mutation_ptr mu = _blocking_mutation;
+    _blocking_mutation = nullptr;
 
-    // 
-    ++_current_op_count;                                                                   
+    //
+    ++_current_op_count;
 
-    return mu;                                                                           
+    return mu;
 }
 
 // Once the popped mutation is found blocking, set it as the blocking mutation.
-mutation_ptr mutation_queue::try_block(mutation_ptr &mu)                                                     
+mutation_ptr mutation_queue::try_block(mutation_ptr &mu)
 {
-    CHECK_NOTNULL(mu, "");                                                      
+    CHECK_NOTNULL(mu, "");
 
-    if (!mu->is_blocking) {                                                                     
-        ++_current_op_count;                                                                       
-        return mu;                                                                                 
-    }                                                                                          
+    if (!mu->is_blocking) {
+        ++_current_op_count;
+        return mu;
+    }
 
-    CHECK_NULL(_blocking_mutation, "");                                                      
+    CHECK_NULL(_blocking_mutation, "");
 
-    _blocking_mutation = mu;                                                               
+    _blocking_mutation = mu;
     return try_unblock();
 }
 
@@ -406,7 +409,8 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request)
 
     // Add to work queue
     if (_pending_mutation == nullptr) {
-        _pending_mutation = r->new_mutation(invalid_decree);
+        _pending_mutation =
+            _replica->new_mutation(invalid_decree, _replica->need_make_idempotent(request));
     }
 
     LOG_DEBUG("add request with trace_id = {:#018x} into mutation with mutation_tid = {}",
