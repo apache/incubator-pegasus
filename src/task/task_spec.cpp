@@ -59,7 +59,7 @@ void task_spec::register_task_code(task_code code,
 {
     CHECK_GE(code, 0);
     CHECK_LT(code, TASK_SPEC_STORE_CAPACITY);
-    if (!s_task_spec_store[code]) {
+    if (s_task_spec_store[code] == nullptr) {
         s_task_spec_store[code] =
             std::make_unique<task_spec>(code, code.to_string(), type, pri, pool);
         auto &spec = s_task_spec_store[code];
@@ -75,8 +75,11 @@ void task_spec::register_task_code(task_code code,
             spec->rpc_paired_code = ack_code;
             task_spec::get(ack_code.code())->rpc_paired_code = code;
         }
-    } else {
-        auto spec = task_spec::get(code);
+
+        return;
+    } 
+
+        auto *spec = task_spec::get(code);
         CHECK_EQ_MSG(
             spec->type,
             type,
@@ -102,7 +105,6 @@ void task_spec::register_task_code(task_code code,
             }
             spec->pool_code = pool;
         }
-    }
 }
 
 void task_spec::register_storage_task_code(task_code code,

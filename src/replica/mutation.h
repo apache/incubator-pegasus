@@ -153,6 +153,11 @@ public:
     // user requests
     std::vector<dsn::message_ex *> client_requests;
 
+    // A mutation is blocking means this mutation would begin to be processed after all of
+    // the previous mutations in the queue have been committed and applied into the rocksdb
+    // of the primary replica.
+    bool is_blocking{false};
+
     // The original request received from the client. While making an atomic request (incr,
     // check_and_set and check_and_mutate) idempotent, an extra variable is needed to hold
     // its original request for the purpose of replying to the client.
@@ -213,7 +218,7 @@ class replica;
 class mutation_queue
 {
 public:
-    mutation_queue(gpid gpid, int max_concurrent_op = 2, bool batch_write_disabled = false);
+    mutation_queue(replica *r, gpid gpid, int max_concurrent_op, bool batch_write_disabled);
 
     ~mutation_queue()
     {
@@ -224,7 +229,7 @@ public:
               _current_op_count);
     }
 
-    mutation_ptr add_work(task_code code, dsn::message_ex *request, replica *r);
+    mutation_ptr add_work(task_code code, dsn::message_ex *request);
 
     void clear();
     // called when you want to clear the mutation_queue and want to get the remaining messages
@@ -235,6 +240,9 @@ public:
     mutation_ptr check_possible_work(int current_running_count);
 
 private:
+    mutation_ptr try_unblock();                                                     
+    mutation_ptr try_block(mutation_ptr &mu);                                                     
+
     mutation_ptr unlink_next_workload()
     {
         mutation_ptr r = _hdr.pop_one();
@@ -247,7 +255,8 @@ private:
 
     void reset_max_concurrent_ops(int max_c) { _max_concurrent_op = max_c; }
 
-private:
+    replica *_replica;
+
     int _current_op_count;
     int _max_concurrent_op;
     bool _batch_write_disabled;
@@ -255,6 +264,12 @@ private:
     volatile int *_pcount;
     mutation_ptr _pending_mutation;
     slist<mutation> _hdr;
+
+    // Once a mutation that would get popped is blocking, it should firstly be put in
+    // `_blocking_mutation`; then, the queue would always return nullptr until previous
+    // mutations have been committed and applied into the rocksdb of primary replica.
+    mutation_ptr _blocking_mutation;
 };
+
 } // namespace replication
 } // namespace dsn

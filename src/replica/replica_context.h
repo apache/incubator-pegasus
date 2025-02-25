@@ -89,9 +89,9 @@ typedef std::unordered_map<::dsn::host_port, remote_learner_state> learner_map;
 class primary_context
 {
 public:
-    primary_context(gpid gpid, int max_concurrent_2pc_count = 1, bool batch_write_disabled = false)
+    primary_context(replica *r,gpid gpid, int max_concurrent_2pc_count, bool batch_write_disabled)
         : next_learning_version(0),
-          write_queue(gpid, max_concurrent_2pc_count, batch_write_disabled),
+          write_queue(r, gpid, max_concurrent_2pc_count, batch_write_disabled),
           last_prepare_decree_on_new_primary(0),
           last_prepare_ts_ms(dsn_now_ms())
     {

@@ -341,31 +341,71 @@ void mutation::wait_log_task() const
     }
 }
 
-mutation_queue::mutation_queue(gpid gpid,
-                               int max_concurrent_op /*= 2*/,
-                               bool batch_write_disabled /*= false*/)
-    : _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
+mutation_queue::mutation_queue(replica *r,
+                               gpid gpid,
+                               int max_concurrent_op,
+                               bool batch_write_disabled)
+    : _replica(r),_current_op_count(0), _max_concurrent_op(max_concurrent_op), _batch_write_disabled(batch_write_disabled)
 {
-    _current_op_count = 0;
-    _pending_mutation = nullptr;
     CHECK_NE_MSG(gpid.get_app_id(), 0, "invalid gpid");
     _pcount = dsn_task_queue_virtual_length_ptr(RPC_PREPARE, gpid.thread_hash());
 }
 
-mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request, replica *r)
+// Once the blocking mutation is set, any mutation would not be popped until all previous
+// mutations have been committed and applied into the rocksdb.
+mutation_ptr mutation_queue::try_unblock()                                                     
 {
-    task_spec *spec = task_spec::get(code);
+    CHECK_NOTNULL(_blocking_mutation, "");                                                      
 
-    // if not allow write batch, switch work queue
-    if (_pending_mutation && !spec->rpc_request_is_write_allow_batch) {
-        _pending_mutation->add_ref(); // released when unlink
+    // All of the mutations before the blocking mutation must have been in prepare list.
+    const auto max_prepared_decree = _replica->max_prepared_decree();                      
+    const auto last_applied_decree = _replica->last_applied_decree();                      
+    if (max_prepared_decree > last_applied_decree) {                                       
+        return {};
+    }                                                                                      
+
+    CHECK_EQ(max_prepared_decree, last_applied_decree);                                   
+
+    mutation_ptr mu = _blocking_mutation;                                                
+    _blocking_mutation = nullptr;                                                          
+
+    // 
+    ++_current_op_count;                                                                   
+
+    return mu;                                                                           
+}
+
+// Once the popped mutation is found blocking, set it as the blocking mutation.
+mutation_ptr mutation_queue::try_block(mutation_ptr &mu)                                                     
+{
+    CHECK_NOTNULL(mu, "");                                                      
+
+    if (!mu->is_blocking) {                                                                     
+        ++_current_op_count;                                                                       
+        return mu;                                                                                 
+    }                                                                                          
+
+    CHECK_NULL(_blocking_mutation, "");                                                      
+
+    _blocking_mutation = mu;                                                               
+    return try_unblock();
+}
+
+mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request)
+{
+    auto *spec = task_spec::get(code);
+    CHECK_NOTNULL(spec, "");
+
+    // If batch is not allowed for this write, switch work queue
+    if (_pending_mutation != nullptr && !spec->rpc_request_is_write_allow_batch) {
+        _pending_mutation->add_ref(); // Would be released during unlink.
         _hdr.add(_pending_mutation);
-        _pending_mutation = nullptr;
+        _pending_mutation.reset();
         ++(*_pcount);
     }
 
-    // add to work queue
-    if (!_pending_mutation) {
+    // Add to work queue
+    if (_pending_mutation == nullptr) {
         _pending_mutation = r->new_mutation(invalid_decree);
     }
 
@@ -377,10 +417,14 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request, 
 
     // short-cut
     if (_current_op_count < _max_concurrent_op && _hdr.is_empty()) {
-        auto ret = _pending_mutation;
-        _pending_mutation = nullptr;
-        _current_op_count++;
-        return ret;
+        if (_blocking_mutation != nullptr) {
+            return try_unblock();
+        }
+
+        auto mu = _pending_mutation;
+        _pending_mutation.reset();
+
+        return try_block(mu);
     }
 
     // check if need to switch work queue
@@ -388,74 +432,94 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request, 
         _pending_mutation->is_full()) {
         _pending_mutation->add_ref(); // released when unlink
         _hdr.add(_pending_mutation);
-        _pending_mutation = nullptr;
+        _pending_mutation.reset();
         ++(*_pcount);
     }
 
     // get next work item
-    if (_current_op_count >= _max_concurrent_op)
-        return nullptr;
-    else if (_hdr.is_empty()) {
+    if (_current_op_count >= _max_concurrent_op) {
+        return {};
+    }
+
+    if (_blocking_mutation != nullptr) {
+        return try_unblock();
+    }
+
+    // Try to fetch next work.
+    mutation_ptr mu;
+    if (_hdr.is_empty()) {
         CHECK_NOTNULL(_pending_mutation, "pending mutation cannot be null");
 
-        auto ret = _pending_mutation;
-        _pending_mutation = nullptr;
-        _current_op_count++;
-        return ret;
+        mu = _pending_mutation;
+        _pending_mutation.reset();
     } else {
-        _current_op_count++;
-        return unlink_next_workload();
+        mu = unlink_next_workload();
     }
+
+    return try_block(mu);
 }
 
 mutation_ptr mutation_queue::check_possible_work(int current_running_count)
 {
     _current_op_count = current_running_count;
 
-    if (_current_op_count >= _max_concurrent_op)
-        return nullptr;
+    if (_current_op_count >= _max_concurrent_op) {
+        return {};
+    }
 
-    // no further workload
+    if (_blocking_mutation != nullptr) {
+        return try_unblock();
+    }
+
+    mutation_ptr mu;
     if (_hdr.is_empty()) {
-        if (_pending_mutation != nullptr) {
-            auto ret = _pending_mutation;
-            _pending_mutation = nullptr;
-            _current_op_count++;
-            return ret;
-        } else {
-            return nullptr;
+        // no further workload
+        if (_pending_mutation == nullptr) {
+            return {};
         }
+
+        mu = _pending_mutation;
+        _pending_mutation.reset();
+    } else {
+        // run further workload
+        mu = unlink_next_workload();
     }
 
-    // run further workload
-    else {
-        _current_op_count++;
-        return unlink_next_workload();
-    }
+    return try_block(mu);
 }
 
 void mutation_queue::clear()
 {
-    if (_pending_mutation != nullptr) {
-        _pending_mutation = nullptr;
+    if (_blocking_mutation != nullptr) {
+        _blocking_mutation.reset();
     }
 
     mutation_ptr r;
     while ((r = unlink_next_workload()) != nullptr) {
     }
+
+    if (_pending_mutation != nullptr) {
+        _pending_mutation.reset();
+    }
 }
 
 void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
 {
-    mutation_ptr r;
     queued_mutations.clear();
+
+    if (_blocking_mutation != nullptr) {
+        queued_mutations.emplace_back(std::move(_blocking_mutation));
+        _blocking_mutation.reset();
+    }
+
+    mutation_ptr r;
     while ((r = unlink_next_workload()) != nullptr) {
         queued_mutations.emplace_back(r);
     }
 
     if (_pending_mutation != nullptr) {
         queued_mutations.emplace_back(std::move(_pending_mutation));
-        _pending_mutation = nullptr;
+        _pending_mutation.reset();
     }
 
     // we don't reset the current_op_count, coz this is handled by
@@ -463,5 +527,6 @@ void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
     // is handled by prepare_list
     // _current_op_count = 0;
 }
+
 } // namespace replication
 } // namespace dsn

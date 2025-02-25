@@ -356,6 +356,16 @@ private:
     void response_client_read(dsn::message_ex *request, error_code error);
     void response_client_write(dsn::message_ex *request, error_code error);
     void execute_mutation(mutation_ptr &mu);
+
+    // Create a new mutation with the non-idempotent original request, which is used to reply
+    // to the client.
+    mutation_ptr new_mutation(decree decree, dsn::message_ex *original_request);
+
+    // Create a new mutation marked as blocking, which means this mutation would begin to be
+    // processed after all of the previous mutations in the queue have been committed and applied
+    // into the rocksdb of primary replica.
+    mutation_ptr new_mutation(decree decree, bool is_blocking);
+
     mutation_ptr new_mutation(decree decree);
 
     // initialization
@@ -372,6 +382,19 @@ private:
 
     /////////////////////////////////////////////////////////////////
     // 2pc
+
+    // - spec: should never be NULL (otherwise the behaviour is undefined).
+    bool need_reject_non_idempotent(dsn::message_ex *request, task_spec *spec);
+
+    // Decide if it is needed to make the request idempotent.
+    // - spec: should never be NULL (otherwise the behaviour is undefined).
+    bool need_make_idempotent(task_spec *spec);
+    bool need_make_idempotent(dsn::message_ex *request, task_spec *spec);
+    bool need_make_idempotent(dsn::message_ex *request);
+
+    // Make the request in the mutation idempotent, if needed.
+    int make_idempotent(mutation_ptr &mu);
+
     // `pop_all_committed_mutations = true` will be used for ingestion empty write
     // See more about it in `replica_bulk_loader.cpp`
     void
