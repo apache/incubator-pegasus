@@ -49,9 +49,8 @@ METRIC_DEFINE_counter(replica,
 DSN_DEFINE_string(replication,
                   dup_load_plog_task,
                   "LPC_REPLICATION_LONG_LOW",
-                  "The level of load_from_private_log when doing a duplication.Be false means the "
-                  "task level of replaing plog is low, otherwise the task level is common (We do "
-                  "not recommend high level)");
+                  "The task code for incremental loading from private logs while duplicating. Tasks with "
+                  "TASK_PRIORITY_HIGH are not recommended.");
 DSN_TAG_VARIABLE(dup_load_plog_task, FT_MUTABLE);
 
 namespace dsn::replication {
