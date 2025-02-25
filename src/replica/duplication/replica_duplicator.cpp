@@ -52,7 +52,7 @@ DSN_DEFINE_string(replication,
                   "The level of load_from_private_log when doing a duplication.Be false means the "
                   "task level of replaing plog is low, otherwise the task level is common (We do "
                   "not recommend high level)");
-DSN_TAG_VARIABLE(load_from_private_log_level, FT_MUTABLE);
+DSN_TAG_VARIABLE(dup_load_plog_task, FT_MUTABLE);
 
 namespace dsn::replication {
 
