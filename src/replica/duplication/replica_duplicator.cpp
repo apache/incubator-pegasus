@@ -47,7 +47,7 @@ METRIC_DEFINE_counter(replica,
                       "The number of confirmed mutations for dup");
 
 DSN_DEFINE_string(replication,
-                  load_from_private_log_level,
+                  dup_load_plog_task,
                   "LPC_REPLICATION_LONG_LOW",
                   "The level of load_from_private_log when doing a duplication.Be false means the "
                   "task level of replaing plog is low, otherwise the task level is common (We do "
