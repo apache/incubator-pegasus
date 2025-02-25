@@ -36,6 +36,7 @@ public class BulkLoaderConfig extends CommonConfig {
       throws PegasusSparkException {
     super(hdfsConfig, clusterName, tableName);
     initTableInfo(); // table id, partitionCount, version are fetched via gateway by default.
+    singleFileSizeThreshold = 64 * 1024 * 1024;
     // Pegasus Server Version 2.2.0 required
   }
 
