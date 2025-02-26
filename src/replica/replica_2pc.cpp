@@ -357,7 +357,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // check bounded staleness
     if (mu->data.header.decree > last_committed_decree() + FLAGS_staleness_for_commit) {
         err = ERR_CAPACITY_EXCEEDED;
-        goto ErrOut;
+        reply_with_error(mu, err);
+        return;
     }
 
     // stop prepare bulk load ingestion if there are secondaries unalive
@@ -374,7 +375,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         }
     }
     if (err != ERR_OK) {
-        goto ErrOut;
+        reply_with_error(mu, err);
+        return;
     }
 
     // stop prepare if there are too few replicas unless it's a reconciliation
@@ -384,7 +386,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count) &&
         !reconciliation) {
         err = ERR_NOT_ENOUGH_MEMBER;
-        goto ErrOut;
+        reply_with_error(mu, err);
+        return;
     }
 
     CHECK_GT(mu->data.header.decree, last_committed_decree());
@@ -392,7 +395,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // local prepare
     err = _prepare_list->prepare(mu, partition_status::PS_PRIMARY, pop_all_committed_mutations);
     if (err != ERR_OK) {
-        goto ErrOut;
+        reply_with_error(mu, err);
+        return;
     }
 
     // remote prepare
@@ -404,7 +408,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
                              partition_status::PS_SECONDARY,
                              mu,
                              FLAGS_prepare_timeout_ms_for_secondaries,
-                             pop_all_committed_mutations);
+                             pop_all_committed_mutations,
+                             invalid_signature);
     }
 
     count = 0;
@@ -446,19 +451,19 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     }
 
     _primary_states.last_prepare_ts_ms = mu->prepare_ts_ms();
-    return;
+}
 
-ErrOut:
+void replica::reply_with_error(const mutation_ptr &mu, const error_code &err)
+{
     if (mu->original_request != nullptr) {
         // Respond to the original atomic request. And it would never be batched.
         response_client_write(mu->original_request, err);
         return;
     }
 
-    for (auto &r : mu->client_requests) {
-        response_client_write(r, err);
+    for (auto *req : mu->client_requests) {
+        response_client_write(req, err);
     }
-    return;
 }
 
 void replica::send_prepare_message(const ::dsn::host_port &hp,

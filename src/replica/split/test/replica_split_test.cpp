@@ -508,7 +508,7 @@ public:
     {
         return _parent_replica->_primary_states.sync_send_write_request;
     }
-    [[nodiscard]] int32_t parent_stopped_split_size() const
+    [[nodiscard]] size_t parent_stopped_split_size() const
     {
         return _parent_replica->_primary_states.split_stopped_secondary.size();
     }
@@ -982,7 +982,7 @@ TEST_P(replica_split_test, primary_parent_handle_stop_test)
         split_status::type meta_split_status;
         bool lack_of_secondary;
         bool will_all_stop;
-        int32_t expected_size;
+        size_t expected_size;
         bool expected_all_stopped;
     } tests[]{{split_status::NOT_SPLIT, false, false, 0, false},
               {split_status::SPLITTING, false, false, 0, false},
