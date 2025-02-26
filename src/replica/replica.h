@@ -412,7 +412,7 @@ private:
     //
     void reply_with_error(const mutation_ptr &mu, const error_code &err);
 
-    void send_prepare_message(const ::dsn::host_port &addr,
+    void send_prepare_message(const ::dsn::host_port &hp,
                               partition_status::type status,
                               const mutation_ptr &mu,
                               int timeout_milliseconds,
