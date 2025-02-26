@@ -86,6 +86,7 @@ var DefaultMultiGetOptions = &MultiGetOptions{
 
 // DelRangeOptions is the options for DelRange, defaults to DefaultDelRangeOptions.
 type DelRangeOptions struct {
+	nextSortKey    []byte
 	StartInclusive bool
 	StopInclusive  bool
 	SortKeyFilter  Filter
@@ -93,6 +94,7 @@ type DelRangeOptions struct {
 
 // DefaultDelRangeOptions defines the defaults of DelRangeOptions.
 var DefaultDelRangeOptions = &DelRangeOptions{
+	nextSortKey:    nil,
 	StartInclusive: true,
 	StopInclusive:  false,
 	SortKeyFilter: Filter{
@@ -491,9 +493,21 @@ func (p *pegasusTableConnector) DelRangeOpt(ctx context.Context, hashKey []byte,
 			NoValue:        true,
 		}
 
+		if startSortKey != nil {
+			options.nextSortKey = make([]byte, len(startSortKey))
+			copy(options.nextSortKey, startSortKey)
+		} else {
+			options.nextSortKey = nil
+		}
+
 		scanner, err := p.GetScanner(context.Background(), hashKey, startSortKey, stopSortKey, &scannerOptions)
 		if err != nil {
-			return err
+			switch {
+			case errors.Is(err, context.DeadlineExceeded):
+				return fmt.Errorf("Getting pegasusScanner takes too long time when delete hashKey: %s, startSortKey: %v, stopSortKey: %v", hashKey, startSortKey, stopSortKey)
+			default:
+				return err
+			}
 		}
 		defer scanner.Close()
 
@@ -509,12 +523,13 @@ func (p *pegasusTableConnector) DelRangeOpt(ctx context.Context, hashKey []byte,
 			}
 			sortKeys = append(sortKeys, s)
 			if len(sortKeys) >= scannerOptions.BatchSize {
+				options.nextSortKey = sortKeys[0]
 				if err := p.MultiDel(ctx, hashKey, sortKeys); err != nil {
 					switch {
 					case errors.Is(err, context.DeadlineExceeded):
-						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] timeout", hashKey, sortKeys[0], index)
+						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] timeout", hashKey, options.nextSortKey, index)
 					default:
-						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] failed", hashKey, sortKeys[0], index)
+						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] failed", hashKey, options.nextSortKey, index)
 					}
 				}
 				sortKeys = nil
@@ -531,7 +546,7 @@ func (p *pegasusTableConnector) DelRangeOpt(ctx context.Context, hashKey []byte,
 					return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] failed", hashKey, sortKeys[0], index)
 				}
 			}
-			sortKeys = nil
+			options.nextSortKey = nil
 		}
 		return nil
 	}()
