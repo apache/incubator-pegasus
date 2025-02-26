@@ -56,7 +56,7 @@ struct replica_base
 
     [[nodiscard]] const char *log_prefix() const { return _name.c_str(); }
 
-    const metric_entity_ptr &replica_metric_entity() const
+    [[nodiscard]] const metric_entity_ptr &replica_metric_entity() const
     {
         CHECK_NOTNULL(_replica_metric_entity,
                       "replica metric entity (table_id={}, partition_id={}) should has been "
