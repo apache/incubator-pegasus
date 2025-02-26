@@ -84,13 +84,6 @@ DSN_DEFINE_bool(replication,
                 "reject client write requests if disk status is space insufficient");
 DSN_TAG_VARIABLE(reject_write_when_disk_insufficient, FT_MUTABLE);
 
-DSN_DEFINE_bool(replication,
-                make_write_idempotent,
-                true,
-                "Whether to make atomic writes idempotent, including incr, check_and_set "
-                "and check_and_mutate");
-DSN_TAG_VARIABLE(make_write_idempotent, FT_MUTABLE);
-
 DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_secondaries,
                  3000,
@@ -236,53 +229,48 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     LOG_DEBUG_PREFIX("got write request from {}", request->header->from_address);
-    auto mu = _primary_states.write_queue.add_work(request->rpc_code(), request);
+    auto mu = _primary_states.write_queue.add_work(request);
     if (mu != nullptr) {
         init_prepare(mu, false);
     }
 }
 
-bool replica::need_reject_non_idempotent(task_spec *spec)
+bool replica::need_reject_non_idempotent(task_spec *spec) const
 {
     if (!is_duplication_master()) {
         return false;
     }
 
-    if (FLAGS_make_write_idempotent) {
+    if (_make_write_idempotent) {
         return false;
     }
 
     return !spec->rpc_request_is_write_idempotent;
 }
 
-bool replica::need_make_idempotent(task_spec *spec)
+bool replica::need_make_idempotent(task_spec *spec) const
 {
-    if (!FLAGS_make_write_idempotent) {
+    if (!_make_write_idempotent) {
         return false;
     }
 
     return !spec->rpc_request_is_write_idempotent;
 }
 
-bool replica::need_make_idempotent(message_ex *request, task_spec *spec)
+bool replica::need_make_idempotent(message_ex *request) const
 {
     if (request == nullptr) {
         return false;
     }
 
-    return need_make_idempotent(spec);
-}
-
-bool replica::need_make_idempotent(dsn::message_ex *request)
-{
-    if (request == nullptr) {
+    if (!_make_write_idempotent) {
         return false;
     }
 
     auto *spec = task_spec::get(request->rpc_code());
     CHECK_NOTNULL(spec, "RPC code {} not found", request->rpc_code());
 
-    return need_make_idempotent(spec);
+    return !spec->rpc_request_is_write_idempotent;
 }
 
 int replica::make_idempotent(mutation_ptr &mu)
@@ -324,7 +312,7 @@ int replica::make_idempotent(mutation_ptr &mu)
     // No need to create the mutation with is_blocking set to true, since the old mutation has
     // been previously popped out from the mutation queue.
     mu = new_mutation(invalid_decree, request);
-    mu->add_client_request(new_request->rpc_code(), new_request);
+    mu->add_client_request(new_request);
     return rocksdb::Status::kOk;
 }
 

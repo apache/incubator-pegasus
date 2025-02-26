@@ -52,23 +52,22 @@ DSN_DEFINE_uint64(
     "Latency trace will be logged when exceed the write latency threshold, in nanoseconds");
 DSN_TAG_VARIABLE(abnormal_write_trace_latency_threshold, FT_MUTABLE);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
+
 std::atomic<uint64_t> mutation::s_tid(0);
 
 mutation::mutation()
+    : _tracer(std::make_shared<dsn::utils::latency_tracer>(
+          false, "mutation", FLAGS_abnormal_write_trace_latency_threshold)),
+      _private0(0),
+      _prepare_ts_ms(0),
+      _appro_data_bytes(sizeof(mutation_header)),
+      _create_ts_ns(dsn_now_ns()),
+      _tid(++s_tid),
+      _is_sync_to_child(false)
 {
-    next = nullptr;
-    _private0 = 0;
     _not_logged = 1;
-    _prepare_ts_ms = 0;
     strcpy(_name, "0.0.0.0");
-    _appro_data_bytes = sizeof(mutation_header);
-    _create_ts_ns = dsn_now_ns();
-    _tid = ++s_tid;
-    _is_sync_to_child = false;
-    _tracer = std::make_shared<dsn::utils::latency_tracer>(
-        false, "mutation", FLAGS_abnormal_write_trace_latency_threshold);
 }
 
 mutation_ptr mutation::copy_no_reply(const mutation_ptr &old_mu)
@@ -178,6 +177,12 @@ void mutation::add_client_request(task_code code, dsn::message_ex *request)
     client_requests.push_back(request);
 
     CHECK_EQ(client_requests.size(), data.updates.size());
+}
+
+void mutation::add_client_request(dsn::message_ex *request)
+{
+    CHECK_NOTNULL(request, "");
+    add_client_request(request->rpc_code(), request);
 }
 
 void mutation::write_to(const std::function<void(const blob &)> &inserter) const
@@ -394,15 +399,16 @@ mutation_ptr mutation_queue::try_block(mutation_ptr &mu)
     return try_unblock();
 }
 
-mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request)
+mutation_ptr mutation_queue::add_work(message_ex *request)
 {
-    auto *spec = task_spec::get(code);
+    CHECK_NOTNULL(request, "");
+
+    auto *spec = task_spec::get(request->rpc_code());
     CHECK_NOTNULL(spec, "");
 
     // If batch is not allowed for this write, switch work queue
     if (_pending_mutation != nullptr && !spec->rpc_request_is_write_allow_batch) {
-        _pending_mutation->add_ref(); // Would be released during unlink.
-        _hdr.add(_pending_mutation);
+        _queue.push(_pending_mutation);
         _pending_mutation.reset();
         ++(*_pcount);
     }
@@ -410,17 +416,17 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request)
     // Add to work queue
     if (_pending_mutation == nullptr) {
         _pending_mutation =
-            _replica->new_mutation(invalid_decree, _replica->need_make_idempotent(request));
+            _replica->new_mutation(invalid_decree, _replica->need_make_idempotent(spec));
     }
 
     LOG_DEBUG("add request with trace_id = {:#018x} into mutation with mutation_tid = {}",
               request->header->trace_id,
               _pending_mutation->tid());
 
-    _pending_mutation->add_client_request(code, request);
+    _pending_mutation->add_client_request(request);
 
     // short-cut
-    if (_current_op_count < _max_concurrent_op && _hdr.is_empty()) {
+    if (_current_op_count < _max_concurrent_op && _queue.empty()) {
         if (_blocking_mutation != nullptr) {
             return try_unblock();
         }
@@ -434,8 +440,7 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request)
     // check if need to switch work queue
     if (_batch_write_disabled || !spec->rpc_request_is_write_allow_batch ||
         _pending_mutation->is_full()) {
-        _pending_mutation->add_ref(); // released when unlink
-        _hdr.add(_pending_mutation);
+        _queue.push(_pending_mutation);
         _pending_mutation.reset();
         ++(*_pcount);
     }
@@ -451,7 +456,7 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request)
 
     // Try to fetch next work.
     mutation_ptr mu;
-    if (_hdr.is_empty()) {
+    if (_queue.empty()) {
         CHECK_NOTNULL(_pending_mutation, "pending mutation cannot be null");
 
         mu = _pending_mutation;
@@ -476,7 +481,7 @@ mutation_ptr mutation_queue::check_possible_work(int current_running_count)
     }
 
     mutation_ptr mu;
-    if (_hdr.is_empty()) {
+    if (_queue.empty()) {
         // no further workload
         if (_pending_mutation == nullptr) {
             return {};
@@ -532,5 +537,4 @@ void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
     // _current_op_count = 0;
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

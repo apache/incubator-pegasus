@@ -30,6 +30,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <queue>
 #include <vector>
 
 #include "common/replication_common.h"
@@ -41,7 +42,6 @@
 #include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
-#include "utils/link.h"
 
 namespace dsn {
 class binary_reader;
@@ -106,6 +106,7 @@ public:
     void set_id(ballot b, decree c);
     void set_timestamp(int64_t timestamp) { data.header.timestamp = timestamp; }
     void add_client_request(task_code code, dsn::message_ex *request);
+    void add_client_request(dsn::message_ex *request);
     void copy_from(mutation_ptr &old);
     void set_logged()
     {
@@ -163,9 +164,6 @@ public:
     // its original request for the purpose of replying to the client.
     dsn::message_ptr original_request;
 
-    // used by pending mutation queue only
-    mutation *next;
-
     std::shared_ptr<dsn::utils::latency_tracer> _tracer;
 
     void set_is_sync_to_child(bool sync_to_child) { _is_sync_to_child = sync_to_child; }
@@ -207,8 +205,10 @@ class replica;
 
 // mutation queue are queues for mutations waiting to send.
 // more precisely: for client requests waiting to send.
-// mutations are queued as "_hdr + _pending_mutation". that is to say, _hdr.first is the first
+// mutations are queued as "_queue + _pending_mutation". that is to say, _queue.first is the first
 // element in the queue, and pending_mutations is the last.
+//
+// However, once _blocking_mutation is non-null, it is the first element.
 //
 // we keep 2 structure "hdr" and "pending_mutation" coz:
 // 1. as a container of client requests, capacity of a mutation is limited, so incoming client
@@ -223,13 +223,18 @@ public:
     ~mutation_queue()
     {
         clear();
-        CHECK(_hdr.is_empty(),
+        CHECK(_queue.empty(),
               "work queue is deleted when there are still {} running ops or pending work items "
               "in queue",
               _current_op_count);
     }
 
-    mutation_ptr add_work(task_code code, dsn::message_ex *request);
+    mutation_queue(const mutation_queue &) = default;
+    mutation_queue &operator=(const mutation_queue &) = default;
+    mutation_queue(mutation_queue &&) = default;
+    mutation_queue &operator=(mutation_queue &&) = default;
+
+    mutation_ptr add_work(dsn::message_ex *request);
 
     void clear();
     // called when you want to clear the mutation_queue and want to get the remaining messages
@@ -245,12 +250,15 @@ private:
 
     mutation_ptr unlink_next_workload()
     {
-        mutation_ptr r = _hdr.pop_one();
-        if (r.get() != nullptr) {
-            r->release_ref(); // added in add_work
-            --(*_pcount);
+        if (_queue.empty()) {
+            return {};
         }
-        return r;
+
+        const auto work = _queue.front();
+        _queue.pop();
+        --(*_pcount);
+
+        return work;
     }
 
     void reset_max_concurrent_ops(int max_c) { _max_concurrent_op = max_c; }
@@ -263,7 +271,7 @@ private:
 
     volatile int *_pcount;
     mutation_ptr _pending_mutation;
-    slist<mutation> _hdr;
+    std::queue<mutation_ptr> _queue;
 
     // Once a mutation that would get popped is blocking, it should firstly be put in
     // `_blocking_mutation`; then, the queue would always return nullptr until previous

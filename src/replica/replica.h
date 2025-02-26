@@ -163,7 +163,7 @@ struct deny_client
 class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:
-    ~replica(void);
+    ~replica();
 
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
@@ -384,13 +384,14 @@ private:
     // 2pc
 
     // - spec: should never be NULL (otherwise the behaviour is undefined).
-    bool need_reject_non_idempotent(task_spec *spec);
+    bool need_reject_non_idempotent(task_spec *spec) const;
 
     // Decide if it is needed to make the request idempotent.
     // - spec: should never be NULL (otherwise the behaviour is undefined).
-    bool need_make_idempotent(task_spec *spec);
-    bool need_make_idempotent(dsn::message_ex *request, task_spec *spec);
-    bool need_make_idempotent(dsn::message_ex *request);
+    bool need_make_idempotent(task_spec *spec) const;
+
+    // Decide if it is needed to make the request idempotent.
+    bool need_make_idempotent(message_ex *request) const;
 
     // Make the request in the mutation idempotent, if needed.
     int make_idempotent(mutation_ptr &mu);
@@ -666,6 +667,9 @@ private:
     replication_options *_options;
     app_info _app_info;
     std::map<std::string, std::string> _extra_envs;
+
+    // TODO(wangdan): temporarily used to record, would support soon.
+    bool _make_write_idempotent;
 
     // uniq timestamp generator for this replica.
     //
