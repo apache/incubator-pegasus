@@ -26,9 +26,10 @@
 
 #include <fmt/core.h>
 #include <inttypes.h>
-#include <stddef.h>
+#include <rocksdb/status.h>
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <string>
@@ -342,7 +343,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             mu->get_decree() % FLAGS_prepare_decree_gap_for_debug_logging == 0) {
             level = LOG_LEVEL_INFO;
         }
-        mu->set_timestamp(_uniq_timestamp_us.next());
+        mu->set_timestamp(static_cast<int64_t>(_uniq_timestamp_us.next()));
     } else {
         mu->set_id(get_ballot(), mu->data.header.decree);
     }

@@ -59,14 +59,18 @@ std::atomic<uint64_t> mutation::s_tid(0);
 mutation::mutation()
     : _tracer(std::make_shared<dsn::utils::latency_tracer>(
           false, "mutation", FLAGS_abnormal_write_trace_latency_threshold)),
-      _private0(0),
+      _not_logged(1),
+      _left_secondary_ack_count(0),
+      _left_potential_secondary_ack_count(0),
+      _wait_child(0),
+      _is_error_acked(0),
       _prepare_ts_ms(0),
+      _name{0},
       _appro_data_bytes(sizeof(mutation_header)),
       _create_ts_ns(dsn_now_ns()),
       _tid(++s_tid),
       _is_sync_to_child(false)
 {
-    _not_logged = 1;
     strcpy(_name, "0.0.0.0");
 }
 

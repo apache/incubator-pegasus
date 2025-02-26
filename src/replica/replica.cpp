@@ -378,7 +378,7 @@ void replica::init_state()
     get_bool_envs(_app_info.envs, replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, _allow_ingest_behind);
 }
 
-replica::~replica(void)
+replica::~replica()
 {
     close();
     _prepare_list = nullptr;

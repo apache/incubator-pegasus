@@ -71,6 +71,7 @@ class rocksdb_wrapper_test;
 namespace dsn {
 class gpid;
 class host_port;
+class task_spec;
 
 namespace dist {
 
@@ -86,7 +87,6 @@ namespace replication {
 
 class backup_request;
 class backup_response;
-
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;
@@ -107,6 +107,7 @@ class replica_stub;
 class replication_app_base;
 class replication_options;
 struct dir_node;
+
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
 namespace test {
@@ -163,7 +164,7 @@ struct deny_client
 class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:
-    ~replica();
+    ~replica() override;
 
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
