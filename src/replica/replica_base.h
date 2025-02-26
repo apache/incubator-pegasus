@@ -52,9 +52,9 @@ struct replica_base
 
     [[nodiscard]] const char *replica_name() const { return _name.c_str(); }
 
-    const char *app_name() const { return _app_name.c_str(); }
+    [[nodiscard]] const char *app_name() const { return _app_name.c_str(); }
 
-    const char *log_prefix() const { return _name.c_str(); }
+    [[nodiscard]] const char *log_prefix() const { return _name.c_str(); }
 
     const metric_entity_ptr &replica_metric_entity() const
     {

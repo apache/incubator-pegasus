@@ -482,39 +482,39 @@ public:
         _child_replica->tracker()->wait_outstanding_tasks();
     }
 
-    int32_t child_get_prepare_list_count() { return _child_replica->get_plist()->count(); }
-    bool child_is_prepare_list_copied()
+    int32_t child_get_prepare_list_count() const { return _child_replica->get_plist()->count(); }
+    bool child_is_prepare_list_copied() const
     {
         return _child_replica->_split_states.is_prepare_list_copied;
     }
-    bool child_is_caught_up() { return _child_replica->_split_states.is_caught_up; }
+    bool child_is_caught_up() const { return _child_replica->_split_states.is_caught_up; }
 
-    split_status::type parent_get_split_status() { return _parent_split_mgr->_split_status; }
+    split_status::type parent_get_split_status() const { return _parent_split_mgr->_split_status; }
     void parent_set_split_status(split_status::type status)
     {
         _parent_split_mgr->_split_status = status;
     }
 
-    bool parent_sync_send_write_request()
+    bool parent_sync_send_write_request() const
     {
         return _parent_replica->_primary_states.sync_send_write_request;
     }
-    int32_t parent_stopped_split_size()
+    int32_t parent_stopped_split_size() const
     {
         return _parent_replica->_primary_states.split_stopped_secondary.size();
     }
-    bool is_parent_not_in_split()
+    bool is_parent_not_in_split() const
     {
         return _parent_split_mgr->_child_gpid.get_app_id() == 0 &&
                _parent_split_mgr->_child_init_ballot == 0 &&
                _parent_split_mgr->_split_status == split_status::NOT_SPLIT;
     }
-    bool primary_parent_not_in_split()
+    bool primary_parent_not_in_split() const
     {
         const auto &context = _parent_replica->_primary_states;
-        return context.caught_up_children.size() == 0 && context.register_child_task == nullptr &&
-               context.sync_send_write_request == false && context.query_child_task == nullptr &&
-               context.split_stopped_secondary.size() == 0 && is_parent_not_in_split();
+        return context.caught_up_children.empty() && context.register_child_task == nullptr &&
+               !context.sync_send_write_request && context.query_child_task == nullptr &&
+               context.split_stopped_secondary.empty() && is_parent_not_in_split();
     }
 
 public:
