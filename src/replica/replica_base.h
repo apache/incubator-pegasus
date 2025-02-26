@@ -48,9 +48,9 @@ struct replica_base
 
     virtual ~replica_base() = default;
 
-    gpid get_gpid() const { return _gpid; }
+    [[nodiscard]] gpid get_gpid() const { return _gpid; }
 
-    const char *replica_name() const { return _name.c_str(); }
+    [[nodiscard]] const char *replica_name() const { return _name.c_str(); }
 
     const char *app_name() const { return _app_name.c_str(); }
 

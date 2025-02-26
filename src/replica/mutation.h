@@ -57,7 +57,7 @@ namespace replication {
 
 class mutation;
 
-typedef dsn::ref_ptr<mutation> mutation_ptr;
+using mutation_ptr = dsn::ref_ptr<mutation>;
 
 // mutation is the 2pc unit of PacificA, which wraps one or more client requests and add
 // header informations related to PacificA algorithm for them.
@@ -229,10 +229,10 @@ public:
               _current_op_count);
     }
 
-    mutation_queue(const mutation_queue &) = default;
-    mutation_queue &operator=(const mutation_queue &) = default;
-    mutation_queue(mutation_queue &&) = default;
-    mutation_queue &operator=(mutation_queue &&) = default;
+    mutation_queue(const mutation_queue &) = delete;
+    mutation_queue &operator=(const mutation_queue &) = delete;
+    mutation_queue(mutation_queue &&) = delete;
+    mutation_queue &operator=(mutation_queue &&) = delete;
 
     mutation_ptr add_work(dsn::message_ex *request);
 

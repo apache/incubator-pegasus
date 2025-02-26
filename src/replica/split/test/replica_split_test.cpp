@@ -495,10 +495,6 @@ public:
         _parent_split_mgr->_split_status = status;
     }
 
-    primary_context get_replica_primary_context(mock_replica_ptr rep)
-    {
-        return rep->_primary_states;
-    }
     bool parent_sync_send_write_request()
     {
         return _parent_replica->_primary_states.sync_send_write_request;
@@ -515,7 +511,7 @@ public:
     }
     bool primary_parent_not_in_split()
     {
-        auto context = _parent_replica->_primary_states;
+        const auto &context = _parent_replica->_primary_states;
         return context.caught_up_children.size() == 0 && context.register_child_task == nullptr &&
                context.sync_send_write_request == false && context.query_child_task == nullptr &&
                context.split_stopped_secondary.size() == 0 && is_parent_not_in_split();

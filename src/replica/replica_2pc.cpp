@@ -25,10 +25,10 @@
  */
 
 #include <fmt/core.h>
-#include <inttypes.h>
 #include <rocksdb/status.h>
 #include <atomic>
 #include <chrono>
+#include <cinttypes>
 #include <cstddef>
 #include <functional>
 #include <memory>

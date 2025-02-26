@@ -73,16 +73,14 @@ class gpid;
 class host_port;
 class task_spec;
 
-namespace dist {
-
-namespace block_service {
+namespace dist::block_service {
 class block_filesystem;
-} // namespace block_service
-} // namespace dist
+} // namespace dist::block_service
 
 namespace security {
 class access_controller;
 } // namespace security
+
 namespace replication {
 
 class backup_request;
@@ -108,11 +106,11 @@ class replication_app_base;
 class replication_options;
 struct dir_node;
 
-typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
+using cold_backup_context_ptr = dsn::ref_ptr<cold_backup_context>;
 
 namespace test {
 class test_checker;
-}
+} // namespace test
 
 #define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
     do {                                                                                           \
@@ -165,6 +163,11 @@ class replica : public serverlet<replica>, public ref_counter, public replica_ba
 {
 public:
     ~replica() override;
+
+    replica(const replica &) = delete;
+    replica &operator=(const replica &) = delete;
+    replica(replica &&) = delete;
+    replica &operator=(replica &&) = delete;
 
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
@@ -796,6 +799,8 @@ private:
     // Indicate where the storage engine data is corrupted and unrecoverable.
     bool _data_corrupted{false};
 };
-typedef dsn::ref_ptr<replica> replica_ptr;
+
+using replica_ptr = dsn::ref_ptr<replica>;
+
 } // namespace replication
 } // namespace dsn
