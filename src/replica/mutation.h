@@ -58,14 +58,19 @@ class mutation;
 
 using mutation_ptr = dsn::ref_ptr<mutation>;
 
-// mutation is the 2pc unit of PacificA, which wraps one or more client requests and add
-// header informations related to PacificA algorithm for them.
-// both header and client request content are put into "data" member.
+// Mutation is 2PC unit of PacificA, which wraps one or more client requests and adds header
+// informations related to PacificA algorithm for them. Both header and client request content
+// are put into "data" member.
 class mutation : public ref_counter
 {
 public:
     mutation();
-    virtual ~mutation();
+    ~mutation() override;
+
+    mutation(const mutation &) = delete;
+    mutation &operator=(const mutation &) = delete;
+    mutation(mutation &&) = delete;
+    mutation &operator=(mutation &&) = delete;
 
     // copy mutation from an existing mutation, typically used in partition split
     // mutation should not reply to client, because parent has already replied
