@@ -154,14 +154,14 @@ void mutation::copy_from(mutation_ptr &old)
     }
 }
 
-void mutation::add_client_request(task_code code, dsn::message_ex *request)
+void mutation::add_client_request(dsn::message_ex *request)
 {
     data.updates.push_back(mutation_update());
     mutation_update &update = data.updates.back();
     _appro_data_bytes += 32; // approximate code size
 
     if (request != nullptr) {
-        update.code = code;
+        update.code = request->rpc_code();
         update.serialization_type =
             (dsn_msg_serialize_format)request->header->context.u.serialize_format;
         update.__set_start_time_ns(dsn_now_ns());
@@ -182,12 +182,6 @@ void mutation::add_client_request(task_code code, dsn::message_ex *request)
     client_requests.push_back(request);
 
     CHECK_EQ(client_requests.size(), data.updates.size());
-}
-
-void mutation::add_client_request(dsn::message_ex *request)
-{
-    CHECK_NOTNULL(request, "");
-    add_client_request(request->rpc_code(), request);
 }
 
 void mutation::write_to(const std::function<void(const blob &)> &inserter) const

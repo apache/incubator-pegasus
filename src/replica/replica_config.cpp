@@ -1175,7 +1175,7 @@ void replica::replay_prepare_list()
                 "copy mutation from mutation_tid={} to mutation_tid={}", old->tid(), mu->tid());
             mu->copy_from(old);
         } else {
-            mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+            mu->add_client_request(nullptr);
 
             LOG_INFO_PREFIX("emit empty mutation {} with mutation_tid={} when replay prepare list",
                             mu->name(),

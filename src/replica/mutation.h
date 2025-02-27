@@ -105,8 +105,14 @@ public:
     // state change
     void set_id(ballot b, decree c);
     void set_timestamp(int64_t timestamp) { data.header.timestamp = timestamp; }
-    void add_client_request(task_code code, dsn::message_ex *request);
+
+    // Append a write request to this mutation, and also hold it if it is from a client
+    // to build the response to the client later.
+    //
+    // Parameters:
+    // - request: it is from a client if non-null, otherwise it is an empty write.
     void add_client_request(dsn::message_ex *request);
+
     void copy_from(mutation_ptr &old);
     void set_logged()
     {

@@ -227,7 +227,7 @@ void replica::async_trigger_manual_emergency_checkpoint(decree min_checkpoint_de
                 // the decree to at least 1, to ensure that the checkpoint would inevitably
                 // be created even if the replica is empty.
                 mutation_ptr mu = new_mutation(invalid_decree);
-                mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+                mu->add_client_request(nullptr);
                 init_prepare(mu, false);
 
                 async_trigger_manual_emergency_checkpoint(
