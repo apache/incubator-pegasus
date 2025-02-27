@@ -36,6 +36,7 @@
 #include "common/replication.codes.h"
 #include "replica.h"
 #include "runtime/api_task.h"
+#include "task/task_code.h"
 #include "task/task_spec.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
@@ -156,27 +157,27 @@ void mutation::copy_from(mutation_ptr &old)
 
 void mutation::add_client_request(dsn::message_ex *request)
 {
-    data.updates.push_back(mutation_update());
+    data.updates.emplace_back();
     mutation_update &update = data.updates.back();
     _appro_data_bytes += 32; // approximate code size
 
     if (request != nullptr) {
         update.code = request->rpc_code();
         update.serialization_type =
-            (dsn_msg_serialize_format)request->header->context.u.serialize_format;
-        update.__set_start_time_ns(dsn_now_ns());
+            static_cast<dsn_msg_serialize_format>(request->header->context.u.serialize_format);
+        update.__set_start_time_ns(static_cast<int64_t>(dsn_now_ns()));
         request->add_ref(); // released on dctor
 
-        void *ptr;
-        size_t size;
+        void *ptr = nullptr;
+        size_t size = 0;
         CHECK(request->read_next(&ptr, &size), "payload is not present");
         request->read_commit(0); // so we can re-read the request buffer in replicated app
-        update.data.assign((char *)ptr, 0, (int)size);
+        update.data.assign(static_cast<const char *>(ptr), 0, size);
 
-        _appro_data_bytes += sizeof(int) + (int)size; // data size
+        _appro_data_bytes += static_cast<int>(sizeof(int) + size); // data size
     } else {
         update.code = RPC_REPLICATION_WRITE_EMPTY;
-        _appro_data_bytes += sizeof(int); // empty data size
+        _appro_data_bytes += static_cast<int>(sizeof(int)); // empty data size
     }
 
     client_requests.push_back(request);

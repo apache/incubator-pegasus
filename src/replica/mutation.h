@@ -39,7 +39,6 @@
 #include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
 #include "task/task.h"
-#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 
@@ -160,9 +159,10 @@ public:
     // user requests
     std::vector<dsn::message_ex *> client_requests;
 
-    // A mutation is blocking means this mutation would begin to be processed after all of
-    // the previous mutations in the queue have been committed and applied into the rocksdb
-    // of the primary replica.
+    // A mutation will be a blocking mutation if `is_blocking` is true. A blocking mutation
+    // will not begin to be poped from the queue and processed until all of mutations before
+    // it in the queue have been committed and applied into RocksDB. This field is only used
+    // by primary replicas.
     bool is_blocking{false};
 
     // The original request received from the client. While making an atomic request (incr,
