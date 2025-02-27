@@ -29,7 +29,7 @@
 #include "utils/filesystem.h"
 #include "utils/output_utils.h"
 #include "utils/string_conv.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "client/replication_ddl_client.h"
 #include "tools/mutation_log_tool.h"
 
@@ -259,6 +259,8 @@ bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args);
 bool add_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool query_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool ls_dups(command_executor *e, shell_context *sc, arguments args);
 
 bool remove_dup(command_executor *e, shell_context *sc, arguments args);
 

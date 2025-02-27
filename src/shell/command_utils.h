@@ -19,65 +19,80 @@
 
 #pragma once
 
-#include <fmt/core.h>
-#include <stdio.h>
+#include <functional>
 #include <map>
 #include <set>
 #include <string>
 #include <utility>
 
 #include "shell/argh.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/strings.h"
 
 namespace dsn {
 class host_port;
-}
+} // namespace dsn
+
 struct shell_context;
 
-inline bool validate_cmd(const argh::parser &cmd,
-                         const std::set<std::string> &params,
-                         const std::set<std::string> &flags)
+// Check if there is not any other positional argument except the command, which means only
+// parameters and flags are needed.
+inline dsn::error_s no_pos_arg(const argh::parser &cmd)
 {
+    // 1 means there is not any other positional argument except the command.
     if (cmd.size() > 1) {
-        fmt::print(stderr, "too many params!\n");
-        return false;
+        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "there shouldn't be any positional argument");
+    }
+
+    return dsn::error_s::ok();
+}
+
+// Check if the positional arguments are valid, and the parameters and flags are in the given set.
+inline dsn::error_s
+validate_cmd(const argh::parser &cmd,
+             const std::set<std::string> &params,
+             const std::set<std::string> &flags,
+             std::function<dsn::error_s(const argh::parser &cmd)> pos_args_checker)
+{
+    const auto &result = pos_args_checker(cmd);
+    if (!result) {
+        return result;
     }
 
     for (const auto &param : cmd.params()) {
         if (params.find(param.first) == params.end()) {
-            fmt::print(stderr, "unknown param {} = {}\n", param.first, param.second);
-            return false;
+            return FMT_ERR(
+                dsn::ERR_INVALID_PARAMETERS, "unknown param {} = {}", param.first, param.second);
         }
     }
 
     for (const auto &flag : cmd.flags()) {
         if (params.find(flag) != params.end()) {
-            fmt::print(stderr, "missing value of {}\n", flag);
-            return false;
+            return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "missing value of {}", flag);
         }
 
         if (flags.find(flag) == flags.end()) {
-            fmt::print(stderr, "unknown flag {}\n", flag);
-            return false;
+            return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "unknown flag", flag);
         }
     }
 
-    return true;
+    return dsn::error_s::ok();
+}
+
+// Check if the parameters and flags are in the given set while there is not any positional
+// argument.
+inline dsn::error_s validate_cmd(const argh::parser &cmd,
+                                 const std::set<std::string> &params,
+                                 const std::set<std::string> &flags)
+{
+    return validate_cmd(cmd, params, flags, no_pos_arg);
 }
 
 bool validate_ip(shell_context *sc,
                  const std::string &host_port_str,
                  /*out*/ dsn::host_port &target_hp,
                  /*out*/ std::string &err_info);
-
-// Print messages to stderr and return false if `exp` is evaluated to false.
-#define PRINT_AND_RETURN_FALSE_IF_NOT(exp, ...)                                                    \
-    do {                                                                                           \
-        if (dsn_unlikely(!(exp))) {                                                                \
-            fmt::print(stderr, __VA_ARGS__);                                                       \
-            return false;                                                                          \
-        }                                                                                          \
-    } while (0)
 
 template <typename EnumType>
 EnumType type_from_string(const std::map<int, const char *> &type_maps,

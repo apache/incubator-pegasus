@@ -33,7 +33,7 @@
 
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 
 /*!
 @addtogroup task-common

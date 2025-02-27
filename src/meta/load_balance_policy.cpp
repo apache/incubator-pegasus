@@ -29,12 +29,12 @@
 #include <mutex>
 #include <ostream>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "dsn.layer2_types.h"
 #include "meta/meta_data.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/dns_resolver.h" // IWYU pragma: keep
+#include "rpc/rpc_address.h"
 #include "utils/command_manager.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
@@ -146,8 +146,7 @@ generate_balancer_request(const app_mapper &apps,
                           const host_port &from,
                           const host_port &to)
 {
-    FAIL_POINT_INJECT_F("generate_balancer_request",
-                        [](absl::string_view name) { return nullptr; });
+    FAIL_POINT_INJECT_F("generate_balancer_request", [](std::string_view name) { return nullptr; });
 
     configuration_balancer_request result;
     result.gpid = pc.pid;

@@ -35,10 +35,10 @@
 #include "replica/mutation.h"
 #include "replica/mutation_log.h"
 #include "replica/test/mock_utils.h"
+#include "rpc/rpc_holder.h"
 #include "runtime/pipeline.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/env.h"
@@ -92,8 +92,7 @@ public:
             // each round mlog will replay the former logs, and create new file
             mutation_log_ptr mlog = create_private_log();
             for (int i = 1; i <= 10; i++) {
-                std::string msg = "hello!";
-                mutation_ptr mu = create_test_mutation(10 * f + i, msg);
+                auto mu = create_test_mutation(10 * f + i, "hello!");
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             }
             mlog->tracker()->wait_outstanding_tasks();
@@ -149,9 +148,8 @@ public:
             auto reserved_plog_force_flush = FLAGS_plog_force_flush;
             FLAGS_plog_force_flush = true;
             for (int i = decree_start; i <= num_entries + decree_start; i++) {
-                std::string msg = "hello!";
                 //  decree - last_commit_decree  = 1 by default
-                mutation_ptr mu = create_test_mutation(i, msg);
+                auto mu = create_test_mutation(i, "hello!");
                 // mock the last_commit_decree of first mu equal with `last_commit_decree_start`
                 if (i == decree_start) {
                     mu->data.header.last_committed_decree = last_commit_decree_start;
@@ -160,7 +158,7 @@ public:
             }
 
             // commit the last entry
-            mutation_ptr mu = create_test_mutation(decree_start + num_entries + 1, "hello!");
+            auto mu = create_test_mutation(decree_start + num_entries + 1, "hello!");
             mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             FLAGS_plog_force_flush = reserved_plog_force_flush;
 
@@ -362,13 +360,12 @@ TEST_P(load_from_private_log_test, ignore_useless)
 
     int num_entries = 100;
     for (int i = 1; i <= num_entries; i++) {
-        std::string msg = "hello!";
-        mutation_ptr mu = create_test_mutation(i, msg);
+        auto mu = create_test_mutation(i, "hello!");
         mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
     }
 
     // commit the last entry
-    mutation_ptr mu = create_test_mutation(1 + num_entries, "hello!");
+    auto mu = create_test_mutation(1 + num_entries, "hello!");
     mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
     mlog->close();
 

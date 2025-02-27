@@ -26,9 +26,11 @@
 #include <algorithm>
 #include <cstdint>
 #include <fstream>
+#include <initializer_list>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -38,7 +40,8 @@
 #include "dsn.layer2_types.h"
 #include "meta_admin_types.h"
 #include "pegasus_utils.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
+#include "shell/argh.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
@@ -52,6 +55,7 @@
 #include "utils/ports.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
+#include "utils_types.h"
 
 DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
 DSN_DEFINE_validator(tables_sample_interval_ms, [](uint32_t value) -> bool { return value > 0; });
@@ -63,57 +67,61 @@ double convert_to_ratio(double hit, double total)
 
 bool ls_apps(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"all", no_argument, 0, 'a'},
-                                           {"detailed", no_argument, 0, 'd'},
-                                           {"json", no_argument, 0, 'j'},
-                                           {"status", required_argument, 0, 's'},
-                                           {"output", required_argument, 0, 'o'},
-                                           {0, 0, 0, 0}};
+    // ls [-a|--all] [-d|--detailed] [-j|--json] [-o|--output file_name]
+    // [-s|--status all|available|creating|dropping|dropped] "
+    // [-p|--app_name_pattern str] [-m|--match_type all|exact|anywhere|prefix|postfix]"
 
-    bool show_all = false;
-    bool detailed = false;
-    bool json = false;
-    std::string status;
-    std::string output_file;
-    optind = 0;
-    while (true) {
-        int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "adjs:o:", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 'a':
-            show_all = true;
-            break;
-        case 'd':
-            detailed = true;
-            break;
-        case 'j':
-            json = true;
-            break;
-        case 's':
-            status = optarg;
-            break;
-        case 'o':
-            output_file = optarg;
-            break;
-        default:
-            return false;
+    // All valid parameters and flags are given as follows.
+    static const std::set<std::string> params = {
+        "o", "output", "s", "status", "p", "app_name_pattern", "m", "match_type"};
+    static const std::set<std::string> flags = {"a", "all", "d", "detailed", "j", "json"};
+
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+
+    // Check if input parameters and flags are valid.
+    const auto &check = validate_cmd(cmd, params, flags);
+    if (!check) {
+        SHELL_PRINTLN_ERROR("{}", check.description());
+        return false;
+    }
+
+    const bool show_all = cmd[{"-a", "--all"}];
+    const bool detailed = cmd[{"-d", "--detailed"}];
+    const bool json = cmd[{"-j", "--json"}];
+
+    const std::string output_file(cmd({"-o", "--output"}, "").str());
+
+    const std::string status_str(cmd({"-s", "--status"}, "").str());
+    auto status = dsn::app_status::AS_INVALID;
+    if (status_str.empty()) {
+        // `show_all` functions only when target `status` is not specified.
+        if (!show_all) {
+            // That `show_all` is not given means just showing available tables.
+            status = dsn::app_status::AS_AVAILABLE;
         }
+    } else if (status_str != "all") {
+        status = type_from_string(dsn::_app_status_VALUES_TO_NAMES,
+                                  fmt::format("as_{}", status_str),
+                                  dsn::app_status::AS_INVALID);
+        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(status != dsn::app_status::AS_INVALID,
+                                            "parse {} as app_status::type failed",
+                                            status_str);
     }
 
-    ::dsn::app_status::type s = ::dsn::app_status::AS_INVALID;
-    if (!status.empty() && status != "all") {
-        s = type_from_string(::dsn::_app_status_VALUES_TO_NAMES,
-                             std::string("as_") + status,
-                             ::dsn::app_status::AS_INVALID);
-        PRINT_AND_RETURN_FALSE_IF_NOT(
-            s != ::dsn::app_status::AS_INVALID, "parse {} as app_status::type failed", status);
+    // Read the parttern of table name with empty string as default.
+    const std::string app_name_pattern(cmd({"-p", "--app_name_pattern"}, "").str());
+
+    // Read the match type of the pattern for table name with "matching all" as default,
+    // typically requesting all tables owned by this cluster.
+    auto match_type = dsn::utils::pattern_match_type::PMT_MATCH_ALL;
+    PARSE_OPT_ENUM(match_type, dsn::utils::pattern_match_type::PMT_INVALID, {"-m", "--match_type"});
+
+    const auto &result = sc->ddl_client->list_apps(
+        detailed, json, output_file, status, app_name_pattern, match_type);
+    if (!result) {
+        fmt::println("list apps failed, error={}", result);
     }
-    ::dsn::error_code err = sc->ddl_client->list_apps(s, show_all, detailed, json, output_file);
-    if (err != ::dsn::ERR_OK)
-        std::cout << "list apps failed, error=" << err << std::endl;
+
     return true;
 }
 
@@ -312,7 +320,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             parse_sst_stat(results[i].body(), count_map[nodes[i].hp], disk_map[nodes[i].hp]),
             nodes[i],
-            "sst");
+            "parse sst stats");
     }
 
     ::dsn::utils::table_printer tp_general("result");
@@ -452,15 +460,15 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-bool app_stat(command_executor *e, shell_context *sc, arguments args)
+bool app_stat(command_executor *, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
-                                           {"only_qps", no_argument, 0, 'q'},
-                                           {"only_usage", no_argument, 0, 'u'},
-                                           {"json", no_argument, 0, 'j'},
-                                           {"output", required_argument, 0, 'o'},
-                                           {"sample_interval_ms", required_argument, 0, 't'},
-                                           {0, 0, 0, 0}};
+    static struct option long_options[] = {{"app_name", required_argument, nullptr, 'a'},
+                                           {"only_qps", no_argument, nullptr, 'q'},
+                                           {"only_usage", no_argument, nullptr, 'u'},
+                                           {"json", no_argument, nullptr, 'j'},
+                                           {"output", required_argument, nullptr, 'o'},
+                                           {"sample_interval_ms", required_argument, nullptr, 'i'},
+                                           {nullptr, 0, nullptr, 0}};
 
     std::string app_name;
     std::string out_file;
@@ -472,7 +480,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     optind = 0;
     while (true) {
         int option_index = 0;
-        int c = getopt_long(args.argc, args.argv, "a:qujo:t:", long_options, &option_index);
+        int c = getopt_long(args.argc, args.argv, "a:qujo:i:", long_options, &option_index);
         if (c == -1) {
             // -1 means all command-line options have been parsed.
             break;
@@ -494,7 +502,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         case 'o':
             out_file = optarg;
             break;
-        case 't':
+        case 'i':
             RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID();
             break;
         default:
@@ -651,6 +659,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
                              (row.rdb_bf_point_positive_total - row.rdb_bf_point_positive_true) +
                                  row.rdb_bf_point_negatives));
     }
+
+    // TODO(wangdan): use dsn::utils::output() in output_utils.h instead.
     tp.output(out, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
     return true;

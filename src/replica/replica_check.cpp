@@ -27,6 +27,7 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -46,19 +47,18 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
 #include "split/replica_split_manager.h"
+#include "task/async_calls.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "absl/strings/string_view.h"
 #include "utils/metrics.h"
 #include "utils/thread_access_checker.h"
 
@@ -82,7 +82,7 @@ namespace replication {
 
 void replica::init_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_init_group_check", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_init_group_check", [](std::string_view) {});
 
     _checker.only_one_thread_access();
 
@@ -102,7 +102,7 @@ void replica::init_group_check()
 
 void replica::broadcast_group_check()
 {
-    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](std::string_view) {});
 
     CHECK_NOTNULL(_primary_states.group_check_task, "");
 

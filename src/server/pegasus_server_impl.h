@@ -46,8 +46,8 @@
 #include "pegasus_value_schema.h"
 #include "range_read_limiter.h"
 #include "replica/replication_app_base.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/metrics.h"
@@ -147,6 +147,8 @@ public:
     //  - ERR_FILE_OPERATION_FAILED
     ::dsn::error_code stop(bool clear_state) override;
 
+    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) override;
+
     /// Each of the write request (specifically, the rpc that's configured as write, see
     /// option `rpc_request_is_write_operation` in rDSN `task_spec`) will first be
     /// replicated to the replicas through the underlying PacificA protocol in rDSN, and
@@ -157,7 +159,8 @@ public:
     int on_batched_write_requests(int64_t decree,
                                   uint64_t timestamp,
                                   dsn::message_ex **requests,
-                                  int count) override;
+                                  int count,
+                                  dsn::message_ex *original_request) override;
 
     ::dsn::error_code prepare_get_checkpoint(dsn::blob &learn_req) override
     {
@@ -301,9 +304,9 @@ private:
     }
 
     // return true if the data is valid for the filter
-    bool validate_filter(::dsn::apps::filter_type::type filter_type,
-                         const ::dsn::blob &filter_pattern,
-                         const ::dsn::blob &value);
+    static bool validate_filter(::dsn::apps::filter_type::type filter_type,
+                                const ::dsn::blob &filter_pattern,
+                                const ::dsn::blob &value);
 
     void update_replica_rocksdb_statistics();
 

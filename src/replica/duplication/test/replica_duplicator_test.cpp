@@ -33,7 +33,7 @@
 #include "replica/mutation_log.h"
 #include "replica/test/mock_utils.h"
 #include "runtime/pipeline.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
@@ -69,12 +69,13 @@ public:
         return dup->_min_checkpoint_decree;
     }
 
-    void test_new_duplicator(const std::string &remote_app_name, bool specify_remote_app_name)
+    void test_new_duplicator(const std::string &remote_app_name,
+                             bool specify_remote_app_name,
+                             int64_t confirmed_decree)
     {
         const dupid_t dupid = 1;
         const std::string remote = "remote_address";
         const duplication_status::type status = duplication_status::DS_PAUSE;
-        const int64_t confirmed_decree = 100;
 
         duplication_entry dup_ent;
         dup_ent.dupid = dupid;
@@ -90,8 +91,13 @@ public:
         ASSERT_EQ(remote, duplicator->remote_cluster_name());
         ASSERT_EQ(remote_app_name, duplicator->remote_app_name());
         ASSERT_EQ(status, duplicator->_status);
+        ASSERT_EQ(1, duplicator->_min_checkpoint_decree);
         ASSERT_EQ(confirmed_decree, duplicator->progress().confirmed_decree);
-        ASSERT_EQ(confirmed_decree, duplicator->progress().last_decree);
+        if (confirmed_decree == invalid_decree) {
+            ASSERT_EQ(1, duplicator->progress().last_decree);
+        } else {
+            ASSERT_EQ(confirmed_decree, duplicator->progress().last_decree);
+        }
 
         auto &expected_env = *duplicator;
         ASSERT_EQ(duplicator->tracker(), expected_env.__conf.tracker);
@@ -144,12 +150,25 @@ INSTANTIATE_TEST_SUITE_P(, replica_duplicator_test, ::testing::Values(false, tru
 
 TEST_P(replica_duplicator_test, new_duplicator_without_remote_app_name)
 {
-    test_new_duplicator("temp", false);
+    test_new_duplicator("temp", false, 100);
 }
 
 TEST_P(replica_duplicator_test, new_duplicator_with_remote_app_name)
 {
-    test_new_duplicator("another_test_app", true);
+    test_new_duplicator("another_test_app", true, 100);
+}
+
+// Initial confirmed decree immediately after the duplication was created is `invalid_decree`
+// which was synced from meta server.
+TEST_P(replica_duplicator_test, new_duplicator_with_initial_confirmed_decree)
+{
+    test_new_duplicator("test_initial_confirmed_decree", true, invalid_decree);
+}
+
+// The duplication progressed and confirmed decree became valid.
+TEST_P(replica_duplicator_test, new_duplicator_with_non_initial_confirmed_decree)
+{
+    test_new_duplicator("test_non_initial_confirmed_decree", true, 1);
 }
 
 TEST_P(replica_duplicator_test, pause_start_duplication) { test_pause_start_duplication(); }
@@ -160,7 +179,7 @@ TEST_P(replica_duplicator_test, duplication_progress)
 
     // Start duplication from empty replica.
     ASSERT_EQ(1, min_checkpoint_decree(duplicator));
-    ASSERT_EQ(0, duplicator->progress().last_decree);
+    ASSERT_EQ(1, duplicator->progress().last_decree);
     ASSERT_EQ(invalid_decree, duplicator->progress().confirmed_decree);
 
     // Update the max decree that has been duplicated to the remote cluster.

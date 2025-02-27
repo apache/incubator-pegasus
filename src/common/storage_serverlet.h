@@ -38,13 +38,13 @@
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
+#include "rpc/serialization.h"
+#include "rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/rpc_address.h"
 
 namespace dsn {
 namespace replication {

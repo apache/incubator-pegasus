@@ -17,7 +17,7 @@
 
 #include "table_metrics.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <stddef.h>

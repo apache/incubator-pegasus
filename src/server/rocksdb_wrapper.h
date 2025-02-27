@@ -29,7 +29,7 @@
 
 #include "pegasus_value_schema.h"
 #include "replica/replica_base.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/metrics.h"
 
 namespace rocksdb {
@@ -54,18 +54,18 @@ public:
     /// is returned.
     /// \result ctx.expired=true if record expired. Still rocksdb::Status::kOk is returned.
     /// \result ctx.found=false if record is not found. Still rocksdb::Status::kOk is returned.
-    int get(absl::string_view raw_key, /*out*/ db_get_context *ctx);
+    int get(std::string_view raw_key, /*out*/ db_get_context *ctx);
 
     int write_batch_put(int64_t decree,
-                        absl::string_view raw_key,
-                        absl::string_view value,
+                        std::string_view raw_key,
+                        std::string_view value,
                         uint32_t expire_sec);
     int write_batch_put_ctx(const db_write_context &ctx,
-                            absl::string_view raw_key,
-                            absl::string_view value,
+                            std::string_view raw_key,
+                            std::string_view value,
                             uint32_t expire_sec);
     int write(int64_t decree);
-    int write_batch_delete(int64_t decree, absl::string_view raw_key);
+    int write_batch_delete(int64_t decree, std::string_view raw_key);
     void clear_up_write_batch();
     int ingest_files(int64_t decree,
                      const std::vector<std::string> &sst_file_list,
@@ -81,6 +81,7 @@ private:
     std::unique_ptr<pegasus_value_generator> _value_generator;
     std::unique_ptr<rocksdb::WriteBatch> _write_batch;
     std::unique_ptr<rocksdb::WriteOptions> _wt_opts;
+    rocksdb::ColumnFamilyHandle *_data_cf;
     rocksdb::ColumnFamilyHandle *_meta_cf;
 
     const uint32_t _pegasus_data_version;

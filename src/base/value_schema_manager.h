@@ -25,7 +25,7 @@
 
 #include "pegasus_value_schema.h"
 #include "utils/singleton.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 namespace pegasus {
 
@@ -35,7 +35,7 @@ public:
     void register_schema(std::unique_ptr<value_schema> schema);
     /// using the raw value in rocksdb and data version stored in meta column family to get data
     /// version
-    value_schema *get_value_schema(uint32_t meta_cf_data_version, absl::string_view value) const;
+    value_schema *get_value_schema(uint32_t meta_cf_data_version, std::string_view value) const;
     value_schema *get_value_schema(uint32_t version) const;
     value_schema *get_latest_value_schema() const;
 

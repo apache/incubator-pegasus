@@ -21,7 +21,7 @@ import pypegasus
 setup(
     name='pypegasus3',
     version=pypegasus.__version__,
-    install_requires=['Twisted==21.2.0', 'aenum==3.0.0', 'thrift==0.13.0', 'pyOpenSSL==20.0.1','cryptography==3.2'],
+    install_requires=['Twisted==21.2.0', 'aenum==3.0.0', 'thrift==0.13.0', 'pyOpenSSL==24.2.1','cryptography==43.0.1'],
     packages=find_packages(),
     package_data={'': ['logger.conf']},
     platforms='any',

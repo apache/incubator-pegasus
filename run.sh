@@ -28,12 +28,13 @@ export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=${PEGASUS_THIRDPARTY_ROOT:-"$ROOT/thirdparty"}
 ARCH_TYPE=''
 arch_output=$(arch)
-if [ "$arch_output"x == "x86_64"x ]; then
-    ARCH_TYPE="amd64"
-elif [ "$arch_output"x == "aarch64"x ]; then
+if [ "$arch_output"x == "aarch64"x ]; then
     ARCH_TYPE="aarch64"
 else
-    echo "WARNING: unsupported CPU architecture '$arch_output', use 'x86_64' as default"
+    if [ "$arch_output"x != "x86_64"x ]; then
+        echo "WARNING: unrecognized CPU architecture '$arch_output', use 'x86_64' as default"
+    fi
+    ARCH_TYPE="amd64"
 fi
 export LD_LIBRARY_PATH=${JAVA_HOME}/jre/lib/${ARCH_TYPE}:${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 # Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
@@ -114,6 +115,7 @@ function usage_build()
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
     echo "   --test                whether to build test binaries"
     echo "   --iwyu                specify the binary path of 'include-what-you-use' when build with IWYU"
+    echo "   --cmake_only          whether to run cmake only, default no"
 }
 
 function exit_if_fail() {
@@ -131,6 +133,7 @@ function run_build()
     C_COMPILER="gcc"
     CXX_COMPILER="g++"
     BUILD_TYPE="release"
+    # TODO(yingchun): some boolean variables are using YES/NO, some are using ON/OFF, should be unified.
     CLEAR=NO
     CLEAR_THIRDPARTY=NO
     JOB_NUM=8
@@ -145,6 +148,7 @@ function run_build()
     BUILD_TEST=OFF
     IWYU=""
     BUILD_MODULES=""
+    CMAKE_ONLY=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -219,6 +223,9 @@ function run_build()
             --iwyu)
                 IWYU="$2"
                 shift
+                ;;
+            --cmake_only)
+                CMAKE_ONLY=YES
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -318,8 +325,8 @@ function run_build()
     if [ ! -f "${ROOT}/src/common/serialization_helper/dsn.layer2_types.h" ]; then
         echo "Gen thrift"
         # TODO(yingchun): should be optimized
-        python3 $ROOT/scripts/compile_thrift.py
-        sh ${ROOT}/scripts/recompile_thrift.sh
+        python3 $ROOT/build_tools/compile_thrift.py
+        sh ${ROOT}/build_tools/recompile_thrift.sh
     fi
 
     if [ ! -d "$BUILD_DIR" ]; then
@@ -352,6 +359,11 @@ function run_build()
     # rebuild link
     rm -f ${BUILD_LATEST_DIR}
     ln -s ${BUILD_DIR} ${BUILD_LATEST_DIR}
+
+    if [ "$CMAKE_ONLY" == "YES" ]; then
+        echo "CMake only, exit"
+        return
+    fi
 
     echo "[$(date)] Building Pegasus ..."
     pushd $BUILD_DIR
@@ -645,7 +657,7 @@ function run_start_zk()
         fi
     fi
 
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/admin_tools/start_zk.sh
 }
 
 #####################
@@ -682,7 +694,7 @@ function run_stop_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $ROOT/scripts/stop_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/admin_tools/stop_zk.sh
 }
 
 #####################
@@ -719,7 +731,7 @@ function run_clear_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $ROOT/scripts/clear_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/admin_tools/clear_zk.sh
 }
 
 #####################
@@ -842,7 +854,7 @@ function run_start_onebox()
         exit 1
     fi
 
-    source "${ROOT}"/scripts/config_hdfs.sh
+    source "${ROOT}"/admin_tools/config_hdfs.sh
     if [ $USE_PRODUCT_CONFIG == "true" ]; then
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.ini
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
@@ -1086,7 +1098,7 @@ function run_start_onebox_instance()
         esac
         shift
     done
-    source "${ROOT}"/scripts/config_hdfs.sh
+    source "${ROOT}"/admin_tools/config_hdfs.sh
     if [ $META_ID = "0" -a $REPLICA_ID = "0" -a $COLLECTOR_ID = "0" ]; then
         echo "ERROR: no meta_id or replica_id or collector set"
         exit 1
@@ -1876,9 +1888,9 @@ function run_migrate_node()
     cd ${ROOT}
     echo "------------------------------"
     if [ "$CLUSTER" != "" ]; then
-        ./scripts/migrate_node.sh $CLUSTER $NODE "$APP" $TYPE
+        ./admin_tools/migrate_node.sh $CLUSTER $NODE "$APP" $TYPE
     else
-        ./scripts/migrate_node.sh $CONFIG $NODE "$APP" $TYPE -f
+        ./admin_tools/migrate_node.sh $CONFIG $NODE "$APP" $TYPE -f
     fi
     echo "------------------------------"
     echo
@@ -1984,9 +1996,9 @@ function run_downgrade_node()
     cd ${ROOT}
     echo "------------------------------"
     if [ "$CLUSTER" != "" ]; then
-        ./scripts/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
+        ./admin_tools/downgrade_node.sh $CLUSTER $NODE "$APP" $TYPE
     else
-        ./scripts/downgrade_node.sh $CONFIG $NODE "$APP" $TYPE -f
+        ./admin_tools/downgrade_node.sh $CONFIG $NODE "$APP" $TYPE -f
     fi
     echo "------------------------------"
     echo
@@ -2094,19 +2106,21 @@ case $cmd in
         ;;
     pack_server)
         shift
-        PEGASUS_ROOT=$ROOT ./scripts/pack_server.sh $*
+        # source the config_hdfs.sh to get the HADOOP_HOME.
+        source "${ROOT}"/admin_tools/config_hdfs.sh
+        PEGASUS_ROOT=$ROOT ./build_tools/pack_server.sh $*
         ;;
     pack_client)
         shift
-        PEGASUS_ROOT=$ROOT ./scripts/pack_client.sh $*
+        PEGASUS_ROOT=$ROOT ./build_tools/pack_client.sh $*
         ;;
     pack_tools)
         shift
-        PEGASUS_ROOT=$ROOT ./scripts/pack_tools.sh $*
+        PEGASUS_ROOT=$ROOT ./build_tools/pack_tools.sh $*
         ;;
     bump_version)
         shift
-        ./scripts/bump_version.sh $*
+        ./build_tools/bump_version.sh $*
         ;;
     *)
         echo "ERROR: unknown command $cmd"

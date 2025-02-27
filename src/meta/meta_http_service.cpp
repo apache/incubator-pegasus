@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <cstddef>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <rapidjson/ostreamwrapper.h>
@@ -47,11 +48,12 @@
 #include "meta_admin_types.h"
 #include "meta_http_service.h"
 #include "meta_server_failure_detector.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_host_port.h"
 #include "server_load_balancer.h"
 #include "server_state.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/output_utils.h"
@@ -73,6 +75,20 @@ struct list_nodes_helper
     {
     }
 };
+
+#define INIT_AND_CALL_LIST_APPS(target_status, list_apps_resp, http_resp)                          \
+    configuration_list_apps_response list_apps_resp;                                               \
+    do {                                                                                           \
+        configuration_list_apps_request list_apps_req;                                             \
+        list_apps_req.status = target_status;                                                      \
+        _service->_state->list_apps(list_apps_req, list_apps_resp);                                \
+        if (list_apps_resp.err != ERR_OK) {                                                        \
+            http_resp.status_code = http_status_code::kInternalServerError;                        \
+            http_resp.body =                                                                       \
+                error_s::make(list_apps_resp.err, list_apps_resp.hint_message).description();      \
+            return;                                                                                \
+        }                                                                                          \
+    } while (false)
 
 void meta_http_service::get_app_handler(const http_request &req, http_response &resp)
 {
@@ -208,28 +224,21 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
 void meta_http_service::list_app_handler(const http_request &req, http_response &resp)
 {
     bool detailed = false;
-    for (const auto &p : req.query_args) {
-        if (p.first == "detail") {
+    for (const auto &[name, value] : req.query_args) {
+        if (name == "detail") {
             detailed = true;
-        } else {
-            resp.status_code = http_status_code::kBadRequest;
-            return;
+            continue;
         }
-    }
-    if (!redirect_if_not_primary(req, resp))
-        return;
-    configuration_list_apps_response response;
-    configuration_list_apps_request request;
-    request.status = dsn::app_status::AS_INVALID;
 
-    _service->_state->list_apps(request, response);
-
-    if (response.err != dsn::ERR_OK) {
-        resp.body = response.err;
-        resp.status_code = http_status_code::kInternalServerError;
+        resp.status_code = http_status_code::kBadRequest;
         return;
     }
-    std::vector<::dsn::app_info> &apps = response.infos;
+
+    if (!redirect_if_not_primary(req, resp)) {
+        return;
+    }
+
+    INIT_AND_CALL_LIST_APPS(app_status::AS_INVALID, list_apps_resp, resp);
 
     // output as json format
     std::ostringstream out;
@@ -247,7 +256,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
     tp_general.add_column("drop_time");
     tp_general.add_column("drop_expire");
     tp_general.add_column("envs_count");
-    for (const auto &app : apps) {
+    for (const auto &app : list_apps_resp.infos) {
         if (app.status != dsn::app_status::AS_AVAILABLE) {
             continue;
         }
@@ -303,7 +312,7 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
         tp_health.add_column("unhealthy");
         tp_health.add_column("write_unhealthy");
         tp_health.add_column("read_unhealthy");
-        for (auto &info : apps) {
+        for (const auto &info : list_apps_resp.infos) {
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
             }
@@ -391,15 +400,14 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
     for (const auto &node : _service->_dead_set) {
         tmp_map.emplace(node, list_nodes_helper(node.to_string(), "UNALIVE"));
     }
-    int alive_node_count = (_service->_alive_set).size();
-    int unalive_node_count = (_service->_dead_set).size();
+
+    size_t alive_node_count = _service->_alive_set.size();
+    size_t unalive_node_count = _service->_dead_set.size();
 
     if (detailed) {
-        configuration_list_apps_response response;
-        configuration_list_apps_request request;
-        request.status = dsn::app_status::AS_AVAILABLE;
-        _service->_state->list_apps(request, response);
-        for (const auto &app : response.infos) {
+        INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_resp, resp);
+
+        for (const auto &app : list_apps_resp.infos) {
             query_cfg_request request_app;
             query_cfg_response response_app;
             request_app.app_name = app.app_name;
@@ -515,21 +523,13 @@ void meta_http_service::get_app_envs_handler(const http_request &req, http_respo
     }
 
     // get all of the apps
-    configuration_list_apps_response response;
-    configuration_list_apps_request request;
-    request.status = dsn::app_status::AS_AVAILABLE;
-    _service->_state->list_apps(request, response);
-    if (response.err != dsn::ERR_OK) {
-        resp.body = response.err.to_string();
-        resp.status_code = http_status_code::kInternalServerError;
-        return;
-    }
+    INIT_AND_CALL_LIST_APPS(app_status::AS_AVAILABLE, list_apps_resp, resp);
 
     // using app envs to generate a table_printer
     dsn::utils::table_printer tp;
-    for (auto &app : response.infos) {
+    for (const auto &app : list_apps_resp.infos) {
         if (app.app_name == app_name) {
-            for (auto env : app.envs) {
+            for (const auto &env : app.envs) {
                 tp.add_row_name_and_data(env.first, env.second);
             }
             break;

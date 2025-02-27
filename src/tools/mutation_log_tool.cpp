@@ -26,7 +26,6 @@
 
 #include "mutation_log_tool.h"
 
-#include <alloca.h>
 #include <memory>
 #include <vector>
 
@@ -39,8 +38,9 @@
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/task_spec.h"
+#include "rpc/rpc_message.h"
+#include "task/task_spec.h"
+#include "utils/alloc.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
@@ -103,14 +103,13 @@ bool mutation_log_tool::dump(
                                   log_length,
                                   mu->data.updates.size());
             if (callback && !mu->data.updates.empty()) {
-                dsn::message_ex **batched_requests =
-                    (dsn::message_ex **)alloca(sizeof(dsn::message_ex *) * mu->data.updates.size());
+                auto **batched_requests = ALLOC_STACK(message_ex *, mu->data.updates.size());
                 int batched_count = 0;
                 for (mutation_update &update : mu->data.updates) {
                     dsn::message_ex *req = dsn::message_ex::create_received_request(
                         update.code,
-                        (dsn_msg_serialize_format)update.serialization_type,
-                        (void *)update.data.data(),
+                        static_cast<dsn_msg_serialize_format>(update.serialization_type),
+                        update.data.data(),
                         update.data.length());
                     batched_requests[batched_count++] = req;
                 }

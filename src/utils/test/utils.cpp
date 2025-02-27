@@ -40,13 +40,15 @@
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/crc.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/link.h"
 #include "utils/rand.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+#include "utils_types.h"
 
-namespace dsn {
-namespace utils {
+namespace dsn::utils {
 
 TEST(core, get_last_component)
 {
@@ -246,6 +248,76 @@ const std::vector<c_string_n_bytes_equality> c_string_n_bytes_equality_tests = {
 INSTANTIATE_TEST_SUITE_P(StringTest,
                          CStringNBytesEqualityTest,
                          testing::ValuesIn(c_string_n_bytes_equality_tests));
+
+struct pattern_match_case
+{
+    std::string str;
+    std::string pattern;
+    pattern_match_type::type match_type;
+    error_code expected_err;
+};
+
+class PatternMatchTest : public testing::TestWithParam<pattern_match_case>
+{
+};
+
+const std::vector<pattern_match_case> pattern_match_tests = {
+    // Everything would be matched even if pattern is empty.
+    {"abc", "", pattern_match_type::PMT_MATCH_ALL, ERR_OK},
+    // Everything would be matched even if it is not matched completely.
+    {"abc", "xyz", pattern_match_type::PMT_MATCH_ALL, ERR_OK},
+    // It is matched exactly.
+    {"abc", "abc", pattern_match_type::PMT_MATCH_EXACT, ERR_OK},
+    // Empty string is matched exactly with empty pattern.
+    {"", "", pattern_match_type::PMT_MATCH_EXACT, ERR_OK},
+    // Non-empty string cannot be matched exactly with empty pattern.
+    {"abc", "", pattern_match_type::PMT_MATCH_EXACT, ERR_NOT_MATCHED},
+    // The string whose content is different from pattern would not be matched.
+    {"abc", "xyz", pattern_match_type::PMT_MATCH_EXACT, ERR_NOT_MATCHED},
+    // The pattern as a sub string would not be matched.
+    {"abc", "ab", pattern_match_type::PMT_MATCH_EXACT, ERR_NOT_MATCHED},
+    // It is matched with same prefix for anywhere.
+    {"abcdef", "ab", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_OK},
+    // It is matched with same middle for anywhere.
+    {"abcdef", "cd", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_OK},
+    // It is matched with same postfix for anywhere.
+    {"abcdef", "ef", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_OK},
+    // It is matched with empty content for anywhere.
+    {"abcdef", "", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_OK},
+    // It is not matched with different content for anywhere.
+    {"abcdef", "xyz", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_NOT_MATCHED},
+    // It is matched for prefix.
+    {"abcdef", "ab", pattern_match_type::PMT_MATCH_PREFIX, ERR_OK},
+    // It is not matched with same middle for prefix.
+    {"abcdef", "cd", pattern_match_type::PMT_MATCH_PREFIX, ERR_NOT_MATCHED},
+    // It is not matched with same postfix for prefix.
+    {"abcdef", "ef", pattern_match_type::PMT_MATCH_PREFIX, ERR_NOT_MATCHED},
+    // It is not matched with different content for prefix.
+    {"abcdef", "xyz", pattern_match_type::PMT_MATCH_PREFIX, ERR_NOT_MATCHED},
+    // It is matched with empty content for prefix.
+    {"abcdef", "", pattern_match_type::PMT_MATCH_PREFIX, ERR_OK},
+    // It is matched for postfix.
+    {"abcdef", "ef", pattern_match_type::PMT_MATCH_POSTFIX, ERR_OK},
+    // It is not matched with same prefix for postfix.
+    {"abcdef", "ab", pattern_match_type::PMT_MATCH_POSTFIX, ERR_NOT_MATCHED},
+    // It is not matched with same middle for postfix.
+    {"abcdef", "cd", pattern_match_type::PMT_MATCH_POSTFIX, ERR_NOT_MATCHED},
+    // It is not matched with different content for postfix.
+    {"abcdef", "xyz", pattern_match_type::PMT_MATCH_PREFIX, ERR_NOT_MATCHED},
+    // It is matched with empty content for postfix.
+    {"abcdef", "", pattern_match_type::PMT_MATCH_POSTFIX, ERR_OK},
+    // PMT_MATCH_REGEX is still not supported.
+    {"unsupported", ".*", pattern_match_type::PMT_MATCH_REGEX, ERR_NOT_IMPLEMENTED},
+};
+
+TEST_P(PatternMatchTest, PatternMatch)
+{
+    const auto &test_case = GetParam();
+    const auto actual_err = pattern_match(test_case.str, test_case.pattern, test_case.match_type);
+    EXPECT_EQ(test_case.expected_err, actual_err.code());
+}
+
+INSTANTIATE_TEST_SUITE_P(StringTest, PatternMatchTest, testing::ValuesIn(pattern_match_tests));
 
 // For containers such as std::unordered_set, the expected result will be deduplicated
 // at initialization. Therefore, it can be used to compare with actual result safely.
@@ -600,5 +672,4 @@ const std::vector<has_space_case> has_space_tests = {
 
 INSTANTIATE_TEST_SUITE_P(StringTest, HasSpaceTest, testing::ValuesIn(has_space_tests));
 
-} // namespace utils
-} // namespace dsn
+} // namespace dsn::utils

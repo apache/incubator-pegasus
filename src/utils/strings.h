@@ -34,8 +34,21 @@
 #include <unordered_set>
 #include <vector>
 
-namespace dsn {
-namespace utils {
+#include "utils_types.h"
+#include "utils/enum_helper.h"
+#include "utils/errors.h"
+
+namespace dsn::utils {
+
+ENUM_BEGIN2(pattern_match_type::type, pattern_match_type, pattern_match_type::PMT_INVALID)
+ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_INVALID, invalid)
+ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_ALL, all)
+ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_EXACT, exact)
+ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_ANYWHERE, anywhere)
+ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_PREFIX, prefix)
+ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_POSTFIX, postfix)
+ENUM_REG_WITH_CUSTOM_NAME(pattern_match_type::PMT_MATCH_REGEX, regex)
+ENUM_END2(pattern_match_type::type, pattern_match_type)
 
 inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
 
@@ -61,6 +74,15 @@ bool iequals(const char *lhs, const std::string &rhs, size_t n);
 
 // Decide whether the first n bytes of two memory areas are equal, even if one of them is NULL.
 bool mequals(const void *lhs, const void *rhs, size_t n);
+
+// Try to match target string `str` with provided `pattern` in `match_type`. Return the code
+// representing matched, not matched, or some error with additional message(if any) as follows:
+// - ERR_OK:                matched;
+// - ERR_NOT_MATCHED:       not matched;
+// - ERR_NOT_IMPLEMENTED:   `match_type` is not supported.
+error_s pattern_match(const std::string &str,
+                      const std::string &pattern,
+                      pattern_match_type::type match_type);
 
 // Split the `input` string by the only character `separator` into tokens. Leading and trailing
 // spaces of each token will be stripped. Once the token is empty, or become empty after
@@ -125,5 +147,4 @@ std::string find_string_prefix(const std::string &input, char separator);
 // Decide if there are some space characters in the given string, such as ' ', '\r', '\n' or '\t'.
 bool has_space(const std::string &str);
 
-} // namespace utils
-} // namespace dsn
+} // namespace dsn::utils

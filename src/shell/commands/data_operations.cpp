@@ -50,19 +50,18 @@
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
+#include "rpc/rpc_host_port.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/async_calls.h"
 #include "shell/args.h"
 #include "shell/command_executor.h"
 #include "shell/command_helper.h"
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "shell/sds/sds.h"
+#include "task/async_calls.h"
 #include "utils/blob.h"
 #include "utils/defer.h"
 #include "utils/error_code.h"
-#include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
@@ -2294,7 +2293,7 @@ bool get_rdb_estimated_keys_stats(shell_context *sc,
             create_rdb_estimated_keys_stats_calcs(table_id, pcs, nodes[i].hp, "replica", rows);
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(calcs->aggregate_metrics(results[i].body()),
                                              nodes[i],
-                                             "rdb_estimated_keys for table(id={})",
+                                             "aggregate rdb_estimated_keys for table(id={})",
                                              table_id);
     }
 

@@ -17,13 +17,13 @@
 
 #include "hotkey_collector.h"
 
-#include <absl/strings/string_view.h>
-#include <boost/container_hash/extensions.hpp>
+#include <boost/container_hash/hash.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <string_view>
 #include <unordered_map>
 
 #include "base/pegasus_key_schema.h"
@@ -129,7 +129,7 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 
 // TODO: (Tangyanzhao) replace it to xxhash
 
-/*extern*/ int get_bucket_id(absl::string_view data, int bucket_num)
+/*extern*/ int get_bucket_id(std::string_view data, int bucket_num)
 {
     return static_cast<int>(boost::hash_range(data.begin(), data.end()) % bucket_num);
 }
@@ -398,7 +398,7 @@ struct blob_hash
 {
     std::size_t operator()(const dsn::blob &str) const
     {
-        absl::string_view cp = str.to_string_view();
+        std::string_view cp = str.to_string_view();
         return boost::hash_range(cp.begin(), cp.end());
     }
 };
@@ -429,8 +429,8 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     // the weight of all the collected hash keys
     std::vector<uint64_t> weights;
     weights.reserve(hash_keys_weight.size());
-    absl::string_view weight_max_key; // the hashkey with the max weight
-    uint64_t weight_max = 0;          // the max weight by far
+    std::string_view weight_max_key; // the hashkey with the max weight
+    uint64_t weight_max = 0;         // the max weight by far
     for (const auto &iter : hash_keys_weight) {
         weights.push_back(iter.second);
         if (iter.second > weight_max) {

@@ -42,14 +42,13 @@ Component providers define the interface for the local components (e.g., network
 #include <string>
 #include <vector>
 
+#include "rpc/message_parser.h"
+#include "rpc/network.h"
 #include "runtime/env_provider.h"
-#include "runtime/rpc/message_parser.h"
-#include "runtime/rpc/network.h"
-#include "runtime/task/task_queue.h"
-#include "runtime/task/task_spec.h"
-#include "runtime/task/task_worker.h"
-#include "runtime/task/timer_service.h"
-// providers
+#include "task/task_queue.h"
+#include "task/task_spec.h"
+#include "task/task_worker.h"
+#include "task/timer_service.h"
 #include "utils/factory_store.h"
 #include "utils/join_point.h"
 #include "utils/logging_provider.h" // IWYU pragma: keep

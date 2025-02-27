@@ -53,10 +53,10 @@
 #include "http/http_client.h"
 #include "perf_counter/perf_counter_utils.h"
 #include "remote_cmd/remote_command.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "tools/mutation_log_tool.h"
 #include "utils/fmt_utils.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"
@@ -89,16 +89,23 @@
 
 #define SHELL_PRINTLN_OK(msg, ...) SHELL_PRINT_OK_BASE("{}\n", fmt::format(msg, ##__VA_ARGS__))
 
-using namespace dsn::replication;
+// Print messages to stderr and return false if `exp` is evaluated to false.
+#define SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(exp, ...)                                              \
+    do {                                                                                           \
+        if (dsn_unlikely(!(exp))) {                                                                \
+            SHELL_PRINTLN_ERROR(__VA_ARGS__);                                                      \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
+
+#define RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID()                                               \
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(dsn::buf2uint32(optarg, sample_interval_ms),               \
+                                        "parse sample_interval_ms({}) failed",                     \
+                                        optarg);                                                   \
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(sample_interval_ms > 0, "sample_interval_ms should be > 0")
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DEFINE_TASK_CODE(LPC_GET_METRICS, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-
-#define RETURN_FALSE_IF_SAMPLE_INTERVAL_MS_INVALID()                                               \
-    PRINT_AND_RETURN_FALSE_IF_NOT(dsn::buf2uint32(optarg, sample_interval_ms),                     \
-                                  "parse sample_interval_ms({}) failed\n",                         \
-                                  optarg);                                                         \
-    PRINT_AND_RETURN_FALSE_IF_NOT(sample_interval_ms > 0, "sample_interval_ms should be > 0\n")
 
 enum scan_data_operator
 {
@@ -286,7 +293,7 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
         if (value.length() < filter_pattern.length())
             return false;
         if (filter_type == pegasus::pegasus_client::FT_MATCH_ANYWHERE) {
-            return absl::string_view(value).find(filter_pattern) != absl::string_view::npos;
+            return std::string_view(value).find(filter_pattern) != std::string_view::npos;
         } else if (filter_type == pegasus::pegasus_client::FT_MATCH_PREFIX) {
             return dsn::utils::mequals(
                 value.data(), filter_pattern.data(), filter_pattern.length());
@@ -709,30 +716,67 @@ inline std::vector<dsn::http_result> get_metrics(const std::vector<node_desc> &n
     return results;
 }
 
+// Adapt the result returned by `get_metrics` into the structure that could be processed by
+// `remote_command`.
+template <typename... Args>
+inline dsn::error_s process_get_metrics_result(const dsn::http_result &result,
+                                               const node_desc &node,
+                                               const char *what,
+                                               Args &&...args)
+{
+    if (dsn_unlikely(!result.error())) {
+        return FMT_ERR(result.error().code(),
+                       "ERROR: query {} metrics from node {} failed, msg={}",
+                       fmt::format(what, std::forward<Args>(args)...),
+                       node.hp,
+                       result.error());
+    }
+
+    if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {
+        return FMT_ERR(dsn::ERR_HTTP_ERROR,
+                       "ERROR: query {} metrics from node {} failed, http_status={}, msg={}",
+                       fmt::format(what, std::forward<Args>(args)...),
+                       node.hp,
+                       dsn::get_http_status_message(result.status()),
+                       result.body());
+    }
+
+    return dsn::error_s::ok();
+}
+
 #define RETURN_SHELL_IF_GET_METRICS_FAILED(result, node, what, ...)                                \
     do {                                                                                           \
-        if (dsn_unlikely(!result.error())) {                                                       \
-            std::cout << "ERROR: send http request to query " << fmt::format(what, ##__VA_ARGS__)  \
-                      << " metrics from node " << node.hp << " failed: " << result.error()         \
-                      << std::endl;                                                                \
-            return true;                                                                           \
-        }                                                                                          \
-        if (dsn_unlikely(result.status() != dsn::http_status_code::kOk)) {                         \
-            std::cout << "ERROR: send http request to query " << what << " metrics from node "     \
-                      << node.hp << " failed: " << dsn::get_http_status_message(result.status())   \
-                      << std::endl                                                                 \
-                      << result.body() << std::endl;                                               \
+        const auto &res = process_get_metrics_result(result, node, what, ##__VA_ARGS__);           \
+        if (dsn_unlikely(!res)) {                                                                  \
+            fmt::println(res.description());                                                       \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
 
+// Adapt the result of some parsing operations on the metrics returned by `get_metrics` into the
+// structure that could be processed by `remote_command`.
+template <typename... Args>
+inline dsn::error_s process_parse_metrics_result(const dsn::error_s &result,
+                                                 const node_desc &node,
+                                                 const char *what,
+                                                 Args &&...args)
+{
+    if (dsn_unlikely(!result)) {
+        return FMT_ERR(result.code(),
+                       "ERROR: {} metrics response from node {} failed, msg={}",
+                       fmt::format(what, std::forward<Args>(args)...),
+                       node.hp,
+                       result);
+    }
+
+    return dsn::error_s::ok();
+}
+
 #define RETURN_SHELL_IF_PARSE_METRICS_FAILED(expr, node, what, ...)                                \
     do {                                                                                           \
-        const auto &res = (expr);                                                                  \
+        const auto &res = process_parse_metrics_result(expr, node, what, ##__VA_ARGS__);           \
         if (dsn_unlikely(!res)) {                                                                  \
-            std::cout << "ERROR: parse " << fmt::format(what, ##__VA_ARGS__)                       \
-                      << " metrics response from node " << node.hp << " failed: " << res           \
-                      << std::endl;                                                                \
+            fmt::println(res.description());                                                       \
             return true;                                                                           \
         }                                                                                          \
     } while (0)
@@ -832,11 +876,19 @@ public:
     }
 
     // Create the aggregations as needed.
+    DEF_CALC_CREATOR(assignments)
     DEF_CALC_CREATOR(sums)
     DEF_CALC_CREATOR(increases)
     DEF_CALC_CREATOR(rates)
 
 #undef DEF_CALC_CREATOR
+
+#define CALC_ASSIGNMENT_STATS(entities)                                                            \
+    do {                                                                                           \
+        if (_assignments) {                                                                        \
+            RETURN_NOT_OK(_assignments->assign(entities));                                         \
+        }                                                                                          \
+    } while (0)
 
 #define CALC_ACCUM_STATS(entities)                                                                 \
     do {                                                                                           \
@@ -845,24 +897,38 @@ public:
         }                                                                                          \
     } while (0)
 
-    // Perform the chosen accum aggregations on the fetched metrics.
+    // Perform the chosen aggregations (both assignment and accum) on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string)
     {
         DESERIALIZE_METRIC_QUERY_BRIEF_SNAPSHOT(value, json_string, query_snapshot);
 
+        return aggregate_metrics(query_snapshot);
+    }
+
+    dsn::error_s aggregate_metrics(const dsn::metric_query_brief_value_snapshot &query_snapshot)
+    {
+        CALC_ASSIGNMENT_STATS(query_snapshot.entities);
         CALC_ACCUM_STATS(query_snapshot.entities);
 
         return dsn::error_s::ok();
     }
 
-    // Perform all of the chosen aggregations (both accum and delta) on the fetched metrics.
+    // Perform the chosen aggregations (assignement, accum, delta and rate) on the fetched metrics.
     dsn::error_s aggregate_metrics(const std::string &json_string_start,
                                    const std::string &json_string_end)
     {
         DESERIALIZE_METRIC_QUERY_BRIEF_2_SAMPLES(
             json_string_start, json_string_end, query_snapshot_start, query_snapshot_end);
 
-        // Apply ending sample to the accum aggregations.
+        return aggregate_metrics(query_snapshot_start, query_snapshot_end);
+    }
+
+    dsn::error_s
+    aggregate_metrics(const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
+                      const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
+    {
+        // Apply ending sample to the assignment and accum aggregations.
+        CALC_ASSIGNMENT_STATS(query_snapshot_end.entities);
         CALC_ACCUM_STATS(query_snapshot_end.entities);
 
         const std::array deltas_list = {&_increases, &_rates};
@@ -884,9 +950,12 @@ public:
 
 #undef CALC_ACCUM_STATS
 
+#undef CALC_ASSIGNMENT_STATS
+
 private:
     DISALLOW_COPY_AND_ASSIGN(aggregate_stats_calcs);
 
+    std::unique_ptr<aggregate_stats> _assignments;
     std::unique_ptr<aggregate_stats> _sums;
     std::unique_ptr<aggregate_stats> _increases;
     std::unique_ptr<aggregate_stats> _rates;
@@ -918,15 +987,15 @@ private:
         const auto param = cmd(param_index++).str();                                               \
         ::dsn::utils::split_args(param.c_str(), container, ',');                                   \
         if (container.empty()) {                                                                   \
-            fmt::print(stderr,                                                                     \
-                       "invalid command, '{}' should be in the form of 'val1,val2,val3' and "      \
-                       "should not be empty\n",                                                    \
-                       param);                                                                     \
+            SHELL_PRINTLN_ERROR(                                                                   \
+                "invalid command, '{}' should be in the form of 'val1,val2,val3' and "             \
+                "should not be empty",                                                             \
+                param);                                                                            \
             return false;                                                                          \
         }                                                                                          \
         std::set<std::string> str_set(container.begin(), container.end());                         \
         if (str_set.size() != container.size()) {                                                  \
-            fmt::print(stderr, "invalid command, '{}' has duplicate values\n", param);             \
+            SHELL_PRINTLN_ERROR("invalid command, '{}' has duplicate values", param);              \
             return false;                                                                          \
         }                                                                                          \
     } while (false)
@@ -943,7 +1012,7 @@ private:
     do {                                                                                           \
         const auto param = cmd(param_index++).str();                                               \
         if (!::dsn::buf2uint32(param, value)) {                                                    \
-            fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", param);    \
+            SHELL_PRINTLN_ERROR("invalid command, '{}' should be an unsigned integer", param);     \
             return false;                                                                          \
         }                                                                                          \
     } while (false)
@@ -957,7 +1026,7 @@ private:
     do {                                                                                           \
         const auto param = cmd(__VA_ARGS__, (def_val)).str();                                      \
         if (!::dsn::buf2uint32(param, value)) {                                                    \
-            fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", param);    \
+            SHELL_PRINTLN_ERROR("invalid command, '{}' should be an unsigned integer", param);     \
             return false;                                                                          \
         }                                                                                          \
     } while (false)
@@ -972,10 +1041,24 @@ private:
         for (const auto &str : strs) {                                                             \
             uint32_t v;                                                                            \
             if (!::dsn::buf2uint32(str, v)) {                                                      \
-                fmt::print(stderr, "invalid command, '{}' should be an unsigned integer\n", str);  \
+                SHELL_PRINTLN_ERROR("invalid command, '{}' should be an unsigned integer", str);   \
                 return false;                                                                      \
             }                                                                                      \
             container.insert(v);                                                                   \
+        }                                                                                          \
+    } while (false)
+
+// Parse enum value from the parameters of command line.
+#define PARSE_OPT_ENUM(enum_val, invalid_val, ...)                                                 \
+    do {                                                                                           \
+        const std::string __str(cmd(__VA_ARGS__, "").str());                                       \
+        if (!__str.empty()) {                                                                      \
+            const auto &__val = enum_from_string(__str.c_str(), invalid_val);                      \
+            if (__val == invalid_val) {                                                            \
+                SHELL_PRINTLN_ERROR("invalid enum: '{}'", __str);                                  \
+                return false;                                                                      \
+            }                                                                                      \
+            enum_val = __val;                                                                      \
         }                                                                                          \
     } while (false)
 
@@ -1776,11 +1859,12 @@ inline bool get_apps_and_nodes(shell_context *sc,
                                std::vector<::dsn::app_info> &apps,
                                std::vector<node_desc> &nodes)
 {
-    dsn::error_code err = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
-    if (err != dsn::ERR_OK) {
-        LOG_ERROR("list apps failed, error = {}", err);
+    const auto &result = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
+    if (!result) {
+        LOG_ERROR("list apps failed, error={}", result);
         return false;
     }
+
     if (!fill_nodes(sc, "replica-server", nodes)) {
         LOG_ERROR("get replica server node list failed");
         return false;
@@ -1940,7 +2024,7 @@ get_table_stats(shell_context *sc, uint32_t sample_interval_ms, std::vector<row_
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
-            "row data requests");
+            "aggregate row data requests");
     }
 
     return true;
@@ -1990,7 +2074,7 @@ inline bool get_partition_stats(shell_context *sc,
         RETURN_SHELL_IF_PARSE_METRICS_FAILED(
             calcs->aggregate_metrics(results_start[i].body(), results_end[i].body()),
             nodes[i],
-            "row data requests for table(id={})",
+            "aggregate row data requests for table(id={})",
             table_id);
     }
 

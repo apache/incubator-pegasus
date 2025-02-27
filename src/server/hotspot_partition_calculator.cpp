@@ -21,13 +21,13 @@
 #include <fmt/core.h>
 #include <algorithm>
 #include <cmath>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "client/replication_ddl_client.h"
 #include "common/gpid.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
 #include "perf_counter/perf_counter.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "server/hotspot_partition_stat.h"
 #include "shell/command_executor.h"
 #include "utils/error_code.h"
@@ -212,7 +212,7 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
     const dsn::replication::hotkey_type::type hotkey_type,
     const dsn::replication::detect_action::type action)
 {
-    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](std::string_view) {});
 
     int app_id = -1;
     int partition_count = -1;

@@ -34,15 +34,17 @@
 #include <vector>
 
 #include "blob.h"
+#include "utils/ports.h"
 
 namespace dsn {
 
 class binary_writer
 {
 public:
-    binary_writer(int reserved_buffer_size = 0);
-    binary_writer(blob &buffer);
-    virtual ~binary_writer();
+    binary_writer();
+    explicit binary_writer(int reserved_buffer_size);
+    explicit binary_writer(blob &buffer);
+    virtual ~binary_writer() = default;
 
     virtual void flush();
 
@@ -95,7 +97,10 @@ private:
 
     int _total_size;
     int _reserved_size_per_buffer;
-    static int _reserved_size_per_buffer_static;
+    static const int kReservedSizePerBuffer;
+
+    DISALLOW_COPY_AND_ASSIGN(binary_writer);
+    DISALLOW_MOVE_AND_ASSIGN(binary_writer);
 };
 
 //--------------- inline implementation -------------------

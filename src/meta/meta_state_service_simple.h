@@ -36,12 +36,12 @@
 #include <vector>
 
 #include "meta/meta_state_service.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/future_types.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_spec.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/serialization.h"
+#include "task/future_types.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_spec.h"
+#include "task/task_tracker.h"
 #include "utils/binary_writer.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
@@ -123,7 +123,7 @@ private:
     {
         bool done;
         std::function<void(bool)> cb;
-        operation(bool done, std::function<void(bool)> &&cb) : done(done), cb(move(cb)) {}
+        operation(bool done, std::function<void(bool)> &&cb) : done(done), cb(std::move(cb)) {}
     };
 
 #pragma pack(push, 1)

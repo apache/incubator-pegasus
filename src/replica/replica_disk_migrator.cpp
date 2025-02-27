@@ -20,7 +20,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <fmt/core.h>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
@@ -30,7 +30,7 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_disk_migrator.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
@@ -164,7 +164,7 @@ void replica_disk_migrator::migrate_replica(const replica_disk_migrate_request &
 // THREAD_POOL_REPLICATION_LONG
 bool replica_disk_migrator::init_target_dir(const replica_disk_migrate_request &req)
 {
-    FAIL_POINT_INJECT_F("init_target_dir", [this](absl::string_view) -> bool {
+    FAIL_POINT_INJECT_F("init_target_dir", [this](std::string_view) -> bool {
         reset_status();
         return false;
     });
@@ -210,7 +210,7 @@ bool replica_disk_migrator::init_target_dir(const replica_disk_migrate_request &
 // THREAD_POOL_REPLICATION_LONG
 bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrate_request &req)
 {
-    FAIL_POINT_INJECT_F("migrate_replica_checkpoint", [this](absl::string_view) -> bool {
+    FAIL_POINT_INJECT_F("migrate_replica_checkpoint", [this](std::string_view) -> bool {
         reset_status();
         return false;
     });
@@ -246,7 +246,7 @@ bool replica_disk_migrator::migrate_replica_checkpoint(const replica_disk_migrat
 // THREAD_POOL_REPLICATION_LONG
 bool replica_disk_migrator::migrate_replica_app_info(const replica_disk_migrate_request &req)
 {
-    FAIL_POINT_INJECT_F("migrate_replica_app_info", [this](absl::string_view) -> bool {
+    FAIL_POINT_INJECT_F("migrate_replica_app_info", [this](std::string_view) -> bool {
         reset_status();
         return false;
     });

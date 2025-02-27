@@ -30,7 +30,7 @@
 #include "meta/app_balance_policy.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/fail_point.h"
 
 namespace dsn {

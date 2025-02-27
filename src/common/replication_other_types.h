@@ -36,8 +36,8 @@
 #include "consensus_types.h"
 #include "replica_admin_types.h"
 #include "common/replication_enums.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 
 namespace dsn {
 namespace replication {

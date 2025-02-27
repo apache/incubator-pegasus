@@ -30,14 +30,15 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
+#include "gutil/map_util.h"
 #include "meta/cluster_balance_policy.h"
 #include "meta/load_balance_policy.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/defer.h"
 #include "utils/fail_point.h"
 
@@ -186,9 +187,10 @@ TEST(cluster_balance_policy, get_node_migration_info)
     policy.get_node_migration_info(ns, all_apps, migration_info);
 
     ASSERT_EQ(migration_info.hp, hp);
-    ASSERT_NE(migration_info.partitions.find(disk_tag), migration_info.partitions.end());
-    ASSERT_EQ(migration_info.partitions.at(disk_tag).size(), 1);
-    ASSERT_EQ(*migration_info.partitions.at(disk_tag).begin(), pid);
+    const auto *ps = gutil::FindOrNull(migration_info.partitions, disk_tag);
+    ASSERT_NE(ps, nullptr);
+    ASSERT_EQ(1, ps->size());
+    ASSERT_EQ(pid, *ps->begin());
 }
 
 TEST(cluster_balance_policy, get_min_max_set)

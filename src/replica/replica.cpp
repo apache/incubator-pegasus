@@ -26,7 +26,7 @@
 
 #include "replica.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <functional>
@@ -51,7 +51,7 @@
 #include "replica_admin_types.h"
 #include "replica_disk_migrator.h"
 #include "replica_stub.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 #include "security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include "utils/filesystem.h"

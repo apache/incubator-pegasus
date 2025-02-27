@@ -18,11 +18,11 @@
 #include <fmt/core.h>
 #include <functional>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
 #include "block_service/block_service_manager.h"
 #include "common/bulk_load_common.h"
 #include "common/gpid.h"
@@ -36,11 +36,11 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_bulk_loader.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/async_calls.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_host_port.h"
+#include "task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/env.h"
@@ -487,7 +487,7 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
                                          const std::string &remote_dir,
                                          const std::string &local_dir)
 {
-    FAIL_POINT_INJECT_F("replica_bulk_loader_download_files", [](absl::string_view) {});
+    FAIL_POINT_INJECT_F("replica_bulk_loader_download_files", [](std::string_view) {});
 
     LOG_INFO_PREFIX("start to download files");
     dist::block_service::block_filesystem *fs =

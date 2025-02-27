@@ -35,7 +35,7 @@
 
 #include "common.h"
 #include "meta_admin_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 #include "utils/fmt_utils.h"
 #include "utils/singleton.h"
@@ -43,6 +43,7 @@
 
 namespace dsn {
 class aio_task;
+
 class message_ex;
 class rpc_request_task;
 class rpc_response_task;

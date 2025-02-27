@@ -122,19 +122,20 @@ public class ReplicaSession {
     VolatileFields cache = fields;
     if (cache.state == ConnState.CONNECTED) {
       write(entry, cache);
-    } else {
-      synchronized (pendingSend) {
-        cache = fields;
-        if (cache.state == ConnState.CONNECTED) {
-          write(entry, cache);
-        } else {
-          if (!pendingSend.offer(entry)) {
-            logger.warn("pendingSend queue is full, drop the request");
-          }
+      return;
+    }
+
+    synchronized (pendingSend) {
+      cache = fields;
+      if (cache.state == ConnState.CONNECTED) {
+        write(entry, cache);
+      } else {
+        if (!pendingSend.offer(entry)) {
+          logger.warn("pendingSend queue is full for session {}, drop the request", name());
         }
       }
-      tryConnect();
     }
+    tryConnect();
   }
 
   public void closeSession() {
@@ -145,9 +146,9 @@ public class ReplicaSession {
         // but the connection may not be completely closed then, that is,
         // the state may not be marked as DISCONNECTED immediately.
         f.nettyChannel.close().sync();
-        logger.info("channel to {} closed", address.toString());
+        logger.info("channel to {} closed", name());
       } catch (Exception ex) {
-        logger.warn("close channel {} failed: ", address.toString(), ex);
+        logger.warn("close channel {} failed: ", name(), ex);
       }
     } else if (f.state == ConnState.CONNECTING) { // f.nettyChannel == null
       // If our actively-close strategy fails to reconnect the session due to
@@ -189,9 +190,7 @@ public class ReplicaSession {
     boolean needConnect = false;
     synchronized (pendingSend) {
       if (fields.state == ConnState.DISCONNECTED) {
-        VolatileFields cache = new VolatileFields();
-        cache.state = ConnState.CONNECTING;
-        fields = cache;
+        fields = new VolatileFields(ConnState.CONNECTING);
         needConnect = true;
       }
     }
@@ -221,79 +220,96 @@ public class ReplicaSession {
                 }
               });
     } catch (UnknownHostException ex) {
-      logger.error("invalid address: {}", address.toString());
+      logger.error("invalid address: {}", name());
       assert false;
       return null; // unreachable
     }
   }
 
   private void markSessionConnected(Channel activeChannel) {
-    VolatileFields newCache = new VolatileFields();
-    newCache.state = ConnState.CONNECTED;
-    newCache.nettyChannel = activeChannel;
+    VolatileFields newCache = new VolatileFields(ConnState.CONNECTED, activeChannel);
 
+    // Note that actions in interceptor such as Negotiation might send request by
+    // ReplicaSession#asyncSend(), inside which ReplicaSession#tryConnect() would
+    // also be called since current state of this session is still CONNECTING.
+    // However, it would never create another connection, thus it is safe to do
+    // `fields = newCache` at the end.
     interceptorManager.onConnected(this);
 
     synchronized (pendingSend) {
       if (fields.state != ConnState.CONNECTING) {
-        // this session may have been closed or connected already
+        // This session may have been closed or connected already.
         logger.info("{}: session is {}, skip to mark it connected", name(), fields.state);
         return;
       }
 
-      while (!pendingSend.isEmpty()) {
-        RequestEntry e = pendingSend.poll();
-        if (pendingResponse.get(e.sequenceId) != null) {
-          write(e, newCache);
-        } else {
-          logger.info("{}: {} is removed from pending, perhaps timeout", name(), e.sequenceId);
-        }
-      }
+      // Once the authentication is enabled, any request except Negotiation such as
+      // query_cfg_operator for meta would be cached in authPendingSend and sent after
+      // Negotiation is successful. Negotiation would be performed first before any other
+      // request for the reason that AuthProtocol#isAuthRequest() would return true for
+      // negotiation_operator.
+      sendPendingRequests(pendingSend, newCache);
       fields = newCache;
     }
   }
 
   void markSessionDisconnect() {
     VolatileFields cache = fields;
+    if (cache.state == ConnState.DISCONNECTED) {
+      logger.warn("{}: session is closed already", name());
+      resetAuth();
+      return;
+    }
+
     synchronized (pendingSend) {
-      if (cache.state != ConnState.DISCONNECTED) {
-        // NOTICE:
-        // 1. when a connection is reset, the timeout response
-        // is not answered in the order they query
-        // 2. It's likely that when the session is disconnecting
-        // but the caller of the api query/asyncQuery didn't notice
-        // this. In this case, we are relying on the timeout task.
-        try {
-          while (!pendingSend.isEmpty()) {
-            RequestEntry e = pendingSend.poll();
-            tryNotifyFailureWithSeqID(
-                e.sequenceId, error_code.error_types.ERR_SESSION_RESET, false);
-          }
-          List<RequestEntry> l = new LinkedList<RequestEntry>();
-          for (Map.Entry<Integer, RequestEntry> entry : pendingResponse.entrySet()) {
-            l.add(entry.getValue());
-          }
-          for (RequestEntry e : l) {
-            tryNotifyFailureWithSeqID(
-                e.sequenceId, error_code.error_types.ERR_SESSION_RESET, false);
-          }
-        } catch (Exception e) {
-          logger.error(
-              "failed to notify callers due to unexpected exception [state={}]: ",
-              cache.state.toString(),
-              e);
-        } finally {
-          logger.info("{}: mark the session to be disconnected from state={}", name(), cache.state);
-          // ensure the state must be set DISCONNECTED
-          cache = new VolatileFields();
-          cache.state = ConnState.DISCONNECTED;
-          cache.nettyChannel = null;
-          fields = cache;
+      // NOTICE:
+      // 1. when a connection is reset, the timeout response
+      // is not answered in the order they query
+      // 2. It's likely that when the session is disconnecting
+      // but the caller of the api query/asyncQuery didn't notice
+      // this. In this case, we are relying on the timeout task.
+      try {
+        while (!pendingSend.isEmpty()) {
+          RequestEntry entry = pendingSend.poll();
+          tryNotifyFailureWithSeqID(
+              entry.sequenceId, error_code.error_types.ERR_SESSION_RESET, false);
         }
-      } else {
-        logger.warn("{}: session is closed already", name());
+        List<RequestEntry> pendingEntries = new LinkedList<>();
+        for (Map.Entry<Integer, RequestEntry> entry : pendingResponse.entrySet()) {
+          pendingEntries.add(entry.getValue());
+        }
+        for (RequestEntry entry : pendingEntries) {
+          tryNotifyFailureWithSeqID(
+              entry.sequenceId, error_code.error_types.ERR_SESSION_RESET, false);
+        }
+      } catch (Exception ex) {
+        logger.error(
+            "{}: failed to notify callers due to unexpected exception [state={}]: ",
+            name(),
+            cache.state.toString(),
+            ex);
+      } finally {
+        logger.info("{}: mark the session to be disconnected from state={}", name(), cache.state);
+        fields = new VolatileFields(ConnState.DISCONNECTED);
       }
     }
+
+    // Reset the authentication once the connection is closed.
+    resetAuth();
+  }
+
+  // After the authentication is reset, a new Negotiation would be launched.
+  private void resetAuth() {
+    int pendingSize;
+    synchronized (authPendingSend) {
+      authSucceed = false;
+      pendingSize = authPendingSend.size();
+    }
+
+    logger.info(
+        "authentication is reset for session {}, with still {} request entries pending",
+        name(),
+        pendingSize);
   }
 
   // Notify the RPC sender if failure occurred.
@@ -342,6 +358,7 @@ public class ReplicaSession {
   }
 
   private void write(final RequestEntry entry, VolatileFields cache) {
+    // Under some circumstances requests are not allowed to be sent or delayed.
     if (!interceptorManager.onSendMessage(this, entry)) {
       return;
     }
@@ -378,8 +395,8 @@ public class ReplicaSession {
           public void run() {
             try {
               tryNotifyFailureWithSeqID(seqID, error_code.error_types.ERR_TIMEOUT, true);
-            } catch (Exception e) {
-              logger.warn("try notify with sequenceID {} exception!", seqID, e);
+            } catch (Exception ex) {
+              logger.warn("{}: try notify with sequenceID {} exception!", name(), seqID, ex);
             }
           }
         },
@@ -388,43 +405,52 @@ public class ReplicaSession {
   }
 
   public void onAuthSucceed() {
-    Queue<RequestEntry> swappedPendingSend = new LinkedList<>();
+    Queue<RequestEntry> swappedPendingSend;
     synchronized (authPendingSend) {
       authSucceed = true;
-      swappedPendingSend.addAll(authPendingSend);
+      swappedPendingSend = new LinkedList<>(authPendingSend);
       authPendingSend.clear();
     }
 
-    while (!swappedPendingSend.isEmpty()) {
-      RequestEntry e = swappedPendingSend.poll();
-      if (pendingResponse.get(e.sequenceId) != null) {
-        write(e, fields);
+    logger.info(
+        "authentication is successful for session {}, then {} pending request entries would be sent",
+        name(),
+        swappedPendingSend.size());
+
+    sendPendingRequests(swappedPendingSend, fields);
+  }
+
+  private void sendPendingRequests(Queue<RequestEntry> pendingEntries, VolatileFields cache) {
+    while (!pendingEntries.isEmpty()) {
+      RequestEntry entry = pendingEntries.poll();
+      if (pendingResponse.get(entry.sequenceId) != null) {
+        write(entry, cache);
       } else {
-        logger.info("{}: {} is removed from pending, perhaps timeout", name(), e.sequenceId);
+        logger.info("{}: {} is removed from pending, perhaps timeout", name(), entry.sequenceId);
       }
     }
   }
 
-  // return value:
+  // Return value:
   //   true  - pend succeed
   //   false - pend failed
   public boolean tryPendRequest(RequestEntry entry) {
-    // double check. the first one doesn't lock the lock.
-    // Because authSucceed only transfered from false to true.
-    // So if it is true now, it will not change in the later.
-    // But if it is false now, maybe it will change soon. So we should use lock to protect it.
-    if (!this.authSucceed) {
-      synchronized (authPendingSend) {
-        if (!this.authSucceed) {
-          if (!authPendingSend.offer(entry)) {
-            logger.warn("{}: pend request {} failed", name(), entry.sequenceId);
-          }
-          return true;
-        }
+    // Double check.
+    if (this.authSucceed) {
+      return false;
+    }
+
+    synchronized (authPendingSend) {
+      if (this.authSucceed) {
+        return false;
+      }
+
+      if (!authPendingSend.offer(entry)) {
+        logger.warn("{}: pend request {} failed", name(), entry.sequenceId);
       }
     }
 
-    return false;
+    return true;
   }
 
   final class DefaultHandler extends SimpleChannelInboundHandler<RequestEntry> {
@@ -463,9 +489,19 @@ public class ReplicaSession {
     }
   }
 
-  // for test
+  // Only for test.
   ConnState getState() {
     return fields.state;
+  }
+
+  interface AuthPendingChecker {
+    void onCheck(Queue<RequestEntry> realAuthPendingSend);
+  }
+
+  void checkAuthPending(AuthPendingChecker checker) {
+    synchronized (authPendingSend) {
+      checker.onCheck(authPendingSend);
+    }
   }
 
   interface MessageResponseFilter {
@@ -474,27 +510,35 @@ public class ReplicaSession {
 
   MessageResponseFilter filter = null;
 
-  final ConcurrentHashMap<Integer, RequestEntry> pendingResponse =
-      new ConcurrentHashMap<Integer, RequestEntry>();
+  final ConcurrentHashMap<Integer, RequestEntry> pendingResponse = new ConcurrentHashMap<>();
   private final AtomicInteger seqId = new AtomicInteger(0);
 
-  final Queue<RequestEntry> pendingSend = new LinkedList<RequestEntry>();
+  final Queue<RequestEntry> pendingSend = new LinkedList<>();
 
   static final class VolatileFields {
-    public ConnState state = ConnState.DISCONNECTED;
-    public Channel nettyChannel = null;
+    public VolatileFields(ConnState state, Channel nettyChannel) {
+      this.state = state;
+      this.nettyChannel = nettyChannel;
+    }
+
+    public VolatileFields(ConnState state) {
+      this(state, null);
+    }
+
+    public ConnState state;
+    public Channel nettyChannel;
   }
 
-  volatile VolatileFields fields = new VolatileFields();
+  volatile VolatileFields fields = new VolatileFields(ConnState.DISCONNECTED);
 
   private final rpc_address address;
-  private Bootstrap boot;
-  private EventLoopGroup timeoutTaskGroup;
-  private ReplicaSessionInterceptorManager interceptorManager;
+  private final Bootstrap boot;
+  private final EventLoopGroup timeoutTaskGroup;
+  private final ReplicaSessionInterceptorManager interceptorManager;
   private volatile boolean authSucceed;
-  final Queue<RequestEntry> authPendingSend = new LinkedList<>();
+  private final Queue<RequestEntry> authPendingSend = new LinkedList<>();
 
-  // Session will be actively closed if all the rpcs across `sessionResetTimeWindowMs`
+  // Session will be actively closed if all the RPCs across `sessionResetTimeWindowMs`
   // are timed out, in that case we suspect that the server is unavailable.
 
   // Timestamp of the first timed out rpc.

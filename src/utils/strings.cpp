@@ -25,14 +25,16 @@
  */
 
 #include <absl/strings/ascii.h>
+#include <boost/algorithm/string/predicate.hpp>
 #include <openssl/md5.h>
-#include <stdio.h>
 #include <strings.h>
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <sstream> // IWYU pragma: keep
 #include <utility>
 
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
@@ -112,6 +114,50 @@ bool mequals(const void *lhs, const void *rhs, size_t n)
 }
 
 #undef CHECK_NULL_PTR
+
+error_s pattern_match(const std::string &str,
+                      const std::string &pattern,
+                      pattern_match_type::type match_type)
+{
+    bool matched = false;
+    switch (match_type) {
+    case pattern_match_type::PMT_MATCH_ALL:
+        // Everything is matched.
+        matched = true;
+        break;
+
+    case pattern_match_type::PMT_MATCH_EXACT:
+        matched = str == pattern;
+        break;
+
+    case pattern_match_type::PMT_MATCH_ANYWHERE:
+        matched = boost::algorithm::contains(str, pattern);
+        break;
+
+    case pattern_match_type::PMT_MATCH_PREFIX:
+        matched = boost::algorithm::starts_with(str, pattern);
+        break;
+
+    case pattern_match_type::PMT_MATCH_POSTFIX:
+        matched = boost::algorithm::ends_with(str, pattern);
+        break;
+
+    // TODO(wangdan): PMT_MATCH_REGEX would be supported soon.
+    case pattern_match_type::PMT_MATCH_REGEX:
+
+    default:
+        return FMT_ERR(ERR_NOT_IMPLEMENTED,
+                       "match_type is not supported: val={}, str={}",
+                       static_cast<int>(match_type),
+                       enum_to_string(match_type));
+    }
+
+    if (!matched) {
+        return error_s::make(ERR_NOT_MATCHED);
+    }
+
+    return error_s::ok();
+}
 
 std::string get_last_component(const std::string &input, const char splitters[])
 {

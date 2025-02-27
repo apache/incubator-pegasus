@@ -34,7 +34,7 @@
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "replica/backup/cold_backup_context.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 
 DSN_DECLARE_int32(log_private_file_size_mb);
 
@@ -78,7 +78,11 @@ public:
         return ERR_OK;
     }
     int on_request(message_ex *request) override WARN_UNUSED_RESULT { return 0; }
-    std::string query_compact_state() const { return ""; };
+    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) override
+    {
+        return rocksdb::Status::kOk;
+    }
+    [[nodiscard]] std::string query_compact_state() const override { return ""; };
 
     // we mock the followings
     void update_app_envs(const std::map<std::string, std::string> &envs) override { _envs = envs; }

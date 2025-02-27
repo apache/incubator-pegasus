@@ -28,8 +28,8 @@
 #pragma GCC diagnostic pop
 
 #include "replica_access_controller.h"
-#include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/network.h"
+#include "rpc/rpc_message.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/flags.h"

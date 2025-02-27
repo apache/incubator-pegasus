@@ -46,7 +46,7 @@
 #include "meta/table_metrics.h"
 #include "meta_admin_types.h"
 #include "meta_data.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/command_manager.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

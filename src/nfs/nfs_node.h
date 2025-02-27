@@ -32,19 +32,21 @@
 
 #include "aio/aio_task.h"
 #include "common/gpid.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_task.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/error_code.h"
 
 namespace dsn {
 class task_tracker;
+
 namespace service {
 class copy_request;
 class copy_response;
 class get_file_size_request;
 class get_file_size_response;
 } // namespace service
+
 template <typename TResponse>
 class rpc_replier;
 

@@ -32,7 +32,7 @@
 #include "load_balance_policy.h"
 #include "meta/meta_data.h"
 #include "metadata_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 
 namespace dsn {
 namespace replication {
@@ -54,6 +54,7 @@ public:
 
 private:
     struct app_disk_info;
+
     struct app_migration_info;
     struct cluster_migration_info;
     struct move_info;

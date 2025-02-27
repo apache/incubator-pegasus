@@ -24,14 +24,15 @@
  * THE SOFTWARE.
  */
 
-#include <absl/strings/string_view.h>
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <boost/lexical_cast.hpp>
 #include <algorithm> // for std::remove_if
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <ostream>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -57,11 +58,11 @@
 #include "partition_split_types.h"
 #include "ranger/ranger_resource_policy_manager.h"
 #include "remote_cmd/remote_command.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/task/async_calls.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_holder.h"
 #include "server_load_balancer.h"
 #include "server_state.h"
+#include "task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/command_manager.h"
 #include "utils/factory_store.h"
@@ -1038,6 +1039,20 @@ void meta_service::on_duplication_sync(duplication_sync_rpc rpc)
         server_state::sStateHash);
 }
 
+void meta_service::on_list_duplication_info(duplication_list_rpc rpc)
+{
+    if (!check_status_and_authz(rpc)) {
+        return;
+    }
+
+    if (!_dup_svc) {
+        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+        return;
+    }
+
+    _dup_svc->list_duplication_info(rpc.request(), rpc.response());
+}
+
 void meta_service::recover_duplication_from_meta_state()
 {
     if (_dup_svc) {
@@ -1056,6 +1071,8 @@ void meta_service::register_duplication_rpc_handlers()
                                          &meta_service::on_query_duplication_info);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_DUPLICATION_SYNC, "sync duplication", &meta_service::on_duplication_sync);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_LIST_DUPLICATION, "list_duplication_info", &meta_service::on_list_duplication_info);
 }
 
 void meta_service::initialize_duplication_service()

@@ -58,11 +58,10 @@ file(MAKE_DIRECTORY ${TP_OUTPUT}/include)
 file(MAKE_DIRECTORY ${TP_OUTPUT}/lib)
 
 ExternalProject_Add(boost
-        URL ${OSS_URL_PREFIX}/boost_1_69_0.tar.bz2
-        https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.bz2
-        URL_MD5 a1332494397bf48332cb152abfefcec2
-        CONFIGURE_COMMAND ./bootstrap.sh --prefix=. --with-libraries=system,filesystem --with-toolset=gcc
-        BUILD_COMMAND ./b2 toolset=gcc cxxflags=-fPIC cxxstd=11 install
+        URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
+        URL_MD5 30a657150d8e5cf431e1de4396a433d0
+        CONFIGURE_COMMAND ./bootstrap.sh --prefix=. --with-libraries=filesystem,system --with-toolset=gcc
+        BUILD_COMMAND ./b2 toolset=gcc link=static cxxflags=-fPIC cxxflags=--std=c++17 install
         INSTALL_COMMAND cp -R include/boost ${TP_OUTPUT}/include && cp -R lib ${TP_OUTPUT}/
         BUILD_IN_SOURCE 1
         DOWNLOAD_EXTRACT_TIMESTAMP true
@@ -120,17 +119,51 @@ ExternalProject_Add(gperftools
         DOWNLOAD_NO_PROGRESS true
 )
 
+ExternalProject_Add(abseil
+        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
+        https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
+        URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DABSL_FIND_GOOGLETEST=OFF
+        -DCMAKE_CXX_STANDARD=17
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
+ExternalProject_Add(protobuf
+        URL https://github.com/protocolbuffers/protobuf/archive/refs/tags/v27.0.tar.gz
+        URL_MD5 c96aaf02c8acea549d65bb7b2d549bf6
+        CMAKE_ARGS -DCMAKE_BUILD_TYPE=release
+        -Dprotobuf_BUILD_TESTS=OFF
+        -Dprotobuf_BUILD_PROTOC_BINARIES=ON
+        -Dprotobuf_BUILD_LIBUPB=ON
+        -Dprotobuf_ABSL_PROVIDER=package
+        -DBUILD_SHARED_LIBS=ON
+        -DBUILD_SHARED_HDFSPP=ON
+        -DHDFSPP_LIBRARY_ONLY=ON
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DCMAKE_CXX_STANDARD=17
+        -DABSL_ROOT_DIR=${TP_OUTPUT}
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        DEPENDS abseil
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
 set(HDFS_CLIENT_DIR "hadoop-hdfs-project/hadoop-hdfs-native-client")
 ExternalProject_Add(hadoop
-        URL ${OSS_URL_PREFIX}/hadoop-release-2.8.4.tar.gz
-        https://github.com/apache/hadoop/archive/refs/tags/rel/release-2.8.4.tar.gz
-        URL_MD5 a1be737d4bff14923689619ab6545a96
-        PATCH_COMMAND ""
+        URL https://mirrors.aliyun.com/apache/hadoop/common/hadoop-3.3.6/hadoop-3.3.6-src.tar.gz
+        URL_MD5 285c07d8ad2c837c8ee04a4fa49c73cd
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_hdfs_native_client.patch
         COMMAND cd ${HDFS_CLIENT_DIR} && mvn package -Pdist,native -DskipTests -Dmaven.javadoc.skip=true -Dtar
-        COMMAND cd ${HDFS_CLIENT_DIR} && cp -R target/hadoop-hdfs-native-client-2.8.4/include/. ${TP_OUTPUT}/include/hdfs && cp -R target/hadoop-hdfs-native-client-2.8.4/lib/native/. ${TP_OUTPUT}/lib
+        COMMAND cd ${HDFS_CLIENT_DIR} && cp -R target/hadoop-hdfs-native-client-3.3.6/include/. ${TP_OUTPUT}/include/hdfs && cp -R target/hadoop-hdfs-native-client-3.3.6/lib/native/. ${TP_OUTPUT}/lib
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND ""
+        DEPENDS protobuf
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
 )
@@ -152,7 +185,7 @@ ExternalProject_Add(thrift
         URL ${OSS_URL_PREFIX}/thrift-0.9.3.tar.gz
         http://archive.apache.org/dist/thrift/0.9.3/thrift-0.9.3.tar.gz
         URL_MD5 88d667a8ae870d5adeca8cb7d6795442
-        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_thrift_for_cpp11.patch
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_thrift_build_and_link_errors.patch
         CMAKE_ARGS -DCMAKE_BUILD_TYPE=release
         -DWITH_JAVA=OFF
         -DWITH_PYTHON=OFF
@@ -170,6 +203,9 @@ ExternalProject_Add(thrift
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DWITH_SHARED_LIB=OFF
         -DBOOST_ROOT=${TP_OUTPUT}
+        # The dependence boost library of thrift needs C++14 at least, but some standard
+        # functions (e.g. std::random_shuffle) are removed from C++17, so don't use C++17.
+        -DCMAKE_CXX_STANDARD=14
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         DEPENDS boost
@@ -303,18 +339,6 @@ ExternalProject_Add(nlohmann_json
         DOWNLOAD_NO_PROGRESS true
 )
 
-ExternalProject_Add(abseil
-        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
-        https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
-        URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DABSL_FIND_GOOGLETEST=OFF
-        -DCMAKE_CXX_STANDARD=17
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-        DOWNLOAD_NO_PROGRESS true
-)
-
 ExternalProject_Add(s2geometry
         URL ${OSS_URL_PREFIX}/s2geometry-0.10.0.tar.gz
         https://github.com/google/s2geometry/archive/refs/tags/v0.10.0.tar.gz
@@ -357,8 +381,7 @@ set(SNAPPY_OPTIONS
         -DSNAPPY_FUZZING_BUILD=OFF
         -DSNAPPY_INSTALL=ON)
 execute_process(COMMAND arch OUTPUT_VARIABLE ARCH_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
-message(STATUS "ARCH_NAME = ${ARCH_NAME}")
-if (ARCH_NAME EQUAL "x86_64")
+if (ARCH_NAME STREQUAL "x86_64")
     set(SNAPPY_OPTIONS
             ${SNAPPY_OPTIONS}
             -DSNAPPY_REQUIRE_AVX=ON
@@ -473,3 +496,19 @@ ExternalProject_Add(http-parser
         DOWNLOAD_NO_PROGRESS true
 )
 
+ExternalProject_Add(spdlog
+        URL https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz
+        URL_MD5 f2c3f15c20e67b261836ff7bfda302cf
+        PATCH_COMMAND ""
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DSPDLOG_ENABLE_PCH=ON
+        -DSPDLOG_BUILD_PIC=ON
+        -DSPDLOG_FMT_EXTERNAL=ON
+        -DSPDLOG_NO_EXCEPTIONS=ON
+        -Dfmt_DIR=${TP_OUTPUT}/lib/cmake/fmt
+        BUILD_COMMAND make -j${PARALLEL}
+        INSTALL_COMMAND make install
+        DEPENDS fmt
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)

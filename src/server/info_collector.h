@@ -29,10 +29,10 @@
 
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "rpc/rpc_host_port.h"
 #include "shell/command_helper.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/synchronize.h"
 
 struct shell_context;

@@ -20,7 +20,7 @@
 #include <string>
 
 #include "replica/replica_base.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/metrics.h"
 
 namespace dsn {

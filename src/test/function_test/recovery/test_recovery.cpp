@@ -32,7 +32,7 @@
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "test/function_test/utils/test_util.h"
 #include "utils/error_code.h"
 #include "utils/rand.h"
@@ -251,6 +251,8 @@ TEST_F(recovery_test, recovery)
         // then do recovery
         auto nodes = get_rpc_host_port_list({34801, 34802, 34803});
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->do_recovery(nodes, 30, false, false, std::string()));
+
+        ASSERT_NO_FATAL_FAILURE(wait_table_healthy(table_name_));
 
         // then wait the apps to ready
         ASSERT_EQ(dsn::ERR_OK,

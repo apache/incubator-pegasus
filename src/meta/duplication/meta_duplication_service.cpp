@@ -15,14 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
+#include <stddef.h>
 #include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <queue>
+#include <string_view>
 #include <type_traits>
 
-#include "absl/strings/string_view.h"
-#include "common//duplication_common.h"
+#include "common/duplication_common.h"
 #include "common/common.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
@@ -30,19 +33,20 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "duplication_types.h"
+#include "gutil/map_util.h"
 #include "meta/meta_service.h"
 #include "meta/meta_state_service_utils.h"
 #include "meta_admin_types.h"
 #include "meta_duplication_service.h"
 #include "metadata_types.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/group_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/group_host_port.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/api_utilities.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
@@ -53,6 +57,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
+#include "utils/strings.h"
 #include "utils/zlocks.h"
 
 DSN_DECLARE_bool(dup_ignore_other_cluster_ids);
@@ -69,18 +74,63 @@ void meta_duplication_service::query_duplication_info(const duplication_query_re
     LOG_INFO("query duplication info for app: {}", request.app_name);
 
     response.err = ERR_OK;
-    {
-        zauto_read_lock l(app_lock());
-        std::shared_ptr<app_state> app = _state->get_app(request.app_name);
-        if (!app || app->status != app_status::AS_AVAILABLE) {
-            response.err = ERR_APP_NOT_EXIST;
+
+    zauto_read_lock l(app_lock());
+
+    std::shared_ptr<app_state> app = _state->get_app(request.app_name);
+    if (!app || app->status != app_status::AS_AVAILABLE) {
+        response.err = ERR_APP_NOT_EXIST;
+        return;
+    }
+
+    response.appid = app->app_id;
+    for (const auto &[_, dup] : app->duplications) {
+        dup->append_as_entry(response.entry_list);
+    }
+}
+
+// ThreadPool(READ): THREAD_POOL_META_SERVER
+void meta_duplication_service::list_duplication_info(const duplication_list_request &request,
+                                                     duplication_list_response &response)
+{
+    LOG_INFO("list duplication info: app_name_pattern={}, match_type={}",
+             request.app_name_pattern,
+             enum_to_string(request.match_type));
+
+    response.err = ERR_OK;
+
+    zauto_read_lock l(app_lock());
+
+    for (const auto &[app_name, app] : _state->_exist_apps) {
+        if (app->status != app_status::AS_AVAILABLE) {
+            // Unavailable tables would not be listed for duplications.
+            continue;
+        }
+
+        const auto &result =
+            utils::pattern_match(app_name, request.app_name_pattern, request.match_type);
+        if (result.code() == ERR_NOT_MATCHED) {
+            continue;
+        }
+
+        if (result.code() != ERR_OK) {
+            response.err = result.code();
+            response.hint_message = result.message();
+            LOG_ERROR("{}, app_name_pattern={}", result, request.app_name_pattern);
+
             return;
         }
 
-        response.appid = app->app_id;
-        for (const auto &[_, dup] : app->duplications) {
-            dup->append_if_valid_for_query(*app, response.entry_list);
+        duplication_app_state dup_app;
+        dup_app.appid = app->app_id;
+        dup_app.app_name = app_name;
+        dup_app.partition_count = app->partition_count;
+
+        for (const auto &[dup_id, dup] : app->duplications) {
+            dup_app.duplications.emplace(dup_id, dup->to_partition_level_entry_for_list());
         }
+
+        response.app_states.emplace(app_name, dup_app);
     }
 }
 
@@ -104,13 +154,12 @@ void meta_duplication_service::modify_duplication(duplication_modify_rpc rpc)
         return;
     }
 
-    auto it = app->duplications.find(dupid);
-    if (it == app->duplications.end()) {
+    auto dup = gutil::FindPtrOrNull(app->duplications, dupid);
+    if (!dup) {
         response.err = ERR_OBJECT_NOT_FOUND;
         return;
     }
 
-    duplication_info_s_ptr dup = it->second;
     auto to_status = request.__isset.status ? request.status : dup->status();
     auto to_fail_mode = request.__isset.fail_mode ? request.fail_mode : dup->fail_mode();
     response.err = dup->alter_status(to_status, to_fail_mode);
@@ -336,10 +385,12 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
     _meta_svc->get_meta_storage()->create_node_recursively(
         std::move(nodes), std::move(value), [app, this, dup, rpc, resp_err]() mutable {
-            LOG_INFO("[{}] add duplication successfully [app_name: {}, remote_cluster_name: {}]",
+            LOG_INFO("[{}] add duplication successfully [app_name: {}, remote_cluster_name: {}, "
+                     "remote_app_name: {}]",
                      dup->log_prefix(),
                      app->app_name,
-                     dup->remote_cluster_name);
+                     dup->remote_cluster_name,
+                     dup->remote_app_name);
 
             // The duplication starts only after it's been persisted.
             dup->persist_status();
@@ -415,11 +466,11 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
                 if (dup->status() == duplication_status::DS_PREPARE) {
                     create_follower_app_for_duplication(dup, app);
                 } else if (dup->status() == duplication_status::DS_APP) {
-                    check_follower_app_if_create_completed(dup);
+                    mark_follower_app_created_for_duplication(dup, app);
                 }
             }
 
-            response.dup_map[app_id][dup_id] = dup->to_duplication_entry();
+            response.dup_map[app_id][dup_id] = dup->to_partition_level_entry_for_sync();
 
             // report progress periodically for each duplications
             dup->report_progress_if_time_up();
@@ -458,6 +509,53 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
 void meta_duplication_service::create_follower_app_for_duplication(
     const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app)
 {
+    // The request of creating table might be issued to the follower cluster many times,
+    // since some error might occurred while the follower table is being created. For
+    // example, once the follower cluster could no connect to the master cluster, the
+    // checkpoint would not be duplicated to the master cluster then the follower table
+    // failed to be created; in this case, the master cluster would repeat this request
+    // until the follower is created.
+    //
+    // To make this request idempotent, it would carry a status marking the follower as
+    // creating by an environment variable. The follower cluster would also store the
+    // status with the table as an env. As long as the status of the table is creating,
+    // the follower cluster would accept the request even if it is repeated (actually
+    // just ignore) and reply with ok. On the side of master cluster, it would send the
+    // same request periodically as long as it is still at the status of DS_PREPARE.
+    do_create_follower_app_for_duplication(
+        dup,
+        app,
+        duplication_constants::kEnvFollowerAppStatusCreating,
+        [this, dup](error_code err, configuration_create_app_response &&resp) {
+            on_follower_app_creating_for_duplication(dup, err, std::move(resp));
+        });
+}
+
+void meta_duplication_service::mark_follower_app_created_for_duplication(
+    const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app)
+{
+    // Once the status of duplication has become DS_APP, the master cluster would send
+    // another request to the follower cluster to mark the table as created. If the
+    // table is at the status of creating, the follower cluster should accept the request
+    // and update its status as created. Similarly, the master cluster could send this
+    // request repeatedly and the follower would accept. The follower would reject if it
+    // receives some invalid request(for example, a request that tries to create the same
+    // table again.
+    do_create_follower_app_for_duplication(
+        dup,
+        app,
+        duplication_constants::kEnvFollowerAppStatusCreated,
+        [this, dup](error_code err, configuration_create_app_response &&resp) {
+            on_follower_app_created_for_duplication(dup, err, std::move(resp));
+        });
+}
+
+void meta_duplication_service::do_create_follower_app_for_duplication(
+    const std::shared_ptr<duplication_info> &dup,
+    const std::shared_ptr<app_state> &app,
+    const std::string &create_status,
+    std::function<void(error_code, configuration_create_app_response &&)> create_callback)
+{
     configuration_create_app_request request;
     request.app_name = dup->remote_app_name;
     request.options.app_type = app->app_type;
@@ -469,14 +567,14 @@ void meta_duplication_service::create_follower_app_for_duplication(
 
     // add envs for follower table, which will use it know itself is `follower` and load master info
     // - env map:
-    // `kDuplicationEnvMasterClusterKey=>{master_cluster_name}`
-    // `kDuplicationEnvMasterMetasKey=>{master_meta_list}`
-    request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey,
+    // `kEnvMasterClusterKey=>{master_cluster_name}`
+    // `kEnvMasterMetasKey=>{master_meta_list}`
+    request.options.envs.emplace(duplication_constants::kEnvMasterClusterKey,
                                  get_current_dup_cluster_name());
-    request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+    request.options.envs.emplace(duplication_constants::kEnvMasterMetasKey,
                                  _meta_svc->get_meta_list_string());
-    request.options.envs.emplace(duplication_constants::kDuplicationEnvMasterAppNameKey,
-                                 app->app_name);
+    request.options.envs.emplace(duplication_constants::kEnvMasterAppNameKey, app->app_name);
+    request.options.envs.emplace(duplication_constants::kEnvFollowerAppStatusKey, create_status);
 
     host_port meta_servers;
     meta_servers.assign_group(dup->remote_cluster_name.c_str());
@@ -484,44 +582,149 @@ void meta_duplication_service::create_follower_app_for_duplication(
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_CREATE_APP);
     dsn::marshall(msg, request);
-    rpc::call(
-        dsn::dns_resolver::instance().resolve_address(meta_servers),
-        msg,
-        _meta_svc->tracker(),
-        [=](error_code err, configuration_create_app_response &&resp) mutable {
-            FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
-                                           [&](absl::string_view s) -> void { err = ERR_OK; });
-            error_code create_err = err == ERR_OK ? resp.err : err;
-            error_code update_err = ERR_NO_NEED_OPERATE;
 
-            FAIL_POINT_INJECT_NOT_RETURN_F(
-                "persist_dup_status_failed",
-                [&](absl::string_view s) -> void { create_err = ERR_OK; });
-            if (create_err == ERR_OK) {
-                update_err = dup->alter_status(duplication_status::DS_APP);
-            }
+    LOG_INFO("send request to create follower app(cluster_name={}, app_name={}, status={}) "
+             "to trigger duplicate checkpoint: master_app_name={}, duplication_status={}",
+             dup->remote_cluster_name,
+             dup->remote_app_name,
+             create_status,
+             app->app_name,
+             duplication_status_to_string(dup->status()));
 
-            FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                [&](absl::string_view s) -> void { return; });
-            if (update_err == ERR_OK) {
-                blob value = dup->to_json_blob();
-                // Note: this function is `async`, it may not be persisted completed
-                // after executing, now using `_is_altering` to judge whether `updating` or
-                // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
-                _meta_svc->get_meta_storage()->set_data(std::string(dup->store_path),
-                                                        std::move(value),
-                                                        [=]() { dup->persist_status(); });
-            } else {
-                LOG_ERROR("created follower app[{}.{}] to trigger duplicate checkpoint failed: "
-                          "duplication_status = {}, create_err = {}, update_err = {}",
-                          dup->remote_cluster_name,
-                          dup->app_name,
-                          duplication_status_to_string(dup->status()),
-                          create_err,
-                          update_err);
-            }
+    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
+              msg,
+              _meta_svc->tracker(),
+              std::move(create_callback));
+}
+
+void meta_duplication_service::on_follower_app_creating_for_duplication(
+    const std::shared_ptr<duplication_info> &dup,
+    error_code err,
+    configuration_create_app_response &&resp)
+{
+    FAIL_POINT_INJECT_NOT_RETURN_F("update_app_request_ok",
+                                   [&err](std::string_view) -> void { err = ERR_OK; });
+
+    error_code create_err = err == ERR_OK ? resp.err : err;
+    FAIL_POINT_INJECT_NOT_RETURN_F(
+        "persist_dup_status_failed",
+        [&create_err](std::string_view) -> void { create_err = ERR_OK; });
+
+    error_code update_err = ERR_NO_NEED_OPERATE;
+    if (create_err == ERR_OK) {
+        update_err = dup->alter_status(duplication_status::DS_APP);
+    }
+
+    FAIL_POINT_INJECT_F("persist_dup_status_failed", [](std::string_view) -> void { return; });
+
+    if (update_err != ERR_OK) {
+        LOG_ERROR("create follower app(cluster_name={}, app_name={}) to trigger duplicate "
+                  "checkpoint failed: master_app_name={}, duplication_status={}, "
+                  "create_err={}, update_err={}",
+                  dup->remote_cluster_name,
+                  dup->remote_app_name,
+                  dup->app_name,
+                  duplication_status_to_string(dup->status()),
+                  create_err,
+                  update_err);
+        return;
+    }
+
+    blob value = dup->to_json_blob();
+    // Note: this function is `async`, it may not be persisted completed
+    // after executing, now using `_is_altering` to judge whether `updating` or
+    // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
+    _meta_svc->get_meta_storage()->set_data(
+        std::string(dup->store_path), std::move(value), [dup]() {
+            dup->persist_status();
+            LOG_INFO("create follower app(cluster_name={}, app_name={}) to trigger duplicate "
+                     "checkpoint successfully: master_app_name={}, duplication_status={}",
+                     dup->remote_cluster_name,
+                     dup->remote_app_name,
+                     dup->app_name,
+                     duplication_status_to_string(dup->status()));
         });
 }
+
+void meta_duplication_service::on_follower_app_created_for_duplication(
+    const std::shared_ptr<duplication_info> &dup,
+    error_code err,
+    configuration_create_app_response &&resp)
+{
+    FAIL_POINT_INJECT_NOT_RETURN_F("on_follower_app_created", [&err](std::string_view s) -> void {
+        err = error_code(s.data());
+    });
+
+    if (err != ERR_OK || resp.err != ERR_OK) {
+        LOG_ERROR("mark follower app(cluster_name={}, app_name={}) as created failed: "
+                  "master_app_name={}, duplication_status={}, callback_err={}, resp_err={}",
+                  dup->remote_cluster_name,
+                  dup->remote_app_name,
+                  dup->app_name,
+                  duplication_status_to_string(dup->status()),
+                  err,
+                  resp.err);
+        return;
+    }
+
+    check_follower_app_if_create_completed(dup);
+}
+
+namespace {
+
+// The format of `replica_state_str` is "<has_primary>,<valid_secondaries>,<invalid_secondaries>":
+//
+//         <has_primary>:   bool, true means if the address of primary replica is valid,
+//                          otherwise false.
+//   <valid_secondaries>:   uint32_t, the number of secondaries whose address are valid.
+// <invalid_secondaries>:   uint32_t, the number of secondaries whose address are invalid.
+void mock_create_app(std::string_view replica_state_str,
+                     const std::shared_ptr<duplication_info> &dup,
+                     dsn::query_cfg_response &resp,
+                     dsn::error_code &err)
+{
+    std::vector<std::string> strs;
+    utils::split_args(replica_state_str.data(), strs, ',');
+    CHECK_EQ(strs.size(), 3);
+
+    bool has_primary = 0;
+    CHECK_TRUE(buf2bool(strs[0], has_primary));
+
+    uint32_t valid_secondaries = 0;
+    CHECK_TRUE(buf2uint32(strs[1], valid_secondaries));
+
+    uint32_t invalid_secondaries = 0;
+    CHECK_TRUE(buf2uint32(strs[2], invalid_secondaries));
+
+    std::vector<host_port> nodes;
+    if (has_primary) {
+        nodes.emplace_back("localhost", 34801);
+    } else {
+        nodes.emplace_back();
+    }
+    for (uint32_t i = 0; i < valid_secondaries; ++i) {
+        nodes.emplace_back("localhost", static_cast<uint16_t>(34802 + i));
+    }
+    for (uint32_t i = 0; i < invalid_secondaries; ++i) {
+        nodes.emplace_back();
+    }
+
+    for (int32_t i = 0; i < dup->partition_count; ++i) {
+        partition_configuration pc;
+        pc.max_replica_count = dup->remote_replica_count;
+
+        SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, nodes[0]);
+        for (size_t j = 1; j < nodes.size(); ++j) {
+            ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, nodes[j]);
+        }
+
+        resp.partitions.push_back(std::move(pc));
+    }
+
+    err = ERR_OK;
+}
+
+} // anonymous namespace
 
 void meta_duplication_service::check_follower_app_if_create_completed(
     const std::shared_ptr<duplication_info> &dup)
@@ -535,79 +738,96 @@ void meta_duplication_service::check_follower_app_if_create_completed(
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     dsn::marshall(msg, meta_config_request);
-    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
-              msg,
-              _meta_svc->tracker(),
-              [=](error_code err, query_cfg_response &&resp) mutable {
-                  FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](absl::string_view s) -> void {
-                      err = ERR_OK;
-                      int count = dup->partition_count;
-                      while (count-- > 0) {
-                          const host_port primary("localhost", 34801);
-                          const host_port secondary1("localhost", 34802);
-                          const host_port secondary2("localhost", 34803);
 
-                          partition_configuration pc;
-                          SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
-                          SET_IPS_AND_HOST_PORTS_BY_DNS(pc, secondaries, secondary1, secondary2);
-                          resp.partitions.emplace_back(pc);
-                      }
-                  });
+    LOG_INFO("send request to check if all replicas of creating follower app(cluster_name={}, "
+             "app_name={}) are ready: master_app_name={}, duplication_status={}",
+             dup->remote_cluster_name,
+             dup->remote_app_name,
+             dup->app_name,
+             duplication_status_to_string(dup->status()));
 
-                  // - ERR_INCONSISTENT_STATE: partition count of response isn't equal with local
-                  // - ERR_INACTIVE_STATE: the follower table hasn't been healthy
-                  error_code query_err = err == ERR_OK ? resp.err : err;
-                  if (query_err == ERR_OK) {
-                      if (resp.partitions.size() != dup->partition_count) {
-                          query_err = ERR_INCONSISTENT_STATE;
-                      } else {
-                          for (const auto &pc : resp.partitions) {
-                              if (!pc.hp_primary) {
-                                  query_err = ERR_INACTIVE_STATE;
-                                  break;
-                              }
+    rpc::call(
+        dsn::dns_resolver::instance().resolve_address(meta_servers),
+        msg,
+        _meta_svc->tracker(),
+        [dup, this](error_code err, query_cfg_response &&resp) mutable {
+            FAIL_POINT_INJECT_NOT_RETURN_F(
+                "create_app_ok",
+                std::bind(
+                    mock_create_app, std::placeholders::_1, dup, std::ref(resp), std::ref(err)));
 
-                              if (pc.hp_secondaries.empty()) {
-                                  query_err = ERR_NOT_ENOUGH_MEMBER;
-                                  break;
-                              }
+            // - ERR_INCONSISTENT_STATE: partition count of response isn't equal with local
+            // - ERR_INACTIVE_STATE: the follower table hasn't been healthy
+            error_code query_err = err == ERR_OK ? resp.err : err;
+            if (query_err == ERR_OK) {
+                if (resp.partitions.size() != dup->partition_count) {
+                    query_err = ERR_INCONSISTENT_STATE;
+                } else {
+                    for (const auto &pc : resp.partitions) {
+                        if (!pc.hp_primary) {
+                            // Fail once the primary replica is unavailable.
+                            query_err = ERR_INACTIVE_STATE;
+                            break;
+                        }
 
-                              for (const auto &secondary : pc.hp_secondaries) {
-                                  if (!secondary) {
-                                      query_err = ERR_INACTIVE_STATE;
-                                      break;
-                                  }
-                              }
-                          }
-                      }
-                  }
+                        // Once replica count is more than 1, at least one secondary replica
+                        // is required.
+                        if (1 + pc.hp_secondaries.size() < pc.max_replica_count &&
+                            pc.hp_secondaries.empty()) {
+                            query_err = ERR_NOT_ENOUGH_MEMBER;
+                            break;
+                        }
 
-                  error_code update_err = ERR_NO_NEED_OPERATE;
-                  if (query_err == ERR_OK) {
-                      update_err = dup->alter_status(duplication_status::DS_LOG);
-                  }
+                        for (const auto &secondary : pc.hp_secondaries) {
+                            if (!secondary) {
+                                // Fail once any secondary replica is unavailable.
+                                query_err = ERR_INACTIVE_STATE;
+                                break;
+                            }
+                        }
+                        if (query_err != ERR_OK) {
+                            break;
+                        }
+                    }
+                }
+            }
 
-                  FAIL_POINT_INJECT_F("persist_dup_status_failed",
-                                      [&](absl::string_view s) -> void { return; });
-                  if (update_err == ERR_OK) {
-                      blob value = dup->to_json_blob();
-                      // Note: this function is `async`, it may not be persisted completed
-                      // after executing, now using `_is_altering` to judge whether `updating` or
-                      // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
-                      _meta_svc->get_meta_storage()->set_data(std::string(dup->store_path),
-                                                              std::move(value),
-                                                              [dup]() { dup->persist_status(); });
-                  } else {
-                      LOG_ERROR(
-                          "query follower app[{}.{}] replica configuration completed, result: "
-                          "duplication_status = {}, query_err = {}, update_err = {}",
+            error_code update_err = ERR_NO_NEED_OPERATE;
+            if (query_err == ERR_OK) {
+                update_err = dup->alter_status(duplication_status::DS_LOG);
+            }
+
+            FAIL_POINT_INJECT_F("persist_dup_status_failed",
+                                [](std::string_view) -> void { return; });
+
+            if (update_err != ERR_OK) {
+                LOG_ERROR("check all replicas of creating follower app(cluster_name={}, "
+                          "app_name={}): master_app_name={}, duplication_status={}, "
+                          "query_err={}, update_err={}",
                           dup->remote_cluster_name,
                           dup->remote_app_name,
+                          dup->app_name,
                           duplication_status_to_string(dup->status()),
                           query_err,
                           update_err);
-                  }
-              });
+                return;
+            }
+
+            blob value = dup->to_json_blob();
+            // Note: this function is `async`, it may not be persisted completed
+            // after executing, now using `_is_altering` to judge whether `updating` or
+            // `completed`, if `_is_altering`, dup->alter_status() will return `ERR_BUSY`
+            _meta_svc->get_meta_storage()->set_data(
+                std::string(dup->store_path), std::move(value), [dup]() {
+                    dup->persist_status();
+                    LOG_INFO("all replicas of follower app(cluster_name={}, app_name={}) "
+                             "have been ready: master_app_name={}, duplication_status={}",
+                             dup->remote_cluster_name,
+                             dup->remote_app_name,
+                             dup->app_name,
+                             duplication_status_to_string(dup->status()));
+                });
+        });
 }
 
 void meta_duplication_service::do_update_partition_confirmed(
@@ -616,31 +836,36 @@ void meta_duplication_service::do_update_partition_confirmed(
     int32_t partition_idx,
     const duplication_confirm_entry &confirm_entry)
 {
-    if (dup->alter_progress(partition_idx, confirm_entry)) {
-        std::string path = get_partition_path(dup, std::to_string(partition_idx));
-        blob value = blob::create_from_bytes(std::to_string(confirm_entry.confirmed_decree));
+    if (!dup->alter_progress(partition_idx, confirm_entry)) {
+        return;
+    }
 
-        _meta_svc->get_meta_storage()->get_data(std::string(path), [=](const blob &data) mutable {
-            if (data.length() == 0) {
+    const auto &path = get_partition_path(dup, std::to_string(partition_idx));
+
+    _meta_svc->get_meta_storage()->get_data(
+        path, [dup, rpc, partition_idx, confirm_entry, path, this](const blob &data) mutable {
+            auto value = blob::create_from_bytes(std::to_string(confirm_entry.confirmed_decree));
+
+            if (data.empty()) {
                 _meta_svc->get_meta_storage()->create_node(
-                    std::string(path), std::move(value), [=]() mutable {
+                    path, std::move(value), [dup, rpc, partition_idx, confirm_entry]() mutable {
                         dup->persist_progress(partition_idx);
                         rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
                             confirm_entry.confirmed_decree;
                     });
-            } else {
-                _meta_svc->get_meta_storage()->set_data(
-                    std::string(path), std::move(value), [=]() mutable {
-                        dup->persist_progress(partition_idx);
-                        rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
-                            confirm_entry.confirmed_decree;
-                    });
+                return;
             }
+
+            _meta_svc->get_meta_storage()->set_data(
+                path, std::move(value), [dup, rpc, partition_idx, confirm_entry]() mutable {
+                    dup->persist_progress(partition_idx);
+                    rpc.response().dup_map[dup->app_id][dup->id].progress[partition_idx] =
+                        confirm_entry.confirmed_decree;
+                });
 
             // duplication_sync_rpc will finally be replied when confirmed points
             // of all partitions are stored.
         });
-    }
 }
 
 std::shared_ptr<duplication_info>
@@ -733,7 +958,7 @@ void meta_duplication_service::do_restore_duplication_progress(
             std::move(partition_path), [dup, partition_idx](const blob &value) {
                 // value is confirmed_decree encoded in string.
 
-                if (value.size() == 0) {
+                if (value.empty()) {
                     // not found
                     dup->init_progress(partition_idx, invalid_decree);
                     return;
@@ -778,10 +1003,11 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
                                                           app->max_replica_count,
                                                           store_path,
                                                           json);
-            if (nullptr == dup) {
+            if (!dup) {
                 LOG_ERROR("failed to decode json \"{}\" on path {}", json, store_path);
                 return; // fail fast
             }
+
             if (!dup->is_invalid_status()) {
                 app->duplications[dup->id] = dup;
                 refresh_duplicating_no_lock(app);

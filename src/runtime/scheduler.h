@@ -35,8 +35,8 @@
 #include <vector>
 
 #include "runtime/simulator.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_worker.h"
+#include "task/task.h"
+#include "task/task_worker.h"
 #include "utils/extensible_object.h"
 #include "utils/singleton.h"
 #include "utils/synchronize.h"

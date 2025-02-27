@@ -36,12 +36,12 @@
 #include <cstdint>
 #include <ctime>
 #include <functional>
-#include <memory>
+#include <mutex>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "runtime/api_layer1.h"
 #include "utils/command_manager.h"
 #include "utils/errors.h"
@@ -165,7 +165,7 @@ inline void process_fatal_log(log_level_t log_level)
     }
 
     bool coredump = true;
-    FAIL_POINT_INJECT_NOT_RETURN_F("coredump_for_fatal_log", [&coredump](absl::string_view str) {
+    FAIL_POINT_INJECT_NOT_RETURN_F("coredump_for_fatal_log", [&coredump](std::string_view str) {
         CHECK(buf2bool(str, coredump),
               "invalid coredump toggle for fatal log, should be true or false: {}",
               str);
@@ -234,37 +234,39 @@ simple_logger::simple_logger(const char *log_dir, const char *role_name)
 
     create_log_file();
 
-    // TODO(yingchun): simple_logger is destroyed after command_manager, so will cause crash like
-    //  "assertion expression: [_handlers.empty()] All commands must be deregistered before
-    //  command_manager is destroyed, however 'flush-log' is still registered".
-    //  We need to fix it.
-    _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
-        "flush-log",
-        "Flush log to stderr or file",
-        "",
-        [this](const std::vector<std::string> &args) {
-            this->flush();
-            return "Flush done.";
-        }));
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        ::dsn::command_manager::instance().add_global_cmd(
+            ::dsn::command_manager::instance().register_single_command(
+                "flush-log",
+                "Flush log to stderr or file",
+                "",
+                [this](const std::vector<std::string> &args) {
+                    this->flush();
+                    return "Flush done.";
+                }));
 
-    _cmds.emplace_back(::dsn::command_manager::instance().register_single_command(
-        "reset-log-start-level",
-        "Reset the log start level",
-        "[DEBUG | INFO | WARNING | ERROR | FATAL]",
-        [](const std::vector<std::string> &args) {
-            log_level_t start_level;
-            if (args.size() == 0) {
-                start_level = enum_from_string(FLAGS_logging_start_level, LOG_LEVEL_INVALID);
-            } else {
-                std::string level_str = "LOG_LEVEL_" + args[0];
-                start_level = enum_from_string(level_str.c_str(), LOG_LEVEL_INVALID);
-                if (start_level == LOG_LEVEL_INVALID) {
-                    return "ERROR: invalid level '" + args[0] + "'";
-                }
-            }
-            set_log_start_level(start_level);
-            return std::string("OK, current level is ") + enum_to_string(start_level);
-        }));
+        ::dsn::command_manager::instance().add_global_cmd(
+            ::dsn::command_manager::instance().register_single_command(
+                "reset-log-start-level",
+                "Reset the log start level",
+                "[DEBUG | INFO | WARNING | ERROR | FATAL]",
+                [](const std::vector<std::string> &args) {
+                    log_level_t start_level;
+                    if (args.size() == 0) {
+                        start_level =
+                            enum_from_string(FLAGS_logging_start_level, LOG_LEVEL_INVALID);
+                    } else {
+                        std::string level_str = "LOG_LEVEL_" + args[0];
+                        start_level = enum_from_string(level_str.c_str(), LOG_LEVEL_INVALID);
+                        if (start_level == LOG_LEVEL_INVALID) {
+                            return "ERROR: invalid level '" + args[0] + "'";
+                        }
+                    }
+                    set_log_start_level(start_level);
+                    return std::string("OK, current level is ") + enum_to_string(start_level);
+                }));
+    });
 }
 
 void simple_logger::create_log_file()

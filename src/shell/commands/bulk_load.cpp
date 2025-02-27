@@ -23,9 +23,8 @@
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <getopt.h>
-#include <stdio.h>
-#include <algorithm>
 #include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -37,10 +36,10 @@
 
 #include "bulk_load_types.h"
 #include "client/replication_ddl_client.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/task/task_spec.h"
+#include "rpc/rpc_address.h"
 #include "shell/command_executor.h"
 #include "shell/commands.h"
+#include "task/task_spec.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/output_utils.h"

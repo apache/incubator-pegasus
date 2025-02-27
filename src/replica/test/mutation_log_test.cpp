@@ -291,9 +291,8 @@ public:
 
     void TearDown() override { utils::filesystem::remove_path(_log_dir); }
 
-    mutation_ptr create_test_mutation(int64_t decree,
-                                      int64_t last_committed_decree,
-                                      const std::string &data) override
+    mutation_ptr
+    create_test_mutation(int64_t decree, int64_t last_committed_decree, const char *data) override
     {
         mutation_ptr mu(new mutation());
         mu->data.header.ballot = 1;
@@ -315,7 +314,7 @@ public:
         return mu;
     }
 
-    mutation_ptr create_test_mutation(int64_t decree, const std::string &data) override
+    mutation_ptr create_test_mutation(int64_t decree, const char *data) override
     {
         return mutation_log_test::create_test_mutation(decree, decree - 1, data);
     }
@@ -333,8 +332,7 @@ public:
             // each round mlog will replay the former logs, and create new file
             mutation_log_ptr mlog = create_private_log();
             for (int i = 1; i <= 10; i++) {
-                std::string msg = "hello!";
-                mutation_ptr mu = create_test_mutation(10 * f + i, msg);
+                auto mu = create_test_mutation(10 * f + i, "hello!");
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             }
             mlog->tracker()->wait_outstanding_tasks();

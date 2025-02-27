@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "fail_point_impl.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
@@ -45,7 +45,7 @@ namespace fail {
 
 static fail_point_registry REGISTRY;
 
-/*extern*/ const std::string *eval(absl::string_view name)
+/*extern*/ const std::string *eval(std::string_view name)
 {
     fail_point *p = REGISTRY.try_get(name);
     if (!p) {
@@ -71,7 +71,7 @@ inline const char *task_type_to_string(fail_point::task_type t)
     }
 }
 
-/*extern*/ void cfg(absl::string_view name, absl::string_view action)
+/*extern*/ void cfg(std::string_view name, std::string_view action)
 {
     fail_point &p = REGISTRY.create_if_not_exists(name);
     p.set_action(action);
@@ -93,14 +93,14 @@ inline const char *task_type_to_string(fail_point::task_type t)
     _S_FAIL_POINT_ENABLED = false;
 }
 
-void fail_point::set_action(absl::string_view action)
+void fail_point::set_action(std::string_view action)
 {
     if (!parse_from_string(action)) {
         LOG_FATAL("unrecognized command: {}", action);
     }
 }
 
-bool fail_point::parse_from_string(absl::string_view action)
+bool fail_point::parse_from_string(std::string_view action)
 {
     _max_cnt = -1;
     _freq = 100;

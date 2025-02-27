@@ -26,8 +26,8 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/system/error_code.hpp>
-#include <errno.h>
+#include <boost/system/detail/error_code.hpp>
+#include <cerrno>
 #include <fmt/core.h>
 #include <ftw.h>
 #include <glob.h>
@@ -42,8 +42,8 @@
 // IWYU pragma: no_include <bits/struct_stat.h>
 #include <unistd.h>
 #include <memory>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "errors.h"
 #include "utils/defer.h"
 #include "utils/env.h"
@@ -648,9 +648,9 @@ error_code get_process_image_path(int pid, std::string &path)
 
 bool get_disk_space_info(const std::string &path, disk_space_info &info)
 {
-    FAIL_POINT_INJECT_F("filesystem_get_disk_space_info", [&info](absl::string_view str) {
+    FAIL_POINT_INJECT_F("filesystem_get_disk_space_info", [&info](std::string_view str) {
         info.capacity = 100 * 1024 * 1024;
-        if (str.find("insufficient") != absl::string_view::npos) {
+        if (str.find("insufficient") != std::string_view::npos) {
             info.available = 512 * 1024;
         } else {
             info.available = 50 * 1024 * 1024;
@@ -850,11 +850,11 @@ bool verify_file_size(const std::string &fname, FileDataType type, const int64_t
 
 bool create_directory(const std::string &path, std::string &absolute_path, std::string &err_msg)
 {
-    FAIL_POINT_INJECT_F("filesystem_create_directory", [path](absl::string_view str) {
+    FAIL_POINT_INJECT_F("filesystem_create_directory", [path](std::string_view str) {
         // when str contains 'false', and path contains broken_disk_dir, mock create fail(return
         // false)
         std::string broken_disk_dir = "disk1";
-        return str.find("false") == absl::string_view::npos ||
+        return str.find("false") == std::string_view::npos ||
                path.find(broken_disk_dir) == std::string::npos;
     });
 
@@ -871,11 +871,11 @@ bool create_directory(const std::string &path, std::string &absolute_path, std::
 
 bool check_dir_rw(const std::string &path, std::string &err_msg)
 {
-    FAIL_POINT_INJECT_F("filesystem_check_dir_rw", [path](absl::string_view str) {
+    FAIL_POINT_INJECT_F("filesystem_check_dir_rw", [path](std::string_view str) {
         // when str contains 'false', and path contains broken_disk_dir, mock check fail(return
         // false)
         std::string broken_disk_dir = "disk1";
-        return str.find("false") == absl::string_view::npos ||
+        return str.find("false") == std::string_view::npos ||
                path.find(broken_disk_dir) == std::string::npos;
     });
 

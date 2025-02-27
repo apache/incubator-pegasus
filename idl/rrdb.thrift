@@ -68,11 +68,26 @@ enum mutate_operation
     MO_DELETE
 }
 
+enum update_type
+{
+    UT_PUT,
+    UT_INCR
+}
+
+// The single-put request, just writes a key/value pair into storage, which is certainly
+// idempotent.
 struct update_request
 {
     1:dsn.blob      key;
     2:dsn.blob      value;
     3:i32           expire_ts_seconds;
+
+    // This field marks the type of a single-put request, mainly used to differentiate a general
+    // single-put request from the one translated from a non-idempotent atomic write request:
+    // - a general single-put request, if `type` is UT_PUT or not set by default as it's
+    // optional, or
+    // - a put request translated from an incr request, if `type` is UT_INCR.
+    4:optional update_type type;
 }
 
 struct update_response

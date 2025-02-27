@@ -32,7 +32,7 @@
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "shell/command_helper.h"
 #include "test/function_test/utils/test_util.h"
 #include "test/function_test/utils/utils.h"

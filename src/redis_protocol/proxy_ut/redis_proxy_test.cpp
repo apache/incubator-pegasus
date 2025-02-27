@@ -18,22 +18,26 @@
  */
 
 #include <boost/asio.hpp> // IWYU pragma: keep
-// IWYU pragma: no_include <boost/asio/buffer.hpp>
-// IWYU pragma: no_include <boost/asio/detail/type_traits.hpp>
-// IWYU pragma: no_include <boost/asio/impl/io_context.ipp>
-// IWYU pragma: no_include <boost/asio/impl/read.hpp>
-// IWYU pragma: no_include <boost/asio/impl/write.hpp>
-// IWYU pragma: no_include <boost/asio/io_service.hpp>
-// IWYU pragma: no_include <boost/asio/ip/address.hpp>
-// IWYU pragma: no_include <boost/asio/ip/address_v4.hpp>
-// IWYU pragma: no_include <boost/asio/ip/impl/address.ipp>
-// IWYU pragma: no_include <boost/asio/ip/impl/address_v4.ipp>
-// IWYU pragma: no_include <boost/asio/ip/tcp.hpp>
-// IWYU pragma: no_include <boost/asio/socket_base.hpp>
-#include <boost/system/error_code.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/detail/impl/reactive_socket_service_base.ipp>
+#include <boost/asio/detail/impl/scheduler.ipp>
+#include <boost/asio/detail/impl/service_registry.hpp>
+#include <boost/asio/detail/type_traits.hpp>
+#include <boost/asio/impl/io_context.hpp>
+#include <boost/asio/impl/io_context.ipp>
+#include <boost/asio/impl/read.hpp>
+#include <boost/asio/impl/write.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/ip/address.hpp>
+#include <boost/asio/ip/address_v4.hpp>
+#include <boost/asio/ip/impl/address.ipp>
+#include <boost/asio/ip/impl/address_v4.ipp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/socket_base.hpp>
+#include <boost/system/detail/error_code.hpp>
 #include <gtest/gtest_prod.h>
-#include <string.h>
 #include <chrono>
+#include <cstring>
 #include <memory>
 #include <set>
 #include <string>
@@ -45,12 +49,12 @@
 #include "gtest/gtest.h"
 #include "proxy_layer.h"
 #include "redis_parser.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_message.h"
+#include "rpc/rpc_stream.h"
 #include "runtime/app_model.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/rpc_stream.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
@@ -108,16 +112,15 @@ public:
         _reserved_entry[index]->request.sub_requests = std::move(msg.sub_requests);
     }
 
-    static dsn::message_ex *create_message(const char *data)
+    static dsn::message_ex *create_message(const char *data, unsigned int length)
     {
         return dsn::message_ex::create_received_request(
-            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, strlen(data));
+            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, data, length);
     }
 
-    static dsn::message_ex *create_message(const char *data, int length)
+    static dsn::message_ex *create_message(const char *data)
     {
-        return dsn::message_ex::create_received_request(
-            RPC_CALL_RAW_MESSAGE, dsn::DSF_THRIFT_BINARY, (void *)data, length);
+        return create_message(data, strlen(data));
     }
 
     static dsn::message_ex *marshalling_array(const redis_request &request)
@@ -375,7 +378,7 @@ TEST_F(proxy_test, test_random_cases)
         offsets.insert(total_body_size);
 
         int last_offset = 0;
-        for (int offset : offsets) {
+        for (auto offset : offsets) {
             dsn::message_ex *msg = redis_test_parser::create_message(msg_buffer_ptr + last_offset,
                                                                      offset - last_offset);
             ASSERT_TRUE(parse(msg));

@@ -31,15 +31,15 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "common/common.h"
 #include "common/replication_other_types.h"
 #include "pegasus/client.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/serialization.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/serialization.h"
 #include "utils/api_utilities.h"
 #include "utils/binary_writer.h"
 #include "utils/error_code.h"
@@ -207,7 +207,7 @@ void redis_parser::eat_all(char *dest, size_t length)
 bool redis_parser::end_array_size()
 {
     int32_t count = 0;
-    if (dsn_unlikely(!dsn::buf2int32(absl::string_view(_current_size), count))) {
+    if (dsn_unlikely(!dsn::buf2int32(std::string_view(_current_size), count))) {
         LOG_ERROR_PREFIX("invalid size string \"{}\"", _current_size);
         return false;
     }
@@ -242,7 +242,7 @@ void redis_parser::append_current_bulk_string()
 bool redis_parser::end_bulk_string_size()
 {
     int32_t length = 0;
-    if (dsn_unlikely(!dsn::buf2int32(absl::string_view(_current_size), length))) {
+    if (dsn_unlikely(!dsn::buf2int32(std::string_view(_current_size), length))) {
         LOG_ERROR_PREFIX("invalid size string \"{}\"", _current_size);
         return false;
     }

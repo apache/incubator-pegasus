@@ -25,6 +25,7 @@
  */
 
 #include <boost/lexical_cast.hpp>
+#include <algorithm>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <atomic>
 #include <functional>
@@ -50,8 +51,8 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_service_app.h"
 #include "replica/storage/simple_kv/test/common.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_engine.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_engine.h"
 #include "runtime/service_app.h"
 #include "runtime/service_engine.h"
 #include "runtime/tool_api.h"

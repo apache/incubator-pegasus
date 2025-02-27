@@ -44,14 +44,15 @@ public:
 
     void test_remove_non_existed_duplications()
     {
-        auto r = stub->add_primary_replica(2, 1);
-        auto &d = r->get_replica_duplicator_manager();
+        auto *rep = stub->add_primary_replica(2, 1);
+        rep->init_private_log(rep->dir());
+        auto &d = rep->get_replica_duplicator_manager();
 
         duplication_entry ent;
         ent.dupid = 1;
         ent.status = duplication_status::DS_PAUSE;
         ent.remote = "dsn://slave-cluster";
-        ent.progress[r->get_gpid().get_partition_index()] = 0;
+        ent.progress[rep->get_gpid().get_partition_index()] = 0;
         d.sync_duplication(ent);
         ASSERT_EQ(d._duplications.size(), 1);
 
@@ -66,20 +67,21 @@ public:
 
     void test_set_confirmed_decree_non_primary()
     {
-        auto r = stub->add_primary_replica(2, 1);
-        auto &d = r->get_replica_duplicator_manager();
+        auto *rep = stub->add_primary_replica(2, 1);
+        rep->init_private_log(rep->dir());
+        auto &d = rep->get_replica_duplicator_manager();
 
         duplication_entry ent;
         ent.dupid = 1;
         ent.status = duplication_status::DS_PAUSE;
         ent.remote = "dsn://slave-cluster";
-        ent.progress[r->get_gpid().get_partition_index()] = 100;
+        ent.progress[rep->get_gpid().get_partition_index()] = 100;
         d.sync_duplication(ent);
         ASSERT_EQ(d._duplications.size(), 1);
         ASSERT_EQ(d._primary_confirmed_decree, invalid_decree);
 
         // replica failover
-        r->as_secondary();
+        rep->as_secondary();
 
         d.update_confirmed_decree_if_secondary(99);
         ASSERT_EQ(d._duplications.size(), 0);
@@ -103,7 +105,8 @@ public:
 
     void test_get_duplication_confirms()
     {
-        auto r = stub->add_primary_replica(2, 1);
+        auto *rep = stub->add_primary_replica(2, 1);
+        rep->init_private_log(rep->dir());
 
         int total_dup_num = 10;
         int update_dup_num = 4; // the number of dups that will be updated
@@ -112,25 +115,25 @@ public:
             duplication_entry ent;
             ent.dupid = id;
             ent.status = duplication_status::DS_PAUSE;
-            ent.progress[r->get_gpid().get_partition_index()] = 0;
+            ent.progress[rep->get_gpid().get_partition_index()] = 0;
 
-            auto dup = std::make_unique<replica_duplicator>(ent, r);
+            auto dup = std::make_unique<replica_duplicator>(ent, rep);
             dup->update_progress(dup->progress().set_last_decree(2).set_confirmed_decree(1));
-            add_dup(r, std::move(dup));
+            add_dup(rep, std::move(dup));
         }
 
         for (dupid_t id = update_dup_num + 1; id <= total_dup_num; id++) {
             duplication_entry ent;
             ent.dupid = id;
             ent.status = duplication_status::DS_PAUSE;
-            ent.progress[r->get_gpid().get_partition_index()] = 0;
+            ent.progress[rep->get_gpid().get_partition_index()] = 0;
 
-            auto dup = std::make_unique<replica_duplicator>(ent, r);
+            auto dup = std::make_unique<replica_duplicator>(ent, rep);
             dup->update_progress(dup->progress().set_last_decree(1).set_confirmed_decree(1));
-            add_dup(r, std::move(dup));
+            add_dup(rep, std::move(dup));
         }
 
-        auto result = r->get_replica_duplicator_manager().get_duplication_confirms_to_update();
+        auto result = rep->get_replica_duplicator_manager().get_duplication_confirms_to_update();
         ASSERT_EQ(result.size(), update_dup_num);
     }
 
@@ -142,24 +145,25 @@ public:
             int64_t min_confirmed_decree;
         };
 
-        auto r = stub->add_non_primary_replica(2, 1);
-        auto assert_test = [r, this](test_case tt) {
+        auto *rep = stub->add_non_primary_replica(2, 1);
+        rep->init_private_log(rep->dir());
+        auto assert_test = [rep, this](test_case tt) {
             for (int id = 1; id <= tt.confirmed_decree.size(); id++) {
                 duplication_entry ent;
                 ent.dupid = id;
                 ent.status = duplication_status::DS_PAUSE;
-                ent.progress[r->get_gpid().get_partition_index()] = 0;
+                ent.progress[rep->get_gpid().get_partition_index()] = 0;
 
-                auto dup = std::make_unique<replica_duplicator>(ent, r);
+                auto dup = std::make_unique<replica_duplicator>(ent, rep);
                 dup->update_progress(dup->progress()
                                          .set_last_decree(tt.confirmed_decree[id - 1])
                                          .set_confirmed_decree(tt.confirmed_decree[id - 1]));
-                add_dup(r, std::move(dup));
+                add_dup(rep, std::move(dup));
             }
 
-            ASSERT_EQ(r->get_replica_duplicator_manager().min_confirmed_decree(),
+            ASSERT_EQ(rep->get_replica_duplicator_manager().min_confirmed_decree(),
                       tt.min_confirmed_decree);
-            r->get_replica_duplicator_manager()._duplications.clear();
+            rep->get_replica_duplicator_manager()._duplications.clear();
         };
 
         {
@@ -169,7 +173,7 @@ public:
         }
 
         { // primary
-            r->as_primary();
+            rep->as_primary();
             test_case tt{{1, 2, 3}, 1};
             assert_test(tt);
 
@@ -203,17 +207,19 @@ TEST_P(replica_duplicator_manager_test, min_confirmed_decree) { test_min_confirm
 
 TEST_P(replica_duplicator_manager_test, update_checkpoint_prepared)
 {
-    auto r = stub->add_primary_replica(2, 1);
+    auto *rep = stub->add_primary_replica(2, 1);
+    rep->init_private_log(rep->dir());
+
     duplication_entry ent;
     ent.dupid = 1;
     ent.status = duplication_status::DS_PAUSE;
-    ent.progress[r->get_gpid().get_partition_index()] = 0;
+    ent.progress[rep->get_gpid().get_partition_index()] = 0;
 
-    auto dup = std::make_unique<replica_duplicator>(ent, r);
-    r->update_last_durable_decree(100);
+    auto dup = std::make_unique<replica_duplicator>(ent, rep);
+    rep->update_last_durable_decree(100);
     dup->update_progress(dup->progress().set_last_decree(2).set_confirmed_decree(1));
-    add_dup(r, std::move(dup));
-    auto updates = r->get_replica_duplicator_manager().get_duplication_confirms_to_update();
+    add_dup(rep, std::move(dup));
+    auto updates = rep->get_replica_duplicator_manager().get_duplication_confirms_to_update();
     for (const auto &update : updates) {
         ASSERT_TRUE(update.checkpoint_prepared);
     }

@@ -34,14 +34,16 @@
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
+#include "rpc/serialization.h"
+#include "rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/task/async_calls.h"
+#include "rpc/rpc_address.h"
+#include "task/async_calls.h"
+#include "rpc/rpc_address.h"
+#include "task/async_calls.h"
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
 #include "duplication_types.h"
@@ -135,7 +137,7 @@ public:
     void json_compacity();
 
     // test server_state set_app_envs/del_app_envs/clear_app_envs
-    void app_envs_basic_test();
+    static void app_envs_basic_test();
 
     // test for bug found
     void adjust_dropped_size();

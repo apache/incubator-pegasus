@@ -34,12 +34,13 @@
 #include "common/replication_other_types.h"
 #include "meta_admin_types.h"
 #include "meta_data.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/enum_helper.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
 class command_deregister;
+
 class partition_configuration;
 
 namespace replication {

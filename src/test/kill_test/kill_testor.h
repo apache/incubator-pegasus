@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "dsn.layer2_types.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/error_code.h"
 
 namespace dsn {

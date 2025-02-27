@@ -34,13 +34,13 @@
 #include "replica/mutation_log.h"
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 namespace dsn {
 namespace replication {
 namespace log_utils {
 
-extern error_s open_read(absl::string_view path, /*out*/ log_file_ptr &file);
+extern error_s open_read(std::string_view path, /*out*/ log_file_ptr &file);
 
 extern error_s list_all_files(const std::string &dir, /*out*/ std::vector<std::string> &files);
 

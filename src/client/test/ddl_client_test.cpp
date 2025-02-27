@@ -26,10 +26,8 @@
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"
 #include "meta_admin_types.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
-#include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/fail_point.h"
@@ -146,7 +144,8 @@ TEST(DDLClientTest, RetryMetaRequest)
         resp.err = ERR_UNKNOWN;
 
         auto start_ms = dsn_now_ms();
-        auto resp_task = ddl_client->request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
+        const auto &req_result =
+            ddl_client->request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp);
         uint64_t duration_ms = dsn_now_ms() - start_ms;
 
         // Check if all the errors have been traversed in sequence and accepted except the last
@@ -157,7 +156,7 @@ TEST(DDLClientTest, RetryMetaRequest)
         EXPECT_LE(test.expected_sleep_ms, duration_ms);
 
         // Check if final send error is matched.
-        EXPECT_EQ(test.final_send_error, resp_task->error());
+        EXPECT_EQ(test.final_send_error, req_result.code());
 
         // Check if final response error is matched.
         EXPECT_EQ(test.final_resp_error, resp.err);

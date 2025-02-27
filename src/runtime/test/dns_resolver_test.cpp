@@ -21,11 +21,11 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/group_address.h"
-#include "runtime/rpc/group_host_port.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/group_address.h"
+#include "rpc/group_host_port.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 
 namespace dsn {
 

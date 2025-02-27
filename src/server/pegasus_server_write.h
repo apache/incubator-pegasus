@@ -29,7 +29,7 @@
 #include "pegasus_write_service.h"
 #include "replica/replica_base.h"
 #include "rrdb/rrdb_types.h"
-#include "runtime/task/task_code.h"
+#include "task/task_code.h"
 #include "utils/metrics.h"
 
 namespace dsn {
@@ -45,8 +45,13 @@ class pegasus_server_impl;
 class pegasus_server_write : public dsn::replication::replica_base
 {
 public:
-    pegasus_server_write(pegasus_server_impl *server);
+    explicit pegasus_server_write(pegasus_server_impl *server);
 
+    // See replication_app_base::make_idempotent() for details.
+    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request);
+
+    // See replication_app_base::on_batched_write_requests() for details.
+    //
     /// \return error code returned by rocksdb, i.e rocksdb::Status::code.
     /// **NOTE**
     /// Error returned is regarded as the failure of replica, thus will trigger
@@ -58,12 +63,16 @@ public:
     int on_batched_write_requests(dsn::message_ex **requests,
                                   int count,
                                   int64_t decree,
-                                  uint64_t timestamp);
+                                  uint64_t timestamp,
+                                  dsn::message_ex *original_request);
 
     void set_default_ttl(uint32_t ttl);
 
 private:
-    /// Delay replying for the batched requests until all of them complete.
+    // Apply the idempotent request and respond to its original request.
+    int on_idempotent(dsn::message_ex *request, dsn::message_ex *original_request);
+
+    // Delay replying for the batched requests until all of them complete.
     int on_batched_writes(dsn::message_ex **requests, int count);
 
     int on_single_put_in_batch(put_rpc &rpc)
@@ -84,12 +93,13 @@ private:
     // In verbose mode it will log for every request.
     void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
 
-private:
+    void init_make_idempotent_handlers();
     void init_non_batch_write_handlers();
+    void init_on_idempotent_handlers();
 
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;
-    friend class pegasus_write_service_impl_test;
+    friend class PegasusWriteServiceImplTest;
     friend class rocksdb_wrapper_test;
 
     std::unique_ptr<pegasus_write_service> _write_svc;
@@ -99,8 +109,19 @@ private:
     db_write_context _write_ctx;
     int64_t _decree;
 
-    typedef std::map<dsn::task_code, std::function<int(dsn::message_ex *)>> non_batch_writes_map;
-    non_batch_writes_map _non_batch_write_handlers;
+    // Handlers that make an atomic request idempotent.
+    using make_idempotent_map =
+        std::map<dsn::task_code, std::function<int(dsn::message_ex *, dsn::message_ex **)>>;
+    make_idempotent_map _make_idempotent_handlers;
+
+    // Handlers that process a request could not be batched, e.g. multi put/remove.
+    using non_batch_write_map = std::map<dsn::task_code, std::function<int(dsn::message_ex *)>>;
+    non_batch_write_map _non_batch_write_handlers;
+
+    // Handlers that apply the idempotent request and respond to its original request.
+    using on_idempotent_map =
+        std::map<dsn::task_code, std::function<int(dsn::message_ex *, dsn::message_ex *)>>;
+    on_idempotent_map _on_idempotent_handlers;
 
     METRIC_VAR_DECLARE_counter(corrupt_writes);
 };

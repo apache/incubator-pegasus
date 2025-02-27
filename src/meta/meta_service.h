@@ -46,17 +46,17 @@
 #include "meta_options.h"
 #include "meta_rpc_types.h"
 #include "meta_server_failure_detector.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/network.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/network.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "security/access_controller.h"
 #include "runtime/serverlet.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_code.h"
-#include "runtime/task/task_tracker.h"
+#include "security/access_controller.h"
+#include "task/task.h"
+#include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/enum_helper.h"
 #include "utils/error_code.h"
@@ -72,6 +72,7 @@ namespace ranger {
 class ranger_resource_policy_manager;
 } // namespace ranger
 namespace dist {
+
 class meta_state_service;
 } // namespace dist
 
@@ -95,6 +96,7 @@ class test_checker;
 DEFINE_TASK_CODE(LPC_DEFAULT_CALLBACK, TASK_PRIORITY_COMMON, dsn::THREAD_POOL_DEFAULT)
 
 enum class meta_op_status
+
 {
     FREE = 0,
     RECALL,
@@ -260,6 +262,7 @@ private:
     void on_modify_duplication(duplication_modify_rpc rpc);
     void on_query_duplication_info(duplication_query_rpc rpc);
     void on_duplication_sync(duplication_sync_rpc rpc);
+    void on_list_duplication_info(duplication_list_rpc rpc);
     void register_duplication_rpc_handlers();
     void recover_duplication_from_meta_state();
     void initialize_duplication_service();
@@ -330,6 +333,7 @@ private:
     friend class meta_partition_guardian_test;
     friend class meta_service_test;
     friend class meta_service_test_app;
+    friend class server_state_test;
     friend class meta_split_service_test;
     friend class meta_test_base;
     friend class policy_context_test;

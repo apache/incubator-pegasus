@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include "common/duplication_common.h"
@@ -32,17 +33,16 @@
 #include "nfs/nfs_node.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/group_host_port.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/group_host_port.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
+#include "task/async_calls.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
-#include "absl/strings/string_view.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -60,8 +60,8 @@ void replica_follower::init_master_info()
 {
     const auto &envs = _replica->get_app_info()->envs;
 
-    const auto &cluster_name = envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
-    const auto &metas = envs.find(duplication_constants::kDuplicationEnvMasterMetasKey);
+    const auto &cluster_name = envs.find(duplication_constants::kEnvMasterClusterKey);
+    const auto &metas = envs.find(duplication_constants::kEnvMasterMetasKey);
     if (cluster_name == envs.end() || metas == envs.end()) {
         return;
     }
@@ -70,7 +70,7 @@ void replica_follower::init_master_info()
 
     _master_cluster_name = cluster_name->second;
 
-    const auto &app_name = envs.find(duplication_constants::kDuplicationEnvMasterAppNameKey);
+    const auto &app_name = envs.find(duplication_constants::kEnvMasterAppNameKey);
     if (app_name == envs.end()) {
         // The version of meta server of master cluster is old(< v2.6.0), thus the app name of
         // the follower cluster is the same with master cluster.
@@ -132,13 +132,13 @@ void replica_follower::async_duplicate_checkpoint_from_master_replica()
               msg,
               &_tracker,
               [&](error_code err, query_cfg_response &&resp) mutable {
-                  FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](absl::string_view s) -> void {
+                  FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](std::string_view s) -> void {
                       _tracker.set_tasks_success();
                       return;
                   });
 
                   FAIL_POINT_INJECT_F("duplicate_checkpoint_failed",
-                                      [&](absl::string_view s) -> void { return; });
+                                      [&](std::string_view s) -> void { return; });
                   if (update_master_replica_config(err, std::move(resp)) == ERR_OK) {
                       copy_master_replica_checkpoint();
                   }
@@ -260,7 +260,7 @@ void replica_follower::nfs_copy_remote_files(const host_port &remote_node,
         &_tracker,
         [&, remote_dir](error_code err, size_t size) mutable {
             FAIL_POINT_INJECT_NOT_RETURN_F("nfs_copy_ok",
-                                           [&](absl::string_view s) -> void { err = ERR_OK; });
+                                           [&](std::string_view s) -> void { err = ERR_OK; });
 
             if (dsn_unlikely(err != ERR_OK)) {
                 LOG_ERROR_PREFIX("nfs copy master[{}] checkpoint failed: checkpoint = {}, err = {}",

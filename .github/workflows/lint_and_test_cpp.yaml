@@ -27,16 +27,16 @@ on:
       - ci-test # testing branch for github action
       - '*dev'
     paths:
-      - .github/actions
+      - .github/actions/**
       - .github/workflows/lint_and_test_cpp.yaml
       - .github/workflows/thirdparty-regular-push.yml
+      - build_tools/pack_server.sh
+      - build_tools/pack_tools.sh
       - docker/thirdparties-bin/**
       - docker/thirdparties-src/**
       - CMakeLists.txt
       - cmake_modules/**
       - run.sh
-      - scripts/pack_server.sh
-      - scripts/pack_tools.sh
       - src/**
       - thirdparty/**
 
@@ -50,16 +50,39 @@ env:
 
 jobs:
   cpp_clang_format_linter:
-    name: Lint
+    name: Format
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: clang-format
-        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-14 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
+        run: ./build_tools/run-clang-format.py --clang-format-executable clang-format-14 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
+
+  cpp_clang_tidy_linter:
+    name: Tidy
+    runs-on: ubuntu-22.04
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
+    steps:
+      - name: Install Softwares
+        run: |
+          apt-get update
+          apt-get install clang-tidy -y
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Rebuild thirdparty if needed
+        uses: "./.github/actions/rebuild_thirdparty_if_needed"
+      - name: clang-tidy
+        run: |
+          git config --global --add safe.directory $(pwd)
+          ./run.sh build --test --compiler clang-14,clang++-14 -t debug --skip_thirdparty -c --cmake_only
+          ./build_tools/clang_tidy.py --rev-range $(git log origin/${{ github.base_ref }} -n1 --format=format:"%H")
+        shell: bash
 
   iwyu:
     name: IWYU
-    needs: cpp_clang_format_linter
+    needs:
+      - cpp_clang_format_linter
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
@@ -87,7 +110,8 @@ jobs:
 
   build_Release:
     name: Build Release
-    needs: cpp_clang_format_linter
+    needs:
+      - cpp_clang_format_linter
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
@@ -136,12 +160,14 @@ jobs:
           - dsn_replica_bulk_load_test
           - dsn_replica_dup_test
           - dsn_replica_split_test
+          - dsn_rpc_tests
           - dsn.replica.test
           - dsn_replication_common_test
           - dsn.replication.simple_kv
           - dsn.rep_tests.simple_kv
           - dsn_runtime_tests
           - dsn_security_tests
+          - dsn_task_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
@@ -170,7 +196,8 @@ jobs:
 
   build_ASAN:
     name: Build ASAN
-    needs: cpp_clang_format_linter
+    needs:
+      - cpp_clang_format_linter
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
@@ -218,12 +245,14 @@ jobs:
           - dsn_replica_bulk_load_test
           - dsn_replica_dup_test
           - dsn_replica_split_test
+          - dsn_rpc_tests
           - dsn.replica.test
           - dsn_replication_common_test
           - dsn.replication.simple_kv
           - dsn.rep_tests.simple_kv
           - dsn_runtime_tests
           - dsn_security_tests
+          - dsn_task_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
@@ -257,7 +286,8 @@ jobs:
 #                 before we find any way to reduce the time cost.
 #  build_UBSAN:
 #    name: Build UBSAN
-#    needs: cpp_clang_format_linter
+#    needs:
+#      - cpp_clang_format_linter
 #    runs-on: ubuntu-latest
 #    env:
 #      USE_JEMALLOC: OFF
@@ -305,12 +335,14 @@ jobs:
 #          - dsn_replica_bulk_load_test
 #          - dsn_replica_dup_test
 #          - dsn_replica_split_test
+#          - dsn_rpc_tests
 #          - dsn.replica.test
 #          - dsn_replication_common_test
 #          - dsn.replication.simple_kv
 #          - dsn.rep_tests.simple_kv
 #          - dsn_runtime_tests
 #          - dsn_security_tests
+#          - dsn_task_tests
 #          - dsn_utils_tests
 #          - dsn.zookeeper.tests
 #          - partition_split_test
@@ -337,7 +369,8 @@ jobs:
 
   build_with_jemalloc:
     name: Build with jemalloc
-    needs: cpp_clang_format_linter
+    needs:
+      - cpp_clang_format_linter
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: ON
@@ -378,12 +411,13 @@ jobs:
 
   build_release_on_macos:
     name: Build Release on macOS
-    needs: cpp_clang_format_linter
-    runs-on: macos-12
+    needs:
+      - cpp_clang_format_linter
+    runs-on: macos-15
     steps:
       - name: Install Softwares
         run: |
-          # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-12-Readme.md
+          # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-15-Readme.md
           brew install ccache
           brew install openssl@1.1
       - uses: actions/checkout@v4
@@ -395,7 +429,7 @@ jobs:
           key: macos_build_ccache
           restore-keys: |
             macos_build_ccache
-            macos-12-thirdparty-bins
+            macos-15-thirdparty-bins
       - name: Build thirdparty
         working-directory: thirdparty
         run: |
@@ -410,18 +444,17 @@ jobs:
           ./run.sh build --test --skip_thirdparty -j $(sysctl -n hw.physicalcpu)
           ccache -s
 
-  build_debug_on_centos7:
-    name: Build Debug on CentOS 7
-    needs: cpp_clang_format_linter
+  build_debug_on_rockylinux9:
+    name: Build Debug on Rockylinux 9
+    needs:
+      - cpp_clang_format_linter
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
       BUILD_OPTIONS: -t debug --test --separate_servers
       PACK_OPTIONS: --separate_servers
-      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     container:
-      image: apache/pegasus:thirdparties-bin-centos7-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-rockylinux9-${{ github.base_ref }}
     steps:
       - name: Clone code
         uses: actions/checkout@v3

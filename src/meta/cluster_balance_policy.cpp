@@ -25,10 +25,11 @@
 #include <unordered_map>
 
 #include "dsn.layer2_types.h"
+#include "gutil/map_util.h"
 #include "meta/load_balance_policy.h"
-#include "runtime/rpc/dns_resolver.h" // IWYU pragma: keep
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
+#include "rpc/dns_resolver.h" // IWYU pragma: keep
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
@@ -258,14 +259,8 @@ void cluster_balance_policy::get_node_migration_info(const node_state &ns,
             if (!context.get_disk_tag(ns.host_port(), disk_tag)) {
                 continue;
             }
-            auto pid = context.pc->pid;
-            if (info.partitions.find(disk_tag) != info.partitions.end()) {
-                info.partitions[disk_tag].insert(pid);
-            } else {
-                partition_set pset;
-                pset.insert(pid);
-                info.partitions.emplace(disk_tag, pset);
-            }
+            auto &partitions_of_disk = gutil::LookupOrInsert(&info.partitions, disk_tag, {});
+            partitions_of_disk.insert(context.pc->pid);
         }
     }
 }

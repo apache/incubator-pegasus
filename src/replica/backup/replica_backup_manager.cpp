@@ -17,7 +17,7 @@
 
 #include "replica_backup_manager.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <stdint.h>
 #include <algorithm>
 #include <chrono>
@@ -36,7 +36,7 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/async_calls.h"
+#include "task/async_calls.h"
 #include "utils/autoref_ptr.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"

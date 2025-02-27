@@ -36,7 +36,7 @@
 #include <string>
 #include <vector>
 
-#include "runtime/task/task_spec.h"
+#include "task/task_spec.h"
 #include "utils/config_api.h"
 #include "utils/config_helper.h"
 #include "utils/customizable_id.h"

@@ -19,7 +19,7 @@
 
 #include "pegasus_manual_compact_service.h"
 
-#include <absl/strings/string_view.h>
+#include <string_view>
 #include <limits.h>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
@@ -32,8 +32,8 @@
 #include "common/replication.codes.h"
 #include "pegasus_server_impl.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_code.h"
+#include "task/async_calls.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

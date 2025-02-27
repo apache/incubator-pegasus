@@ -20,14 +20,14 @@
 #include <string>
 
 #include "utils/errors.h"
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 namespace dsn {
 namespace uri {
 
 /// \brief Decodes a sequence according to the percent decoding rules.
 /// \returns the decoded uri path
-error_with<std::string> decode(const absl::string_view &encoded_uri);
+error_with<std::string> decode(const std::string_view &encoded_uri);
 
 } // namespace uri
 } // namespace dsn

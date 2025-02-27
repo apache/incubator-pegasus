@@ -46,15 +46,15 @@
 #include "meta/test/misc/misc.h"
 #include "meta_admin_types.h"
 #include "meta_service_test_app.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/task/task.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/strings.h"
-#include "utils/utils.h"
 #include "utils/test_macros.h"
+#include "utils/utils.h"
 
 DSN_DECLARE_string(cluster_root);
 DSN_DECLARE_string(meta_state_service_type);
@@ -393,7 +393,7 @@ void meta_service_test_app::construct_apps_test()
     generate_node_list(nodes, 1, 1);
     svc->_state->construct_apps({resp}, nodes, hint_message);
 
-    meta_view mv = svc->_state->get_meta_view();
+    const meta_view mv = svc->_state->get_meta_view();
     const app_mapper &mapper = *(mv.apps);
     ASSERT_EQ(6, mv.apps->size());
 

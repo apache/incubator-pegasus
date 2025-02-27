@@ -21,7 +21,7 @@
 
 function GenThriftTool() {
     set -e
-    wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -O thrift-0.11.0.tar.gz
+    wget --progress=dot:giga https://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz -O thrift-0.11.0.tar.gz
     tar xzf thrift-0.11.0.tar.gz
     pushd thrift-0.11.0
     ./bootstrap.sh

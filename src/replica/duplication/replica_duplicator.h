@@ -28,7 +28,7 @@
 #include "duplication_types.h"
 #include "replica/replica_base.h"
 #include "runtime/pipeline.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
@@ -157,8 +157,8 @@ public:
 
         {
             zauto_read_lock l(_lock);
-            JSON_ENCODE_OBJ(writer, confirmed_decree, _progress.last_decree);
-            JSON_ENCODE_OBJ(writer, persisted_decree, _progress.confirmed_decree);
+            JSON_ENCODE_OBJ(writer, replica_confirmed_decree, _progress.last_decree);
+            JSON_ENCODE_OBJ(writer, meta_persisted_decree, _progress.confirmed_decree);
         }
 
         writer.EndObject();

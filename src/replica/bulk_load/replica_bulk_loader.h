@@ -29,7 +29,7 @@
 #include "replica/replica.h"
 #include "replica/replica_base.h"
 #include "runtime/api_layer1.h"
-#include "runtime/task/task.h"
+#include "task/task.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
 #include "utils/zlocks.h"

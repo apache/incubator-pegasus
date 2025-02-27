@@ -28,13 +28,14 @@
 
 #include <boost/lexical_cast.hpp>
 #include <chrono>
+#include <ostream>
 #include <thread>
 
 #include "gtest/gtest.h"
 #include "meta/meta_state_service_simple.h"
 #include "meta/meta_state_service_zookeeper.h"
 #include "runtime/service_app.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task_tracker.h"
 #include "test_util/test_util.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
@@ -98,7 +99,7 @@ void provider_basic_test(const service_creator_func &service_creator,
         service->delete_node("/1", false, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)
             ->wait();
     }
-    // set & get data
+    // create & get data
     {
         dsn::binary_writer writer;
         writer.write(0xdeadbeef);
@@ -117,7 +118,10 @@ void provider_basic_test(const service_creator_func &service_creator,
                            CHECK_EQ(0xdeadbeef, read_value);
                        })
             ->wait();
-        writer = dsn::binary_writer();
+    }
+    // set & get data
+    {
+        dsn::binary_writer writer;
         writer.write(0xbeefdead);
         service
             ->set_data(

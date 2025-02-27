@@ -33,7 +33,7 @@
 #include <cstdio>
 #include <string>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "runtime/api_layer1.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -115,7 +115,7 @@ inline int64_t get_unix_sec_today_midnight()
 // `hh:mm` (range in [00:00, 23:59]) to seconds since 00:00:00
 // eg. `01:00` => `3600`
 // Return: -1 when invalid
-inline int hh_mm_to_seconds(absl::string_view hhmm)
+inline int hh_mm_to_seconds(std::string_view hhmm)
 {
     int hour = 0, min = 0, sec = -1;
     if (::sscanf(hhmm.data(), "%d:%d", &hour, &min) == 2 && (0 <= hour && hour <= 23) &&
@@ -128,7 +128,7 @@ inline int hh_mm_to_seconds(absl::string_view hhmm)
 // local time `hh:mm` to unix timestamp.
 // eg. `18:10` => `1525947000` when called on May 10, 2018, CST
 // Return: -1 when invalid
-inline int64_t hh_mm_today_to_unix_sec(absl::string_view hhmm_of_day)
+inline int64_t hh_mm_today_to_unix_sec(std::string_view hhmm_of_day)
 {
     int sec_of_day = hh_mm_to_seconds(hhmm_of_day);
     if (sec_of_day == -1) {
@@ -147,13 +147,15 @@ public:
 
     inline void reset_start_time() { _start_time_ns = dsn_now_ns(); }
 
-    inline uint64_t duration_ns() const
+    [[nodiscard]] inline uint64_t duration_ns() const
     {
         auto now = dsn_now_ns();
         CHECK_GE(now, _start_time_ns);
 
         return now - _start_time_ns;
     }
+
+    [[nodiscard]] inline uint64_t duration_ms() const { return duration_ns() / 1'000'000; }
 
 private:
     uint64_t _start_time_ns;

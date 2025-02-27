@@ -32,10 +32,10 @@
 #include "hotspot_partition_calculator.h"
 #include "pegasus/client.h"
 #include "result_writer.h"
-#include "runtime/rpc/group_host_port.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_code.h"
+#include "rpc/group_host_port.h"
 #include "shell/command_executor.h"
+#include "task/async_calls.h"
+#include "task/task_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
@@ -74,7 +74,7 @@ DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
 info_collector::info_collector()
 {
     std::vector<::dsn::host_port> meta_servers;
-    replica_helper::parse_server_list(FLAGS_server_list, meta_servers);
+    dsn::replication::replica_helper::parse_server_list(FLAGS_server_list, meta_servers);
 
     _meta_servers.assign_group("meta-servers");
     for (auto &ms : meta_servers) {
@@ -86,7 +86,8 @@ info_collector::info_collector()
     _shell_context = std::make_shared<shell_context>();
     _shell_context->current_cluster_name = _cluster_name;
     _shell_context->meta_list = meta_servers;
-    _shell_context->ddl_client.reset(new replication_ddl_client(meta_servers));
+    _shell_context->ddl_client =
+        std::make_unique<dsn::replication::replication_ddl_client>(meta_servers);
 
     // initialize the _client.
     CHECK(pegasus_client_factory::initialize(nullptr), "Initialize the pegasus client failed");

@@ -49,11 +49,11 @@
 #include "replica/backup/cold_backup_context.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
+#include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
 #include "runtime/serverlet.h"
-#include "runtime/task/task.h"
-#include "runtime/task/task_tracker.h"
+#include "task/task.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
@@ -73,6 +73,7 @@ class gpid;
 class host_port;
 
 namespace dist {
+
 namespace block_service {
 class block_filesystem;
 } // namespace block_service
@@ -85,6 +86,7 @@ namespace replication {
 
 class backup_request;
 class backup_response;
+
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;
@@ -105,7 +107,6 @@ class replica_stub;
 class replication_app_base;
 class replication_options;
 struct dir_node;
-
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
 
 namespace test {
@@ -532,8 +533,8 @@ private:
     void update_restore_progress(uint64_t f_size);
 
     // Used for remote command
-    // TODO: remove this interface and only expose the http interface
-    // now this remote commend will be used by `scripts/pegasus_manual_compact.sh`
+    // TODO(clang-tidy): remove this interface and only expose the http interface
+    // now this remote commend will be used by `admin_tools/pegasus_manual_compact.sh`
     std::string query_manual_compact_state() const;
 
     manual_compaction_status::type get_manual_compact_status() const;
@@ -609,6 +610,7 @@ private:
     friend class replica_disk_test;
     friend class replica_disk_migrate_test;
     friend class open_replica_test;
+    friend class mock_load_replica;
     friend class replica_follower;
     friend class ::pegasus::server::pegasus_server_test_base;
     friend class ::pegasus::server::rocksdb_wrapper_test;

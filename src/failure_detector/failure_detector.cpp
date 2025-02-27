@@ -34,18 +34,18 @@
 #include <type_traits>
 #include <utility>
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 #include "failure_detector/fd.code.definition.h"
 #include "fd_types.h"
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "nlohmann/json_fwd.hpp"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
 #include "runtime/serverlet.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_spec.h"
+#include "task/async_calls.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/command_manager.h"
 #include "utils/fmt_logging.h"

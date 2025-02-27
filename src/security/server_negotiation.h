@@ -20,7 +20,7 @@
 #include <string>
 
 #include "negotiation.h"
-#include "runtime/rpc/rpc_message.h"
+#include "rpc/rpc_message.h"
 
 namespace dsn {
 class blob;

@@ -35,12 +35,12 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "absl/strings/string_view.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
@@ -51,6 +51,7 @@
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "failure_detector/failure_detector_multimaster.h"
+#include "gutil/map_util.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
@@ -59,16 +60,16 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/dns_resolver.h"
-#include "runtime/rpc/rpc_address.h"
-#include "runtime/rpc/rpc_host_port.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task.h"
 #include "security/access_controller.h"
 #include "split/replica_split_manager.h"
+#include "task/async_calls.h"
+#include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
@@ -89,9 +90,9 @@ bool get_bool_envs(const std::map<std::string, std::string> &envs,
                    const std::string &name,
                    bool &value)
 {
-    auto iter = envs.find(name);
-    if (iter != envs.end()) {
-        if (!buf2bool(iter->second, value)) {
+    const auto *value_ptr = gutil::FindOrNull(envs, name);
+    if (value_ptr != nullptr) {
+        if (!buf2bool(*value_ptr, value)) {
             return false;
         }
     }
@@ -202,7 +203,7 @@ void replica::add_potential_secondary(const configuration_update_request &propos
         _primary_states.pc.hp_secondaries.size() + _primary_states.learners.size();
     if (potential_secondaries_count >= _primary_states.pc.max_replica_count - 1) {
         if (proposal.type == config_type::CT_ADD_SECONDARY) {
-            if (_primary_states.learners.find(node) == _primary_states.learners.end()) {
+            if (!gutil::ContainsKey(_primary_states.learners, node)) {
                 LOG_INFO_PREFIX(
                     "already have enough secondaries or potential secondaries, ignore new "
                     "potential secondary proposal");
@@ -225,9 +226,9 @@ void replica::add_potential_secondary(const configuration_update_request &propos
     state.prepare_start_decree = invalid_decree;
     state.timeout_task = nullptr; // TODO: add timer for learner task
 
-    auto it = _primary_states.learners.find(node);
-    if (it != _primary_states.learners.end()) {
-        state.signature = it->second.signature;
+    const auto *rls = gutil::FindOrNull(_primary_states.learners, node);
+    if (rls != nullptr) {
+        state.signature = rls->signature;
     } else {
         state.signature = ++_primary_states.next_learning_version;
         _primary_states.learners[node] = state;
@@ -585,9 +586,10 @@ void replica::update_bool_envs(const std::map<std::string, std::string> &envs,
 void replica::update_ac_allowed_users(const std::map<std::string, std::string> &envs)
 {
     std::string allowed_users;
-    auto iter = envs.find(replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS);
-    if (iter != envs.end()) {
-        allowed_users = iter->second;
+    const auto *env =
+        gutil::FindOrNull(envs, replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS);
+    if (env != nullptr) {
+        allowed_users = *env;
     }
 
     _access_controller->update_allowed_users(allowed_users);
@@ -595,9 +597,10 @@ void replica::update_ac_allowed_users(const std::map<std::string, std::string> &
 
 void replica::update_ac_ranger_policies(const std::map<std::string, std::string> &envs)
 {
-    auto iter = envs.find(replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES);
-    if (iter != envs.end()) {
-        _access_controller->update_ranger_policies(iter->second);
+    const auto *env =
+        gutil::FindOrNull(envs, replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES);
+    if (env != nullptr) {
+        _access_controller->update_ranger_policies(*env);
     }
 }
 
@@ -623,14 +626,14 @@ void replica::update_allow_ingest_behind(const std::map<std::string, std::string
 
 void replica::update_deny_client(const std::map<std::string, std::string> &envs)
 {
-    auto env_iter = envs.find(replica_envs::DENY_CLIENT_REQUEST);
-    if (env_iter == envs.end()) {
+    const auto *env = gutil::FindOrNull(envs, replica_envs::DENY_CLIENT_REQUEST);
+    if (env == nullptr) {
         _deny_client.reset();
         return;
     }
 
     std::vector<std::string> sub_sargs;
-    utils::split_args(env_iter->second.c_str(), sub_sargs, '*', true);
+    utils::split_args(env->c_str(), sub_sargs, '*', true);
     CHECK_EQ_PREFIX(sub_sargs.size(), 2);
 
     _deny_client.reconfig = (sub_sargs[0] == "reconfig");
@@ -691,7 +694,7 @@ bool replica::is_same_ballot_status_change_allowed(partition_status::type olds,
 bool replica::update_local_configuration(const replica_configuration &config,
                                          bool same_ballot /* = false*/)
 {
-    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](absl::string_view) -> bool {
+    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](std::string_view) -> bool {
         auto old_status = status();
         _config = config;
         LOG_INFO_PREFIX(

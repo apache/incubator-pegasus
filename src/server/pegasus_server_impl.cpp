@@ -43,8 +43,8 @@
 #include <mutex>
 #include <ostream>
 #include <set>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "base/idl_utils.h" // IWYU pragma: keep
 #include "base/meta_store.h"
 #include "base/pegasus_key_schema.h"
@@ -60,17 +60,17 @@
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
 #include "replica_admin_types.h"
+#include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/api_layer1.h"
-#include "runtime/rpc/rpc_message.h"
-#include "runtime/task/async_calls.h"
-#include "runtime/task/task_code.h"
 #include "server/key_ttl_compaction_filter.h"
 #include "server/pegasus_manual_compact_service.h"
 #include "server/pegasus_read_service.h"
 #include "server/pegasus_scan_context.h"
 #include "server/range_read_limiter.h"
+#include "task/async_calls.h"
+#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
@@ -350,15 +350,24 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
                     max_d);
 }
 
+int pegasus_server_impl::make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request)
+{
+    CHECK_TRUE(_is_open);
+
+    return _server_write->make_idempotent(request, new_request);
+}
+
 int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                                                    uint64_t timestamp,
                                                    dsn::message_ex **requests,
-                                                   int count)
+                                                   int count,
+                                                   dsn::message_ex *original_request)
 {
-    CHECK(_is_open, "");
+    CHECK_TRUE(_is_open);
     CHECK_NOTNULL(requests, "");
 
-    return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
+    return _server_write->on_batched_write_requests(
+        requests, count, decree, timestamp, original_request);
 }
 
 // Since LOG_ERROR_PREFIX depends on log_prefix(), this method could not be declared as static or
@@ -2338,6 +2347,7 @@ int64_t pegasus_server_impl::last_flushed_decree() const
     return static_cast<int64_t>(decree);
 }
 
+// TODO(wangdan): consider using dsn::utils::pattern_match().
 bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_type,
                                           const ::dsn::blob &filter_pattern,
                                           const ::dsn::blob &value)
@@ -2354,7 +2364,7 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
             return false;
         if (filter_type == ::dsn::apps::filter_type::FT_MATCH_ANYWHERE) {
             return value.to_string_view().find(filter_pattern.to_string_view()) !=
-                   absl::string_view::npos;
+                   std::string_view::npos;
         } else if (filter_type == ::dsn::apps::filter_type::FT_MATCH_PREFIX) {
             return dsn::utils::mequals(
                 value.data(), filter_pattern.data(), filter_pattern.length());

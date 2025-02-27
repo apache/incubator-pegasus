@@ -19,12 +19,11 @@
 
 #include "server/pegasus_mutation_duplicator.h"
 
-#include <absl/strings/string_view.h>
 #include <fmt/core.h>
 #include <pegasus/error.h>
 #include <sys/types.h>
-#include <algorithm>
 #include <memory>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -39,11 +38,11 @@
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "replica/replica_base.h"
+#include "rpc/rpc_holder.h"
+#include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
-#include "runtime/rpc/rpc_holder.h"
-#include "runtime/rpc/rpc_message.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
 
