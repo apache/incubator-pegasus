@@ -24,7 +24,7 @@ import (
 	"sort"
 
 	"github.com/apache/incubator-pegasus/admin-cli/tabular"
-	"github.com/pegasus-kv/collector/aggregate"
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 )
 
 var partitionStatsTemplate = `---

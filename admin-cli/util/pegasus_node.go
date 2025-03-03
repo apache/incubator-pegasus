@@ -25,9 +25,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/session"
-	"github.com/pegasus-kv/collector/aggregate"
 )
 
 // PegasusNode is a representation of MetaServer and ReplicaServer.
