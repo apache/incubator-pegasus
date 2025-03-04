@@ -59,10 +59,10 @@ void task_spec::register_task_code(task_code code,
 {
     CHECK_GE(code, 0);
     CHECK_LT(code, TASK_SPEC_STORE_CAPACITY);
-    if (!s_task_spec_store[code]) {
-        s_task_spec_store[code] =
+    if (s_task_spec_store.at(code) == nullptr) {
+        s_task_spec_store.at(code) =
             std::make_unique<task_spec>(code, code.to_string(), type, pri, pool);
-        auto &spec = s_task_spec_store[code];
+        auto &spec = s_task_spec_store.at(code);
 
         if (type == TASK_TYPE_RPC_REQUEST) {
             std::string ack_name = std::string(code.to_string()) + std::string("_ACK");
@@ -75,33 +75,35 @@ void task_spec::register_task_code(task_code code,
             spec->rpc_paired_code = ack_code;
             task_spec::get(ack_code.code())->rpc_paired_code = code;
         }
-    } else {
-        auto spec = task_spec::get(code);
-        CHECK_EQ_MSG(
-            spec->type,
-            type,
-            "task code {} registerd for {}, which does not match with previously registered {}",
-            code,
-            enum_to_string(type),
-            enum_to_string(spec->type));
 
-        if (spec->priority != pri) {
-            LOG_WARNING("overwrite priority for task {} from {} to {}",
+        return;
+    }
+
+    auto *spec = task_spec::get(code);
+    CHECK_EQ_MSG(
+        spec->type,
+        type,
+        "task code {} registerd for {}, which does not match with previously registered {}",
+        code,
+        enum_to_string(type),
+        enum_to_string(spec->type));
+
+    if (spec->priority != pri) {
+        LOG_WARNING("overwrite priority for task {} from {} to {}",
+                    code,
+                    enum_to_string(spec->priority),
+                    enum_to_string(pri));
+        spec->priority = pri;
+    }
+
+    if (spec->pool_code != pool) {
+        if (spec->pool_code != THREAD_POOL_INVALID) {
+            LOG_WARNING("overwrite default thread pool for task {} from {} to {}",
                         code,
-                        enum_to_string(spec->priority),
-                        enum_to_string(pri));
-            spec->priority = pri;
+                        spec->pool_code,
+                        pool);
         }
-
-        if (spec->pool_code != pool) {
-            if (spec->pool_code != THREAD_POOL_INVALID) {
-                LOG_WARNING("overwrite default thread pool for task {} from {} to {}",
-                            code,
-                            spec->pool_code,
-                            pool);
-            }
-            spec->pool_code = pool;
-        }
+        spec->pool_code = pool;
     }
 }
 

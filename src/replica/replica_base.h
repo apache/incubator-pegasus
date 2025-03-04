@@ -46,15 +46,17 @@ struct replica_base
     {
     }
 
-    gpid get_gpid() const { return _gpid; }
+    virtual ~replica_base() = default;
 
-    const char *replica_name() const { return _name.c_str(); }
+    [[nodiscard]] gpid get_gpid() const { return _gpid; }
 
-    const char *app_name() const { return _app_name.c_str(); }
+    [[nodiscard]] const char *replica_name() const { return _name.c_str(); }
 
-    const char *log_prefix() const { return _name.c_str(); }
+    [[nodiscard]] const char *app_name() const { return _app_name.c_str(); }
 
-    const metric_entity_ptr &replica_metric_entity() const
+    [[nodiscard]] const char *log_prefix() const { return _name.c_str(); }
+
+    [[nodiscard]] const metric_entity_ptr &replica_metric_entity() const
     {
         CHECK_NOTNULL(_replica_metric_entity,
                       "replica metric entity (table_id={}, partition_id={}) should has been "

@@ -71,22 +71,20 @@ class rocksdb_wrapper_test;
 namespace dsn {
 class gpid;
 class host_port;
+class task_spec;
 
-namespace dist {
-
-namespace block_service {
+namespace dist::block_service {
 class block_filesystem;
-} // namespace block_service
-} // namespace dist
+} // namespace dist::block_service
 
 namespace security {
 class access_controller;
 } // namespace security
+
 namespace replication {
 
 class backup_request;
 class backup_response;
-
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;
@@ -107,11 +105,12 @@ class replica_stub;
 class replication_app_base;
 class replication_options;
 struct dir_node;
-typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
+
+using cold_backup_context_ptr = dsn::ref_ptr<cold_backup_context>;
 
 namespace test {
 class test_checker;
-}
+} // namespace test
 
 #define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
     do {                                                                                           \
@@ -163,7 +162,12 @@ struct deny_client
 class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:
-    ~replica(void);
+    ~replica() override;
+
+    replica(const replica &) = delete;
+    replica &operator=(const replica &) = delete;
+    replica(replica &&) = delete;
+    replica &operator=(replica &&) = delete;
 
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
@@ -356,6 +360,16 @@ private:
     void response_client_read(dsn::message_ex *request, error_code error);
     void response_client_write(dsn::message_ex *request, error_code error);
     void execute_mutation(mutation_ptr &mu);
+
+    // Create a new mutation with the non-idempotent original request, which is used to reply
+    // to the client.
+    mutation_ptr new_mutation(decree decree, dsn::message_ex *original_request);
+
+    // Create a new mutation marked as blocking, which means this mutation would begin to be
+    // processed after all of the previous mutations in the queue have been committed and applied
+    // into the rocksdb of primary replica.
+    mutation_ptr new_mutation(decree decree, bool is_blocking);
+
     mutation_ptr new_mutation(decree decree);
 
     // initialization
@@ -372,16 +386,38 @@ private:
 
     /////////////////////////////////////////////////////////////////
     // 2pc
+
+    // - spec: should never be NULL (otherwise the behaviour is undefined).
+    bool need_reject_non_idempotent(task_spec *spec) const;
+
+    // Decide if it is needed to make the request idempotent.
+    // - spec: should never be NULL (otherwise the behaviour is undefined).
+    bool need_make_idempotent(task_spec *spec) const;
+
+    // Decide if it is needed to make the request idempotent.
+    bool need_make_idempotent(message_ex *request) const;
+
+    // Make the request in the mutation idempotent, if needed.
+    int make_idempotent(mutation_ptr &mu);
+
     // `pop_all_committed_mutations = true` will be used for ingestion empty write
     // See more about it in `replica_bulk_loader.cpp`
-    void
-    init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations = false);
-    void send_prepare_message(const ::dsn::host_port &addr,
+    void init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations);
+
+    void init_prepare(mutation_ptr &mu, bool reconciliation)
+    {
+        init_prepare(mu, reconciliation, false);
+    }
+
+    //
+    void reply_with_error(const mutation_ptr &mu, const error_code &err);
+
+    void send_prepare_message(const ::dsn::host_port &hp,
                               partition_status::type status,
                               const mutation_ptr &mu,
                               int timeout_milliseconds,
-                              bool pop_all_committed_mutations = false,
-                              int64_t learn_signature = invalid_signature);
+                              bool pop_all_committed_mutations,
+                              int64_t learn_signature);
     void on_append_log_completed(mutation_ptr &mu, error_code err, size_t size);
     void on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr,
                           error_code err,
@@ -644,6 +680,9 @@ private:
     app_info _app_info;
     std::map<std::string, std::string> _extra_envs;
 
+    // TODO(wangdan): temporarily used to record, would support soon.
+    bool _make_write_idempotent;
+
     // uniq timestamp generator for this replica.
     //
     // we use it to generate an increasing timestamp for current replica
@@ -768,6 +807,8 @@ private:
     // Indicate where the storage engine data is corrupted and unrecoverable.
     bool _data_corrupted{false};
 };
-typedef dsn::ref_ptr<replica> replica_ptr;
+
+using replica_ptr = dsn::ref_ptr<replica>;
+
 } // namespace replication
 } // namespace dsn
