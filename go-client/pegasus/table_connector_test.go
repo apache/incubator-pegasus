@@ -227,6 +227,12 @@ func TestPegasusTableConnector_EmptyInput(t *testing.T) {
 	assert.Contains(t, err.Error(), "sortkey must not be nil")
 	_, err = tb.TTL(context.Background(), []byte("h1"), []byte(""))
 	assert.Nil(t, err)
+
+	// DelRange
+	err = tb.DelRange(context.Background(), nil, nil, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	err = tb.DelRangeOpt(context.Background(), []byte{}, nil, nil, &DelRangeOptions{})
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
 }
 
 func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
@@ -655,6 +661,87 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 
 	// test with invalid ttl
 	assert.Error(t, tb.MultiSetOpt(context.Background(), hashKey, sortKeys, values, -1*time.Second))
+}
+
+func TestPegasusTableConnector_DelRange(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+
+	testDelRangeOperations(t, tb)
+}
+
+func testDelRangeOperations(t *testing.T, tb TableConnector) {
+	hashKey := []byte("h1")
+
+	sortKeys := make([][]byte, 10)
+	values := make([][]byte, 10)
+	for i := 0; i < 10; i++ {
+		// make sortKeys sorted.
+		sidBuf := []byte(fmt.Sprintf("%d", i))
+		var sidWithLeadingZero bytes.Buffer
+		for k := 0; k < 20-len(sidBuf); k++ {
+			sidWithLeadingZero.WriteByte('0')
+		}
+		sidWithLeadingZero.Write(sidBuf)
+		sortKeys[i] = sidWithLeadingZero.Bytes()
+		values[i] = []byte(fmt.Sprintf("v%d", i))
+	}
+
+	// delete non-existent sortKey should be ok
+	err := tb.DelRange(context.Background(), hashKey, sortKeys[0], sortKeys[9])
+	assert.NoError(t, err)
+
+	// setup
+	err = tb.MultiSet(context.Background(), hashKey, sortKeys, values)
+	assert.NoError(t, err)
+
+	// read after deletion
+	err = tb.DelRange(context.Background(), hashKey, sortKeys[5], sortKeys[6])
+	assert.NoError(t, err)
+	count, err := tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(9), count) // 0,1,2,3,4,5,7,8,9
+
+	// DelRange with "*Inclusive" option
+	err = tb.DelRangeOpt(context.Background(), hashKey, sortKeys[2], sortKeys[6],
+		&DelRangeOptions{StartInclusive: true, StopInclusive: true})
+	assert.NoError(t, err)
+	count, err = tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(5), count) // 0,1,7,8,9
+
+	err = tb.DelRangeOpt(context.Background(), hashKey, sortKeys[6], sortKeys[8],
+		&DelRangeOptions{StartInclusive: false, StopInclusive: false})
+	assert.NoError(t, err)
+	count, err = tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(4), count) // 0,1,8,9
+
+	// DelRange with FilterTypeMatchPostfix option
+	err = tb.DelRangeOpt(context.Background(), hashKey, sortKeys[0], sortKeys[9], &DelRangeOptions{SortKeyFilter: Filter{
+		Type:    FilterTypeMatchPostfix,
+		Pattern: []byte("8"),
+	}})
+	assert.NoError(t, err)
+	count, err = tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(3), count) // 0,1,9
+
+	// ensure passing nil to startSortKey and stopSortKey in DelRange deletes all entries
+	err = tb.MultiSet(context.Background(), hashKey, sortKeys, values)
+	assert.NoError(t, err)
+	err = tb.DelRange(context.Background(), hashKey, nil, nil)
+	assert.NoError(t, err)
+	count, err = tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), count)
+
 }
 
 func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
