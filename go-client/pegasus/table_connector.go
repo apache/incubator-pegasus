@@ -166,8 +166,8 @@ type TableConnector interface {
 	// atomically in one operation.
 	// DelRange is identical to DelRangeOpt except that the former uses DefaultDelRangeOptions as `options`.
 	//
-	// startSortKey: nil or len(startSortKey) == 0 means start from begin.
-	// stopSortKey: nil or len(stopSortKey) == 0 means stop to end.
+	// startSortKey: nil or len(startSortKey) == 0 means to start from the first entry in the sorted key range.
+	// stopSortKey: nil or len(stopSortKey) == 0 means to stop at the last entry in the sorted key range.
 	// `hashKey` : CAN'T be nil or empty.
 	DelRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) error
 	DelRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *DelRangeOptions) error
