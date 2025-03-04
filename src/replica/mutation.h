@@ -58,9 +58,10 @@ class mutation;
 
 using mutation_ptr = dsn::ref_ptr<mutation>;
 
-// Mutation is 2PC unit of PacificA, which wraps one or more client requests and adds header
-// informations related to PacificA algorithm for them. Both header and client request content
-// are put into "data" member.
+// As 2PC unit of PacificA, a mutation contains one or more write requests with header
+// information related to PacificA algorithm in `data` member. It is appended to plog
+// and written into prepare request broadcast to secondary replicas. It also holds the
+// original client requests used to build the response to the client.
 class mutation : public ref_counter
 {
 public:
@@ -114,7 +115,7 @@ public:
     // to build the response to the client later.
     //
     // Parameters:
-    // - request: it is from a client if non-null, otherwise it is an empty write.
+    // - request: is from a client if non-null, otherwise is an empty write.
     void add_client_request(dsn::message_ex *request);
 
     void copy_from(mutation_ptr &old);
@@ -165,7 +166,7 @@ public:
     std::vector<dsn::message_ex *> client_requests;
 
     // A mutation will be a blocking mutation if `is_blocking` is true. A blocking mutation
-    // will not begin to be poped from the queue and processed until all of mutations before
+    // will not begin to be popped from the queue and processed until all of mutations before
     // it in the queue have been committed and applied into RocksDB. This field is only used
     // by primary replicas.
     bool is_blocking{false};
@@ -214,18 +215,26 @@ private:
 
 class replica;
 
-// mutation queue are queues for mutations waiting to send.
-// more precisely: for client requests waiting to send.
-// mutations are queued as "_queue + _pending_mutation". that is to say, _queue.first is the first
-// element in the queue, and pending_mutations is the last.
+// The mutation queue caches the mutations waiting to be processed in order by the write pipeline,
+// including appended to plog and broadcast to secondary replicas.
 //
-// However, once _blocking_mutation is non-null, it is the first element.
+// The entire queue is arranged in the order of `_blocking_mutation + _queue + _pending_mutation`,
+// meaning that `_blocking_mutation` is the head of the queue if it is non-null, for the reason
+// that it is enabled only when the mutation ready to get popped from the queue is a blocking
+// mutation: it will block the entire queue from which none could get popped until all of the
+// mutations before it have been applied.
 //
-// we keep 2 structure "hdr" and "pending_mutation" coz:
-// 1. as a container of client requests, capacity of a mutation is limited, so incoming client
-//    requets should be packed into different mutations
-// 2. number of preparing mutations is also limited, so we should queue new created mutations and
-//    try to send them as soon as the concurrent condition satisfies.
+// Once `_blocking_mutation` is cleared and becomes null, the head of the queue will be the head
+// of `_queue`. `_pending_mutation` is the tail of the queue, separated from `_queue` due to the
+// following reasons:
+// 1. As a carrier for storing client requests, each mutation needs to be size-limited. For each
+// incoming request, we need to decide whether to continue storing it in the most recent mutation
+// (i.e. `_pending_mutation`) or to create a new one.
+// 2. The number of concurrent two-phase commits is limited. We should ensure the requests in
+// each mutation could be processed as soon as possible if it does not reach the upper limit,
+// even if the requests are in the latest mutation.
+// 3. Some writes (such as non-single writes) do not allow batching. Once this kind of requests
+// are received, a new mutation (`_pending_mutation`) should be created to hold them.
 class mutation_queue
 {
 public:
@@ -245,21 +254,80 @@ public:
     mutation_queue(mutation_queue &&) = delete;
     mutation_queue &operator=(mutation_queue &&) = delete;
 
+    // Append the input request from the client to the queue by filling the latest mutation
+    // with it.
+    //
+    // Parameters:
+    // - request: must be non-null and from a client.
+    //
+    // Return the next mutation needing to be processed in order. Returning null means the
+    // queue is being blocked or does not have any mutation.
     mutation_ptr add_work(dsn::message_ex *request);
 
+    // Get the next mutation in order, typically called immediately after the current
+    // mutation was applied, or the membership was changed and we became the primary
+    // replica.
+    //
+    // Parameters:
+    // - current_running_count: used to reset the current number of the mutations being
+    // processed, typically the gap between the max committed decree and the max prepared
+    // decree. `_current_op_count` is never decreased directly: this parameter provides
+    // the only way to decrease it.
+    //
+    // Return the next mutation needing to be processed in order. Returning null means the
+    // queue is being blocked or does not have any mutation.
+    mutation_ptr next_work(int current_running_count);
+
+    // Clear the entire queue.
     void clear();
-    // called when you want to clear the mutation_queue and want to get the remaining messages
+
+    // Get the remaining unprocessed mutations and clear the entire queue.
+    //
+    // Parameters:
+    // - queued_mutations: the output parameter used to hold the remaining unprocessed
+    // mutations.
     void clear(std::vector<mutation_ptr> &queued_mutations);
 
-    // called when the curren operation is completed or replica configuration is change,
-    // which triggers further round of operations as returned
-    mutation_ptr check_possible_work(int current_running_count);
-
 private:
+    // Promote `_pending_mutation` to `_queue`. Before the promotion, `_pending_mutation`
+    // should not be null (otherwise the behaviour is undefined).
+    void promote_pending();
+
+    // If some conditions are met, promote `_pending_mutation` to `_queue`. Before the
+    // promotion, `_pending_mutation` should not be null (otherwise the behaviour is
+    // undefined).
+    //
+    // Parameters:
+    // - spec: the specification for the incoming client request, used to check if this client
+    // request is allowed to be batched.
+    void try_promote_pending(task_spec *spec);
+
+    // Once the blocking mutation is enabled, the queue will be blocked and any mutation cannot
+    // get popped. However, once the mutations before the blocking mutation have been applied
+    // into RocksDB, the blocking mutation can be disabled and the queue will be "unblocked".
+    // `_blocking_mutation` should not be null before this function is called.
+    //
+    // Return non-null blocking mutation if succeeding in unblocking, otherwise return null
+    // which means the queue is still blocked.
     mutation_ptr try_unblock();
+
+    // If immediately popped `mu` is not a blocking mutation, this function will do nothing
+    // except that increase the count for the mutations being processed. Otherwise, it will
+    // set `mu` to `_blocking_mutation` to enable the blocking mutation. `_blocking_mutation`
+    // should be null before this function is called.
+    //
+    // Parameters:
+    // - mu: the mutation immediately popped from the header of `_queue + _pending_mutation`.
+    // Should not be null.
+    //
+    // Return the next mutation needing to be processed in order. Returning null means the
+    // queue is being blocked or does not have any mutation.
     mutation_ptr try_block(mutation_ptr &mu);
 
-    mutation_ptr unlink_next_workload()
+    // Pop the mutation from the header of `_queue`.
+    //
+    // Return non-null mutation if the queue is not empty, otherwise return null.
+    mutation_ptr pop_internal_queue()
     {
         if (_queue.empty()) {
             return {};
@@ -272,7 +340,7 @@ private:
         return work;
     }
 
-    void reset_max_concurrent_ops(int max_c) { _max_concurrent_op = max_c; }
+    void reset_max_concurrent_ops(int max) { _max_concurrent_op = max; }
 
     replica *_replica;
 

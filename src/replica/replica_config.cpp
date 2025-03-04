@@ -1039,7 +1039,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
 
     // start pending mutations if necessary
     if (status() == partition_status::PS_PRIMARY) {
-        mutation_ptr next = _primary_states.write_queue.check_possible_work(
+        auto next = _primary_states.write_queue.next_work(
             static_cast<int>(max_prepared_decree() - last_committed_decree()));
         if (next != nullptr) {
             init_prepare(next, false);

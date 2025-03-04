@@ -561,8 +561,7 @@ void replica::execute_mutation(mutation_ptr &mu)
     }
 
     ADD_CUSTOM_POINT(mu->_tracer, "completed");
-    auto next = _primary_states.write_queue.check_possible_work(
-        static_cast<int>(max_prepared_decree() - d));
+    auto next = _primary_states.write_queue.next_work(static_cast<int>(max_prepared_decree() - d));
 
     if (next != nullptr) {
         init_prepare(next, false);
