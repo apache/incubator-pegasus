@@ -58,7 +58,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
-#include "utils/ports.h"
 #include "utils/rand.h"
 
 DSN_DEFINE_bool(replication,
@@ -275,7 +274,8 @@ replica::replica(replica_stub *stub,
     : serverlet<replica>(replication_options::kReplicaAppType.c_str()),
       replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_host_port_cache), app.app_name),
       _app_info(app),
-      _primary_states(gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
+      _make_write_idempotent(false),
+      _primary_states(this, gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
       _potential_secondary_states(this),
       _chkpt_total_size(0),
       _cur_download_size(0),
@@ -377,7 +377,7 @@ void replica::init_state()
     get_bool_envs(_app_info.envs, replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, _allow_ingest_behind);
 }
 
-replica::~replica(void)
+replica::~replica()
 {
     close();
     _prepare_list = nullptr;
@@ -560,12 +560,25 @@ void replica::execute_mutation(mutation_ptr &mu)
     }
 
     ADD_CUSTOM_POINT(mu->_tracer, "completed");
-    auto next = _primary_states.write_queue.check_possible_work(
-        static_cast<int>(_prepare_list->max_decree() - d));
+    auto next = _primary_states.write_queue.next_work(static_cast<int>(max_prepared_decree() - d));
 
     if (next != nullptr) {
         init_prepare(next, false);
     }
+}
+
+mutation_ptr replica::new_mutation(decree decree, dsn::message_ex *original_request)
+{
+    auto mu = new_mutation(decree);
+    mu->original_request = original_request;
+    return mu;
+}
+
+mutation_ptr replica::new_mutation(decree decree, bool is_blocking)
+{
+    auto mu = new_mutation(decree);
+    mu->is_blocking = is_blocking;
+    return mu;
 }
 
 mutation_ptr replica::new_mutation(decree decree)
