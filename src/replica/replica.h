@@ -402,19 +402,45 @@ private:
     decree get_replay_start_decree();
 
     /////////////////////////////////////////////////////////////////
-    // 2pc
+    // 2PC
 
-    // - spec: should never be NULL (otherwise the behaviour is undefined).
+    // Given the specification for a client request, decide whether to reject it as it is a
+    // non-idempotent request.
+    //
+    // Parameters:
+    // - spec: the specification for a client request, should not be null (otherwise the
+    // behaviour is undefined).
+    //
+    // Return true if deciding to reject this client request.
     bool need_reject_non_idempotent(task_spec *spec) const;
 
-    // Decide if it is needed to make the request idempotent.
-    // - spec: should never be NULL (otherwise the behaviour is undefined).
+    // Given the specification for a client request, decide whether to make it idempotent.
+    //
+    // Parameters:
+    // - spec: the specification for a client request, should not be null (otherwise the
+    // behaviour is undefined).
+    //
+    // Return true if deciding to make this client request idempotent.
     bool need_make_idempotent(task_spec *spec) const;
 
-    // Decide if it is needed to make the request idempotent.
+    // Given a client request, decide whether to make it idempotent.
+    //
+    // Parameters:
+    // - request: the client request, could be null.
+    //
+    // Return true if deciding to make this client request idempotent.
     bool need_make_idempotent(message_ex *request) const;
 
-    // Make the request in the mutation idempotent, if needed.
+    // Make the atomic write request (if any) in a mutation idempotent.
+    //
+    // Parameters:
+    // - mu: the mutation where the atomic write request will be translated into idempotent
+    // one. Should contain at least one client request. Once succeed in translating, `mu`
+    // will be reassigned with the new idempotent mutation as the output. Thus it is both an
+    // input and an output parameter.
+    //
+    // Return rocksdb::Status::kOk, or other code (rocksdb::Status::Code) if some error
+    // occurred while making write idempotent.
     int make_idempotent(mutation_ptr &mu);
 
     // Launch 2PC for the specified mutation: it will be broadcast to secondary replicas,

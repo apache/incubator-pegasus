@@ -289,29 +289,26 @@ int replica::make_idempotent(mutation_ptr &mu)
     dsn::message_ex *new_request = nullptr;
     const int err = _app->make_idempotent(request, &new_request);
     if (dsn_unlikely(err != rocksdb::Status::kOk)) {
-        // Once error occurred, the response would be returned to the client during
-        // _app->make_idempotent().
+        // Once some error occurred, the response with error must have been returned to the
+        // client during _app->make_idempotent(). Thus do nothing here.
         return err;
     }
 
     CHECK_NOTNULL(new_request,
                   "new_request should not be null since its original write request must be atomic");
 
-    // During make_idempotent(), request has been deserialized (i.e. unmarshall() in
-    // rpc_holder::internal). Once deserialize it again, assertion would fail for
-    // set_read_msg() in the constructor of rpc_read_stream.
+    // During make_idempotent(), the request has been deserialized (i.e. unmarshall() in the
+    // constructor of `rpc_holder::internal`). Once deserialize it again, assertion would fail for
+    // set_read_msg() in the constructor of `rpc_read_stream`.
     //
-    // To deserialize it again for writting rocksdb, restore read for it.
+    // To make it deserializable again to be applied into RocksDB, restore read for it.
     request->restore_read();
 
     // The decree must have not been assigned.
     CHECK_EQ(mu->get_decree(), invalid_decree);
 
-    // Create a new mutation to hold the new idempotent request. The old mutation that hold the
-    // non-idempotent requests would be released automatically.
-    //
-    // No need to create the mutation with is_blocking set to true, since the old mutation has
-    // been previously popped out from the mutation queue.
+    // Create a new mutation to hold the new idempotent request. The old mutation holding the
+    // original atomic write request will be released automatically.
     mu = new_mutation(invalid_decree, request);
     mu->add_client_request(new_request);
     return rocksdb::Status::kOk;
@@ -322,8 +319,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     CHECK_EQ(partition_status::PS_PRIMARY, status());
 
     if (make_idempotent(mu) != rocksdb::Status::kOk) {
-        // Once error occurred, the response must have been returned to the client during
-        // make_idempotent().
+        // If some error occurred, the response with error must have been returned to the
+        // client during make_idempotent(). Thus do nothing here.
         return;
     }
 
@@ -455,12 +452,13 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
 
 void replica::reply_with_error(const mutation_ptr &mu, const error_code &err)
 {
+    // Respond to the original atomic request if it is non-null. And it could never be batched.
     if (mu->original_request != nullptr) {
-        // Respond to the original atomic request. And it would never be batched.
         response_client_write(mu->original_request, err);
         return;
     }
 
+    // Just respond to each client request directly if there is no original request for them.
     for (auto *req : mu->client_requests) {
         response_client_write(req, err);
     }
