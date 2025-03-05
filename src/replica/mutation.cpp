@@ -44,7 +44,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
-#include "utils/ports.h"
 
 DSN_DEFINE_uint64(
     replication,
@@ -416,6 +415,7 @@ mutation_ptr mutation_queue::try_block(mutation_ptr &mu)
 {
     CHECK_NOTNULL(mu, "");
 
+    // If the immediately popped mutation is non-blocking, just return it to be processed.
     if (!mu->is_blocking) {
         ++_current_op_count;
         return mu;
@@ -445,7 +445,9 @@ mutation_ptr mutation_queue::add_work(message_ex *request)
         promote_pending();
     }
 
-    // Once `_pending_mutation` is cleared, just assign a new mutation to it.
+    // Once `_pending_mutation` is cleared, just assign a new mutation to it. If the client
+    // request is an atomic write and should be translated into idempotent writes, this new
+    // mutation will be created as a blocking mutation.
     if (_pending_mutation == nullptr) {
         _pending_mutation =
             _replica->new_mutation(invalid_decree, _replica->need_make_idempotent(spec));

@@ -41,12 +41,14 @@
 #include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 namespace dsn {
 class binary_reader;
 class binary_writer;
 class blob;
 class gpid;
+class task_spec;
 
 namespace utils {
 class latency_tracer;
@@ -68,10 +70,8 @@ public:
     mutation();
     ~mutation() override;
 
-    mutation(const mutation &) = delete;
-    mutation &operator=(const mutation &) = delete;
-    mutation(mutation &&) = delete;
-    mutation &operator=(mutation &&) = delete;
+    DISALLOW_COPY_AND_ASSIGN(mutation);
+    DISALLOW_MOVE_AND_ASSIGN(mutation);
 
     // copy mutation from an existing mutation, typically used in partition split
     // mutation should not reply to client, because parent has already replied
@@ -249,10 +249,8 @@ public:
               _current_op_count);
     }
 
-    mutation_queue(const mutation_queue &) = delete;
-    mutation_queue &operator=(const mutation_queue &) = delete;
-    mutation_queue(mutation_queue &&) = delete;
-    mutation_queue &operator=(mutation_queue &&) = delete;
+    DISALLOW_COPY_AND_ASSIGN(mutation_queue);
+    DISALLOW_MOVE_AND_ASSIGN(mutation_queue);
 
     // Append the input request from the client to the queue by filling the latest mutation
     // with it.
@@ -312,8 +310,8 @@ private:
     mutation_ptr try_unblock();
 
     // If immediately popped `mu` is not a blocking mutation, this function will do nothing
-    // except that increase the count for the mutations being processed. Otherwise, it will
-    // set `mu` to `_blocking_mutation` to enable the blocking mutation. `_blocking_mutation`
+    // but increasing the count for the mutations being processed. Otherwise, it will set
+    // `mu` to `_blocking_mutation` to enable the blocking mutation. `_blocking_mutation`
     // should be null before this function is called.
     //
     // Parameters:

@@ -58,7 +58,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
-#include "utils/ports.h"
 #include "utils/rand.h"
 
 DSN_DEFINE_bool(replication,

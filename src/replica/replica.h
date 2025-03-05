@@ -57,6 +57,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
@@ -164,10 +165,8 @@ class replica : public serverlet<replica>, public ref_counter, public replica_ba
 public:
     ~replica() override;
 
-    replica(const replica &) = delete;
-    replica &operator=(const replica &) = delete;
-    replica(replica &&) = delete;
-    replica &operator=(replica &&) = delete;
+    DISALLOW_COPY_AND_ASSIGN(replica);
+    DISALLOW_MOVE_AND_ASSIGN(replica);
 
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
