@@ -224,9 +224,9 @@ class replica;
 // mutation: it will block the entire queue from which none could get popped until all of the
 // mutations before it have been applied.
 //
-// Once `_blocking_mutation` is cleared and becomes null, the head of the queue will be the head
-// of `_queue`. `_pending_mutation` is the tail of the queue, separated from `_queue` due to the
-// following reasons:
+// Once `_blocking_mutation` is cleared and becomes null, the head of the queue will be the first
+// element of `_queue`. `_pending_mutation` is the tail of the queue, separated from `_queue` due
+// to the following reasons:
 // 1. As a carrier for storing client requests, each mutation needs to be size-limited. For each
 // incoming request, we need to decide whether to continue storing it in the most recent mutation
 // (i.e. `_pending_mutation`) or to create a new one.
@@ -317,14 +317,14 @@ private:
     // should be null before this function is called.
     //
     // Parameters:
-    // - mu: the mutation immediately popped from the header of `_queue + _pending_mutation`.
+    // - mu: the mutation immediately popped from the head of `_queue + _pending_mutation`.
     // Should not be null.
     //
     // Return the next mutation needing to be processed in order. Returning null means the
     // queue is being blocked or does not have any mutation.
     mutation_ptr try_block(mutation_ptr &mu);
 
-    // Pop the mutation from the header of `_queue`.
+    // Pop the mutation from the head of `_queue`.
     //
     // Return non-null mutation if the queue is not empty, otherwise return null.
     mutation_ptr pop_internal_queue()
@@ -352,9 +352,12 @@ private:
     mutation_ptr _pending_mutation;
     std::queue<mutation_ptr> _queue;
 
-    // Once a mutation that would get popped is blocking, it should firstly be put in
-    // `_blocking_mutation`; then, the queue would always return nullptr until previous
-    // mutations have been committed and applied into the rocksdb of primary replica.
+    // Once a mutation getting popped from `_queue + _pending_mutation` is found blocking, it
+    // will firstly be set to `_blocking_mutation` to enable the blocking mutation; then, the
+    // mutation popped from the queue will always be null. Only after the all of the mutations
+    // before the blocking mutations have been applied into RocksDB can `_blocking_mutation`
+    // be popped and disabled; then, the mutations will continue to get popped from this queue
+    // in order until another blocking mutations appears.
     mutation_ptr _blocking_mutation;
 };
 

@@ -373,9 +373,9 @@ void mutation_queue::try_promote_pending(task_spec *spec)
     // - the size of `_pending_mutation` reaches the upper limit, or
     // - batch write is disabled (initialized by FLAGS_batch_write_disabled).
     //
-    // To optimize short-circuit evaluation, `_batch_write_disabled` is used as the last
-    // condition to be checked, since it originates from FLAGS_batch_write_disabled which
-    // is mostly set as false by default, while other conditions vary with different incoming
+    // Choose `_batch_write_disabled` as the last condition to be checked to optimize the
+    // performance by short-circuit evaluation since it is actually FLAGS_batch_write_disabled
+    // which is mostly set false by default while other conditions vary with different incoming
     // client requests.
     if (spec->rpc_request_is_write_allow_batch && !_pending_mutation->is_full() &&
         !_batch_write_disabled) {
@@ -438,12 +438,14 @@ mutation_ptr mutation_queue::add_work(message_ex *request)
     auto *spec = task_spec::get(request->rpc_code());
     CHECK_NOTNULL(spec, "");
 
-    // If batch is not allowed for this write, switch work queue
+    // If this request is not allowed to be batched, promote `_pending_mutation` if it is
+    // non-null. We don't check `_batch_write_disabled` since `_pending_mutation` must be
+    // null now if it is true.
     if (_pending_mutation != nullptr && !spec->rpc_request_is_write_allow_batch) {
         promote_pending();
     }
 
-    // Add to work queue
+    // Once `_pending_mutation` is cleared, just assign a new mutation to it.
     if (_pending_mutation == nullptr) {
         _pending_mutation =
             _replica->new_mutation(invalid_decree, _replica->need_make_idempotent(spec));
@@ -453,31 +455,45 @@ mutation_ptr mutation_queue::add_work(message_ex *request)
               request->header->trace_id,
               _pending_mutation->tid());
 
+    // Append the incoming client request to `_pending_mutation`.
     _pending_mutation->add_client_request(request);
 
+    // Throttling is triggered as there are too many mutations being processed as 2PC. Return
+    // null in case more mutations flow into the write pipeline.
     if (_current_op_count >= _max_concurrent_op) {
+        // Since the pending mutation was just filled with the client request, try to promote
+        // it.
         try_promote_pending(spec);
         return {};
     }
 
+    // Once the blocking mutation is enabled, return null if still blocked, or non-null
+    // blocking mutation if succeeding in unblocking.
     if (_blocking_mutation != nullptr) {
+        // Since the pending mutation was just filled with the client request, try to promote
+        // it.
         try_promote_pending(spec);
         return try_unblock();
     }
 
     mutation_ptr mu;
     if (_queue.empty()) {
-        // _pending_mutation is non-null
+        // `_pending_mutation` must be non-null now. There's no need to promote it as `_queue`
+        // is empty: just pop it as the next work candidate to be processed.
         mu = _pending_mutation;
         _pending_mutation.reset();
     } else {
-
+        // Since the pending mutation was just filled with the client request, try to promote
+        // it.
         try_promote_pending(spec);
 
-        // Try to fetch next work.
+        // Now the first element of `_queue` is the head of the entire queue. Pop and return it
+        // as the next work candidate to be processed.
         mu = pop_internal_queue();
     }
 
+    // Currently the popped work is still a candidate: once it is a blocking mutation, the queue
+    // may become blocked and nothing will be returned.
     return try_block(mu);
 }
 
@@ -485,28 +501,37 @@ mutation_ptr mutation_queue::next_work(int current_running_count)
 {
     _current_op_count = current_running_count;
 
+    // Throttling is triggered as there are too many mutations being processed as 2PC. Just
+    // return null in case more mutations flow into the write pipeline.
     if (_current_op_count >= _max_concurrent_op) {
         return {};
     }
 
+    // Once the blocking mutation is enabled, return null if still blocked, or non-null
+    // blocking mutation if succeeding in unblocking.
     if (_blocking_mutation != nullptr) {
         return try_unblock();
     }
 
     mutation_ptr mu;
     if (_queue.empty()) {
-        // no further workload
+        // There's not any further work to be processed if `_pending_mutation` is also null.
         if (_pending_mutation == nullptr) {
             return {};
         }
 
+        // `_pending_mutation` is not null now. Just pop it as the next work candidate to be
+        // processed.
         mu = _pending_mutation;
         _pending_mutation.reset();
     } else {
-        // run further workload
+        // Now the first element of `_queue` is the head of the entire queue. Pop and return it
+        // as the next work candidate to be processed.
         mu = pop_internal_queue();
     }
 
+    // Currently the popped work is still a candidate: once it is a blocking mutation, the queue
+    // may become blocked and nothing will be returned.
     return try_block(mu);
 }
 
@@ -516,6 +541,7 @@ void mutation_queue::clear()
         _blocking_mutation.reset();
     }
 
+    // Use pop_internal_queue() to clear `_queue` since `_pcount` should also be updated.
     mutation_ptr r;
     while ((r = pop_internal_queue()) != nullptr) {
     }
@@ -534,6 +560,7 @@ void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
         _blocking_mutation.reset();
     }
 
+    // Use pop_internal_queue() to clear `_queue` since `_pcount` should also be updated.
     mutation_ptr r;
     while ((r = pop_internal_queue()) != nullptr) {
         queued_mutations.emplace_back(r);
@@ -544,10 +571,8 @@ void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
         _pending_mutation.reset();
     }
 
-    // we don't reset the current_op_count, coz this is handled by
-    // next_work. In which, the variable current_running_count
-    // is handled by prepare_list
-    // _current_op_count = 0;
+    // We don't reset the `_current_op_count` here, since it is done by next_work() where the
+    // parameter `current_running_count` is specified to reset `_current_op_count` as 0.
 }
 
 } // namespace dsn::replication
