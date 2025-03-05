@@ -360,15 +360,33 @@ private:
     void response_client_write(dsn::message_ex *request, error_code error);
     void execute_mutation(mutation_ptr &mu);
 
-    // Create a new mutation with the non-idempotent original request, which is used to reply
-    // to the client.
+    // Create a new mutation with specified decree and the original atomic write request,
+    // which is used to build the response to the client.
+    //
+    // Parameters:
+    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    // - original_request: the original request of the atomic write.
+    //
+    // Return the newly created mutation.
     mutation_ptr new_mutation(decree decree, dsn::message_ex *original_request);
 
-    // Create a new mutation marked as blocking, which means this mutation would begin to be
-    // processed after all of the previous mutations in the queue have been committed and applied
-    // into the rocksdb of primary replica.
+    // Create a new mutation with specified decree and a flag marking whether this is a
+    // blocking mutation (for a detailed explanation of blocking mutations, refer to the
+    // comments for the field `is_blocking` of class `mutation`).
+    //
+    // Parameters:
+    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    // - is_blocking: true means creating a blocking mutation.
+    //
+    // Return the newly created mutation.
     mutation_ptr new_mutation(decree decree, bool is_blocking);
 
+    // Create a new mutation with specified decree.
+    //
+    // Parameters:
+    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    //
+    // Return the newly created mutation.
     mutation_ptr new_mutation(decree decree);
 
     // initialization
@@ -399,19 +417,33 @@ private:
     // Make the request in the mutation idempotent, if needed.
     int make_idempotent(mutation_ptr &mu);
 
-    // `pop_all_committed_mutations = true` will be used for ingestion empty write
-    // See more about it in `replica_bulk_loader.cpp`
+    // Launch 2PC for the specified mutation: it will be broadcast to secondary replicas,
+    // appended to plog, and finally applied into storage engine.
+    //
+    // Parameters:
+    // - mu: the mutation pushed into the write pipeline.
+    // - reconciliation: true means the primary replica will be force to launch 2PC for each
+    // uncommitted request in its prepared list to make them committed regardless of whether
+    // there is a quorum to receive the prepare requests.
+    // - pop_all_committed_mutations: true means popping all committed mutations while preparing
+    // locally, used for ingestion in bulk loader with empty write. See `replica_bulk_loader.cpp`
+    // for details.
     void init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations);
 
+    // The same as the above except that `pop_all_committed_mutations` is set false.
     void init_prepare(mutation_ptr &mu, bool reconciliation)
     {
         init_prepare(mu, reconciliation, false);
     }
 
+    // Reply to the client with the error if 2PC failed.
     //
+    // Parameters:
+    // - mu: the mutation for which 2PC failed.
+    // - err: the error that caused the 2PC failure.
     void reply_with_error(const mutation_ptr &mu, const error_code &err);
 
-    void send_prepare_message(const ::dsn::host_port &hp,
+    void send_prepare_message(const host_port &hp,
                               partition_status::type status,
                               const mutation_ptr &mu,
                               int timeout_milliseconds,
@@ -679,7 +711,8 @@ private:
     app_info _app_info;
     std::map<std::string, std::string> _extra_envs;
 
-    // TODO(wangdan): temporarily used to record, would support soon.
+    // TODO(wangdan): temporarily used to mark whether we make all atomic writes idempotent
+    // for this replica. Would make this configurable soon.
     bool _make_write_idempotent;
 
     // uniq timestamp generator for this replica.

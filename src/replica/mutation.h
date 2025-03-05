@@ -216,7 +216,8 @@ private:
 class replica;
 
 // The mutation queue caches the mutations waiting to be processed in order by the write pipeline,
-// including appended to plog and broadcast to secondary replicas.
+// including appended to plog and broadcast to secondary replicas. This class is only used by
+// primary replicas.
 //
 // The entire queue is arranged in the order of `_blocking_mutation + _queue + _pending_mutation`,
 // meaning that `_blocking_mutation` is the head of the queue if it is non-null, for the reason

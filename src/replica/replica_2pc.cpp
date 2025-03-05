@@ -75,6 +75,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/thread_access_checker.h"
 #include "utils/uniq_timestamp_us.h"
 
@@ -465,7 +466,7 @@ void replica::reply_with_error(const mutation_ptr &mu, const error_code &err)
     }
 }
 
-void replica::send_prepare_message(const ::dsn::host_port &hp,
+void replica::send_prepare_message(const host_port &hp,
                                    partition_status::type status,
                                    const mutation_ptr &mu,
                                    int timeout_milliseconds,
