@@ -35,7 +35,6 @@
 #include "gtest/gtest.h"
 #include "metadata_types.h"
 #include "replica/backup/cold_backup_context.h"
-#include "replica/replica.h"
 #include "replica/test/replication_service_test_app.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"

@@ -15,8 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <stdint.h>
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -482,46 +483,50 @@ public:
         _child_replica->tracker()->wait_outstanding_tasks();
     }
 
-    int32_t child_get_prepare_list_count() { return _child_replica->get_plist()->count(); }
-    bool child_is_prepare_list_copied()
+    [[nodiscard]] int32_t child_get_prepare_list_count() const
+    {
+        return _child_replica->get_plist()->count();
+    }
+    [[nodiscard]] bool child_is_prepare_list_copied() const
     {
         return _child_replica->_split_states.is_prepare_list_copied;
     }
-    bool child_is_caught_up() { return _child_replica->_split_states.is_caught_up; }
+    [[nodiscard]] bool child_is_caught_up() const
+    {
+        return _child_replica->_split_states.is_caught_up;
+    }
 
-    split_status::type parent_get_split_status() { return _parent_split_mgr->_split_status; }
-    void parent_set_split_status(split_status::type status)
+    [[nodiscard]] split_status::type parent_get_split_status() const
+    {
+        return _parent_split_mgr->_split_status;
+    }
+    void parent_set_split_status(split_status::type status) const
     {
         _parent_split_mgr->_split_status = status;
     }
 
-    primary_context get_replica_primary_context(mock_replica_ptr rep)
-    {
-        return rep->_primary_states;
-    }
-    bool parent_sync_send_write_request()
+    [[nodiscard]] bool parent_sync_send_write_request() const
     {
         return _parent_replica->_primary_states.sync_send_write_request;
     }
-    int32_t parent_stopped_split_size()
+    [[nodiscard]] size_t parent_stopped_split_size() const
     {
         return _parent_replica->_primary_states.split_stopped_secondary.size();
     }
-    bool is_parent_not_in_split()
+    [[nodiscard]] bool is_parent_not_in_split() const
     {
         return _parent_split_mgr->_child_gpid.get_app_id() == 0 &&
                _parent_split_mgr->_child_init_ballot == 0 &&
                _parent_split_mgr->_split_status == split_status::NOT_SPLIT;
     }
-    bool primary_parent_not_in_split()
+    [[nodiscard]] bool primary_parent_not_in_split() const
     {
-        auto context = _parent_replica->_primary_states;
-        return context.caught_up_children.size() == 0 && context.register_child_task == nullptr &&
-               context.sync_send_write_request == false && context.query_child_task == nullptr &&
-               context.split_stopped_secondary.size() == 0 && is_parent_not_in_split();
+        const auto &context = _parent_replica->_primary_states;
+        return context.caught_up_children.empty() && context.register_child_task == nullptr &&
+               !context.sync_send_write_request && context.query_child_task == nullptr &&
+               context.split_stopped_secondary.empty() && is_parent_not_in_split();
     }
 
-public:
     const std::string APP_NAME = "split_table";
     const int32_t APP_ID = 2;
     const int32_t OLD_PARTITION_COUNT = 8;
@@ -978,7 +983,7 @@ TEST_P(replica_split_test, primary_parent_handle_stop_test)
         split_status::type meta_split_status;
         bool lack_of_secondary;
         bool will_all_stop;
-        int32_t expected_size;
+        size_t expected_size;
         bool expected_all_stopped;
     } tests[]{{split_status::NOT_SPLIT, false, false, 0, false},
               {split_status::SPLITTING, false, false, 0, false},

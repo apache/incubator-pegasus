@@ -57,6 +57,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
@@ -71,22 +72,20 @@ class rocksdb_wrapper_test;
 namespace dsn {
 class gpid;
 class host_port;
+class task_spec;
 
-namespace dist {
-
-namespace block_service {
+namespace dist::block_service {
 class block_filesystem;
-} // namespace block_service
-} // namespace dist
+} // namespace dist::block_service
 
 namespace security {
 class access_controller;
 } // namespace security
+
 namespace replication {
 
 class backup_request;
 class backup_response;
-
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;
@@ -107,11 +106,12 @@ class replica_stub;
 class replication_app_base;
 class replication_options;
 struct dir_node;
-typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
+
+using cold_backup_context_ptr = dsn::ref_ptr<cold_backup_context>;
 
 namespace test {
 class test_checker;
-}
+} // namespace test
 
 #define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
     do {                                                                                           \
@@ -163,7 +163,10 @@ struct deny_client
 class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:
-    ~replica(void);
+    ~replica() override;
+
+    DISALLOW_COPY_AND_ASSIGN(replica);
+    DISALLOW_MOVE_AND_ASSIGN(replica);
 
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
@@ -356,6 +359,34 @@ private:
     void response_client_read(dsn::message_ex *request, error_code error);
     void response_client_write(dsn::message_ex *request, error_code error);
     void execute_mutation(mutation_ptr &mu);
+
+    // Create a new mutation with specified decree and the original atomic write request,
+    // which is used to build the response to the client.
+    //
+    // Parameters:
+    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    // - original_request: the original request of the atomic write.
+    //
+    // Return the newly created mutation.
+    mutation_ptr new_mutation(decree decree, dsn::message_ex *original_request);
+
+    // Create a new mutation with specified decree and a flag marking whether this is a
+    // blocking mutation (for a detailed explanation of blocking mutations, refer to the
+    // comments for the field `is_blocking` of class `mutation`).
+    //
+    // Parameters:
+    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    // - is_blocking: true means creating a blocking mutation.
+    //
+    // Return the newly created mutation.
+    mutation_ptr new_mutation(decree decree, bool is_blocking);
+
+    // Create a new mutation with specified decree.
+    //
+    // Parameters:
+    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    //
+    // Return the newly created mutation.
     mutation_ptr new_mutation(decree decree);
 
     // initialization
@@ -371,17 +402,79 @@ private:
     decree get_replay_start_decree();
 
     /////////////////////////////////////////////////////////////////
-    // 2pc
-    // `pop_all_committed_mutations = true` will be used for ingestion empty write
-    // See more about it in `replica_bulk_loader.cpp`
-    void
-    init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations = false);
-    void send_prepare_message(const ::dsn::host_port &addr,
+    // 2PC
+
+    // Given the specification for a client request, decide whether to reject it as it is a
+    // non-idempotent request.
+    //
+    // Parameters:
+    // - spec: the specification for a client request, should not be null (otherwise the
+    // behaviour is undefined).
+    //
+    // Return true if deciding to reject this client request.
+    bool need_reject_non_idempotent(task_spec *spec) const;
+
+    // Given the specification for a client request, decide whether to make it idempotent.
+    //
+    // Parameters:
+    // - spec: the specification for a client request, should not be null (otherwise the
+    // behaviour is undefined).
+    //
+    // Return true if deciding to make this client request idempotent.
+    bool need_make_idempotent(task_spec *spec) const;
+
+    // Given a client request, decide whether to make it idempotent.
+    //
+    // Parameters:
+    // - request: the client request, could be null.
+    //
+    // Return true if deciding to make this client request idempotent.
+    bool need_make_idempotent(message_ex *request) const;
+
+    // Make the atomic write request (if any) in a mutation idempotent.
+    //
+    // Parameters:
+    // - mu: the mutation where the atomic write request will be translated into idempotent
+    // one. Should contain at least one client request. Once succeed in translating, `mu`
+    // will be reassigned with the new idempotent mutation as the output. Thus it is both an
+    // input and an output parameter.
+    //
+    // Return rocksdb::Status::kOk, or other code (rocksdb::Status::Code) if some error
+    // occurred while making write idempotent.
+    int make_idempotent(mutation_ptr &mu);
+
+    // Launch 2PC for the specified mutation: it will be broadcast to secondary replicas,
+    // appended to plog, and finally applied into storage engine.
+    //
+    // Parameters:
+    // - mu: the mutation pushed into the write pipeline.
+    // - reconciliation: true means the primary replica will be force to launch 2PC for each
+    // uncommitted request in its prepared list to make them committed regardless of whether
+    // there is a quorum to receive the prepare requests.
+    // - pop_all_committed_mutations: true means popping all committed mutations while preparing
+    // locally, used for ingestion in bulk loader with empty write. See `replica_bulk_loader.cpp`
+    // for details.
+    void init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations);
+
+    // The same as the above except that `pop_all_committed_mutations` is set false.
+    void init_prepare(mutation_ptr &mu, bool reconciliation)
+    {
+        init_prepare(mu, reconciliation, false);
+    }
+
+    // Reply to the client with the error if 2PC failed.
+    //
+    // Parameters:
+    // - mu: the mutation for which 2PC failed.
+    // - err: the error that caused the 2PC failure.
+    void reply_with_error(const mutation_ptr &mu, const error_code &err);
+
+    void send_prepare_message(const host_port &hp,
                               partition_status::type status,
                               const mutation_ptr &mu,
                               int timeout_milliseconds,
-                              bool pop_all_committed_mutations = false,
-                              int64_t learn_signature = invalid_signature);
+                              bool pop_all_committed_mutations,
+                              int64_t learn_signature);
     void on_append_log_completed(mutation_ptr &mu, error_code err, size_t size);
     void on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr,
                           error_code err,
@@ -644,6 +737,10 @@ private:
     app_info _app_info;
     std::map<std::string, std::string> _extra_envs;
 
+    // TODO(wangdan): temporarily used to mark whether we make all atomic writes idempotent
+    // for this replica. Would make this configurable soon.
+    bool _make_write_idempotent;
+
     // uniq timestamp generator for this replica.
     //
     // we use it to generate an increasing timestamp for current replica
@@ -768,6 +865,8 @@ private:
     // Indicate where the storage engine data is corrupted and unrecoverable.
     bool _data_corrupted{false};
 };
-typedef dsn::ref_ptr<replica> replica_ptr;
+
+using replica_ptr = dsn::ref_ptr<replica>;
+
 } // namespace replication
 } // namespace dsn

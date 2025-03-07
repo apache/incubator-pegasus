@@ -108,7 +108,7 @@ class serverlet
 {
 public:
     explicit serverlet(const char *nm);
-    virtual ~serverlet();
+    virtual ~serverlet() = default;
 
 protected:
     template <typename TRequest>
@@ -150,11 +150,6 @@ private:
 // ------------- inline implementation ----------------
 template <typename T>
 inline serverlet<T>::serverlet(const char *nm) : _name(nm)
-{
-}
-
-template <typename T>
-inline serverlet<T>::~serverlet()
 {
 }
 
