@@ -56,6 +56,7 @@ const (
 	OpSortKeyCount
 	OpIncr
 	OpBatchGet
+	OpDelRange
 )
 
 var opTypeToStringMap = map[OpType]string{
@@ -78,6 +79,7 @@ var opTypeToStringMap = map[OpType]string{
 	OpSortKeyCount:         "SORTKEY_COUNT",
 	OpIncr:                 "INCR",
 	OpBatchGet:             "BATCH_GET",
+	OpDelRange:             "DEL_RANGE",
 }
 
 func (op OpType) String() string {
