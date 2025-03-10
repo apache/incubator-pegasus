@@ -169,6 +169,18 @@ public:
     // will not begin to be popped from the queue and processed until all of mutations before
     // it in the queue have been committed and applied into RocksDB. This field is only used
     // by primary replicas.
+    //
+    // For example, if the primary replica receives an incr request (with a base value of 1)
+    // and the current configuration requires all atomic write requests to be idempotent, then:
+    // 1. A mutation with `is_blocking` = true will be created to store this request and then
+    // added to the mutation queue.
+    // 2. This mutation request will only be dequeued after all previous write requests have
+    // been applied.
+    // 3. Next, the current base value 100 is read from the storage engine, and after performing
+    // the incr operation, a single put request is created to store the final value 101.
+    // 4. Another mutation is then created to store this idempotent single put request, which is
+    // subsequently added to the write pipeline, including writing to the plog and broadcasting
+    // to the secondary replicas.
     bool is_blocking{false};
 
     // The original request received from the client. While making an atomic request (incr,
