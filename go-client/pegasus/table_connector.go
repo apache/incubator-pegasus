@@ -84,6 +84,25 @@ var DefaultMultiGetOptions = &MultiGetOptions{
 	NoValue:       false,
 }
 
+// DelRangeOptions is the options for DelRange, defaults to DefaultDelRangeOptions.
+type DelRangeOptions struct {
+	nextSortKey    []byte
+	StartInclusive bool
+	StopInclusive  bool
+	SortKeyFilter  Filter
+}
+
+// DefaultDelRangeOptions defines the defaults of DelRangeOptions.
+var DefaultDelRangeOptions = &DelRangeOptions{
+	nextSortKey:    nil,
+	StartInclusive: true,
+	StopInclusive:  false,
+	SortKeyFilter: Filter{
+		Type:    FilterTypeNoFilter,
+		Pattern: nil,
+	},
+}
+
 // TableConnector is used to communicate with single Pegasus table.
 type TableConnector interface {
 	// Get retrieves the entry for `hashKey` + `sortKey`.
@@ -142,6 +161,16 @@ type TableConnector interface {
 	// `hashKey` / `sortKeys` : CAN'T be nil or empty.
 	// `sortKeys[i]` : CAN'T be nil but CAN be empty.
 	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error
+
+	// DelRange /DelRangeOpt deletes the multiple entries under `hashKey`, between range (`startSortKey`, `stopSortKey`),
+	// atomically in one operation.
+	// DelRange is identical to DelRangeOpt except that the former uses DefaultDelRangeOptions as `options`.
+	//
+	// startSortKey: nil or len(startSortKey) == 0 means to start from the first entry in the sorted key range.
+	// stopSortKey: nil or len(stopSortKey) == 0 means to stop at the last entry in the sorted key range.
+	// `hashKey` : CAN'T be nil or empty.
+	DelRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) error
+	DelRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *DelRangeOptions) error
 
 	// Returns ttl(time-to-live) in seconds: -1 if ttl is not set; -2 if entry doesn't exist.
 	// `hashKey` : CAN'T be nil or empty.
@@ -447,6 +476,81 @@ func (p *pegasusTableConnector) MultiSetOpt(ctx context.Context, hashKey []byte,
 func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error {
 	_, err := p.runPartitionOp(ctx, hashKey, &op.MultiDel{HashKey: hashKey, SortKeys: sortKeys}, OpMultiDel)
 	return err
+}
+
+func (p *pegasusTableConnector) DelRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) error {
+	return p.DelRangeOpt(ctx, hashKey, startSortKey, stopSortKey, DefaultDelRangeOptions)
+}
+
+func (p *pegasusTableConnector) DelRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *DelRangeOptions) error {
+	err := func() error {
+		scannerOptions := ScannerOptions{
+			BatchSize:      defaultScannerBatchSize,
+			StartInclusive: options.StartInclusive,
+			StopInclusive:  options.StopInclusive,
+			HashKeyFilter:  Filter{Type: FilterTypeNoFilter, Pattern: nil},
+			SortKeyFilter:  options.SortKeyFilter,
+			NoValue:        true,
+		}
+
+		if startSortKey != nil {
+			options.nextSortKey = make([]byte, len(startSortKey))
+			copy(options.nextSortKey, startSortKey)
+		} else {
+			options.nextSortKey = nil
+		}
+
+		scanner, err := p.GetScanner(context.Background(), hashKey, startSortKey, stopSortKey, &scannerOptions)
+		if err != nil {
+			switch {
+			case errors.Is(err, context.DeadlineExceeded):
+				return fmt.Errorf("Getting pegasusScanner takes too long time when delete hashKey: %s, startSortKey: %v, stopSortKey: %v", hashKey, startSortKey, stopSortKey)
+			default:
+				return err
+			}
+		}
+		defer scanner.Close()
+
+		var sortKeys [][]byte
+		index := 0
+		for {
+			completed, _, s, _, err := scanner.Next(ctx)
+			if err != nil {
+				return err
+			}
+			if completed {
+				break
+			}
+			sortKeys = append(sortKeys, s)
+			if len(sortKeys) >= scannerOptions.BatchSize {
+				options.nextSortKey = sortKeys[0]
+				if err := p.MultiDel(ctx, hashKey, sortKeys); err != nil {
+					switch {
+					case errors.Is(err, context.DeadlineExceeded):
+						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] timeout", hashKey, options.nextSortKey, index)
+					default:
+						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] failed", hashKey, options.nextSortKey, index)
+					}
+				}
+				sortKeys = nil
+				index += scannerOptions.BatchSize
+			}
+		}
+
+		if len(sortKeys) > 0 {
+			if err := p.MultiDel(ctx, hashKey, sortKeys); err != nil {
+				switch {
+				case errors.Is(err, context.DeadlineExceeded):
+					return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] timeout", hashKey, sortKeys[0], index)
+				default:
+					return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] failed", hashKey, sortKeys[0], index)
+				}
+			}
+			options.nextSortKey = nil
+		}
+		return nil
+	}()
+	return WrapError(err, OpDelRange)
 }
 
 // -2 means entry not found.
