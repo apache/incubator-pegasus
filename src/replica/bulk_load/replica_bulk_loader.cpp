@@ -716,7 +716,7 @@ void replica_bulk_loader::check_ingestion_finish()
         // checkpoint, to gurantee the condition above, we should pop all committed mutations in
         // prepare list to gurantee learn type is LT_APP
         mutation_ptr mu = _replica->new_mutation(invalid_decree);
-        mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+        mu->add_client_request(nullptr);
         _replica->init_prepare(mu, false, true);
         _replica->_primary_states.ingestion_is_empty_prepare_sent = true;
     }
@@ -735,7 +735,7 @@ void replica_bulk_loader::handle_bulk_load_succeed()
     // send an empty prepare again to gurantee that learner should learn from checkpoint
     if (status() == partition_status::PS_PRIMARY) {
         mutation_ptr mu = _replica->new_mutation(invalid_decree);
-        mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+        mu->add_client_request(nullptr);
         _replica->init_prepare(mu, false, true);
     }
 }
