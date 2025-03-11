@@ -113,4 +113,6 @@ struct app_info
     // New fields for bulk load
     // Whether this app is executing bulk load
     14:optional bool    is_bulk_loading = false;
+
+    15:optional bool    atomic_idempotent = false;
 }

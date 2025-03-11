@@ -3648,7 +3648,7 @@ std::shared_ptr<app_state> server_state::get_app_and_check_exist(const std::stri
                                                                  Response &response) const
 {
     auto app = get_app(app_name);
-    if (app == nullptr) {
+    if (!app) {
         response.err = ERR_APP_NOT_EXIST;
         response.hint_message = fmt::format("app({}) does not exist", app_name);
     }
@@ -4456,6 +4456,167 @@ void server_state::recover_app_max_replica_count(std::shared_ptr<app_state> &app
                      app->max_replica_count);
         },
         &tracker);
+}
+
+// ThreadPool: THREAD_POOL_META_STATE
+void server_state::get_atomic_idempotent(configuration_get_atomic_idempotent_rpc rpc) const
+{
+    const auto &app_name = rpc.request().app_name;
+    auto &response = rpc.response();
+
+    zauto_read_lock l(_lock);
+
+    auto app = get_app_and_check_exist(app_name, response);
+    if (!app) {
+        response.atomic_idempotent = false;
+        LOG_WARNING("failed to get atomic_idempotent: app_name={}, "
+                "error_code={}, hint_message={}",
+                    app_name,
+                    response.err,
+                    response.hint_message);
+        return;
+    }
+
+    response.err = ERR_OK;
+    response.atomic_idempotent = app->atomic_idempotent;
+
+    LOG_INFO("get atomic_idempotent successfully: app_name={}, app_id={}, "
+             "atomic_idempotent={}",
+             app_name,
+             app->app_id,
+             response.atomic_idempotent);
+}
+
+// ThreadPool: THREAD_POOL_META_STATE
+void server_state::set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc)
+{
+    const auto &app_name = rpc.request().app_name;
+    const auto new_atomic_idempotent = rpc.request().atomic_idempotent;
+    auto &response = rpc.response();
+
+    int32_t app_id = 0;
+    std::shared_ptr<app_state> app;
+
+    {
+        zauto_read_lock l(_lock);
+
+        app = get_app_and_check_exist(app_name, response);
+        if (app == nullptr) {
+            response.old_atomic_idempotent = 0;
+            LOG_WARNING(
+                "failed to set atomic_idempotent: app_name={}, error_code={}, hint_message={}",
+                app_name,
+                response.err,
+                response.hint_message);
+            return;
+        }
+
+        app_id = app->app_id;
+
+        response.old_atomic_idempotent = app->atomic_idempotent;
+
+        if (app->status != app_status::AS_AVAILABLE) {
+            response.err = ERR_INVALID_PARAMETERS;
+            response.hint_message = fmt::format("app({}) is not in available status", app_name);
+            LOG_ERROR("failed to set atomic_idempotent: app_name={}, app_id={}, error_code={}, "
+                      "hint_message={}",
+                      app_name,
+                      app_id,
+                      response.err,
+                      response.hint_message);
+            return;
+        }
+    }
+
+    auto level = _meta_svc->get_function_level();
+    if (level <= meta_function_level::fl_freezed) {
+        response.err = ERR_STATE_FREEZED;
+        response.hint_message =
+            "current meta function level is freezed, since there are too few alive nodes";
+        LOG_ERROR(
+            "failed to set atomic_idempotent: app_name={}, app_id={}, error_code={}, message={}",
+            app_name,
+            app_id,
+            response.err,
+            response.hint_message);
+        return;
+    }
+
+    if (new_atomic_idempotent == response.old_atomic_idempotent) {
+        response.err = ERR_OK;
+        response.hint_message = "no need to update atomic_idempotent since it's unchanged";
+        LOG_WARNING("{}: app_name={}, app_id={}", response.hint_message, app_name, app_id);
+        return;
+    }
+
+    LOG_INFO("request for updating atomic_idempotent: app_name={}, app_id={}, "
+             "old_atomic_idempotent={}, new_atomic_idempotent={}",
+             app_name,
+             app_id,
+             response.old_atomic_idempotent,
+             new_atomic_idempotent);
+
+    update_atomic_idempotent_on_remote(app, rpc);
+}
+
+void server_state::update_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
+                                                configuration_set_atomic_idempotent_rpc rpc)
+{
+    app_info ainfo = *app;
+    ainfo.atomic_idempotent = rpc.request().atomic_idempotent;
+    do_update_app_info(get_app_path(*app), ainfo, [this, app, rpc](error_code ec) mutable {
+        const auto new_atomic_idempotent = rpc.request().atomic_idempotent;
+        const auto old_atomic_idempotent = rpc.response().old_atomic_idempotent;
+
+        zauto_write_lock l(_lock);
+
+        CHECK_EQ_MSG(ec,
+                     ERR_OK,
+                     "An error that cannot be handled occurred while updating atomic_idempotent "
+                     "on remote: error_code={}, app_name={}, app_id={}, "
+                     "old_atomic_idempotent={}, new_atomic_idempotent={}",
+                     ec,
+                     app->app_name,
+                     app->app_id,
+                     old_atomic_idempotent,
+                     new_atomic_idempotent
+                     );
+
+        CHECK_EQ_MSG(rpc.request().app_name,
+                     app->app_name,
+                     "atomic_idempotent was updated to remote storage, however app_name "
+                     "has been changed since then: old_app_name={}, new_app_name={}, "
+                     "app_id={}, old_atomic_idempotent={}, new_atomic_idempotent={}",
+                     rpc.request().app_name,
+                     app->app_name,
+                     app->app_id,
+                     old_atomic_idempotent,
+                     new_atomic_idempotent);
+
+        CHECK_EQ_MSG(old_atomic_idempotent,
+                     app->atomic_idempotent,
+                     "atomic_idempotent has been updated to remote storage, however "
+                     "old_atomic_idempotent from response is not consistent with current local "
+                     "atomic_idempotent: app_name={}, app_id={}, old_atomic_idempotent={}, "
+                     "local_atomic_idempotent={}, new_atomic_idempotent={}",
+                     app->app_name,
+                     app->app_id,
+                     old_atomic_idempotent,
+                     app->atomic_idempotent,
+                     new_atomic_idempotent);
+
+        app->atomic_idempotent = new_atomic_idempotent;
+        LOG_INFO("both remote and local app-level atomic_idempotent have been updated "
+                 "successfully: app_name={}, app_id={}, old_atomic_idempotent={}, "
+                 "new_atomic_idempotent={}",
+                 app->app_name,
+                 app->app_id,
+                 old_atomic_idempotent,
+                 new_atomic_idempotent);
+
+        auto &response = rpc.response();
+        response.err = ERR_OK;
+    });
 }
 
 #undef SUCC_CREATE_APP_RESPONSE

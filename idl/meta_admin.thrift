@@ -139,6 +139,8 @@ struct create_app_options
     4:string           app_type;
     5:bool             is_stateful;
     6:map<string, string>  envs;
+
+    7:optional bool    atomic_idempotent = false;
 }
 
 struct configuration_create_app_request
@@ -434,6 +436,33 @@ struct configuration_set_max_replica_count_response
 {
     1:dsn.error_code            err;
     2:i32                       old_max_replica_count;
+    3:string                    hint_message;
+}
+
+struct configuration_get_atomic_idempotent_request
+{
+    1:string                    app_name;
+}
+
+struct configuration_get_atomic_idempotent_response
+{
+    1:dsn.error_code            err;
+    2:bool                      atomic_idempotent;
+    3:string                    hint_message;
+}
+
+// This request is sent from client to meta server, to list duplications with their
+// per-duplication info and progress of each partition for one or multiple tables.
+struct configuration_set_atomic_idempotent_request
+{
+    1:string                    app_name;
+    2:bool                      atomic_idempotent;
+}
+
+struct configuration_set_atomic_idempotent_response
+{
+    1:dsn.error_code            err;
+    2:bool                      old_atomic_idempotent;
     3:string                    hint_message;
 }
 

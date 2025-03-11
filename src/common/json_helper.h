@@ -104,6 +104,22 @@
     out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14)                      \
     JSON_ENCODE_ENTRIES13(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13);    \
     JSON_ENCODE_ENTRY(out, prefix, T14)
+#define JSON_ENCODE_ENTRIES15(                                                                     \
+    out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15)                      \
+    JSON_ENCODE_ENTRIES14(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14);    \
+    JSON_ENCODE_ENTRY(out, prefix, T15)
+#define JSON_ENCODE_ENTRIES16(                                                                     \
+    out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16)                      \
+    JSON_ENCODE_ENTRIES15(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15);    \
+    JSON_ENCODE_ENTRY(out, prefix, T16)
+#define JSON_ENCODE_ENTRIES17(                                                                     \
+    out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17)                      \
+    JSON_ENCODE_ENTRIES16(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16);    \
+    JSON_ENCODE_ENTRY(out, prefix, T17)
+#define JSON_ENCODE_ENTRIES18(                                                                     \
+    out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18)                      \
+    JSON_ENCODE_ENTRIES17(out, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17);    \
+    JSON_ENCODE_ENTRY(out, prefix, T18)
 
 #define JSON_DECODE_ENTRY(in, prefix, T)                                                           \
     do {                                                                                           \
@@ -162,9 +178,25 @@
     in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14)                       \
     JSON_DECODE_ENTRIES13(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13);     \
     JSON_TRY_DECODE_ENTRY(in, prefix, T14)
+#define JSON_DECODE_ENTRIES15(                                                                     \
+    in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15)                       \
+    JSON_DECODE_ENTRIES14(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14);     \
+    JSON_TRY_DECODE_ENTRY(in, prefix, T15)
+#define JSON_DECODE_ENTRIES16(                                                                     \
+    in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16)                       \
+    JSON_DECODE_ENTRIES15(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15);     \
+    JSON_TRY_DECODE_ENTRY(in, prefix, T16)
+#define JSON_DECODE_ENTRIES17(                                                                     \
+    in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17)                       \
+    JSON_DECODE_ENTRIES16(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16);     \
+    JSON_TRY_DECODE_ENTRY(in, prefix, T17)
+#define JSON_DECODE_ENTRIES18(                                                                     \
+    in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18)                       \
+    JSON_DECODE_ENTRIES17(in, prefix, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17);     \
+    JSON_TRY_DECODE_ENTRY(in, prefix, T18)
 
 #define JSON_ENTRIES_GET_MACRO(                                                                    \
-    ph1, ph2, ph3, ph4, ph5, ph6, ph7, ph8, ph9, ph10, ph11, ph12, ph13, ph14, NAME, ...)          \
+    ph1, ph2, ph3, ph4, ph5, ph6, ph7, ph8, ph9, ph10, ph11, ph12, ph13, ph14, ph15, ph16, ph17, ph18, NAME, ...)          \
     NAME
 // workaround due to the way VC handles "..."
 #define JSON_ENTRIES_GET_MACRO_(tuple) JSON_ENTRIES_GET_MACRO tuple
@@ -172,6 +204,10 @@
 #define JSON_ENCODE_ENTRIES(out, prefix, ...)                                                      \
     out.StartObject();                                                                             \
     JSON_ENTRIES_GET_MACRO_((__VA_ARGS__,                                                          \
+                             JSON_ENCODE_ENTRIES18,                                                \
+                             JSON_ENCODE_ENTRIES17,                                                \
+                             JSON_ENCODE_ENTRIES16,                                                \
+                             JSON_ENCODE_ENTRIES15,                                                \
                              JSON_ENCODE_ENTRIES14,                                                \
                              JSON_ENCODE_ENTRIES13,                                                \
                              JSON_ENCODE_ENTRIES12,                                                \
@@ -194,6 +230,10 @@
     int arguments_count = 0;                                                                       \
     int parsed_count = 0;                                                                          \
     JSON_ENTRIES_GET_MACRO_((__VA_ARGS__,                                                          \
+                             JSON_DECODE_ENTRIES18,                                                \
+                             JSON_DECODE_ENTRIES17,                                                \
+                             JSON_DECODE_ENTRIES16,                                                \
+                             JSON_DECODE_ENTRIES15,                                                \
                              JSON_DECODE_ENTRIES14,                                                \
                              JSON_DECODE_ENTRIES13,                                                \
                              JSON_DECODE_ENTRIES12,                                                \
@@ -740,7 +780,8 @@ NON_MEMBER_JSON_SERIALIZATION(dsn::app_info,
                               drop_second,
                               duplicating,
                               init_partition_count,
-                              is_bulk_loading)
+                              is_bulk_loading,
+                              atomic_idempotent)
 
 NON_MEMBER_JSON_SERIALIZATION(dsn::replication::file_meta, name, size, md5)
 

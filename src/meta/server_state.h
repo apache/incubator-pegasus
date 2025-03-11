@@ -200,6 +200,10 @@ public:
     void set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
     void recover_from_max_replica_count_env();
 
+    // get/set atomic_idempotent of an app
+    void get_atomic_idempotent(configuration_get_atomic_idempotent_rpc rpc) const;
+    void set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc);
+
     // return true if no need to do any actions
     bool check_all_partitions();
     void get_cluster_balance_score(double &primary_stddev /*out*/, double &total_stddev /*out*/);
@@ -376,6 +380,9 @@ private:
     void recover_app_max_replica_count(std::shared_ptr<app_state> &app,
                                        int32_t max_replica_count,
                                        dsn::task_tracker &tracker);
+
+void update_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
+                                                configuration_set_atomic_idempotent_rpc rpc);
 
     // Used for `on_start_manual_compaction`
     bool parse_compaction_envs(start_manual_compact_rpc rpc,
