@@ -381,8 +381,8 @@ private:
                                        int32_t max_replica_count,
                                        dsn::task_tracker &tracker);
 
-void update_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
-                                                configuration_set_atomic_idempotent_rpc rpc);
+    void update_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
+                                            configuration_set_atomic_idempotent_rpc rpc);
 
     // Used for `on_start_manual_compaction`
     bool parse_compaction_envs(start_manual_compact_rpc rpc,

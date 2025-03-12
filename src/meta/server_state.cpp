@@ -4470,7 +4470,7 @@ void server_state::get_atomic_idempotent(configuration_get_atomic_idempotent_rpc
     if (!app) {
         response.atomic_idempotent = false;
         LOG_WARNING("failed to get atomic_idempotent: app_name={}, "
-                "error_code={}, hint_message={}",
+                    "error_code={}, hint_message={}",
                     app_name,
                     response.err,
                     response.hint_message);
@@ -4560,7 +4560,7 @@ void server_state::set_atomic_idempotent(configuration_set_atomic_idempotent_rpc
 }
 
 void server_state::update_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
-                                                configuration_set_atomic_idempotent_rpc rpc)
+                                                      configuration_set_atomic_idempotent_rpc rpc)
 {
     app_info ainfo = *app;
     ainfo.atomic_idempotent = rpc.request().atomic_idempotent;
@@ -4579,8 +4579,7 @@ void server_state::update_atomic_idempotent_on_remote(std::shared_ptr<app_state>
                      app->app_name,
                      app->app_id,
                      old_atomic_idempotent,
-                     new_atomic_idempotent
-                     );
+                     new_atomic_idempotent);
 
         CHECK_EQ_MSG(rpc.request().app_name,
                      app->app_name,

@@ -1684,8 +1684,7 @@ replication_ddl_client::get_atomic_idempotent(const std::string &app_name)
 }
 
 error_with<configuration_set_atomic_idempotent_response>
-replication_ddl_client::set_atomic_idempotent(const std::string &app_name,
-                                              bool atomic_idempotent)
+replication_ddl_client::set_atomic_idempotent(const std::string &app_name, bool atomic_idempotent)
 {
     auto req = std::make_unique<configuration_set_atomic_idempotent_request>();
     req->__set_app_name(app_name);
