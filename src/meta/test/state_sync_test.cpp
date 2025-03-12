@@ -155,6 +155,11 @@ void meta_service_test_app::state_sync_test()
             info.max_replica_count = 3;
             info.partition_count = random32(100, 10000);
             info.status = dsn::app_status::AS_CREATING;
+
+            // `atomic_idempotent` will be set true for the table with even index,
+            // otherwise false.
+            info.atomic_idempotent = (i & 1) == 0;
+
             std::shared_ptr<app_state> app = app_state::create(info);
 
             ss->_all_apps.emplace(app->app_id, app);
@@ -175,7 +180,7 @@ void meta_service_test_app::state_sync_test()
         }
 
         dsn::error_code ec = ss->sync_apps_to_remote_storage();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_EQ(dsn::ERR_OK, ec);
         ss->spin_wait_staging();
     }
 
@@ -185,10 +190,19 @@ void meta_service_test_app::state_sync_test()
         std::shared_ptr<server_state> ss2 = std::make_shared<server_state>();
         ss2->initialize(svc, apps_root);
         dsn::error_code ec = ss2->sync_apps_from_remote_storage();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_EQ(dsn::ERR_OK, ec);
 
         for (int i = 1; i <= apps_count; ++i) {
             std::shared_ptr<app_state> app = ss2->get_app(i);
+
+            // `app->__isset.atomic_idempotent` must be true since `app->atomic_idempotent`
+            // has default value.
+            ASSERT_TRUE(app->__isset.atomic_idempotent);
+
+            // Recovered `app->atomic_idempotent` will true for the table with even index,
+            // otherwise false.
+            ASSERT_EQ((i & 1) == 0, app->atomic_idempotent);
+
             for (int j = 0; j < app->partition_count; ++j) {
                 config_context &cc = app->helpers->contexts[j];
                 ASSERT_EQ(1, cc.dropped.size());
@@ -196,7 +210,7 @@ void meta_service_test_app::state_sync_test()
             }
         }
         ec = ss2->dump_from_remote_storage("meta_state.dump1", false);
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_EQ(dsn::ERR_OK, ec);
     }
 
     // dump another way
