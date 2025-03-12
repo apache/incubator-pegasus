@@ -299,6 +299,12 @@ public:
     error_with<configuration_set_max_replica_count_response>
     set_max_replica_count(const std::string &app_name, int32_t max_replica_count);
 
+    error_with<configuration_get_atomic_idempotent_response>
+    get_atomic_idempotent(const std::string &app_name);
+
+    error_with<configuration_set_atomic_idempotent_response>
+    set_atomic_idempotent(const std::string &app_name, bool atomic_idempotent);
+
     void set_max_wait_app_ready_secs(uint32_t max_wait_secs) { _max_wait_secs = max_wait_secs; }
     void set_meta_servers_leader();
 
