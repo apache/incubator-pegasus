@@ -1213,6 +1213,10 @@ void server_state::create_app(dsn::message_ex *msg)
     info.create_second = static_cast<int64_t>(dsn_now_s());
     info.init_partition_count = request.options.partition_count;
 
+    // No need to check `request.options.__isset.atomic_idempotent`, since by default
+    // `request.options.atomic_idempotent` is false.
+    info.__set_atomic_idempotent(request.options.atomic_idempotent);
+
     app = app_state::create(info);
     app->helpers->pending_response = msg;
     app->helpers->partitions_in_progress.store(info.partition_count);
@@ -4478,6 +4482,9 @@ void server_state::get_atomic_idempotent(configuration_get_atomic_idempotent_rpc
     }
 
     response.err = ERR_OK;
+
+    // No need to check `app->__isset.atomic_idempotent`, since by default
+    // `app->atomic_idempotent` is false.
     response.atomic_idempotent = app->atomic_idempotent;
 
     LOG_INFO("get atomic_idempotent successfully: app_name={}, app_id={}, "
@@ -4513,7 +4520,10 @@ void server_state::set_atomic_idempotent(configuration_set_atomic_idempotent_rpc
 
         app_id = app->app_id;
 
-        response.old_atomic_idempotent = app->atomic_idempotent;
+        // No need to check `app->__isset.atomic_idempotent`, since by default
+        // `app->atomic_idempotent` is false.
+        response.old_atomic_idempotent = app->__isset.atomic_idempotent ? app->atomic_idempotent
+                                                                        : false;
 
         if (app->status != app_status::AS_AVAILABLE) {
             response.err = ERR_INVALID_PARAMETERS;
@@ -4592,6 +4602,8 @@ void server_state::update_atomic_idempotent_on_remote(std::shared_ptr<app_state>
                      old_atomic_idempotent,
                      new_atomic_idempotent);
 
+        // No need to check `app->__isset.atomic_idempotent`, since by default
+        // `app->atomic_idempotent` is false.
         CHECK_EQ_MSG(old_atomic_idempotent,
                      app->atomic_idempotent,
                      "atomic_idempotent has been updated to remote storage, however "
@@ -4604,7 +4616,7 @@ void server_state::update_atomic_idempotent_on_remote(std::shared_ptr<app_state>
                      app->atomic_idempotent,
                      new_atomic_idempotent);
 
-        app->atomic_idempotent = new_atomic_idempotent;
+        app->__set_atomic_idempotent(new_atomic_idempotent);
         LOG_INFO("both remote and local app-level atomic_idempotent have been updated "
                  "successfully: app_name={}, app_id={}, old_atomic_idempotent={}, "
                  "new_atomic_idempotent={}",

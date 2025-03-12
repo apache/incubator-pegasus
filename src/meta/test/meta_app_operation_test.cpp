@@ -66,11 +66,12 @@ class meta_app_operation_test : public meta_test_base
 public:
     meta_app_operation_test() = default;
 
-    error_code create_app_test(int32_t partition_count,
+    error_code create_app_test(const std::string &app_name,
+                               int32_t partition_count,
                                int32_t replica_count,
                                bool success_if_exist,
-                               const std::string &app_name,
-                               const std::map<std::string, std::string> &envs = {})
+                               const std::map<std::string, std::string> &envs,
+                               bool atomic_idempotent)
     {
         configuration_create_app_request create_request;
         configuration_create_app_response create_response;
@@ -81,6 +82,7 @@ public:
         create_request.options.success_if_exist = success_if_exist;
         create_request.options.is_stateful = true;
         create_request.options.envs = envs;
+        create_request.options.__set_atomic_idempotent(atomic_idempotent);
 
         auto result = fake_create_app(_ss.get(), create_request);
         fake_wait_rpc(result, create_response);
@@ -350,10 +352,47 @@ public:
         tracker.wait_outstanding_tasks();
     }
 
+    void verify_app_atomic_idempotent(const std::string &app_name, bool expected_atomic_idempotent)
+    {
+        const auto app = find_app(app_name);
+        CHECK(app, "app({}) does not exist", app_name);
+
+        // `app->__isset.atomic_idempotent` must be true since `app->atomic_idempotent`
+        // has default value.
+        ASSERT_TRUE(app->__isset.atomic_idempotent);
+
+        // Verify `atomic_idempotent` of local table.
+        ASSERT_EQ(expected_atomic_idempotent, app->atomic_idempotent);
+
+        dsn::task_tracker tracker;
+        _ms->get_remote_storage()->get_data(
+            _ss->get_app_path(*app),
+            LPC_META_CALLBACK,
+            [app, expected_atomic_idempotent](error_code ec, const blob &value) {
+                ASSERT_EQ(ERR_OK, ec);
+
+                app_info ainfo;
+                dsn::json::json_forwarder<app_info>::decode(value, ainfo);
+
+                ASSERT_EQ(app->app_name, ainfo.app_name);
+                ASSERT_EQ(app->app_id, ainfo.app_id);
+
+                // `ainfo.__isset.atomic_idempotent` must be true since `ainfo.atomic_idempotent`
+                // has default value.
+                ASSERT_TRUE(ainfo.__isset.atomic_idempotent);
+
+                // Verify `atomic_idempotent` on remote.
+                ASSERT_EQ(expected_atomic_idempotent, ainfo.atomic_idempotent);
+            },
+            &tracker);
+        tracker.wait_outstanding_tasks();
+    }
+
     const std::string APP_NAME = "app_operation_test";
     const std::string OLD_APP_NAME = "old_app_operation";
     const std::string DUP_MASTER_APP_NAME = "dup_master_test";
     const std::string DUP_FOLLOWER_APP_NAME = "dup_follower_test";
+    const std::string ATOMIC_IDEMPOTENT_APP_NAME = "atomic_idempotent_test";
 };
 
 TEST_F(meta_app_operation_test, create_app)
@@ -371,6 +410,7 @@ TEST_F(meta_app_operation_test, create_app)
         app_status::type before_status;
         error_code expected_err;
         std::map<std::string, std::string> envs = {};
+        bool atomic_idempotent = false;
     } tests[] = {
         // Wrong partition_count (< 0).
         {APP_NAME, -1, 3, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
@@ -661,6 +701,18 @@ TEST_F(meta_app_operation_test, create_app)
           {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
           {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
           {duplication_constants::kEnvFollowerAppStatusKey, "invalid_creating_status"}}},
+        // Create a table with idempotence enabled for atomic writes.
+        {ATOMIC_IDEMPOTENT_APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_OK,
+         {},
+         true},
     };
 
     clear_nodes();
@@ -706,15 +758,17 @@ TEST_F(meta_app_operation_test, create_app)
             update_app_status(test.before_status);
         }
 
-        auto err = create_app_test(test.partition_count,
-                                   test.replica_count,
-                                   test.success_if_exist,
-                                   test.app_name,
-                                   test.envs);
+        const auto err = create_app_test(test.app_name,
+                                         test.partition_count,
+                                         test.replica_count,
+                                         test.success_if_exist,
+                                         test.envs,
+                                         test.atomic_idempotent);
         ASSERT_EQ(test.expected_err, err);
 
         if (test.expected_err == ERR_OK) {
             verify_app_envs(test.app_name, test.envs);
+            verify_app_atomic_idempotent(test.app_name, test.atomic_idempotent);
         }
 
         _ms->set_node_state(nodes, true);

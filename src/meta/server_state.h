@@ -200,8 +200,10 @@ public:
     void set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
     void recover_from_max_replica_count_env();
 
-    // get/set atomic_idempotent of an app
+    // Get `atomic_idempotent` of an table.
     void get_atomic_idempotent(configuration_get_atomic_idempotent_rpc rpc) const;
+
+    // Set `atomic_idempotent` of an table.
     void set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc);
 
     // return true if no need to do any actions
@@ -381,6 +383,11 @@ private:
                                        int32_t max_replica_count,
                                        dsn::task_tracker &tracker);
 
+    // Update `atomic_idempotent` of given table on remote storage.
+    //
+    // Parameters:
+    // - app: the given table.
+    // - rpc: RPC request/response to change `atomic_idempotent`.
     void update_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
                                             configuration_set_atomic_idempotent_rpc rpc);
 

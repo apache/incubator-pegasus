@@ -289,8 +289,10 @@ private:
     void on_get_max_replica_count(configuration_get_max_replica_count_rpc rpc);
     void on_set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
 
-    // get/set atomic_idempotent of an app
+    // Get `atomic_idempotent` of an table.
     void on_get_atomic_idempotent(configuration_get_atomic_idempotent_rpc rpc);
+
+    // Set `atomic_idempotent` of an table.
     void on_set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc);
 
     // if return 'kNotLeaderAndCannotForwardRpc' and 'forward_address' != nullptr, then return

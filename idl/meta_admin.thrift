@@ -140,6 +140,9 @@ struct create_app_options
     5:bool             is_stateful;
     6:map<string, string>  envs;
 
+    // Whether all atomic writes to this table are made idempotent:
+    // - true: made idempotent.
+    // - false: kept non-idempotent as their respective client requests. 
     7:optional bool    atomic_idempotent = false;
 }
 
@@ -439,6 +442,7 @@ struct configuration_set_max_replica_count_response
     3:string                    hint_message;
 }
 
+// Get the idempotence (see app_info::atomic_idempotent) of given table for atomic writes.
 struct configuration_get_atomic_idempotent_request
 {
     1:string                    app_name;
@@ -451,8 +455,7 @@ struct configuration_get_atomic_idempotent_response
     3:string                    hint_message;
 }
 
-// This request is sent from client to meta server, to list duplications with their
-// per-duplication info and progress of each partition for one or multiple tables.
+// Change the idempotence (see app_info::atomic_idempotent) of given table for atomic writes.
 struct configuration_set_atomic_idempotent_request
 {
     1:string                    app_name;
@@ -462,7 +465,10 @@ struct configuration_set_atomic_idempotent_request
 struct configuration_set_atomic_idempotent_response
 {
     1:dsn.error_code            err;
+
+    // Previous atomic_idempotent before updated.
     2:bool                      old_atomic_idempotent;
+
     3:string                    hint_message;
 }
 
