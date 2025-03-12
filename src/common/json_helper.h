@@ -514,14 +514,14 @@ inline bool json_decode(const dsn::json::JsonObject &in, dsn::host_port &hp)
     return static_cast<bool>(hp);
 }
 
-inline void json_encode(JsonWriter &out, const dsn::partition_configuration &pc);
-inline bool json_decode(const JsonObject &in, dsn::partition_configuration &pc);
-inline void json_encode(JsonWriter &out, const dsn::app_info &info);
-inline bool json_decode(const JsonObject &in, dsn::app_info &info);
-inline void json_encode(JsonWriter &out, const dsn::replication::file_meta &f_meta);
-inline bool json_decode(const JsonObject &in, dsn::replication::file_meta &f_meta);
-inline void json_encode(JsonWriter &out, const dsn::replication::bulk_load_metadata &metadata);
-inline bool json_decode(const JsonObject &in, dsn::replication::bulk_load_metadata &metadata);
+inline void json_encode(JsonWriter &, const dsn::partition_configuration &);
+inline bool json_decode(const JsonObject &, dsn::partition_configuration &);
+inline void json_encode(JsonWriter &, const dsn::app_info &);
+inline bool json_decode(const JsonObject &, dsn::app_info &);
+inline void json_encode(JsonWriter &, const dsn::replication::file_meta &);
+inline bool json_decode(const JsonObject &, dsn::replication::file_meta &);
+inline void json_encode(JsonWriter &, const dsn::replication::bulk_load_metadata &);
+inline bool json_decode(const JsonObject &in, dsn::replication::bulk_load_metadata &);
 
 template <typename T>
 inline void json_encode_iterable(JsonWriter &out, const T &t)

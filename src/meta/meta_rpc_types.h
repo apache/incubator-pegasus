@@ -26,8 +26,7 @@
 #include "replica_admin_types.h"
 #include "rpc/rpc_holder.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 using app_env_rpc =
     rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>;
@@ -75,5 +74,4 @@ using configuration_set_atomic_idempotent_rpc =
 using configuration_rename_app_rpc =
     rpc_holder<configuration_rename_app_request, configuration_rename_app_response>;
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

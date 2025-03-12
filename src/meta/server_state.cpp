@@ -4501,8 +4501,8 @@ void server_state::set_atomic_idempotent(configuration_set_atomic_idempotent_rpc
         zauto_read_lock l(_lock);
 
         app = get_app_and_check_exist(app_name, response);
-        if (app == nullptr) {
-            response.old_atomic_idempotent = 0;
+        if (!app) {
+            response.old_atomic_idempotent = false;
             LOG_WARNING(
                 "failed to set atomic_idempotent: app_name={}, error_code={}, hint_message={}",
                 app_name,
