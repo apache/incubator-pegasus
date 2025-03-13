@@ -770,12 +770,16 @@ void server_state::initialize_node_state()
     for (auto &app_pair : _all_apps) {
         app_state &app = *(app_pair.second);
         for (const auto &pc : app.pcs) {
-            if (pc.hp_primary) {
-                node_state *ns = get_node_state(_nodes, pc.hp_primary, true);
+            host_port primary;
+            GET_HOST_PORT(pc, primary, primary);
+            if (primary) {
+                node_state *ns = get_node_state(_nodes, primary, true);
                 ns->put_partition(pc.pid, true);
             }
 
-            for (const auto &secondary : pc.hp_secondaries) {
+            std::vector<host_port> secondaries;
+            GET_HOST_PORTS(pc, secondaries, secondaries);
+            for (const auto &secondary : secondaries) {
                 CHECK(secondary, "invalid secondary: {}", secondary);
                 node_state *ns = get_node_state(_nodes, secondary, true);
                 ns->put_partition(pc.pid, false);
@@ -1694,63 +1698,40 @@ void server_state::request_check(const partition_configuration &old_pc,
                                  const configuration_update_request &request)
 {
     const auto &new_pc = request.config;
+    host_port old_primary;
+    GET_HOST_PORT(old_pc, primary, old_primary);
+    host_port req_node;
+    GET_HOST_PORT(request, node, req_node);
+    std::vector<host_port> old_secondaries;
+    GET_HOST_PORTS(old_pc, secondaries, old_secondaries);
     switch (request.type) {
     case config_type::CT_ASSIGN_PRIMARY:
-        if (request.__isset.hp_node) {
-            CHECK_NE(old_pc.hp_primary, request.hp_node);
-            CHECK(!utils::contains(old_pc.hp_secondaries, request.hp_node), "");
-        } else {
-            CHECK_NE(old_pc.primary, request.node);
-            CHECK(!utils::contains(old_pc.secondaries, request.node), "");
-        }
+        CHECK_NE(old_primary, req_node);
+        CHECK(!utils::contains(old_secondaries, req_node), "");
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        if (request.__isset.hp_node) {
-            CHECK_NE(old_pc.hp_primary, request.hp_node);
-            CHECK(utils::contains(old_pc.hp_secondaries, request.hp_node), "");
-        } else {
-            CHECK_NE(old_pc.primary, request.node);
-            CHECK(utils::contains(old_pc.secondaries, request.node), "");
-        }
+        CHECK_NE(old_primary, req_node);
+        CHECK(utils::contains(old_secondaries, req_node), "");
         break;
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        if (request.__isset.hp_node) {
-            CHECK_EQ(old_pc.hp_primary, request.hp_node);
-            CHECK(!utils::contains(old_pc.hp_secondaries, request.hp_node), "");
-        } else {
-            CHECK_EQ(old_pc.primary, request.node);
-            CHECK(!utils::contains(old_pc.secondaries, request.node), "");
-        }
+        CHECK_EQ(old_primary, req_node);
+        CHECK(!utils::contains(old_secondaries, req_node), "");
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
     case config_type::CT_REMOVE:
-        if (request.__isset.hp_node) {
-            CHECK(old_pc.hp_primary == request.hp_node ||
-                      utils::contains(old_pc.hp_secondaries, request.hp_node),
-                  "");
-        } else {
-            CHECK(old_pc.primary == request.node ||
-                      utils::contains(old_pc.secondaries, request.node),
-                  "");
-        }
+        CHECK(old_primary == req_node || utils::contains(old_secondaries, req_node), "");
         break;
     case config_type::CT_UPGRADE_TO_SECONDARY:
-        if (request.__isset.hp_node) {
-            CHECK_NE(old_pc.hp_primary, request.hp_node);
-            CHECK(!utils::contains(old_pc.hp_secondaries, request.hp_node), "");
-        } else {
-            CHECK_NE(old_pc.primary, request.node);
-            CHECK(!utils::contains(old_pc.secondaries, request.node), "");
-        }
+        CHECK_NE(old_primary, req_node);
+        CHECK(!utils::contains(old_secondaries, req_node), "");
         break;
     case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT: {
-        if (request.__isset.hp_node) {
-            CHECK_EQ(old_pc.hp_primary, new_pc.hp_primary);
-            CHECK(old_pc.hp_secondaries == new_pc.hp_secondaries, "");
-        } else {
-            CHECK_EQ(old_pc.primary, new_pc.primary);
-            CHECK(old_pc.secondaries == new_pc.secondaries, "");
-        }
+        host_port new_primary;
+        GET_HOST_PORT(new_pc, primary, new_primary);
+        CHECK_EQ(old_primary, new_primary);
+        std::vector<host_port> new_secondaries;
+        GET_HOST_PORTS(new_pc, secondaries, new_secondaries);
+        CHECK(old_secondaries == new_secondaries, "");
         break;
     }
     default:
@@ -1810,7 +1791,9 @@ void server_state::update_configuration_locally(
             break;
 
         case config_type::CT_DROP_PARTITION: {
-            for (const auto &last_drop : new_pc.hp_last_drops) {
+            std::vector<host_port> last_drops;
+            GET_HOST_PORTS(new_pc, last_drops, last_drops);
+            for (const auto &last_drop : last_drops) {
                 ns = get_node_state(_nodes, last_drop, false);
                 if (ns != nullptr) {
                     ns->remove_partition(gpid, false);
@@ -2137,7 +2120,9 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
     partition_configuration &pc = app->pcs[pidx];
     config_context &cc = app->helpers->contexts[pidx];
 
-    CHECK(pc.hp_primary, "this shouldn't be called if the primary is invalid");
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    CHECK(primary, "this shouldn't be called if the primary is invalid");
     if (config_status::pending_remote_sync != cc.stage) {
         configuration_update_request request;
         request.info = *app;
@@ -2170,8 +2155,10 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
     partition_configuration &pc = req->config;
 
     unsigned i = 0;
-    for (; i < pc.hp_secondaries.size(); ++i) {
-        if (pc.hp_secondaries[i] == node) {
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    for (; i < secondaries.size(); ++i) {
+        if (secondaries[i] == node) {
             SET_OBJ_IP_AND_HOST_PORT(*req, node, pc, last_drops[i]);
             break;
         }
@@ -2294,7 +2281,9 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
         return;
     }
 
-    if (pc.hp_primary) {
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    if (primary) {
         downgrade_secondary_to_inactive(app, pidx, node);
         return;
     }
@@ -2496,12 +2485,14 @@ error_code server_state::construct_partitions(
                              app->app_id,
                              pc.pid.get_partition_index(),
                              boost::lexical_cast<std::string>(pc));
-                    if (pc.hp_last_drops.size() + 1 < pc.max_replica_count) {
+                    std::vector<host_port> last_drops;
+                    GET_HOST_PORTS(pc, last_drops, last_drops);
+                    if (last_drops.size() + 1 < pc.max_replica_count) {
                         hint_message += fmt::format("WARNING: partition({}.{}) only collects {}/{} "
                                                     "of replicas, may lost data",
                                                     app->app_id,
                                                     pc.pid.get_partition_index(),
-                                                    pc.hp_last_drops.size() + 1,
+                                                    last_drops.size() + 1,
                                                     pc.max_replica_count);
                     }
                     succeed_count++;
@@ -2829,7 +2820,9 @@ bool server_state::check_all_partitions()
     for (int i = 0; i < add_secondary_actions.size(); ++i) {
         gpid &pid = add_secondary_gpids[i];
         const auto *pc = get_config(_all_apps, pid);
-        if (!add_secondary_proposed[i] && pc->hp_secondaries.empty()) {
+        std::vector<host_port> secondaries;
+        GET_HOST_PORTS(*pc, secondaries, secondaries);
+        if (!add_secondary_proposed[i] && secondaries.empty()) {
             const auto &action = add_secondary_actions[i];
             CHECK(action.hp_node, "");
             if (_add_secondary_enable_flow_control && add_secondary_running_nodes[action.hp_node] >=
@@ -2950,22 +2943,27 @@ void server_state::check_consistency(const dsn::gpid &gpid)
 
     auto &app = *(iter->second);
     auto &pc = app.pcs[gpid.get_partition_index()];
-
     if (app.is_stateful) {
-        if (pc.hp_primary) {
-            const auto it = _nodes.find(pc.hp_primary);
-            CHECK(it != _nodes.end(), "invalid primary: {}", pc.hp_primary);
+        host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
+        std::vector<host_port> last_drops;
+        GET_HOST_PORTS(pc, last_drops, last_drops);
+        if (primary) {
+            const auto it = _nodes.find(primary);
+            CHECK(it != _nodes.end(), "invalid primary: {}", primary);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_PRIMARY);
-            CHECK(!utils::contains(pc.hp_last_drops, pc.hp_primary),
+            CHECK(!utils::contains(last_drops, primary),
                   "primary({}) shouldn't appear in last_drops",
-                  pc.hp_primary);
+                  primary);
         }
 
-        for (const auto &secondary : pc.hp_secondaries) {
+        std::vector<host_port> secondaries;
+        GET_HOST_PORTS(pc, secondaries, secondaries);
+        for (const auto &secondary : secondaries) {
             const auto it = _nodes.find(secondary);
             CHECK(it != _nodes.end(), "invalid secondary: {}", secondary);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
-            CHECK(!utils::contains(pc.hp_last_drops, secondary),
+            CHECK(!utils::contains(last_drops, secondary),
                   "secondary({}) shouldn't appear in last_drops",
                   secondary);
         }
