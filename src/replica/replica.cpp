@@ -732,5 +732,14 @@ void replica::METRIC_FUNC_NAME_SET(dup_pending_mutations)()
     METRIC_SET(*_duplication_mgr, dup_pending_mutations);
 }
 
+bool replica::having_dup_loading()
+{
+    if (_duplication_mgr == nullptr) {
+        return false;
+    }
+    return _duplication_mgr->check_still_have_dup_pipeline_loading();
+}
+
+
 } // namespace replication
 } // namespace dsn

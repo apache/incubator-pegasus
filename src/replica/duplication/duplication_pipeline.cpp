@@ -67,6 +67,7 @@ void load_mutation::run()
     decree last_decree = _duplicator->progress().last_decree;
     _start_decree = last_decree + 1;
 
+    _duplicator->get_loading_private_log_state(true);
     // Load the mutations from plog that have been committed recently, if any.
     const auto max_plog_committed_decree =
         std::min(_replica->private_log()->max_decree_on_disk(), _replica->last_applied_decree());

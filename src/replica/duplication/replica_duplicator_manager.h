@@ -95,6 +95,15 @@ public:
         }
         writer.EndArray();
     }
+    bool check_still_have_dup_pipeline_loading()
+    {
+        for (auto &kv : _duplications) {
+            if (kv.second->get_loading_private_log_state()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 private:
     void sync_duplication(const duplication_entry &ent);

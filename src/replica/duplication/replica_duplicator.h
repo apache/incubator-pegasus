@@ -163,6 +163,8 @@ public:
 
         writer.EndObject();
     }
+    void set_loading_private_log_state(bool is_loading) { _is_loading_private_log.store(is_loading,std::memory_order_release); }
+    bool get_loading_private_log_state() { return _is_loading_private_log.load(std::memory_order_acquire); }
 
 private:
     friend class duplication_test_base;
@@ -205,6 +207,8 @@ private:
     // TODO(wutao1): calculate the counters independently for each remote cluster
     //               if we need to duplicate to multiple clusters someday.
     METRIC_VAR_DECLARE_counter(dup_confirmed_mutations);
+
+    std::atomic_bool _is_loading_private_log;
 };
 
 typedef std::unique_ptr<replica_duplicator> replica_duplicator_u_ptr;

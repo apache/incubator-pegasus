@@ -306,6 +306,8 @@ public:
 
     void update_app_duplication_status(bool duplicating);
 
+    bool having_dup_loading();
+
     //
     // Backup
     //
