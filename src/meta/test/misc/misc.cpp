@@ -360,7 +360,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK(node != nodes.end(), "");
         ns = &node->second;
         SET_IP_AND_HOST_PORT(pc, primary, act.node, hp_node);
-        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(pc, secondaries, act, node), "");
+        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(act, node, pc, secondaries), "");
         ns->put_partition(pc.pid, true);
         break;
     }
@@ -390,7 +390,7 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
         CHECK_EQ(pc.primary, act.target);
         CHECK(is_secondary(pc, hp_node), "");
         CHECK(is_secondary(pc, act.node), "");
-        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(pc, secondaries, act, node), "");
+        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(act, node, pc, secondaries), "");
         const auto node = nodes.find(hp_node);
         CHECK(node != nodes.end(), "");
         ns = &node->second;

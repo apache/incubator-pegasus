@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -105,7 +106,7 @@ public:
         case config_type::CT_ASSIGN_PRIMARY:
         case config_type::CT_UPGRADE_TO_PRIMARY:
             SET_OBJ_IP_AND_HOST_PORT(pc, primary, *update_req, node);
-            REMOVE_IP_AND_HOST_PORT_BY_OBJ(pc, secondaries, *update_req, node);
+            REMOVE_IP_AND_HOST_PORT_BY_OBJ(*update_req, node, pc, secondaries);
             break;
 
         case config_type::CT_ADD_SECONDARY:
@@ -121,7 +122,7 @@ public:
                 RESET_IP_AND_HOST_PORT(pc, primary);
             } else {
                 CHECK_NE(update_req->node, pc.primary);
-                REMOVE_IP_AND_HOST_PORT_BY_OBJ(pc, secondaries, *update_req, node);
+                REMOVE_IP_AND_HOST_PORT_BY_OBJ(*update_req, node, pc, secondaries);
             }
             break;
 

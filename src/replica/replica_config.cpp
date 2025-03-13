@@ -175,7 +175,7 @@ void replica::assign_primary(configuration_update_request &proposal)
     SET_IP_AND_HOST_PORT(
         proposal.config, primary, _stub->primary_address(), _stub->primary_host_port());
     REMOVE_IP_AND_HOST_PORT(
-        proposal.config, secondaries, _stub->primary_address(), _stub->primary_host_port());
+        _stub->primary_address(), _stub->primary_host_port(), proposal.config, secondaries);
 
     update_configuration_on_meta_server(proposal.type, node, proposal.config);
 }
@@ -298,7 +298,7 @@ void replica::downgrade_to_inactive_on_primary(configuration_update_request &pro
         RESET_IP_AND_HOST_PORT(proposal.config, primary);
     } else {
         CHECK_NE(proposal.node, proposal.config.primary);
-        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(proposal.config, secondaries, proposal, node),
+        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(proposal, node, proposal.config, secondaries),
               "remove node failed, node = {}",
               FMT_HOST_PORT_AND_IP(proposal, node));
     }
@@ -327,7 +327,7 @@ void replica::remove(configuration_update_request &proposal)
         RESET_IP_AND_HOST_PORT(proposal.config, primary);
         break;
     case partition_status::PS_SECONDARY: {
-        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(proposal.config, secondaries, proposal, node),
+        CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(proposal, node, proposal.config, secondaries),
               "remove node failed, node = {}",
               FMT_HOST_PORT_AND_IP(proposal, node));
     } break;

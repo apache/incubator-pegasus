@@ -1753,7 +1753,7 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
     if (_primary_host_port == pc.hp_primary) {
         RESET_IP_AND_HOST_PORT(request->config, primary);
     } else if (REMOVE_IP_AND_HOST_PORT(
-                   request->config, secondaries, primary_address(), _primary_host_port)) {
+                   primary_address(), _primary_host_port, request->config, secondaries)) {
     } else {
         return;
     }
