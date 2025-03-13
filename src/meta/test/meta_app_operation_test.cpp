@@ -173,16 +173,13 @@ public:
             app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT] = env;
         }
 
-        // set remote env of app
-        auto app_path = _ss->get_app_path(*app);
-        auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
-        auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
+        // Set env on remote storage.
         dsn::task_tracker tracker;
         _ms->get_remote_storage()->set_data(
-            app_path,
-            json_config,
+            _ss->get_app_path(*app),
+            json::json_forwarder<app_info>::encode(*app),
             LPC_META_STATE_HIGH,
-            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+            [](error_code ec) { ASSERT_EQ(ERR_OK, ec); },
             &tracker);
         tracker.wait_outstanding_tasks();
     }
@@ -223,36 +220,31 @@ public:
 
         auto partition_size = static_cast<int>(app->pcs.size());
         for (int i = 0; i < partition_size; ++i) {
-            // set local max_replica_count of each partition
+            // Set `max_replica_count` of each partition locally.
             auto &pc = app->pcs[i];
             pc.max_replica_count = max_replica_count;
 
-            // set remote max_replica_count of each partition
-            auto partition_path = _ss->get_partition_path(pc.pid);
-            auto json_config = dsn::json::json_forwarder<partition_configuration>::encode(pc);
+            // Set `max_replica_count` of each partition on remote storage.
             dsn::task_tracker tracker;
             _ms->get_remote_storage()->set_data(
-                partition_path,
-                json_config,
+                _ss->get_partition_path(pc.pid),
+                json::json_forwarder<partition_configuration>::encode(pc),
                 LPC_META_STATE_HIGH,
-                [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+                [](error_code ec) { ASSERT_EQ(ec, ERR_OK); },
                 &tracker);
             tracker.wait_outstanding_tasks();
         }
 
-        // set local max_replica_count of app
+        // Set `max_replica_count` of the table locally.
         app->max_replica_count = max_replica_count;
 
-        // set remote max_replica_count of app
-        auto app_path = _ss->get_app_path(*app);
-        auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
-        auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
+        // Set `max_replica_count` of the table on remote storage.
         dsn::task_tracker tracker;
         _ms->get_remote_storage()->set_data(
-            app_path,
-            json_config,
+            _ss->get_app_path(*app),
+            json::json_forwarder<app_info>::encode(*app),
             LPC_META_STATE_HIGH,
-            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+            [](error_code ec) { ASSERT_EQ(ec, ERR_OK); },
             &tracker);
         tracker.wait_outstanding_tasks();
     }
@@ -267,7 +259,7 @@ public:
         for (int i = 0; i < partition_size; ++i) {
             // verify local max_replica_count of each partition
             auto &pc = app->pcs[i];
-            ASSERT_EQ(pc.max_replica_count, expected_max_replica_count);
+            ASSERT_EQ(expected_max_replica_count, pc.max_replica_count);
 
             // verify remote max_replica_count of each partition
             auto partition_path = _ss->get_partition_path(pc.pid);
@@ -277,13 +269,13 @@ public:
                 LPC_META_CALLBACK,
                 [expected_pid = pc.pid, expected_max_replica_count](error_code ec,
                                                                     const blob &value) {
-                    ASSERT_EQ(ec, ERR_OK);
+                    ASSERT_EQ(ERR_OK, ec);
 
                     partition_configuration pc;
                     dsn::json::json_forwarder<partition_configuration>::decode(value, pc);
 
-                    ASSERT_EQ(pc.pid, expected_pid);
-                    ASSERT_EQ(pc.max_replica_count, expected_max_replica_count);
+                    ASSERT_EQ(expected_pid, pc.pid);
+                    ASSERT_EQ(expected_max_replica_count, pc.max_replica_count);
                 },
                 &tracker);
             tracker.wait_outstanding_tasks();
@@ -297,7 +289,7 @@ public:
         CHECK(app, "app({}) does not exist", app_name);
 
         // verify local max_replica_count of the app
-        ASSERT_EQ(app->max_replica_count, expected_max_replica_count);
+        ASSERT_EQ(expected_max_replica_count, app->max_replica_count);
         // env of max_replica_count should have been removed under normal circumstances
         ASSERT_EQ(app->envs.find(replica_envs::UPDATE_MAX_REPLICA_COUNT), app->envs.end());
 
@@ -381,7 +373,7 @@ public:
                 // has default value.
                 ASSERT_TRUE(ainfo.__isset.atomic_idempotent);
 
-                // Verify `atomic_idempotent` on remote.
+                // Verify `atomic_idempotent` on remote storage.
                 ASSERT_EQ(expected_atomic_idempotent, ainfo.atomic_idempotent);
             },
             &tracker);

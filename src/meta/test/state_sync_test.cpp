@@ -25,6 +25,8 @@
  */
 
 #include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <fstream> // IWYU pragma: keep
@@ -151,7 +153,7 @@ void meta_service_test_app::state_sync_test()
             info.is_stateful = true;
             info.app_id = i;
             info.app_type = "simple_kv";
-            info.app_name = "test_app" + boost::lexical_cast<std::string>(i);
+            info.app_name = fmt::format("test_app{}", i);
             info.max_replica_count = 3;
             info.partition_count = static_cast<int32_t>(random32(100, 10000));
             info.status = dsn::app_status::AS_CREATING;
@@ -201,7 +203,7 @@ void meta_service_test_app::state_sync_test()
 
             // Recovered `app->atomic_idempotent` will true for the table with even index,
             // otherwise false.
-            ASSERT_EQ((static_cast<uint32_t>(i) & 1) == 0, app->atomic_idempotent);
+            ASSERT_EQ((static_cast<uint32_t>(i) & 1U) == 0, app->atomic_idempotent);
 
             for (int j = 0; j < app->partition_count; ++j) {
                 config_context &cc = app->helpers->contexts[j];

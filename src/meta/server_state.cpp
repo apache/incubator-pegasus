@@ -2368,10 +2368,11 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
                              std::string &hint_message)
 {
     int max_app_id = 0;
-    for (unsigned int i = 0; i < query_app_responses.size(); ++i) {
-        query_app_info_response query_resp = query_app_responses[i];
-        if (query_resp.err != dsn::ERR_OK)
+    for (size_t i = 0; i < query_app_responses.size(); ++i) {
+        const auto &query_resp = query_app_responses[i];
+        if (query_resp.err != dsn::ERR_OK) {
             continue;
+        }
 
         for (const app_info &info : query_resp.apps) {
             CHECK_GE_MSG(info.app_id, 1, "invalid app id");
@@ -2384,23 +2385,26 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
                          boost::lexical_cast<std::string>(info));
                 _all_apps.emplace(app->app_id, app);
                 max_app_id = std::max(app->app_id, max_app_id);
-            } else {
-                app_info *old_info = iter->second.get();
-                // all info in all replica servers should be the same
-                // coz the app info is only initialized when the replica is
-                // created, and it will NEVER change even if the app is dropped/recalled...
-                if (info != *old_info) // app_info::operator !=
-                {
-                    // compatible for app.duplicating different between primary and secondaries in
-                    // 2.1.x, 2.2.x and 2.3.x release
-                    CHECK(app_info_compatible_equal(info, *old_info),
-                          "conflict app info from ({}) for id({}): new_info({}), old_info({})",
-                          replica_nodes[i],
-                          info.app_id,
-                          boost::lexical_cast<std::string>(info),
-                          boost::lexical_cast<std::string>(*old_info));
-                }
+                continue;
             }
+
+            app_info *old_info = iter->second.get();
+
+            // all info in all replica servers should be the same
+            // coz the app info is only initialized when the replica is
+            // created, and it will NEVER change even if the app is dropped/recalled...
+            if (info == *old_info) {
+                continue;
+            }
+
+            // compatible for app.duplicating different between primary and secondaries in
+            // 2.1.x, 2.2.x and 2.3.x release
+            CHECK(app_info_compatible_equal(info, *old_info),
+                  "conflict app info from ({}) for id({}): new_info({}), old_info({})",
+                  replica_nodes[i],
+                  info.app_id,
+                  boost::lexical_cast<std::string>(info),
+                  boost::lexical_cast<std::string>(*old_info));
         }
     }
 
@@ -4566,11 +4570,11 @@ void server_state::set_atomic_idempotent(configuration_set_atomic_idempotent_rpc
              response.old_atomic_idempotent,
              new_atomic_idempotent);
 
-    update_atomic_idempotent_on_remote(app, rpc);
+    update_app_atomic_idempotent_on_remote(app, rpc);
 }
 
-void server_state::update_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
-                                                      configuration_set_atomic_idempotent_rpc rpc)
+void server_state::update_app_atomic_idempotent_on_remote(
+    std::shared_ptr<app_state> &app, configuration_set_atomic_idempotent_rpc rpc)
 {
     app_info ainfo = *app;
     ainfo.atomic_idempotent = rpc.request().atomic_idempotent;
