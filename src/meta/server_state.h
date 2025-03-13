@@ -399,7 +399,6 @@ private:
                                                   const std::vector<std::string> &keys,
                                                   const std::vector<std::string> &values);
 
-private:
     friend class bulk_load_service;
     friend class bulk_load_service_test;
     friend class meta_app_operation_test;
