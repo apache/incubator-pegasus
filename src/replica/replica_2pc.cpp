@@ -201,7 +201,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     CHECK(_primary_states.pc.__isset.hp_secondaries,
           "The primary partition_configuration must be normalized before using it");
     const auto &secondaries = _primary_states.pc.hp_secondaries;
-    if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
+    if (static_cast<int32_t>(secondaries.size()) + 1 <
         _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
         response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
         return;
