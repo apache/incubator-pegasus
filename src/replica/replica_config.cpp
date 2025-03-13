@@ -281,6 +281,7 @@ void replica::downgrade_to_secondary_on_primary(configuration_update_request &pr
     }
 
     CHECK_EQ(proposal.config.pid, _primary_states.pc.pid);
+    CHECK_EQ(proposal.config.primary, _primary_states.pc.primary);
     dsn::host_port primary;
     GET_HOST_PORT(proposal.config, primary, primary);
     // The local host_port type 'hp_primary' field must be set.
