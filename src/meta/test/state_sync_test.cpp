@@ -181,8 +181,8 @@ void meta_service_test_app::state_sync_test()
             }
         }
 
-        dsn::error_code ec = ss->sync_apps_to_remote_storage();
-        ASSERT_EQ(dsn::ERR_OK, ec);
+        error_code ec = ss->sync_apps_to_remote_storage();
+        ASSERT_EQ(ERR_OK, ec);
         ss->spin_wait_staging();
     }
 
@@ -191,8 +191,8 @@ void meta_service_test_app::state_sync_test()
     {
         std::shared_ptr<server_state> ss2 = std::make_shared<server_state>();
         ss2->initialize(svc, apps_root);
-        dsn::error_code ec = ss2->sync_apps_from_remote_storage();
-        ASSERT_EQ(dsn::ERR_OK, ec);
+        error_code ec = ss2->sync_apps_from_remote_storage();
+        ASSERT_EQ(ERR_OK, ec);
 
         for (int i = 1; i <= apps_count; ++i) {
             std::shared_ptr<app_state> app = ss2->get_app(i);
@@ -201,8 +201,8 @@ void meta_service_test_app::state_sync_test()
             // has default value.
             ASSERT_TRUE(app->__isset.atomic_idempotent);
 
-            // Recovered `app->atomic_idempotent` will true for the table with even index,
-            // otherwise false.
+            // Recovered `app->atomic_idempotent` will be true for the table with even
+            // index, otherwise false.
             ASSERT_EQ((static_cast<uint32_t>(i) & 1U) == 0, app->atomic_idempotent);
 
             for (int j = 0; j < app->partition_count; ++j) {
@@ -212,7 +212,7 @@ void meta_service_test_app::state_sync_test()
             }
         }
         ec = ss2->dump_from_remote_storage("meta_state.dump1", false);
-        ASSERT_EQ(dsn::ERR_OK, ec);
+        ASSERT_EQ(ERR_OK, ec);
     }
 
     // dump another way
