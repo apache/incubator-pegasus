@@ -344,8 +344,8 @@ public:
         const auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        // `app->__isset.atomic_idempotent` must be true since `app->atomic_idempotent`
-        // has default value.
+        // `app->__isset.atomic_idempotent` must be true since by default it is true
+        // (because `app->atomic_idempotent` has default value false).
         ASSERT_TRUE(app->__isset.atomic_idempotent);
 
         // Verify `atomic_idempotent` of the table locally.
@@ -364,8 +364,8 @@ public:
                 ASSERT_EQ(app->app_name, ainfo.app_name);
                 ASSERT_EQ(app->app_id, ainfo.app_id);
 
-                // `ainfo.__isset.atomic_idempotent` must be true since `ainfo.atomic_idempotent`
-                // has default value.
+                // `ainfo.__isset.atomic_idempotent` must be true since by default it
+                // is true (because `ainfo.atomic_idempotent` has default value false).
                 ASSERT_TRUE(ainfo.__isset.atomic_idempotent);
 
                 // Verify `atomic_idempotent` on remote storage.

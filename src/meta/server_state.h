@@ -399,34 +399,6 @@ private:
                                                   const std::vector<std::string> &keys,
                                                   const std::vector<std::string> &values);
 
-    bool app_info_compatible_equal(const app_info &l, const app_info &r) const
-    {
-        // Some fields like `app_type`, `app_id` and `create_second` are initialized and
-        // persisted into .app-info file when the replica is created, and will NEVER be
-        // changed during their lifetime even if the table is dropped or recalled. Their
-        // consistency must be checked.
-        //
-        // Some fields may be updated during their lifetime, but will NEVER be persisted
-        // into .app-info, such as most environments in `envs`. Their consistency do not
-        // need to be checked.
-        //
-        // Some fields may be updated during their lifetime, and will also be persited into
-        // .app-info file:
-        // - For the fields such as `app_name`, `max_replica_count` and `atomic_idempotent`
-        // without compatibility problems, their consistency should be checked.
-        // - For the fields such as `duplicating` whose compatibility varies between primary
-        // and secondaries in 2.1.x, 2.2.x and 2.3.x release, their consistency are not
-        // checked.
-        if (l.status != r.status || l.app_type != r.app_type || l.app_name != r.app_name ||
-            l.app_id != r.app_id || l.partition_count != r.partition_count ||
-            l.is_stateful != r.is_stateful || l.max_replica_count != r.max_replica_count ||
-            l.expire_second != r.expire_second || l.create_second != r.create_second ||
-            l.drop_second != r.drop_second || l.atomic_idempotent != r.atomic_idempotent) {
-            return false;
-        }
-        return true;
-    }
-
 private:
     friend class bulk_load_service;
     friend class bulk_load_service_test;

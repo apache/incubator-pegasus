@@ -197,8 +197,8 @@ void meta_service_test_app::state_sync_test()
         for (int i = 1; i <= apps_count; ++i) {
             std::shared_ptr<app_state> app = ss2->get_app(i);
 
-            // `app->__isset.atomic_idempotent` must be true since `app->atomic_idempotent`
-            // has default value.
+            // `app->__isset.atomic_idempotent` must be true since by default it is true
+            // (because `app->atomic_idempotent` has default value false).
             ASSERT_TRUE(app->__isset.atomic_idempotent);
 
             // Recovered `app->atomic_idempotent` will be true for the table with even

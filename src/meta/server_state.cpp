@@ -1214,7 +1214,7 @@ void server_state::create_app(dsn::message_ex *msg)
     info.init_partition_count = request.options.partition_count;
 
     // No need to check `request.options.__isset.atomic_idempotent`, since by default
-    // it is true while `request.options.atomic_idempotent` is false.
+    // it is true (because `request.options.atomic_idempotent` has default value false).
     info.__set_atomic_idempotent(request.options.atomic_idempotent);
 
     app = app_state::create(info);
@@ -2361,6 +2361,35 @@ void server_state::on_propose_balancer(const configuration_balancer_request &req
 
     _meta_svc->get_balancer()->register_proposals({&_all_apps, &_nodes}, request, response);
 }
+
+namespace {
+
+bool app_info_compatible_equal(const app_info &l, const app_info &r)
+{
+    // Some fields like `app_type`, `app_id` and `create_second` are initialized and
+    // persisted into .app-info file when the replica is created, and will NEVER be
+    // changed during their lifetime even if the table is dropped or recalled. Their
+    // consistency must be checked.
+    //
+    // Some fields may be updated during their lifetime, but will NEVER be persisted
+    // into .app-info, such as most environments in `envs`. Their consistency do not
+    // need to be checked.
+    //
+    // Some fields may be updated during their lifetime, and will also be persited into
+    // .app-info file:
+    // - For the fields such as `app_name`, `max_replica_count` and `atomic_idempotent`
+    // without compatibility problems, their consistency should be checked.
+    // - For the fields such as `duplicating` whose compatibility varies between primary
+    // and secondaries in 2.1.x, 2.2.x and 2.3.x release, their consistency are not
+    // checked.
+    return l.status == r.status && l.app_type == r.app_type && l.app_name == r.app_name &&
+           l.app_id == r.app_id && l.partition_count == r.partition_count &&
+           l.is_stateful == r.is_stateful && l.max_replica_count == r.max_replica_count &&
+           l.expire_second == r.expire_second && l.create_second == r.create_second &&
+           l.drop_second == r.drop_second && l.atomic_idempotent == r.atomic_idempotent;
+}
+
+} // anonymous namespace
 
 error_code
 server_state::construct_apps(const std::vector<query_app_info_response> &query_app_responses,
@@ -3758,7 +3787,7 @@ void server_state::set_max_replica_count(configuration_set_max_replica_count_rpc
         response.old_max_replica_count = app->max_replica_count;
 
         if (app->status != app_status::AS_AVAILABLE) {
-            response.err = ERR_INVALID_PARAMETERS;
+            response.err = ERR_INVALID_STATE;
             response.hint_message = fmt::format("app({}) is not in available status", app_name);
             LOG_ERROR("failed to set max_replica_count: app_name={}, app_id={}, error_code={}, "
                       "hint_message={}",
@@ -4481,8 +4510,8 @@ void server_state::get_atomic_idempotent(configuration_get_atomic_idempotent_rpc
 
     response.err = ERR_OK;
 
-    // No need to check `app->__isset.atomic_idempotent`, since by default
-    // `app->atomic_idempotent` is false.
+    // No need to check `app->__isset.atomic_idempotent`, since by default it is true
+    // (because `app->atomic_idempotent` has default value false).
     response.atomic_idempotent = app->atomic_idempotent;
 
     LOG_INFO("get atomic_idempotent successfully: app_name={}, app_id={}, "
@@ -4508,26 +4537,25 @@ void server_state::set_atomic_idempotent(configuration_set_atomic_idempotent_rpc
         app = get_app_and_check_exist(app_name, response);
         if (!app) {
             response.old_atomic_idempotent = false;
-            LOG_WARNING(
-                "failed to set atomic_idempotent: app_name={}, error_code={}, hint_message={}",
-                app_name,
-                response.err,
-                response.hint_message);
+            LOG_WARNING("failed to set atomic_idempotent: app_name={}, "
+                        "error_code={}, hint_message={}",
+                        app_name,
+                        response.err,
+                        response.hint_message);
             return;
         }
 
         app_id = app->app_id;
 
-        // No need to check `app->__isset.atomic_idempotent`, since by default
-        // `app->atomic_idempotent` is false.
-        response.old_atomic_idempotent = app->__isset.atomic_idempotent ? app->atomic_idempotent
-                                                                        : false;
+        // No need to check `app->__isset.atomic_idempotent`, since by default it is true
+        // (because `app->atomic_idempotent` has default value false).
+        response.old_atomic_idempotent = app->atomic_idempotent;
 
         if (app->status != app_status::AS_AVAILABLE) {
-            response.err = ERR_INVALID_PARAMETERS;
+            response.err = ERR_INVALID_STATE;
             response.hint_message = fmt::format("app({}) is not in available status", app_name);
-            LOG_ERROR("failed to set atomic_idempotent: app_name={}, app_id={}, error_code={}, "
-                      "hint_message={}",
+            LOG_ERROR("failed to set atomic_idempotent: app_name={}, app_id={}, "
+                      "error_code={}, hint_message={}",
                       app_name,
                       app_id,
                       response.err,
@@ -4536,17 +4564,17 @@ void server_state::set_atomic_idempotent(configuration_set_atomic_idempotent_rpc
         }
     }
 
-    auto level = _meta_svc->get_function_level();
+    const auto level = _meta_svc->get_function_level();
     if (level <= meta_function_level::fl_freezed) {
         response.err = ERR_STATE_FREEZED;
         response.hint_message =
             "current meta function level is freezed, since there are too few alive nodes";
-        LOG_ERROR(
-            "failed to set atomic_idempotent: app_name={}, app_id={}, error_code={}, message={}",
-            app_name,
-            app_id,
-            response.err,
-            response.hint_message);
+        LOG_ERROR("failed to set atomic_idempotent: app_name={}, app_id={}, "
+                  "error_code={}, message={}",
+                  app_name,
+                  app_id,
+                  response.err,
+                  response.hint_message);
         return;
     }
 
@@ -4601,8 +4629,8 @@ void server_state::update_app_atomic_idempotent_on_remote(
                      old_atomic_idempotent,
                      new_atomic_idempotent);
 
-        // No need to check `app->__isset.atomic_idempotent`, since by default
-        // `app->atomic_idempotent` is false.
+        // No need to check `app->__isset.atomic_idempotent`, since by default it is true
+        // (because `app->atomic_idempotent` has default value false).
         CHECK_EQ_MSG(old_atomic_idempotent,
                      app->atomic_idempotent,
                      "atomic_idempotent has been updated to remote storage, however "
