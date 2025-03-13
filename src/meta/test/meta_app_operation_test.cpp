@@ -219,9 +219,8 @@ public:
         auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        for (int i = 0; i < static_cast<int>(app->pcs.size()); ++i) {
+        for (auto &pc : app->pcs) {
             // Set `max_replica_count` of each partition locally.
-            auto &pc = app->pcs[i];
             pc.max_replica_count = max_replica_count;
 
             // Set `max_replica_count` of each partition on remote storage.
@@ -255,9 +254,8 @@ public:
         auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        for (int i = 0; i < static_cast<int>(app->pcs.size()); ++i) {
+        for (auto &pc : app->pcs) {
             // Verify `max_replica_count` of each partition locally.
-            auto &pc = app->pcs[i];
             ASSERT_EQ(expected_max_replica_count, pc.max_replica_count);
 
             // Verify `max_replica_count` of each partition on remote storage.

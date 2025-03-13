@@ -1214,7 +1214,7 @@ void server_state::create_app(dsn::message_ex *msg)
     info.init_partition_count = request.options.partition_count;
 
     // No need to check `request.options.__isset.atomic_idempotent`, since by default
-    // `request.options.atomic_idempotent` is false.
+    // it is true while `request.options.atomic_idempotent` is false.
     info.__set_atomic_idempotent(request.options.atomic_idempotent);
 
     app = app_state::create(info);
@@ -2375,8 +2375,8 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
         }
 
         for (const app_info &info : query_resp.apps) {
-            CHECK_GE_MSG(info.app_id, 1, "invalid app id");
-            auto iter = _all_apps.find(info.app_id);
+            CHECK_GT_MSG(info.app_id, 0, "invalid app id");
+            const auto iter = std::as_const(_all_apps).find(info.app_id);
             if (iter == _all_apps.end()) {
                 std::shared_ptr<app_state> app = app_state::create(info);
                 LOG_INFO("create app info from ({}) for id({}): {}",
@@ -2389,16 +2389,10 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
             }
 
             app_info *old_info = iter->second.get();
-
-            // all info in all replica servers should be the same
-            // coz the app info is only initialized when the replica is
-            // created, and it will NEVER change even if the app is dropped/recalled...
             if (info == *old_info) {
                 continue;
             }
 
-            // compatible for app.duplicating different between primary and secondaries in
-            // 2.1.x, 2.2.x and 2.3.x release
             CHECK(app_info_compatible_equal(info, *old_info),
                   "conflict app info from ({}) for id({}): new_info({}), old_info({})",
                   replica_nodes[i],
@@ -4573,6 +4567,7 @@ void server_state::set_atomic_idempotent(configuration_set_atomic_idempotent_rpc
     update_app_atomic_idempotent_on_remote(app, rpc);
 }
 
+// ThreadPool: THREAD_POOL_META_STATE
 void server_state::update_app_atomic_idempotent_on_remote(
     std::shared_ptr<app_state> &app, configuration_set_atomic_idempotent_rpc rpc)
 {
