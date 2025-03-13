@@ -740,6 +740,5 @@ bool replica::having_dup_loading()
     return _duplication_mgr->check_still_have_dup_pipeline_loading();
 }
 
-
 } // namespace replication
 } // namespace dsn

@@ -1723,8 +1723,9 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
 
         // deal with unexpected close when duplication and balance function running at the same time
         if (replica->status() == partition_status::PS_INACTIVE && replica->having_dup_loading()) {
-            LOG_DEBUG("%s: replica not exists on meta server,and still have dup on it. wait to close",
-                   replica->name());
+            LOG_DEBUG(
+                "%s: replica not exists on meta server,and still have dup on it. wait to close",
+                replica->name());
             return;
         }
 

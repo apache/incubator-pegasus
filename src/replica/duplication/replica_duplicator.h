@@ -163,8 +163,14 @@ public:
 
         writer.EndObject();
     }
-    void set_loading_private_log_state(bool is_loading) { _is_loading_private_log.store(is_loading,std::memory_order_release); }
-    bool get_loading_private_log_state() { return _is_loading_private_log.load(std::memory_order_acquire); }
+    void set_loading_private_log_state(bool is_loading)
+    {
+        _is_loading_private_log.store(is_loading, std::memory_order_release);
+    }
+    bool get_loading_private_log_state()
+    {
+        return _is_loading_private_log.load(std::memory_order_acquire);
+    }
 
 private:
     friend class duplication_test_base;

@@ -104,13 +104,13 @@ public:
         }
         return false;
     }
+    // called by close replica also
+    void remove_all_duplications();
 
 private:
     void sync_duplication(const duplication_entry &ent);
 
     void remove_non_existed_duplications(const std::map<dupid_t, duplication_entry> &);
-
-    void remove_all_duplications();
 
 private:
     friend class duplication_sync_timer_test;

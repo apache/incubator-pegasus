@@ -95,7 +95,6 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     _status = ent.status;
     _is_loading_private_log.store(false);
 
-
     const auto it = ent.progress.find(get_gpid().get_partition_index());
     CHECK_PREFIX_MSG(it != ent.progress.end(),
                      "partition({}) not found in duplication progress: "
