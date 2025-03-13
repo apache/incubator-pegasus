@@ -388,6 +388,50 @@ public:
         tracker.wait_outstanding_tasks();
     }
 
+    configuration_get_atomic_idempotent_response get_atomic_idempotent(const std::string &app_name)
+    {
+        auto req = std::make_unique<configuration_get_atomic_idempotent_request>();
+        req->__set_app_name(app_name);
+
+        configuration_get_atomic_idempotent_rpc rpc(std::move(req), RPC_CM_GET_ATOMIC_IDEMPOTENT);
+        _ss->get_atomic_idempotent(rpc);
+        _ss->wait_all_task();
+
+        return rpc.response();
+    }
+
+    void test_get_atomic_idempotent(const std::string &app_name, bool expected_atomic_idempotent)
+    {
+        const auto resp = get_atomic_idempotent(app_name);
+        ASSERT_EQ(ERR_OK, resp.err);
+        ASSERT_EQ(expected_atomic_idempotent, resp.atomic_idempotent);
+    }
+
+    configuration_set_atomic_idempotent_response set_atomic_idempotent(const std::string &app_name,
+                                                                       bool atomic_idempotent)
+    {
+        auto req = std::make_unique<configuration_set_atomic_idempotent_request>();
+        req->__set_app_name(app_name);
+        req->__set_atomic_idempotent(atomic_idempotent);
+
+        configuration_set_atomic_idempotent_rpc rpc(std::move(req), RPC_CM_SET_ATOMIC_IDEMPOTENT);
+        _ss->set_atomic_idempotent(rpc);
+        _ss->wait_all_task();
+
+        return rpc.response();
+    }
+
+    void test_set_atomic_idempotent(const std::string &app_name,
+                                    bool expected_new_atomic_idempotent,
+                                    bool expected_old_atomic_idempotent)
+    {
+        const auto resp = set_atomic_idempotent(app_name, expected_new_atomic_idempotent);
+        ASSERT_EQ(ERR_OK, resp.err);
+        ASSERT_EQ(expected_old_atomic_idempotent, resp.old_atomic_idempotent);
+
+        test_get_atomic_idempotent(app_name, expected_new_atomic_idempotent);
+    }
+
     const std::string APP_NAME = "app_operation_test";
     const std::string OLD_APP_NAME = "old_app_operation";
     const std::string DUP_MASTER_APP_NAME = "dup_master_test";
@@ -1158,6 +1202,17 @@ TEST_F(meta_app_operation_test, recover_from_max_replica_count_env)
 
     verify_all_partitions_max_replica_count(APP_NAME, new_max_replica_count);
     verify_app_max_replica_count(APP_NAME, new_max_replica_count);
+}
+
+TEST_F(meta_app_operation_test, change_atomic_idempotent)
+{
+    create_app(APP_NAME, 4);
+
+    test_get_atomic_idempotent(APP_NAME, false);
+
+    test_set_atomic_idempotent(APP_NAME, true, false);
+
+    test_set_atomic_idempotent(APP_NAME, false, true);
 }
 
 TEST_F(meta_app_operation_test, rename_app)
