@@ -51,6 +51,7 @@
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
+#include "dsn.layer2_types.h"
 #include "dump_file.h"
 #include "meta/app_env_validator.h"
 #include "meta/meta_data.h"

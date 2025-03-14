@@ -41,7 +41,6 @@
 #include "app_env_validator.h"
 #include "common/gpid.h"
 #include "common/manual_compact.h"
-#include "dsn.layer2_types.h"
 #include "gutil/map_util.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
@@ -52,10 +51,14 @@
 #include "utils/zlocks.h"
 
 namespace dsn {
+class app_info;
 class blob;
 class command_deregister;
 class host_port;
 class message_ex;
+class partition_configuration;
+class query_cfg_request;
+class query_cfg_response;
 
 namespace replication {
 class configuration_balancer_request;
