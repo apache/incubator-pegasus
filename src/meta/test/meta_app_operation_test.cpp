@@ -34,6 +34,7 @@
 #include "common/replication.codes.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
+#include "gutil/map_util.h"
 #include "meta/meta_data.h"
 #include "meta/meta_rpc_types.h"
 #include "meta/meta_service.h"
@@ -66,11 +67,12 @@ class meta_app_operation_test : public meta_test_base
 public:
     meta_app_operation_test() = default;
 
-    error_code create_app_test(int32_t partition_count,
+    error_code create_app_test(const std::string &app_name,
+                               int32_t partition_count,
                                int32_t replica_count,
                                bool success_if_exist,
-                               const std::string &app_name,
-                               const std::map<std::string, std::string> &envs = {})
+                               const std::map<std::string, std::string> &envs,
+                               bool atomic_idempotent)
     {
         configuration_create_app_request create_request;
         configuration_create_app_response create_response;
@@ -81,6 +83,7 @@ public:
         create_request.options.success_if_exist = success_if_exist;
         create_request.options.is_stateful = true;
         create_request.options.envs = envs;
+        create_request.options.__set_atomic_idempotent(atomic_idempotent);
 
         auto result = fake_create_app(_ss.get(), create_request);
         fake_wait_rpc(result, create_response);
@@ -171,16 +174,13 @@ public:
             app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT] = env;
         }
 
-        // set remote env of app
-        auto app_path = _ss->get_app_path(*app);
-        auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
-        auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
+        // Set env on remote storage.
         dsn::task_tracker tracker;
         _ms->get_remote_storage()->set_data(
-            app_path,
-            json_config,
+            _ss->get_app_path(*app),
+            json::json_forwarder<app_info>::encode(*app),
             LPC_META_STATE_HIGH,
-            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+            [](error_code ec) { ASSERT_EQ(ERR_OK, ec); },
             &tracker);
         tracker.wait_outstanding_tasks();
     }
@@ -219,38 +219,31 @@ public:
         auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        auto partition_size = static_cast<int>(app->pcs.size());
-        for (int i = 0; i < partition_size; ++i) {
-            // set local max_replica_count of each partition
-            auto &pc = app->pcs[i];
+        for (auto &pc : app->pcs) {
+            // Set `max_replica_count` of each partition locally.
             pc.max_replica_count = max_replica_count;
 
-            // set remote max_replica_count of each partition
-            auto partition_path = _ss->get_partition_path(pc.pid);
-            auto json_config = dsn::json::json_forwarder<partition_configuration>::encode(pc);
+            // Set `max_replica_count` of each partition on remote storage.
             dsn::task_tracker tracker;
             _ms->get_remote_storage()->set_data(
-                partition_path,
-                json_config,
+                _ss->get_partition_path(pc.pid),
+                json::json_forwarder<partition_configuration>::encode(pc),
                 LPC_META_STATE_HIGH,
-                [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+                [](error_code ec) { ASSERT_EQ(ec, ERR_OK); },
                 &tracker);
             tracker.wait_outstanding_tasks();
         }
 
-        // set local max_replica_count of app
+        // Set `max_replica_count` of the table locally.
         app->max_replica_count = max_replica_count;
 
-        // set remote max_replica_count of app
-        auto app_path = _ss->get_app_path(*app);
-        auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
-        auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
+        // Set `max_replica_count` of the table on remote storage.
         dsn::task_tracker tracker;
         _ms->get_remote_storage()->set_data(
-            app_path,
-            json_config,
+            _ss->get_app_path(*app),
+            json::json_forwarder<app_info>::encode(*app),
             LPC_META_STATE_HIGH,
-            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+            [](error_code ec) { ASSERT_EQ(ec, ERR_OK); },
             &tracker);
         tracker.wait_outstanding_tasks();
     }
@@ -261,27 +254,24 @@ public:
         auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        auto partition_size = static_cast<int>(app->pcs.size());
-        for (int i = 0; i < partition_size; ++i) {
-            // verify local max_replica_count of each partition
-            auto &pc = app->pcs[i];
-            ASSERT_EQ(pc.max_replica_count, expected_max_replica_count);
+        for (auto &pc : app->pcs) {
+            // Verify `max_replica_count` of each partition locally.
+            ASSERT_EQ(expected_max_replica_count, pc.max_replica_count);
 
-            // verify remote max_replica_count of each partition
-            auto partition_path = _ss->get_partition_path(pc.pid);
+            // Verify `max_replica_count` of each partition on remote storage.
             dsn::task_tracker tracker;
             _ms->get_remote_storage()->get_data(
-                partition_path,
+                _ss->get_partition_path(pc.pid),
                 LPC_META_CALLBACK,
                 [expected_pid = pc.pid, expected_max_replica_count](error_code ec,
                                                                     const blob &value) {
-                    ASSERT_EQ(ec, ERR_OK);
+                    ASSERT_EQ(ERR_OK, ec);
 
                     partition_configuration pc;
                     dsn::json::json_forwarder<partition_configuration>::decode(value, pc);
 
-                    ASSERT_EQ(pc.pid, expected_pid);
-                    ASSERT_EQ(pc.max_replica_count, expected_max_replica_count);
+                    ASSERT_EQ(expected_pid, pc.pid);
+                    ASSERT_EQ(expected_max_replica_count, pc.max_replica_count);
                 },
                 &tracker);
             tracker.wait_outstanding_tasks();
@@ -294,29 +284,30 @@ public:
         auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        // verify local max_replica_count of the app
-        ASSERT_EQ(app->max_replica_count, expected_max_replica_count);
-        // env of max_replica_count should have been removed under normal circumstances
-        ASSERT_EQ(app->envs.find(replica_envs::UPDATE_MAX_REPLICA_COUNT), app->envs.end());
+        // Verify `max_replica_count` of the table locally.
+        ASSERT_EQ(expected_max_replica_count, app->max_replica_count);
+        // The env of `max_replica_count` should have been removed under normal circumstances.
+        ASSERT_FALSE(gutil::ContainsKey(app->envs, replica_envs::UPDATE_MAX_REPLICA_COUNT));
 
-        // verify remote max_replica_count of the app
-        auto app_path = _ss->get_app_path(*app);
+        // Verify `max_replica_count` of the table on remote storage.
         dsn::task_tracker tracker;
         _ms->get_remote_storage()->get_data(
-            app_path,
+            _ss->get_app_path(*app),
             LPC_META_CALLBACK,
             [app, expected_max_replica_count](error_code ec, const blob &value) {
                 ASSERT_EQ(ec, ERR_OK);
 
                 app_info ainfo;
-                dsn::json::json_forwarder<app_info>::decode(value, ainfo);
+                json::json_forwarder<app_info>::decode(value, ainfo);
 
-                ASSERT_EQ(ainfo.app_name, app->app_name);
-                ASSERT_EQ(ainfo.app_id, app->app_id);
-                ASSERT_EQ(ainfo.max_replica_count, expected_max_replica_count);
-                // env of max_replica_count should have been removed under normal circumstances
-                ASSERT_EQ(ainfo.envs.find(replica_envs::UPDATE_MAX_REPLICA_COUNT),
-                          ainfo.envs.end());
+                ASSERT_EQ(app->app_name, ainfo.app_name);
+                ASSERT_EQ(app->app_id, ainfo.app_id);
+                ASSERT_EQ(expected_max_replica_count, ainfo.max_replica_count);
+
+                // The env of `max_replica_count` should have been removed under normal
+                // circumstances.
+                ASSERT_FALSE(
+                    gutil::ContainsKey(ainfo.envs, replica_envs::UPDATE_MAX_REPLICA_COUNT));
             },
             &tracker);
         tracker.wait_outstanding_tasks();
@@ -328,17 +319,15 @@ public:
         auto app = find_app(app_name);
         CHECK(app, "app({}) does not exist", app_name);
 
-        auto app_path = _ss->get_app_path(*app);
-
         dsn::task_tracker tracker;
         _ms->get_remote_storage()->get_data(
-            app_path,
+            _ss->get_app_path(*app),
             LPC_META_CALLBACK,
             [app_name, expected_envs, app](error_code ec, const blob &value) {
                 ASSERT_EQ(ERR_OK, ec);
 
                 app_info ainfo;
-                dsn::json::json_forwarder<app_info>::decode(value, ainfo);
+                json::json_forwarder<app_info>::decode(value, ainfo);
 
                 ASSERT_EQ(app_name, app->app_name);
                 ASSERT_EQ(app_name, ainfo.app_name);
@@ -350,10 +339,92 @@ public:
         tracker.wait_outstanding_tasks();
     }
 
+    void verify_app_atomic_idempotent(const std::string &app_name, bool expected_atomic_idempotent)
+    {
+        const auto app = find_app(app_name);
+        CHECK(app, "app({}) does not exist", app_name);
+
+        // `app->__isset.atomic_idempotent` must be true since by default it is true
+        // (because `app->atomic_idempotent` has default value false).
+        ASSERT_TRUE(app->__isset.atomic_idempotent);
+
+        // Verify `atomic_idempotent` of the table locally.
+        ASSERT_EQ(expected_atomic_idempotent, app->atomic_idempotent);
+
+        dsn::task_tracker tracker;
+        _ms->get_remote_storage()->get_data(
+            _ss->get_app_path(*app),
+            LPC_META_CALLBACK,
+            [app, expected_atomic_idempotent](error_code ec, const blob &value) {
+                ASSERT_EQ(ERR_OK, ec);
+
+                app_info ainfo;
+                dsn::json::json_forwarder<app_info>::decode(value, ainfo);
+
+                ASSERT_EQ(app->app_name, ainfo.app_name);
+                ASSERT_EQ(app->app_id, ainfo.app_id);
+
+                // `ainfo.__isset.atomic_idempotent` must be true since by default it
+                // is true (because `ainfo.atomic_idempotent` has default value false).
+                ASSERT_TRUE(ainfo.__isset.atomic_idempotent);
+
+                // Verify `atomic_idempotent` on remote storage.
+                ASSERT_EQ(expected_atomic_idempotent, ainfo.atomic_idempotent);
+            },
+            &tracker);
+        tracker.wait_outstanding_tasks();
+    }
+
+    configuration_get_atomic_idempotent_response get_atomic_idempotent(const std::string &app_name)
+    {
+        auto req = std::make_unique<configuration_get_atomic_idempotent_request>();
+        req->__set_app_name(app_name);
+
+        configuration_get_atomic_idempotent_rpc rpc(std::move(req), RPC_CM_GET_ATOMIC_IDEMPOTENT);
+        _ss->get_atomic_idempotent(rpc);
+        _ss->wait_all_task();
+
+        return rpc.response();
+    }
+
+    void test_get_atomic_idempotent(const std::string &app_name, bool expected_atomic_idempotent)
+    {
+        const auto resp = get_atomic_idempotent(app_name);
+        ASSERT_EQ(ERR_OK, resp.err);
+        ASSERT_EQ(expected_atomic_idempotent, resp.atomic_idempotent);
+    }
+
+    configuration_set_atomic_idempotent_response set_atomic_idempotent(const std::string &app_name,
+                                                                       bool atomic_idempotent)
+    {
+        auto req = std::make_unique<configuration_set_atomic_idempotent_request>();
+        req->__set_app_name(app_name);
+        req->__set_atomic_idempotent(atomic_idempotent);
+
+        configuration_set_atomic_idempotent_rpc rpc(std::move(req), RPC_CM_SET_ATOMIC_IDEMPOTENT);
+        _ss->set_atomic_idempotent(rpc);
+        _ss->wait_all_task();
+
+        return rpc.response();
+    }
+
+    void test_set_atomic_idempotent(const std::string &app_name,
+                                    bool expected_new_atomic_idempotent,
+                                    bool expected_old_atomic_idempotent)
+    {
+        const auto resp = set_atomic_idempotent(app_name, expected_new_atomic_idempotent);
+        ASSERT_EQ(ERR_OK, resp.err);
+        ASSERT_EQ(expected_old_atomic_idempotent, resp.old_atomic_idempotent);
+
+        // Ensure that new `atomic_idempotent` has been updated to `server_state`.
+        test_get_atomic_idempotent(app_name, expected_new_atomic_idempotent);
+    }
+
     const std::string APP_NAME = "app_operation_test";
     const std::string OLD_APP_NAME = "old_app_operation";
     const std::string DUP_MASTER_APP_NAME = "dup_master_test";
     const std::string DUP_FOLLOWER_APP_NAME = "dup_follower_test";
+    const std::string ATOMIC_IDEMPOTENT_APP_NAME = "atomic_idempotent_test";
 };
 
 TEST_F(meta_app_operation_test, create_app)
@@ -371,6 +442,7 @@ TEST_F(meta_app_operation_test, create_app)
         app_status::type before_status;
         error_code expected_err;
         std::map<std::string, std::string> envs = {};
+        bool atomic_idempotent = false;
     } tests[] = {
         // Wrong partition_count (< 0).
         {APP_NAME, -1, 3, 2, 3, 1, false, app_status::AS_INVALID, ERR_INVALID_PARAMETERS},
@@ -661,6 +733,18 @@ TEST_F(meta_app_operation_test, create_app)
           {duplication_constants::kEnvMasterMetasKey, "10.1.2.3:34601"},
           {duplication_constants::kEnvMasterAppNameKey, DUP_MASTER_APP_NAME},
           {duplication_constants::kEnvFollowerAppStatusKey, "invalid_creating_status"}}},
+        // Create a table with idempotence enabled for atomic writes.
+        {ATOMIC_IDEMPOTENT_APP_NAME,
+         4,
+         3,
+         2,
+         3,
+         3,
+         false,
+         app_status::AS_INVALID,
+         ERR_OK,
+         {},
+         true},
     };
 
     clear_nodes();
@@ -706,15 +790,17 @@ TEST_F(meta_app_operation_test, create_app)
             update_app_status(test.before_status);
         }
 
-        auto err = create_app_test(test.partition_count,
-                                   test.replica_count,
-                                   test.success_if_exist,
-                                   test.app_name,
-                                   test.envs);
+        const auto err = create_app_test(test.app_name,
+                                         test.partition_count,
+                                         test.replica_count,
+                                         test.success_if_exist,
+                                         test.envs,
+                                         test.atomic_idempotent);
         ASSERT_EQ(test.expected_err, err);
 
         if (test.expected_err == ERR_OK) {
             verify_app_envs(test.app_name, test.envs);
+            verify_app_atomic_idempotent(test.app_name, test.atomic_idempotent);
         }
 
         _ms->set_node_state(nodes, true);
@@ -728,10 +814,10 @@ TEST_F(meta_app_operation_test, create_app)
             all_test_envs.insert(test.envs.begin(), test.envs.end());
         }
         for (const auto &option : replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
-            ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
+            ASSERT_TRUE(gutil::ContainsKey(all_test_envs, option));
         }
         for (const auto &option : replica_envs::ROCKSDB_STATIC_OPTIONS) {
-            ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
+            ASSERT_TRUE(gutil::ContainsKey(all_test_envs, option));
         }
     }
 
@@ -897,8 +983,8 @@ TEST_F(meta_app_operation_test, get_max_replica_count)
         }
 
         const auto resp = get_max_replica_count(test.app_name);
-        ASSERT_EQ(resp.err, test.expected_err);
-        ASSERT_EQ(resp.max_replica_count, test.expected_max_replica_count);
+        ASSERT_EQ(test.expected_err, resp.err);
+        ASSERT_EQ(test.expected_max_replica_count, resp.max_replica_count);
 
         recover_partition_max_replica_count();
     }
@@ -1037,8 +1123,8 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
                                                          test.initial_max_replica_count);
 
             const auto resp = get_max_replica_count(test.app_name);
-            ASSERT_EQ(resp.err, ERR_OK);
-            ASSERT_EQ(resp.max_replica_count, test.initial_max_replica_count);
+            ASSERT_EQ(ERR_OK, resp.err);
+            ASSERT_EQ(test.initial_max_replica_count, resp.max_replica_count);
         }
 
         // recover automatically the original FLAGS_min_live_node_count_for_unfreeze,
@@ -1078,13 +1164,13 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
 
         const auto get_resp = get_max_replica_count(test.app_name);
         if (test.expected_err == ERR_APP_NOT_EXIST || test.expected_err == ERR_INCONSISTENT_STATE) {
-            ASSERT_EQ(get_resp.err, test.expected_err);
+            ASSERT_EQ(test.expected_err, get_resp.err);
         } else if (test.expected_err != ERR_OK) {
-            ASSERT_EQ(get_resp.err, ERR_OK);
+            ASSERT_EQ(ERR_OK, get_resp.err);
         }
 
         if (test.expected_err != ERR_OK) {
-            ASSERT_EQ(get_resp.max_replica_count, test.expected_old_max_replica_count);
+            ASSERT_EQ(test.expected_old_max_replica_count, get_resp.max_replica_count);
         }
 
         _ms->set_node_state(nodes, true);
@@ -1104,6 +1190,20 @@ TEST_F(meta_app_operation_test, recover_from_max_replica_count_env)
 
     verify_all_partitions_max_replica_count(APP_NAME, new_max_replica_count);
     verify_app_max_replica_count(APP_NAME, new_max_replica_count);
+}
+
+TEST_F(meta_app_operation_test, change_atomic_idempotent)
+{
+    create_app(APP_NAME, 4);
+
+    // Initial `atomic_idempotent` should be false by default.
+    test_get_atomic_idempotent(APP_NAME, false);
+
+    // Enable `atomic_idempotent` and its previous value should be false.
+    test_set_atomic_idempotent(APP_NAME, true, false);
+
+    // Disable `atomic_idempotent` and its previous value should be true.
+    test_set_atomic_idempotent(APP_NAME, false, true);
 }
 
 TEST_F(meta_app_operation_test, rename_app)

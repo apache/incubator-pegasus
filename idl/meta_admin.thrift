@@ -139,6 +139,11 @@ struct create_app_options
     4:string           app_type;
     5:bool             is_stateful;
     6:map<string, string>  envs;
+
+    // Whether all atomic writes to this table are made idempotent:
+    // - true: made idempotent.
+    // - false: kept non-idempotent as their respective client requests. 
+    7:optional bool    atomic_idempotent = false;
 }
 
 struct configuration_create_app_request
@@ -434,6 +439,36 @@ struct configuration_set_max_replica_count_response
 {
     1:dsn.error_code            err;
     2:i32                       old_max_replica_count;
+    3:string                    hint_message;
+}
+
+// Get the idempotence (see app_info::atomic_idempotent) of given table for atomic writes.
+struct configuration_get_atomic_idempotent_request
+{
+    1:string                    app_name;
+}
+
+struct configuration_get_atomic_idempotent_response
+{
+    1:dsn.error_code            err;
+    2:bool                      atomic_idempotent;
+    3:string                    hint_message;
+}
+
+// Change the idempotence (see app_info::atomic_idempotent) of given table for atomic writes.
+struct configuration_set_atomic_idempotent_request
+{
+    1:string                    app_name;
+    2:bool                      atomic_idempotent;
+}
+
+struct configuration_set_atomic_idempotent_response
+{
+    1:dsn.error_code            err;
+
+    // Previous atomic_idempotent before updated.
+    2:bool                      old_atomic_idempotent;
+
     3:string                    hint_message;
 }
 

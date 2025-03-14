@@ -563,6 +563,12 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler_with_rpc_holder(RPC_CM_SET_MAX_REPLICA_COUNT,
                                          "set_max_replica_count",
                                          &meta_service::on_set_max_replica_count);
+    register_rpc_handler_with_rpc_holder(RPC_CM_GET_ATOMIC_IDEMPOTENT,
+                                         "get_atomic_idempotent",
+                                         &meta_service::on_get_atomic_idempotent);
+    register_rpc_handler_with_rpc_holder(RPC_CM_SET_ATOMIC_IDEMPOTENT,
+                                         "set_atomic_idempotent",
+                                         &meta_service::on_set_atomic_idempotent);
 }
 
 meta_leader_state meta_service::check_leader(dsn::message_ex *req, dsn::host_port *forward_address)
@@ -1350,6 +1356,32 @@ void meta_service::on_set_max_replica_count(configuration_set_max_replica_count_
     tasking::enqueue(LPC_META_STATE_NORMAL,
                      tracker(),
                      std::bind(&server_state::set_max_replica_count, _state.get(), rpc),
+                     server_state::sStateHash);
+}
+
+// ThreadPool: THREAD_POOL_META_SERVER
+void meta_service::on_get_atomic_idempotent(configuration_get_atomic_idempotent_rpc rpc)
+{
+    if (!check_status_and_authz(rpc, nullptr, rpc.request().app_name)) {
+        return;
+    }
+
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     tracker(),
+                     std::bind(&server_state::get_atomic_idempotent, _state.get(), rpc),
+                     server_state::sStateHash);
+}
+
+// ThreadPool: THREAD_POOL_META_SERVER
+void meta_service::on_set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc)
+{
+    if (!check_status_and_authz(rpc, nullptr, rpc.request().app_name)) {
+        return;
+    }
+
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     tracker(),
+                     std::bind(&server_state::set_atomic_idempotent, _state.get(), rpc),
                      server_state::sStateHash);
 }
 

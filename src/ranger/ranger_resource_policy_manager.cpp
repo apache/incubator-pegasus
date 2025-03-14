@@ -180,7 +180,8 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_QUERY_PARTITION_SPLIT",
                               "RPC_CM_QUERY_BULK_LOAD_STATUS",
                               "RPC_CM_QUERY_MANUAL_COMPACT_STATUS",
-                              "RPC_CM_GET_MAX_REPLICA_COUNT"},
+                              "RPC_CM_GET_MAX_REPLICA_COUNT",
+                              "RPC_CM_GET_ATOMIC_IDEMPOTENT"},
                              _ac_type_of_database_rpcs);
     // DATABASE - kControl
     register_rpc_access_type(access_type::kControl,
@@ -198,6 +199,7 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_CLEAR_BULK_LOAD",
                               "RPC_CM_START_MANUAL_COMPACT",
                               "RPC_CM_SET_MAX_REPLICA_COUNT",
+                              "RPC_CM_SET_ATOMIC_IDEMPOTENT",
                               "RPC_CM_RENAME_APP"},
                              _ac_type_of_database_rpcs);
 }
