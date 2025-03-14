@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -112,7 +113,6 @@ private:
 
     void remove_non_existed_duplications(const std::map<dupid_t, duplication_entry> &);
 
-private:
     friend class duplication_sync_timer_test;
     friend class duplication_test_base;
     friend class replica_duplicator_manager_test;

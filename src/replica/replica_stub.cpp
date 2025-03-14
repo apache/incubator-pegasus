@@ -59,6 +59,7 @@
 #include "nfs_types.h"
 #include "ranger/access_type.h"
 #include "replica.h"
+#include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/duplication/replica_follower.h"
 #include "replica/kms_key_provider.h"
 #include "replica/replica_context.h"
