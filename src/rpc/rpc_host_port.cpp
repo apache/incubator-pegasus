@@ -22,6 +22,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <unordered_set>
@@ -247,6 +248,23 @@ error_s host_port::lookup_hostname(uint32_t ip, std::string *hostname)
 
     *hostname = host;
     return error_s::ok();
+}
+
+bool remove_node(const rpc_address &to_rm_addr,
+                 const host_port &to_rm_hp,
+                 /*inout*/ std::vector<rpc_address> &dst_addrs,
+                 /*inout*/ std::vector<host_port> &dst_hps)
+{
+    const auto it_addr = std::find(dst_addrs.begin(), dst_addrs.end(), to_rm_addr);
+    const auto it_hp = std::find(dst_hps.begin(), dst_hps.end(), to_rm_hp);
+    bool found_addr = (it_addr != dst_addrs.end());
+    bool found_hp = (it_hp != dst_hps.end());
+    DCHECK_EQ(found_addr, found_hp);
+    if (found_addr) {
+        dst_addrs.erase(it_addr);
+        dst_hps.erase(it_hp);
+    }
+    return found_addr;
 }
 
 } // namespace dsn

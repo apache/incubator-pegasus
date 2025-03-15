@@ -95,17 +95,6 @@ inline bool is_partition_config_equal(const partition_configuration &pc1,
 class replica_helper
 {
 public:
-    template <typename T>
-    static bool remove_node(const T node,
-                            /*inout*/ std::vector<T> &nodes)
-    {
-        auto it = std::find(nodes.begin(), nodes.end(), node);
-        if (it != nodes.end()) {
-            nodes.erase(it);
-            return true;
-        }
-        return false;
-    }
     static bool get_replica_config(const partition_configuration &pc,
                                    const ::dsn::host_port &node,
                                    /*out*/ replica_configuration &rc);

@@ -1752,8 +1752,8 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
 
     if (_primary_host_port == pc.hp_primary) {
         RESET_IP_AND_HOST_PORT(request->config, primary);
-    } else if (replica_helper::remove_node(primary_address(), request->config.secondaries) &&
-               replica_helper::remove_node(_primary_host_port, request->config.hp_secondaries)) {
+    } else if (REMOVE_IP_AND_HOST_PORT(
+                   primary_address(), _primary_host_port, request->config, secondaries)) {
     } else {
         return;
     }
