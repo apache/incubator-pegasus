@@ -78,29 +78,29 @@ void nativerun::install(service_spec &spec)
         }
     }
 
-    if (spec.logging_factory_name == "")
-        spec.logging_factory_name = "dsn::tools::simple_logger";
-
-    if (spec.lock_factory_name == "")
+    if (spec.lock_factory_name.empty()) {
         spec.lock_factory_name = ("dsn::tools::std_lock_provider");
-
-    if (spec.lock_nr_factory_name == "")
+    }
+    if (spec.lock_nr_factory_name.empty()) {
         spec.lock_nr_factory_name = ("dsn::tools::std_lock_nr_provider");
+    }
 
-    if (spec.rwlock_nr_factory_name == "")
+    if (spec.rwlock_nr_factory_name.empty()) {
         spec.rwlock_nr_factory_name = ("dsn::tools::std_rwlock_nr_provider");
+    }
 
-    if (spec.semaphore_factory_name == "")
+    if (spec.semaphore_factory_name.empty()) {
         spec.semaphore_factory_name = ("dsn::tools::std_semaphore_provider");
+    }
 
-    for (auto it = spec.threadpool_specs.begin(); it != spec.threadpool_specs.end(); ++it) {
-        threadpool_spec &tspec = *it;
-
-        if (tspec.worker_factory_name == "")
+    for (auto &tspec : spec.threadpool_specs) {
+        if (tspec.worker_factory_name.empty()) {
             tspec.worker_factory_name = ("dsn::task_worker");
+        }
 
-        if (tspec.queue_factory_name == "")
+        if (tspec.queue_factory_name.empty()) {
             tspec.queue_factory_name = ("dsn::tools::simple_task_queue");
+        }
     }
 }
 

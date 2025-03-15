@@ -44,7 +44,6 @@
 #include "task/task_code.h"
 #include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
-#include "utils/enum_helper.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/thread_access_checker.h"
