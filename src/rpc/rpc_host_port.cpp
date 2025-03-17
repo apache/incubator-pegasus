@@ -31,7 +31,6 @@
 #include "fmt/core.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_host_port.h"
-#include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/ports.h"
 #include "utils/safe_strerror_posix.h"
@@ -56,7 +55,7 @@ host_port host_port::from_address(rpc_address addr)
 {
     host_port hp;
     SCOPED_LOG_SLOW_EXECUTION(
-        WARNING, 100, "construct host_port '{}' from rpc_address '{}'", hp, addr);
+        warn, 100, "construct host_port '{}' from rpc_address '{}'", hp, addr);
     switch (addr.type()) {
     case HOST_TYPE_IPV4: {
         const auto s = lookup_hostname(htonl(addr.ip()), &hp._host);
@@ -82,7 +81,7 @@ host_port host_port::from_string(const std::string &host_port_str)
 {
     host_port hp;
     SCOPED_LOG_SLOW_EXECUTION(
-        WARNING, 100, "construct host_port '{}' from string '{}'", hp, host_port_str);
+        warn, 100, "construct host_port '{}' from string '{}'", hp, host_port_str);
     const auto pos = host_port_str.find_last_of(':');
     if (dsn_unlikely(pos == std::string::npos)) {
         return hp;
