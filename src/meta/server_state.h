@@ -203,10 +203,10 @@ public:
     void set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
     void recover_from_max_replica_count_env();
 
-    // Get `atomic_idempotent` of an table.
+    // Get `atomic_idempotent` of a table.
     void get_atomic_idempotent(configuration_get_atomic_idempotent_rpc rpc) const;
 
-    // Set `atomic_idempotent` of an table.
+    // Set `atomic_idempotent` of a table.
     void set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc);
 
     // return true if no need to do any actions
