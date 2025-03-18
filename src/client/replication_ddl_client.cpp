@@ -1674,6 +1674,25 @@ replication_ddl_client::set_max_replica_count(const std::string &app_name,
         configuration_set_max_replica_count_rpc(std::move(req), RPC_CM_SET_MAX_REPLICA_COUNT));
 }
 
+error_with<configuration_get_atomic_idempotent_response>
+replication_ddl_client::get_atomic_idempotent(const std::string &app_name)
+{
+    auto req = std::make_unique<configuration_get_atomic_idempotent_request>();
+    req->__set_app_name(app_name);
+    return call_rpc_sync(
+        configuration_get_atomic_idempotent_rpc(std::move(req), RPC_CM_GET_ATOMIC_IDEMPOTENT));
+}
+
+error_with<configuration_set_atomic_idempotent_response>
+replication_ddl_client::set_atomic_idempotent(const std::string &app_name, bool atomic_idempotent)
+{
+    auto req = std::make_unique<configuration_set_atomic_idempotent_request>();
+    req->__set_app_name(app_name);
+    req->__set_atomic_idempotent(atomic_idempotent);
+    return call_rpc_sync(
+        configuration_set_atomic_idempotent_rpc(std::move(req), RPC_CM_SET_ATOMIC_IDEMPOTENT));
+}
+
 error_with<configuration_rename_app_response>
 replication_ddl_client::rename_app(const std::string &old_app_name, const std::string &new_app_name)
 {

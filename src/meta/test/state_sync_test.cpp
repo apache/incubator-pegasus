@@ -25,6 +25,8 @@
  */
 
 #include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <fstream> // IWYU pragma: keep
@@ -151,10 +153,15 @@ void meta_service_test_app::state_sync_test()
             info.is_stateful = true;
             info.app_id = i;
             info.app_type = "simple_kv";
-            info.app_name = "test_app" + boost::lexical_cast<std::string>(i);
+            info.app_name = fmt::format("test_app{}", i);
             info.max_replica_count = 3;
-            info.partition_count = random32(100, 10000);
+            info.partition_count = static_cast<int32_t>(random32(100, 10000));
             info.status = dsn::app_status::AS_CREATING;
+
+            // `atomic_idempotent` will be set true for the table with even index,
+            // otherwise false.
+            info.atomic_idempotent = (static_cast<uint32_t>(i) & 1U) == 0;
+
             std::shared_ptr<app_state> app = app_state::create(info);
 
             ss->_all_apps.emplace(app->app_id, app);
@@ -174,8 +181,8 @@ void meta_service_test_app::state_sync_test()
             }
         }
 
-        dsn::error_code ec = ss->sync_apps_to_remote_storage();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        error_code ec = ss->sync_apps_to_remote_storage();
+        ASSERT_EQ(ERR_OK, ec);
         ss->spin_wait_staging();
     }
 
@@ -184,11 +191,20 @@ void meta_service_test_app::state_sync_test()
     {
         std::shared_ptr<server_state> ss2 = std::make_shared<server_state>();
         ss2->initialize(svc, apps_root);
-        dsn::error_code ec = ss2->sync_apps_from_remote_storage();
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        error_code ec = ss2->sync_apps_from_remote_storage();
+        ASSERT_EQ(ERR_OK, ec);
 
         for (int i = 1; i <= apps_count; ++i) {
             std::shared_ptr<app_state> app = ss2->get_app(i);
+
+            // `app->__isset.atomic_idempotent` must be true since by default it is true
+            // (because `app->atomic_idempotent` has default value false).
+            ASSERT_TRUE(app->__isset.atomic_idempotent);
+
+            // Recovered `app->atomic_idempotent` will be true for the table with even
+            // index, otherwise false.
+            ASSERT_EQ((static_cast<uint32_t>(i) & 1U) == 0, app->atomic_idempotent);
+
             for (int j = 0; j < app->partition_count; ++j) {
                 config_context &cc = app->helpers->contexts[j];
                 ASSERT_EQ(1, cc.dropped.size());
@@ -196,7 +212,7 @@ void meta_service_test_app::state_sync_test()
             }
         }
         ec = ss2->dump_from_remote_storage("meta_state.dump1", false);
-        ASSERT_EQ(ec, dsn::ERR_OK);
+        ASSERT_EQ(ERR_OK, ec);
     }
 
     // dump another way
