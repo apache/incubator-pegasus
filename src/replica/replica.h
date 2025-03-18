@@ -360,15 +360,21 @@ private:
     void response_client_write(dsn::message_ex *request, error_code error);
     void execute_mutation(mutation_ptr &mu);
 
-    // Create a new mutation with specified decree and the original atomic write request,
-    // which is used to build the response to the client.
+    // Create a new mutation with specified decree.
     //
     // Parameters:
     // - decree: invalid_decree, or the real decree assigned to this mutation.
-    // - original_request: the original request of the atomic write.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree, dsn::message_ex *original_request);
+    mutation_ptr new_mutation(decree decree, mutation_queue *work_queue);
+
+    // Create a new mutation with specified decree.
+    //
+    // Parameters:
+    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    //
+    // Return the newly created mutation.
+    mutation_ptr new_mutation(decree decree);
 
     // Create a new mutation with specified decree and a flag marking whether this is a
     // blocking mutation (for a detailed explanation of blocking mutations, refer to the
@@ -379,15 +385,17 @@ private:
     // - is_blocking: true means creating a blocking mutation.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree, bool is_blocking);
+    mutation_ptr new_mutation(decree decree, mutation_queue *work_queue, bool is_blocking);
 
-    // Create a new mutation with specified decree.
+    // Create a new mutation with specified decree and the original atomic write request,
+    // which is used to build the response to the client.
     //
     // Parameters:
     // - decree: invalid_decree, or the real decree assigned to this mutation.
+    // - original_request: the original request of the atomic write.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree);
+    mutation_ptr new_mutation(decree decree, dsn::message_ex *original_request);
 
     // initialization
     replica(replica_stub *stub,

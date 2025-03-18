@@ -567,27 +567,32 @@ void replica::execute_mutation(mutation_ptr &mu)
     }
 }
 
-mutation_ptr replica::new_mutation(decree decree, dsn::message_ex *original_request)
+mutation_ptr replica::new_mutation(decree d, mutation_queue *work_queue)
 {
-    auto mu = new_mutation(decree);
-    mu->original_request = original_request;
-    return mu;
-}
-
-mutation_ptr replica::new_mutation(decree decree, bool is_blocking)
-{
-    auto mu = new_mutation(decree);
-    mu->is_blocking = is_blocking;
+    mutation_ptr mu(new mutation(work_queue));
+    mu->data.header.pid = get_gpid();
+    mu->data.header.ballot = get_ballot();
+    mu->data.header.decree = d;
+    mu->data.header.log_offset = invalid_offset;
     return mu;
 }
 
 mutation_ptr replica::new_mutation(decree decree)
 {
-    mutation_ptr mu(new mutation());
-    mu->data.header.pid = get_gpid();
-    mu->data.header.ballot = get_ballot();
-    mu->data.header.decree = decree;
-    mu->data.header.log_offset = invalid_offset;
+    return new_mutation(decree, nullptr);
+}
+
+mutation_ptr replica::new_mutation(decree decree, mutation_queue *work_queue, bool is_blocking)
+{
+    auto mu = new_mutation(decree, work_queue);
+    mu->is_blocking = is_blocking;
+    return mu;
+}
+
+mutation_ptr replica::new_mutation(decree decree, dsn::message_ex *original_request)
+{
+    auto mu = new_mutation(decree);
+    mu->original_request = original_request;
     return mu;
 }
 

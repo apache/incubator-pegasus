@@ -26,13 +26,16 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <boost/intrusive/slist.hpp>
+
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <queue>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
@@ -60,14 +63,17 @@ class mutation;
 
 using mutation_ptr = dsn::ref_ptr<mutation>;
 
+class mutation_queue;
+
 // As 2PC unit of PacificA, a mutation contains one or more write requests with header
 // information related to PacificA algorithm in `data` member. It is appended to plog
 // and written into prepare request broadcast to secondary replicas. It also holds the
 // original client requests used to build the response to the client.
-class mutation : public ref_counter
+class mutation : public ref_counter, public boost::intrusive::slist_base_hook<>
 {
 public:
     mutation();
+    mutation(mutation_queue *work_queue);
     ~mutation() override;
 
     DISALLOW_COPY_AND_ASSIGN(mutation);
@@ -117,6 +123,10 @@ public:
     // Parameters:
     // - request: is from a client if non-null, otherwise is an empty write.
     void add_client_request(dsn::message_ex *request);
+
+    void acquire_row_lock();
+
+    void release_row_lock();
 
     void copy_from(mutation_ptr &old);
     void set_logged()
@@ -213,6 +223,9 @@ private:
         uint32_t _private0;
     };
 
+    // work queue if we are primary replica
+    mutation_queue *_work_queue{nullptr};
+
     uint64_t _prepare_ts_ms;
     ::dsn::task_ptr _log_task;
     node_tasks _prepare_or_commit_tasks;
@@ -289,6 +302,10 @@ public:
     // queue is being blocked or does not have any mutation.
     mutation_ptr next_work(int current_running_count);
 
+    void acquire_row_lock(const mutation *mu);
+
+    void release_row_lock(const mutation *mu);
+
     // Clear the entire queue.
     void clear();
 
@@ -313,6 +330,8 @@ private:
     // request is allowed to be batched.
     void try_promote_pending(task_spec *spec);
 
+bool row_locked(const mutation &mu);
+
     // Once the blocking mutation is enabled, the queue will be blocked and any mutation cannot
     // get popped. However, once the mutations before the blocking mutation have been applied
     // into RocksDB, the blocking mutation can be disabled and the queue will be "unblocked".
@@ -333,7 +352,10 @@ private:
     //
     // Return the next mutation needing to be processed in order. Returning null means the
     // queue is being blocked or does not have any mutation.
-    mutation_ptr try_block(mutation_ptr &mu);
+    bool try_block(const mutation_ptr &mu);
+
+mutation_ptr try_block_queue();
+mutation_ptr try_block_pending();
 
     // Pop the mutation from the head of `_queue`.
     //
@@ -369,7 +391,16 @@ private:
     // before the blocking mutations have been applied into RocksDB can `_blocking_mutation`
     // be popped and disabled; then, the mutations will continue to get popped from this queue
     // in order until another blocking mutations appears.
-    mutation_ptr _blocking_mutation;
+    // mutation_ptr _blocking_mutation;
+
+    // Enable `cache_last` to make push_back O(1)
+    using blocking_mutation_list = boost::intrusive::slist<mutation, cache_last<true>>;
+    blocking_mutation_list _blocking_mutations;
+
+    // rather than real hash key, where deserialize will consume cpu.
+    // partition_hash => count
+    using row_lock_map = absl::flat_hash_map<uint64_t, size_t>;
+    row_lock_map _row_locks;
 };
 
 } // namespace replication

@@ -396,6 +396,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         return;
     }
 
+    mu->acquire_row_lock();
+
     // remote prepare
     mu->set_prepare_ts();
     mu->set_left_secondary_ack_count(

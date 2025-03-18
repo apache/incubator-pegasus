@@ -62,11 +62,21 @@ from_blob_to_received_msg(task_code rpc_code,
 /// It's useful for unit test, especially when we need to create a fake message
 /// as test input.
 template <typename T>
-inline message_ex *from_thrift_request_to_received_message(const T &thrift_request, task_code tc)
+inline message_ex *from_thrift_request_to_received_message(const T &thrift_request, task_code tc,
+                          int thread_hash,
+                          uint64_t partition_hash,
+                          dsn_msg_serialize_format serialization_type)
 {
     binary_writer writer;
     marshall_thrift_binary(writer, thrift_request);
-    return from_blob_to_received_msg(tc, writer.get_buffer());
+    return from_blob_to_received_msg(tc, writer.get_buffer(), thread_hash, partition_hash, DSF_THRIFT_BINARY);
+}
+
+template <typename T>
+inline message_ex *from_thrift_request_to_received_message(const T &thrift_request, task_code tc)
+{
+    return from_thrift_request_to_received_message(thrift_request, code, 0, 0, DSF_THRIFT_BINARY);
+
 }
 
 /// Convert a blob into a thrift object.

@@ -327,6 +327,8 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
                                                         batched_count,
                                                         mu->original_request);
 
+    mu->release_row_lock();
+
     // release faked requests
     for (int i = 0; i < faked_count; ++i) {
         faked_requests[i]->release_ref();
