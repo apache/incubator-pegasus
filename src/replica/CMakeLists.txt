@@ -58,6 +58,7 @@ set(MY_PROJ_SRC
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+        absl::flat_hash_map
         absl::strings
         dsn_replication_common
         dsn.failure_detector

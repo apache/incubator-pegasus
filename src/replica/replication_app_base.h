@@ -160,7 +160,7 @@ public:
     //   - ERR_RDB_CORRUPTION: encountered some unrecoverable data errors, i.e. kCorruption from
     //     storage engine.
     //   - ERR_LOCAL_APP_FAILURE: other type of errors.
-    error_code apply_mutation(const mutation *mu) WARN_UNUSED_RESULT;
+    error_code apply_mutation(mutation *mu) WARN_UNUSED_RESULT;
 
     // methods need to implement on storage engine side
     virtual error_code start(int argc, char **argv) = 0;

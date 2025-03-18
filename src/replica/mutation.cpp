@@ -76,9 +76,7 @@ mutation::mutation(mutation_queue *work_queue)
     strcpy(_name, "0.0.0.0");
 }
 
-mutation::mutation(): mutation(nullptr)
-{
-}
+mutation::mutation() : mutation(nullptr) {}
 
 mutation_ptr mutation::copy_no_reply(const mutation_ptr &old_mu)
 {
@@ -189,15 +187,9 @@ void mutation::add_client_request(dsn::message_ex *request)
     CHECK_EQ(client_requests.size(), data.updates.size());
 }
 
-void mutation::acquire_row_lock()
-{
-    _work_queue->acquire_row_lock(this);
-}
+void mutation::acquire_row_lock() { _work_queue->acquire_row_lock(this); }
 
-void mutation::release_row_lock()
-{
-    _work_queue->release_row_lock(this);
-}
+void mutation::release_row_lock() { _work_queue->release_row_lock(this); }
 
 void mutation::write_to(const std::function<void(const blob &)> &inserter) const
 {
@@ -399,7 +391,7 @@ void mutation_queue::try_promote_pending(task_spec *spec)
     promote_pending();
 }
 
-/* 
+/*
 mutation_ptr mutation_queue::try_unblock()
 {
     CHECK_NOTNULL(_blocking_mutation, "");
@@ -450,7 +442,7 @@ mutation_ptr mutation_queue::try_block(mutation_ptr &mu)
 
 void mutation_queue::acquire_row_lock(const mutation *mu)
 {
-    for (auto *request: mu->client_requests) {
+    for (auto *request : mu->client_requests) {
         if (request == nullptr) {
             continue;
         }
@@ -468,7 +460,7 @@ void mutation_queue::acquire_row_lock(const mutation *mu)
 
 void mutation_queue::release_row_lock(const mutation *mu)
 {
-    for (auto *request: mu->client_requests) {
+    for (auto *request : mu->client_requests) {
         if (request == nullptr) {
             continue;
         }
@@ -491,7 +483,7 @@ void mutation_queue::release_row_lock(const mutation *mu)
 
 bool mutation_queue::row_locked(const mutation &mu)
 {
-    for (auto *request: mu->client_requests) {
+    for (auto *request : mu.client_requests) {
         if (request == nullptr) {
             continue;
         }
@@ -511,7 +503,8 @@ bool mutation_queue::row_locked(const mutation &mu)
 
 mutation_ptr mutation_queue::try_unblock()
 {
-    for (auto curr = _blocking_mutations.begin(), prev = _blocking_mutations.before_begin(); curr != _blocking_mutations.end(); ) {
+    for (auto curr = _blocking_mutations.begin(), prev = _blocking_mutations.before_begin();
+         curr != _blocking_mutations.end();) {
         if (row_locked(*curr)) {
             prev = curr++;
             continue;
@@ -545,9 +538,9 @@ bool mutation_queue::try_block(const mutation_ptr &mu)
 mutation_ptr mutation_queue::try_block_queue()
 {
     while (true) {
-        auto mu = pop_internal_queue();
+        const auto mu = pop_internal_queue();
         if (mu == nullptr) {
-            return false;
+            return {};
         }
 
         if (!try_block(mu)) {
@@ -560,7 +553,12 @@ mutation_ptr mutation_queue::try_block_pending()
 {
     mutation_ptr mu = _pending_mutation;
     _pending_mutation.reset();
-    return try_block(mu) ? {} : mu;
+
+    if (!try_block(mu)) {
+        return mu;
+    }
+
+    return {};
 }
 
 mutation_ptr mutation_queue::add_work(message_ex *request)
@@ -617,12 +615,12 @@ mutation_ptr mutation_queue::add_work(message_ex *request)
         return try_block_pending();
     }
 
-        // Since the pending mutation was just filled with the client request, try to promote
-        // it.
-        try_promote_pending(spec);
+    // Since the pending mutation was just filled with the client request, try to promote
+    // it.
+    try_promote_pending(spec);
 
-        // Now the first element of `_queue` is the head of the entire queue. Pop and return it
-        // as the next work candidate to be processed.
+    // Now the first element of `_queue` is the head of the entire queue. Pop and return it
+    // as the next work candidate to be processed.
 
     // Currently the popped work is still a candidate: once it is a blocking mutation, the queue
     // may become blocked and nothing will be returned.
@@ -657,8 +655,8 @@ mutation_ptr mutation_queue::next_work(int current_running_count)
         return try_block_pending();
     }
 
-        // Now the first element of `_queue` is the head of the entire queue. Pop and return it
-        // as the next work candidate to be processed.
+    // Now the first element of `_queue` is the head of the entire queue. Pop and return it
+    // as the next work candidate to be processed.
 
     // Currently the popped work is still a candidate: once it is a blocking mutation, the queue
     // may become blocked and nothing will be returned.
@@ -668,7 +666,7 @@ mutation_ptr mutation_queue::next_work(int current_running_count)
 void mutation_queue::clear()
 {
     // for each _blocking_mutations must release_ref()
-    
+
     while (!_blocking_mutations.empty()) {
         _blocking_mutations.front().release_ref();
         _blocking_mutations.pop_front();

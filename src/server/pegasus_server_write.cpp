@@ -253,10 +253,12 @@ void pegasus_server_write::init_make_idempotent_handlers()
              if (dsn_likely(err == rocksdb::Status::kOk)) {
                  // Build the message based on the resulting put request.
                  *new_request = dsn::from_thrift_request_to_received_message(
-                     update, dsn::apps::RPC_RRDB_RRDB_PUT,
-    request->header->client.thread_hash,
-    request->header->client.partition_hash,
-            static_cast<dsn_msg_serialize_format>(request->header->context.u.serialize_format));
+                     update,
+                     dsn::apps::RPC_RRDB_RRDB_PUT,
+                     request->header->client.thread_hash,
+                     request->header->client.partition_hash,
+                     static_cast<dsn::dsn_msg_serialize_format>(
+                         request->header->context.u.serialize_format));
              } else {
                  // Once it failed, just reply to the client with error immediately.
                  rpc.enable_auto_reply();

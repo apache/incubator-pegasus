@@ -279,7 +279,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
     return storage_error;
 }
 
-error_code replication_app_base::apply_mutation(const mutation *mu)
+error_code replication_app_base::apply_mutation(mutation *mu)
 {
     FAIL_POINT_INJECT_F("replication_app_base_apply_mutation",
                         [](std::string_view) { return ERR_OK; });

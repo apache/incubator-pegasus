@@ -330,7 +330,7 @@ private:
     // request is allowed to be batched.
     void try_promote_pending(task_spec *spec);
 
-bool row_locked(const mutation &mu);
+    bool row_locked(const mutation &mu);
 
     // Once the blocking mutation is enabled, the queue will be blocked and any mutation cannot
     // get popped. However, once the mutations before the blocking mutation have been applied
@@ -354,8 +354,8 @@ bool row_locked(const mutation &mu);
     // queue is being blocked or does not have any mutation.
     bool try_block(const mutation_ptr &mu);
 
-mutation_ptr try_block_queue();
-mutation_ptr try_block_pending();
+    mutation_ptr try_block_queue();
+    mutation_ptr try_block_pending();
 
     // Pop the mutation from the head of `_queue`.
     //
@@ -394,7 +394,8 @@ mutation_ptr try_block_pending();
     // mutation_ptr _blocking_mutation;
 
     // Enable `cache_last` to make push_back O(1)
-    using blocking_mutation_list = boost::intrusive::slist<mutation, cache_last<true>>;
+    using blocking_mutation_list =
+        boost::intrusive::slist<mutation, boost::intrusive::cache_last<true>>;
     blocking_mutation_list _blocking_mutations;
 
     // rather than real hash key, where deserialize will consume cpu.

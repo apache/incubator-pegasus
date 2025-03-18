@@ -579,7 +579,7 @@ mutation_ptr replica::new_mutation(decree d, mutation_queue *work_queue)
 
 mutation_ptr replica::new_mutation(decree decree)
 {
-    return new_mutation(decree, nullptr);
+    return new_mutation(decree, static_cast<mutation_queue *>(nullptr));
 }
 
 mutation_ptr replica::new_mutation(decree decree, mutation_queue *work_queue, bool is_blocking)
