@@ -1,32 +1,15 @@
-#!/bin/bash
-
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-
 #!/usr/bin/env bash
 
 SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
 PROJECT_DIR=$(dirname "${SCRIPT_DIR}")
 cd "${PROJECT_DIR}" || exit 1
 
-SRC_FILES=(pegasus-spark-common/src/main/java/com/xiaomi/infra/pegasus/spark/*.java
-           pegasus-spark-common/src/main/java/com/xiaomi/infra/pegasus/spark/utils/*.java
-           pegasus-spark-analyser/src/main/java/com/xiaomi/infra/pegasus/spark/analyser/*.java
-           pegasus-spark-bulkloader/src/main/java/com/xiaomi/infra/pegasus/spark/bulkloader/*.java
+SRC_FILES=(src/main/java/com/xiaomi/infra/pegasus/spark/common/*.java
+           src/main/java/com/xiaomi/infra/pegasus/spark/common/utils/*.java
+           src/main/java/com/xiaomi/infra/pegasus/spark/common/utils/gateway/*.java
+           src/main/java/com/xiaomi/infra/pegasus/spark/common/utils/metaproxy/*.java
+           src/main/java/com/xiaomi/infra/pegasus/spark/analyser/*.java
+           src/main/java/com/xiaomi/infra/pegasus/spark/bulkloader/*.java
            )
 
 if [[ ! -f "${PROJECT_DIR}"/google-java-format-1.7-all-deps.jar ]]; then
