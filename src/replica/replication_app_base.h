@@ -321,9 +321,9 @@ public:
     }
 
     // query pegasus data version
-    virtual uint32_t query_data_version() const = 0;
+    [[nodiscard]] virtual uint32_t query_data_version() const = 0;
 
-    virtual manual_compaction_status::type query_compact_status() const = 0;
+    [[nodiscard]] virtual manual_compaction_status::type query_compact_status() const = 0;
 
     //
     // utility functions to be used by app
@@ -333,10 +333,15 @@ public:
     const std::string &backup_dir() const { return _dir_backup; }
     const std::string &bulk_load_dir() const { return _dir_bulk_load; }
     const std::string &duplication_dir() const { return _dir_duplication; }
-    const app_info *get_app_info() const;
-    replication::decree last_committed_decree() const { return _last_committed_decree.load(); }
+    [[nodiscard]] const app_info *get_app_info() const;
+    [[nodiscard]] replication::decree last_committed_decree() const
+    {
+        return _last_committed_decree.load();
+    }
 
 protected:
+    explicit replication_app_base(replication::replica *replica);
+
     std::string _dir_data;        // ${replica_dir}/data
     std::string _dir_learn;       // ${replica_dir}/learn
     std::string _dir_backup;      // ${replica_dir}/backup
@@ -345,8 +350,6 @@ protected:
     replica *_replica;
     std::atomic<int64_t> _last_committed_decree;
     replica_init_info _info;
-
-    explicit replication_app_base(replication::replica *replica);
 
 private:
     // routines for replica internal usage

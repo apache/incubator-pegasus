@@ -682,6 +682,8 @@ void mutation_queue::clear()
     if (_pending_mutation != nullptr) {
         _pending_mutation.reset();
     }
+
+    _row_locks.clear();
 }
 
 void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
@@ -704,6 +706,8 @@ void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
         queued_mutations.emplace_back(std::move(_pending_mutation));
         _pending_mutation.reset();
     }
+
+    _row_locks.clear();
 
     // We don't reset the `_current_op_count` here, since it is done by next_work() where the
     // parameter `current_running_count` is specified to reset `_current_op_count` as 0.

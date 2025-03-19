@@ -40,6 +40,7 @@
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "replica.h"
+#include "replica/mutation.h"
 #include "replica/replication_app_base.h"
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"

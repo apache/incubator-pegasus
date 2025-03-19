@@ -71,8 +71,6 @@ class mutation;
 
 using mutation_ptr = dsn::ref_ptr<mutation>;
 
-class mutation_queue;
-
 // As 2PC unit of PacificA, a mutation contains one or more write requests with header
 // information related to PacificA algorithm in `data` member. It is appended to plog
 // and written into prepare request broadcast to secondary replicas. It also holds the
