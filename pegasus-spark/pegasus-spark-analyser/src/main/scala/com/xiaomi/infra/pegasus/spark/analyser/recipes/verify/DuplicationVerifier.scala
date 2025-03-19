@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package com.xiaomi.infra.pegasus.spark.analyser.recipes.verify
 
 import com.typesafe.config.{ConfigException, ConfigFactory}
@@ -130,14 +149,19 @@ object VerifyDuplication {
       DuplicationVerifier.loadFromConfiguration(args.apply(0))
     val result = verifier.verify()
     printf(
-      "Verified snapshots of table \"%s\" in cluster1=\"%s\" and cluster2=\"%s\"\n",
+      "Verified snapshots of table \"%s\" in cluster1=\"%s\" and cluster2=\"%s\"
+",
       verifier.options.tableName,
       verifier.options.cluster1,
       verifier.options.cluster2
     )
-    printf("Differences: %d\n", result.differences)
-    printf("Same: %d\n", result.same)
-    printf("Number of RDD1: %d\n", result.numRdd1)
-    printf("Number of RDD2: %d\n", result.numRdd2)
+    printf("Differences: %d
+", result.differences)
+    printf("Same: %d
+", result.same)
+    printf("Number of RDD1: %d
+", result.numRdd1)
+    printf("Number of RDD2: %d
+", result.numRdd2)
   }
 }
