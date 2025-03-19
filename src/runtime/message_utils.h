@@ -31,7 +31,6 @@
 #include "utils/blob.h"
 
 namespace dsn {
-class message_ex;
 
 /// Move the content inside message `m` into a blob.
 inline blob move_message_to_blob(message_ex *m)

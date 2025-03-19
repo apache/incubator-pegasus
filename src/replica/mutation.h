@@ -26,16 +26,18 @@
 
 #pragma once
 
+#include <absl/container/flat_hash_map.h>
+#include <absl/hash/hash.h>
 #include <boost/intrusive/slist.hpp>
-
+#include <boost/intrusive/slist_hook.hpp>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <queue>
 #include <vector>
 
-#include "absl/container/flat_hash_map.h"
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
@@ -45,6 +47,11 @@
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
+
+namespace boost::intrusive {
+template <bool Enabled>
+struct cache_last;
+} // namespace boost::intrusive
 
 namespace dsn {
 class binary_reader;
@@ -72,8 +79,9 @@ class mutation_queue;
 class mutation : public ref_counter, public boost::intrusive::slist_base_hook<>
 {
 public:
+    explicit mutation(mutation_queue *work_queue);
     mutation();
-    mutation(mutation_queue *work_queue);
+
     ~mutation() override;
 
     DISALLOW_COPY_AND_ASSIGN(mutation);

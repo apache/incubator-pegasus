@@ -26,9 +26,11 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
+#include <algorithm>
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -196,7 +198,7 @@ public:
     template <typename TBlob>
     static message_ex *create_receive_message_with_standalone_header(TBlob &&data)
     {
-        message_ex *msg = new message_ex();
+        auto *msg = new message_ex();
 
         std::string str(sizeof(message_header), '\0');
         msg->header = reinterpret_cast<message_header *>(const_cast<char *>(str.data()));

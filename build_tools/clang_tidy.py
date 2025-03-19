@@ -77,6 +77,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-cppcoreguidelines-pro-bounds-array-to-pointer-decay,"
                            "-cppcoreguidelines-pro-bounds-pointer-arithmetic,"
                            "-cppcoreguidelines-pro-type-const-cast,"
+                           "-cppcoreguidelines-pro-type-reinterpret-cast,"
                            "-cppcoreguidelines-pro-type-union-access,"
                            "-fuchsia-default-arguments-calls,"
                            "-fuchsia-multiple-inheritance,"

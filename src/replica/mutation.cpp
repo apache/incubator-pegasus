@@ -26,7 +26,9 @@
 
 #include "mutation.h"
 
-#include <inttypes.h>
+#include <absl/meta/type_traits.h>
+#include <boost/intrusive/detail/slist_iterator.hpp>
+#include <cinttypes>
 #include <string.h>
 #include <string>
 #include <unordered_map>

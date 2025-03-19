@@ -38,6 +38,7 @@
 #include "rrdb/rrdb.code.definition.h"
 #include "runtime/message_utils.h"
 #include "server/pegasus_write_service.h"
+#include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/flags.h"

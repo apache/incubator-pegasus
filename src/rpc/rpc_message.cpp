@@ -163,7 +163,7 @@ message_ex *message_ex::create_received_request(dsn::task_code code,
 
 message_ex *message_ex::copy_message_no_reply(const message_ex &old_msg)
 {
-    message_ex *msg = new message_ex();
+    auto *msg = new message_ex();
     size_t header_size = sizeof(message_header);
     std::string str(header_size, '\0');
     msg->header = reinterpret_cast<message_header *>(const_cast<char *>(str.data()));

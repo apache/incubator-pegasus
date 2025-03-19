@@ -96,17 +96,18 @@ blob binary_writer::get_buffer()
     }
 
     if (_total_size == 0) {
-        return blob();
+        return {};
     }
 
     std::shared_ptr<char> bptr(utils::make_shared_array<char>(_total_size));
     blob bb(bptr, _total_size);
     char *ptr = const_cast<char *>(bb.data());
 
-    for (unsigned int i = 0; i < _buffers.size(); ++i) {
-        memcpy(ptr, _buffers[i].data(), _buffers[i].length());
-        ptr += _buffers[i].length();
+    for (const auto &buf : _buffers) {
+        memcpy(ptr, buf.data(), buf.length());
+        ptr += buf.length();
     }
+
     return bb;
 }
 
