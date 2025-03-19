@@ -5,7 +5,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.xiaomi.infra</groupId>
+  <groupId>org.apache</groupId>
   <artifactId>pegasus-spark</artifactId>
   <packaging>pom</packaging>
   <version>1.1-SNAPSHOT</version>

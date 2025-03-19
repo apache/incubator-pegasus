@@ -355,7 +355,6 @@ collector/collector
 #   pegasus-spark   #
 # ================= #
 pegasus-spark/*.class
-pegasus-spark/
 # Log file
 pegasus-spark/*.log
 pegasus-spark/*.ctxt
