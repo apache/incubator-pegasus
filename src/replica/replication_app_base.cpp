@@ -39,7 +39,6 @@
 #include "common/replication_enums.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
-#include "mutation.h"
 #include "replica.h"
 #include "replica/replication_app_base.h"
 #include "rpc/rpc_message.h"
@@ -137,17 +136,18 @@ replication_app_base *replication_app_base::new_storage_instance(const std::stri
 }
 
 replication_app_base::replication_app_base(replica *replica)
-    : replica_base(replica), METRIC_VAR_INIT_replica(committed_requests)
+    : replica_base(replica),
+      _dir_data(utils::filesystem::path_combine(replica->dir(), kDataDir)),
+      _dir_learn(utils::filesystem::path_combine(replica->dir(), "learn")),
+      _dir_backup(utils::filesystem::path_combine(replica->dir(), "backup")),
+      _dir_bulk_load(utils::filesystem::path_combine(replica->dir(),
+                                                     bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR)),
+      _dir_duplication(utils::filesystem::path_combine(
+          replica->dir(), duplication_constants::kDuplicationCheckpointRootDir)),
+      _replica(replica),
+      _last_committed_decree(0),
+      METRIC_VAR_INIT_replica(committed_requests)
 {
-    _dir_data = utils::filesystem::path_combine(replica->dir(), kDataDir);
-    _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
-    _dir_backup = utils::filesystem::path_combine(replica->dir(), "backup");
-    _dir_bulk_load = utils::filesystem::path_combine(replica->dir(),
-                                                     bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR);
-    _dir_duplication = utils::filesystem::path_combine(
-        replica->dir(), duplication_constants::kDuplicationCheckpointRootDir);
-    _last_committed_decree = 0;
-    _replica = replica;
 }
 
 bool replication_app_base::is_primary() const
@@ -279,7 +279,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
     return storage_error;
 }
 
-error_code replication_app_base::apply_mutation(mutation *mu)
+error_code replication_app_base::apply_mutation(const mutation_ptr &mu)
 {
     FAIL_POINT_INJECT_F("replication_app_base_apply_mutation",
                         [](std::string_view) { return ERR_OK; });
@@ -327,7 +327,7 @@ error_code replication_app_base::apply_mutation(mutation *mu)
                                                         batched_count,
                                                         mu->original_request);
 
-    mu->release_row_lock();
+    _replica->release_row_lock(mu);
 
     // release faked requests
     for (int i = 0; i < faked_count; ++i) {

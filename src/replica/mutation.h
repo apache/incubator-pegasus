@@ -30,6 +30,7 @@
 #include <absl/hash/hash.h>
 #include <boost/intrusive/slist.hpp>
 #include <boost/intrusive/slist_hook.hpp>
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -79,9 +80,7 @@ class mutation_queue;
 class mutation : public ref_counter, public boost::intrusive::slist_base_hook<>
 {
 public:
-    explicit mutation(mutation_queue *work_queue);
     mutation();
-
     ~mutation() override;
 
     DISALLOW_COPY_AND_ASSIGN(mutation);
@@ -131,10 +130,6 @@ public:
     // Parameters:
     // - request: is from a client if non-null, otherwise is an empty write.
     void add_client_request(dsn::message_ex *request);
-
-    void acquire_row_lock();
-
-    void release_row_lock();
 
     void copy_from(mutation_ptr &old);
     void set_logged()
@@ -231,9 +226,6 @@ private:
         uint32_t _private0;
     };
 
-    // work queue if we are primary replica
-    mutation_queue *_work_queue{nullptr};
-
     uint64_t _prepare_ts_ms;
     ::dsn::task_ptr _log_task;
     node_tasks _prepare_or_commit_tasks;
@@ -310,9 +302,9 @@ public:
     // queue is being blocked or does not have any mutation.
     mutation_ptr next_work(int current_running_count);
 
-    void acquire_row_lock(const mutation *mu);
+    void acquire_row_lock(const mutation_ptr &mu);
 
-    void release_row_lock(const mutation *mu);
+    void release_row_lock(const mutation_ptr &mu);
 
     // Clear the entire queue.
     void clear();

@@ -29,7 +29,7 @@
 #include <absl/meta/type_traits.h>
 #include <boost/intrusive/detail/slist_iterator.hpp>
 #include <cinttypes>
-#include <string.h>
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -58,11 +58,10 @@ namespace dsn::replication {
 
 std::atomic<uint64_t> mutation::s_tid(0);
 
-mutation::mutation(mutation_queue *work_queue)
+mutation::mutation()
     : _tracer(std::make_shared<dsn::utils::latency_tracer>(
           false, "mutation", FLAGS_abnormal_write_trace_latency_threshold)),
       _private0(0),
-      _work_queue(work_queue),
       _prepare_ts_ms(0),
       _name{0},
       _appro_data_bytes(sizeof(mutation_header)),
@@ -77,8 +76,6 @@ mutation::mutation(mutation_queue *work_queue)
     _is_error_acked = false;
     strcpy(_name, "0.0.0.0");
 }
-
-mutation::mutation() : mutation(nullptr) {}
 
 mutation_ptr mutation::copy_no_reply(const mutation_ptr &old_mu)
 {
@@ -188,10 +185,6 @@ void mutation::add_client_request(dsn::message_ex *request)
 
     CHECK_EQ(client_requests.size(), data.updates.size());
 }
-
-void mutation::acquire_row_lock() { _work_queue->acquire_row_lock(this); }
-
-void mutation::release_row_lock() { _work_queue->release_row_lock(this); }
 
 void mutation::write_to(const std::function<void(const blob &)> &inserter) const
 {
@@ -442,14 +435,21 @@ mutation_ptr mutation_queue::try_block(mutation_ptr &mu)
 }
  */
 
-void mutation_queue::acquire_row_lock(const mutation *mu)
+#define CHECK_RPC_REQUEST_IS_WRITE(request)                                                        \
+    do {                                                                                           \
+        const auto *__spec = task_spec::get(request->rpc_code());                                  \
+        CHECK_NOTNULL(__spec, "RPC code {} not found", request->rpc_code());                       \
+        CHECK_TRUE(__spec->rpc_request_is_write_operation);                                        \
+    } while (0)
+
+void mutation_queue::acquire_row_lock(const mutation_ptr &mu)
 {
     for (auto *request : mu->client_requests) {
         if (request == nullptr) {
             continue;
         }
 
-        CHECK_NE(request->rpc_code(), RPC_REPLICATION_WRITE_EMPTY);
+        CHECK_RPC_REQUEST_IS_WRITE(request);
 
         const auto result = _row_locks.try_emplace(request->header->client.partition_hash, 1);
         if (result.second) {
@@ -460,14 +460,14 @@ void mutation_queue::acquire_row_lock(const mutation *mu)
     }
 }
 
-void mutation_queue::release_row_lock(const mutation *mu)
+void mutation_queue::release_row_lock(const mutation_ptr &mu)
 {
     for (auto *request : mu->client_requests) {
         if (request == nullptr) {
             continue;
         }
 
-        CHECK_NE(request->rpc_code(), RPC_REPLICATION_WRITE_EMPTY);
+        CHECK_RPC_REQUEST_IS_WRITE(request);
 
         const auto result = _row_locks.find(request->header->client.partition_hash);
         if (result == _row_locks.end()) {
@@ -490,7 +490,7 @@ bool mutation_queue::row_locked(const mutation &mu)
             continue;
         }
 
-        CHECK_NE(request->rpc_code(), RPC_REPLICATION_WRITE_EMPTY);
+        CHECK_RPC_REQUEST_IS_WRITE(request);
 
         const auto result = _row_locks.find(request->header->client.partition_hash);
         if (result == _row_locks.end()) {
@@ -582,7 +582,7 @@ mutation_ptr mutation_queue::add_work(message_ex *request)
     // mutation will be created as a blocking mutation.
     if (_pending_mutation == nullptr) {
         _pending_mutation =
-            _replica->new_mutation(invalid_decree, this, _replica->need_make_idempotent(spec));
+            _replica->new_mutation(invalid_decree, _replica->need_make_idempotent(spec));
     }
 
     LOG_DEBUG("add request with trace_id = {:#018x} into mutation with mutation_tid = {}",

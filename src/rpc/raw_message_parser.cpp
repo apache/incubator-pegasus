@@ -83,9 +83,9 @@ message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
 {
     if (reader->_buffer_occupied == 0) {
         if (reader->_buffer.length() > 0) {
-            read_next = reader->_buffer.length();
+            read_next = static_cast<int>(reader->_buffer.length());
         } else {
-            read_next = reader->_buffer_block_size;
+            read_next = static_cast<int>(reader->_buffer_block_size);
         }
         return nullptr;
     }
@@ -104,7 +104,7 @@ message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
     header->context.u.is_forwarded = 0;
     header->context.u.is_forward_supported = 0;
 
-    reader->_buffer = reader->_buffer.range(msg_length);
+    reader->_buffer = reader->_buffer.range(static_cast<int>(msg_length));
     reader->_buffer_occupied = 0;
     read_next = 0;
 

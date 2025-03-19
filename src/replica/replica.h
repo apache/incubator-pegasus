@@ -187,6 +187,12 @@ public:
     void on_client_write(message_ex *request, bool ignore_throttling = false);
     void on_client_read(message_ex *request, bool ignore_throttling = false);
 
+    // 2PC
+
+    void acquire_row_lock(const mutation_ptr &mu);
+
+    void release_row_lock(const mutation_ptr &mu);
+
     //
     //    messages and tools from/for meta server
     //
@@ -366,14 +372,6 @@ private:
     // - decree: invalid_decree, or the real decree assigned to this mutation.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree, mutation_queue *work_queue);
-
-    // Create a new mutation with specified decree.
-    //
-    // Parameters:
-    // - decree: invalid_decree, or the real decree assigned to this mutation.
-    //
-    // Return the newly created mutation.
     mutation_ptr new_mutation(decree decree);
 
     // Create a new mutation with specified decree and a flag marking whether this is a
@@ -385,7 +383,7 @@ private:
     // - is_blocking: true means creating a blocking mutation.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree, mutation_queue *work_queue, bool is_blocking);
+    mutation_ptr new_mutation(decree decree, bool is_blocking);
 
     // Create a new mutation with specified decree and the original atomic write request,
     // which is used to build the response to the client.
@@ -420,7 +418,7 @@ private:
     // behaviour is undefined).
     //
     // Return true if deciding to reject this client request.
-    bool need_reject_non_idempotent(task_spec *spec) const;
+    bool need_reject_non_idempotent(const task_spec *spec) const;
 
     // Given the specification for a client request, decide whether to make it idempotent.
     //
@@ -429,7 +427,7 @@ private:
     // behaviour is undefined).
     //
     // Return true if deciding to make this client request idempotent.
-    bool need_make_idempotent(task_spec *spec) const;
+    bool need_make_idempotent(const task_spec *spec) const;
 
     // Given a client request, decide whether to make it idempotent.
     //
@@ -547,12 +545,17 @@ private:
     void update_configuration_on_meta_server(config_type::type type,
                                              const host_port &node,
                                              partition_configuration &new_pc);
+
+    // Only called by primary replicas.
     void
     on_update_configuration_on_meta_server_reply(error_code err,
                                                  dsn::message_ex *request,
                                                  dsn::message_ex *response,
                                                  std::shared_ptr<configuration_update_request> req);
+
+    // Only called by primary replicas.
     void replay_prepare_list();
+
     bool is_same_ballot_status_change_allowed(partition_status::type olds,
                                               partition_status::type news);
 

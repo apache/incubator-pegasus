@@ -35,6 +35,7 @@
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
+#include "mutation.h"
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/error_code.h"
@@ -49,7 +50,6 @@ class message_ex;
 
 namespace replication {
 class learn_state;
-class mutation;
 class replica;
 
 class replica_init_info
@@ -160,7 +160,7 @@ public:
     //   - ERR_RDB_CORRUPTION: encountered some unrecoverable data errors, i.e. kCorruption from
     //     storage engine.
     //   - ERR_LOCAL_APP_FAILURE: other type of errors.
-    error_code apply_mutation(mutation *mu) WARN_UNUSED_RESULT;
+    error_code apply_mutation(const mutation_ptr &mu) WARN_UNUSED_RESULT;
 
     // methods need to implement on storage engine side
     virtual error_code start(int argc, char **argv) = 0;
@@ -325,7 +325,6 @@ public:
 
     virtual manual_compaction_status::type query_compact_status() const = 0;
 
-public:
     //
     // utility functions to be used by app
     //
@@ -336,6 +335,18 @@ public:
     const std::string &duplication_dir() const { return _dir_duplication; }
     const app_info *get_app_info() const;
     replication::decree last_committed_decree() const { return _last_committed_decree.load(); }
+
+protected:
+    std::string _dir_data;        // ${replica_dir}/data
+    std::string _dir_learn;       // ${replica_dir}/learn
+    std::string _dir_backup;      // ${replica_dir}/backup
+    std::string _dir_bulk_load;   // ${replica_dir}/bulk_load
+    std::string _dir_duplication; // ${replica_dir}/duplication
+    replica *_replica;
+    std::atomic<int64_t> _last_committed_decree;
+    replica_init_info _info;
+
+    explicit replication_app_base(replication::replica *replica);
 
 private:
     // routines for replica internal usage
@@ -351,21 +362,10 @@ private:
     error_code update_init_info(replica *r, int64_t private_log_offset, int64_t durable_decree);
     error_code update_init_info_ballot_and_decree(replica *r);
 
-protected:
-    std::string _dir_data;        // ${replica_dir}/data
-    std::string _dir_learn;       // ${replica_dir}/learn
-    std::string _dir_backup;      // ${replica_dir}/backup
-    std::string _dir_bulk_load;   // ${replica_dir}/bulk_load
-    std::string _dir_duplication; // ${replica_dir}/duplication
-    replica *_replica;
-    std::atomic<int64_t> _last_committed_decree;
-    replica_init_info _info;
-
-    explicit replication_app_base(replication::replica *replica);
-
-private:
     METRIC_VAR_DECLARE_counter(committed_requests);
 };
+
 USER_DEFINED_ENUM_FORMATTER(replication_app_base::chkpt_apply_mode)
+
 } // namespace replication
 } // namespace dsn
