@@ -328,11 +328,11 @@ public:
     //
     // utility functions to be used by app
     //
-    const std::string &data_dir() const { return _dir_data; }
-    const std::string &learn_dir() const { return _dir_learn; }
-    const std::string &backup_dir() const { return _dir_backup; }
-    const std::string &bulk_load_dir() const { return _dir_bulk_load; }
-    const std::string &duplication_dir() const { return _dir_duplication; }
+    [[nodiscard]] const std::string &data_dir() const { return _dir_data; }
+    [[nodiscard]] const std::string &learn_dir() const { return _dir_learn; }
+    [[nodiscard]] const std::string &backup_dir() const { return _dir_backup; }
+    [[nodiscard]] const std::string &bulk_load_dir() const { return _dir_bulk_load; }
+    [[nodiscard]] const std::string &duplication_dir() const { return _dir_duplication; }
     [[nodiscard]] const app_info *get_app_info() const;
     [[nodiscard]] replication::decree last_committed_decree() const
     {
