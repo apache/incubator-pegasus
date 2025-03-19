@@ -89,9 +89,8 @@ message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
         return nullptr;
     } else {
         auto msg_length = reader->_buffer_occupied;
-        dsn::blob msg_blob = reader->_buffer.range(0, msg_length);
-        message_ex *new_message =
-            message_ex::create_receive_message_with_standalone_header(msg_blob);
+        message_ex *new_message = message_ex::create_receive_message_with_standalone_header(
+            reader->_buffer.range(0, msg_length));
         message_header *header = new_message->header;
 
         header->hdr_length = sizeof(*header);

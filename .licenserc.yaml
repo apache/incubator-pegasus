@@ -499,7 +499,6 @@ header:
     - 'src/runtime/fault_injector.h'
     - 'src/runtime/global_config.cpp'
     - 'src/runtime/global_config.h'
-    - 'src/runtime/message_utils.cpp'
     - 'src/runtime/nativerun.cpp'
     - 'src/runtime/nativerun.h'
     - 'src/runtime/node_scoper.h'
