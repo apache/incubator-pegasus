@@ -202,7 +202,7 @@ jobs:
     env:
       USE_JEMALLOC: OFF
       ARTIFACT_NAME: release_address
-      BUILD_OPTIONS: --sanitizer address --disable_gperf --test -t debug
+      BUILD_OPTIONS: --sanitizer address --disable_gperf --test
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:

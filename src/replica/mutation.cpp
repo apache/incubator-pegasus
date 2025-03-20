@@ -26,7 +26,6 @@
 
 #include "mutation.h"
 
-#include <absl/meta/type_traits.h>
 #include <boost/intrusive/detail/slist_iterator.hpp>
 #include <cinttypes>
 #include <cstring>
@@ -448,6 +447,11 @@ void mutation_queue::acquire_row_lock(const mutation_ptr &mu)
         if (request == nullptr) {
             continue;
         }
+
+        LOG_INFO("pid={}, rpc_code={}, partition_hash={}",
+                 _replica->get_gpid(),
+                 request->rpc_code(),
+                 request->header->client.partition_hash);
 
         CHECK_RPC_REQUEST_IS_WRITE(request);
 
