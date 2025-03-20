@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include "utils/absl_sanitize_address.h" // IWYU pragma: keep
+
 #include <absl/container/flat_hash_map.h>
 #include <absl/hash/hash.h>
 #include <boost/intrusive/slist.hpp>
@@ -398,8 +400,8 @@ private:
 
     // rather than real hash key, where deserialize will consume cpu.
     // partition_hash => count
-    // using row_lock_map = absl::flat_hash_map<uint64_t, size_t>;
-    using row_lock_map = std::unordered_map<uint64_t, size_t>;
+    // using row_lock_map = std::unordered_map<uint64_t, size_t>;
+    using row_lock_map = absl::flat_hash_map<uint64_t, size_t>;
     row_lock_map _row_locks;
 };
 

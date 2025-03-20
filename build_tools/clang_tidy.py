@@ -67,6 +67,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-bugprone-macro-parentheses,"
                            "-bugprone-sizeof-expression,"
                            "-cert-err58-cpp,"
+                           "-clang-analyzer-cplusplus.NewDelete,"
                            "-concurrency-mt-unsafe,"
                            "-cppcoreguidelines-avoid-c-arrays,"
                            "-cppcoreguidelines-avoid-magic-numbers,"
