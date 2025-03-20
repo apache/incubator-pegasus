@@ -26,8 +26,6 @@
 
 #pragma once
 
-#include "utils/absl_sanitize_address.h" // IWYU pragma: keep
-
 #include <absl/container/flat_hash_map.h>
 #include <absl/hash/hash.h>
 #include <boost/intrusive/slist.hpp>
