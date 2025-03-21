@@ -27,6 +27,8 @@
 #include "mutation.h"
 
 #include <boost/intrusive/detail/slist_iterator.hpp>
+#include <boost/unordered/detail/fca.hpp>
+#include <boost/unordered/detail/implementation.hpp>
 #include <cinttypes>
 #include <cstring>
 #include <string>

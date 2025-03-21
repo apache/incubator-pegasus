@@ -28,7 +28,7 @@
 
 #include <boost/intrusive/slist.hpp>
 #include <boost/intrusive/slist_hook.hpp>
-#include <boost/unordered_map.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
@@ -397,8 +397,15 @@ private:
 
     // rather than real hash key, where deserialize will consume cpu.
     // partition_hash => count
+    //
+    // TODO(wangdan): consider comparing performance between boost::unordered_flat_map
+    // and absl::flat_hash_map, both of which are based on open addressing.
+    // Introducing absl::flat_hash_map is very easy, just by:
     // using row_lock_map = absl::flat_hash_map<uint64_t, size_t>;
-    using row_lock_map = boost::unordered_map<uint64_t, size_t>;
+    // I've tried to introduce absl::flat_hash_map; however, it could not pass the ASAN
+    // tests due to segmentation fault caused by dereferencing a null pointer inside
+    // "absl/container/internal/raw_hash_set.h". I'll try it again later.
+    using row_lock_map = boost::unordered_flat_map<uint64_t, size_t>;
     row_lock_map _row_locks;
 };
 
