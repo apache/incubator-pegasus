@@ -32,7 +32,6 @@ add_library(dsn_runtime STATIC
         env.sim.cpp
         fault_injector.cpp
         global_config.cpp
-        message_utils.cpp
         nativerun.cpp
         profiler.cpp
         providers.common.cpp

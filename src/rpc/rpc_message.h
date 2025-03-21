@@ -26,9 +26,12 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
+#include <algorithm>
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "common/gpid.h"
@@ -192,7 +195,24 @@ public:
     ///   - msg->buffers[0] = message_header
     ///   - msg->buffers[1] = data
     /// NOTE: the reference counter of returned message_ex is not added in this function
-    static message_ex *create_receive_message_with_standalone_header(const blob &data);
+    template <typename TBlob>
+    static message_ex *create_receive_message_with_standalone_header(TBlob &&data)
+    {
+        auto *msg = new message_ex();
+
+        std::string str(sizeof(message_header), '\0');
+        msg->header = reinterpret_cast<message_header *>(const_cast<char *>(str.data()));
+        msg->header->body_length = data.length();
+
+        msg->buffers.emplace_back(blob::create_from_bytes(std::move(str)));
+        msg->buffers.push_back(std::forward<TBlob>(data));
+
+        msg->_is_read = true;
+        // we skip the message header
+        msg->_rw_index = 1;
+
+        return msg;
+    }
 
     /// copy message without client information, it will not reply
     /// The returned message:
