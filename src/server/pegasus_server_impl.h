@@ -261,6 +261,10 @@ private:
     friend class pegasus_write_service;
     friend class rocksdb_wrapper;
 
+    // check whether the checkpoint contains the two column families: DATA_COLUMN_FAMILY_NAME
+    // and META_COLUMN_FAMILY_NAME
+    bool is_checkpoint_complete(const std::string &checkpoint_dir);
+
     // parse checkpoint directories in the data dir
     // checkpoint directory format is: "checkpoint.{decree}"
     void parse_checkpoints();
