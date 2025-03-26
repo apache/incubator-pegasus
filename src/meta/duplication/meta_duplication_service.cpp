@@ -764,7 +764,11 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                     query_err = ERR_INCONSISTENT_STATE;
                 } else {
                     for (const auto &pc : resp.partitions) {
-                        if (!pc.hp_primary) {
+                        host_port primary;
+                        std::vector<host_port> secondaries;
+                        GET_HOST_PORT(pc, primary, primary);
+                        GET_HOST_PORTS(pc, secondaries, secondaries);
+                        if (!primary) {
                             // Fail once the primary replica is unavailable.
                             query_err = ERR_INACTIVE_STATE;
                             break;
@@ -772,13 +776,12 @@ void meta_duplication_service::check_follower_app_if_create_completed(
 
                         // Once replica count is more than 1, at least one secondary replica
                         // is required.
-                        if (1 + pc.hp_secondaries.size() < pc.max_replica_count &&
-                            pc.hp_secondaries.empty()) {
+                        if (1 + secondaries.size() < pc.max_replica_count && secondaries.empty()) {
                             query_err = ERR_NOT_ENOUGH_MEMBER;
                             break;
                         }
 
-                        for (const auto &secondary : pc.hp_secondaries) {
+                        for (const auto &secondary : secondaries) {
                             if (!secondary) {
                                 // Fail once any secondary replica is unavailable.
                                 query_err = ERR_INACTIVE_STATE;

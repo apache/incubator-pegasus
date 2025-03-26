@@ -133,11 +133,17 @@ void primary_context::get_replica_config(partition_status::type st,
 
 bool primary_context::check_exist(const ::dsn::host_port &node, partition_status::type st)
 {
+    host_port primary;
+    std::vector<host_port> secondaries;
+    GET_HOST_PORT(pc, primary, primary);
+    GET_HOST_PORTS(pc, secondaries, secondaries);
     switch (st) {
     case partition_status::PS_PRIMARY:
-        return pc.hp_primary == node;
+        DCHECK(pc.__isset.hp_primary, "");
+        return primary == node;
     case partition_status::PS_SECONDARY:
-        return utils::contains(pc.hp_secondaries, node);
+        DCHECK(pc.__isset.hp_secondaries, "");
+        return utils::contains(secondaries, node);
     case partition_status::PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
     default:
