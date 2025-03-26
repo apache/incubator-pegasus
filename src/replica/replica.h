@@ -376,14 +376,14 @@ private:
 
     // Create a new mutation with specified decree and a flag marking whether this is a
     // blocking mutation (for a detailed explanation of blocking mutations, refer to the
-    // comments for the field `is_blocking` of class `mutation`).
+    // comments for the field `is_blocking_candidate` of class `mutation`).
     //
     // Parameters:
     // - decree: invalid_decree, or the real decree assigned to this mutation.
-    // - is_blocking: true means creating a blocking mutation.
+    // - is_blocking_candidate: true means creating a blocking mutation.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree, bool is_blocking);
+    mutation_ptr new_mutation(decree decree, bool is_blocking_candidate);
 
     // Create a new mutation with specified decree and the original atomic write request,
     // which is used to build the response to the client.

@@ -174,15 +174,15 @@ public:
     // user requests
     std::vector<dsn::message_ex *> client_requests;
 
-    // A mutation will be a blocking mutation if `is_blocking` is true. A blocking mutation
-    // will not begin to be popped from the queue and processed until all of mutations before
-    // it in the queue have been committed and applied into RocksDB. This field is only used
+    // A mutation will be a blocking mutation if `is_blocking_candidate` is true. A blocking
+    // mutation will not begin to be popped from the queue and processed until all of mutations
+    // before it in the queue have been committed and applied into RocksDB. This field is only used
     // by primary replicas.
     //
     // For example, if the primary replica receives an incr request (with a base value of 1)
     // and the current configuration requires all atomic write requests to be idempotent, then:
-    // 1. A mutation with `is_blocking` = true will be created to store this request and then
-    // added to the mutation queue.
+    // 1. A mutation with `is_blocking_candidate` = true will be created to store this request and
+    // then added to the mutation queue.
     // 2. This mutation request will only be dequeued after all previous write requests have
     // been applied.
     // 3. Next, the current base value 100 is read from the storage engine, and after performing
@@ -190,7 +190,7 @@ public:
     // 4. Another mutation is then created to store this idempotent single put request, which is
     // subsequently added to the write pipeline, including writing to the plog and broadcasting
     // to the secondary replicas.
-    bool is_blocking{false};
+    bool is_blocking_candidate{false};
 
     // The original request received from the client. While making an atomic request (incr,
     // check_and_set and check_and_mutate) idempotent, an extra variable is needed to hold
@@ -326,36 +326,35 @@ private:
     // request is allowed to be batched.
     void try_promote_pending(task_spec *spec);
 
+    // Check each client request within the mutation `mu` one by one:
+    // - If any request's `partition_hash` exists in the row lock mapping table, it means that
+    // the corresponding hash key is locked. In this case, return true, indicating that the
+    // entire mutation is locked.
+    // - Otherwise, if none of the requests are locked, return false, meaning that the mutation
+    // is not locked.
     bool row_locked(const mutation &mu);
 
-    // Once the blocking mutation is enabled, the queue will be blocked and any mutation cannot
-    // get popped. However, once the mutations before the blocking mutation have been applied
-    // into RocksDB, the blocking mutation can be disabled and the queue will be "unblocked".
-    // `_blocking_mutation` should not be null before this function is called.
+    // Sequentially check the mutations in `_blocking_mutations` from head to tail:
+    // - If a mutation is still locked, which means it still needs to be blocked, so continue
+    // checking the next mutation.
+    // - Otherwise, this mutation no longer needs to be blocked - it will be removed from
+    // `_blocking_mutations` and returned, to proceed to the 2PC phase at any time.
     //
-    // Return non-null blocking mutation if succeeding in unblocking, otherwise return null
-    // which means the queue is still blocked.
+    // If all mutations in `_blocking_mutations` are still locked, return null, which means
+    // none of the mutations in `_blocking_mutations` could be "unblocked".
     mutation_ptr try_unblock();
 
-    // If immediately popped `mu` is not a blocking mutation, this function will do nothing
-    // but increasing the count for the mutations being processed. Otherwise, it will set
-    // `mu` to `_blocking_mutation` to enable the blocking mutation. `_blocking_mutation`
-    // should be null before this function is called.
-    //
-    // Parameters:
-    // - mu: the mutation immediately popped from the head of `_queue + _pending_mutation`.
-    // Should not be null.
-    //
-    // Return the next mutation needing to be processed in order. Returning null means the
-    // queue is being blocked or does not have any mutation.
+    // `mu` is a mutation dequeued from `_queue + _pending_mutation` and cannot be null. If
+    // it is a blocking candidate and is currently locked, it should be pushed to the tail
+    // of `_blocking_mutations` and return true. Otherwise, it does not need to be blocked,
+    // return false indicating that it could proceed to the 2PC phase at any time.
     bool try_block(const mutation_ptr &mu);
 
     mutation_ptr try_block_queue();
     mutation_ptr try_block_pending();
 
-    // Pop the mutation from the head of `_queue`.
-    //
-    // Return non-null mutation if the queue is not empty, otherwise return null.
+    // Pop the mutation from the head of `_queue`. Return non-null mutation if the queue is
+    // not empty, otherwise return null.
     mutation_ptr pop_internal_queue()
     {
         if (_queue.empty()) {
@@ -373,8 +372,15 @@ private:
 
     replica *_replica;
 
+    // The current count of the mutations being processed concurrently in 2PC phase.
     int _current_op_count;
+
+    // The max allowed count of the mutations being processed concurrently in 2PC phase.
+    // Currently this is set to FLAGS_staleness_for_commit.
     int _max_concurrent_op;
+
+    // Whether the write requests are allowed to be batched. Currently this is set to
+    // FLAGS_batch_write_disabled.
     bool _batch_write_disabled;
 
     volatile int *_pcount;
@@ -394,28 +400,33 @@ private:
     //
     // This explains why `_blocking_mutations` is designed as a singly linked list — it allows
     // efficient element removal from the middle of the container with an O(1) time complexity.
+    // The reason for not using a doubly linked list is that we only need to traverse in a
+    // single direction from head to tail. Using a singly linked list is more memory-efficient.
     //
     // Only when no executable task is found in `_blocking_mutations`, the system proceeds to
     // check whether there are executable tasks in `_queue + _pending_mutation`.
     //
-    // The reason for using `boost::intrusive::slist` as the singly linked list implementation
-    // is that, when the template parameter `cache_last<true>` is set, it enables O(1) time
-    // complexity for tail insertions.
+    // The reasons for using boost::intrusive::slist as the singly linked list implementation
+    // are:
+    // 1. Low memory overhead due to intrusive design – it eliminates the need for extra node
+    // memory allocation on the heap for each element in the container. Each element object
+    // only requires an additional next pointer, which is the only extra memory overhead.
+    // 2. O(1) time complexity for tail insertions – when the template parameter is set to
+    // cache_last<true>, it allows constant-time (O(1)) insertion at the tail.
     using blocking_mutation_list =
         boost::intrusive::slist<mutation, boost::intrusive::cache_last<true>>;
     blocking_mutation_list _blocking_mutations;
 
-    // The structure of (key, value) is (partition_hash, count).
-    //
+    // The row lock mapping table. The structure of (key, value) is (partition_hash, count).
     // Instead of directly using the actual hash key, we use the `partition_hash` generated on
     // the client side using the CRC64 algorithm as the key for row locks.
     //
     // Advantages of this approach:
-    // 1. No computation required on the server side – The server can directly use the hash
+    // 1. No computation required on the server side – the server can directly use the hash
     // value generated by the client. If we were to use the hash key as the row lock key, the
     // server would need to deserialize the entire client request using Thrift, which would
     // consume a significant number of CPU cycles.
-    // 2. Fixed memory usage – The `partition_hash` is simply a 64-bit unsigned integer, which
+    // 2. Fixed memory usage – the `partition_hash` is simply a 64-bit unsigned integer, which
     // takes up a fixed amount of memory and is often much smaller than the length of the
     // original hash key.
     //
@@ -438,8 +449,10 @@ private:
     //
     // TODO(wangdan): consider comparing performance between boost::unordered_flat_map
     // and absl::flat_hash_map, both of which are based on open addressing.
+    //
     // Introducing absl::flat_hash_map is very easy, just by:
-    // using row_lock_map = absl::flat_hash_map<uint64_t, size_t>;
+    //     using row_lock_map = absl::flat_hash_map<uint64_t, size_t>;
+    //
     // I've tried to introduce absl::flat_hash_map; however, it could not pass the ASAN
     // tests due to segmentation fault caused by dereferencing a null pointer inside
     // "absl/container/internal/raw_hash_set.h". I'll try it again later.

@@ -577,10 +577,10 @@ mutation_ptr replica::new_mutation(decree d)
     return mu;
 }
 
-mutation_ptr replica::new_mutation(decree decree, bool is_blocking)
+mutation_ptr replica::new_mutation(decree decree, bool is_blocking_candidate)
 {
     auto mu = new_mutation(decree);
-    mu->is_blocking = is_blocking;
+    mu->is_blocking_candidate = is_blocking_candidate;
     return mu;
 }
 

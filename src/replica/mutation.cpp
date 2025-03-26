@@ -420,7 +420,7 @@ mutation_ptr mutation_queue::try_block(mutation_ptr &mu)
     CHECK_NOTNULL(mu, "");
 
     // If the immediately popped mutation is non-blocking, just return it to be processed.
-    if (!mu->is_blocking) {
+    if (!mu->is_blocking_candidate) {
         ++_current_op_count;
         return mu;
     }
@@ -459,9 +459,11 @@ void mutation_queue::acquire_row_lock(const mutation_ptr &mu)
 
         const auto result = _row_locks.try_emplace(request->header->client.partition_hash, 1);
         if (result.second) {
+            // The lock for this hash key is newly created with count 1.
             continue;
         }
 
+        // The lock for this hash key has existed, just increase its count.
         ++result.first->second;
     }
 }
@@ -477,14 +479,25 @@ void mutation_queue::release_row_lock(const mutation_ptr &mu)
 
         const auto result = _row_locks.find(request->header->client.partition_hash);
         if (result == _row_locks.end()) {
+            // The lock for this hash key does not exist, no need to release.
             continue;
         }
 
         if (result->second > 1) {
+            // More than 1 write request with the same hash key is in 2PC phase, just
+            // decrease the count for the lock.
             --result->second;
             continue;
         }
 
+        // TODO(wangdan): Frequent insertion and deletion of row locks in the hash table may
+        // impact performance. In the future, we can introduce a better GC strategy for row
+        // locks, such as using an LRU mechanism:
+        // - When a lock's count reaches 0, push it to the tail of a linked list.
+        // - If the same hash key is written again recently, remove it from the corresponding
+        // position in the linked list.
+        // - Once the row lock mapping table exceeds a certain threshold, start removing the
+        // least recently accessed locks whose count must be 0 from the head of the linked list.
         _row_locks.erase(result);
     }
 }
@@ -498,8 +511,15 @@ bool mutation_queue::row_locked(const mutation &mu)
 
         CHECK_RPC_REQUEST_IS_WRITE(request);
 
-        const auto result = _row_locks.find(request->header->client.partition_hash);
+        const auto result = std::as_const(_row_locks).find(request->header->client.partition_hash);
         if (result == _row_locks.end()) {
+            continue;
+        }
+
+        // Since a better GC strategy would be introduced to improve the performance, we still
+        // check if the count has been 0 though currently all row locks in the mapping table
+        // must have non-zero count (all locks whose count is 0 were removed when released).
+        if (result->second <= 0) {
             continue;
         }
 
@@ -511,17 +531,27 @@ bool mutation_queue::row_locked(const mutation &mu)
 
 mutation_ptr mutation_queue::try_unblock()
 {
+    // To erase a node from a singly linked list, we use an extra `prev` to hold the previous
+    // node.
     for (auto curr = _blocking_mutations.begin(), prev = _blocking_mutations.before_begin();
          curr != _blocking_mutations.end();) {
         if (row_locked(*curr)) {
+            // The mutation that `curr` points to is still being blocked. Turn to the next.
             prev = curr++;
             continue;
         }
 
+        // Since now this mutation's memory is managed by `ref_ptr`, its ref count could be
+        // released which is originally added in try_block().
         mutation_ptr mu(&(*curr));
         mu->release_ref();
+
+        // Erase the mutation that no longer needs to be blocked from the blocking list.
         (void)_blocking_mutations.erase_after(prev);
+
+        // Increment the count as this mutation will be returned and processed in 2PC phase.
         ++_current_op_count;
+
         return mu;
     }
 
@@ -530,14 +560,18 @@ mutation_ptr mutation_queue::try_unblock()
 
 bool mutation_queue::try_block(const mutation_ptr &mu)
 {
-    if (!mu->is_blocking || !row_locked(*mu)) {
+    if (!mu->is_blocking_candidate || !row_locked(*mu)) {
         ++_current_op_count;
         return false;
     }
 
+    // Since in the intrusive singly linked list the mutation's memory is not managed by
+    // `ref_ptr`, add its ref count which will be released while popped from the linked list
+    // in try_unblock().
     mu->add_ref();
 
-    // No copy, O(1)
+    // Push the mutation to the tail of the singly linked list without any copy constructor
+    // called, in constant time complexity.
     _blocking_mutations.push_back(*mu);
 
     return true;
