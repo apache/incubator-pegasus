@@ -31,7 +31,6 @@
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <stddef.h>
 #include <sstream>
-#include <vector>
 
 #include "checker.h"
 #include "common/replication_enums.h"
@@ -320,12 +319,8 @@ void parti_config::convert_from(const partition_configuration &pc)
 {
     pid = pc.pid;
     ballot = pc.ballot;
-    host_port hp_primary;
-    GET_HOST_PORT(pc, primary, hp_primary);
-    std::vector<host_port> hp_secondaries;
-    GET_HOST_PORTS(pc, secondaries, hp_secondaries);
-    primary = address_to_node(hp_primary);
-    for (const auto &secondary : hp_secondaries) {
+    primary = address_to_node(pc.hp_primary);
+    for (const auto &secondary : pc.hp_secondaries) {
         secondaries.push_back(address_to_node(secondary));
     }
     std::sort(secondaries.begin(), secondaries.end());
