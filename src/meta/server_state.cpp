@@ -2058,7 +2058,7 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     std::vector<host_port> last_drops;
     GET_HOST_PORT(pc, primary, primary);
     GET_HOST_PORTS(pc, secondaries, secondaries);
-    GET_HOST_PORTS(pc, last_drops, last_drops);
+    GET_HOST_PORTS(request.config, last_drops, last_drops);
     for (const auto &secondary : secondaries) {
         maintain_drops(last_drops, secondary, request.type);
     }
@@ -2133,7 +2133,9 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
     RESET_IP_AND_HOST_PORT(request.config, primary);
     host_port primary;
     GET_HOST_PORT(pc, primary, primary);
-    maintain_drops(request.config.hp_last_drops, primary, request.type);
+    std::vector<host_port> last_drops;
+    GET_HOST_PORTS(request.config, last_drops, last_drops);
+    maintain_drops(last_drops, primary, request.type);
     maintain_drops(request.config.last_drops, pc.primary, request.type);
 
     cc.stage = config_status::pending_remote_sync;
