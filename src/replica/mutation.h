@@ -174,22 +174,26 @@ public:
     // user requests
     std::vector<dsn::message_ex *> client_requests;
 
-    // A mutation will be a blocking mutation if `is_blocking_candidate` is true. A blocking
-    // mutation will not begin to be popped from the queue and processed until all of mutations
-    // before it in the queue have been committed and applied into RocksDB. This field is only used
-    // by primary replicas.
+    // A mutation will be a blocking candidate if this field is true. Typically, to hold an
+    // atomic write request while idempotence is enabled, a mutation will be will be created
+    // as a blocking candidate.
     //
-    // For example, if the primary replica receives an incr request (with a base value of 1)
-    // and the current configuration requires all atomic write requests to be idempotent, then:
-    // 1. A mutation with `is_blocking_candidate` = true will be created to store this request and
-    // then added to the mutation queue.
-    // 2. This mutation request will only be dequeued after all previous write requests have
-    // been applied.
-    // 3. Next, the current base value 100 is read from the storage engine, and after performing
-    // the incr operation, a single put request is created to store the final value 101.
-    // 4. Another mutation is then created to store this idempotent single put request, which is
-    // subsequently added to the write pipeline, including writing to the plog and broadcasting
-    // to the secondary replicas.
+    // A blocking candidate will be blocked once it has a locked hash key: it will not get
+    // popped from mutation queue until it does not has any locked hash key.
+    //
+    // For example, the primary replica receives an incr request from a client. If the current
+    // configuration requires all atomic write requests to be idempotent, then:
+    // 1. A mutation will be created as a blocking candidate to hold this request and then
+    // appended to the mutation queue.
+    // 2. Once its hash key is locked, it will be blocked and cannot get popped.
+    // 3. It can get popped only after its hash key becomes unlocked.
+    // 4. After popped, the current base value 100 is read from the storage engine, and after
+    // performing incr operation, a single put request is created to store the final value 101.
+    // 5. Another mutation is then created to hold this idempotent single put request.
+    // 6. Subsequently the new mutation enters 2PC phase, appended to plog and broadcast to
+    // secondary replicas.
+    //
+    // This field is only used by primary replicas.
     bool is_blocking_candidate{false};
 
     // The original request received from the client. While making an atomic request (incr,
@@ -236,27 +240,35 @@ private:
 
 class replica;
 
-// The mutation queue caches the mutations waiting to be processed in order by the write pipeline,
-// including appended to plog and broadcast to secondary replicas. This class is only used by
-// primary replicas.
+// When the primary replica receives a write request from the client, it is assembled into a
+// mutation (batched if allowed) and pushed to the tail of the mutation queue for caching.
+// Meanwhile, mutations popped from the mutation queue will gradually enter the 2PC phase.
 //
-// The entire queue is arranged in the order of `_blocking_mutation + _queue + _pending_mutation`,
-// meaning that `_blocking_mutation` is the head of the queue if it is non-null, for the reason
-// that it is enabled only when the mutation ready to get popped from the queue is a blocking
-// mutation: it will block the entire queue from which none could get popped until all of the
-// mutations before it have been applied.
+// The entire queue is ordered as `_blocking_mutations + _queue + _pending_mutation`. The reason
+// why `_blocking_mutations` is at the head of this queue is that it caches mutations that need
+// to be blocked (those blocking candidates whose hash keys are locked). When deciding which
+// mutation could be dequeued from the mutation queue and returned to be processed in 2PC phase,
+// firstly traverse `_blocking_mutations`: if any mutation is found unlocked, dequeue and return
+// it immediately. If no mutation could be dequeued, then turn to `_queue + _pending_mutation`:
+// - Start from the head. If a mutation is a blocking candidate and contains a write request whose
+//   hash key is locked, it should be blocked: just append it to the tail of `_blocking_mutations`
+//   and continue checking the next mutation. Otherwise, it will be dequeued and returned.
+// - If none of mutations could be dequeued, just return null.
 //
-// Once `_blocking_mutation` is cleared and becomes null, the head of the queue will be the first
-// element of `_queue`. `_pending_mutation` is the tail of the queue, separated from `_queue` due
-// to the following reasons:
-// 1. As a carrier for storing client requests, each mutation needs to be size-limited. For each
+// As a carrier for storing client requests, each mutation needs to be size-limited. For each
 // incoming request, we need to decide whether to continue storing it in the most recent mutation
-// (i.e. `_pending_mutation`) or to create a new one.
-// 2. The number of concurrent two-phase commits is limited. We should ensure the requests in
-// each mutation could be processed as soon as possible if it does not reach the upper limit,
-// even if the requests are in the latest mutation.
-// 3. Some writes (such as non-single writes) do not allow batching. Once this kind of requests
-// are received, a new mutation (`_pending_mutation`) should be created to hold them.
+// or to create a new one to hold it. That's why `_pending_mutation` is separated from `_queue`:
+// `_pending_mutation` is the most recent mutation, i.e. the tail of the mutation queue. Any
+// client request that is appended to the mutation queue will firstly added into it.
+//
+// Current `_pending_mutation` will be promoted (i.e. appended) to `_queue` and reset to a new
+// mutation to hold the subsequent client requests, when:
+// 1. Current `_pending_mutation` is big enough.
+// 2. The received write request does not allow batching (such as non-single writes).
+// 3. FLAGS_batch_write_disabled is set to true. As the global configuration, it decides whether
+// to disallow batching for all kinds of write requests.
+//
+// This class is only used by primary replicas.
 class mutation_queue
 {
 public:
@@ -274,32 +286,45 @@ public:
     DISALLOW_COPY_AND_ASSIGN(mutation_queue);
     DISALLOW_MOVE_AND_ASSIGN(mutation_queue);
 
-    // Append the input request from the client to the queue by filling the latest mutation
-    // with it.
+    // Fill the latest mutation with the incoming client request, then append it to the queue.
+    // And finally, get the next mutation from the queue.
     //
     // Parameters:
-    // - request: must be non-null and from a client.
+    // - request: the incoming write request from a client, must be non-null.
     //
-    // Return the next mutation needing to be processed in order. Returning null means the
-    // queue is being blocked or does not have any mutation.
+    // Return the next mutation needing to be processed in 2PC phase. If the returned mutation
+    // is null, it means the queue is empty, or all mutations in the queue is being blocked.
     mutation_ptr add_work(dsn::message_ex *request);
 
-    // Get the next mutation in order, typically called immediately after the current
-    // mutation was applied, or the membership was changed and we became the primary
-    // replica.
+    // Get the next mutation from the queue, typically called immediately after the current
+    // mutation was applied, or the membership was changed and we became the primary replica.
     //
     // Parameters:
-    // - current_running_count: used to reset the current number of the mutations being
-    // processed, typically the gap between the max committed decree and the max prepared
-    // decree. `_current_op_count` is never decreased directly: this parameter provides
-    // the only way to decrease it.
+    // - current_running_count: used to reset the current number of the mutations being processed
+    // concurrently in 2PC phase. It is typically the gap between the max committed decree and
+    // the max prepared decree. `_current_op_count` is never decreased directly: this parameter
+    // provides the only way to decrease it.
     //
-    // Return the next mutation needing to be processed in order. Returning null means the
-    // queue is being blocked or does not have any mutation.
+    // Return the next mutation needing to be processed in 2PC phase. If the returned mutation
+    // is null, it means the queue is empty, or all mutations in the queue is being blocked.
     mutation_ptr next_work(int current_running_count);
 
+    // Acquire row locks for each hash key in the mutation `mu`.
+    //
+    // The reason we do not acquire the lock immediately upon dequeuing is that between dequeuing
+    // and actually entering the 2PC phase, there are some processing steps which are sequential
+    // operations executed in the same unique thread dedicated to this hash key and the dequeue
+    // operation. These steps may fail and return an error to the client. Therefore, call this
+    // function to acquire locks only when the mutation is truly about to enter the 2PC phase.
     void acquire_row_lock(const mutation_ptr &mu);
 
+    // Release row locks for each hash key in the mutation `mu`.
+    //
+    // Once a mutation is applied to the storage engine, regardless of success or failure (if
+    // the application fails and we are the primary replica, we will later request the meta
+    // server to remove it from the membership), we must call this interface to release the row
+    // locks corresponding to the mutation. This ensures that blocked mutations can be dequeued,
+    // preventing a scenario where they remain blocked indefinitely due to unreleased row locks.
     void release_row_lock(const mutation_ptr &mu);
 
     // Clear the entire queue.
@@ -350,8 +375,14 @@ private:
     // return false indicating that it could proceed to the 2PC phase at any time.
     bool try_block(const mutation_ptr &mu);
 
-    mutation_ptr try_block_queue();
-    mutation_ptr try_block_pending();
+    // Start from the head of `_queue`: if the popped mutation is blocked, push it to the
+    // tail of `_blocking_mutations`; otherwise, return it to be processed in 2PC phase.
+    // If all of the mutations in `_queue` are blocked, return null.
+    mutation_ptr pop_or_block_queue();
+
+    // If `_pending_mutation` is blocked, push it to the tail of `_blocking_mutations` and
+    // return null; otherwise, return it to be processed in 2PC phase.
+    mutation_ptr pop_or_block_pending();
 
     // Pop the mutation from the head of `_queue`. Return non-null mutation if the queue is
     // not empty, otherwise return null.
@@ -389,8 +420,8 @@ private:
 
     // The tasks pushed into the mutation queue must first enter `_queue + _pending_mutation`.
     // When fetching tasks from `_queue + _pending_mutation` for execution: if the dequeued
-    // mutation is blocking, and any of its write requests' hash keys are locked, it will be
-    // pushed to the tail of `_blocking_mutations`.
+    // mutation is a blocking candidate, and any of its write requests' hash keys are locked,
+    // it will be pushed to the tail of `_blocking_mutations`.
     //
     // Therefore, when retrieving a task from the entire mutation queue, we first need to
     // sequentially check each mutation in `_blocking_mutations`:

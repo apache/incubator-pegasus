@@ -32,6 +32,7 @@
 #include <cinttypes>
 #include <cstring>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
@@ -387,55 +388,6 @@ void mutation_queue::try_promote_pending(task_spec *spec)
     promote_pending();
 }
 
-/*
-mutation_ptr mutation_queue::try_unblock()
-{
-    CHECK_NOTNULL(_blocking_mutation, "");
-
-    // All of the mutations before the blocking mutation must have been in prepare list.
-    const auto max_prepared_decree = _replica->max_prepared_decree();
-    const auto last_applied_decree = _replica->last_applied_decree();
-    if (max_prepared_decree > last_applied_decree) {
-        return {};
-    }
-
-    // All of the mutations before the blocking mutation must have been applied.
-    CHECK_EQ(max_prepared_decree, last_applied_decree);
-
-    // Pop the blocking mutation into the write pipeline to be processed.
-    mutation_ptr mu = _blocking_mutation;
-
-    // Disable the blocking mutation as it has been popped.
-    _blocking_mutation = nullptr;
-
-    // Increase the number of the mutations being processed currently as the blocking
-    // mutation is popped.
-    ++_current_op_count;
-
-    return mu;
-}
-
-mutation_ptr mutation_queue::try_block(mutation_ptr &mu)
-{
-    CHECK_NOTNULL(mu, "");
-
-    // If the immediately popped mutation is non-blocking, just return it to be processed.
-    if (!mu->is_blocking_candidate) {
-        ++_current_op_count;
-        return mu;
-    }
-
-    CHECK_NULL(_blocking_mutation, "");
-
-    // Enable the blocking mutation once the immediately popped mutation `mu` is found blocking.
-    _blocking_mutation = mu;
-
-    // If all of mutations before the blocking mutation have been applied, we could unblock
-    // the queue immediately.
-    return try_unblock();
-}
- */
-
 #define CHECK_RPC_REQUEST_IS_WRITE(request)                                                        \
     do {                                                                                           \
         const auto *__spec = task_spec::get(request->rpc_code());                                  \
@@ -536,7 +488,7 @@ mutation_ptr mutation_queue::try_unblock()
     for (auto curr = _blocking_mutations.begin(), prev = _blocking_mutations.before_begin();
          curr != _blocking_mutations.end();) {
         if (row_locked(*curr)) {
-            // The mutation that `curr` points to is still being blocked. Turn to the next.
+            // The mutation that `curr` points to is still being locked. Turn to the next.
             prev = curr++;
             continue;
         }
@@ -577,7 +529,7 @@ bool mutation_queue::try_block(const mutation_ptr &mu)
     return true;
 }
 
-mutation_ptr mutation_queue::try_block_queue()
+mutation_ptr mutation_queue::pop_or_block_queue()
 {
     while (true) {
         const auto mu = pop_internal_queue();
@@ -591,7 +543,7 @@ mutation_ptr mutation_queue::try_block_queue()
     }
 }
 
-mutation_ptr mutation_queue::try_block_pending()
+mutation_ptr mutation_queue::pop_or_block_pending()
 {
     mutation_ptr mu = _pending_mutation;
     _pending_mutation.reset();
@@ -618,8 +570,8 @@ mutation_ptr mutation_queue::add_work(message_ex *request)
     }
 
     // Once `_pending_mutation` is cleared, just assign a new mutation to it. If the client
-    // request is an atomic write and should be translated into idempotent writes, this new
-    // mutation will be created as a blocking mutation.
+    // request is an atomic write and idempotence is enabled, the new mutation will be created
+    // as a blocking candidate.
     if (_pending_mutation == nullptr) {
         _pending_mutation =
             _replica->new_mutation(invalid_decree, _replica->need_make_idempotent(spec));
@@ -641,8 +593,7 @@ mutation_ptr mutation_queue::add_work(message_ex *request)
         return {};
     }
 
-    // Once the blocking mutation is enabled, return null if still blocked, or non-null
-    // blocking mutation if succeeding in unblocking.
+    // Traverse the blocking mutations to check if someone has become unblocked.
     const auto mu = try_unblock();
     if (mu != nullptr) {
         // Since the pending mutation was just filled with the client request, try to promote
@@ -653,20 +604,17 @@ mutation_ptr mutation_queue::add_work(message_ex *request)
 
     if (_queue.empty()) {
         // `_pending_mutation` must be non-null now. There's no need to promote it as `_queue`
-        // is empty: just pop it as the next work candidate to be processed.
-        return try_block_pending();
+        // is empty: pop it as the next work candidate to be processed if it is not blocked.
+        return pop_or_block_pending();
     }
 
     // Since the pending mutation was just filled with the client request, try to promote
     // it.
     try_promote_pending(spec);
 
-    // Now the first element of `_queue` is the head of the entire queue. Pop and return it
-    // as the next work candidate to be processed.
-
-    // Currently the popped work is still a candidate: once it is a blocking mutation, the queue
-    // may become blocked and nothing will be returned.
-    return try_block_queue();
+    // Now the head of `_queue` becomes the head of the entire queue. Try to pop an unblocked
+    // mutation from it as the next work candidate to be processed.
+    return pop_or_block_queue();
 }
 
 mutation_ptr mutation_queue::next_work(int current_running_count)
@@ -679,8 +627,7 @@ mutation_ptr mutation_queue::next_work(int current_running_count)
         return {};
     }
 
-    // Once the blocking mutation is enabled, return null if still blocked, or non-null
-    // blocking mutation if succeeding in unblocking.
+    // Traverse the blocking mutations to check if someone has become unblocked.
     const auto mu = try_unblock();
     if (mu != nullptr) {
         return mu;
@@ -693,23 +640,19 @@ mutation_ptr mutation_queue::next_work(int current_running_count)
         }
 
         // `_pending_mutation` is not null now. Just pop it as the next work candidate to be
-        // processed.
-        return try_block_pending();
+        // processed if it is not blocked.
+        return pop_or_block_pending();
     }
 
-    // Now the first element of `_queue` is the head of the entire queue. Pop and return it
-    // as the next work candidate to be processed.
-
-    // Currently the popped work is still a candidate: once it is a blocking mutation, the queue
-    // may become blocked and nothing will be returned.
-    return try_block_queue();
+    // Now the head of `_queue` becomes the head of the entire queue. Try to pop an unblocked
+    // mutation from it as the next work candidate to be processed.
+    return pop_or_block_queue();
 }
 
 void mutation_queue::clear()
 {
-    // for each _blocking_mutations must release_ref()
-
     while (!_blocking_mutations.empty()) {
+        // Release the ref count which is originally added in try_block().
         _blocking_mutations.front().release_ref();
         _blocking_mutations.pop_front();
     }
@@ -731,6 +674,7 @@ void mutation_queue::clear(std::vector<mutation_ptr> &queued_mutations)
     queued_mutations.clear();
 
     while (!_blocking_mutations.empty()) {
+        // Release the ref count which is originally added in try_block().
         queued_mutations.emplace_back(&(_blocking_mutations.front()));
         _blocking_mutations.front().release_ref();
         _blocking_mutations.pop_front();
