@@ -19,7 +19,7 @@ name: Rebuild thirdparty if needed
 runs:
   using: composite
   steps:
-    - uses: dorny/paths-filter@v3
+    - uses: dorny/paths-filter@v3.0.2
       id: changes
       with:
         filters: |
