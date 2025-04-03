@@ -577,16 +577,16 @@ mutation_ptr replica::new_mutation(decree d)
     return mu;
 }
 
-mutation_ptr replica::new_mutation(decree decree, bool is_blocking_candidate)
+mutation_ptr replica::new_mutation(decree d, bool is_blocking_candidate)
 {
-    auto mu = new_mutation(decree);
+    auto mu = new_mutation(d);
     mu->is_blocking_candidate = is_blocking_candidate;
     return mu;
 }
 
-mutation_ptr replica::new_mutation(decree decree, dsn::message_ex *original_request)
+mutation_ptr replica::new_mutation(decree d, dsn::message_ex *original_request)
 {
-    auto mu = new_mutation(decree);
+    auto mu = new_mutation(d);
     mu->original_request = original_request;
     return mu;
 }

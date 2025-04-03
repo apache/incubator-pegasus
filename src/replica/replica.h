@@ -187,11 +187,17 @@ public:
     void on_client_write(message_ex *request, bool ignore_throttling);
     void on_client_read(message_ex *request, bool ignore_throttling);
 
+    //
     // 2PC
+    //
 
-    void acquire_row_lock(const mutation_ptr &mu);
+    // Acquire row locks for each hash key in the mutation `mu`. For details please see
+    // mutation_queue::acquire_row_lock().
+    // void acquire_row_lock(const mutation_ptr &mu);
 
-    void release_row_lock(const mutation_ptr &mu);
+    // Release row locks for each hash key in the mutation `mu`. For details please see
+    // mutation_queue::release_row_lock().
+    // void release_row_lock(const mutation_ptr &mu);
 
     //
     //    messages and tools from/for meta server
@@ -369,31 +375,31 @@ private:
     // Create a new mutation with specified decree.
     //
     // Parameters:
-    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    // - d: invalid_decree, or the real decree assigned to this mutation.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree);
+    mutation_ptr new_mutation(decree d);
 
     // Create a new mutation with specified decree and a flag marking whether this is a
-    // blocking mutation (for a detailed explanation of blocking mutations, refer to the
-    // comments for the field `is_blocking_candidate` of class `mutation`).
+    // blocking candidate (for a detailed explanation of blocking candidate, refer to the
+    // comments for the field mutation::is_blocking_candidate).
     //
     // Parameters:
-    // - decree: invalid_decree, or the real decree assigned to this mutation.
-    // - is_blocking_candidate: true means creating a blocking mutation.
+    // - d: invalid_decree, or the real decree assigned to this mutation.
+    // - is_blocking_candidate: true means creating a blocking candidate.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree, bool is_blocking_candidate);
+    mutation_ptr new_mutation(decree d, bool is_blocking_candidate);
 
     // Create a new mutation with specified decree and the original atomic write request,
     // which is used to build the response to the client.
     //
     // Parameters:
-    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    // - d: invalid_decree, or the real decree assigned to this mutation.
     // - original_request: the original request of the atomic write.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree, dsn::message_ex *original_request);
+    mutation_ptr new_mutation(decree d, dsn::message_ex *original_request);
 
     // initialization
     replica(replica_stub *stub,

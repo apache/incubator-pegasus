@@ -56,6 +56,13 @@ DSN_DEFINE_uint64(
     "Latency trace will be logged when exceed the write latency threshold, in nanoseconds");
 DSN_TAG_VARIABLE(abnormal_write_trace_latency_threshold, FT_MUTABLE);
 
+DSN_DEFINE_uint64(replication,
+                  row_lock_map_capacity,
+                  512,
+                  "The max size of row lock map, this is not a hard limit, the real size "
+                  "may be slightly more than this value");
+DSN_TAG_VARIABLE(row_lock_map_capacity, FT_MUTABLE);
+
 namespace dsn::replication {
 
 std::atomic<uint64_t> mutation::s_tid(0);
@@ -395,6 +402,8 @@ void mutation_queue::try_promote_pending(task_spec *spec)
         CHECK_TRUE(__spec->rpc_request_is_write_operation);                                        \
     } while (0)
 
+bool mutation_queue::applied(decree d) const { return d <= _replica->last_applied_decree(); }
+
 void mutation_queue::acquire_row_lock(const mutation_ptr &mu)
 {
     for (auto *request : mu->client_requests) {
@@ -409,48 +418,29 @@ void mutation_queue::acquire_row_lock(const mutation_ptr &mu)
 
         CHECK_RPC_REQUEST_IS_WRITE(request);
 
-        const auto result = _row_locks.try_emplace(request->header->client.partition_hash, 1);
-        if (result.second) {
-            // The lock for this hash key is newly created with count 1.
+        const decree d = mu->get_decree();
+        const auto result = _row_locks.try_emplace(request->header->client.partition_hash);
+        if (!result.second) {
+            // The lock for this hash key has existed, just increase its count.
+            if (d > result.first->second->second) {
+                result.first->second->second = d;
+            }
+            _lru_rows.splice(_lru_rows.begin(), _lru_rows, result.first->second);
             continue;
         }
 
-        // The lock for this hash key has existed, just increase its count.
-        ++result.first->second;
+        // The lock for this hash key is newly created with count 1.
+        _lru_rows.emplace_front(request->header->client.partition_hash, d);
+        result.first->second = _lru_rows.begin();
     }
-}
 
-void mutation_queue::release_row_lock(const mutation_ptr &mu)
-{
-    for (auto *request : mu->client_requests) {
-        if (request == nullptr) {
-            continue;
+    while (_row_locks.size() > FLAGS_row_lock_map_capacity) {
+        if (dsn_unlikely(!applied(_lru_rows.back().second))) {
+            break;
         }
 
-        CHECK_RPC_REQUEST_IS_WRITE(request);
-
-        const auto result = _row_locks.find(request->header->client.partition_hash);
-        if (result == _row_locks.end()) {
-            // The lock for this hash key does not exist, no need to release.
-            continue;
-        }
-
-        if (result->second > 1) {
-            // More than 1 write request with the same hash key is in 2PC phase, just
-            // decrease the count for the lock.
-            --result->second;
-            continue;
-        }
-
-        // TODO(wangdan): Frequent insertion and deletion of row locks in the hash table may
-        // impact performance. In the future, we can introduce a better GC strategy for row
-        // locks, such as using an LRU mechanism:
-        // - When a lock's count reaches 0, push it to the tail of a linked list.
-        // - If the same hash key is written again recently, remove it from the corresponding
-        // position in the linked list.
-        // - Once the row lock mapping table exceeds a certain threshold, start removing the
-        // least recently accessed locks whose count must be 0 from the head of the linked list.
-        _row_locks.erase(result);
+        _row_locks.erase(_lru_rows.back().first);
+        _lru_rows.pop_back();
     }
 }
 
@@ -463,15 +453,15 @@ bool mutation_queue::row_locked(const mutation &mu)
 
         CHECK_RPC_REQUEST_IS_WRITE(request);
 
-        const auto result = std::as_const(_row_locks).find(request->header->client.partition_hash);
-        if (result == _row_locks.end()) {
+        const auto entry = std::as_const(_row_locks).find(request->header->client.partition_hash);
+        if (entry == _row_locks.end()) {
             continue;
         }
 
         // Since a better GC strategy would be introduced to improve the performance, we still
         // check if the count has been 0 though currently all row locks in the mapping table
         // must have non-zero count (all locks whose count is 0 were removed when released).
-        if (result->second <= 0) {
+        if (applied(entry->second->second)) {
             continue;
         }
 

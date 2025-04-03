@@ -325,7 +325,7 @@ public:
     // server to remove it from the membership), we must call this interface to release the row
     // locks corresponding to the mutation. This ensures that blocked mutations can be dequeued,
     // preventing a scenario where they remain blocked indefinitely due to unreleased row locks.
-    void release_row_lock(const mutation_ptr &mu);
+    // void release_row_lock(const mutation_ptr &mu);
 
     // Clear the entire queue.
     void clear();
@@ -358,6 +358,7 @@ private:
     // - Otherwise, if none of the requests are locked, return false, meaning that the mutation
     // is not locked.
     bool row_locked(const mutation &mu);
+    bool applied(decree d) const;
 
     // Sequentially check the mutations in `_blocking_mutations` from head to tail:
     // - If a mutation is still locked, which means it still needs to be blocked, so continue
@@ -487,8 +488,10 @@ private:
     // I've tried to introduce absl::flat_hash_map; however, it could not pass the ASAN
     // tests due to segmentation fault caused by dereferencing a null pointer inside
     // "absl/container/internal/raw_hash_set.h". I'll try it again later.
-    using row_lock_map = boost::unordered_flat_map<uint64_t, size_t>;
+    using lru_row_list = std::list<std::pair<uint64_t, decree>>;
+    using row_lock_map = boost::unordered_flat_map<uint64_t, lru_row_list::iterator>;
     row_lock_map _row_locks;
+    lru_row_list _lru_rows;
 };
 
 } // namespace replication
