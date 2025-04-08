@@ -188,7 +188,7 @@ bool pegasus_server_impl::is_checkpoint_complete(const std::string &checkpoint_d
 {
     rocksdb::DB *snapshot_db = nullptr;
     std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
-    auto cleanup = [&]() {
+    auto cleanup = dsn::defer([&]() {
         if (snapshot_db != nullptr) {
             for (auto *handle : handles_opened) {
                 if (handle != nullptr) {
@@ -199,7 +199,7 @@ bool pegasus_server_impl::is_checkpoint_complete(const std::string &checkpoint_d
             delete snapshot_db;
             snapshot_db = nullptr;
         }
-    };
+    });
 
     // Because of RocksDB's restriction, we have to to open default column family even though
     // not use it
@@ -212,16 +212,13 @@ bool pegasus_server_impl::is_checkpoint_complete(const std::string &checkpoint_d
         LOG_ERROR_PREFIX(
             "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
         snapshot_db = nullptr;
-        cleanup();
         return false;
     }
     if (handles_opened.size() != 2 ||
         handles_opened[1]->GetName() != meta_store::META_COLUMN_FAMILY_NAME) {
         LOG_ERROR_PREFIX("{} is not complete", checkpoint_dir);
-        cleanup();
         return false;
     }
-    cleanup();
 
     return true;
 }
