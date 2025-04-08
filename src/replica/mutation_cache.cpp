@@ -117,9 +117,6 @@ mutation_ptr mutation_cache::pop_min()
     _start_idx = (_start_idx + 1) % _max_count;
 
     if (_interval == 0) {
-        // TODO: FIXE ME LATER
-        // CHECK_EQ(_total_size_bytes, 0);
-
         _end_decree = _start_decree;
         _end_idx = _start_idx;
     } else {
