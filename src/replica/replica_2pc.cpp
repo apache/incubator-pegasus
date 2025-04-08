@@ -236,18 +236,6 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 }
 
-/*
-void replica::acquire_row_lock(const mutation_ptr &mu)
-{
-    _primary_states.write_queue.acquire_row_lock(mu);
-}
-
-void replica::release_row_lock(const mutation_ptr &mu)
-{
-    _primary_states.write_queue.release_row_lock(mu);
-}
-  */
-
 bool replica::need_reject_non_idempotent(const task_spec *spec) const
 {
     if (!is_duplication_master()) {
@@ -408,9 +396,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         return;
     }
 
-    // From this point onward, the system will no longer respond to the client with an error
-    // message. This marks the official entry into the 2PC phase, where row locks can be acquired.
-    _primary_states.write_queue.acquire_row_lock(mu);
+    // Tell the assigned decree that has entered the 2PC phase to the mutation queue.
+    _primary_states.write_queue.enter_2pc(mu);
 
     // remote prepare
     mu->set_prepare_ts();

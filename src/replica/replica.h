@@ -188,18 +188,6 @@ public:
     void on_client_read(message_ex *request, bool ignore_throttling);
 
     //
-    // 2PC
-    //
-
-    // Acquire row locks for each hash key in the mutation `mu`. For details please see
-    // mutation_queue::acquire_row_lock().
-    // void acquire_row_lock(const mutation_ptr &mu);
-
-    // Release row locks for each hash key in the mutation `mu`. For details please see
-    // mutation_queue::release_row_lock().
-    // void release_row_lock(const mutation_ptr &mu);
-
-    //
     //    messages and tools from/for meta server
     //
     void on_config_proposal(configuration_update_request &proposal);

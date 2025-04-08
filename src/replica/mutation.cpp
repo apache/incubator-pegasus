@@ -58,7 +58,7 @@ DSN_TAG_VARIABLE(abnormal_write_trace_latency_threshold, FT_MUTABLE);
 
 DSN_DEFINE_uint64(replication,
                   row_lock_map_capacity,
-                  512,
+                  1024,
                   "The max size of row lock map, this is not a hard limit, the real size "
                   "may be slightly more than this value");
 DSN_TAG_VARIABLE(row_lock_map_capacity, FT_MUTABLE);
@@ -404,38 +404,44 @@ void mutation_queue::try_promote_pending(task_spec *spec)
 
 bool mutation_queue::applied(decree d) const { return d <= _replica->last_applied_decree(); }
 
-void mutation_queue::acquire_row_lock(const mutation_ptr &mu)
+void mutation_queue::enter_2pc(const mutation_ptr &mu)
 {
+    const decree d = mu->get_decree();
+
     for (auto *request : mu->client_requests) {
         if (request == nullptr) {
             continue;
         }
 
-        LOG_INFO("pid={}, rpc_code={}, partition_hash={}",
-                 _replica->get_gpid(),
-                 request->rpc_code(),
-                 request->header->client.partition_hash);
-
         CHECK_RPC_REQUEST_IS_WRITE(request);
 
-        const decree d = mu->get_decree();
         const auto result = _row_locks.try_emplace(request->header->client.partition_hash);
         if (!result.second) {
-            // The lock for this hash key has existed, just increase its count.
+            // The lock for this hash key has existed.
             if (d > result.first->second->second) {
+                // Update the value only when `mu` has higher decree. Besides, the primary
+                // replica might also call replay_prepare_list() which could incur lower
+                // decrees.
                 result.first->second->second = d;
             }
+
+            // The latest entry is moved to the head of the LRU list.
             _lru_rows.splice(_lru_rows.begin(), _lru_rows, result.first->second);
             continue;
         }
 
-        // The lock for this hash key is newly created with count 1.
+        // If the lock for this hash key is newly created, just push it into the head of the.
+        // LRU list.
         _lru_rows.emplace_front(request->header->client.partition_hash, d);
         result.first->second = _lru_rows.begin();
     }
 
+    // Once the row lock mapping table is too large, check the tail to decide whether to discard
+    // it to make room.
     while (_row_locks.size() > FLAGS_row_lock_map_capacity) {
         if (dsn_unlikely(!applied(_lru_rows.back().second))) {
+            // The max decree of the oldest has not be applied to the storage engine, no need
+            // to check others.
             break;
         }
 
@@ -458,9 +464,8 @@ bool mutation_queue::row_locked(const mutation &mu)
             continue;
         }
 
-        // Since a better GC strategy would be introduced to improve the performance, we still
-        // check if the count has been 0 though currently all row locks in the mapping table
-        // must have non-zero count (all locks whose count is 0 were removed when released).
+        // Only after the max decree of a hash key in 2PC phase is applied to the storage engine
+        // could it be unlocked.
         if (applied(entry->second->second)) {
             continue;
         }
