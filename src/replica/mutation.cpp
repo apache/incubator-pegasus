@@ -30,6 +30,7 @@
 #include <boost/unordered/detail/foa/table.hpp>
 #include <algorithm>
 #include <cinttypes>
+#include <cstddef>
 #include <cstring>
 #include <string>
 #include <type_traits>

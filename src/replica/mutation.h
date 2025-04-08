@@ -26,15 +26,17 @@
 
 #pragma once
 
+#include <boost/cstdint.hpp>
 #include <boost/intrusive/slist.hpp>
 #include <boost/intrusive/slist_hook.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <atomic>
-#include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <list>
 #include <memory>
 #include <queue>
+#include <utility>
 #include <vector>
 
 #include "common/replication_common.h"

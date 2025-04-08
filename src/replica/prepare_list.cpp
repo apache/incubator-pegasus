@@ -149,8 +149,9 @@ error_code prepare_list::prepare(mutation_ptr &mu,
 //
 void prepare_list::commit(decree d, commit_type ct)
 {
-    if (d <= last_committed_decree())
+    if (d <= last_committed_decree()) {
         return;
+    }
 
     ballot last_bt = 0;
     switch (ct) {

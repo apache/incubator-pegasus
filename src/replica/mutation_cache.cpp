@@ -106,26 +106,27 @@ error_code mutation_cache::put(mutation_ptr &mu)
 
 mutation_ptr mutation_cache::pop_min()
 {
-    if (_interval > 0) {
-        mutation_ptr mu = _array[_start_idx];
-        _array[_start_idx] = nullptr;
-
-        _interval--;
-        _start_idx = (_start_idx + 1) % _max_count;
-
-        if (_interval == 0) {
-            // TODO: FIXE ME LATER
-            // CHECK_EQ(_total_size_bytes, 0);
-
-            _end_decree = _start_decree;
-            _end_idx = _start_idx;
-        } else {
-            _start_decree++;
-        }
-        return mu;
-    } else {
+    if (_interval <= 0) {
         return nullptr;
     }
+
+    mutation_ptr mu = _array[_start_idx];
+    _array[_start_idx] = nullptr;
+
+    --_interval;
+    _start_idx = (_start_idx + 1) % _max_count;
+
+    if (_interval == 0) {
+        // TODO: FIXE ME LATER
+        // CHECK_EQ(_total_size_bytes, 0);
+
+        _end_decree = _start_decree;
+        _end_idx = _start_idx;
+    } else {
+        ++_start_decree;
+    }
+
+    return mu;
 }
 
 void mutation_cache::reset(decree init_decree, bool clear_mutations)
