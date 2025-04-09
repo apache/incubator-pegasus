@@ -673,6 +673,7 @@ private:
     error_code store_app_info(app_info &info, const std::string &path = "");
 
     void update_app_max_replica_count(int32_t max_replica_count);
+    void update_app_atomic_idempotent(bool atomic_idempotent);
     void update_app_name(const std::string &app_name);
 
     bool is_data_corrupted() const { return _data_corrupted; }

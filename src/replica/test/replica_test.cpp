@@ -240,43 +240,55 @@ public:
         return false;
     }
 
-    void test_update_app_max_replica_count()
+    // Load `app_info` from .app-info file to test whether it is consistent with the one 
+    // in memory.
+    void load_app_info(app_info &info) const
     {
-        const auto reserved_max_replica_count = _app_info.max_replica_count;
-        const int32_t target_max_replica_count = 5;
-        CHECK_NE(target_max_replica_count, reserved_max_replica_count);
-
-        // store new max_replica_count into file
-        _mock_replica->update_app_max_replica_count(target_max_replica_count);
-        _app_info.max_replica_count = target_max_replica_count;
-
-        dsn::app_info info;
-        replica_app_info replica_info(&info);
-
-        auto path = dsn::utils::filesystem::path_combine(
+        const auto path = dsn::utils::filesystem::path_combine(
             _mock_replica->_dir, dsn::replication::replica_app_info::kAppInfo);
-        std::cout << "the path of .app-info file is " << path << std::endl;
+        std::cout << "The path of .app-info file is " << path << std::endl;
 
-        // load new max_replica_count from file
-        auto err = replica_info.load(path);
+        replica_app_info replica_info(&info);
+        const auto err = replica_info.load(path);
         ASSERT_EQ(ERR_OK, err);
-        ASSERT_EQ(info, _mock_replica->_app_info);
-        std::cout << "the loaded new app_info is " << info << std::endl;
+        ASSERT_EQ(_mock_replica->_app_info, info);
+        std::cout << "The loaded app_info is " << info << std::endl;
+    }
 
-        // recover original max_replica_count
-        _mock_replica->update_app_max_replica_count(reserved_max_replica_count);
-        _app_info.max_replica_count = reserved_max_replica_count;
+    void load_app_max_replica_count(int32_t expected_max_replica_count) const
+    {
+        app_info info;
+        load_app_info(info);
+        ASSERT_EQ(expected_max_replica_count, info.max_replica_count);
+    }
 
-        // load original max_replica_count from file
-        err = replica_info.load(path);
-        ASSERT_EQ(err, ERR_OK);
-        ASSERT_EQ(info, _mock_replica->_app_info);
-        std::cout << "the loaded original app_info is " << info << std::endl;
+    // Test `max_replica_count` both on disk and in memory after updated.
+    void update_app_max_replica_count(int32_t expected_max_replica_count)
+    {
+        _mock_replica->update_app_max_replica_count(expected_max_replica_count);
+        _app_info.max_replica_count = expected_max_replica_count;
+
+        load_app_max_replica_count(expected_max_replica_count);
+    }
+
+    void load_app_atomic_idempotent(bool expected_atomic_idempotent) const
+    {
+        app_info info;
+        load_app_info(info);
+        ASSERT_EQ(expected_atomic_idempotent, info.atomic_idempotent);
+    }
+
+    // Test `atomic_idempotent` both on disk and in memory after updated.
+    void update_app_atomic_idempotent(bool expected_atomic_idempotent)
+    {
+        _mock_replica->update_app_atomic_idempotent(expected_atomic_idempotent);
+        _app_info.atomic_idempotent = expected_atomic_idempotent;
+
+        load_app_atomic_idempotent(expected_atomic_idempotent);
     }
 
     void test_auto_trash(error_code ec);
 
-public:
     dsn::app_info _app_info;
     dsn::gpid _pid;
     mock_replica_ptr _mock_replica;
@@ -628,7 +640,30 @@ TEST_P(replica_test, update_deny_client_test)
     }
 }
 
-TEST_P(replica_test, test_update_app_max_replica_count) { test_update_app_max_replica_count(); }
+TEST_P(replica_test, test_update_app_max_replica_count) {
+    const auto reserved_max_replica_count = _app_info.max_replica_count;
+    const int32_t target_max_replica_count = 5;
+
+    // The new value should not be equal to the original one.
+    CHECK_NE(target_max_replica_count, reserved_max_replica_count);
+
+    // Test `max_replica_count` after updated to a new value.
+    update_app_max_replica_count(target_max_replica_count);
+
+    // Test `max_replica_count` after recovered to the original value.
+    update_app_max_replica_count(reserved_max_replica_count);
+}
+
+TEST_P(replica_test, test_update_app_atomic_idempotent) {
+    // Test the default value of `atomic_idempotent` which should be false.
+    load_app_atomic_idempotent(false);
+
+    // Test `atomic_idempotent` after updated to true.
+    update_app_atomic_idempotent(true);
+
+    // Test `atomic_idempotent` after recovered to the default value.
+    update_app_atomic_idempotent(false);
+}
 
 } // namespace replication
 } // namespace dsn
