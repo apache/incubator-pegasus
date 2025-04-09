@@ -50,6 +50,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/uniq_timestamp_us.h"
 
 DSN_DEFINE_bool(replication,
