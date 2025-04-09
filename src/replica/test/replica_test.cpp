@@ -108,9 +108,15 @@ public:
         ASSERT_EQ(ERR_OK, _mock_replica->store_app_info());
     }
 
-    [[nodiscard]] int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
+    [[nodiscard]] int64_t get_backup_request_count() const
+    {
+        return _mock_replica->get_backup_request_count();
+    }
 
-    [[nodiscard]] bool get_validate_partition_hash() const { return _mock_replica->_validate_partition_hash; }
+    [[nodiscard]] bool get_validate_partition_hash() const
+    {
+        return _mock_replica->_validate_partition_hash;
+    }
 
     void reset_validate_partition_hash() { _mock_replica->_validate_partition_hash = false; }
 
