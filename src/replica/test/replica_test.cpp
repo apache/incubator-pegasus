@@ -105,12 +105,12 @@ public:
 
         // Initially update the whole .app-info file with `_app_info` as the defined format
         // (encrypted or unencrypted).
-        ASSERT_EQ(ERR_OK, _mock_replica->store_app_info(_app_info));
+        ASSERT_EQ(ERR_OK, _mock_replica->store_app_info());
     }
 
-    int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
+    [[nodiscard]] int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
 
-    bool get_validate_partition_hash() const { return _mock_replica->_validate_partition_hash; }
+    [[nodiscard]] bool get_validate_partition_hash() const { return _mock_replica->_validate_partition_hash; }
 
     void reset_validate_partition_hash() { _mock_replica->_validate_partition_hash = false; }
 

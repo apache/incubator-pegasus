@@ -84,8 +84,8 @@ error_code replica::initialize_on_new()
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    auto err = store_app_info(_app_info);
-    if (err != ERR_OK) {
+    const auto err = store_app_info();
+    if (dsn_unlikely(err != ERR_OK)) {
         dsn::utils::filesystem::remove_path(_dir);
         return err;
     }

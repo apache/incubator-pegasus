@@ -668,9 +668,17 @@ private:
     // update envs to deny client request
     void update_deny_client(const std::map<std::string, std::string> &envs);
 
-    // store `info` into a file under `path` directory
-    // path = "" means using the default directory (`_dir`/.app_info)
-    error_code store_app_info(app_info &info, const std::string &path = "");
+    // Write the specified `info` into .app_info file under the specified `dir` directory.
+    error_code store_app_info(app_info &info, const std::string &dir);
+
+    // Write the specified `info` into .app_info file under `_dir` directory.
+    error_code store_app_info(app_info &info);
+
+    // Write `_app_info` into .app_info file under the specified `dir` directory.
+    error_code store_app_info(const std::string &dir);
+
+    // Write `_app_info` into .app_info file under `_dir` directory.
+    error_code store_app_info();
 
     void update_app_max_replica_count(int32_t max_replica_count);
     void update_app_atomic_idempotent(bool atomic_idempotent);
