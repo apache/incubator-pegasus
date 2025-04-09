@@ -326,7 +326,7 @@ TEST_P(replica_test, backup_request_count)
     backup_request->io_session = sim_net->create_client_session(rpc_address());
 
     const auto initial_backup_request_count = get_backup_request_count();
-    _mock_replica->on_client_read(backup_request);
+    _mock_replica->on_client_read(backup_request, false);
     ASSERT_EQ(initial_backup_request_count + 1, get_backup_request_count());
 }
 

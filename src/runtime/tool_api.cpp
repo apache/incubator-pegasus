@@ -26,6 +26,7 @@
 
 #include "runtime/tool_api.h"
 
+#include <algorithm>
 #include <functional>
 #include <map>
 #include <memory>
