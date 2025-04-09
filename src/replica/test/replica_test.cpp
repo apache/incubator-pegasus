@@ -102,6 +102,10 @@ public:
         // FLAGS_cold_backup_root is set by configuration "replication.cold_backup_root",
         // which is usually the cluster_name of production clusters.
         FLAGS_cold_backup_root = "test_cluster";
+
+        // Initially update the whole .app-info file with `_app_info` as the defined format
+        // (encrypted or unencrypted).
+        ASSERT_EQ(ERR_OK, _mock_replica->store_app_info(_app_info));
     }
 
     int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
@@ -240,7 +244,7 @@ public:
         return false;
     }
 
-    // Load `app_info` from .app-info file to test whether it is consistent with the one 
+    // Load `app_info` from .app-info file to test whether it is consistent with the one
     // in memory.
     void load_app_info(app_info &info) const
     {
@@ -251,8 +255,9 @@ public:
         replica_app_info replica_info(&info);
         const auto err = replica_info.load(path);
         ASSERT_EQ(ERR_OK, err);
-        ASSERT_EQ(_mock_replica->_app_info, info);
+
         std::cout << "The loaded app_info is " << info << std::endl;
+        ASSERT_EQ(_mock_replica->_app_info, info);
     }
 
     void load_app_max_replica_count(int32_t expected_max_replica_count) const
@@ -640,21 +645,26 @@ TEST_P(replica_test, update_deny_client_test)
     }
 }
 
-TEST_P(replica_test, test_update_app_max_replica_count) {
-    const auto reserved_max_replica_count = _app_info.max_replica_count;
+TEST_P(replica_test, test_update_app_max_replica_count)
+{
+    const auto original_max_replica_count = _app_info.max_replica_count;
     const int32_t target_max_replica_count = 5;
 
     // The new value should not be equal to the original one.
-    CHECK_NE(target_max_replica_count, reserved_max_replica_count);
+    CHECK_NE(target_max_replica_count, original_max_replica_count);
 
-    // Test `max_replica_count` after updated to a new value.
+    // Test the original value of `max_replica_count`.
+    load_app_max_replica_count(original_max_replica_count);
+
+    // Test `max_replica_count` after updated to the new value.
     update_app_max_replica_count(target_max_replica_count);
 
     // Test `max_replica_count` after recovered to the original value.
-    update_app_max_replica_count(reserved_max_replica_count);
+    update_app_max_replica_count(original_max_replica_count);
 }
 
-TEST_P(replica_test, test_update_app_atomic_idempotent) {
+TEST_P(replica_test, test_update_app_atomic_idempotent)
+{
     // Test the default value of `atomic_idempotent` which should be false.
     load_app_atomic_idempotent(false);
 
