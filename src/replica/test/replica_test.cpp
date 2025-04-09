@@ -120,7 +120,8 @@ public:
 
     void reset_validate_partition_hash() const { _mock_replica->_validate_partition_hash = false; }
 
-    void update_validate_partition_hash(bool old_value, bool set_in_map, std::string new_value)
+    void
+    update_validate_partition_hash(bool old_value, bool set_in_map, std::string new_value) const
     {
         _mock_replica->_validate_partition_hash = old_value;
         std::map<std::string, std::string> envs;
