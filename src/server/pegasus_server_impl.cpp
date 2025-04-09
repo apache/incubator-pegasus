@@ -184,6 +184,45 @@ const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters = {
      }},
 };
 
+bool pegasus_server_impl::is_checkpoint_complete(const std::string &checkpoint_dir)
+{
+    rocksdb::DB *snapshot_db = nullptr;
+    std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
+    auto cleanup = dsn::defer([&]() {
+        if (snapshot_db != nullptr) {
+            for (auto *handle : handles_opened) {
+                if (handle != nullptr) {
+                    snapshot_db->DestroyColumnFamilyHandle(handle);
+                    handle = nullptr;
+                }
+            }
+            delete snapshot_db;
+            snapshot_db = nullptr;
+        }
+    });
+
+    // Because of RocksDB's restriction, we have to to open default column family even though
+    // not use it
+    std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
+        {{meta_store::DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
+         {meta_store::META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
+    auto status = rocksdb::DB::OpenForReadOnly(
+        _db_opts, checkpoint_dir, column_families, &handles_opened, &snapshot_db);
+    if (!status.ok()) {
+        LOG_ERROR_PREFIX(
+            "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
+        snapshot_db = nullptr;
+        return false;
+    }
+    if (handles_opened.size() != 2 ||
+        handles_opened[1]->GetName() != meta_store::META_COLUMN_FAMILY_NAME) {
+        LOG_ERROR_PREFIX("{} is not complete", checkpoint_dir);
+        return false;
+    }
+
+    return true;
+}
+
 void pegasus_server_impl::parse_checkpoints()
 {
     std::vector<std::string> dirs;
@@ -193,9 +232,9 @@ void pegasus_server_impl::parse_checkpoints()
 
     _checkpoints.clear();
     for (auto &d : dirs) {
-        int64_t ci;
+        int64_t ci = 0;
         std::string d1 = d.substr(data_dir().size() + 1);
-        if (chkpt_init_from_dir(d1.c_str(), ci)) {
+        if (chkpt_init_from_dir(d1.c_str(), ci) && is_checkpoint_complete(d)) {
             _checkpoints.push_back(ci);
         } else if (d1.find("checkpoint") != std::string::npos) {
             LOG_INFO_PREFIX("invalid checkpoint directory {}, remove it", d);
@@ -2244,6 +2283,7 @@ private:
     }
 
     auto chkpt_dir = ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(ci));
+
     state.files.clear();
     if (!::dsn::utils::filesystem::get_subfiles(chkpt_dir, state.files, true)) {
         LOG_ERROR_PREFIX("list files in checkpoint dir {} failed", chkpt_dir);

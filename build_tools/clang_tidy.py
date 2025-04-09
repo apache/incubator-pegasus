@@ -62,7 +62,8 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                    "-path", BUILD_PATH,
                    # Disable some checks that are not useful for us now.
                    # They are sorted by names, and should be consistent to .clang-tidy.
-                   "-checks=-bugprone-easily-swappable-parameters,"
+                   "-checks=-abseil-string-find-str-contains,"
+                           "-bugprone-easily-swappable-parameters,"
                            "-bugprone-lambda-function-name,"
                            "-bugprone-macro-parentheses,"
                            "-bugprone-sizeof-expression,"
