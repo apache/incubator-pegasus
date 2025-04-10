@@ -33,7 +33,7 @@
 // TODO(yingchun): it's too tricky, but I don't know how does it happen, we can fix it later.
 #define TRICKY_CODE_TO_AVOID_LINK_ERROR                                                            \
     do {                                                                                           \
-        ddl_client_->create_app("", "pegasus", 0, 0, {});                                   \
+        ddl_client_->create_app("", "pegasus", 0, 0, {});                                          \
         pegasus_client_factory::get_client("", "");                                                \
     } while (false)
 

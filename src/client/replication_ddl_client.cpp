@@ -241,11 +241,9 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
                                                    const std::string &app_type,
                                                    int32_t partition_count,
                                                    int32_t replica_count,
-                                                   const std::map<std::string, std::string> &envs
-                                                   )
+                                                   const std::map<std::string, std::string> &envs)
 {
-    return create_app(app_name, app_type, partition_count, replica_count, envs, false,
-            true, false);
+    return create_app(app_name, app_type, partition_count, replica_count, envs, false, true, false);
 }
 
 dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, int reserve_seconds)

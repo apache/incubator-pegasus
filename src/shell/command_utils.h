@@ -41,7 +41,9 @@ inline dsn::error_s exact_n_pos_arg(const argh::parser &cmd, size_t n)
 {
     // n + 1 means the exact n positional arguments plus the command.
     if (cmd.size() != n + 1) {
-        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "except the command, there should be exact {} positional argument", n);
+        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS,
+                       "except the command, there should be exact {} positional argument",
+                       n);
     }
 
     return dsn::error_s::ok();
@@ -86,7 +88,9 @@ inline dsn::error_s validate_cmd(const argh::parser &cmd,
                                  const std::set<std::string> &flags,
                                  size_t num_pos_args)
 {
-    return validate_cmd(cmd, params, flags, [num_pos_args](const argh::parser &cmd) { return exact_n_pos_arg(cmd, num_pos_args);});
+    return validate_cmd(cmd, params, flags, [num_pos_args](const argh::parser &cmd) {
+        return exact_n_pos_arg(cmd, num_pos_args);
+    });
 }
 
 bool validate_ip(shell_context *sc,

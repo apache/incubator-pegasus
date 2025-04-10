@@ -699,15 +699,20 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
     const bool atomic_idempotent = cmd[{"-i", "--atomic_idempotent"}];
 
     std::map<std::string, std::string> envs;
-    PARSE_OPT_KV_MAP(envs, 4, ',', '=', {"-e", "--envs"});
+    PARSE_OPT_KV_MAP(envs, ',', '=', {"-e", "--envs"});
 
-    dsn::error_code err =
-        sc->ddl_client->create_app(app_name, "pegasus", partition_count, replica_count, envs, false, success_if_exist, atomic_idempotent);
+    dsn::error_code err = sc->ddl_client->create_app(app_name,
+                                                     "pegasus",
+                                                     partition_count,
+                                                     replica_count,
+                                                     envs,
+                                                     false,
+                                                     success_if_exist,
+                                                     atomic_idempotent);
     if (err == ::dsn::ERR_OK) {
         std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name) << "\" succeed"
                   << std::endl;
-    }
-    else {
+    } else {
         std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name)
                   << "\" failed, error = " << err << std::endl;
     }

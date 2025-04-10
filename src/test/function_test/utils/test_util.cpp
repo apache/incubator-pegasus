@@ -98,9 +98,9 @@ void test_util::SetUp()
         ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, kCreateEnvs);
     if (ret == dsn::ERR_INVALID_PARAMETERS) {
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0));
-        ASSERT_EQ(dsn::ERR_OK,
-                  ddl_client_->create_app(
-                      table_name_, "pegasus", partition_count_, 3, kCreateEnvs));
+        ASSERT_EQ(
+            dsn::ERR_OK,
+            ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, kCreateEnvs));
     } else {
         ASSERT_EQ(dsn::ERR_OK, ret);
     }

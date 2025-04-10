@@ -1053,11 +1053,11 @@ private:
 //
 // Variable arguments are `name` or `init_list` of argh::parser::operator(). See argh::parser
 // for details.
-#define PARSE_OPT_INT(value, def_val, ...)                                                        \
+#define PARSE_OPT_INT(value, def_val, ...)                                                         \
     do {                                                                                           \
         const auto param = cmd(__VA_ARGS__, (def_val)).str();                                      \
-        if (!::dsn::buf2int32(param, value)) {                                                    \
-            SHELL_PRINTLN_ERROR("invalid command, '{}' should be a signed integer", param);     \
+        if (!::dsn::buf2int32(param, value)) {                                                     \
+            SHELL_PRINTLN_ERROR("invalid command, '{}' should be a signed integer", param);        \
             return false;                                                                          \
         }                                                                                          \
     } while (false)
@@ -1077,13 +1077,13 @@ private:
     } while (false)
 
 // Parse the provided parameter into the map by the specified delimiters.
-#define PARSE_OPT_KV_MAP(map, item_splitter, kv_splitter, ...)                                                    \
+#define PARSE_OPT_KV_MAP(map, item_splitter, kv_splitter, ...)                                     \
     do {                                                                                           \
-        const std::string __str(cmd(__VA_ARGS__, "").str());                                      \
-        if (!::dsn::utils::parse_kv_map(__str.c_str(), map, item_splitter, kv_splitter)                                   {\
-            SHELL_PRINTLN_ERROR("invalid envs: '{}'", __str);     \
-            return false;  \
-            }            \
+        const std::string __str(cmd(__VA_ARGS__, "").str());                                       \
+        if (!::dsn::utils::parse_kv_map(__str.c_str(), map, item_splitter, kv_splitter)) {         \
+            SHELL_PRINTLN_ERROR("invalid envs: '{}'", __str);                                      \
+            return false;                                                                          \
+        }                                                                                          \
     } while (false)
 
 #define RETURN_FALSE_IF_NOT(expr, ...)                                                             \
