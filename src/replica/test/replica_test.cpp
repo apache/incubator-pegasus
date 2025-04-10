@@ -251,17 +251,12 @@ public:
         return false;
     }
 
-    // Load `app_info` from .app-info file to test whether it is consistent with the one
+    // Load `info` from .app-info file to test whether it is consistent with the one
     // in memory.
     void load_app_info(app_info &info) const
     {
-        const auto path = dsn::utils::filesystem::path_combine(
-            _mock_replica->_dir, dsn::replication::replica_app_info::kAppInfo);
-        std::cout << "The path of .app-info file is " << path << std::endl;
-
-        replica_app_info replica_info(&info);
-        const auto err = replica_info.load(path);
-        ASSERT_EQ(ERR_OK, err);
+        std::cout << ".app-info file is under " << _mock_replica->_dir << std::endl;
+        ASSERT_EQ(ERR_OK, _mock_replica->load_app_info(info));
 
         std::cout << "The loaded app_info is " << info << std::endl;
         ASSERT_EQ(_mock_replica->_app_info, info);

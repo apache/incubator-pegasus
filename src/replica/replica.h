@@ -680,6 +680,12 @@ private:
     // Write `_app_info` into .app_info file under `_dir` directory.
     error_code store_app_info();
 
+    // Load `info` from .app_info file under the specified `dir` directory.
+    error_code load_app_info(const std::string &dir, app_info &info) const;
+
+    // Load `info` from .app_info file under `_dir` directory.
+    error_code load_app_info(app_info &info) const;
+
     void update_app_max_replica_count(int32_t max_replica_count);
     void update_app_atomic_idempotent(bool atomic_idempotent);
     void update_app_name(const std::string &app_name);

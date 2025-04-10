@@ -730,6 +730,22 @@ error_code replica::store_app_info(const std::string &dir)
 
 error_code replica::store_app_info() { return store_app_info(_app_info, _dir); }
 
+error_code replica::load_app_info(const std::string &dir, app_info &info) const
+{
+    const auto path =
+        utils::filesystem::path_combine(dir, dsn::replication::replica_app_info::kAppInfo);
+
+    replica_app_info rep_info(&info);
+    const auto err = rep_info.load(path);
+    if (dsn_unlikely(err != ERR_OK)) {
+        LOG_ERROR_PREFIX("failed to load app_info from {}, error = {}", path, err);
+    }
+
+    return err;
+}
+
+error_code replica::load_app_info(app_info &info) const { return load_app_info(_dir, info); }
+
 bool replica::access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const
 {
     return !_access_controller->is_enable_ranger_acl() || _access_controller->allowed(msg, ac_type);

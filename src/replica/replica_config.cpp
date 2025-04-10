@@ -1137,8 +1137,6 @@ void replica::update_app_name(const std::string &app_name)
 
 void replica::update_app_max_replica_count(int32_t max_replica_count)
 {
-    // No need to check `_app_info.__isset.atomic_idempotent`, since by default it is true
-    // (because `_app_info.atomic_idempotent` has default value false).
     if (max_replica_count == _app_info.max_replica_count) {
         return;
     }
@@ -1158,6 +1156,8 @@ void replica::update_app_max_replica_count(int32_t max_replica_count)
 
 void replica::update_app_atomic_idempotent(bool atomic_idempotent)
 {
+    // No need to check `_app_info.__isset.atomic_idempotent`, since by default it is true
+    // (because `_app_info.atomic_idempotent` has default value false).
     if (atomic_idempotent == _app_info.atomic_idempotent) {
         return;
     }
