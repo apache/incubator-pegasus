@@ -50,6 +50,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/uniq_timestamp_us.h"
 
 DSN_DEFINE_bool(replication,
@@ -84,8 +85,8 @@ error_code replica::initialize_on_new()
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    auto err = store_app_info(_app_info);
-    if (err != ERR_OK) {
+    const auto err = store_app_info();
+    if (dsn_unlikely(err != ERR_OK)) {
         dsn::utils::filesystem::remove_path(_dir);
         return err;
     }

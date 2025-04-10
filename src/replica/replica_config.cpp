@@ -1072,10 +1072,12 @@ void replica::on_config_sync(const app_info &info,
 {
     LOG_DEBUG_PREFIX("configuration sync");
     // no outdated update
-    if (pc.ballot < get_ballot())
+    if (pc.ballot < get_ballot()) {
         return;
+    }
 
     update_app_max_replica_count(info.max_replica_count);
+    update_app_atomic_idempotent(info.atomic_idempotent);
     update_app_name(info.app_name);
     update_app_envs(info.envs);
     _is_duplication_master = info.duplicating;
@@ -1121,10 +1123,10 @@ void replica::update_app_name(const std::string &app_name)
         return;
     }
 
-    auto old_app_name = _app_info.app_name;
+    const auto old_app_name = _app_info.app_name;
     _app_info.app_name = app_name;
 
-    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
+    CHECK_EQ_PREFIX_MSG(store_app_info(),
                         ERR_OK,
                         "store_app_info for app_name failed: "
                         "app_name={}, app_id={}, old_app_name={}",
@@ -1139,10 +1141,10 @@ void replica::update_app_max_replica_count(int32_t max_replica_count)
         return;
     }
 
-    auto old_max_replica_count = _app_info.max_replica_count;
+    const auto old_max_replica_count = _app_info.max_replica_count;
     _app_info.max_replica_count = max_replica_count;
 
-    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
+    CHECK_EQ_PREFIX_MSG(store_app_info(),
                         ERR_OK,
                         "store_app_info for max_replica_count failed: app_name={}, "
                         "app_id={}, old_max_replica_count={}, new_max_replica_count={}",
@@ -1150,6 +1152,27 @@ void replica::update_app_max_replica_count(int32_t max_replica_count)
                         _app_info.app_id,
                         old_max_replica_count,
                         _app_info.max_replica_count);
+}
+
+void replica::update_app_atomic_idempotent(bool atomic_idempotent)
+{
+    // No need to check `_app_info.__isset.atomic_idempotent`, since by default it is true
+    // (because `_app_info.atomic_idempotent` has default value false).
+    if (atomic_idempotent == _app_info.atomic_idempotent) {
+        return;
+    }
+
+    const auto old_atomic_idempotent = _app_info.atomic_idempotent;
+    _app_info.atomic_idempotent = atomic_idempotent;
+
+    CHECK_EQ_PREFIX_MSG(store_app_info(),
+                        ERR_OK,
+                        "store_app_info for atomic_idempotent failed: app_name={}, "
+                        "app_id={}, old_atomic_idempotent={}, new_atomic_idempotent={}",
+                        _app_info.app_name,
+                        _app_info.app_id,
+                        old_atomic_idempotent,
+                        _app_info.atomic_idempotent);
 }
 
 void replica::replay_prepare_list()
@@ -1190,10 +1213,10 @@ void replica::update_app_duplication_status(bool duplicating)
         return;
     }
 
-    auto old_duplicating = _app_info.duplicating;
+    const auto old_duplicating = _app_info.duplicating;
     _app_info.__set_duplicating(duplicating);
 
-    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
+    CHECK_EQ_PREFIX_MSG(store_app_info(),
                         ERR_OK,
                         "store_app_info for duplicating failed: app_name={}, "
                         "app_id={}, old_duplicating={}, new_duplicating={}",
