@@ -48,7 +48,6 @@
 #include "replica/replica.h"
 #include "replica/replica_http_service.h"
 #include "replica/replica_stub.h"
-#include "replica/replication_app_base.h"
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
 #include "rpc/network.sim.h"
