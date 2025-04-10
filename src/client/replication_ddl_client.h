@@ -80,11 +80,19 @@ public:
 
     dsn::error_code create_app(const std::string &app_name,
                                const std::string &app_type,
-                               int partition_count,
-                               int replica_count,
+                               int32_t partition_count,
+                               int32_t replica_count,
                                const std::map<std::string, std::string> &envs,
                                bool is_stateless,
-                               bool success_if_exist = true);
+                               bool success_if_exist ,
+                                                   bool atomic_idempotent);
+
+    dsn::error_code create_app(const std::string &app_name,
+                               const std::string &app_type,
+                               int32_t partition_count,
+                               int32_t replica_count,
+                               const std::map<std::string, std::string> &envs
+                               );
 
     // 'reserve_seconds' == 0 means use default value in configuration
     // FLAGS_hold_seconds_for_dropped_app.

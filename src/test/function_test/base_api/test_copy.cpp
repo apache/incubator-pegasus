@@ -89,10 +89,10 @@ public:
     {
         ASSERT_EQ(
             dsn::ERR_OK,
-            ddl_client_->create_app(source_app_name, "pegasus", default_partitions, 3, {}, false));
+            ddl_client_->create_app(source_app_name, "pegasus", default_partitions, 3, {}));
         ASSERT_EQ(dsn::ERR_OK,
                   ddl_client_->create_app(
-                      destination_app_name, "pegasus", default_partitions, 3, {}, false));
+                      destination_app_name, "pegasus", default_partitions, 2, {}));
         source_client_ =
             pegasus_client_factory::get_client(kClusterName.c_str(), source_app_name.c_str());
         ASSERT_NE(nullptr, source_client_);
@@ -153,7 +153,7 @@ protected:
     const int max_batch_count = 500;
     const int timeout_ms = 5000;
     const int max_multi_set_concurrency = 20;
-    const int default_partitions = 4;
+    const int32_t default_partitions = 4;
 
     char buffer_[256];
     map<string, map<string, string>> expect_data_;

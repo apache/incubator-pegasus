@@ -198,7 +198,7 @@ TEST_F(recovery_test, recovery)
 
         // then wait the apps to ready
         ASSERT_EQ(dsn::ERR_OK,
-                  ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, {}, false));
+                  ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, {}));
 
         ASSERT_NO_FATAL_FAILURE(verify_data(dataset_count));
     }
@@ -223,7 +223,7 @@ TEST_F(recovery_test, recovery)
 
         // then wait the app to ready
         ASSERT_EQ(dsn::ERR_OK,
-                  ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, {}, false));
+                  ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, {}));
 
         ASSERT_NO_FATAL_FAILURE(verify_data(dataset_count));
     }
@@ -256,7 +256,7 @@ TEST_F(recovery_test, recovery)
 
         // then wait the apps to ready
         ASSERT_EQ(dsn::ERR_OK,
-                  ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, {}, false));
+                  ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, {}));
 
         ASSERT_NO_FATAL_FAILURE(verify_data(dataset_count));
     }
@@ -286,7 +286,7 @@ TEST_F(recovery_test, recovery)
 
         // then wait the apps to ready
         ASSERT_EQ(dsn::ERR_OK,
-                  ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, {}, false));
+                  ddl_client_->create_app(table_name_, "pegasus", partition_count_, 3, {}));
 
         ASSERT_NO_FATAL_FAILURE(verify_data(dataset_count));
     }
