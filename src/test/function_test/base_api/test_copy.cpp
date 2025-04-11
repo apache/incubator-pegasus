@@ -92,7 +92,7 @@ public:
                   ddl_client_->create_app(source_app_name, "pegasus", default_partitions, 3, {}));
         ASSERT_EQ(
             dsn::ERR_OK,
-            ddl_client_->create_app(destination_app_name, "pegasus", default_partitions, 2, {}));
+            ddl_client_->create_app(destination_app_name, "pegasus", default_partitions, 3, {}));
         source_client_ =
             pegasus_client_factory::get_client(kClusterName.c_str(), source_app_name.c_str());
         ASSERT_NE(nullptr, source_client_);
