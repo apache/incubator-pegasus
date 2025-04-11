@@ -87,6 +87,8 @@ public:
                                bool success_if_exist,
                                bool atomic_idempotent);
 
+    // The same as the above while both `is_stateless` and `atomic_idempotent` are set false
+    // and `success_if_exist` is set true.
     dsn::error_code create_app(const std::string &app_name,
                                const std::string &app_type,
                                int32_t partition_count,

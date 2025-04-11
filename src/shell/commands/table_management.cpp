@@ -678,13 +678,15 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
-    // Check if input parameters, flags and positional arguments are valid.
+    // Check if the input parameters and flags are valid, and there are exact one positional
+    // argument (i.e. app_name).
     const auto &check = validate_cmd(cmd, params, flags, 1);
     if (!check) {
         SHELL_PRINTLN_ERROR("{}", check.description());
         return false;
     }
 
+    // Get the only positional argument as app_name.
     std::string app_name = cmd(1).str();
 
     int32_t partition_count = 0;
@@ -693,11 +695,12 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
     int32_t replica_count = 0;
     PARSE_OPT_INT(replica_count, 3, {"-r", "--replica_count"});
 
-    // To get `success_if_exist`, just apply logical NOT to `fail_if_exist`.
+    // To get `success_if_exist`, just apply logical NOT to the flag `fail_if_exist`.
     const bool success_if_exist = !cmd[{"-f", "--fail_if_exist"}];
 
     const bool atomic_idempotent = cmd[{"-i", "--atomic_idempotent"}];
 
+    // Parse each env name/value pair with specified delimiters.
     std::map<std::string, std::string> envs;
     PARSE_OPT_KV_MAP(envs, ',', '=', {"-e", "--envs"});
 

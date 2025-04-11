@@ -1081,7 +1081,7 @@ private:
     do {                                                                                           \
         const std::string __str(cmd(__VA_ARGS__, "").str());                                       \
         if (!::dsn::utils::parse_kv_map(__str.c_str(), map, item_splitter, kv_splitter)) {         \
-            SHELL_PRINTLN_ERROR("invalid envs: '{}'", __str);                                      \
+            SHELL_PRINTLN_ERROR("invalid kvs: '{}'", __str);                                       \
             return false;                                                                          \
         }                                                                                          \
     } while (false)
