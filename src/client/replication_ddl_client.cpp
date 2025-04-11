@@ -351,6 +351,7 @@ error_s replication_ddl_client::list_apps(bool detailed,
     tp_general.add_column("drop_time");
     tp_general.add_column("drop_expire");
     tp_general.add_column("envs_count");
+    tp_general.add_column("atomic_idempotent");
 
     int available_app_count = 0;
     for (const auto &info : apps) {
@@ -392,6 +393,7 @@ error_s replication_ddl_client::list_apps(bool detailed,
         tp_general.append_data(drop_time);
         tp_general.append_data(drop_expire_time);
         tp_general.append_data(info.envs.size());
+        tp_general.append_data(info.atomic_idempotent);
     }
     multi_printer.add(std::move(tp_general));
 

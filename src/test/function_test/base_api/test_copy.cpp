@@ -17,11 +17,12 @@
  * under the License.
  */
 
-#include <limits.h>
-#include <string.h>
-#include <time.h>
 #include <atomic>
+#include <climits>
+#include <cstdint>
 #include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <functional>
 #include <map>
 #include <memory>
@@ -32,8 +33,8 @@
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
-#include "task/async_calls.h"
 #include "shell/command_helper.h"
+#include "task/async_calls.h"
 #include "test/function_test/utils/test_util.h"
 #include "test/function_test/utils/utils.h"
 #include "test_util/test_util.h"
