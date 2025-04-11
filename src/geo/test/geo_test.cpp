@@ -65,9 +65,8 @@ public:
         CHECK(dsn::replication::replica_helper::load_servers_from_config(
                   dsn::PEGASUS_CLUSTER_SECTION_NAME, "onebox", meta_list),
               "load_servers_from_config failed");
-        auto ddl_client = new dsn::replication::replication_ddl_client(meta_list);
-        dsn::error_code error = ddl_client->create_app("temp_geo", "pegasus", 4, 3, {}, false);
-        CHECK_EQ(dsn::ERR_OK, error);
+        dsn::replication::replication_ddl_client ddl_client(meta_list);
+        CHECK_EQ(dsn::ERR_OK, ddl_client.create_app("temp_geo", "pegasus", 4, 3, {}));
         _geo_client.reset(new pegasus::geo::geo_client("config.ini", "onebox", "temp", "temp_geo"));
     }
 

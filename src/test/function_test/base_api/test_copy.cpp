@@ -17,11 +17,12 @@
  * under the License.
  */
 
-#include <limits.h>
-#include <string.h>
-#include <time.h>
 #include <atomic>
+#include <climits>
+#include <cstdint>
 #include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <functional>
 #include <map>
 #include <memory>
@@ -32,8 +33,8 @@
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
-#include "task/async_calls.h"
 #include "shell/command_helper.h"
+#include "task/async_calls.h"
 #include "test/function_test/utils/test_util.h"
 #include "test/function_test/utils/utils.h"
 #include "test_util/test_util.h"
@@ -87,12 +88,11 @@ public:
 
     void create_table_and_get_client()
     {
+        ASSERT_EQ(dsn::ERR_OK,
+                  ddl_client_->create_app(source_app_name, "pegasus", default_partitions, 3, {}));
         ASSERT_EQ(
             dsn::ERR_OK,
-            ddl_client_->create_app(source_app_name, "pegasus", default_partitions, 3, {}, false));
-        ASSERT_EQ(dsn::ERR_OK,
-                  ddl_client_->create_app(
-                      destination_app_name, "pegasus", default_partitions, 3, {}, false));
+            ddl_client_->create_app(destination_app_name, "pegasus", default_partitions, 3, {}));
         source_client_ =
             pegasus_client_factory::get_client(kClusterName.c_str(), source_app_name.c_str());
         ASSERT_NE(nullptr, source_client_);
@@ -153,7 +153,7 @@ protected:
     const int max_batch_count = 500;
     const int timeout_ms = 5000;
     const int max_multi_set_concurrency = 20;
-    const int default_partitions = 4;
+    const int32_t default_partitions = 4;
 
     char buffer_[256];
     map<string, map<string, string>> expect_data_;

@@ -109,7 +109,7 @@ static command_executor commands[] = {
         "create",
         "create an app",
         "<app_name> [-p|--partition_count num] [-r|--replica_count num] [-f|--fail_if_exist] "
-        "[-e|--envs k1=v1,k2=v2...]",
+        "[-i|--atomic_idempotent] [-e|--envs k1=v1,k2=v2...]",
         create_app,
     },
     {
