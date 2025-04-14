@@ -263,7 +263,7 @@ aggregate_meta_server_stats(const node_desc &node,
         stat_var_map({{"virtual_mem_usage_mb", &stats.virt_mem_mb},
                       {"resident_mem_usage_mb", &stats.res_mem_mb}}));
 
-    auto command_result = process_parse_metrics_result(
+    const auto command_result = process_parse_metrics_result(
         calcs.aggregate_metrics(query_snapshot), node, "aggregate meta server stats");
     if (!command_result) {
         // Metrics failed to be aggregated.
@@ -281,7 +281,27 @@ struct replica_server_stats
     double virt_mem_mb{0.0};
     double res_mem_mb{0.0};
 
-    DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
+    double total_replicas{0.0};
+    double opening_replicas{0.0};
+    double closing_replicas{0.0};
+    double inactive_replicas{0.0};
+    double error_replicas{0.0};
+    double primary_replicas{0.0};
+    double secondary_replicas{0.0};
+    double learning_replicas{0.0};
+    double splitting_replicas{0.0};
+
+    DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb,
+     total_replicas,
+     opening_replicas,
+     closing_replicas,
+     inactive_replicas,
+     error_replicas,
+     primary_replicas,
+     secondary_replicas,
+     learning_replicas,
+     splitting_replicas
+            )
 };
 
 std::pair<bool, std::string>
@@ -290,13 +310,22 @@ aggregate_replica_server_stats(const node_desc &node,
                                const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
 {
     aggregate_stats_calcs calcs;
-    meta_server_stats stats;
+    replica_server_stats stats;
     calcs.create_assignments<total_aggregate_stats>(
         "server",
         stat_var_map({{"virtual_mem_usage_mb", &stats.virt_mem_mb},
-                      {"resident_mem_usage_mb", &stats.res_mem_mb}}));
+                      {"resident_mem_usage_mb", &stats.res_mem_mb},
+                      {"total_replicas", &stats.total_replicas},
+                      {"opening_replicas", &stats.opening_replicas},
+                      {"closing_replicas", &stats.closing_replicas},
+                      {"inactive_replicas", &stats.inactive_replicas},
+                      {"error_replicas", &stats.error_replicas},
+                      {"primary_replicas", &stats.primary_replicas},
+                      {"secondary_replicas", &stats.secondary_replicas},
+                      {"learning_replicas", &stats.learning_replicas},
+                      {"splitting_replicas", &stats.splitting_replicas}}));
 
-    auto command_result = process_parse_metrics_result(
+    const auto command_result = process_parse_metrics_result(
         calcs.aggregate_metrics(query_snapshot_start, query_snapshot_end),
         node,
         "aggregate replica server stats");
@@ -306,7 +335,7 @@ aggregate_replica_server_stats(const node_desc &node,
     }
 
     return std::make_pair(true,
-                          dsn::json::json_forwarder<meta_server_stats>::encode(stats).to_string());
+                          dsn::json::json_forwarder<replica_server_stats>::encode(stats).to_string());
 }
 
 std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
