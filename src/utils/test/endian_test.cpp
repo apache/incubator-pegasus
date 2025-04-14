@@ -21,9 +21,8 @@
 
 #include "gtest/gtest.h"
 #include "utils/endians.h"
-#include "utils/enum_helper.h"
 
-using namespace dsn;
+namespace dsn {
 
 TEST(endian, conversion)
 {
@@ -72,3 +71,4 @@ TEST(endian, write_and_read)
         }
     }
 }
+} // namespace dsn

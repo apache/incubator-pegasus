@@ -53,8 +53,6 @@ def run_tidy(sha="HEAD", is_rev_range=False):
             "--",
             path]
         subprocess.check_call(cmd, stdout=patch_file, cwd=ROOT)
-        # TODO(yingchun): some checks could be disabled before we fix them.
-        #  "-checks=-llvm-include-order,-modernize-concat-nested-namespaces,-cppcoreguidelines-macro-usage,-cppcoreguidelines-special-member-functions,-hicpp-special-member-functions,-bugprone-easily-swappable-parameters,-google-readability-avoid-underscore-in-googletest-name,-cppcoreguidelines-avoid-c-arrays,-hicpp-avoid-c-arrays,-modernize-avoid-c-arrays,-llvm-header-guard,-cppcoreguidelines-pro-bounds-pointer-arithmetic",
         cmdline = ["clang-tidy-diff",
                    "-clang-tidy-binary",
                    "clang-tidy",
@@ -86,6 +84,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-hicpp-avoid-c-arrays,"
                            "-hicpp-named-parameter,"
                            "-hicpp-no-array-decay,"
+                           "-llvm-header-guard,"
                            "-llvm-include-order,"
                            "-misc-definitions-in-headers,"
                            "-misc-non-private-member-variables-in-classes,"

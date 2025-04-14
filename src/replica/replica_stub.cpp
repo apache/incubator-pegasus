@@ -74,7 +74,6 @@
 #include "task/task.h"
 #include "task/task_engine.h"
 #include "task/task_worker.h"
-#include "utils/api_utilities.h"
 #include "utils/command_manager.h"
 #include "utils/env.h"
 #include "utils/errors.h"
@@ -544,7 +543,7 @@ void replica_stub::load_replica(dir_node *disk_node,
     //
     // TODO(wangdan): support decimal milliseconds or microseconds, since loading a small
     // replica tends to spend less than 1 milliseconds and show "0ms" in logging.
-    SCOPED_LOG_TIMING(INFO, "on loading replica dir {}:{}", disk_node->tag, replica_dir);
+    SCOPED_LOG_TIMING(info, "on loading replica dir {}:{}", disk_node->tag, replica_dir);
 
     LOG_INFO("loading replica: replica_dir={}:{}", disk_node->tag, replica_dir);
 
@@ -596,7 +595,7 @@ void replica_stub::load_replicas(replica_map_by_gpid &reps)
     //
     // TODO(wangdan): show both the size of output replicas and execution time on just one
     // logging line.
-    SCOPED_LOG_TIMING(INFO, "on loading replicas");
+    SCOPED_LOG_TIMING(info, "on loading replicas");
 
     const auto &disks = get_all_disk_dirs();
 

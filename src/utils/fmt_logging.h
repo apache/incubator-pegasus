@@ -19,28 +19,39 @@
 
 #pragma once
 
+#include <memory>
+#include <fmt/core.h>
 #include <fmt/ostream.h>
 #include <rocksdb/status.h>
 
 #include "utils/api_utilities.h"
+#include "spdlog/common.h"
+#include "spdlog/spdlog.h"
+#include "utils/logging.h"
 
-// The macros below no longer use the default snprintf method for log message formatting,
-// instead we use fmt::format.
-// TODO(wutao1): prevent construction of std::string for each log.
+extern std::shared_ptr<spdlog::logger> g_stderr_logger;
+extern std::shared_ptr<spdlog::logger> g_file_logger;
 
-// __FILENAME__ macro comes from the cmake, in which we calculate a filename without path.
 #define LOG(level, ...)                                                                            \
     do {                                                                                           \
-        if (level >= log_start_level)                                                              \
-            global_log(                                                                            \
-                __FILENAME__, __FUNCTION__, __LINE__, level, fmt::format(__VA_ARGS__).c_str());    \
+        const auto _lvl = (level);                                                                 \
+        g_stderr_logger->log(                                                                      \
+            spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, _lvl, __VA_ARGS__);           \
+        if (dsn_likely(!!g_file_logger)) {                                                         \
+            g_file_logger->log(                                                                    \
+                spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, _lvl, __VA_ARGS__);       \
+        }                                                                                          \
     } while (false)
 
-#define LOG_DEBUG(...) LOG(LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define LOG_INFO(...) LOG(LOG_LEVEL_INFO, __VA_ARGS__)
-#define LOG_WARNING(...) LOG(LOG_LEVEL_WARNING, __VA_ARGS__)
-#define LOG_ERROR(...) LOG(LOG_LEVEL_ERROR, __VA_ARGS__)
-#define LOG_FATAL(...) LOG(LOG_LEVEL_FATAL, __VA_ARGS__)
+#define LOG_DEBUG(...) LOG(spdlog::level::debug, __VA_ARGS__)
+#define LOG_INFO(...) LOG(spdlog::level::info, __VA_ARGS__)
+#define LOG_WARNING(...) LOG(spdlog::level::warn, __VA_ARGS__)
+#define LOG_ERROR(...) LOG(spdlog::level::err, __VA_ARGS__)
+#define LOG_FATAL(...)                                                                             \
+    do {                                                                                           \
+        LOG(spdlog::level::critical, __VA_ARGS__);                                                 \
+        dsn_coredump();                                                                            \
+    } while (false)
 
 #define LOG_WARNING_IF(x, ...)                                                                     \
     do {                                                                                           \
