@@ -2611,12 +2611,16 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
 void pegasus_server_impl::update_server_rocksdb_statistics()
 {
     if (_s_block_cache) {
-        METRIC_VAR_SET(rdb_block_cache_mem_usage_bytes, static_cast<int64_t>(_s_block_cache->GetUsage()));
+        METRIC_VAR_SET(rdb_block_cache_mem_usage_bytes,
+                       static_cast<int64_t>(_s_block_cache->GetUsage()));
     }
 
     if (_s_write_buffer_manager) {
-        METRIC_VAR_SET(rdb_wbm_total_mem_usage_bytes, static_cast<int64_t>(_s_write_buffer_manager->memory_usage()));
-        METRIC_VAR_SET(rdb_wbm_mutable_mem_usage_bytes, static_cast<int64_t>(_s_write_buffer_manager->mutable_memtable_memory_usage()));
+        METRIC_VAR_SET(rdb_wbm_total_mem_usage_bytes,
+                       static_cast<int64_t>(_s_write_buffer_manager->memory_usage()));
+        METRIC_VAR_SET(
+            rdb_wbm_mutable_mem_usage_bytes,
+            static_cast<int64_t>(_s_write_buffer_manager->mutable_memtable_memory_usage()));
     }
 
     if (_s_rate_limiter) {
