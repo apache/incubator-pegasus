@@ -242,7 +242,7 @@ bool replica::need_reject_non_idempotent(const task_spec *spec) const
         return false;
     }
 
-    if (_make_write_idempotent) {
+    if (_app_info.atomic_idempotent) {
         return false;
     }
 
@@ -251,7 +251,7 @@ bool replica::need_reject_non_idempotent(const task_spec *spec) const
 
 bool replica::need_make_idempotent(const task_spec *spec) const
 {
-    if (!_make_write_idempotent) {
+    if (!_app_info.atomic_idempotent) {
         return false;
     }
 
@@ -264,7 +264,7 @@ bool replica::need_make_idempotent(message_ex *request) const
         return false;
     }
 
-    if (!_make_write_idempotent) {
+    if (!_app_info.atomic_idempotent) {
         return false;
     }
 
