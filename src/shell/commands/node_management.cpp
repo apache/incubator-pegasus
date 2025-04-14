@@ -634,6 +634,8 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     if (resource_usage) {
         tp.add_column("memused_res_mb", tp_alignment::kRight);
         tp.add_column("block_cache_mb", tp_alignment::kRight);
+        tp.add_column("wbm_total_mb", tp_alignment::kRight);
+        tp.add_column("wbm_mutable_mb", tp_alignment::kRight);
         tp.add_column("mem_tbl_mb", tp_alignment::kRight);
         tp.add_column("mem_idx_mb", tp_alignment::kRight);
         tp.add_column("disk_avl_total_ratio", tp_alignment::kRight);
@@ -666,6 +668,8 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         if (resource_usage) {
             tp.append_data(kv.second.memused_res_mb);
             tp.append_data(kv.second.block_cache_bytes / (1 << 20U));
+            tp.append_data(kv.second.wbm_total_bytes / (1 << 20U));
+            tp.append_data(kv.second.wbm_mutable_bytes / (1 << 20U));
             tp.append_data(kv.second.mem_tbl_bytes / (1 << 20U));
             tp.append_data(kv.second.mem_idx_bytes / (1 << 20U));
             tp.append_data(kv.second.disk_available_total_ratio);

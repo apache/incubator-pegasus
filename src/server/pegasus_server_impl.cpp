@@ -2624,8 +2624,8 @@ void pegasus_server_impl::update_server_rocksdb_statistics()
     }
 
     if (_s_rate_limiter) {
-        const uint64_t current_total_through = _s_rate_limiter->GetTotalBytesThrough();
-        const uint64_t through_bytes_per_sec =
+        const int64_t current_total_through = _s_rate_limiter->GetTotalBytesThrough();
+        const int64_t through_bytes_per_sec =
             (current_total_through - _rocksdb_limiter_last_total_through) /
             kServerStatUpdateTimeSec.count();
         METRIC_VAR_SET(rdb_write_rate_limiter_through_bytes_per_sec, through_bytes_per_sec);
