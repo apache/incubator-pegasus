@@ -291,17 +291,17 @@ struct replica_server_stats
     double learning_replicas{0.0};
     double splitting_replicas{0.0};
 
-    DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb,
-     total_replicas,
-     opening_replicas,
-     closing_replicas,
-     inactive_replicas,
-     error_replicas,
-     primary_replicas,
-     secondary_replicas,
-     learning_replicas,
-     splitting_replicas
-            )
+    DEFINE_JSON_SERIALIZATION(virt_mem_mb,
+                              res_mem_mb,
+                              total_replicas,
+                              opening_replicas,
+                              closing_replicas,
+                              inactive_replicas,
+                              error_replicas,
+                              primary_replicas,
+                              secondary_replicas,
+                              learning_replicas,
+                              splitting_replicas)
 };
 
 std::pair<bool, std::string>
@@ -334,8 +334,8 @@ aggregate_replica_server_stats(const node_desc &node,
         return std::make_pair(false, command_result.description());
     }
 
-    return std::make_pair(true,
-                          dsn::json::json_forwarder<replica_server_stats>::encode(stats).to_string());
+    return std::make_pair(
+        true, dsn::json::json_forwarder<replica_server_stats>::encode(stats).to_string());
 }
 
 std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
