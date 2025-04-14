@@ -37,7 +37,7 @@ class host_port;
 
 struct shell_context;
 
-// Check if there is exact n positional arguments except the command, where n >= 0.
+// Check if there are exact n positional arguments except the command, where n >= 0.
 inline dsn::error_s exact_n_pos_arg(const argh::parser &cmd, size_t n)
 {
     // n + 1 means the exact n positional arguments plus the command.
