@@ -56,6 +56,8 @@ struct list_nodes_helper
     int secondary_count;
     int64_t memused_res_mb;
     int64_t block_cache_bytes;
+    int64_t wbm_total_bytes;
+    int64_t wbm_mutable_bytes;
     int64_t mem_tbl_bytes;
     int64_t mem_idx_bytes;
     int64_t disk_available_total_ratio;
@@ -79,6 +81,8 @@ struct list_nodes_helper
           secondary_count(0),
           memused_res_mb(0),
           block_cache_bytes(0),
+          wbm_total_bytes(0),
+          wbm_mutable_bytes(0),
           mem_tbl_bytes(0),
           mem_idx_bytes(0),
           disk_available_total_ratio(0),

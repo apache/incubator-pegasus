@@ -564,6 +564,8 @@ private:
 
     // Server-level metrics for rocksdb.
     METRIC_VAR_DECLARE_gauge_int64(rdb_block_cache_mem_usage_bytes, static);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_wbm_total_mem_usage_bytes, static);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_wbm_mutable_mem_usage_bytes, static);
     METRIC_VAR_DECLARE_gauge_int64(rdb_write_rate_limiter_through_bytes_per_sec, static);
 
     // Replica-level metrics for rocksdb.

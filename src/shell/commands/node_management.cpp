@@ -110,6 +110,8 @@ dsn::metric_filters resource_usage_filters()
     filters.entity_types = {"server", "replica", "disk"};
     filters.entity_metrics = {"resident_mem_usage_mb",
                               "rdb_block_cache_mem_usage_bytes",
+                              "rdb_wbm_total_mem_usage_bytes",
+                              "rdb_wbm_mutable_mem_usage_bytes",
                               "rdb_memtable_mem_usage_bytes",
                               "rdb_index_and_filter_blocks_mem_usage_bytes",
                               "disk_capacity_total_mb",
@@ -131,6 +133,10 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
                     stat.memused_res_mb += m.value;
                 } else if (m.name == "rdb_block_cache_mem_usage_bytes") {
                     stat.block_cache_bytes += m.value;
+                } else if (m.name == "rdb_wbm_total_mem_usage_bytes") {
+                    stat.wbm_total_bytes += m.value;
+                } else if (m.name == "rdb_wbm_mutable_mem_usage_bytes") {
+                    stat.wbm_mutable_bytes += m.value;
                 }
             }
         } else if (entity.type == "replica") {
