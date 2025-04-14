@@ -184,8 +184,8 @@ public:
     //
     //    requests from clients
     //
-    void on_client_write(message_ex *request, bool ignore_throttling = false);
-    void on_client_read(message_ex *request, bool ignore_throttling = false);
+    void on_client_write(message_ex *request, bool ignore_throttling);
+    void on_client_read(message_ex *request, bool ignore_throttling);
 
     //
     //    messages and tools from/for meta server
@@ -360,34 +360,34 @@ private:
     void response_client_write(dsn::message_ex *request, error_code error);
     void execute_mutation(mutation_ptr &mu);
 
+    // Create a new mutation with specified decree.
+    //
+    // Parameters:
+    // - d: invalid_decree, or the real decree assigned to this mutation.
+    //
+    // Return the newly created mutation.
+    mutation_ptr new_mutation(decree d);
+
+    // Create a new mutation with specified decree and a flag marking whether this is a
+    // blocking candidate (for a detailed explanation of blocking candidate, refer to the
+    // comments for the field mutation::is_blocking_candidate).
+    //
+    // Parameters:
+    // - d: invalid_decree, or the real decree assigned to this mutation.
+    // - is_blocking_candidate: true means creating a blocking candidate.
+    //
+    // Return the newly created mutation.
+    mutation_ptr new_mutation(decree d, bool is_blocking_candidate);
+
     // Create a new mutation with specified decree and the original atomic write request,
     // which is used to build the response to the client.
     //
     // Parameters:
-    // - decree: invalid_decree, or the real decree assigned to this mutation.
+    // - d: invalid_decree, or the real decree assigned to this mutation.
     // - original_request: the original request of the atomic write.
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree, dsn::message_ex *original_request);
-
-    // Create a new mutation with specified decree and a flag marking whether this is a
-    // blocking mutation (for a detailed explanation of blocking mutations, refer to the
-    // comments for the field `is_blocking` of class `mutation`).
-    //
-    // Parameters:
-    // - decree: invalid_decree, or the real decree assigned to this mutation.
-    // - is_blocking: true means creating a blocking mutation.
-    //
-    // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree, bool is_blocking);
-
-    // Create a new mutation with specified decree.
-    //
-    // Parameters:
-    // - decree: invalid_decree, or the real decree assigned to this mutation.
-    //
-    // Return the newly created mutation.
-    mutation_ptr new_mutation(decree decree);
+    mutation_ptr new_mutation(decree d, dsn::message_ex *original_request);
 
     // initialization
     replica(replica_stub *stub,
@@ -412,7 +412,7 @@ private:
     // behaviour is undefined).
     //
     // Return true if deciding to reject this client request.
-    bool need_reject_non_idempotent(task_spec *spec) const;
+    bool need_reject_non_idempotent(const task_spec *spec) const;
 
     // Given the specification for a client request, decide whether to make it idempotent.
     //
@@ -421,7 +421,7 @@ private:
     // behaviour is undefined).
     //
     // Return true if deciding to make this client request idempotent.
-    bool need_make_idempotent(task_spec *spec) const;
+    bool need_make_idempotent(const task_spec *spec) const;
 
     // Given a client request, decide whether to make it idempotent.
     //
@@ -539,12 +539,17 @@ private:
     void update_configuration_on_meta_server(config_type::type type,
                                              const host_port &node,
                                              partition_configuration &new_pc);
+
+    // Only called by primary replicas.
     void
     on_update_configuration_on_meta_server_reply(error_code err,
                                                  dsn::message_ex *request,
                                                  dsn::message_ex *response,
                                                  std::shared_ptr<configuration_update_request> req);
+
+    // Only called by primary replicas.
     void replay_prepare_list();
+
     bool is_same_ballot_status_change_allowed(partition_status::type olds,
                                               partition_status::type news);
 

@@ -156,7 +156,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    auto *spec = task_spec::get(request->rpc_code());
+    const auto *spec = task_spec::get(request->rpc_code());
     if (dsn_unlikely(spec == nullptr)) {
         LOG_ERROR("recv message with unhandled RPC code {} from {}, trace_id = {}",
                   request->rpc_code(),
@@ -236,7 +236,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 }
 
-bool replica::need_reject_non_idempotent(task_spec *spec) const
+bool replica::need_reject_non_idempotent(const task_spec *spec) const
 {
     if (!is_duplication_master()) {
         return false;
@@ -249,7 +249,7 @@ bool replica::need_reject_non_idempotent(task_spec *spec) const
     return !spec->rpc_request_is_write_idempotent;
 }
 
-bool replica::need_make_idempotent(task_spec *spec) const
+bool replica::need_make_idempotent(const task_spec *spec) const
 {
     if (!_make_write_idempotent) {
         return false;
@@ -268,7 +268,7 @@ bool replica::need_make_idempotent(message_ex *request) const
         return false;
     }
 
-    auto *spec = task_spec::get(request->rpc_code());
+    const auto *spec = task_spec::get(request->rpc_code());
     CHECK_NOTNULL(spec, "RPC code {} not found", request->rpc_code());
 
     return !spec->rpc_request_is_write_idempotent;
@@ -395,6 +395,9 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         reply_with_error(mu, err);
         return;
     }
+
+    // Tell the assigned decree that has entered the 2PC phase to the mutation queue.
+    _primary_states.write_queue.enter_2pc(mu);
 
     // remote prepare
     mu->set_prepare_ts();

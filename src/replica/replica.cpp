@@ -567,27 +567,27 @@ void replica::execute_mutation(mutation_ptr &mu)
     }
 }
 
-mutation_ptr replica::new_mutation(decree decree, dsn::message_ex *original_request)
-{
-    auto mu = new_mutation(decree);
-    mu->original_request = original_request;
-    return mu;
-}
-
-mutation_ptr replica::new_mutation(decree decree, bool is_blocking)
-{
-    auto mu = new_mutation(decree);
-    mu->is_blocking = is_blocking;
-    return mu;
-}
-
-mutation_ptr replica::new_mutation(decree decree)
+mutation_ptr replica::new_mutation(decree d)
 {
     mutation_ptr mu(new mutation());
     mu->data.header.pid = get_gpid();
     mu->data.header.ballot = get_ballot();
-    mu->data.header.decree = decree;
+    mu->data.header.decree = d;
     mu->data.header.log_offset = invalid_offset;
+    return mu;
+}
+
+mutation_ptr replica::new_mutation(decree d, bool is_blocking_candidate)
+{
+    auto mu = new_mutation(d);
+    mu->is_blocking_candidate = is_blocking_candidate;
+    return mu;
+}
+
+mutation_ptr replica::new_mutation(decree d, dsn::message_ex *original_request)
+{
+    auto mu = new_mutation(d);
+    mu->original_request = original_request;
     return mu;
 }
 
