@@ -88,6 +88,7 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-hicpp-avoid-c-arrays,"
                            "-hicpp-named-parameter,"
                            "-hicpp-no-array-decay,"
+                           "-llvm-header-guard,"
                            "-llvm-include-order,"
                            "-misc-definitions-in-headers,"
                            "-misc-non-private-member-variables-in-classes,"
