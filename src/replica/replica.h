@@ -757,10 +757,6 @@ private:
     app_info _app_info;
     std::map<std::string, std::string> _extra_envs;
 
-    // TODO(wangdan): temporarily used to mark whether we make all atomic writes idempotent
-    // for this replica. Would make this configurable soon.
-    bool _make_write_idempotent;
-
     // uniq timestamp generator for this replica.
     //
     // we use it to generate an increasing timestamp for current replica

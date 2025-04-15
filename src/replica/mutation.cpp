@@ -430,7 +430,7 @@ void mutation_queue::enter_2pc(const mutation_ptr &mu)
             continue;
         }
 
-        // If the lock for this hash key is newly created, just push it into the head of the.
+        // If the lock for this hash key is newly created, just push it into the head of the
         // LRU list.
         _lru_rows.emplace_front(request->header->client.partition_hash, d);
         result.first->second = _lru_rows.begin();
