@@ -130,21 +130,21 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
         if (entity.type == "server") {
             for (const auto &m : entity.metrics) {
                 if (m.name == "resident_mem_usage_mb") {
-                    stat.memused_res_mb += m.value;
+                    stat.memused_res_mb += static_cast<int64_t>(m.value);
                 } else if (m.name == "rdb_block_cache_mem_usage_bytes") {
-                    stat.block_cache_bytes += m.value;
+                    stat.block_cache_bytes += static_cast<int64_t>(m.value);
                 } else if (m.name == "rdb_wbm_total_mem_usage_bytes") {
-                    stat.wbm_total_bytes += m.value;
+                    stat.wbm_total_bytes += static_cast<int64_t>(m.value);
                 } else if (m.name == "rdb_wbm_mutable_mem_usage_bytes") {
-                    stat.wbm_mutable_bytes += m.value;
+                    stat.wbm_mutable_bytes += static_cast<int64_t>(m.value);
                 }
             }
         } else if (entity.type == "replica") {
             for (const auto &m : entity.metrics) {
                 if (m.name == "rdb_memtable_mem_usage_bytes") {
-                    stat.mem_tbl_bytes += m.value;
+                    stat.mem_tbl_bytes += static_cast<int64_t>(m.value);
                 } else if (m.name == "rdb_index_and_filter_blocks_mem_usage_bytes") {
-                    stat.mem_idx_bytes += m.value;
+                    stat.mem_idx_bytes += static_cast<int64_t>(m.value);
                 }
             }
         } else if (entity.type == "disk") {
@@ -152,11 +152,11 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
             int64_t available_mb = 0;
             for (const auto &m : entity.metrics) {
                 if (m.name == "disk_capacity_total_mb") {
-                    total_capacity_mb += m.value;
-                    capacity_mb = m.value;
+                    total_capacity_mb += static_cast<int64_t>(m.value);
+                    capacity_mb = static_cast<int64_t>(m.value);
                 } else if (m.name == "disk_capacity_avail_mb") {
-                    total_available_mb += m.value;
-                    available_mb = m.value;
+                    total_available_mb += static_cast<int64_t>(m.value);
+                    available_mb = static_cast<int64_t>(m.value);
                 }
             }
 
@@ -667,11 +667,11 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         }
         if (resource_usage) {
             tp.append_data(kv.second.memused_res_mb);
-            tp.append_data(kv.second.block_cache_bytes / (1 << 20U));
-            tp.append_data(kv.second.wbm_total_bytes / (1 << 20U));
-            tp.append_data(kv.second.wbm_mutable_bytes / (1 << 20U));
-            tp.append_data(kv.second.mem_tbl_bytes / (1 << 20U));
-            tp.append_data(kv.second.mem_idx_bytes / (1 << 20U));
+            tp.append_data(kv.second.block_cache_bytes / (1U << 20));
+            tp.append_data(kv.second.wbm_total_bytes / (1U << 20));
+            tp.append_data(kv.second.wbm_mutable_bytes / (1U << 20));
+            tp.append_data(kv.second.mem_tbl_bytes / (1U << 20));
+            tp.append_data(kv.second.mem_idx_bytes / (1U << 20));
             tp.append_data(kv.second.disk_available_total_ratio);
             tp.append_data(kv.second.disk_available_min_ratio);
         }

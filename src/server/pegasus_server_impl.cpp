@@ -31,6 +31,7 @@
 #include <rocksdb/status.h>
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/utilities/options_util.h>
+#include <rocksdb/write_buffer_manager.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -109,10 +110,6 @@ DSN_DECLARE_uint32(checkpoint_reserve_min_count);
 DSN_DECLARE_uint32(checkpoint_reserve_time_seconds);
 DSN_DECLARE_uint64(rocksdb_iteration_threshold_time_ms);
 DSN_DECLARE_uint64(rocksdb_slow_query_threshold_ns);
-
-namespace rocksdb {
-class WriteBufferManager;
-} // namespace rocksdb
 
 using namespace dsn::literals::chrono_literals;
 
