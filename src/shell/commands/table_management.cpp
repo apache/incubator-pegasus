@@ -54,7 +54,6 @@
 #include "utils/output_utils.h"
 #include "utils/ports.h"
 #include "utils/string_conv.h"
-#include "utils/strings.h"
 #include "utils_types.h"
 
 DSN_DEFINE_uint32(shell, tables_sample_interval_ms, 1000, "The interval between sampling metrics.");
@@ -68,8 +67,8 @@ double convert_to_ratio(double hit, double total)
 bool ls_apps(command_executor *e, shell_context *sc, arguments args)
 {
     // ls [-a|--all] [-d|--detailed] [-j|--json] [-o|--output file_name]
-    // [-s|--status all|available|creating|dropping|dropped] "
-    // [-p|--app_name_pattern str] [-m|--match_type all|exact|anywhere|prefix|postfix]"
+    // [-s|--status all|available|creating|dropping|dropped]
+    // [-p|--app_name_pattern str] [-m|--match_type all|exact|anywhere|prefix|postfix]
 
     // All valid parameters and flags are given as follows.
     static const std::set<std::string> params = {
@@ -79,7 +78,7 @@ bool ls_apps(command_executor *e, shell_context *sc, arguments args)
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
     // Check if input parameters and flags are valid.
-    const auto &check = validate_cmd(cmd, params, flags);
+    const auto &check = validate_cmd(cmd, params, flags, 0);
     if (!check) {
         SHELL_PRINTLN_ERROR("{}", check.description());
         return false;
@@ -668,62 +667,58 @@ bool app_stat(command_executor *, shell_context *sc, arguments args)
 
 bool create_app(command_executor *e, shell_context *sc, arguments args)
 {
-    static struct option long_options[] = {{"partition_count", required_argument, 0, 'p'},
-                                           {"replica_count", required_argument, 0, 'r'},
-                                           {"fail_if_exist", no_argument, 0, 'f'},
-                                           {"envs", required_argument, 0, 'e'},
-                                           {0, 0, 0, 0}};
+    // create <app_name> [-p|--partition_count num] [-r|--replica_count num] [-f|--fail_if_exist]
+    // [-i|--atomic_idempotent] [-e|--envs k1=v1,k2=v2...]
 
-    if (args.argc < 2)
+    // All valid parameters and flags are given as follows.
+    static const std::set<std::string> params = {
+        "p", "partition_count", "r", "replica_count", "e", "envs"};
+    static const std::set<std::string> flags = {"f", "fail_if_exist", "i", "atomic_idempotent"};
+
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+
+    // Check if the input parameters and flags are valid, and there are exact one positional
+    // argument (i.e. app_name).
+    const auto &check = validate_cmd(cmd, params, flags, 1);
+    if (!check) {
+        SHELL_PRINTLN_ERROR("{}", check.description());
         return false;
-
-    std::string app_name = args.argv[1];
-    bool success_if_exist = true;
-
-    int pc = 4, rc = 3;
-    std::map<std::string, std::string> envs;
-    optind = 0;
-    while (true) {
-        int option_index = 0;
-        int c;
-        c = getopt_long(args.argc, args.argv, "p:r:fe:", long_options, &option_index);
-        if (c == -1)
-            break;
-        switch (c) {
-        case 'p':
-            if (!dsn::buf2int32(optarg, pc)) {
-                fprintf(stderr, "parse %s as partition_count failed\n", optarg);
-                return false;
-            }
-            break;
-        case 'r':
-            if (!dsn::buf2int32(optarg, rc)) {
-                fprintf(stderr, "parse %s as replica_count failed\n", optarg);
-                return false;
-            }
-            break;
-        case 'f':
-            success_if_exist = false;
-            break;
-        case 'e':
-            if (!::dsn::utils::parse_kv_map(optarg, envs, ',', '=')) {
-                fprintf(stderr, "invalid envs: %s\n", optarg);
-                return false;
-            }
-            break;
-        default:
-            return false;
-        }
     }
 
-    ::dsn::error_code err =
-        sc->ddl_client->create_app(app_name, "pegasus", pc, rc, envs, false, success_if_exist);
-    if (err == ::dsn::ERR_OK)
+    // Get the only positional argument as app_name.
+    std::string app_name = cmd(1).str();
+
+    int32_t partition_count = 0;
+    PARSE_OPT_INT(partition_count, 4, {"-p", "--partition_count"});
+
+    int32_t replica_count = 0;
+    PARSE_OPT_INT(replica_count, 3, {"-r", "--replica_count"});
+
+    // To get `success_if_exist`, just apply logical NOT to the flag `fail_if_exist`.
+    const bool success_if_exist = !cmd[{"-f", "--fail_if_exist"}];
+
+    const bool atomic_idempotent = cmd[{"-i", "--atomic_idempotent"}];
+
+    // Parse each env name/value pair with specified delimiters.
+    std::map<std::string, std::string> envs;
+    PARSE_OPT_KV_MAP(envs, ',', '=', {"-e", "--envs"});
+
+    dsn::error_code err = sc->ddl_client->create_app(app_name,
+                                                     "pegasus",
+                                                     partition_count,
+                                                     replica_count,
+                                                     envs,
+                                                     false,
+                                                     success_if_exist,
+                                                     atomic_idempotent);
+    if (err == ::dsn::ERR_OK) {
         std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name) << "\" succeed"
                   << std::endl;
-    else
+    } else {
         std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name)
                   << "\" failed, error = " << err << std::endl;
+    }
+
     return true;
 }
 
