@@ -1093,7 +1093,7 @@ bool get_atomic_idempotent(command_executor *e, shell_context *sc, arguments arg
 
     const auto &result = sc->ddl_client->get_atomic_idempotent(app_name);
     auto status = result.get_error();
-    if (status.is_ok()) {
+    if (status) {
         status = FMT_ERR(result.get_value().err, result.get_value().hint_message);
     }
 
@@ -1132,7 +1132,7 @@ bool set_atomic_idempotent(command_executor *e,
 
     const auto &result = sc->ddl_client->set_atomic_idempotent(app_name, atomic_idempotent);
     auto status = result.get_error();
-    if (status.is_ok()) {
+    if (status) {
         status = FMT_ERR(result.get_value().err, result.get_value().hint_message);
     }
 
