@@ -32,12 +32,12 @@
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/utilities/options_util.h>
 #include <rocksdb/write_buffer_manager.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
 #include <unistd.h> // IWYU pragma: keep
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
 #include <functional>
 #include <limits>
 #include <list>
@@ -111,10 +111,7 @@ DSN_DECLARE_uint32(checkpoint_reserve_time_seconds);
 DSN_DECLARE_uint64(rocksdb_iteration_threshold_time_ms);
 DSN_DECLARE_uint64(rocksdb_slow_query_threshold_ns);
 
-using namespace dsn::literals::chrono_literals;
-
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
@@ -3572,5 +3569,4 @@ dsn::replication::manual_compaction_status::type pegasus_server_impl::query_comp
     return _manual_compact_svc.query_compact_status();
 }
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

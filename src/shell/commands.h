@@ -75,7 +75,10 @@ struct list_nodes_helper
     double read_cu{0.0};
     double write_cu{0.0};
 
-    list_nodes_helper(const std::string &n, const std::string &s) : node_name(n), node_status(s) {}
+    list_nodes_helper(std::string &&name, std::string &&status)
+        : node_name(std::move(name)), node_status(std::move(status))
+    {
+    }
 };
 
 // == miscellaneous (see 'commands/misc.cpp') == //

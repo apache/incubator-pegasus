@@ -50,6 +50,7 @@
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "utils/blob.h"
+#include "utils/bytes.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
@@ -491,12 +492,14 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
     for (auto &kv : status_by_hp) {
-        if (kv.second == dsn::replication::node_status::NS_ALIVE)
-            alive_node_count++;
-        std::string status_str = dsn::enum_to_string(kv.second);
-        status_str = status_str.substr(status_str.find("NS_") + 3);
-        const auto node_name = replication_ddl_client::node_name(kv.first, resolve_ip);
-        tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
+        if (kv.second == dsn::replication::node_status::NS_ALIVE) {
+            ++alive_node_count;
+        }
+
+        const std::string status_str(dsn::enum_to_string(kv.second));
+        tmp_map.emplace(kv.first,
+                        list_nodes_helper(replication_ddl_client::node_name(kv.first, resolve_ip),
+                                          status_str.substr(status_str.find("NS_") + 3)));
     }
 
     if (detailed) {
@@ -667,11 +670,11 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         }
         if (resource_usage) {
             tp.append_data(kv.second.memused_res_mb);
-            tp.append_data(kv.second.block_cache_bytes / (1U << 20));
-            tp.append_data(kv.second.wbm_total_bytes / (1U << 20));
-            tp.append_data(kv.second.wbm_mutable_bytes / (1U << 20));
-            tp.append_data(kv.second.mem_tbl_bytes / (1U << 20));
-            tp.append_data(kv.second.mem_idx_bytes / (1U << 20));
+            tp.append_data(dsn::bytes::to_mb(kv.second.block_cache_bytes));
+            tp.append_data(dsn::bytes::to_mb(kv.second.wbm_total_bytes));
+            tp.append_data(dsn::bytes::to_mb(kv.second.wbm_mutable_bytes));
+            tp.append_data(dsn::bytes::to_mb(kv.second.mem_tbl_bytes));
+            tp.append_data(dsn::bytes::to_mb(kv.second.mem_idx_bytes));
             tp.append_data(kv.second.disk_available_total_ratio);
             tp.append_data(kv.second.disk_available_min_ratio);
         }
