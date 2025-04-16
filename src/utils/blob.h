@@ -27,6 +27,7 @@
 #pragma once
 
 #include <fmt/core.h>
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <string_view>
@@ -37,6 +38,7 @@
 
 #include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"
+#include "utils/strings.h"
 #include "utils.h"
 
 namespace dsn {
@@ -223,6 +225,18 @@ public:
     }
 
     [[nodiscard]] std::string_view to_string_view() const { return {_data, _length}; }
+
+    int compare(const blob &rhs) const noexcept {
+        return to_string_view().compare(rhs.to_string_view());
+    }
+
+    int compare(size_t start, size_t count, const blob &rhs) const {
+        return to_string_view().compare(start, count, rhs.to_string_view());
+    }
+
+    bool equals(size_t start, size_t count, const blob &rhs) const {
+        return compare(start, count, rhs) == 0;
+    }
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;

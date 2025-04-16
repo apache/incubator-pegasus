@@ -71,7 +71,8 @@ enum mutate_operation
 enum update_type
 {
     UT_PUT,
-    UT_INCR
+    UT_INCR,
+    UT_CHECK_AND_SET
 }
 
 // The single-put request, just writes a key/value pair into storage, which is certainly
@@ -86,8 +87,16 @@ struct update_request
     // single-put request from the one translated from a non-idempotent atomic write request:
     // - a general single-put request, if `type` is UT_PUT or not set by default as it's
     // optional, or
-    // - a put request translated from an incr request, if `type` is UT_INCR.
+    // - a put request translated from an incr request, if `type` is UT_INCR, or
+    // - a put request translated from a check_and_set request, if `type` is UT_CHECK_AND_SET.
     4:optional update_type type;
+
+    // Following 3 fields are only available while type = UT_CHECK_AND_SET, used to build
+    // check_and_set_response to reply to the client, once this put request is translated
+    // from the non-idempotent check_and_set_request.
+    5:optional bool     check_value_returned;
+    6:optional bool     check_value_exist; // Used only if check_value_returned is true.
+    7:optional dsn.blob check_value; // Used only if check_value_returned and check_value_exist is true.
 }
 
 struct update_response
