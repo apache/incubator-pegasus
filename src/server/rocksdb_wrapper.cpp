@@ -177,12 +177,12 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
 }
 
 int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
-        const dsn::blob &raw_key,
-        const dsn::blob &value,
-        int32_t expire_sec)
+                                         const dsn::blob &raw_key,
+                                         const dsn::blob &value,
+                                         int32_t expire_sec)
 {
-    return write_batch_put_ctx(ctx, raw_key.to_string_view(), value.to_string_view(),
-            static_cast<uint32_t>(expire_sec));
+    return write_batch_put_ctx(
+        ctx, raw_key.to_string_view(), value.to_string_view(), static_cast<uint32_t>(expire_sec));
 }
 
 int rocksdb_wrapper::write(int64_t decree)

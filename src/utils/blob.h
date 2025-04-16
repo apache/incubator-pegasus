@@ -226,15 +226,18 @@ public:
 
     [[nodiscard]] std::string_view to_string_view() const { return {_data, _length}; }
 
-    int compare(const blob &rhs) const noexcept {
+    int compare(const blob &rhs) const noexcept
+    {
         return to_string_view().compare(rhs.to_string_view());
     }
 
-    int compare(size_t start, size_t count, const blob &rhs) const {
+    int compare(size_t start, size_t count, const blob &rhs) const
+    {
         return to_string_view().compare(start, count, rhs.to_string_view());
     }
 
-    bool equals(size_t start, size_t count, const blob &rhs) const {
+    bool equals(size_t start, size_t count, const blob &rhs) const
+    {
         return compare(start, count, rhs) == 0;
     }
 
