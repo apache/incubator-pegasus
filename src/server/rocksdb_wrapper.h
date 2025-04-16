@@ -34,8 +34,8 @@
 
 namespace dsn {
 class blob;
-}  // namespace dsn
-    
+} // namespace dsn
+
 namespace rocksdb {
 class ColumnFamilyHandle;
 class DB;
