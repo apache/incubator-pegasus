@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <fmt/core.h>
 #include <algorithm>
 #include <cstring>
@@ -226,19 +227,24 @@ public:
 
     [[nodiscard]] std::string_view to_string_view() const { return {_data, _length}; }
 
-    int compare(const blob &rhs) const noexcept
+    [[nodiscard]] int compare(const blob &rhs) const noexcept
     {
         return to_string_view().compare(rhs.to_string_view());
     }
 
-    int compare(size_t start, size_t count, const blob &rhs) const
+    [[nodiscard]] bool contains(const blob &rhs) const
     {
-        return to_string_view().compare(start, count, rhs.to_string_view());
+        return boost::algorithm::contains(to_string_view(), rhs.to_string_view());
     }
 
-    bool equals(size_t start, size_t count, const blob &rhs) const
+    [[nodiscard]] bool starts_with(const blob &rhs) const
     {
-        return compare(start, count, rhs) == 0;
+        return boost::algorithm::starts_with(to_string_view(), rhs.to_string_view());
+    }
+
+    [[nodiscard]] bool ends_with(const blob &rhs) const
+    {
+        return boost::algorithm::ends_with(to_string_view(), rhs.to_string_view());
     }
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);

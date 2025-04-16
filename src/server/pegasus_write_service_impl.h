@@ -119,13 +119,13 @@ public:
         }
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
-        for (auto &kv : update.kvs) {
-            resp.error = _rocksdb_wrapper->write_batch_put_ctx(
-                ctx,
-                composite_raw_key(update.hash_key.to_string_view(), kv.key.to_string_view()),
-                kv.value,
-                update.expire_ts_seconds);
-            if (resp.error) {
+        for (const auto &kv : update.kvs) {
+            resp.error =
+                _rocksdb_wrapper->write_batch_put_ctx(ctx,
+                                                      composite_raw_key(update.hash_key, kv.key),
+                                                      kv.value,
+                                                      update.expire_ts_seconds);
+            if (resp.error != rocksdb::Status::kOk) {
                 return resp.error;
             }
         }
@@ -155,9 +155,7 @@ public:
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         for (auto &sort_key : update.sort_keys) {
             resp.error = _rocksdb_wrapper->write_batch_delete(
-                decree,
-                composite_raw_key(update.hash_key.to_string_view(), sort_key.to_string_view())
-                    .to_string_view());
+                decree, composite_raw_key(update.hash_key, sort_key).to_string_view());
             if (resp.error) {
                 return resp.error;
             }
@@ -744,7 +742,9 @@ private:
         _rocksdb_wrapper->clear_up_write_batch();
     }
 
-    static dsn::blob composite_raw_key(std::string_view hash_key, std::string_view sort_key)
+    // TKey may be std::string_view, std::string or dsn::blob.
+    template <typename TKey>
+    static dsn::blob composite_raw_key(const TKey &hash_key, const TKey &sort_key)
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, sort_key);
@@ -949,21 +949,18 @@ private:
             }
 
             if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
-                return check_value.to_string_view().find(check_operand.to_string_view()) !=
-                       std::string_view::npos;
+                return check_value.contains(check_operand);
             }
 
             if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_PREFIX) {
-                return check_value.equals(0, check_operand.length(), check_operand);
+                return check_value.starts_with(check_operand);
             }
 
             CHECK(check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_POSTFIX,
                   "check_type({}) should be CT_VALUE_MATCH_POSTFIX",
                   cas_check_type_to_string(check_type));
 
-            return check_value.equals(check_value.length() - check_operand.length(),
-                                      check_operand.length(),
-                                      check_operand);
+            return check_value.ends_with(check_operand);
         }
 
         case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS:

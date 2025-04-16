@@ -22,16 +22,20 @@
 #include <gtest/gtest_prod.h>
 #include <rocksdb/options.h>
 #include <rocksdb/write_batch.h>
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "pegasus_value_schema.h"
 #include "replica/replica_base.h"
-#include <string_view>
 #include "utils/metrics.h"
 
+namespace dsn {
+class blob;
+}  // namespace dsn
+    
 namespace rocksdb {
 class ColumnFamilyHandle;
 class DB;
