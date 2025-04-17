@@ -614,6 +614,25 @@ static command_executor commands[] = {
         set_max_replica_count,
     },
     {
+        "get_atomic_idempotent",
+        "check whether all atomic writes to an app will be made idempotent: true means "
+        "made idempotent, while false means kept non-idempotent",
+        "<app_name> [-j|--json]",
+        get_atomic_idempotent,
+    },
+    {
+        "enable_atomic_idempotent",
+        "enable idempotence for all atomic writes to an app",
+        "<app_name>",
+        enable_atomic_idempotent,
+    },
+    {
+        "disable_atomic_idempotent",
+        "disable idempotence for all atomic writes to an app",
+        "<app_name>",
+        disable_atomic_idempotent,
+    },
+    {
         "local_partition_split",
         "Split the local partitions offline. It's helpful to split the table which has large "
         "amount of data but with a few partitions into more partitions to improve the throughput "

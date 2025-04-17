@@ -143,6 +143,12 @@ bool get_max_replica_count(command_executor *e, shell_context *sc, arguments arg
 
 bool set_max_replica_count(command_executor *e, shell_context *sc, arguments args);
 
+bool get_atomic_idempotent(command_executor *e, shell_context *sc, arguments args);
+
+bool enable_atomic_idempotent(command_executor *e, shell_context *sc, arguments args);
+
+bool disable_atomic_idempotent(command_executor *e, shell_context *sc, arguments args);
+
 // == data operations (see 'commands/data_operations.cpp') == //
 
 bool data_operations(command_executor *e, shell_context *sc, arguments args);

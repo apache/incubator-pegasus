@@ -677,7 +677,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
-    // Check if the input parameters and flags are valid, and there are exact one positional
+    // Check if the input parameters and flags are valid, and there is exact one positional
     // argument (i.e. app_name).
     const auto &check = validate_cmd(cmd, params, flags, 1);
     if (!check) {
@@ -686,7 +686,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
     }
 
     // Get the only positional argument as app_name.
-    std::string app_name = cmd(1).str();
+    const std::string app_name(cmd(1).str());
 
     int32_t partition_count = 0;
     PARSE_OPT_INT(partition_count, 4, {"-p", "--partition_count"});
@@ -703,14 +703,14 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
     std::map<std::string, std::string> envs;
     PARSE_OPT_KV_MAP(envs, ',', '=', {"-e", "--envs"});
 
-    dsn::error_code err = sc->ddl_client->create_app(app_name,
-                                                     "pegasus",
-                                                     partition_count,
-                                                     replica_count,
-                                                     envs,
-                                                     false,
-                                                     success_if_exist,
-                                                     atomic_idempotent);
+    const dsn::error_code err = sc->ddl_client->create_app(app_name,
+                                                           "pegasus",
+                                                           partition_count,
+                                                           replica_count,
+                                                           envs,
+                                                           false,
+                                                           success_if_exist,
+                                                           atomic_idempotent);
     if (err == ::dsn::ERR_OK) {
         std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name) << "\" succeed"
                   << std::endl;
@@ -1067,4 +1067,101 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
     }
 
     return true;
+}
+
+bool get_atomic_idempotent(command_executor *e, shell_context *sc, arguments args)
+{
+    // get_atomic_idempotent <app_name> [-j|--json]
+
+    // All valid flags are given as follows.
+    static const std::set<std::string> flags = {"j", "json"};
+
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+
+    // Check if the input flags are valid, and there is exact one positional argument
+    // (i.e. app_name).
+    const auto &check = validate_cmd(cmd, {}, flags, 1);
+    if (!check) {
+        SHELL_PRINTLN_ERROR("{}", check.description());
+        return false;
+    }
+
+    // Get the only positional argument as app_name.
+    const std::string app_name(cmd(1).str());
+
+    const bool json = cmd[{"-j", "--json"}];
+
+    const auto &result = sc->ddl_client->get_atomic_idempotent(app_name);
+    auto status = result.get_error();
+    if (status) {
+        status = FMT_ERR(result.get_value().err, result.get_value().hint_message);
+    }
+
+    if (!status) {
+        SHELL_PRINTLN_ERROR("get_atomic_idempotent failed, error={}", status);
+        return true;
+    }
+
+    dsn::utils::table_printer printer("atomic_idempotent");
+    printer.add_row_name_and_data("atomic_idempotent", result.get_value().atomic_idempotent);
+    dsn::utils::output(json, printer);
+
+    return true;
+}
+
+namespace {
+
+bool set_atomic_idempotent(command_executor *e,
+                           shell_context *sc,
+                           arguments args,
+                           bool atomic_idempotent)
+{
+    // <enable|disable>_atomic_idempotent <app_name>
+
+    argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+
+    // Check if there is exact one positional argument (i.e. app_name).
+    const auto &check = validate_cmd(cmd, {}, {}, 1);
+    if (!check) {
+        SHELL_PRINTLN_ERROR("{}", check.description());
+        return false;
+    }
+
+    // Get the only positional argument as app_name.
+    const std::string app_name(cmd(1).str());
+
+    const auto &result = sc->ddl_client->set_atomic_idempotent(app_name, atomic_idempotent);
+    auto status = result.get_error();
+    if (status) {
+        status = FMT_ERR(result.get_value().err, result.get_value().hint_message);
+    }
+
+    if (!status) {
+        SHELL_PRINTLN_ERROR("set_atomic_idempotent failed, error={}", status);
+        return true;
+    }
+
+    const auto &resp = result.get_value();
+    SHELL_PRINTLN_OK("set_atomic_idempotent from {} to {}: {}\n",
+                     resp.old_atomic_idempotent,
+                     atomic_idempotent,
+                     resp.hint_message.empty() ? "succeed" : resp.hint_message);
+
+    return true;
+}
+
+} // anonymous namespace
+
+bool enable_atomic_idempotent(command_executor *e, shell_context *sc, arguments args)
+{
+    // enable_atomic_idempotent <app_name>
+
+    return set_atomic_idempotent(e, sc, args, true);
+}
+
+bool disable_atomic_idempotent(command_executor *e, shell_context *sc, arguments args)
+{
+    // disable_atomic_idempotent <app_name>
+
+    return set_atomic_idempotent(e, sc, args, false);
 }
