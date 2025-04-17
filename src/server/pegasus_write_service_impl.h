@@ -125,7 +125,7 @@ public:
                                                       composite_raw_key(update.hash_key, kv.key),
                                                       kv.value,
                                                       update.expire_ts_seconds);
-            if (resp.error != rocksdb::Status::kOk) {
+            if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
                 return resp.error;
             }
         }
@@ -153,10 +153,10 @@ public:
         }
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
-        for (auto &sort_key : update.sort_keys) {
+        for (const auto &sort_key : update.sort_keys) {
             resp.error = _rocksdb_wrapper->write_batch_delete(
                 decree, composite_raw_key(update.hash_key, sort_key).to_string_view());
-            if (resp.error) {
+            if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
                 return resp.error;
             }
         }
@@ -459,8 +459,8 @@ public:
 
         db_get_context get_context;
         std::string_view check_raw_key = check_key.to_string_view();
-        int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
-        if (err != rocksdb::Status::kOk) {
+        const int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
+        if (dsn_unlikely(err != rocksdb::Status::kOk)) {
             // read check value failed
             LOG_ERROR_PREFIX("Error to GetCheckValue for CheckAndSet decree: {}, hash_key: {}, "
                              "check_sort_key: {}",
