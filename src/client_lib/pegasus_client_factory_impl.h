@@ -32,11 +32,29 @@ class pegasus_client;
 namespace client {
 class pegasus_client_impl;
 
+/**
+ * @brief Implementation of Pegasus client factory
+ *
+ * This class manages the lifecycle of Pegasus client instances and provides
+ * a centralized way to create and access client objects.
+ */
 class pegasus_client_factory_impl
 {
 public:
+    /**
+     * @brief Initialize the client factory with configuration
+     * @param config_file Path to the configuration file
+     * @return bool True if initialization succeeded, false otherwise
+     */
     static bool initialize(const char *config_file);
 
+    /**
+     * @brief Get or create a Pegasus client instance
+     * @param cluster_name Name of the Pegasus cluster
+     * @param app_name Name of the Pegasus table (app)
+     * @return pegasus_client* Pointer to the client instance
+     * @note The returned client should not be deleted by caller
+     */
     static pegasus_client *get_client(const char *cluster_name, const char *app_name);
 
 private:
