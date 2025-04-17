@@ -50,6 +50,7 @@
 #include "shell/command_utils.h"
 #include "shell/commands.h"
 #include "utils/blob.h"
+#include "utils/bytes.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
@@ -110,6 +111,8 @@ dsn::metric_filters resource_usage_filters()
     filters.entity_types = {"server", "replica", "disk"};
     filters.entity_metrics = {"resident_mem_usage_mb",
                               "rdb_block_cache_mem_usage_bytes",
+                              "rdb_wbm_total_mem_usage_bytes",
+                              "rdb_wbm_mutable_mem_usage_bytes",
                               "rdb_memtable_mem_usage_bytes",
                               "rdb_index_and_filter_blocks_mem_usage_bytes",
                               "disk_capacity_total_mb",
@@ -128,17 +131,21 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
         if (entity.type == "server") {
             for (const auto &m : entity.metrics) {
                 if (m.name == "resident_mem_usage_mb") {
-                    stat.memused_res_mb += m.value;
+                    stat.memused_res_mb += static_cast<int64_t>(m.value);
                 } else if (m.name == "rdb_block_cache_mem_usage_bytes") {
-                    stat.block_cache_bytes += m.value;
+                    stat.block_cache_bytes += static_cast<int64_t>(m.value);
+                } else if (m.name == "rdb_wbm_total_mem_usage_bytes") {
+                    stat.wbm_total_bytes += static_cast<int64_t>(m.value);
+                } else if (m.name == "rdb_wbm_mutable_mem_usage_bytes") {
+                    stat.wbm_mutable_bytes += static_cast<int64_t>(m.value);
                 }
             }
         } else if (entity.type == "replica") {
             for (const auto &m : entity.metrics) {
                 if (m.name == "rdb_memtable_mem_usage_bytes") {
-                    stat.mem_tbl_bytes += m.value;
+                    stat.mem_tbl_bytes += static_cast<int64_t>(m.value);
                 } else if (m.name == "rdb_index_and_filter_blocks_mem_usage_bytes") {
-                    stat.mem_idx_bytes += m.value;
+                    stat.mem_idx_bytes += static_cast<int64_t>(m.value);
                 }
             }
         } else if (entity.type == "disk") {
@@ -146,11 +153,11 @@ dsn::error_s parse_resource_usage(const std::string &json_string, list_nodes_hel
             int64_t available_mb = 0;
             for (const auto &m : entity.metrics) {
                 if (m.name == "disk_capacity_total_mb") {
-                    total_capacity_mb += m.value;
-                    capacity_mb = m.value;
+                    total_capacity_mb += static_cast<int64_t>(m.value);
+                    capacity_mb = static_cast<int64_t>(m.value);
                 } else if (m.name == "disk_capacity_avail_mb") {
-                    total_available_mb += m.value;
-                    available_mb = m.value;
+                    total_available_mb += static_cast<int64_t>(m.value);
+                    available_mb = static_cast<int64_t>(m.value);
                 }
             }
 
@@ -514,12 +521,14 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
     for (auto &kv : status_by_hp) {
-        if (kv.second == dsn::replication::node_status::NS_ALIVE)
-            alive_node_count++;
-        std::string status_str = dsn::enum_to_string(kv.second);
-        status_str = status_str.substr(status_str.find("NS_") + 3);
-        const auto node_name = replication_ddl_client::node_name(kv.first, resolve_ip);
-        tmp_map.emplace(kv.first, list_nodes_helper(node_name, status_str));
+        if (kv.second == dsn::replication::node_status::NS_ALIVE) {
+            ++alive_node_count;
+        }
+
+        const std::string status_str(dsn::enum_to_string(kv.second));
+        tmp_map.emplace(kv.first,
+                        list_nodes_helper(replication_ddl_client::node_name(kv.first, resolve_ip),
+                                          status_str.substr(status_str.find("NS_") + 3)));
     }
 
     if (detailed) {
@@ -657,6 +666,8 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     if (resource_usage) {
         tp.add_column("memused_res_mb", tp_alignment::kRight);
         tp.add_column("block_cache_mb", tp_alignment::kRight);
+        tp.add_column("wbm_total_mb", tp_alignment::kRight);
+        tp.add_column("wbm_mutable_mb", tp_alignment::kRight);
         tp.add_column("mem_tbl_mb", tp_alignment::kRight);
         tp.add_column("mem_idx_mb", tp_alignment::kRight);
         tp.add_column("disk_avl_total_ratio", tp_alignment::kRight);
@@ -688,9 +699,11 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         }
         if (resource_usage) {
             tp.append_data(kv.second.memused_res_mb);
-            tp.append_data(kv.second.block_cache_bytes / (1 << 20U));
-            tp.append_data(kv.second.mem_tbl_bytes / (1 << 20U));
-            tp.append_data(kv.second.mem_idx_bytes / (1 << 20U));
+            tp.append_data(dsn::bytes::to_mb(kv.second.block_cache_bytes));
+            tp.append_data(dsn::bytes::to_mb(kv.second.wbm_total_bytes));
+            tp.append_data(dsn::bytes::to_mb(kv.second.wbm_mutable_bytes));
+            tp.append_data(dsn::bytes::to_mb(kv.second.mem_tbl_bytes));
+            tp.append_data(dsn::bytes::to_mb(kv.second.mem_idx_bytes));
             tp.append_data(kv.second.disk_available_total_ratio);
             tp.append_data(kv.second.disk_available_min_ratio);
         }
