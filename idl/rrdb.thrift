@@ -96,7 +96,8 @@ struct update_request
     // from the non-idempotent check_and_set_request.
     5:optional bool     check_value_returned;
     6:optional bool     check_value_exist; // Used only if check_value_returned is true.
-    7:optional dsn.blob check_value; // Used only if check_value_returned and check_value_exist is true.
+    7:optional dsn.blob check_value; // Used only if both check_value_returned and
+                                     // check_value_exist are true.
 }
 
 struct update_response
@@ -251,12 +252,13 @@ struct check_and_set_request
 
 struct check_and_set_response
 {
-    1:i32            error; // return kTryAgain if check not passed.
-                            // return kInvalidArgument if check type is int compare and
-                            // check_operand/check_value is not integer or out of range.
+    1:i32            error; // Return kTryAgain if check not passed.
+                            // Return kInvalidArgument if check_type is comparing integers and
+                            // check_value/check_operand is not a valid integer or out of range.
     2:bool           check_value_returned;
-    3:bool           check_value_exist; // used only if check_value_returned is true
-    4:dsn.blob       check_value; // used only if check_value_returned and check_value_exist is true
+    3:bool           check_value_exist; // Used only if check_value_returned is true.
+    4:dsn.blob       check_value; // Used only if both check_value_returned and
+                                  // check_value_exist are true.
     5:i32            app_id;
     6:i32            partition_index;
     7:i64            decree;
