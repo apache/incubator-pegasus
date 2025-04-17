@@ -71,7 +71,8 @@ enum mutate_operation
 enum update_type
 {
     UT_PUT,
-    UT_INCR
+    UT_INCR,
+    UT_CHECK_AND_SET
 }
 
 // The single-put request, just writes a key/value pair into storage, which is certainly
@@ -86,8 +87,17 @@ struct update_request
     // single-put request from the one translated from a non-idempotent atomic write request:
     // - a general single-put request, if `type` is UT_PUT or not set by default as it's
     // optional, or
-    // - a put request translated from an incr request, if `type` is UT_INCR.
+    // - a put request translated from an incr request, if `type` is UT_INCR, or
+    // - a put request translated from a check_and_set request, if `type` is UT_CHECK_AND_SET.
     4:optional update_type type;
+
+    // Following 3 fields are only available while type = UT_CHECK_AND_SET, used to build
+    // check_and_set_response to reply to the client, once this put request is translated
+    // from the non-idempotent check_and_set_request.
+    5:optional bool     check_value_returned;
+    6:optional bool     check_value_exist; // Used only if check_value_returned is true.
+    7:optional dsn.blob check_value; // Used only if both check_value_returned and
+                                     // check_value_exist are true.
 }
 
 struct update_response
@@ -242,12 +252,13 @@ struct check_and_set_request
 
 struct check_and_set_response
 {
-    1:i32            error; // return kTryAgain if check not passed.
-                            // return kInvalidArgument if check type is int compare and
-                            // check_operand/check_value is not integer or out of range.
+    1:i32            error; // Return kTryAgain if check not passed.
+                            // Return kInvalidArgument if check_type is comparing integers and
+                            // check_value/check_operand is not a valid integer or out of range.
     2:bool           check_value_returned;
-    3:bool           check_value_exist; // used only if check_value_returned is true
-    4:dsn.blob       check_value; // used only if check_value_returned and check_value_exist is true
+    3:bool           check_value_exist; // Used only if check_value_returned is true.
+    4:dsn.blob       check_value; // Used only if both check_value_returned and
+                                  // check_value_exist are true.
     5:i32            app_id;
     6:i32            partition_index;
     7:i64            decree;
