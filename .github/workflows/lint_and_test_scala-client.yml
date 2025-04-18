@@ -46,7 +46,7 @@ jobs:
       - name: Install sbt
         run: |
           curl -s "https://get.sdkman.io" | bash
-          source /github/home/.sdkman/bin/sdkman-init.sh
+          source ${HOME}/.sdkman/bin/sdkman-init.sh
           sdk install sbt
           sbt -V
       - name: Check format with sbt
@@ -92,7 +92,7 @@ jobs:
       - name: Install sbt
         run: |
           curl -s "https://get.sdkman.io" | bash
-          source /github/home/.sdkman/bin/sdkman-init.sh
+          source ${HOME}/.sdkman/bin/sdkman-init.sh
           sdk install sbt
           sbt -V
       - name: Download thrift
