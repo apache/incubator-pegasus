@@ -49,9 +49,12 @@ jobs:
           source ${HOME}/.sdkman/bin/sdkman-init.sh
           sdk install sbt
           sbt -V
+          which sbt
       - name: Check format with sbt
         working-directory: ./scala-client
-        run: sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck
+        run: |
+          which sbt
+          sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck
 
   build_server:
     name: Build server
