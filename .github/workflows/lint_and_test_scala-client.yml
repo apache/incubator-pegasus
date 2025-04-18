@@ -46,14 +46,13 @@ jobs:
       - name: Install sbt
         run: |
           curl -s "https://get.sdkman.io" | bash
-          source ${HOME}/.sdkman/bin/sdkman-init.sh
+          source "${HOME}/.sdkman/bin/sdkman-init.sh"
           sdk install sbt
           sbt -V
-          which sbt
       - name: Check format with sbt
         working-directory: ./scala-client
         run: |
-          which sbt
+          source "${HOME}/.sdkman/bin/sdkman-init.sh"
           sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck
 
   build_server:
@@ -95,7 +94,7 @@ jobs:
       - name: Install sbt
         run: |
           curl -s "https://get.sdkman.io" | bash
-          source ${HOME}/.sdkman/bin/sdkman-init.sh
+          source "${HOME}/.sdkman/bin/sdkman-init.sh"
           sdk install sbt
           sbt -V
       - name: Download thrift
@@ -116,5 +115,5 @@ jobs:
       - name: Run Scala client tests
         working-directory: ./scala-client
         run: |
-          source /github/home/.sdkman/bin/sdkman-init.sh
+          source "${HOME}/.sdkman/bin/sdkman-init.sh"
           sbt test
