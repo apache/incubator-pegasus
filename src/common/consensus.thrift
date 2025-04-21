@@ -27,6 +27,7 @@
 include "../../idl/dsn.thrift"
 include "../../idl/dsn.layer2.thrift"
 include "../../idl/metadata.thrift"
+include "../../idl/utils.thrift"
 
 namespace cpp dsn.replication
 
@@ -131,6 +132,12 @@ struct learn_state
 
     // Used by duplication. Holds the start_decree of this round of learn.
     5:optional i64   learn_start_decree;
+
+    // 
+    6:optional list<i64>        file_sizes;
+
+    //
+    7:optional list<string>     file_checksums;
 }
 
 enum learner_status
@@ -157,6 +164,8 @@ struct learn_request
     // learnee will copy the missing logs.
     7:optional i64               max_gced_decree;
     8:optional dsn.host_port     hp_learner;
+
+    9:optional utils.checksum_type      checksum = utils.checksum_type.CST_NONE;
 }
 
 struct learn_response

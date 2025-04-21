@@ -15,41 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-namespace cpp dsn.utils
-namespace go utils
-namespace java org.apache.pegasus.utils
+#pragma once
 
-// How a string matches to a given pattern.
-enum pattern_match_type
-{
-    PMT_INVALID = 0,
+#include <string>
 
-    // The string always matches no matter what the given pattern is.
-    PMT_MATCH_ALL,
+#include "utils_types.h"
+#include "utils/enum_helper.h"
+#include "utils/errors.h"
 
-    // The string must exactly equal to the given pattern.
-    PMT_MATCH_EXACT,
+namespace dsn {
 
-    // The string must appear anywhere in the given pattern.
-    PMT_MATCH_ANYWHERE,
+ENUM_BEGIN2(checksum_type::type, checksum_type, checksum_type::CST_INVALID)
+ENUM_REG_WITH_CUSTOM_NAME(checksum_type::CST_INVALID, invalid)
+ENUM_REG_WITH_CUSTOM_NAME(checksum_type::CST_NONE, all)
+ENUM_REG_WITH_CUSTOM_NAME(checksum_type::CST_MD5, exact)
+ENUM_END2(checksum_type::type, checksum_type)
 
-    // The string must start with the given pattern.
-    PMT_MATCH_PREFIX,
+error_s calc_checksum(const std::string &file_path, utils::checksum_type::type type, std::string &result);
 
-    // The string must end with the given pattern.
-    PMT_MATCH_POSTFIX,
+} // namespace dsn
 
-    // The string must match the given pattern as a regular expression.
-    PMT_MATCH_REGEX,
-}
-
-enum checksum_type
-{
-    CST_INVALID = 0,
-
-    // 
-    CST_NONE,
-
-    // 
-    CST_MD5,
-}

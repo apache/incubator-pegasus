@@ -57,6 +57,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
@@ -313,7 +314,7 @@ void replica::init_checkpoint(bool is_emergency)
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-void replica::on_query_last_checkpoint(/*out*/ learn_response &response)
+void replica::on_query_last_checkpoint(utils::checksum_type::type checksum_type, learn_response &response)
 {
     _checker.only_one_thread_access();
 
@@ -322,11 +323,11 @@ void replica::on_query_last_checkpoint(/*out*/ learn_response &response)
         return;
     }
 
-    blob placeholder;
-    int err = _app->get_checkpoint(0, placeholder, response.state);
-    if (err != 0) {
+    if (dsn_unlikely(_app->get_checkpoint(0, blob(), response.state) != ERR_OK)) {
         response.err = ERR_GET_LEARN_STATE_FAILED;
-    } else {
+        return;
+    } 
+
         response.err = ERR_OK;
         response.last_committed_decree = last_committed_decree();
         // for example: base_local_dir = "./data" + "checkpoint.1024" = "./data/checkpoint.1024"
@@ -334,12 +335,50 @@ void replica::on_query_last_checkpoint(/*out*/ learn_response &response)
             _app->data_dir(), checkpoint_folder(response.state.to_decree_included));
         SET_IP_AND_HOST_PORT(
             response, learnee, _stub->primary_address(), _stub->primary_host_port());
+
+        if (checksum_type <= utils::checksum_type::CST_NONE) {
         for (auto &file : response.state.files) {
             // response.state.files contain file absolute path， for example:
             // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst
             file = file.substr(response.base_local_dir.length() + 1);
         }
-    }
+        }
+
+        std::vector<int64_t> file_sizes;
+        std::vector<std::string> file_checksums;
+        for (auto &file : response.state.files) {
+            int64_t size = 0;
+            if (!utils::filesystem::file_size(
+                    file_path, utils::FileDataType::kSensitive, size)) {
+                LOG_ERROR_PREFIX("get size of file failed: file = {}", file);
+                response.err = ERR_GET_LEARN_STATE_FAILED;
+                break;
+            }
+
+            std::string checksum;
+            const auto err = calc_checksum(file, checksum_type, checksum);
+            if (dsn_unlikely(err != ERR_OK)) {
+                LOG_ERROR_PREFIX("calculate checksum failed: file = {}, err = {}", file, err);
+                response.err = ERR_GET_LEARN_STATE_FAILED;
+                return;
+            }
+
+            file_sizes.push_back(size);
+            file_checksums.push_back(std::move(checksum));
+
+            // response.state.files contain file absolute path， for example:
+            // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst
+            file = file.substr(response.base_local_dir.length() + 1);
+        }
+
+        if (file_sizes.empty()) {
+            return;
+        }
+
+        response.__isset.file_sizes = true;
+        response.__isset.file_checksums = true;
+        response.file_sizes = std::move(file_sizes);
+        response.file_checksums = std::move(file_checksums);
 }
 
 // run in background thread

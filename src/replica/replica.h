@@ -54,6 +54,7 @@
 #include "runtime/serverlet.h"
 #include "task/task.h"
 #include "task/task_tracker.h"
+#include "utils_types.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
@@ -291,7 +292,8 @@ public:
                                                    uint32_t delay_ms,
                                                    trigger_checkpoint_callback callback = {});
 
-    void on_query_last_checkpoint(learn_response &response);
+    void on_query_last_checkpoint(utils::checksum_type::type checksum_type, utils::learn_response &response);
+
     std::shared_ptr<replica_duplicator_manager> get_duplication_manager() const
     {
         return _duplication_mgr;
