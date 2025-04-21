@@ -527,13 +527,13 @@ TEST_P(replica_test, test_query_last_checkpoint_info)
 
     learn_response resp;
     // last_checkpoint hasn't exist
-    _mock_replica->on_query_last_checkpoint(resp);
+    _mock_replica->on_query_last_checkpoint(utils::checksum_type::CST_NONE,resp);
     ASSERT_EQ(resp.err, ERR_PATH_NOT_FOUND);
 
     // query ok
     _mock_replica->update_last_durable_decree(100);
     _mock_replica->set_last_committed_decree(200);
-    _mock_replica->on_query_last_checkpoint(resp);
+    _mock_replica->on_query_last_checkpoint(utils::checksum_type::CST_NONE,resp);
     ASSERT_EQ(resp.last_committed_decree, 200);
     ASSERT_STR_CONTAINS(resp.base_local_dir, "/data/checkpoint.100");
 }

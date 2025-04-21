@@ -25,13 +25,13 @@
 
 namespace dsn {
 
-ENUM_BEGIN2(checksum_type::type, checksum_type, checksum_type::CST_INVALID)
-ENUM_REG_WITH_CUSTOM_NAME(checksum_type::CST_INVALID, invalid)
-ENUM_REG_WITH_CUSTOM_NAME(checksum_type::CST_NONE, all)
-ENUM_REG_WITH_CUSTOM_NAME(checksum_type::CST_MD5, exact)
-ENUM_END2(checksum_type::type, checksum_type)
+ENUM_BEGIN2(utils::checksum_type::type, checksum_type, utils::checksum_type::CST_INVALID)
+ENUM_REG_WITH_CUSTOM_NAME(utils::checksum_type::CST_INVALID, invalid)
+ENUM_REG_WITH_CUSTOM_NAME(utils::checksum_type::CST_NONE, none)
+ENUM_REG_WITH_CUSTOM_NAME(utils::checksum_type::CST_MD5, md5)
+ENUM_END2(utils::checksum_type::type, checksum_type)
 
-error_s calc_checksum(const std::string &file_path, utils::checksum_type::type type, std::string &result);
+error_s
+calc_checksum(const std::string &file_path, utils::checksum_type::type type, std::string &result);
 
 } // namespace dsn
-

@@ -23,18 +23,19 @@
 
 namespace dsn {
 
-error_s calc_checksum(const std::string &file_path, utils::checksum_type::type type, std::string &result)
+error_s
+calc_checksum(const std::string &file_path, utils::checksum_type::type type, std::string &result)
 {
     switch (type) {
-        case utils::checksum_type::CST_MD5:
+    case utils::checksum_type::CST_MD5: {
         const auto err = utils::filesystem::md5sum(file_path, result);
         if (dsn_unlikely(err != ERR_OK)) {
             return FMT_ERR(err, "md5sum failed: err={}", err);
         }
 
-        break;
+    } break;
 
-        case utils::checksum_type::CST_NONE:
+    case utils::checksum_type::CST_NONE:
         break;
 
     default:
@@ -48,4 +49,3 @@ error_s calc_checksum(const std::string &file_path, utils::checksum_type::type t
 }
 
 } // namespace dsn
-

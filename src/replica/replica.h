@@ -292,7 +292,8 @@ public:
                                                    uint32_t delay_ms,
                                                    trigger_checkpoint_callback callback = {});
 
-    void on_query_last_checkpoint(utils::checksum_type::type checksum_type, utils::learn_response &response);
+    void on_query_last_checkpoint(utils::checksum_type::type checksum_type,
+                                  learn_response &response);
 
     std::shared_ptr<replica_duplicator_manager> get_duplication_manager() const
     {
