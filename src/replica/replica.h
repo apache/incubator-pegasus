@@ -290,7 +290,9 @@ public:
     // - `callback`: the callback processor handling the error code of triggering checkpoint.
     void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree,
                                                    uint32_t delay_ms,
-                                                   trigger_checkpoint_callback callback = {});
+                                                   trigger_checkpoint_callback callback);
+
+    void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree, uint32_t delay_ms);
 
     void on_query_last_checkpoint(utils::checksum_type::type checksum_type,
                                   learn_response &response);

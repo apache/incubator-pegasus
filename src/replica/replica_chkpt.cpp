@@ -25,12 +25,13 @@
  */
 
 #include <fmt/core.h>
-#include <stdint.h>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "common/gpid.h"
@@ -60,11 +61,14 @@
 #include "utils/chrono_literals.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/thread_access_checker.h"
+#include "utils_types.h"
 
 /// The checkpoint of the replicated app part of replica.
 
@@ -245,6 +249,12 @@ void replica::async_trigger_manual_emergency_checkpoint(decree min_checkpoint_de
         },
         get_gpid().thread_hash(),
         std::chrono::milliseconds(delay_ms));
+}
+
+void replica::async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree,
+                                                        uint32_t delay_ms)
+{
+    async_trigger_manual_emergency_checkpoint(min_checkpoint_decree, delay_ms, {});
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION

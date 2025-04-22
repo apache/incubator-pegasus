@@ -68,6 +68,7 @@
 #include "utils/string_conv.h"
 #include "utils/synchronize.h"
 #include "utils/test_macros.h"
+#include "utils_types.h"
 
 DSN_DECLARE_bool(fd_disabled);
 DSN_DECLARE_string(cold_backup_root);
