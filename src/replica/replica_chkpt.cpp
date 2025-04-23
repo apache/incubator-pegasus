@@ -359,6 +359,8 @@ void replica::on_query_last_checkpoint(utils::checksum_type::type checksum_type,
 
     std::vector<int64_t> file_sizes;
     std::vector<std::string> file_checksums;
+    file_sizes.reserve(response.state.files.size());
+    file_checksums.reserve(response.state.files.size());
     for (auto &file : response.state.files) {
         int64_t size = 0;
         if (dsn_unlikely(

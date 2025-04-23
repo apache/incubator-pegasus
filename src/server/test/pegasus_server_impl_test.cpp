@@ -21,19 +21,25 @@
 #include <fmt/core.h>
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
-#include <stdint.h>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "common/replica_envs.h"
+#include "common/replication.codes.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
+#include "replica/replica_stub.h"
+#include "rpc/rpc_holder.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/serverlet.h"
@@ -45,14 +51,14 @@
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/metrics.h"
+#include "utils/test_macros.h"
 #include "utils_types.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 class pegasus_server_impl_test : public pegasus_server_test_base
 {
-public:
+protected:
     pegasus_server_impl_test() : pegasus_server_test_base() {}
 
     void test_table_level_slow_query()
@@ -156,23 +162,16 @@ public:
             _server->data_dir(), fmt::format("checkpoint.{}", expected_last_durable_decree)));
         ASSERT_TRUE(dsn::utils::filesystem::create_directory(checkpoint_dir));
 
-        const std::vector<std::string> file_names = {"test_file.1",
-                                                     "test_file.2",
-                                                     "test_file.3",
-                                                     "test_file.4",
-                                                     "test_file.5",
-                                                     "test_file.6"};
-        const std::vector<int64_t> file_sizes = {0, 1, 2, 4095, 4096, 4097};
-        for (size_t i = 0; i < file_names.size(); ++i) {
+        for (size_t i = 0; i < kCheckpointFileNames.size(); ++i) {
             const std::string file_path =
-                dsn::utils::filesystem::path_combine(checkpoint_dir, file_names[i]);
-            pegasus::generate_test_file(file_path, file_sizes[i]);
+                dsn::utils::filesystem::path_combine(checkpoint_dir, kCheckpointFileNames[i]);
+            pegasus::generate_test_file(file_path, kCheckpointFileSizes[i]);
         }
 
-        const auto cleanup = dsn::defer([checkpoint_dir, file_names]() {
-            for (size_t i = 0; i < file_names.size(); ++i) {
+        const auto cleanup = dsn::defer([checkpoint_dir]() {
+            for (const auto &file_name : kCheckpointFileNames) {
                 const auto &file_path =
-                    dsn::utils::filesystem::path_combine(checkpoint_dir, file_names[i]);
+                    dsn::utils::filesystem::path_combine(checkpoint_dir, file_name);
                 dsn::utils::filesystem::remove_path(file_path);
             }
 
@@ -198,7 +197,7 @@ public:
         ASSERT_STR_ENDSWITH(resp.base_local_dir,
                             fmt::format("/data/checkpoint.{}", expected_last_durable_decree));
 
-        ASSERT_EQ(file_names, resp.state.files);
+        check_checkpoint_file_names(resp.state.files);
 
         if (checksum_type <= dsn::utils::checksum_type::CST_NONE) {
             ASSERT_FALSE(resp.state.__isset.file_sizes);
@@ -207,17 +206,10 @@ public:
         }
 
         ASSERT_TRUE(resp.state.__isset.file_sizes);
-        ASSERT_EQ(file_sizes, resp.state.file_sizes);
+        check_checkpoint_file_sizes(resp.state.file_sizes, resp.state.files);
 
         ASSERT_TRUE(resp.state.__isset.file_checksums);
-
-        const std::vector<std::string> file_checksums = {"d41d8cd98f00b204e9800998ecf8427e",
-                                                         "0cc175b9c0f1b6a831c399e269772661",
-                                                         "4124bc0a9335c27f086f24ba207a4912",
-                                                         "559110baa849c7608ee70abe1d76273e",
-                                                         "21a199c53f422a380e20b162fb6ebe9c",
-                                                         "8cfc1a0bd8cd76599e76e5e721c6e62e"};
-        ASSERT_EQ(file_checksums, resp.state.file_checksums);
+        check_checkpoint_file_checksums(resp.state.file_checksums, resp.state.files);
     }
 
     void test_query_last_checkpoint(const dsn::gpid &pid, const dsn::error_code &expected_err)
@@ -225,7 +217,75 @@ public:
 
         test_query_last_checkpoint(pid, dsn::utils::checksum_type::CST_INVALID, expected_err, 0, 0);
     }
+
+private:
+    static void check_checkpoint_file_names(const std::vector<std::string> &file_names)
+    {
+        std::vector<std::string> ordered_file_names(file_names);
+        std::sort(ordered_file_names.begin(), ordered_file_names.end());
+        ASSERT_EQ(kCheckpointFileNames, ordered_file_names);
+    }
+
+    template <typename TFileProperty>
+    std::vector<TFileProperty> static sort_checkpoint_file_properties(
+        const std::vector<TFileProperty> &file_properties,
+        const std::vector<std::string> &file_names)
+    {
+        CHECK_EQ(file_properties.size(), file_names.size());
+
+        std::vector<size_t> order_indices(file_names.size());
+        for (size_t i = 0; i < order_indices.size(); ++i) {
+            order_indices[i] = i;
+        }
+
+        std::sort(order_indices.begin(), order_indices.end(), [&file_names](size_t a, size_t b) {
+            return file_names[a] < file_names[b];
+        });
+
+        std::vector<TFileProperty> ordered_file_properties;
+        ordered_file_properties.reserve(file_properties.size());
+        for (size_t idx : order_indices) {
+            ordered_file_properties.push_back(file_properties[idx]);
+        }
+
+        return ordered_file_properties;
+    }
+
+    static void check_checkpoint_file_sizes(const std::vector<int64_t> &file_sizes,
+                                            const std::vector<std::string> &file_names)
+    {
+        const auto ordered_file_sizes = sort_checkpoint_file_properties(file_sizes, file_names);
+
+        ASSERT_EQ(kCheckpointFileSizes, ordered_file_sizes);
+    }
+
+    static void check_checkpoint_file_checksums(const std::vector<std::string> &file_checksums,
+                                                const std::vector<std::string> &file_names)
+    {
+        const auto ordered_file_checksums =
+            sort_checkpoint_file_properties(file_checksums, file_names);
+
+        ASSERT_EQ(kCheckpointFileChecksums, ordered_file_checksums);
+    }
+
+    static const std::vector<std::string> kCheckpointFileNames;
+    static const std::vector<int64_t> kCheckpointFileSizes;
+    static const std::vector<std::string> kCheckpointFileChecksums;
 };
+
+const std::vector<std::string> pegasus_server_impl_test::kCheckpointFileNames = {
+    "test_file.1", "test_file.2", "test_file.3", "test_file.4", "test_file.5", "test_file.6"};
+
+const std::vector<int64_t> pegasus_server_impl_test::kCheckpointFileSizes = {
+    0, 1, 2, 4095, 4096, 4097};
+
+const std::vector<std::string> pegasus_server_impl_test::kCheckpointFileChecksums = {
+    "d41d8cd98f00b204e9800998ecf8427e",
+    "0cc175b9c0f1b6a831c399e269772661",
+    "4124bc0a9335c27f086f24ba207a4912",
+    "559110baa849c7608ee70abe1d76273e",
+    "21a199c53f422a380e20b162fb6ebe9c",
+    "8cfc1a0bd8cd76599e76e5e721c6e62e"};
 
 INSTANTIATE_TEST_SUITE_P(, pegasus_server_impl_test, ::testing::Values(false, true));
 
@@ -364,5 +424,4 @@ TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_files)
     test_query_last_checkpoint(_gpid, dsn::utils::checksum_type::CST_MD5, dsn::ERR_OK, 200, 100);
 }
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

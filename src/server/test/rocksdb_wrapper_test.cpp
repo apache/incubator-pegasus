@@ -21,25 +21,21 @@
 #include <stdint.h>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
-#include "common/fs_manager.h"
 #include "dsn.layer2_types.h"
 #include "gtest/gtest.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "pegasus_utils.h"
 #include "pegasus_value_schema.h"
-#include "replica/replica.h"
-#include "replica/replica_stub.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service.h"
 #include "server/pegasus_write_service_impl.h"
 #include "server/rocksdb_wrapper.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
-#include "utils/fmt_logging.h"
-#include <string_view>
 
 namespace pegasus {
 namespace server {

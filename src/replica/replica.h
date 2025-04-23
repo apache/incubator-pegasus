@@ -34,6 +34,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include "common/json_helper.h"
@@ -54,7 +55,6 @@
 #include "runtime/serverlet.h"
 #include "task/task.h"
 #include "task/task_tracker.h"
-#include "utils_types.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
@@ -62,6 +62,7 @@
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
+#include "utils_types.h"
 
 namespace pegasus {
 namespace server {

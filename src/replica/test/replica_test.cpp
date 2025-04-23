@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <fmt/core.h>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -38,9 +37,7 @@
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
-#include "consensus_types.h"
 #include "dsn.layer2_types.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "http/http_server.h"
 #include "http/http_status_code.h"
@@ -69,7 +66,6 @@
 #include "utils/string_conv.h"
 #include "utils/synchronize.h"
 #include "utils/test_macros.h"
-#include "utils_types.h"
 
 DSN_DECLARE_bool(fd_disabled);
 DSN_DECLARE_string(cold_backup_root);

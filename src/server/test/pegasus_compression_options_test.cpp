@@ -21,7 +21,6 @@
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <map>
-#include <memory>
 #include <string>
 #include <vector>
 

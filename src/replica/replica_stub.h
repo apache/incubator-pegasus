@@ -71,6 +71,12 @@
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
 
+namespace pegasus::server {
+
+class pegasus_server_test_base;
+
+} // namespace pegasus::server
+
 namespace dsn::utils {
 
 class ex_lock;

@@ -479,7 +479,6 @@ private:
     void
     log_expired_data(const char *op, const dsn::rpc_address &addr, const rocksdb::Slice &key) const;
 
-private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
 

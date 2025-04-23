@@ -87,7 +87,7 @@ public:
         _server = dsn::down_cast<mock_pegasus_server_impl *>(_replica->_app.get());
     }
 
-    dsn::error_code start(const std::map<std::string, std::string> &envs = {})
+    dsn::error_code start(const std::map<std::string, std::string> &envs)
     {
         std::unique_ptr<char *[]> argvs = std::make_unique<char *[]>(1 + envs.size() * 2);
         char **argv = argvs.get();
@@ -101,6 +101,8 @@ public:
         }
         return _server->start(idx, argv);
     }
+
+    dsn::error_code start() { return start({}); }
 
     void set_last_committed_decree(dsn::replication::decree d)
     {
