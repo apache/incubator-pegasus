@@ -1213,9 +1213,10 @@ void replica_stub::on_query_last_checkpoint(query_last_checkpoint_info_rpc rpc)
     replica_ptr rep = get_replica(request.pid);
     if (dsn_unlikely(rep == nullptr)) {
         response.err = ERR_OBJECT_NOT_FOUND;
+        return;
     }
 
-    rep->on_query_last_checkpoint(request.checksum, response);
+    rep->on_query_last_checkpoint(request.checksum_type, response);
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT

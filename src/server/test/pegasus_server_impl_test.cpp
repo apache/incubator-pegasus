@@ -29,6 +29,8 @@
 #include <utility>
 
 #include "common/replica_envs.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
@@ -36,11 +38,14 @@
 #include "rrdb/rrdb_types.h"
 #include "runtime/serverlet.h"
 #include "server/pegasus_read_service.h"
+#include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/metrics.h"
+#include "utils_types.h"
 
 namespace pegasus {
 namespace server {
@@ -139,6 +144,86 @@ public:
                 ASSERT_TRUE(false) << fmt::format("query_app_envs not supported {}", test.env_key);
             }
         }
+    }
+
+    void test_query_last_checkpoint(const dsn::gpid &pid,
+                                    dsn::utils::checksum_type::type checksum_type,
+                                    const dsn::error_code &expected_err,
+                                    dsn::replication::decree expected_last_committed_decree,
+                                    dsn::replication::decree expected_last_durable_decree)
+    {
+        const std::string checkpoint_dir(dsn::utils::filesystem::path_combine(
+            _server->data_dir(), fmt::format("checkpoint.{}", expected_last_durable_decree)));
+        ASSERT_TRUE(dsn::utils::filesystem::create_directory(checkpoint_dir));
+
+        const std::vector<std::string> file_names = {"test_file.1",
+                                                     "test_file.2",
+                                                     "test_file.3",
+                                                     "test_file.4",
+                                                     "test_file.5",
+                                                     "test_file.6"};
+        const std::vector<int64_t> file_sizes = {0, 1, 2, 4095, 4096, 4097};
+        for (size_t i = 0; i < file_names.size(); ++i) {
+            const std::string file_path =
+                dsn::utils::filesystem::path_combine(checkpoint_dir, file_names[i]);
+            pegasus::generate_test_file(file_path, file_sizes[i]);
+        }
+
+        const auto cleanup = dsn::defer([checkpoint_dir, file_names]() {
+            for (size_t i = 0; i < file_names.size(); ++i) {
+                const auto &file_path =
+                    dsn::utils::filesystem::path_combine(checkpoint_dir, file_names[i]);
+                dsn::utils::filesystem::remove_path(file_path);
+            }
+
+            dsn::utils::filesystem::remove_path(checkpoint_dir);
+        });
+
+        auto req = std::make_unique<dsn::replication::learn_request>();
+        req->pid = pid;
+        req->__set_checksum_type(checksum_type);
+
+        auto rpc = dsn::replication::query_last_checkpoint_info_rpc(std::move(req),
+                                                                    RPC_QUERY_LAST_CHECKPOINT_INFO);
+        _replica_stub->on_query_last_checkpoint(rpc);
+
+        const auto &resp = rpc.response();
+        ASSERT_EQ(expected_err, resp.err);
+
+        if (expected_err != dsn::ERR_OK) {
+            return;
+        }
+
+        ASSERT_EQ(expected_last_committed_decree, resp.last_committed_decree);
+        ASSERT_STR_ENDSWITH(resp.base_local_dir,
+                            fmt::format("/data/checkpoint.{}", expected_last_durable_decree));
+
+        ASSERT_EQ(file_names, resp.state.files);
+
+        if (checksum_type <= dsn::utils::checksum_type::CST_NONE) {
+            ASSERT_FALSE(resp.state.__isset.file_sizes);
+            ASSERT_FALSE(resp.state.__isset.file_checksums);
+            return;
+        }
+
+        ASSERT_TRUE(resp.state.__isset.file_sizes);
+        ASSERT_EQ(file_sizes, resp.state.file_sizes);
+
+        ASSERT_TRUE(resp.state.__isset.file_checksums);
+
+        const std::vector<std::string> file_checksums = {"d41d8cd98f00b204e9800998ecf8427e",
+                                                         "0cc175b9c0f1b6a831c399e269772661",
+                                                         "4124bc0a9335c27f086f24ba207a4912",
+                                                         "559110baa849c7608ee70abe1d76273e",
+                                                         "21a199c53f422a380e20b162fb6ebe9c",
+                                                         "8cfc1a0bd8cd76599e76e5e721c6e62e"};
+        ASSERT_EQ(file_checksums, resp.state.file_checksums);
+    }
+
+    void test_query_last_checkpoint(const dsn::gpid &pid, const dsn::error_code &expected_err)
+    {
+
+        test_query_last_checkpoint(pid, dsn::utils::checksum_type::CST_INVALID, expected_err, 0, 0);
     }
 };
 
@@ -249,6 +334,34 @@ TEST_P(pegasus_server_impl_test, test_load_from_duplication_data)
     ASSERT_FALSE(dsn::utils::filesystem::file_exists(origin_file));
     ASSERT_TRUE(dsn::utils::filesystem::file_exists(new_file));
     dsn::utils::filesystem::remove_file_name(new_file);
+}
+
+TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_replica_not_found)
+{
+    // test no exist gpid
+    test_query_last_checkpoint(dsn::gpid(101, 101), dsn::ERR_OBJECT_NOT_FOUND);
+}
+
+TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_last_checkpoint_not_exist)
+{
+    // last_checkpoint hasn't exist
+    set_last_committed_decree(0);
+    set_last_durable_decree(0);
+    test_query_last_checkpoint(_gpid, dsn::ERR_PATH_NOT_FOUND);
+}
+
+TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_files)
+{
+    ASSERT_EQ(dsn::ERR_OK, start());
+
+    // query ok
+    set_last_committed_decree(200);
+    set_last_durable_decree(100);
+
+    test_query_last_checkpoint(
+        _gpid, dsn::utils::checksum_type::CST_INVALID, dsn::ERR_OK, 200, 100);
+    test_query_last_checkpoint(_gpid, dsn::utils::checksum_type::CST_NONE, dsn::ERR_OK, 200, 100);
+    test_query_last_checkpoint(_gpid, dsn::utils::checksum_type::CST_MD5, dsn::ERR_OK, 200, 100);
 }
 
 } // namespace server

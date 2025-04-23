@@ -17,35 +17,21 @@
 
 #include "utils/checksum.h"
 
-#include <rocksdb/env.h>
-#include <rocksdb/slice.h>
-#include <rocksdb/status.h>
+#include <cstdint>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "test_util/test_util.h"
-#include "utils_types.h"
-#include "utils/env.h"
-#include "utils/errors.h"
 #include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils_types.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
 namespace dsn {
-
-namespace {
-
-void generate_test_file(const std::string &file_path, int64_t file_size)
-{
-    const auto status =
-        rocksdb::WriteStringToFile(utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                   rocksdb::Slice(std::string(file_size, 'a')),
-                                   file_path,
-                                   /* should_sync */ true);
-    ASSERT_TRUE(status.ok()) << status.ToString();
-}
-
-} // anonymous namespace
 
 struct calc_checksum_case
 {
@@ -58,7 +44,7 @@ struct calc_checksum_case
 class CalcChecksumTest : public testing::TestWithParam<calc_checksum_case>
 {
 public:
-    void test_calc_md5(bool encrypted) const
+    static void test_calc_checksum(bool encrypted)
     {
         static const std::string kFilePath("test_file_for_calc_checksum");
 
@@ -67,7 +53,7 @@ public:
 
         const auto &test_case = GetParam();
 
-        generate_test_file(kFilePath, test_case.file_size);
+        pegasus::generate_test_file(kFilePath, test_case.file_size);
         const auto cleanup = defer([]() { utils::filesystem::remove_path(kFilePath); });
 
         int64_t file_size = 0;
@@ -101,9 +87,9 @@ const std::vector<calc_checksum_case> calc_checksum_tests = {
     {4097, utils::checksum_type::CST_INVALID, ERR_NOT_IMPLEMENTED, ""},
 };
 
-TEST_P(CalcChecksumTest, CalcEncryptedMD5) { test_calc_md5(true); }
+TEST_P(CalcChecksumTest, CalcEncryptedMD5) { test_calc_checksum(true); }
 
-TEST_P(CalcChecksumTest, CalcUnencryptedMD5) { test_calc_md5(false); }
+TEST_P(CalcChecksumTest, CalcUnencryptedMD5) { test_calc_checksum(false); }
 
 INSTANTIATE_TEST_SUITE_P(ChecksumTest, CalcChecksumTest, testing::ValuesIn(calc_checksum_tests));
 

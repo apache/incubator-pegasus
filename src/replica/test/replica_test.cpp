@@ -15,9 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <stddef.h>
-#include <stdint.h>
+#include <fmt/core.h>
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -514,29 +515,6 @@ TEST_P(replica_test, test_trigger_manual_emergency_checkpoint)
     test_trigger_manual_emergency_checkpoint(
         101, ERR_TRY_AGAIN, [this]() { ASSERT_FALSE(is_checkpointing()); });
     _mock_replica->tracker()->wait_outstanding_tasks();
-}
-
-TEST_P(replica_test, test_query_last_checkpoint_info)
-{
-    // test no exist gpid
-    auto req = std::make_unique<learn_request>();
-    req->pid = gpid(100, 100);
-    query_last_checkpoint_info_rpc rpc =
-        query_last_checkpoint_info_rpc(std::move(req), RPC_QUERY_LAST_CHECKPOINT_INFO);
-    stub->on_query_last_checkpoint(rpc);
-    ASSERT_EQ(rpc.response().err, ERR_OBJECT_NOT_FOUND);
-
-    learn_response resp;
-    // last_checkpoint hasn't exist
-    _mock_replica->on_query_last_checkpoint(utils::checksum_type::CST_NONE, resp);
-    ASSERT_EQ(resp.err, ERR_PATH_NOT_FOUND);
-
-    // query ok
-    _mock_replica->update_last_durable_decree(100);
-    _mock_replica->set_last_committed_decree(200);
-    _mock_replica->on_query_last_checkpoint(utils::checksum_type::CST_NONE, resp);
-    ASSERT_EQ(resp.last_committed_decree, 200);
-    ASSERT_STR_CONTAINS(resp.base_local_dir, "/data/checkpoint.100");
 }
 
 TEST_P(replica_test, test_clear_on_failure)

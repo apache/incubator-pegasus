@@ -494,6 +494,7 @@ private:
     friend class replica_disk_test_base;
     friend class replica_disk_migrate_test;
     friend class replica_stub_test_base;
+    friend class pegasus::server::pegasus_server_test_base;
     friend class open_replica_test;
     friend class replica_follower;
     friend class replica_follower_test;

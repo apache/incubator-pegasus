@@ -107,7 +107,7 @@ TEST(hotkey_collector_public_func_test, find_outlier_index_test)
 class coarse_collector_test : public pegasus_server_test_base
 {
 public:
-    coarse_collector_test() : coarse_collector(_server.get(), FLAGS_hotkey_buckets_num){};
+    coarse_collector_test() : coarse_collector(_server, FLAGS_hotkey_buckets_num){};
 
     hotkey_coarse_data_collector coarse_collector;
 
@@ -164,7 +164,7 @@ public:
     int max_queue_size = 1000;
     int target_bucket_index = 0;
     hotkey_fine_data_collector fine_collector;
-    fine_collector_test() : fine_collector(_server.get(), 1, max_queue_size)
+    fine_collector_test() : fine_collector(_server, 1, max_queue_size)
     {
         fine_collector.change_target_bucket(0);
     };

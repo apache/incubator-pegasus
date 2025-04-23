@@ -48,7 +48,7 @@ public:
     manual_compact_service_test()
     {
         start();
-        manual_compact_svc = std::make_unique<pegasus_manual_compact_service>(_server.get());
+        manual_compact_svc = std::make_unique<pegasus_manual_compact_service>(_server);
     }
 
     void set_compact_time(int64_t ts)

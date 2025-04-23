@@ -55,7 +55,7 @@ public:
     pegasus_server_write_test() : pegasus_server_test_base()
     {
         start();
-        _server_write = std::make_unique<pegasus_server_write>(_server.get());
+        _server_write = std::make_unique<pegasus_server_write>(_server);
     }
 
     void test_batch_writes()

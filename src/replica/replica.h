@@ -708,7 +708,16 @@ private:
     // Currently only used for unit test to get the count of backup requests.
     int64_t get_backup_request_count() const;
 
-private:
+    template <typename TApp,
+              typename... Args,
+              typename = typename std::enable_if<
+                  std::is_base_of<replication_app_base,
+                                  typename std::remove_pointer<TApp>::type>::value>::type>
+    void create_app_for_test(Args &&...args)
+    {
+        _app = std::make_unique<TApp>(std::forward<Args>(args)...);
+    }
+
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_log_tool;
     friend class ::dsn::replication::mutation_queue;

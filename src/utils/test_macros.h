@@ -39,3 +39,13 @@
 
 #define ASSERT_STR_NOT_CONTAINS(str, substr)                                                       \
     ASSERT_THAT(str, testing::Not(testing::HasSubstr(substr)))
+
+#define ASSERT_STR_STARTSWITH(str, substr) ASSERT_THAT(str, testing::StartsWith(substr))
+
+#define ASSERT_STR_NOT_STARTSWITH(str, substr)                                                     \
+    ASSERT_THAT(str, testing::Not(testing::StartsWith(substr)))
+
+#define ASSERT_STR_ENDSWITH(str, substr) ASSERT_THAT(str, testing::EndsWith(substr))
+
+#define ASSERT_STR_NOT_ENDSWITH(str, substr)                                                       \
+    ASSERT_THAT(str, testing::Not(testing::EndsWith(substr)))

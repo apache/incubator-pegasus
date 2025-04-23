@@ -353,16 +353,19 @@ void replica::on_query_last_checkpoint(utils::checksum_type::type checksum_type,
             // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst
             file = file.substr(response.base_local_dir.length() + 1);
         }
+
+        return;
     }
 
     std::vector<int64_t> file_sizes;
     std::vector<std::string> file_checksums;
     for (auto &file : response.state.files) {
         int64_t size = 0;
-        if (!utils::filesystem::file_size(file, utils::FileDataType::kSensitive, size)) {
+        if (dsn_unlikely(
+                !utils::filesystem::file_size(file, utils::FileDataType::kSensitive, size))) {
             LOG_ERROR_PREFIX("get size of file failed: file = {}", file);
             response.err = ERR_GET_LEARN_STATE_FAILED;
-            break;
+            return;
         }
 
         std::string checksum;

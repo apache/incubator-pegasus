@@ -165,7 +165,7 @@ struct learn_request
     7:optional i64               max_gced_decree;
     8:optional dsn.host_port     hp_learner;
 
-    9:optional utils.checksum_type      checksum = utils.checksum_type.CST_NONE;
+    9:optional utils.checksum_type      checksum_type = utils.checksum_type.CST_NONE;
 }
 
 struct learn_response

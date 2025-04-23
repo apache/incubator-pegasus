@@ -50,6 +50,16 @@ void create_local_test_file(const std::string &full_name, dsn::replication::file
         full_name, dsn::utils::FileDataType::kSensitive, fm->size));
 }
 
+void generate_test_file(const std::string &file_path, int64_t file_size)
+{
+    const auto status =
+        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
+                                   rocksdb::Slice(std::string(file_size, 'a')),
+                                   file_path,
+                                   /* should_sync */ true);
+    ASSERT_TRUE(status.ok()) << status.ToString();
+}
+
 void AssertEventually(const std::function<void(void)> &f, int timeout_sec, WaitBackoff backoff)
 {
     // TODO(yingchun): should use mono time

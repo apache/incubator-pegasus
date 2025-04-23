@@ -56,7 +56,7 @@ public:
     void SetUp() override
     {
         ASSERT_EQ(::dsn::ERR_OK, start());
-        _server_write = std::make_unique<pegasus_server_write>(_server.get());
+        _server_write = std::make_unique<pegasus_server_write>(_server);
         _rocksdb_wrapper = _server_write->_write_svc->_impl->_rocksdb_wrapper.get();
 
         pegasus::pegasus_generate_key(
@@ -79,16 +79,12 @@ public:
     void set_app_duplicating()
     {
         _server->stop(false);
-        delete _replica;
 
         dsn::app_info app_info;
         app_info.app_type = "pegasus";
         app_info.duplicating = true;
 
-        auto *dn = _replica_stub->get_fs_manager()->find_best_dir_for_new_replica(_gpid);
-        CHECK_NOTNULL(dn, "");
-        _replica = new dsn::replication::replica(_replica_stub, _gpid, app_info, dn, false, false);
-        _server = std::make_unique<mock_pegasus_server_impl>(_replica);
+        initialize_replica(app_info);
 
         SetUp();
     }

@@ -93,6 +93,8 @@ private:
 
 void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm);
 
+void generate_test_file(const std::string &file_path, int64_t file_size);
+
 #define ASSERT_EVENTUALLY(expr)                                                                    \
     do {                                                                                           \
         AssertEventually(expr);                                                                    \
