@@ -2053,20 +2053,14 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     SET_OBJ_IP_AND_HOST_PORT(request, node, pc, primary);
 
     request.config = pc;
-    host_port primary;
-    std::vector<host_port> secondaries;
-    std::vector<host_port> last_drops;
-    GET_HOST_PORT(pc, primary, primary);
-    GET_HOST_PORTS(pc, secondaries, secondaries);
-    GET_HOST_PORTS(request.config, last_drops, last_drops);
-    for (const auto &secondary : secondaries) {
-        maintain_drops(last_drops, secondary, request.type);
+    for (const auto &secondary : pc.hp_secondaries) {
+        maintain_drops(request.config.hp_last_drops, secondary, request.type);
     }
     for (const auto &secondary : pc.secondaries) {
         maintain_drops(request.config.last_drops, secondary, request.type);
     }
-    if (primary) {
-        maintain_drops(last_drops, primary, request.type);
+    if (pc.hp_primary) {
+        maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);
     }
     if (pc.primary) {
         maintain_drops(request.config.last_drops, pc.primary, request.type);
@@ -2131,11 +2125,7 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
     SET_OBJ_IP_AND_HOST_PORT(request, node, pc, primary);
     request.config.ballot++;
     RESET_IP_AND_HOST_PORT(request.config, primary);
-    host_port primary;
-    GET_HOST_PORT(pc, primary, primary);
-    std::vector<host_port> last_drops;
-    GET_HOST_PORTS(request.config, last_drops, last_drops);
-    maintain_drops(last_drops, primary, request.type);
+    maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);
     maintain_drops(request.config.last_drops, pc.primary, request.type);
 
     cc.stage = config_status::pending_remote_sync;
