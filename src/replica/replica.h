@@ -64,12 +64,10 @@
 #include "utils/uniq_timestamp_us.h"
 #include "utils_types.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 class pegasus_server_test_base;
 class rocksdb_wrapper_test;
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server
 
 namespace dsn {
 class gpid;

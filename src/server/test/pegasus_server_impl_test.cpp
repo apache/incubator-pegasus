@@ -17,6 +17,7 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <base/pegasus_key_schema.h>
 #include <fmt/core.h>
 #include <rocksdb/db.h>
@@ -31,6 +32,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
 #include "common/replication_other_types.h"
@@ -50,6 +52,7 @@
 #include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 #include "utils/test_macros.h"
 #include "utils_types.h"
@@ -59,7 +62,7 @@ namespace pegasus::server {
 class pegasus_server_impl_test : public pegasus_server_test_base
 {
 protected:
-    pegasus_server_impl_test() : pegasus_server_test_base() {}
+    pegasus_server_impl_test() = default;
 
     void test_table_level_slow_query()
     {
@@ -152,7 +155,8 @@ protected:
         }
     }
 
-    void test_query_last_checkpoint(const dsn::gpid &pid,
+    void test_query_last_checkpoint(bool create_checkpoint_dir,
+                                    const dsn::gpid &pid,
                                     dsn::utils::checksum_type::type checksum_type,
                                     const dsn::error_code &expected_err,
                                     dsn::replication::decree expected_last_committed_decree,
@@ -160,22 +164,29 @@ protected:
     {
         const std::string checkpoint_dir(dsn::utils::filesystem::path_combine(
             _server->data_dir(), fmt::format("checkpoint.{}", expected_last_durable_decree)));
-        ASSERT_TRUE(dsn::utils::filesystem::create_directory(checkpoint_dir));
 
-        for (size_t i = 0; i < kCheckpointFileNames.size(); ++i) {
-            const std::string file_path =
-                dsn::utils::filesystem::path_combine(checkpoint_dir, kCheckpointFileNames[i]);
-            pegasus::generate_test_file(file_path, kCheckpointFileSizes[i]);
+        if (create_checkpoint_dir) {
+            CHECK_TRUE(dsn::utils::filesystem::create_directory(checkpoint_dir));
+
+            for (size_t i = 0; i < kCheckpointFileNames.size(); ++i) {
+                const auto file_path =
+                    dsn::utils::filesystem::path_combine(checkpoint_dir, kCheckpointFileNames[i]);
+                pegasus::generate_test_file(file_path, kCheckpointFileSizes[i]);
+            }
         }
 
         const auto cleanup = dsn::defer([checkpoint_dir]() {
+            if (!dsn::utils::filesystem::directory_exists(checkpoint_dir)) {
+                return;
+            }
+
             for (const auto &file_name : kCheckpointFileNames) {
                 const auto &file_path =
                     dsn::utils::filesystem::path_combine(checkpoint_dir, file_name);
-                dsn::utils::filesystem::remove_path(file_path);
+                CHECK_TRUE(dsn::utils::filesystem::remove_path(file_path));
             }
 
-            dsn::utils::filesystem::remove_path(checkpoint_dir);
+            CHECK_TRUE(dsn::utils::filesystem::remove_path(checkpoint_dir));
         });
 
         auto req = std::make_unique<dsn::replication::learn_request>();
@@ -214,8 +225,16 @@ protected:
 
     void test_query_last_checkpoint(const dsn::gpid &pid, const dsn::error_code &expected_err)
     {
+        test_query_last_checkpoint(
+            true, pid, dsn::utils::checksum_type::CST_INVALID, expected_err, 0, 0);
+    }
 
-        test_query_last_checkpoint(pid, dsn::utils::checksum_type::CST_INVALID, expected_err, 0, 0);
+    void test_query_last_checkpoint(bool create_checkpoint_dir,
+                                    const dsn::gpid &pid,
+                                    const dsn::error_code &expected_err)
+    {
+        test_query_last_checkpoint(
+            create_checkpoint_dir, pid, dsn::utils::checksum_type::CST_INVALID, expected_err, 0, 0);
     }
 
 private:
@@ -407,7 +426,18 @@ TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_last_checkpoint
     // last_checkpoint hasn't exist
     set_last_committed_decree(0);
     set_last_durable_decree(0);
+
     test_query_last_checkpoint(_gpid, dsn::ERR_PATH_NOT_FOUND);
+}
+
+TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_last_checkpoint_dir_not_exist)
+{
+    ASSERT_EQ(dsn::ERR_OK, start());
+
+    set_last_committed_decree(200);
+    set_last_durable_decree(100);
+
+    test_query_last_checkpoint(false, _gpid, dsn::ERR_GET_LEARN_STATE_FAILED);
 }
 
 TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_files)
@@ -419,9 +449,11 @@ TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_files)
     set_last_durable_decree(100);
 
     test_query_last_checkpoint(
-        _gpid, dsn::utils::checksum_type::CST_INVALID, dsn::ERR_OK, 200, 100);
-    test_query_last_checkpoint(_gpid, dsn::utils::checksum_type::CST_NONE, dsn::ERR_OK, 200, 100);
-    test_query_last_checkpoint(_gpid, dsn::utils::checksum_type::CST_MD5, dsn::ERR_OK, 200, 100);
+        true, _gpid, dsn::utils::checksum_type::CST_INVALID, dsn::ERR_OK, 200, 100);
+    test_query_last_checkpoint(
+        true, _gpid, dsn::utils::checksum_type::CST_NONE, dsn::ERR_OK, 200, 100);
+    test_query_last_checkpoint(
+        true, _gpid, dsn::utils::checksum_type::CST_MD5, dsn::ERR_OK, 200, 100);
 }
 
 } // namespace pegasus::server

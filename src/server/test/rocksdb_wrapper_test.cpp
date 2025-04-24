@@ -18,7 +18,8 @@
  */
 
 #include <fmt/core.h>
-#include <stdint.h>
+#include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -37,8 +38,8 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
+
 class rocksdb_wrapper_test : public pegasus_server_test_base
 {
 protected:
@@ -224,5 +225,5 @@ TEST_P(rocksdb_wrapper_test, verify_timetag_compatible_with_version_0)
         _rocksdb_wrapper->_pegasus_data_version, std::move(get_ctx.raw_value), user_value);
     ASSERT_EQ(user_value.to_string(), value);
 }
-} // namespace server
-} // namespace pegasus
+
+} // namespace pegasus::server
