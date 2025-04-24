@@ -84,3 +84,41 @@ jobs:
             THRIFT_VERSION=0.13.0
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
+
+  build_go_compilation_env_docker_images:
+    runs-on: ubuntu-latest
+    env:
+      # The glibc version on ubuntu1804 is lower than the node20 required, so
+      # we need to force the node version to 16.
+      # See more details: https://github.com/actions/checkout/issues/1809
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout
+        # The glibc version on ubuntu1804 is lower than the actions/checkout@v4 required, so
+        # we need to force to use actions/checkout@v3.
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64
+          context: .
+          file: ./docker/pegasus-build-env/ubuntu2204/Dockerfile
+          push: true
+          tags: |
+            apache/pegasus:build-env-ubuntu2204-${{ github.ref_name }}-go
+          build-args: |
+            THRIFT_VERSION=0.13.0
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
