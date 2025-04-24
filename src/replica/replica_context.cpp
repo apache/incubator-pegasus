@@ -139,10 +139,10 @@ bool primary_context::check_exist(const ::dsn::host_port &node, partition_status
     GET_HOST_PORTS(pc, secondaries, secondaries);
     switch (st) {
     case partition_status::PS_PRIMARY:
-        // DCHECK(pc.__isset.hp_primary, "");
+        DCHECK(pc.__isset.hp_primary, "");
         return primary == node;
     case partition_status::PS_SECONDARY:
-        // DCHECK(pc.__isset.hp_secondaries, "");
+        DCHECK(pc.__isset.hp_secondaries, "");
         return utils::contains(secondaries, node);
     case partition_status::PS_POTENTIAL_SECONDARY:
         return learners.find(node) != learners.end();
