@@ -151,6 +151,19 @@ public:
     // Write a non-idempotent INCR record.
     int incr(int64_t decree, const dsn::apps::incr_request &update, dsn::apps::incr_response &resp);
 
+    // Translate an CHECK_AND_SET request into an idempotent PUT request. Only called by
+    // primary replicas.
+    int make_idempotent(const dsn::apps::check_and_set_request &req,
+                        dsn::apps::check_and_set_response &err_resp,
+                        std::vector<dsn::apps::update_request> &updates);
+
+    // Write an idempotent CHECK_AND_SET record (i.e. a PUT record) and reply to the client
+    // with CHECK_AND_SET response. Only called by primary replicas.
+    int put(const db_write_context &ctx,
+            const dsn::apps::update_request &update,
+            const dsn::apps::check_and_set_request &req,
+            dsn::apps::check_and_set_response &resp);
+
     // Write CHECK_AND_SET record.
     int check_and_set(int64_t decree,
                       const dsn::apps::check_and_set_request &update,
@@ -217,26 +230,6 @@ private:
 
     uint64_t _batch_start_time;
 
-    // Only used for primary replica to calculate the duration that an incr request from
-    // the client is translated into an idempotent put request before appended to plog,
-    // including reading the current value from RocksDB and incrementing it by a given
-    // amount.
-    //
-    // This variable is defined as per-replica rather than per-request, for the reason
-    // that the current design for implementing idempotence is to make sure there is only
-    // one atomic request being processed in the write pipeline for each replica. This
-    // pipeline consists of the following stages:
-    // (1) read the current value from RocksDB and built the idempotent request based on
-    // it;
-    // (2) append the corresponding mutation to plog;
-    // (3) broadcast the prepare requests;
-    // (4) apply the result for atomic operation back to RocksDB ultimately.
-    // For a request, this variable will be set in stage (1) and read in stage (4); since
-    // there is only one request in the pipeline, this variable is guaranteed not to be
-    // set for another request before stage (4) is finished. Therefore, it is safe to
-    // define this variable as per-replica.
-    uint64_t _make_incr_idempotent_duration_ns;
-
     capacity_unit_calculator *_cu_calculator;
 
     METRIC_VAR_DECLARE_counter(put_requests);
@@ -246,6 +239,9 @@ private:
     METRIC_VAR_DECLARE_counter(incr_requests);
     METRIC_VAR_DECLARE_counter(check_and_set_requests);
     METRIC_VAR_DECLARE_counter(check_and_mutate_requests);
+
+    METRIC_VAR_DECLARE_percentile_int64(make_incr_idempotent_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(make_check_and_set_idempotent_latency_ns);
 
     METRIC_VAR_DECLARE_percentile_int64(put_latency_ns);
     METRIC_VAR_DECLARE_percentile_int64(multi_put_latency_ns);
@@ -268,6 +264,10 @@ private:
     // Measure the size of incr requests (with each translated into an idempotent put request)
     // in batch applied into RocksDB for metrics.
     uint32_t _incr_batch_size;
+
+    // Measure the size of check_and_set requests (with each translated into an idempotent put
+    // request) in batch applied into RocksDB for metrics.
+    uint32_t _check_and_set_batch_size;
 
     // TODO(wutao1): add metrics for failed rpc.
 };

@@ -82,6 +82,24 @@ METRIC_DEFINE_counter(replica,
                       "The number of CHECK_AND_MUTATE requests");
 
 METRIC_DEFINE_percentile_int64(replica,
+                               make_incr_idempotent_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The duration that an incr request is made idempotent, "
+                               "including reading the current value from storage engine, "
+                               "increasing it by a given amount, and translate the incr"
+                               "request into the single-put request. Only used for the "
+                               "primary replicas");
+
+METRIC_DEFINE_percentile_int64(replica,
+                               make_check_and_set_idempotent_latency_ns,
+                               dsn::metric_unit::kNanoSeconds,
+                               "The duration that an check_and_set request is made "
+                               "idempotent, including reading the check value from "
+                               "storage engine, validate the check conditions, and "
+                               "translate the check_and_set request into the single-put "
+                               "request. Only used for the primary replicas");
+
+METRIC_DEFINE_percentile_int64(replica,
                                put_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
                                "The latency of PUT requests");
@@ -152,7 +170,6 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       _server(server),
       _impl(new impl(server)),
       _batch_start_time(0),
-      _make_incr_idempotent_duration_ns(0),
       _cu_calculator(server->_cu_calculator.get()),
       METRIC_VAR_INIT_replica(put_requests),
       METRIC_VAR_INIT_replica(multi_put_requests),
@@ -161,6 +178,8 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       METRIC_VAR_INIT_replica(incr_requests),
       METRIC_VAR_INIT_replica(check_and_set_requests),
       METRIC_VAR_INIT_replica(check_and_mutate_requests),
+      METRIC_VAR_INIT_replica(make_incr_idempotent_latency_ns),
+      METRIC_VAR_INIT_replica(make_check_and_set_idempotent_latency_ns),
       METRIC_VAR_INIT_replica(put_latency_ns),
       METRIC_VAR_INIT_replica(multi_put_latency_ns),
       METRIC_VAR_INIT_replica(remove_latency_ns),
@@ -173,7 +192,8 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       METRIC_VAR_INIT_replica(dup_lagging_writes),
       _put_batch_size(0),
       _remove_batch_size(0),
-      _incr_batch_size(0)
+      _incr_batch_size(0),
+      _check_and_set_batch_size(0)
 {
 }
 
@@ -217,22 +237,16 @@ int pegasus_write_service::make_idempotent(const dsn::apps::incr_request &req,
                                            dsn::apps::incr_response &err_resp,
                                            dsn::apps::update_request &update)
 {
-    const uint64_t start_time = dsn_now_ns();
+    METRIC_VAR_AUTO_LATENCY(make_incr_idempotent_latency_ns);
 
-    const int err = _impl->make_idempotent(req, err_resp, update);
-
-    // Calculate the duration that an incr request is translated into an idempotent put request.
-    _make_incr_idempotent_duration_ns = dsn_now_ns() - start_time;
-
-    return err;
+    return err = _impl->make_idempotent(req, err_resp, update);
 }
 
 int pegasus_write_service::put(const db_write_context &ctx,
                                const dsn::apps::update_request &update,
                                dsn::apps::incr_response &resp)
 {
-    // The total latency should also include the duration of the translation.
-    METRIC_VAR_AUTO_LATENCY(incr_latency_ns, dsn_now_ns() - _make_incr_idempotent_duration_ns);
+    METRIC_VAR_AUTO_LATENCY(incr_latency_ns);
     METRIC_VAR_INCREMENT(incr_requests);
 
     const int err = _impl->put(ctx, update, resp);
@@ -255,6 +269,33 @@ int pegasus_write_service::incr(int64_t decree,
 
     if (_server->is_primary()) {
         _cu_calculator->add_incr_cu(resp.error, update.key);
+    }
+
+    return err;
+}
+
+int pegasus_write_service::make_idempotent(const dsn::apps::check_and_set_request &req,
+                                           dsn::apps::check_and_set_response &err_resp,
+                                           dsn::apps::update_request &update)
+{
+    METRIC_VAR_AUTO_LATENCY(make_check_and_set_idempotent_latency_ns);
+
+    return err = _impl->make_idempotent(req, err_resp, update);
+}
+
+int pegasus_write_service::put(const db_write_context &ctx,
+                               const dsn::apps::update_request &update,
+                               const dsn::apps::check_and_set_request &req,
+                               dsn::apps::check_and_set_response &resp)
+{
+    METRIC_VAR_AUTO_LATENCY(check_and_set_latency_ns);
+    METRIC_VAR_INCREMENT(check_and_set_requests);
+
+    const int err = _impl->put(ctx, update, resp);
+
+    if (_server->is_primary()) {
+        _cu_calculator->add_check_and_set_cu(
+            resp.error, req.hash_key, req.check_sort_key, req.set_sort_key, req.set_value);
     }
 
     return err;
@@ -325,10 +366,12 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
         // request (i.e. the atomic write).
         if (update.type == dsn::apps::update_type::UT_INCR) {
             ++_incr_batch_size;
+        } else if (update.type == dsn::apps::update_type::UT_CHECK_AND_SET) {
+            ++_check_and_set_batch_size;
         }
     }
 
-    int err = _impl->batch_put(ctx, update, resp);
+    const int err = _impl->batch_put(ctx, update, resp);
 
     if (_server->is_primary()) {
         _cu_calculator->add_put_cu(resp.error, update.key, update.value);
@@ -344,7 +387,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
     CHECK_GT_MSG(_batch_start_time, 0, "batch_remove must be called after batch_prepare");
 
     ++_remove_batch_size;
-    int err = _impl->batch_remove(decree, key, resp);
+    const int err = _impl->batch_remove(decree, key, resp);
 
     if (_server->is_primary()) {
         _cu_calculator->add_remove_cu(resp.error, key);
@@ -357,7 +400,7 @@ int pegasus_write_service::batch_commit(int64_t decree)
 {
     CHECK_GT_MSG(_batch_start_time, 0, "batch_commit must be called after batch_prepare");
 
-    int err = _impl->batch_commit(decree);
+    const int err = _impl->batch_commit(decree);
     batch_finish();
     return err;
 }
@@ -393,6 +436,7 @@ void pegasus_write_service::batch_finish()
     // put requests are actually translated from atomic requests (see comments in batch_put()),
     // there's no need to add `_make_incr_idempotent_duration_ns` to the total latency.
     UPDATE_WRITE_BATCH_METRICS(incr);
+    UPDATE_WRITE_BATCH_METRICS(check_and_set);
 
     _batch_start_time = 0;
 
