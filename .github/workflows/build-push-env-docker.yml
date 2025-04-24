@@ -71,5 +71,16 @@ jobs:
           push: true
           tags: |
             apache/pegasus:build-env-${{ matrix.dockertag }}-${{ github.ref_name }}
+      - name: Build and push for Go
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64
+          context: .
+          file: ./docker/pegasus-build-env/ubuntu2204/Dockerfile
+          push: true
+          tags: |
+            apache/pegasus:build-env-ubuntu2204-${{ github.ref_name }}-go
+          build-args: |
+            THRIFT_VERSION=0.13.0
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
