@@ -239,7 +239,7 @@ int pegasus_write_service::make_idempotent(const dsn::apps::incr_request &req,
 {
     METRIC_VAR_AUTO_LATENCY(make_incr_idempotent_latency_ns);
 
-    return err = _impl->make_idempotent(req, err_resp, update);
+    return _impl->make_idempotent(req, err_resp, update);
 }
 
 int pegasus_write_service::put(const db_write_context &ctx,
@@ -280,7 +280,7 @@ int pegasus_write_service::make_idempotent(const dsn::apps::check_and_set_reques
 {
     METRIC_VAR_AUTO_LATENCY(make_check_and_set_idempotent_latency_ns);
 
-    return err = _impl->make_idempotent(req, err_resp, update);
+    return _impl->make_idempotent(req, err_resp, update);
 }
 
 int pegasus_write_service::put(const db_write_context &ctx,
@@ -432,9 +432,8 @@ void pegasus_write_service::batch_finish()
     UPDATE_WRITE_BATCH_METRICS(put);
     UPDATE_WRITE_BATCH_METRICS(remove);
 
-    // Since the duration of translation is unknown for both possible situations where these
-    // put requests are actually translated from atomic requests (see comments in batch_put()),
-    // there's no need to add `_make_incr_idempotent_duration_ns` to the total latency.
+    // These put requests are translated from atomic requests. See comments in batch_put()
+    // for the two possible situations where we are now.
     UPDATE_WRITE_BATCH_METRICS(incr);
     UPDATE_WRITE_BATCH_METRICS(check_and_set);
 

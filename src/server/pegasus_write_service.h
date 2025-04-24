@@ -155,7 +155,7 @@ public:
     // primary replicas.
     int make_idempotent(const dsn::apps::check_and_set_request &req,
                         dsn::apps::check_and_set_response &err_resp,
-                        std::vector<dsn::apps::update_request> &updates);
+                        dsn::apps::update_request &update);
 
     // Write an idempotent CHECK_AND_SET record (i.e. a PUT record) and reply to the client
     // with CHECK_AND_SET response. Only called by primary replicas.
