@@ -61,10 +61,10 @@ jobs:
     needs: format
     # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
     # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:build-env-ubuntu2204-${{ github.base_ref }}-go
     steps:
-      - name: Install thrift
-        run: sudo apt-get install -y thrift-compiler
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Go
