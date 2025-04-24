@@ -86,7 +86,7 @@ METRIC_DEFINE_percentile_int64(replica,
                                dsn::metric_unit::kNanoSeconds,
                                "The duration that an incr request is made idempotent, "
                                "including reading the current value from storage engine, "
-                               "increasing it by a given amount, and translate the incr"
+                               "increasing it by a given amount, and translate the incr "
                                "request into the single-put request. Only used for the "
                                "primary replicas");
 
