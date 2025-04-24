@@ -63,7 +63,7 @@ jobs:
     # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:build-env-ubuntu2204-${{ github.base_ref }}-go
+      image: apache/pegasus:build-env-ubuntu2204-${{ github.ref_name }}-go
     steps:
       - name: Checkout
         uses: actions/checkout@v4
