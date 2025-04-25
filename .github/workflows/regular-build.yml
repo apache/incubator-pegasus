@@ -102,7 +102,7 @@ jobs:
       - name: Lint go-client
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.64.8
+          version: v1.56.2
           working-directory: ./go-client
       - name: Build admin-cli
         run: make
@@ -110,7 +110,7 @@ jobs:
       - name: Lint admin-cli
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.64.8
+          version: v1.56.2
           working-directory: ./admin-cli
       - name: Build pegic
         run: make
@@ -118,7 +118,7 @@ jobs:
       - name: Lint pegic
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.64.8
+          version: v1.56.2
           working-directory: ./pegic
 
   build_java:
