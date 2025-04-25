@@ -82,6 +82,7 @@ jobs:
         with:
           version: v1.56.2
           working-directory: ./go-client
+          args: --build-tags="" --build-flags="-buildvcs=false"
         env:
           GOVCS: '*:off'
 
