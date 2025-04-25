@@ -69,11 +69,11 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.18
-      - name: Build Go Client
+      - name: Build
         working-directory: ./go-client
         run: make build
       # because some files are generated after building, so lint after the build step
-      - name: Lint Go Client
+      - name: Lint
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.56.2
@@ -117,7 +117,7 @@ jobs:
           cd - && rm -rf thrift-${THRIFT_VERSION} v${THRIFT_VERSION}.tar.gz
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: 1.18
