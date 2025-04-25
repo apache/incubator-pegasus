@@ -19,10 +19,10 @@ linters:
   enable:
     - gofmt
     - goimports
-    - golint
+    - revive
     - bodyclose
     - exhaustive
-    - exportloopref
+    - copyloopvar
 
 linters-settings:
   exhaustive:
