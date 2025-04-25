@@ -67,8 +67,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
@@ -79,6 +77,9 @@ jobs:
       # because some files are generated after building, so lint after the build step
       - name: Lint
         uses: golangci/golangci-lint-action@v3
+        run: golangci-lint run --out-format=github-actions --path-prefix=./go-client
+        env:
+          GOVCS: '*:off'
         with:
           version: v1.56.2
           working-directory: ./go-client
