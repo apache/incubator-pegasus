@@ -38,7 +38,7 @@ RUN apt-get update -y; \
                        unzip; \
     rm -rf /var/lib/apt/lists/*
 
-ARG THRIFT_VERSION=0.11.0
+ARG THRIFT_VERSION=0.13.0
 RUN wget --progress=dot:giga https://archive.apache.org/dist/thrift/${THRIFT_VERSION}/thrift-${THRIFT_VERSION}.tar.gz -P /opt/thrift && \
     cd /opt/thrift && tar xzf thrift-${THRIFT_VERSION}.tar.gz && cd thrift-${THRIFT_VERSION} && ./bootstrap.sh && \
     ./configure --enable-libs=no && \

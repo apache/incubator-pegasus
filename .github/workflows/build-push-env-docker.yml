@@ -102,6 +102,11 @@ jobs:
           push: true
           tags: |
             apache/pegasus:build-env-ubuntu2204-${{ github.ref_name }}-go
+          # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
+          # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0,
+          # however ubuntu-20.04 LTS runner has been retired on 2025-04-15. Thus we choose to
+          # build thrift 0.13.0 in a image based on ubuntu-22.04 whose thrift version is 0.16.0
+          # by default.
           build-args: |
             THRIFT_VERSION=0.13.0
       - name: Image digest
