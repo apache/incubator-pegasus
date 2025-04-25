@@ -59,7 +59,7 @@ jobs:
     needs: format
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:build-env-ubuntu2204-${{ github.ref_name }}-go
+      image: apache/pegasus:build-env-ubuntu2204-${{ github.base_ref }}-go
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -81,7 +81,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:build-env-ubuntu2204-${{ github.ref_name }}-go
+      image: apache/pegasus:build-env-ubuntu2204-${{ github.base_ref }}-go
     steps:
       - name: Checkout
         uses: actions/checkout@v4
