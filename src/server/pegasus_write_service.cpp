@@ -86,17 +86,17 @@ METRIC_DEFINE_percentile_int64(replica,
                                dsn::metric_unit::kNanoSeconds,
                                "The duration that an incr request is made idempotent, "
                                "including reading the current value from storage engine, "
-                               "increasing it by a given amount, and translate the incr "
+                               "increasing it by a given amount and translating the incr "
                                "request into the single-put request. Only used for the "
                                "primary replicas");
 
 METRIC_DEFINE_percentile_int64(replica,
                                make_check_and_set_idempotent_latency_ns,
                                dsn::metric_unit::kNanoSeconds,
-                               "The duration that an check_and_set request is made "
+                               "The duration that a check_and_set request is made "
                                "idempotent, including reading the check value from "
-                               "storage engine, validate the check conditions, and "
-                               "translate the check_and_set request into the single-put "
+                               "storage engine, validating the check conditions and "
+                               "translating the check_and_set request into the single-put "
                                "request. Only used for the primary replicas");
 
 METRIC_DEFINE_percentile_int64(replica,

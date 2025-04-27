@@ -151,7 +151,7 @@ public:
     // Write a non-idempotent INCR record.
     int incr(int64_t decree, const dsn::apps::incr_request &update, dsn::apps::incr_response &resp);
 
-    // Translate an CHECK_AND_SET request into an idempotent PUT request. Only called by
+    // Translate a CHECK_AND_SET request into an idempotent PUT request. Only called by
     // primary replicas.
     int make_idempotent(const dsn::apps::check_and_set_request &req,
                         dsn::apps::check_and_set_response &err_resp,
