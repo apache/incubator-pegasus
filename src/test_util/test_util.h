@@ -93,6 +93,8 @@ private:
 
 void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm);
 
+// Generate a file under `file_path` with size `file_size`. The file is filled with
+// `file_size` 'a's.
 void generate_test_file(const std::string &file_path, int64_t file_size);
 
 #define ASSERT_EVENTUALLY(expr)                                                                    \

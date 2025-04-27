@@ -44,7 +44,7 @@ struct calc_checksum_case
 
 class CalcChecksumTest : public testing::TestWithParam<calc_checksum_case>
 {
-public:
+protected:
     static void test_calc_checksum(bool encrypted)
     {
         static const std::string kFilePath("test_file_for_calc_checksum");

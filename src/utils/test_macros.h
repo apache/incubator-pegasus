@@ -34,18 +34,23 @@
         }                                                                                          \
     } while (0)
 
-// Substring matches.
+// Assert that `str` should contain the given `substr`.
 #define ASSERT_STR_CONTAINS(str, substr) ASSERT_THAT(str, testing::HasSubstr(substr))
 
+// Assert that `str` should not contain the given `substr`.
 #define ASSERT_STR_NOT_CONTAINS(str, substr)                                                       \
     ASSERT_THAT(str, testing::Not(testing::HasSubstr(substr)))
 
-#define ASSERT_STR_STARTSWITH(str, substr) ASSERT_THAT(str, testing::StartsWith(substr))
+// Assert that `str` should begin with the given `prefix`.
+#define ASSERT_STR_STARTSWITH(str, prefix) ASSERT_THAT(str, testing::StartsWith(prefix))
 
-#define ASSERT_STR_NOT_STARTSWITH(str, substr)                                                     \
-    ASSERT_THAT(str, testing::Not(testing::StartsWith(substr)))
+// Assert that `str` should not begin with the given `prefix`.
+#define ASSERT_STR_NOT_STARTSWITH(str, prefix)                                                     \
+    ASSERT_THAT(str, testing::Not(testing::StartsWith(prefix)))
 
-#define ASSERT_STR_ENDSWITH(str, substr) ASSERT_THAT(str, testing::EndsWith(substr))
+// Assert that `str` should end with the given `suffix`.
+#define ASSERT_STR_ENDSWITH(str, suffix) ASSERT_THAT(str, testing::EndsWith(suffix))
 
-#define ASSERT_STR_NOT_ENDSWITH(str, substr)                                                       \
-    ASSERT_THAT(str, testing::Not(testing::EndsWith(substr)))
+// Assert that `str` should not end with the given `suffix`.
+#define ASSERT_STR_NOT_ENDSWITH(str, suffix)                                                       \
+    ASSERT_THAT(str, testing::Not(testing::EndsWith(suffix)))

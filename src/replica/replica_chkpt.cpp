@@ -342,14 +342,18 @@ void replica::on_query_last_checkpoint(utils::checksum_type::type checksum_type,
 
     response.err = ERR_OK;
     response.last_committed_decree = last_committed_decree();
-    // for example: base_local_dir = "./data" + "checkpoint.1024" = "./data/checkpoint.1024"
+
+    // For example: base_local_dir = "./data" + "checkpoint.1024" = "./data/checkpoint.1024"
     response.base_local_dir = utils::filesystem::path_combine(
         _app->data_dir(), checkpoint_folder(response.state.to_decree_included));
+
     SET_IP_AND_HOST_PORT(response, learnee, _stub->primary_address(), _stub->primary_host_port());
 
+    // If the client does not require the calculation of the checksum, only respond with name
+    // for each file.
     if (checksum_type <= utils::checksum_type::CST_NONE) {
         for (auto &file : response.state.files) {
-            // response.state.files contain file absolute path， for example:
+            // response.state.files contain file absolute path, for example:
             // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst
             file = file.substr(response.base_local_dir.length() + 1);
         }
@@ -381,13 +385,9 @@ void replica::on_query_last_checkpoint(utils::checksum_type::type checksum_type,
         file_sizes.push_back(size);
         file_checksums.push_back(std::move(checksum));
 
-        // response.state.files contain file absolute path， for example:
+        // response.state.files contain file absolute path, for example:
         // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst
         file = file.substr(response.base_local_dir.length() + 1);
-    }
-
-    if (file_sizes.empty()) {
-        return;
     }
 
     response.state.__isset.file_sizes = true;

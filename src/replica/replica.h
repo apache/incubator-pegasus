@@ -291,8 +291,18 @@ public:
                                                    uint32_t delay_ms,
                                                    trigger_checkpoint_callback callback);
 
+    // The same as the above except that `callback` is empty.
     void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree, uint32_t delay_ms);
 
+    // Get the last checkpoint info and put it into the response to reply to the dup follower.
+    //
+    // Parameters:
+    // - `checksum_type`: specify which algorithm the server (namely dup master) will use to
+    // calculate the checksum for each file. This parameter is used to implement resumable
+    // checkpoint download for duplication: the client (namely dup follower) receives the file
+    // sizes and checksums, then decides which files it should fetch from the server accordingly.
+    // CST_NONE means do not calculate checksum and file size.
+    // - `response`: the output parameter, used to respond to the dup follower.
     void on_query_last_checkpoint(utils::checksum_type::type checksum_type,
                                   learn_response &response);
 
@@ -707,6 +717,7 @@ private:
     // Currently only used for unit test to get the count of backup requests.
     int64_t get_backup_request_count() const;
 
+    // Support self-defined `replication_app_base` at runtime which is only used for test.
     template <typename TApp,
               typename... Args,
               typename = typename std::enable_if<

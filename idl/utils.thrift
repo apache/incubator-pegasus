@@ -43,13 +43,15 @@ enum pattern_match_type
     PMT_MATCH_REGEX,
 }
 
+// Specify which algorithm is used to calculate the checksum of a file.
 enum checksum_type
 {
     CST_INVALID = 0,
 
-    // 
+    // Do NOT calculate by any algorithm, which means no content will be
+    // generated.
     CST_NONE,
 
-    // 
+    // Use md5sum to calculate.
     CST_MD5,
 }
