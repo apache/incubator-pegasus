@@ -45,7 +45,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: 1.18
       - name: Format
@@ -57,13 +57,15 @@ jobs:
   lint:
     name: Lint
     needs: format
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:build-env-ubuntu2204-${{ github.base_ref }}-go
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: 1.18
@@ -71,20 +73,22 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.2
+          version: v1.56.2
           working-directory: ./collector
 
   build:
     name: Build
     needs: lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:build-env-ubuntu2204-${{ github.base_ref }}-go
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Set up Go
-        uses: actions/setup-go@v2
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
           go-version: 1.18
       - name: Build
