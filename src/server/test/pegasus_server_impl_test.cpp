@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <set>
@@ -244,12 +245,7 @@ protected:
             resp.state.file_checksums, resp.state.files, expected_file_checksums);
     }
 
-    void test_query_last_checkpoint(const dsn::gpid &pid, const dsn::error_code &expected_err)
-    {
-        test_query_last_checkpoint(
-            true, pid, dsn::utils::checksum_type::CST_INVALID, expected_err, 0, 0, {}, {}, {});
-    }
-
+    // Only test for failed cases.
     void test_query_last_checkpoint(bool create_checkpoint_dir,
                                     const dsn::gpid &pid,
                                     const dsn::error_code &expected_err)
@@ -265,6 +261,14 @@ protected:
                                    {});
     }
 
+    // Only test for failed cases.
+    void test_query_last_checkpoint(const dsn::gpid &pid, const dsn::error_code &expected_err)
+    {
+        test_query_last_checkpoint(
+            true, pid, expected_err);
+    }
+
+    // Test for each checksum type.
     void test_query_last_checkpoint_for_all_checksum_types(
         dsn::replication::decree expected_last_committed_decree,
         dsn::replication::decree expected_last_durable_decree,
@@ -296,6 +300,7 @@ private:
         ASSERT_EQ(expected_file_names, ordered_file_names);
     }
 
+    // Sort `file_properties` so that its order is consistent with that of `file_names`.
     template <typename TFileProperty>
     static std::vector<TFileProperty>
     sort_checkpoint_file_properties(const std::vector<TFileProperty> &file_properties,
@@ -451,14 +456,14 @@ TEST_P(pegasus_server_impl_test, test_load_from_duplication_data)
     dsn::utils::filesystem::remove_file_name(new_file);
 }
 
-// Failed to get last checkpoint since the replica does not exist.
+// Fail to get last checkpoint since the replica does not exist.
 TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_replica_not_found)
 {
     // To make sure the replica does not exist, give a gpid that does not exist.
     test_query_last_checkpoint(dsn::gpid(101, 101), dsn::ERR_OBJECT_NOT_FOUND);
 }
 
-// Failed to get last checkpoint since it does not exist.
+// Fail to get last checkpoint since it does not exist.
 TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_last_checkpoint_not_exist)
 {
     // To make sure the last checkpoint does not exist, set last_durable_decree zero.
@@ -468,7 +473,7 @@ TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_last_checkpoint
     test_query_last_checkpoint(_gpid, dsn::ERR_PATH_NOT_FOUND);
 }
 
-// Failed to get last checkpoint since its dir does not exist.
+// Fail to get last checkpoint since its dir does not exist.
 TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_last_checkpoint_dir_not_exist)
 {
     ASSERT_EQ(dsn::ERR_OK, start());

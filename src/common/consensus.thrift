@@ -167,10 +167,10 @@ struct learn_request
     8:optional dsn.host_port     hp_learner;
 
     // checksum_type is only used to implement resumable checkpoint download for duplication.
-    // It decide which algorithm the dup master will use to calculate the checksum for each
-    // file (learn_request will be sent from the dup follower to dup master). Since it is only
-    // used for duplication, by default it is CST_NONE which means do not calculate checksum
-    // and file size.
+    // It decides which algorithm the dup master will use to calculate the checksum for each
+    // file (learn_request will be sent from the dup follower to the dup master). Since it is
+    // only used for duplication, by default it is CST_NONE which means do not calculate file
+    // size and checksum.
     9:optional utils.checksum_type      checksum_type = utils.checksum_type.CST_NONE;
 }
 

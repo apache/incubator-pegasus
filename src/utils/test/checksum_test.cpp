@@ -49,19 +49,23 @@ protected:
     {
         static const std::string kFilePath("test_file_for_calc_checksum");
 
+        // Set flag to make file encrypted or unencrypted.
         PRESERVE_FLAG(encrypt_data_at_rest);
         FLAGS_encrypt_data_at_rest = encrypted;
 
         const auto &test_case = GetParam();
 
+        // Generate the test file.
         pegasus::generate_test_file(kFilePath, test_case.file_size);
         const auto cleanup = defer([]() { utils::filesystem::remove_path(kFilePath); });
 
+        // Check the file size.
         int64_t file_size = 0;
         ASSERT_TRUE(
             utils::filesystem::file_size(kFilePath, utils::FileDataType::kSensitive, file_size));
         ASSERT_EQ(test_case.file_size, file_size);
 
+        // Calculate the file checksum and check the return code.
         std::string actual_checksum;
         const auto actual_status = calc_checksum(kFilePath, test_case.type, actual_checksum);
         ASSERT_EQ(test_case.expected_err, actual_status.code());
@@ -69,6 +73,7 @@ protected:
             return;
         }
 
+        // Check the file checksum only when the return code is ok.
         ASSERT_EQ(test_case.expected_checksum, actual_checksum);
     }
 };
@@ -88,9 +93,11 @@ const std::vector<calc_checksum_case> calc_checksum_tests = {
     {4097, utils::checksum_type::CST_INVALID, ERR_NOT_IMPLEMENTED, ""},
 };
 
-TEST_P(CalcChecksumTest, CalcEncryptedMD5) { test_calc_checksum(true); }
+// Calculate checksum for encrypted files.
+TEST_P(CalcChecksumTest, CalcEncrypted) { test_calc_checksum(true); }
 
-TEST_P(CalcChecksumTest, CalcUnencryptedMD5) { test_calc_checksum(false); }
+// Calculate checksum for unencrypted files.
+TEST_P(CalcChecksumTest, CalcUnencrypted) { test_calc_checksum(false); }
 
 INSTANTIATE_TEST_SUITE_P(ChecksumTest, CalcChecksumTest, testing::ValuesIn(calc_checksum_tests));
 

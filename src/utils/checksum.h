@@ -31,6 +31,15 @@ ENUM_REG_WITH_CUSTOM_NAME(utils::checksum_type::CST_NONE, none)
 ENUM_REG_WITH_CUSTOM_NAME(utils::checksum_type::CST_MD5, md5)
 ENUM_END2(utils::checksum_type::type, checksum_type)
 
+// Calculate the checksum for a file.
+//
+// Parameters:
+// - `file_path`: the path of the file.
+// - `type`: decides which algorithm is used to calculate the checksum for the file.
+// CST_NONE means do not calculate the checksum.
+// - `result`: the output parameter that holds the resulting checksum.
+//
+// Return ok if succeed in calculating, otherwise return corresponding error.
 error_s
 calc_checksum(const std::string &file_path, utils::checksum_type::type type, std::string &result);
 

@@ -30,7 +30,7 @@ calc_checksum(const std::string &file_path, utils::checksum_type::type type, std
     case utils::checksum_type::CST_MD5: {
         const auto err = utils::filesystem::md5sum(file_path, result);
         if (dsn_unlikely(err != ERR_OK)) {
-            return FMT_ERR(err, "md5sum failed: err={}", err);
+            return FMT_ERR(err, "md5sum failed: err = {}", err);
         }
 
     } break;
@@ -40,7 +40,7 @@ calc_checksum(const std::string &file_path, utils::checksum_type::type type, std
 
     default:
         return FMT_ERR(ERR_NOT_IMPLEMENTED,
-                       "checksum_type is not supported: val={}, str={}",
+                       "checksum_type is not supported: val = {}, str = {}",
                        static_cast<int>(type),
                        enum_to_string(type));
     }

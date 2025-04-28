@@ -301,7 +301,7 @@ public:
     // calculate the checksum for each file. This parameter is used to implement resumable
     // checkpoint download for duplication: the client (namely dup follower) receives the file
     // sizes and checksums, then decides which files it should fetch from the server accordingly.
-    // CST_NONE means do not calculate checksum and file size.
+    // CST_NONE means do not calculate file size and checksum.
     // - `response`: the output parameter, used to respond to the dup follower.
     void on_query_last_checkpoint(utils::checksum_type::type checksum_type,
                                   learn_response &response);
