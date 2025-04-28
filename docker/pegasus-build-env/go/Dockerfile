@@ -22,50 +22,25 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update -y; \
     apt-get install -y --no-install-recommends \
-                       build-essential \
-                       software-properties-common \
-                       clang-14 \
-                       libclang-14-dev \
-                       llvm-14-dev \
-                       openjdk-8-jdk \
-                       pkg-config \
-                       python3-pip \
-                       libaio-dev \
-                       zlib1g \
-                       zlib1g.dev \
-                       patch \
-                       netcat \
-                       wget \
-                       ccache \
-                       git \
-                       curl \
-                       zip \
-                       unzip \
-                       gdb \
-                       vim \
                        automake \
-                       libtool \
-                       libssl-dev \
+                       build-essential \
                        bison \
-                       libkrb5-dev \
-                       libsasl2-dev \
-                       maven \
-                       flex; \
+                       flex \
+		       g++ \
+                       libboost-dev \
+                       libevent-dev \
+                       libssl-dev \
+                       libtool \
+		       make \
+                       pkg-config \
+		       ca-certificates \
+                       wget \
+                       unzip; \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir --upgrade pip
-RUN pip3 install --no-cache-dir cmake
-
-ARG THRIFT_VERSION=0.11.0
+ARG THRIFT_VERSION=0.13.0
 RUN wget --progress=dot:giga https://archive.apache.org/dist/thrift/${THRIFT_VERSION}/thrift-${THRIFT_VERSION}.tar.gz -P /opt/thrift && \
     cd /opt/thrift && tar xzf thrift-${THRIFT_VERSION}.tar.gz && cd thrift-${THRIFT_VERSION} && ./bootstrap.sh && \
     ./configure --enable-libs=no && \
     make -j$(($(nproc)/2+1)) && make install && cd - && \
     rm -rf thrift-${THRIFT_VERSION} thrift-${THRIFT_VERSION}.tar.gz
-
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-ENV CLASSPATH=$JAVA_HOME/lib/
-ENV PATH=$JAVA_HOME/bin:$PATH
-ENV LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$LD_LIBRARY_PATH
-
-WORKDIR /root/apache

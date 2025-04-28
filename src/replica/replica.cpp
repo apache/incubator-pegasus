@@ -274,7 +274,6 @@ replica::replica(replica_stub *stub,
     : serverlet<replica>(replication_options::kReplicaAppType.c_str()),
       replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_host_port_cache), app.app_name),
       _app_info(app),
-      _make_write_idempotent(false),
       _primary_states(this, gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
       _potential_secondary_states(this),
       _chkpt_total_size(0),
@@ -567,27 +566,27 @@ void replica::execute_mutation(mutation_ptr &mu)
     }
 }
 
-mutation_ptr replica::new_mutation(decree decree, dsn::message_ex *original_request)
-{
-    auto mu = new_mutation(decree);
-    mu->original_request = original_request;
-    return mu;
-}
-
-mutation_ptr replica::new_mutation(decree decree, bool is_blocking)
-{
-    auto mu = new_mutation(decree);
-    mu->is_blocking = is_blocking;
-    return mu;
-}
-
-mutation_ptr replica::new_mutation(decree decree)
+mutation_ptr replica::new_mutation(decree d)
 {
     mutation_ptr mu(new mutation());
     mu->data.header.pid = get_gpid();
     mu->data.header.ballot = get_ballot();
-    mu->data.header.decree = decree;
+    mu->data.header.decree = d;
     mu->data.header.log_offset = invalid_offset;
+    return mu;
+}
+
+mutation_ptr replica::new_mutation(decree d, bool is_blocking_candidate)
+{
+    auto mu = new_mutation(d);
+    mu->is_blocking_candidate = is_blocking_candidate;
+    return mu;
+}
+
+mutation_ptr replica::new_mutation(decree d, dsn::message_ex *original_request)
+{
+    auto mu = new_mutation(d);
+    mu->original_request = original_request;
     return mu;
 }
 
@@ -708,17 +707,43 @@ uint32_t replica::query_data_version() const
     return _app->query_data_version();
 }
 
-error_code replica::store_app_info(app_info &info, const std::string &path)
+error_code replica::store_app_info(app_info &info, const std::string &dir)
 {
-    replica_app_info new_info((app_info *)&info);
-    const auto &info_path =
-        path.empty() ? utils::filesystem::path_combine(_dir, replica_app_info::kAppInfo) : path;
-    auto err = new_info.store(info_path);
+    const auto path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
+
+    replica_app_info rep_info(&info);
+    const auto err = rep_info.store(path);
     if (dsn_unlikely(err != ERR_OK)) {
-        LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", info_path, err);
+        LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", path, err);
     }
+
     return err;
 }
+
+error_code replica::store_app_info(app_info &info) { return store_app_info(info, _dir); }
+
+error_code replica::store_app_info(const std::string &dir)
+{
+    return store_app_info(_app_info, dir);
+}
+
+error_code replica::store_app_info() { return store_app_info(_app_info, _dir); }
+
+error_code replica::load_app_info(const std::string &dir, app_info &info) const
+{
+    const auto path =
+        utils::filesystem::path_combine(dir, dsn::replication::replica_app_info::kAppInfo);
+
+    replica_app_info rep_info(&info);
+    const auto err = rep_info.load(path);
+    if (dsn_unlikely(err != ERR_OK)) {
+        LOG_ERROR_PREFIX("failed to load app_info from {}, error = {}", path, err);
+    }
+
+    return err;
+}
+
+error_code replica::load_app_info(app_info &info) const { return load_app_info(_dir, info); }
 
 bool replica::access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const
 {

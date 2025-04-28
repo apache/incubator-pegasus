@@ -41,11 +41,12 @@
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
 #include "utils/strings.h"
+#include "utils/threadpool_code.h"
 #include "utils/utils.h"
 
 DSN_DEFINE_uint64(replication,
                   hdfs_read_batch_size_bytes,
-                  64 << 20,
+                  64U << 20U,
                   "hdfs read batch size, the default value is 64MB");
 DSN_TAG_VARIABLE(hdfs_read_batch_size_bytes, FT_MUTABLE);
 
@@ -57,7 +58,7 @@ DSN_TAG_VARIABLE(hdfs_write_limit_rate_mb_per_sec, FT_MUTABLE);
 
 DSN_DEFINE_uint64(replication,
                   hdfs_write_batch_size_bytes,
-                  64 << 20,
+                  64U << 20U,
                   "hdfs write batch size, the default value is 64MB");
 DSN_TAG_VARIABLE(hdfs_write_batch_size_bytes, FT_MUTABLE);
 

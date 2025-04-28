@@ -87,7 +87,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
 
-    const auto &check = validate_cmd(cmd, params, flags);
+    const auto &check = validate_cmd(cmd, params, flags, 0);
     if (!check) {
         // TODO(wangdan): use SHELL_PRINT* macros instead.
         fmt::print(stderr, "{}\n", check.description());

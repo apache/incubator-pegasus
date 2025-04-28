@@ -1048,6 +1048,20 @@ private:
         }                                                                                          \
     } while (false)
 
+// A helper macro to parse an optional command argument, the result is filled in an int32_t
+// variable 'value'.
+//
+// Variable arguments are `name` or `init_list` of argh::parser::operator(). See argh::parser
+// for details.
+#define PARSE_OPT_INT(value, def_val, ...)                                                         \
+    do {                                                                                           \
+        const auto param = cmd(__VA_ARGS__, (def_val)).str();                                      \
+        if (!::dsn::buf2int32(param, value)) {                                                     \
+            SHELL_PRINTLN_ERROR("invalid command, '{}' should be a signed integer", param);        \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (false)
+
 // Parse enum value from the parameters of command line.
 #define PARSE_OPT_ENUM(enum_val, invalid_val, ...)                                                 \
     do {                                                                                           \
@@ -1059,6 +1073,16 @@ private:
                 return false;                                                                      \
             }                                                                                      \
             enum_val = __val;                                                                      \
+        }                                                                                          \
+    } while (false)
+
+// Parse the provided parameter into the map by the specified delimiters.
+#define PARSE_OPT_KV_MAP(map, item_splitter, kv_splitter, ...)                                     \
+    do {                                                                                           \
+        const std::string __str(cmd(__VA_ARGS__, "").str());                                       \
+        if (!::dsn::utils::parse_kv_map(__str.c_str(), map, item_splitter, kv_splitter)) {         \
+            SHELL_PRINTLN_ERROR("invalid kvs: '{}'", __str);                                       \
+            return false;                                                                          \
         }                                                                                          \
     } while (false)
 

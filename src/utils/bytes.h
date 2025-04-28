@@ -15,28 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-module github.com/apache/incubator-pegasus/go-client
+#pragma once
 
-go 1.18
+#include <type_traits>
 
-require (
-	github.com/agiledragon/gomonkey v2.0.2+incompatible
-	github.com/apache/thrift v0.13.0
-	github.com/cenkalti/backoff/v4 v4.1.0
-	github.com/fortytw2/leaktest v1.3.0
-	github.com/sirupsen/logrus v1.4.2
-	github.com/stretchr/testify v1.4.0
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
-	k8s.io/apimachinery v0.16.13
-)
+// Utility functions related to bytes.
+namespace dsn::bytes {
 
-require (
-	github.com/BurntSushi/toml v0.3.1 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	gopkg.in/yaml.v2 v2.2.8 // indirect
-)
+// Convert a value in bytes to megabytes.
+template <typename TNum, typename = typename std::enable_if<std::is_arithmetic<TNum>::value>::type>
+inline TNum to_mb(TNum bytes)
+{
+    return bytes / static_cast<TNum>(1U << 20U);
+}
+
+} // namespace dsn::bytes

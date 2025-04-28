@@ -41,7 +41,6 @@
 #include "app_env_validator.h"
 #include "common/gpid.h"
 #include "common/manual_compact.h"
-#include "dsn.layer2_types.h"
 #include "gutil/map_util.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
@@ -52,10 +51,14 @@
 #include "utils/zlocks.h"
 
 namespace dsn {
+class app_info;
 class blob;
 class command_deregister;
 class host_port;
 class message_ex;
+class partition_configuration;
+class query_cfg_request;
+class query_cfg_response;
 
 namespace replication {
 class configuration_balancer_request;
@@ -199,6 +202,12 @@ public:
     void get_max_replica_count(configuration_get_max_replica_count_rpc rpc) const;
     void set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
     void recover_from_max_replica_count_env();
+
+    // Get `atomic_idempotent` of a table.
+    void get_atomic_idempotent(configuration_get_atomic_idempotent_rpc rpc) const;
+
+    // Set `atomic_idempotent` of a table.
+    void set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc);
 
     // return true if no need to do any actions
     bool check_all_partitions();
@@ -377,6 +386,14 @@ private:
                                        int32_t max_replica_count,
                                        dsn::task_tracker &tracker);
 
+    // Update `atomic_idempotent` of given table on remote storage.
+    //
+    // Parameters:
+    // - app: the given table.
+    // - rpc: RPC request/response to change `atomic_idempotent`.
+    void update_app_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
+                                                configuration_set_atomic_idempotent_rpc rpc);
+
     // Used for `on_start_manual_compaction`
     bool parse_compaction_envs(start_manual_compact_rpc rpc,
                                std::vector<std::string> &keys,
@@ -385,19 +402,6 @@ private:
                                                   const std::vector<std::string> &keys,
                                                   const std::vector<std::string> &values);
 
-    bool app_info_compatible_equal(const app_info &l, const app_info &r) const
-    {
-        if (l.status != r.status || l.app_type != r.app_type || l.app_name != r.app_name ||
-            l.app_id != r.app_id || l.partition_count != r.partition_count ||
-            l.is_stateful != r.is_stateful || l.max_replica_count != r.max_replica_count ||
-            l.expire_second != r.expire_second || l.create_second != r.create_second ||
-            l.drop_second != r.drop_second) {
-            return false;
-        }
-        return true;
-    }
-
-private:
     friend class bulk_load_service;
     friend class bulk_load_service_test;
     friend class meta_app_operation_test;

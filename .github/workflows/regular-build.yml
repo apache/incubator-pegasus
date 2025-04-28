@@ -86,16 +86,14 @@ jobs:
 
   build_and_lint_go:
     name: Build and Lint Golang
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:build-env-ubuntu2204-${{ github.ref_name }}-go
     steps:
-      - name: Install thrift
-        # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
-        # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
-        run: sudo apt-get install -y thrift-compiler
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v2
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
           go-version: 1.18
       - name: Build go-client
@@ -104,15 +102,23 @@ jobs:
       - name: Lint go-client
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.2
+          version: v1.56.2
           working-directory: ./go-client
+      - name: Build collector
+        run: make
+        working-directory: ./collector
+      - name: Lint collector
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.56.2
+          working-directory: ./collector
       - name: Build admin-cli
         run: make
         working-directory: ./admin-cli
       - name: Lint admin-cli
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.2
+          version: v1.56.2
           working-directory: ./admin-cli
       - name: Build pegic
         run: make
@@ -120,7 +126,7 @@ jobs:
       - name: Lint pegic
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.2
+          version: v1.56.2
           working-directory: ./pegic
 
   build_java:
@@ -130,7 +136,7 @@ jobs:
       matrix:
         java: [ '8', '11']
     steps:
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}

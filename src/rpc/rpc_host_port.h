@@ -234,6 +234,14 @@ class TProtocol;
         DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                      \
     } while (0)
 
+#define REMOVE_IP_AND_HOST_PORT(to_rm_addr, to_rm_hp, dst_obj, dst_field)                          \
+    remove_node(to_rm_addr, to_rm_hp, dst_obj.dst_field, dst_obj.hp_##dst_field)
+#define REMOVE_IP_AND_HOST_PORT_BY_OBJ(to_rm_obj, to_rm_field, dst_obj, dst_field)                 \
+    remove_node((to_rm_obj).to_rm_field,                                                           \
+                (to_rm_obj).hp_##to_rm_field,                                                      \
+                dst_obj.dst_field,                                                                 \
+                dst_obj.hp_##dst_field)
+
 // TODO(yingchun): the 'hp' can be reduced.
 // Set 'value' to the '<field>' map and optional 'hp_<field>' map of 'obj'. The key of the
 // maps are rpc_address and host_port type and indexed by 'addr' and 'hp', respectively.
@@ -370,6 +378,11 @@ inline bool operator<(const host_port &hp1, const host_port &hp2)
         return true;
     }
 }
+
+bool remove_node(const rpc_address &to_rm_addr,
+                 const host_port &to_rm_hp,
+                 /*inout*/ std::vector<rpc_address> &dst_addrs,
+                 /*inout*/ std::vector<host_port> &dst_hps);
 } // namespace dsn
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::host_port);

@@ -196,11 +196,12 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
 
 dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
                                                    const std::string &app_type,
-                                                   int partition_count,
-                                                   int replica_count,
+                                                   int32_t partition_count,
+                                                   int32_t replica_count,
                                                    const std::map<std::string, std::string> &envs,
                                                    bool is_stateless,
-                                                   bool success_if_exist)
+                                                   bool success_if_exist,
+                                                   bool atomic_idempotent)
 {
     if (partition_count < 1) {
         fmt::println(stderr, "create app {} failed: partition_count should >= 1", app_name);
@@ -223,6 +224,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
     req->options.app_type = app_type;
     req->options.envs = envs;
     req->options.is_stateful = !is_stateless;
+    req->options.__set_atomic_idempotent(atomic_idempotent);
 
     dsn::replication::configuration_create_app_response resp;
     RETURN_EC_NOT_OK_MSG(request_meta_and_wait_response(RPC_CM_CREATE_APP, req, resp),
@@ -243,6 +245,15 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
     }
 
     return error;
+}
+
+dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
+                                                   const std::string &app_type,
+                                                   int32_t partition_count,
+                                                   int32_t replica_count,
+                                                   const std::map<std::string, std::string> &envs)
+{
+    return create_app(app_name, app_type, partition_count, replica_count, envs, false, true, false);
 }
 
 dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, int reserve_seconds)
@@ -350,6 +361,7 @@ error_s replication_ddl_client::list_apps(bool detailed,
     tp_general.add_column("drop_time");
     tp_general.add_column("drop_expire");
     tp_general.add_column("envs_count");
+    tp_general.add_column("atomic_idempotent");
 
     int available_app_count = 0;
     for (const auto &info : apps) {
@@ -391,6 +403,7 @@ error_s replication_ddl_client::list_apps(bool detailed,
         tp_general.append_data(drop_time);
         tp_general.append_data(drop_expire_time);
         tp_general.append_data(info.envs.size());
+        tp_general.append_data(info.atomic_idempotent);
     }
     multi_printer.add(std::move(tp_general));
 
@@ -1691,6 +1704,25 @@ replication_ddl_client::set_max_replica_count(const std::string &app_name,
     req->__set_max_replica_count(max_replica_count);
     return call_rpc_sync(
         configuration_set_max_replica_count_rpc(std::move(req), RPC_CM_SET_MAX_REPLICA_COUNT));
+}
+
+error_with<configuration_get_atomic_idempotent_response>
+replication_ddl_client::get_atomic_idempotent(const std::string &app_name)
+{
+    auto req = std::make_unique<configuration_get_atomic_idempotent_request>();
+    req->__set_app_name(app_name);
+    return call_rpc_sync(
+        configuration_get_atomic_idempotent_rpc(std::move(req), RPC_CM_GET_ATOMIC_IDEMPOTENT));
+}
+
+error_with<configuration_set_atomic_idempotent_response>
+replication_ddl_client::set_atomic_idempotent(const std::string &app_name, bool atomic_idempotent)
+{
+    auto req = std::make_unique<configuration_set_atomic_idempotent_request>();
+    req->__set_app_name(app_name);
+    req->__set_atomic_idempotent(atomic_idempotent);
+    return call_rpc_sync(
+        configuration_set_atomic_idempotent_rpc(std::move(req), RPC_CM_SET_ATOMIC_IDEMPOTENT));
 }
 
 error_with<configuration_rename_app_response>

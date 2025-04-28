@@ -31,12 +31,13 @@
 #include <rocksdb/status.h>
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/utilities/options_util.h>
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
+#include <rocksdb/write_buffer_manager.h>
 #include <unistd.h> // IWYU pragma: keep
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
 #include <functional>
 #include <limits>
 #include <list>
@@ -73,7 +74,6 @@
 #include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
-#include "utils/chrono_literals.h"
 #include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/filesystem.h"
@@ -110,14 +110,7 @@ DSN_DECLARE_uint32(checkpoint_reserve_time_seconds);
 DSN_DECLARE_uint64(rocksdb_iteration_threshold_time_ms);
 DSN_DECLARE_uint64(rocksdb_slow_query_threshold_ns);
 
-namespace rocksdb {
-class WriteBufferManager;
-} // namespace rocksdb
-
-using namespace dsn::literals::chrono_literals;
-
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
@@ -140,6 +133,8 @@ std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_s_block_cache;
 std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffer_manager;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 METRIC_VAR_DEFINE_gauge_int64(rdb_block_cache_mem_usage_bytes, pegasus_server_impl);
+METRIC_VAR_DEFINE_gauge_int64(rdb_wbm_total_mem_usage_bytes, pegasus_server_impl);
+METRIC_VAR_DEFINE_gauge_int64(rdb_wbm_mutable_mem_usage_bytes, pegasus_server_impl);
 METRIC_VAR_DEFINE_gauge_int64(rdb_write_rate_limiter_through_bytes_per_sec, pegasus_server_impl);
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::chrono::seconds pegasus_server_impl::kServerStatUpdateTimeSec = std::chrono::seconds(10);
@@ -2609,13 +2604,21 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
 void pegasus_server_impl::update_server_rocksdb_statistics()
 {
     if (_s_block_cache) {
-        uint64_t val = _s_block_cache->GetUsage();
-        METRIC_VAR_SET(rdb_block_cache_mem_usage_bytes, val);
+        METRIC_VAR_SET(rdb_block_cache_mem_usage_bytes,
+                       static_cast<int64_t>(_s_block_cache->GetUsage()));
+    }
+
+    if (_s_write_buffer_manager) {
+        METRIC_VAR_SET(rdb_wbm_total_mem_usage_bytes,
+                       static_cast<int64_t>(_s_write_buffer_manager->memory_usage()));
+        METRIC_VAR_SET(
+            rdb_wbm_mutable_mem_usage_bytes,
+            static_cast<int64_t>(_s_write_buffer_manager->mutable_memtable_memory_usage()));
     }
 
     if (_s_rate_limiter) {
-        uint64_t current_total_through = _s_rate_limiter->GetTotalBytesThrough();
-        uint64_t through_bytes_per_sec =
+        const int64_t current_total_through = _s_rate_limiter->GetTotalBytesThrough();
+        const int64_t through_bytes_per_sec =
             (current_total_through - _rocksdb_limiter_last_total_through) /
             kServerStatUpdateTimeSec.count();
         METRIC_VAR_SET(rdb_write_rate_limiter_through_bytes_per_sec, through_bytes_per_sec);
@@ -3565,5 +3568,4 @@ dsn::replication::manual_compaction_status::type pegasus_server_impl::query_comp
     return _manual_compact_svc.query_compact_status();
 }
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

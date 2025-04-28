@@ -18,10 +18,10 @@
 #include <rocksdb/env.h>
 #include <memory>
 #include <set>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
-#include <string_view>
 #include "local_service.h"
 #include "nlohmann/json.hpp"
 #include "rocksdb/slice.h"
@@ -37,6 +37,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/load_dump_object.h"
 #include "utils/strings.h"
+#include "utils/threadpool_code.h"
 
 DSN_DECLARE_bool(enable_direct_io);
 

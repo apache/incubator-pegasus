@@ -82,35 +82,35 @@ message_ex *raw_message_parser::get_message_on_receive(message_reader *reader,
                                                        /*out*/ int &read_next)
 {
     if (reader->_buffer_occupied == 0) {
-        if (reader->_buffer.length() > 0)
-            read_next = reader->_buffer.length();
-        else
-            read_next = reader->_buffer_block_size;
+        if (reader->_buffer.length() > 0) {
+            read_next = static_cast<int>(reader->_buffer.length());
+        } else {
+            read_next = static_cast<int>(reader->_buffer_block_size);
+        }
         return nullptr;
-    } else {
-        auto msg_length = reader->_buffer_occupied;
-        dsn::blob msg_blob = reader->_buffer.range(0, msg_length);
-        message_ex *new_message =
-            message_ex::create_receive_message_with_standalone_header(msg_blob);
-        message_header *header = new_message->header;
-
-        header->hdr_length = sizeof(*header);
-        header->body_length = msg_length;
-        strncpy(header->rpc_name, "RPC_CALL_RAW_MESSAGE", sizeof(header->rpc_name) - 1);
-        header->rpc_name[sizeof(header->rpc_name) - 1] = '\0';
-        header->gpid.set_value(0);
-        header->context.u.is_request = 1;
-        header->context.u.is_forwarded = 0;
-        header->context.u.is_forward_supported = 0;
-
-        reader->_buffer = reader->_buffer.range(msg_length);
-        reader->_buffer_occupied = 0;
-        read_next = 0;
-
-        new_message->local_rpc_code = RPC_CALL_RAW_MESSAGE;
-        new_message->hdr_format = NET_HDR_RAW;
-        return new_message;
     }
+
+    auto msg_length = reader->_buffer_occupied;
+    message_ex *new_message = message_ex::create_receive_message_with_standalone_header(
+        reader->_buffer.range(0, msg_length));
+    message_header *header = new_message->header;
+
+    header->hdr_length = sizeof(*header);
+    header->body_length = msg_length;
+    strncpy(header->rpc_name, "RPC_CALL_RAW_MESSAGE", sizeof(header->rpc_name) - 1);
+    header->rpc_name[sizeof(header->rpc_name) - 1] = '\0';
+    header->gpid.set_value(0);
+    header->context.u.is_request = 1;
+    header->context.u.is_forwarded = 0;
+    header->context.u.is_forward_supported = 0;
+
+    reader->_buffer = reader->_buffer.range(static_cast<int>(msg_length));
+    reader->_buffer_occupied = 0;
+    read_next = 0;
+
+    new_message->local_rpc_code = RPC_CALL_RAW_MESSAGE;
+    new_message->hdr_format = NET_HDR_RAW;
+    return new_message;
 }
 
 int raw_message_parser::get_buffers_on_send(message_ex *msg, send_buf *buffers)

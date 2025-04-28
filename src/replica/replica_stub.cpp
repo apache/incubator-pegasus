@@ -1090,7 +1090,7 @@ void replica_stub::on_client_write(gpid id, dsn::message_ex *request)
     }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
-        rep->on_client_write(request);
+        rep->on_client_write(request, false);
     } else {
         response_client(id, false, request, partition_status::PS_INVALID, ERR_OBJECT_NOT_FOUND);
     }
@@ -1112,7 +1112,7 @@ void replica_stub::on_client_read(gpid id, dsn::message_ex *request)
     }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
-        rep->on_client_read(request);
+        rep->on_client_read(request, false);
     } else {
         response_client(id, true, request, partition_status::PS_INVALID, ERR_OBJECT_NOT_FOUND);
     }
@@ -1765,8 +1765,8 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
 
     if (_primary_host_port == pc.hp_primary) {
         RESET_IP_AND_HOST_PORT(request->config, primary);
-    } else if (replica_helper::remove_node(primary_address(), request->config.secondaries) &&
-               replica_helper::remove_node(_primary_host_port, request->config.hp_secondaries)) {
+    } else if (REMOVE_IP_AND_HOST_PORT(
+                   primary_address(), _primary_host_port, request->config, secondaries)) {
     } else {
         return;
     }

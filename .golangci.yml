@@ -16,6 +16,14 @@
 # under the License.
 ---
 linters:
+  # TODO(wangdan): consider replacing 'golint' with 'revive' because 'golint' is
+  # deprecated (since v1.41.0, its repository has been archived by the owner).
+  #
+  # After Go is upgraded to v1.22, consider replacing 'exportloopref' with 'copyloopvar'
+  # because as of Go 1.22, the problem resolved by 'exportloopref' no longer occurs and
+  # fixed by Go team (https://go.dev/blog/loopvar-preview).
+  #
+  # After all of above are bumped, consider upgrading golangci-lint (e.g. to v1.64.8).
   enable:
     - gofmt
     - goimports

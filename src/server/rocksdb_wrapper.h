@@ -22,15 +22,19 @@
 #include <gtest/gtest_prod.h>
 #include <rocksdb/options.h>
 #include <rocksdb/write_batch.h>
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "pegasus_value_schema.h"
 #include "replica/replica_base.h"
-#include <string_view>
 #include "utils/metrics.h"
+
+namespace dsn {
+class blob;
+} // namespace dsn
 
 namespace rocksdb {
 class ColumnFamilyHandle;
@@ -64,6 +68,10 @@ public:
                             std::string_view raw_key,
                             std::string_view value,
                             uint32_t expire_sec);
+    int write_batch_put_ctx(const db_write_context &ctx,
+                            const dsn::blob &raw_key,
+                            const dsn::blob &value,
+                            int32_t expire_sec);
     int write(int64_t decree);
     int write_batch_delete(int64_t decree, std::string_view raw_key);
     void clear_up_write_batch();
