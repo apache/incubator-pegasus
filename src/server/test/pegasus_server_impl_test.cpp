@@ -264,8 +264,7 @@ protected:
     // Only test for failed cases.
     void test_query_last_checkpoint(const dsn::gpid &pid, const dsn::error_code &expected_err)
     {
-        test_query_last_checkpoint(
-            true, pid, expected_err);
+        test_query_last_checkpoint(true, pid, expected_err);
     }
 
     // Test for each checksum type.
