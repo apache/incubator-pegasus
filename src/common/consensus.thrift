@@ -27,6 +27,7 @@
 include "../../idl/dsn.thrift"
 include "../../idl/dsn.layer2.thrift"
 include "../../idl/metadata.thrift"
+include "../../idl/utils.thrift"
 
 namespace cpp dsn.replication
 
@@ -131,6 +132,13 @@ struct learn_state
 
     // Used by duplication. Holds the start_decree of this round of learn.
     5:optional i64   learn_start_decree;
+
+    // file_sizes and file_checksums are only used to implement resumable checkpoint download
+    // for duplication. While the dup follower receives file_sizes and file_checksums, it will
+    // decide which files it already has and which files it should fetch from the dup master
+    // (the dup master will reply to the dup follower with learn_response).
+    6:optional list<i64>        file_sizes;
+    7:optional list<string>     file_checksums;
 }
 
 enum learner_status
@@ -157,6 +165,13 @@ struct learn_request
     // learnee will copy the missing logs.
     7:optional i64               max_gced_decree;
     8:optional dsn.host_port     hp_learner;
+
+    // checksum_type is only used to implement resumable checkpoint download for duplication.
+    // It decides which algorithm the dup master will use to calculate the checksum for each
+    // file (learn_request will be sent from the dup follower to the dup master). Since it is
+    // only used for duplication, by default it is CST_NONE which means do not calculate file
+    // size and checksum.
+    9:optional utils.checksum_type      checksum_type = utils.checksum_type.CST_NONE;
 }
 
 struct learn_response

@@ -30,11 +30,12 @@ set(MY_PROJ_NAME dsn_utils_tests)
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+        test_utils
+        dsn_replication_common
         dsn_http
         dsn_runtime
         dsn_utils
         gtest
-        test_utils
         rocksdb
         lz4
         zstd

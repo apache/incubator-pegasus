@@ -2232,13 +2232,14 @@ private:
 {
     CHECK(_is_open, "");
 
-    int64_t ci = last_durable_decree();
+    const int64_t ci = last_durable_decree();
     if (ci == 0) {
         LOG_ERROR_PREFIX("no checkpoint found");
         return ::dsn::ERR_OBJECT_NOT_FOUND;
     }
 
-    auto chkpt_dir = ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(ci));
+    const auto chkpt_dir =
+        ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(ci));
     state.files.clear();
     if (!::dsn::utils::filesystem::get_subfiles(chkpt_dir, state.files, true)) {
         LOG_ERROR_PREFIX("list files in checkpoint dir {} failed", chkpt_dir);

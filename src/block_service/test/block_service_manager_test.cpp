@@ -85,8 +85,11 @@ TEST_P(block_service_manager_test, remote_file_not_exist)
 
 TEST_P(block_service_manager_test, local_file_exist)
 {
-    NO_FATALS(pegasus::create_local_test_file(utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME),
-                                              &_file_meta));
+    std::shared_ptr<pegasus::local_test_file> local_file;
+    NO_FATALS(pegasus::local_test_file::create(
+        utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME), local_file));
+    _file_meta = local_file->get_file_meta();
+
     struct remote_file_info
     {
         int64_t size;
@@ -96,6 +99,7 @@ TEST_P(block_service_manager_test, local_file_exist)
         {2333, _file_meta.md5},      // wrong size
         {_file_meta.size, "bad_md5"} // wrong md5
     };
+
     for (const auto &test : tests) {
         // The remote file will be overwritten when repeatedly created.
         create_remote_file(FILE_NAME, test.size, test.md5);
@@ -107,15 +111,20 @@ TEST_P(block_service_manager_test, local_file_exist)
 
 TEST_P(block_service_manager_test, do_download_succeed)
 {
-    NO_FATALS(pegasus::create_local_test_file(utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME),
-                                              &_file_meta));
+    // Allow local_file to be automatically deleted while out of the scope, to mock
+    // the condition where the local file do not exist.
+    {
+        std::shared_ptr<pegasus::local_test_file> local_file;
+        NO_FATALS(pegasus::local_test_file::create(
+            utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME), local_file));
+        _file_meta = local_file->get_file_meta();
+    }
+
     create_remote_file(FILE_NAME, _file_meta.size, _file_meta.md5);
-    // remove local file to mock condition that file not existed
-    std::string file_name = utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME);
-    utils::filesystem::remove_path(file_name);
+
     uint64_t download_size = 0;
-    ASSERT_EQ(test_download_file(download_size), ERR_OK);
-    ASSERT_EQ(download_size, _file_meta.size);
+    ASSERT_EQ(ERR_OK, test_download_file(download_size));
+    ASSERT_EQ(_file_meta.size, download_size);
 }
 
 } // namespace block_service

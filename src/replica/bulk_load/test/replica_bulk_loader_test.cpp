@@ -31,6 +31,7 @@
 #include "rpc/rpc_host_port.h"
 #include "task/task_tracker.h"
 #include "test_util/test_util.h"
+#include "utils/defer.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/load_dump_object.h"
@@ -245,14 +246,17 @@ public:
         _replica->set_primary_partition_configuration(pc);
     }
 
-    void create_local_metadata_file()
+    void create_local_metadata_file(std::shared_ptr<pegasus::local_test_file> &local_file)
     {
-        NO_FATALS(pegasus::create_local_test_file(
-            utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME), &_file_meta));
+        NO_FATALS(pegasus::local_test_file::create(
+            utils::filesystem::path_combine(LOCAL_DIR, FILE_NAME), local_file));
+        _file_meta = local_file->get_file_meta();
+
         _metadata.files.emplace_back(_file_meta);
         _metadata.file_total_size = _file_meta.size;
-        std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
-        ASSERT_EQ(ERR_OK, utils::dump_rjobj_to_file(_metadata, whole_name));
+
+        const auto &full_path = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
+        ASSERT_EQ(ERR_OK, utils::dump_rjobj_to_file(_metadata, full_path));
     }
 
     bool validate_metadata()
@@ -520,22 +524,30 @@ TEST_P(replica_bulk_loader_test, bulk_load_metadata_corrupt)
 {
     // create file can not parse as bulk_load_metadata structure
     utils::filesystem::create_directory(LOCAL_DIR);
-    NO_FATALS(pegasus::create_local_test_file(utils::filesystem::path_combine(LOCAL_DIR, METADATA),
-                                              &_file_meta));
+    const auto cleanup =
+        dsn::defer([this]() { ASSERT_TRUE(utils::filesystem::remove_path(LOCAL_DIR)); });
+
+    std::shared_ptr<pegasus::local_test_file> local_file;
+    NO_FATALS(pegasus::local_test_file::create(utils::filesystem::path_combine(LOCAL_DIR, METADATA),
+                                               local_file));
+    _file_meta = local_file->get_file_meta();
+
     std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
     ASSERT_EQ(ERR_CORRUPTION, test_parse_bulk_load_metadata(metadata_file_name));
-    utils::filesystem::remove_path(LOCAL_DIR);
 }
 
 TEST_P(replica_bulk_loader_test, bulk_load_metadata_parse_succeed)
 {
     utils::filesystem::create_directory(LOCAL_DIR);
-    NO_FATALS(create_local_metadata_file());
+    const auto cleanup =
+        dsn::defer([this]() { ASSERT_TRUE(utils::filesystem::remove_path(LOCAL_DIR)); });
+
+    std::shared_ptr<pegasus::local_test_file> local_file;
+    NO_FATALS(create_local_metadata_file(local_file));
 
     std::string metadata_file_name = utils::filesystem::path_combine(LOCAL_DIR, METADATA);
     ASSERT_EQ(ERR_OK, test_parse_bulk_load_metadata(metadata_file_name));
     ASSERT_TRUE(validate_metadata());
-    utils::filesystem::remove_path(LOCAL_DIR);
 }
 
 // finish download test

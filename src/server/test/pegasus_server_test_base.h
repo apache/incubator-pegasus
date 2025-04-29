@@ -24,10 +24,11 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "common/fs_manager.h"
-#include "utils/flags.h"
 #include "replica/replica_stub.h"
 #include "test_util/test_util.h"
+#include "utils/casts.h"
 #include "utils/filesystem.h"
+#include "utils/flags.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
@@ -50,7 +51,7 @@ public:
     {
         // Remove rdb to prevent rocksdb recovery from last test.
         dsn::utils::filesystem::remove_path("./test_dir");
-        _replica_stub = new dsn::replication::replica_stub();
+        _replica_stub = std::make_unique<dsn::replication::replica_stub>();
         _replica_stub->get_fs_manager()->initialize({"test_dir"}, {"test_tag"});
 
         // Use different gpid for encryption and non-encryption test to avoid reopening a rocksdb
@@ -64,19 +65,29 @@ public:
         dsn::app_info app_info;
         app_info.app_type = "pegasus";
 
-        auto *dn = _replica_stub->get_fs_manager()->find_best_dir_for_new_replica(_gpid);
-        CHECK_NOTNULL(dn, "");
-        _replica = new dsn::replication::replica(_replica_stub, _gpid, app_info, dn, false, false);
-        const auto dir_data = dsn::utils::filesystem::path_combine(
-            _replica->dir(), dsn::replication::replication_app_base::kDataDir);
-        CHECK(dsn::utils::filesystem::create_directory(dir_data),
-              "create data dir {} failed",
-              dir_data);
+        initialize_replica(app_info);
 
-        _server = std::make_unique<mock_pegasus_server_impl>(_replica);
+        CHECK(dsn::utils::filesystem::create_directory(_server->data_dir()),
+              "create data dir {} failed",
+              _server->data_dir());
     }
 
-    dsn::error_code start(const std::map<std::string, std::string> &envs = {})
+    void initialize_replica(const dsn::app_info &app_info)
+    {
+        _replica.reset();
+
+        auto *dn = _replica_stub->get_fs_manager()->find_best_dir_for_new_replica(_gpid);
+        CHECK_NOTNULL(dn, "");
+
+        _replica =
+            new dsn::replication::replica(_replica_stub.get(), _gpid, app_info, dn, false, false);
+        _replica_stub->_replicas[_gpid] = _replica;
+
+        _replica->create_app_for_test<mock_pegasus_server_impl>(_replica.get());
+        _server = dsn::down_cast<mock_pegasus_server_impl *>(_replica->_app.get());
+    }
+
+    dsn::error_code start(const std::map<std::string, std::string> &envs)
     {
         std::unique_ptr<char *[]> argvs = std::make_unique<char *[]>(1 + envs.size() * 2);
         char **argv = argvs.get();
@@ -91,20 +102,29 @@ public:
         return _server->start(idx, argv);
     }
 
+    dsn::error_code start() { return start({}); }
+
+    void set_last_committed_decree(dsn::replication::decree d)
+    {
+        _replica->_prepare_list->reset(d);
+    }
+
+    void set_last_durable_decree(dsn::replication::decree d)
+    {
+        _server->set_last_durable_decree(d);
+    }
+
     ~pegasus_server_test_base() override
     {
         // do not clear state
         _server->stop(false);
-
-        delete _replica_stub;
-        delete _replica;
     }
 
 protected:
-    std::unique_ptr<mock_pegasus_server_impl> _server;
-    dsn::replication::replica *_replica = nullptr;
-    dsn::replication::replica_stub *_replica_stub = nullptr;
+    std::unique_ptr<dsn::replication::replica_stub> _replica_stub;
     dsn::gpid _gpid;
+    dsn::replication::replica_ptr _replica;
+    mock_pegasus_server_impl *_server;
 };
 
 } // namespace server

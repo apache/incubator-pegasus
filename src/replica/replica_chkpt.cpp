@@ -25,12 +25,13 @@
  */
 
 #include <fmt/core.h>
-#include <stdint.h>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "common/gpid.h"
@@ -56,13 +57,18 @@
 #include "task/task.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/checksum.h"
 #include "utils/chrono_literals.h"
+#include "utils/env.h"
 #include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/thread_access_checker.h"
+#include "utils_types.h"
 
 /// The checkpoint of the replicated app part of replica.
 
@@ -245,6 +251,12 @@ void replica::async_trigger_manual_emergency_checkpoint(decree min_checkpoint_de
         std::chrono::milliseconds(delay_ms));
 }
 
+void replica::async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree,
+                                                        uint32_t delay_ms)
+{
+    async_trigger_manual_emergency_checkpoint(min_checkpoint_decree, delay_ms, {});
+}
+
 // ThreadPool: THREAD_POOL_REPLICATION
 error_code replica::trigger_manual_emergency_checkpoint(decree min_checkpoint_decree)
 {
@@ -313,7 +325,8 @@ void replica::init_checkpoint(bool is_emergency)
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-void replica::on_query_last_checkpoint(/*out*/ learn_response &response)
+void replica::on_query_last_checkpoint(utils::checksum_type::type checksum_type,
+                                       learn_response &response)
 {
     _checker.only_one_thread_access();
 
@@ -322,24 +335,65 @@ void replica::on_query_last_checkpoint(/*out*/ learn_response &response)
         return;
     }
 
-    blob placeholder;
-    int err = _app->get_checkpoint(0, placeholder, response.state);
-    if (err != 0) {
+    if (dsn_unlikely(_app->get_checkpoint(0, blob(), response.state) != ERR_OK)) {
         response.err = ERR_GET_LEARN_STATE_FAILED;
-    } else {
-        response.err = ERR_OK;
-        response.last_committed_decree = last_committed_decree();
-        // for example: base_local_dir = "./data" + "checkpoint.1024" = "./data/checkpoint.1024"
-        response.base_local_dir = utils::filesystem::path_combine(
-            _app->data_dir(), checkpoint_folder(response.state.to_decree_included));
-        SET_IP_AND_HOST_PORT(
-            response, learnee, _stub->primary_address(), _stub->primary_host_port());
+        return;
+    }
+
+    response.err = ERR_OK;
+    response.last_committed_decree = last_committed_decree();
+
+    // For example: base_local_dir = "./data" + "checkpoint.1024" = "./data/checkpoint.1024"
+    response.base_local_dir = utils::filesystem::path_combine(
+        _app->data_dir(), checkpoint_folder(response.state.to_decree_included));
+
+    SET_IP_AND_HOST_PORT(response, learnee, _stub->primary_address(), _stub->primary_host_port());
+
+    // If the client does not require the calculation of the checksum, only respond with name
+    // for each file.
+    if (checksum_type <= utils::checksum_type::CST_NONE) {
         for (auto &file : response.state.files) {
-            // response.state.files contain file absolute path， for example:
+            // response.state.files contain file absolute path, for example:
             // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst
             file = file.substr(response.base_local_dir.length() + 1);
         }
+
+        return;
     }
+
+    std::vector<int64_t> file_sizes;
+    std::vector<std::string> file_checksums;
+    file_sizes.reserve(response.state.files.size());
+    file_checksums.reserve(response.state.files.size());
+    for (auto &file : response.state.files) {
+        int64_t size = 0;
+        if (dsn_unlikely(
+                !utils::filesystem::file_size(file, utils::FileDataType::kSensitive, size))) {
+            LOG_ERROR_PREFIX("get size of file failed: file = {}", file);
+            response.err = ERR_GET_LEARN_STATE_FAILED;
+            return;
+        }
+
+        std::string checksum;
+        const auto result = calc_checksum(file, checksum_type, checksum);
+        if (dsn_unlikely(!result)) {
+            LOG_ERROR_PREFIX("calculate checksum failed: file = {}, err = {}", file, result);
+            response.err = ERR_GET_LEARN_STATE_FAILED;
+            return;
+        }
+
+        file_sizes.push_back(size);
+        file_checksums.push_back(std::move(checksum));
+
+        // response.state.files contain file absolute path, for example:
+        // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst
+        file = file.substr(response.base_local_dir.length() + 1);
+    }
+
+    response.state.__isset.file_sizes = true;
+    response.state.__isset.file_checksums = true;
+    response.state.file_sizes = std::move(file_sizes);
+    response.state.file_checksums = std::move(file_checksums);
 }
 
 // run in background thread
