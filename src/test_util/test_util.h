@@ -30,12 +30,13 @@
 
 #include "metadata_types.h"
 #include "runtime/api_layer1.h"
-#include "utils/env.h"
 // IWYU refused to include "utils/defer.h" everywhere, both in .h and .cpp files.
 // However, once "utils/defer.h" is not included, it is inevitable that compilation
 // will fail since dsn::defer is referenced. Thus force IWYU to keep it.
 #include "utils/defer.h" // IWYU pragma: keep
+#include "utils/env.h"
 #include "utils/flags.h"
+#include "utils/ports.h"
 #include "utils/test_macros.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
@@ -100,10 +101,10 @@ public:
     // Generate a file whose content is arbitrary.
     static void create(const std::string &path, std::shared_ptr<local_test_file> &file);
 
-    const dsn::replication::file_meta &get_file_meta() const { return _file_meta; }
+    [[nodiscard]] const dsn::replication::file_meta &get_file_meta() const { return _file_meta; }
 
 private:
-    local_test_file(dsn::replication::file_meta &&meta);
+    explicit local_test_file(const dsn::replication::file_meta &meta);
     ~local_test_file();
 
     static void deleter(local_test_file *ptr) { delete ptr; }

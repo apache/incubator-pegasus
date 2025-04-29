@@ -18,17 +18,19 @@
 #include "utils/checksum.h"
 
 #include <cstdint>
+#include <memory>
 #include <tuple>
+#include <type_traits>
 #include <vector>
 
 #include "gtest/gtest.h"
 #include "test_util/test_util.h"
-#include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
+#include "utils/test_macros.h"
 #include "utils_types.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);

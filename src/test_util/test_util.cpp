@@ -20,7 +20,6 @@
 #include <gtest/gtest-spi.h>
 #include <chrono>
 #include <thread>
-#include <utility>
 
 #include "gtest/gtest.h"
 #include "rocksdb/env.h"
@@ -52,7 +51,7 @@ void local_test_file::create(const std::string &path,
         dsn::utils::filesystem::file_size(path, dsn::utils::FileDataType::kSensitive, meta.size));
     ASSERT_EQ(dsn::ERR_OK, dsn::utils::filesystem::md5sum(path, meta.md5));
 
-    file = std::shared_ptr<local_test_file>(new local_test_file(std::move(meta)), deleter);
+    file = std::shared_ptr<local_test_file>(new local_test_file(meta), deleter);
 }
 
 void local_test_file::create(const std::string &path, std::shared_ptr<local_test_file> &file)
@@ -60,9 +59,7 @@ void local_test_file::create(const std::string &path, std::shared_ptr<local_test
     return create(path, "write some data.", file);
 }
 
-local_test_file::local_test_file(dsn::replication::file_meta &&meta) : _file_meta(std::move(meta))
-{
-}
+local_test_file::local_test_file(const dsn::replication::file_meta &meta) : _file_meta(meta) {}
 
 local_test_file::~local_test_file()
 {

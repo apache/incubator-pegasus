@@ -193,8 +193,7 @@ protected:
                 std::shared_ptr<local_test_file> local_file;
                 NO_FATALS(local_test_file::create(
                     file_path, std::string(expected_file_sizes[i], 'a'), local_file));
-                ASSERT_TRUE(
-                    local_files.emplace(std::move(file_path), std::move(local_file)).second);
+                ASSERT_TRUE(local_files.emplace(file_path, local_file).second);
             }
         }
 
