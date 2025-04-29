@@ -18,6 +18,7 @@
 #include "utils/checksum.h"
 
 #include <cstdint>
+#include <tuple>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -42,22 +43,23 @@ struct calc_checksum_case
     std::string expected_checksum;
 };
 
-class CalcChecksumTest : public testing::TestWithParam<calc_checksum_case>
+class CalcChecksumTest : public testing::TestWithParam<std::tuple<bool, calc_checksum_case>>
 {
 protected:
-    static void test_calc_checksum(bool encrypted)
+    static void test_calc_checksum()
     {
         static const std::string kFilePath("test_file_for_calc_checksum");
 
+        const auto &[file_encrypted, test_case] = GetParam();
+
         // Set flag to make file encrypted or unencrypted.
         PRESERVE_FLAG(encrypt_data_at_rest);
-        FLAGS_encrypt_data_at_rest = encrypted;
-
-        const auto &test_case = GetParam();
+        FLAGS_encrypt_data_at_rest = file_encrypted;
 
         // Generate the test file.
-        pegasus::generate_test_file(kFilePath, test_case.file_size);
-        const auto cleanup = defer([]() { utils::filesystem::remove_path(kFilePath); });
+        std::shared_ptr<pegasus::local_test_file> local_file;
+        NO_FATALS(pegasus::local_test_file::create(
+            kFilePath, std::string(test_case.file_size, 'a'), local_file));
 
         // Check the file size.
         int64_t file_size = 0;
@@ -93,12 +95,10 @@ const std::vector<calc_checksum_case> calc_checksum_tests = {
     {4097, utils::checksum_type::CST_INVALID, ERR_NOT_IMPLEMENTED, ""},
 };
 
-// Calculate checksum for encrypted files.
-TEST_P(CalcChecksumTest, CalcEncrypted) { test_calc_checksum(true); }
+TEST_P(CalcChecksumTest, CalcChecksum) { test_calc_checksum(); }
 
-// Calculate checksum for unencrypted files.
-TEST_P(CalcChecksumTest, CalcUnencrypted) { test_calc_checksum(false); }
-
-INSTANTIATE_TEST_SUITE_P(ChecksumTest, CalcChecksumTest, testing::ValuesIn(calc_checksum_tests));
+INSTANTIATE_TEST_SUITE_P(ChecksumTest,
+                         CalcChecksumTest,
+                         testing::Combine(testing::Bool(), testing::ValuesIn(calc_checksum_tests)));
 
 } // namespace dsn

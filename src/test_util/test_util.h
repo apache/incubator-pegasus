@@ -25,8 +25,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <functional>
+#include <memory>
 #include <string>
 
+#include "metadata_types.h"
 #include "runtime/api_layer1.h"
 #include "utils/env.h"
 // IWYU refused to include "utils/defer.h" everywhere, both in .h and .cpp files.
@@ -37,12 +39,6 @@
 #include "utils/test_macros.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
-
-namespace dsn {
-namespace replication {
-class file_meta;
-} // namespace replication
-} // namespace dsn
 
 #define PRESERVE_VAR(name, expr)                                                                   \
     const auto PRESERVED_##name = expr;                                                            \
@@ -91,11 +87,32 @@ private:
     uint64_t _start_ms = 0;
 };
 
-void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm);
+// Used to generate a local file for test whose life cycle is managed with RAII: the file
+// will be removed automatically in destructor.
+class local_test_file
+{
+public:
+    // Generate a file whose content is user-defined.
+    static void create(const std::string &path,
+                       const std::string &content,
+                       std::shared_ptr<local_test_file> &file);
 
-// Generate a file under `file_path` with size `file_size`. The file is filled with
-// `file_size` 'a's.
-void generate_test_file(const std::string &file_path, int64_t file_size);
+    // Generate a file whose content is arbitrary.
+    static void create(const std::string &path, std::shared_ptr<local_test_file> &file);
+
+    const dsn::replication::file_meta &get_file_meta() const { return _file_meta; }
+
+private:
+    local_test_file(dsn::replication::file_meta &&meta);
+    ~local_test_file();
+
+    static void deleter(local_test_file *ptr) { delete ptr; }
+
+    dsn::replication::file_meta _file_meta;
+
+    DISALLOW_COPY_AND_ASSIGN(local_test_file);
+    DISALLOW_MOVE_AND_ASSIGN(local_test_file);
+};
 
 #define ASSERT_EVENTUALLY(expr)                                                                    \
     do {                                                                                           \

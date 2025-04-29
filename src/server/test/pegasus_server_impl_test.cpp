@@ -172,31 +172,31 @@ protected:
         const std::string checkpoint_dir(dsn::utils::filesystem::path_combine(
             _server->data_dir(), fmt::format("checkpoint.{}", expected_last_durable_decree)));
 
-        if (create_checkpoint_dir) {
-            CHECK_TRUE(dsn::utils::filesystem::create_directory(checkpoint_dir));
-
-            // Generate all files in the checkpoint dir with respective specified size.
-            for (size_t i = 0; i < expected_file_names.size(); ++i) {
-                const auto file_path =
-                    dsn::utils::filesystem::path_combine(checkpoint_dir, expected_file_names[i]);
-                pegasus::generate_test_file(file_path, expected_file_sizes[i]);
-            }
-        }
-
         // After the test case is finished, remove the whole checkpoint dir.
         const auto cleanup = dsn::defer([checkpoint_dir, expected_file_names]() {
             if (!dsn::utils::filesystem::directory_exists(checkpoint_dir)) {
                 return;
             }
 
-            for (const auto &file_name : expected_file_names) {
-                const auto &file_path =
-                    dsn::utils::filesystem::path_combine(checkpoint_dir, file_name);
-                CHECK_TRUE(dsn::utils::filesystem::remove_path(file_path));
-            }
-
-            CHECK_TRUE(dsn::utils::filesystem::remove_path(checkpoint_dir));
+            ASSERT_TRUE(dsn::utils::filesystem::remove_path(checkpoint_dir));
         });
+
+        std::map<std::string, std::shared_ptr<local_test_file>> local_files;
+        if (create_checkpoint_dir) {
+            ASSERT_TRUE(dsn::utils::filesystem::create_directory(checkpoint_dir));
+
+            // Generate all files in the checkpoint dir with respective specified size.
+            for (size_t i = 0; i < expected_file_names.size(); ++i) {
+                const auto file_path =
+                    dsn::utils::filesystem::path_combine(checkpoint_dir, expected_file_names[i]);
+
+                std::shared_ptr<local_test_file> local_file;
+                NO_FATALS(local_test_file::create(
+                    file_path, std::string(expected_file_sizes[i], 'a'), local_file));
+                ASSERT_TRUE(
+                    local_files.emplace(std::move(file_path), std::move(local_file)).second);
+            }
+        }
 
         // Build the request to get the last checkpoint info.
         auto req = std::make_unique<dsn::replication::learn_request>();

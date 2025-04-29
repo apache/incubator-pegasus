@@ -20,9 +20,9 @@
 #include <gtest/gtest-spi.h>
 #include <chrono>
 #include <thread>
+#include <utility>
 
 #include "gtest/gtest.h"
-#include "metadata_types.h"
 #include "rocksdb/env.h"
 #include "rocksdb/slice.h"
 #include "rocksdb/status.h"
@@ -35,29 +35,40 @@
 
 namespace pegasus {
 
-void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm)
-{
-    ASSERT_NE(fm, nullptr);
-    auto s =
-        rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                   rocksdb::Slice("write some data."),
-                                   full_name,
-                                   /* should_sync */ true);
-    ASSERT_TRUE(s.ok()) << s.ToString();
-    fm->name = full_name;
-    ASSERT_EQ(dsn::ERR_OK, dsn::utils::filesystem::md5sum(full_name, fm->md5));
-    ASSERT_TRUE(dsn::utils::filesystem::file_size(
-        full_name, dsn::utils::FileDataType::kSensitive, fm->size));
-}
-
-void generate_test_file(const std::string &file_path, int64_t file_size)
+void local_test_file::create(const std::string &path,
+                             const std::string &content,
+                             std::shared_ptr<local_test_file> &file)
 {
     const auto status =
         rocksdb::WriteStringToFile(dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive),
-                                   rocksdb::Slice(std::string(file_size, 'a')),
-                                   file_path,
+                                   rocksdb::Slice(content),
+                                   path,
                                    /* should_sync */ true);
     ASSERT_TRUE(status.ok()) << status.ToString();
+
+    dsn::replication::file_meta meta;
+    meta.name = path;
+    ASSERT_TRUE(
+        dsn::utils::filesystem::file_size(path, dsn::utils::FileDataType::kSensitive, meta.size));
+    ASSERT_EQ(dsn::ERR_OK, dsn::utils::filesystem::md5sum(path, meta.md5));
+
+    file = std::shared_ptr<local_test_file>(new local_test_file(std::move(meta)), deleter);
+}
+
+void local_test_file::create(const std::string &path, std::shared_ptr<local_test_file> &file)
+{
+    return create(path, "write some data.", file);
+}
+
+local_test_file::local_test_file(dsn::replication::file_meta &&meta) : _file_meta(std::move(meta))
+{
+}
+
+local_test_file::~local_test_file()
+{
+    // We don't check whether returning ture, since the dir where the file is located may have
+    // been removed.
+    dsn::utils::filesystem::remove_path(_file_meta.name);
 }
 
 void AssertEventually(const std::function<void(void)> &f, int timeout_sec, WaitBackoff backoff)
