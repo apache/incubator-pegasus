@@ -94,7 +94,18 @@ private:
 
     // manual compact state
     std::atomic<bool> _disabled;
+    // when trigger time is larger than current time,there are two situation
+    // 1. The current day is the day when the user first sets the manual compaction trigger time,
+    // and the user sets a time earlier than the time of this action.
+    // 2. The current day is not the day when the user first sets the time. We should ensure that
+    // manual compaction is executed.
+    // The flag _time_natural_increase indicates if the current time is later than the trigger time,
+    // causing time to progress.
+    // The flag _manual_compact_first_day_s records the day's midnight when the user set the manual
+    // compaction time.
+    std::atomic<bool> _time_natural_increase;
     std::atomic<int> _max_concurrent_running_count;
+    std::atomic<uint64_t> _manual_compact_first_day_s;
     std::atomic<uint64_t> _manual_compact_enqueue_time_ms;
     std::atomic<uint64_t> _manual_compact_start_running_time_ms;
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;

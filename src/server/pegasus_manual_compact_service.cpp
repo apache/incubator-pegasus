@@ -65,7 +65,9 @@ pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_im
     : replica_base(*app),
       _app(app),
       _disabled(false),
+      _time_natural_increase(false),
       _max_concurrent_running_count(INT_MAX),
+      _manual_compact_first_day_s(0),
       _manual_compact_enqueue_time_ms(0),
       _manual_compact_start_running_time_ms(0),
       _manual_compact_last_finish_time_ms(0),
@@ -185,6 +187,9 @@ bool pegasus_manual_compact_service::check_periodic_compact(
 {
     auto find = envs.find(dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME);
     if (find == envs.end()) {
+        // if user remove MANUAL_COMPACT_PERIODIC_TRIGGER_TIME_KEY for this app
+        _manual_compact_first_day_s.store(0);
+        _time_natural_increase.store(false);
         return false;
     }
 
@@ -193,6 +198,11 @@ bool pegasus_manual_compact_service::check_periodic_compact(
     if (trigger_time_strs.empty()) {
         LOG_ERROR_PREFIX("{}={} is invalid.", find->first, find->second);
         return false;
+    }
+
+    if (0 == _manual_compact_first_day_s.load()) {
+        int64_t first_day_midnight = dsn::utils::get_unix_sec_today_midnight();
+        _manual_compact_first_day_s.store(first_day_midnight);
     }
 
     std::set<int64_t> trigger_time;
@@ -208,8 +218,16 @@ bool pegasus_manual_compact_service::check_periodic_compact(
     }
 
     auto now = static_cast<int64_t>(now_timestamp());
+    int64_t cur_day_midnight = dsn::utils::get_unix_sec_today_midnight();
     for (auto t : trigger_time) {
         auto t_ms = t * 1000;
+
+        if (_manual_compact_first_day_s.load() == cur_day_midnight && t_ms < now &&
+            !_time_natural_increase.load()) {
+            return false;
+        }
+
+        _time_natural_increase.store(true);
         if (_manual_compact_last_finish_time_ms.load() < t_ms && t_ms < now) {
             return true;
         }
