@@ -58,7 +58,7 @@ RUN add-apt-repository ppa:git-core/ppa -y; \
     apt-get install pkg-config -y --no-install-recommends; \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir cmake
+RUN pip3 install --no-cache-dir cmake==3.31.6
 
 RUN wget --progress=dot:giga https://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz -P /opt/thrift && \
     cd /opt/thrift && tar xzf thrift-0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
