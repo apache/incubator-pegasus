@@ -568,22 +568,22 @@ public:
         for (size_t i = 0; i < req.mutate_list.size(); ++i) {
             const auto &mu = req.mutate_list[i];
             if (dsn_likely(mu.operation == ::dsn::apps::mutate_operation::MO_PUT ||
-                mu.operation == ::dsn::apps::mutate_operation::MO_DELETE)) {
+                           mu.operation == ::dsn::apps::mutate_operation::MO_DELETE)) {
                 continue;
             }
 
             LOG_ERROR_PREFIX("mutate_list[{}]'s operation {} is invalid for check_and_mutate "
-                           "while making idempotent",
-                           i,
-                           mu.operation);
+                             "while making idempotent",
+                             i,
+                             mu.operation);
 
             return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
         }
 
         if (dsn_unlikely(!is_check_type_supported(req.check_type))) {
             LOG_ERROR_PREFIX("check type {} is not supported for check_and_mutate ",
-                           "while making idempotent",
-                           cas_check_type_to_string(req.check_type));
+                             "while making idempotent",
+                             cas_check_type_to_string(req.check_type));
 
             return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
         }
@@ -597,11 +597,11 @@ public:
         if (dsn_unlikely(err != rocksdb::Status::kOk)) {
             // Failed to read the check value.
             LOG_ERROR_PREFIX("failed to get the check value for check_and_mutate while making "
-                           "idempotent: rocksdb_status = {}, hash_key = {}, "
-                           "check_sort_key = {}",
-                           err,
-                           utils::c_escape_sensitive_string(req.hash_key),
-                           utils::c_escape_sensitive_string(req.check_sort_key));
+                             "idempotent: rocksdb_status = {}, hash_key = {}, "
+                             "check_sort_key = {}",
+                             err,
+                             utils::c_escape_sensitive_string(req.hash_key),
+                             utils::c_escape_sensitive_string(req.check_sort_key));
 
             return make_error_response(err, err_resp);
         }
@@ -618,7 +618,9 @@ public:
             req.check_type, req.check_operand, value_exist, check_value, invalid_argument);
         if (!passed) {
             make_check_value(req, value_exist, check_value, err_resp);
-            return make_error_response(invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain, err_resp);
+            return make_error_response(invalid_argument ? rocksdb::Status::kInvalidArgument
+                                                        : rocksdb::Status::kTryAgain,
+                                       err_resp);
         }
 
         updates.clear();
@@ -635,15 +637,14 @@ public:
                 continue;
             }
 
-            if (mu.operation== dsn::apps::mutate_operation::MO_DELETE) {
-            make_idempotent_request_for_check_and_mutate_remove(set_key, updates.back());
+            if (mu.operation == dsn::apps::mutate_operation::MO_DELETE) {
+                make_idempotent_request_for_check_and_mutate_remove(set_key, updates.back());
                 continue;
             }
 
             // It must have retured and replied to the client once this is an invalid
             // mutate_operation. Here just make an assertion.
-            LOG_FATAL(
-                      "invalid mutate_operation {} for check_and_mutate while making idempotent",
+            LOG_FATAL("invalid mutate_operation {} for check_and_mutate while making idempotent",
                       mu.operation);
             __builtin_unreachable();
         }
@@ -665,17 +666,16 @@ public:
 
         const auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
 
-        for (const auto &update: updates) {
+        for (const auto &update : updates) {
             if (update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT) {
                 resp.error = _rocksdb_wrapper->write_batch_put_ctx(
                     ctx, update.key, update.value, update.expire_ts_seconds);
-            } else if (update.type== dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE){
+            } else if (update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE) {
                 resp.error = _rocksdb_wrapper->write_batch_delete(ctx.decree, update.key);
             } else {
-            LOG_FATAL(
-                      "invalid update_type for check_and_mutate {} while making idempotent",
-                      update.type);
-            __builtin_unreachable();
+                LOG_FATAL("invalid update_type for check_and_mutate {} while making idempotent",
+                          update.type);
+                __builtin_unreachable();
             }
 
             if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
@@ -1039,9 +1039,9 @@ private:
 
     static inline void
     make_idempotent_request_for_check_and_mutate_put(const dsn::blob &key,
-                                                 const dsn::blob &value,
-                                                 int32_t expire_ts_seconds,
-                                                 dsn::apps::update_request &update)
+                                                     const dsn::blob &value,
+                                                     int32_t expire_ts_seconds,
+                                                     dsn::apps::update_request &update)
     {
         make_idempotent_request(
             key, value, expire_ts_seconds, dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT, update);
@@ -1049,7 +1049,7 @@ private:
 
     static inline void
     make_idempotent_request_for_check_and_mutate_remove(const dsn::blob &key,
-                                                    dsn::apps::update_request &update)
+                                                        dsn::apps::update_request &update)
     {
         make_idempotent_request(key, dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE, update);
     }
