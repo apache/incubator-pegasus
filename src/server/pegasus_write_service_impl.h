@@ -604,7 +604,7 @@ public:
         }
 
         dsn::blob check_value;
-        bool value_exist = !get_ctx.expired && get_ctx.found;
+        const bool value_exist = !get_ctx.expired && get_ctx.found;
         if (value_exist) {
             pegasus_extract_user_data(
                 _pegasus_data_version, std::move(get_ctx.raw_value), check_value);
