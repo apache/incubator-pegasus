@@ -77,12 +77,12 @@ enum update_type
     UT_CHECK_AND_MUTATE_REMOVE
 }
 
-// The single-put request, just writes a key/value pair into storage, which is certainly
+// The single-put request, just apply a key/value pair into storage, which is certainly
 // idempotent.
 struct update_request
 {
-    // Once `type` is UT_CHECK_AND_MUTATE_REMOVE, only `key` would be used (as one of 
-    // the keys in the check_and_mutate_request that should be deleted), while `value`
+    // Once `type` is UT_CHECK_AND_MUTATE_REMOVE, only `key` would be used (as one of the
+    // composite keys from check_and_mutate_request that should be deleted), while `value`
     // and `expire_ts_seconds` would be ignored.
     1:dsn.blob      key;
     2:dsn.blob      value;

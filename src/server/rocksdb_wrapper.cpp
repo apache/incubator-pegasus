@@ -112,6 +112,12 @@ int rocksdb_wrapper::get(std::string_view raw_key, /*out*/ db_get_context *ctx)
     return s.code();
 }
 
+int rocksdb_wrapper::get(const dsn::blob &raw_key,
+                         /*out*/ db_get_context *ctx)
+{
+    return get(raw_key.to_string_view(), ctx);
+}
+
 int rocksdb_wrapper::write_batch_put(int64_t decree,
                                      std::string_view raw_key,
                                      std::string_view value,

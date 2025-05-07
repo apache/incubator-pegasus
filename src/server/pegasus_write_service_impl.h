@@ -176,7 +176,7 @@ public:
     {
         // Get current raw value for the provided key from the RocksDB instance.
         db_get_context get_ctx;
-        const int err = _rocksdb_wrapper->get(req.key.to_string_view(), &get_ctx);
+        const int err = _rocksdb_wrapper->get(req.key, &get_ctx);
         if (dsn_unlikely(err != rocksdb::Status::kOk)) {
             // Failed to read current raw value.
             LOG_ERROR_PREFIX("failed to get current raw value for incr while making "
@@ -365,7 +365,7 @@ public:
 
         // Get the check value.
         db_get_context get_ctx;
-        const int err = _rocksdb_wrapper->get(check_key.to_string_view(), &get_ctx);
+        const int err = _rocksdb_wrapper->get(check_key, &get_ctx);
         if (dsn_unlikely(err != rocksdb::Status::kOk)) {
             // Failed to read the check value.
             LOG_ERROR_PREFIX("failed to get the check value for check_and_set while making "
@@ -532,19 +532,12 @@ public:
         return rocksdb::Status::kOk;
     }
 
-    // Used to call make_idempotent for incr and check_and_set to make the single idempotent
-    // put request which would be stored as the only element of `updates`.
-    // This interface is provided to ensure consistency between the make_idempotent()
-    // interfaces of the incr and check_and_set operations and that of check_and_mutate
-    // (both using a std::vector type for updates), thereby facilitating uniform templated
-    // function invocation.
+    // Used to call make_idempotent for incr and check_and_set to get the idempotent single
+    // put request which is stored as the only element of `updates`.
     //
-    // Parameters:
-    // - `req`:
-    // - `resp`:
-    // - `updates`:
-    //
-    // Return
+    // This interface is provided to ensure consistency between the make_idempotent() interfaces
+    // of incr/check_and_set operations and that of check_and_mutate (both using std::vector for
+    // `updates`), thereby facilitating uniform templated function invocation.
     template <typename TRequest, typename TResponse>
     inline int make_idempotent(const TRequest &req,
                                TResponse &err_resp,
@@ -555,6 +548,9 @@ public:
         return make_idempotent(req, err_resp, updates.front());
     }
 
+    // Tranlate a check_and_mutate request into multiple single-put and single-remove requests
+    // which are certainly idempotent. Return current status for RocksDB. Only called by primary
+    // replicas.
     int make_idempotent(const dsn::apps::check_and_mutate_request &req,
                         dsn::apps::check_and_mutate_response &err_resp,
                         std::vector<dsn::apps::update_request> &updates)
@@ -565,6 +561,7 @@ public:
             return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
         }
 
+        // Verify operation type for each mutate.
         for (size_t i = 0; i < req.mutate_list.size(); ++i) {
             const auto &mu = req.mutate_list[i];
             if (dsn_likely(mu.operation == ::dsn::apps::mutate_operation::MO_PUT ||
@@ -593,7 +590,7 @@ public:
 
         // Get the check value.
         db_get_context get_ctx;
-        const int err = _rocksdb_wrapper->get(check_key.to_string_view(), &get_ctx);
+        const int err = _rocksdb_wrapper->get(check_key, &get_ctx);
         if (dsn_unlikely(err != rocksdb::Status::kOk)) {
             // Failed to read the check value.
             LOG_ERROR_PREFIX("failed to get the check value for check_and_mutate while making "
@@ -623,8 +620,10 @@ public:
                                        err_resp);
         }
 
+        // Check passed.
         updates.clear();
         for (const auto &mu : req.mutate_list) {
+            // Generate new RocksDB key.
             dsn::blob set_key;
             pegasus_generate_key(set_key, req.hash_key, mu.sort_key);
 
@@ -642,26 +641,31 @@ public:
                 continue;
             }
 
-            // It must have retured and replied to the client once this is an invalid
-            // mutate_operation. Here just make an assertion.
+            // It must have returned and replied to the client once there is some invalid
+            // mutate_operation. Here is just a defensive assertion.
             LOG_FATAL("invalid mutate_operation {} for check_and_mutate while making idempotent",
                       mu.operation);
             __builtin_unreachable();
         }
 
-        // Add necessary values to the first element for future response to the client.
+        // Add check value to the first generated idempotent request, for the future response to
+        // the client.
         make_check_value(req, value_exist, check_value, updates.front());
 
         return rocksdb::Status::kOk;
     }
 
+    // Apply the single-put and single-remove requests translated from a check_and_mutate request
+    // into RocksDB, and build response for the check_and_mutate request. Return current status
+    // for RocksDB. Only called by primary replicas.
     int put(const db_write_context &ctx,
             const std::vector<dsn::apps::update_request> &updates,
             dsn::apps::check_and_mutate_response &resp)
     {
         make_basic_response(ctx.decree, resp);
 
-        // Take the values of the first element as the response to the client.
+        // Copy check_value's fields from the first idempotent request to the check_and_mutate
+        // response to reply to the client.
         copy_check_value(updates.front(), resp);
 
         const auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
@@ -1037,6 +1041,8 @@ private:
         return rocksdb::Status::kOk;
     }
 
+    // Build a single-put `update` for a mutate of MO_PUT in a check_and_mutate request based
+    // on `key`, `value` and `expire_ts_seconds`.
     static inline void
     make_idempotent_request_for_check_and_mutate_put(const dsn::blob &key,
                                                      const dsn::blob &value,
@@ -1047,6 +1053,8 @@ private:
             key, value, expire_ts_seconds, dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT, update);
     }
 
+    // Build a single-remove `update` for a mutate of MO_DELETE in a check_and_mutate request
+    // based on `key`.
     static inline void
     make_idempotent_request_for_check_and_mutate_remove(const dsn::blob &key,
                                                         dsn::apps::update_request &update)

@@ -59,6 +59,8 @@ public:
     /// \result ctx.expired=true if record expired. Still rocksdb::Status::kOk is returned.
     /// \result ctx.found=false if record is not found. Still rocksdb::Status::kOk is returned.
     int get(std::string_view raw_key, /*out*/ db_get_context *ctx);
+    int get(const dsn::blob &raw_key,
+            /*out*/ db_get_context *ctx);
 
     int write_batch_put(int64_t decree,
                         std::string_view raw_key,
