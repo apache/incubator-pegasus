@@ -239,13 +239,9 @@ public:
             const dsn::apps::update_request &update,
             dsn::apps::incr_response &resp)
     {
-        const auto pid = get_gpid();
-        resp.app_id = pid.get_app_id();
-        resp.partition_index = pid.get_partition_index();
-        resp.decree = ctx.decree;
-        resp.server = _primary_host_port;
+        make_basic_response(ctx.decree, resp);
 
-        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
+        const auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
 
         resp.error = _rocksdb_wrapper->write_batch_put_ctx(
             ctx, update.key, update.value, update.expire_ts_seconds);
@@ -422,17 +418,13 @@ public:
             const dsn::apps::update_request &update,
             dsn::apps::check_and_set_response &resp)
     {
-        const auto pid = get_gpid();
-        resp.app_id = pid.get_app_id();
-        resp.partition_index = pid.get_partition_index();
-        resp.decree = ctx.decree;
-        resp.server = _primary_host_port;
+        make_basic_response(ctx.decree, resp);
 
         // Copy check_value's fields from the single-put request to the check_and_set
         // response to reply to the client.
         copy_check_value(update, resp);
 
-        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
+        const auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
 
         resp.error = _rocksdb_wrapper->write_batch_put_ctx(
             ctx, update.key, update.value, update.expire_ts_seconds);
@@ -538,6 +530,161 @@ public:
         }
 
         return rocksdb::Status::kOk;
+    }
+
+    // Used to call make_idempotent for incr and check_and_set to make the single idempotent
+    // put request which would be stored as the only element of `updates`.
+    // This interface is provided to ensure consistency between the make_idempotent()
+    // interfaces of the incr and check_and_set operations and that of check_and_mutate
+    // (both using a std::vector type for updates), thereby facilitating uniform templated
+    // function invocation.
+    //
+    // Parameters:
+    // - `req`:
+    // - `resp`:
+    // - `updates`:
+    //
+    // Return
+    template <typename TRequest, typename TResponse>
+    inline int make_idempotent(const TRequest &req,
+                               TResponse &err_resp,
+                               std::vector<dsn::apps::update_request> &updates)
+    {
+        updates.clear();
+        updates.emplace_back();
+        return make_idempotent(req, err_resp, updates.front());
+    }
+
+    int make_idempotent(const dsn::apps::check_and_mutate_request &req,
+                        dsn::apps::check_and_mutate_response &err_resp,
+                        std::vector<dsn::apps::update_request> &updates)
+    {
+        if (dsn_unlikely(req.mutate_list.empty())) {
+            LOG_ERROR_PREFIX("mutate_list is empty for check_and_mutate while making idempotent");
+
+            return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
+        }
+
+        for (size_t i = 0; i < req.mutate_list.size(); ++i) {
+            const auto &mu = req.mutate_list[i];
+            if (dsn_likely(mu.operation == ::dsn::apps::mutate_operation::MO_PUT ||
+                mu.operation == ::dsn::apps::mutate_operation::MO_DELETE)) {
+                continue;
+            }
+
+            LOG_ERROR_PREFIX("mutate_list[{}]'s operation {} is invalid for check_and_mutate "
+                           "while making idempotent",
+                           i,
+                           mu.operation);
+
+            return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
+        }
+
+        if (dsn_unlikely(!is_check_type_supported(req.check_type))) {
+            LOG_ERROR_PREFIX("check type {} is not supported for check_and_mutate ",
+                           "while making idempotent",
+                           cas_check_type_to_string(req.check_type));
+
+            return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
+        }
+
+        dsn::blob check_key;
+        pegasus_generate_key(check_key, req.hash_key, req.check_sort_key);
+
+        // Get the check value.
+        db_get_context get_ctx;
+        const int err = _rocksdb_wrapper->get(check_key.to_string_view(), &get_ctx);
+        if (dsn_unlikely(err != rocksdb::Status::kOk)) {
+            // Failed to read the check value.
+            LOG_ERROR_PREFIX("failed to get the check value for check_and_mutate while making "
+                           "idempotent: rocksdb_status = {}, hash_key = {}, "
+                           "check_sort_key = {}",
+                           err,
+                           utils::c_escape_sensitive_string(req.hash_key),
+                           utils::c_escape_sensitive_string(req.check_sort_key));
+
+            return make_error_response(err, err_resp);
+        }
+
+        dsn::blob check_value;
+        bool value_exist = !get_ctx.expired && get_ctx.found;
+        if (value_exist) {
+            pegasus_extract_user_data(
+                _pegasus_data_version, std::move(get_ctx.raw_value), check_value);
+        }
+
+        bool invalid_argument = false;
+        const bool passed = validate_check(
+            req.check_type, req.check_operand, value_exist, check_value, invalid_argument);
+        if (!passed) {
+            make_check_value(req, value_exist, check_value, err_resp);
+            return make_error_response(invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain, err_resp);
+        }
+
+        updates.clear();
+        for (const auto &mu : req.mutate_list) {
+            dsn::blob set_key;
+            pegasus_generate_key(set_key, req.hash_key, mu.sort_key);
+
+            // Add a new put request.
+            updates.emplace_back();
+
+            if (mu.operation == dsn::apps::mutate_operation::MO_PUT) {
+                make_idempotent_request_for_check_and_mutate_put(
+                    set_key, mu.value, mu.set_expire_ts_seconds, updates.back());
+                continue;
+            }
+
+            if (mu.operation== dsn::apps::mutate_operation::MO_DELETE) {
+            make_idempotent_request_for_check_and_mutate_remove(set_key, updates.back());
+                continue;
+            }
+
+            // It must have retured and replied to the client once this is an invalid
+            // mutate_operation. Here just make an assertion.
+            LOG_FATAL(
+                      "invalid mutate_operation {} for check_and_mutate while making idempotent",
+                      mu.operation);
+            __builtin_unreachable();
+        }
+
+        // Add necessary values to the first element for future response to the client.
+        make_check_value(req, value_exist, check_value, updates.front());
+
+        return rocksdb::Status::kOk;
+    }
+
+    int put(const db_write_context &ctx,
+            const std::vector<dsn::apps::update_request> &updates,
+            dsn::apps::check_and_mutate_response &resp)
+    {
+        make_basic_response(ctx.decree, resp);
+
+        // Take the values of the first element as the response to the client.
+        copy_check_value(updates.front(), resp);
+
+        const auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
+
+        for (const auto &update: updates) {
+            if (update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT) {
+                resp.error = _rocksdb_wrapper->write_batch_put_ctx(
+                    ctx, update.key, update.value, update.expire_ts_seconds);
+            } else if (update.type== dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE){
+                resp.error = _rocksdb_wrapper->write_batch_delete(ctx.decree, update.key);
+            } else {
+            LOG_FATAL(
+                      "invalid update_type for check_and_mutate {} while making idempotent",
+                      update.type);
+            __builtin_unreachable();
+            }
+
+            if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
+                return resp.error;
+            }
+        }
+
+        resp.error = _rocksdb_wrapper->write(ctx.decree);
+        return resp.error;
     }
 
     int check_and_mutate(int64_t decree,
@@ -888,6 +1035,34 @@ private:
         make_idempotent_request(
             key, value, expire_ts_seconds, dsn::apps::update_type::UT_CHECK_AND_SET, update);
         return rocksdb::Status::kOk;
+    }
+
+    static inline void
+    make_idempotent_request_for_check_and_mutate_put(const dsn::blob &key,
+                                                 const dsn::blob &value,
+                                                 int32_t expire_ts_seconds,
+                                                 dsn::apps::update_request &update)
+    {
+        make_idempotent_request(
+            key, value, expire_ts_seconds, dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT, update);
+    }
+
+    static inline void
+    make_idempotent_request_for_check_and_mutate_remove(const dsn::blob &key,
+                                                    dsn::apps::update_request &update)
+    {
+        make_idempotent_request(key, dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE, update);
+    }
+
+    // Build response `resp` with basic info.
+    template <typename TResponse>
+    inline void make_basic_response(int64_t decree, TResponse &resp)
+    {
+        const auto pid = get_gpid();
+        resp.app_id = pid.get_app_id();
+        resp.partition_index = pid.get_partition_index();
+        resp.decree = decree;
+        resp.server = _primary_host_port;
     }
 
     // Build response `resp` based on `err` only for the error case (i.e. the current status

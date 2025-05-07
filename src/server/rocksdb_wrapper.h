@@ -74,6 +74,7 @@ public:
                             int32_t expire_sec);
     int write(int64_t decree);
     int write_batch_delete(int64_t decree, std::string_view raw_key);
+    int write_batch_delete(int64_t decree, const dsn::blob &raw_key);
     void clear_up_write_batch();
     int ingest_files(int64_t decree,
                      const std::vector<std::string> &sst_file_list,

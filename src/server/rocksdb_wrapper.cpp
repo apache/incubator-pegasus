@@ -232,6 +232,11 @@ int rocksdb_wrapper::write_batch_delete(int64_t decree, std::string_view raw_key
     return s.code();
 }
 
+int rocksdb_wrapper::write_batch_delete(int64_t decree, const dsn::blob &raw_key)
+{
+    return write_batch_delete(decree, raw_key.to_string_view());
+}
+
 void rocksdb_wrapper::clear_up_write_batch() { _write_batch->Clear(); }
 
 int rocksdb_wrapper::ingest_files(int64_t decree,
