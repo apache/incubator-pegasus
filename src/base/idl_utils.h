@@ -48,5 +48,6 @@ namespace apps {
 USER_DEFINED_ENUM_FORMATTER(cas_check_type::type)
 USER_DEFINED_ENUM_FORMATTER(filter_type::type)
 USER_DEFINED_ENUM_FORMATTER(mutate_operation::type)
+USER_DEFINED_ENUM_FORMATTER(update_type::type)
 } // namespace apps
 } // namespace dsn
