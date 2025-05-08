@@ -77,7 +77,7 @@ enum update_type
     UT_CHECK_AND_MUTATE_REMOVE
 }
 
-// The single-put request, just apply a key/value pair into storage, which is certainly
+// The single-update request, just applies a key/value pair into storage, which is certainly
 // idempotent.
 struct update_request
 {
@@ -88,14 +88,16 @@ struct update_request
     2:dsn.blob      value;
     3:i32           expire_ts_seconds;
 
-    // This field marks the type of a single-put request, mainly used to differentiate a general
-    // single-put request from the one translated from a non-idempotent atomic write request:
+    // This field marks the type of a single-update request, mainly used to differentiate a
+    // general single-put request from the one translated from an atomic write request which
+    // may be:
     // - a general single-put request, if `type` is UT_PUT or not set by default as it's
     // optional, or
     // - a put request translated from an incr request, if `type` is UT_INCR, or
-    // - a put request translated from a check_and_set request, if `type` is UT_CHECK_AND_SET.
+    // - a put request translated from a check_and_set request, if `type` is UT_CHECK_AND_SET,
+    // or
     // - a put request translated from a mutate of MO_PUT in a check_and_mutate request, if
-    // `type` is UT_CHECK_AND_MUTATE_PUT.
+    // `type` is UT_CHECK_AND_MUTATE_PUT, or
     // - a remove request translated from a mutate of MO_DELETE in a check_and_mutate request,
     // if `type` is UT_CHECK_AND_MUTATE_REMOVE.
     4:optional update_type type;

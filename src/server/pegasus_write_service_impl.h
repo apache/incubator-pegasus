@@ -532,8 +532,8 @@ public:
         return rocksdb::Status::kOk;
     }
 
-    // Used to call make_idempotent for incr and check_and_set to get the idempotent single
-    // put request which is stored as the only element of `updates`.
+    // Used to call make_idempotent() for incr and check_and_set to get the idempotent single-put
+    // request which is stored as the unique element of `updates`.
     //
     // This interface is provided to ensure consistency between the make_idempotent() interfaces
     // of incr/check_and_set operations and that of check_and_mutate (both using std::vector for
@@ -564,8 +564,8 @@ public:
         // Verify operation type for each mutate.
         for (size_t i = 0; i < req.mutate_list.size(); ++i) {
             const auto &mu = req.mutate_list[i];
-            if (dsn_likely(mu.operation == ::dsn::apps::mutate_operation::MO_PUT ||
-                           mu.operation == ::dsn::apps::mutate_operation::MO_DELETE)) {
+            if (dsn_likely(mu.operation == dsn::apps::mutate_operation::MO_PUT ||
+                           mu.operation == dsn::apps::mutate_operation::MO_DELETE)) {
                 continue;
             }
 
