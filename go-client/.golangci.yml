@@ -32,8 +32,8 @@ linters-settings:
       - name: var-naming
         severity: warning
         disabled: false
-        exclude: [""]
+        exclude: ["TEST"]
         arguments:
           - ["ID", "RPC"] # AllowList
           - [] # DenyList
-          - - upper-case-const: true # Extra parameter (upper-case-const|skip-package-name-checks)
+          - - upperCaseConst: true # Extra parameter (upper-case-const|skip-package-name-checks)
