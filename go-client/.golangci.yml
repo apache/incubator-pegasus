@@ -35,5 +35,5 @@ linters-settings:
         exclude: [""]
         arguments:
           - ["ID", "RPC"] # AllowList
-          - [""] # DenyList
+          - [] # DenyList
           - upper-case-const # Extra parameter (upper-case-const|skip-package-name-checks)

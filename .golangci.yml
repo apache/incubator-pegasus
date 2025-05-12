@@ -41,7 +41,7 @@ linters-settings:
         exclude: [""]
         arguments:
           - ["ID", "RPC"] # AllowList
-          - [""] # DenyList
+          - [] # DenyList
           - upper-case-const # Extra parameter (upper-case-const|skip-package-name-checks)
   exhaustive:
     # indicates that switch statements are to be considered exhaustive if a
