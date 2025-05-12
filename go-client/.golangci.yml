@@ -32,7 +32,7 @@ linters-settings:
       - name: var-naming
         severity: warning
         disabled: false
-        exclude: ["**/*_test.go"]
+        exclude: [""]
         arguments:
           - ["ID", "RPC"] # AllowList
           - [] # DenyList
