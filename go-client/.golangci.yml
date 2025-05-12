@@ -36,4 +36,4 @@ linters-settings:
         arguments:
           - ["ID", "RPC"] # AllowList
           - [] # DenyList
-          - upper-case-const # Extra parameter (upper-case-const|skip-package-name-checks)
+          - - upper-case-const: true # Extra parameter (upper-case-const|skip-package-name-checks)
