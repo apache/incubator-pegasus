@@ -36,13 +36,13 @@ linters-settings:
   revive:
     rules:
       - name: var-naming
-          severity: warning
-          disabled: false
-          exclude: [""]
-          arguments:
-            - ["ID"] # AllowList
-            - [] # DenyList
-            - - upper-case-const: true # Extra parameter (upper-case-const|skip-package-name-checks)
+        severity: warning
+        disabled: false
+        exclude: [""]
+        arguments:
+          - ["ID"] # AllowList
+          - [] # DenyList
+          - - upper-case-const: true # Extra parameter (upper-case-const|skip-package-name-checks)
   exhaustive:
     # indicates that switch statements are to be considered exhaustive if a
     # 'default' case is present, even if all enum members aren't listed in the

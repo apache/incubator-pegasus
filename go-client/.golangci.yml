@@ -30,10 +30,10 @@ linters-settings:
   revive:
     rules:
       - name: var-naming
-          severity: warning
-          disabled: false
-          exclude: [""]
-          arguments:
-            - ["ID"] # AllowList
-            - [] # DenyList
-            - - upper-case-const: true # Extra parameter (upper-case-const|skip-package-name-checks)
+        severity: warning
+        disabled: false
+        exclude: [""]
+        arguments:
+          - ["ID"] # AllowList
+          - [] # DenyList
+          - - upper-case-const: true # Extra parameter (upper-case-const|skip-package-name-checks)
