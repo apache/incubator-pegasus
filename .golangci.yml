@@ -27,7 +27,7 @@ linters:
   enable:
     - gofmt
     - goimports
-    - golint
+    - revive
     - bodyclose
     - exhaustive
     - exportloopref
