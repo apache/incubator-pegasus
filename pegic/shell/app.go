@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/apache/incubator-pegasus/pegic/interactive"
-	"github.com/apache/incubator-pegasus/pegic/interactive/cmd"
 	"github.com/spf13/cobra"
 )
 
@@ -37,15 +36,15 @@ func init() {
 	Root = &cobra.Command{
 		Use:   "pegic [--meta|-m <meta-list>]",
 		Short: "pegic: Pegasus Interactive Command-Line tool",
-		PreRun: func(c *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, _ []string) {
 			metaAddrs := strings.Split(*metaList, ",")
 			err := cmd.Init(metaAddrs)
 			if err != nil {
-				c.PrintErrln(err)
+				cmd.PrintErrln(err)
 				os.Exit(1)
 			}
 		},
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			// the default entrance is interactive
 			interactive.Run()
 		},

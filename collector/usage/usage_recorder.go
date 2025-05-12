@@ -71,7 +71,7 @@ func (rec *tableUsageRecorder) Start(tom *tomb.Tomb) {
 		break
 	}
 
-	aggregate.AddHookAfterTableStatEmitted(func(stats []aggregate.TableStats, allStat aggregate.ClusterStats) {
+	aggregate.AddHookAfterTableStatEmitted(func(stats []aggregate.TableStats, _ aggregate.ClusterStats) {
 		rootCtx := tom.Context(context.TODO())
 		for _, s := range stats {
 			rec.writeTableUsage(rootCtx, &s)

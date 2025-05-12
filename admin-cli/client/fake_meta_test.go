@@ -167,7 +167,7 @@ func (m *fakeMeta) Balance(pid *base.Gpid, opType BalanceType, from *util.Pegasu
 	return nil
 }
 
-func (m *fakeMeta) Propose(pid *base.Gpid, opType admin.ConfigType, target *util.PegasusNode, node *util.PegasusNode) error {
+func (m *fakeMeta) Propose(pid *base.Gpid, opType admin.ConfigType, _ *util.PegasusNode, node *util.PegasusNode) error {
 	fakeNode := findNodeInFakeCluster(node)
 
 	switch opType {
@@ -193,67 +193,67 @@ func findNodeInFakeCluster(pn *util.PegasusNode) *fakeNode {
 	return ret
 }
 
-func (m *fakeMeta) StartBackupApp(tableID int, providerType string, backupPath string) (*admin.StartBackupAppResponse, error) {
+func (m *fakeMeta) StartBackupApp(_ int, _ string, _ string) (*admin.StartBackupAppResponse, error) {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) QueryBackupStatus(tableID int, backupID int64) (*admin.QueryBackupStatusResponse, error) {
+func (m *fakeMeta) QueryBackupStatus(_ int, _ int64) (*admin.QueryBackupStatusResponse, error) {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) RestoreApp(oldClusterName string, oldTableName string, oldTableID int, backupID int64, providerType string,
-	newTableName string, restorePath string, skipBadPartition bool, policyName string) (*admin.CreateAppResponse, error) {
+func (m *fakeMeta) RestoreApp(_ string, _ string, _ int, _ int64, _ string,
+	_ string, _ string, _ bool, _ string) (*admin.CreateAppResponse, error) {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) StartPartitionSplit(tableName string, newPartitionCount int) error {
+func (m *fakeMeta) StartPartitionSplit(_ string, _ int) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) QuerySplitStatus(tableName string) (*admin.QuerySplitResponse, error) {
+func (m *fakeMeta) QuerySplitStatus(_ string) (*admin.QuerySplitResponse, error) {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) PausePartitionSplit(tableName string, parentPidx int) error {
+func (m *fakeMeta) PausePartitionSplit(_ string, _ int) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) RestartPartitionSplit(tableName string, parentPidx int) error {
+func (m *fakeMeta) RestartPartitionSplit(_ string, _ int) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) CancelPartitionSplit(tableName string, oldPartitionCount int) error {
+func (m *fakeMeta) CancelPartitionSplit(_ string, _ int) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) StartBulkLoad(tableName string, clusterName string, providerType string, rootPath string) error {
+func (m *fakeMeta) StartBulkLoad(_ string, _ string, _ string, _ string) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) QueryBulkLoad(tableName string) (*admin.QueryBulkLoadResponse, error) {
+func (m *fakeMeta) QueryBulkLoad(_ string) (*admin.QueryBulkLoadResponse, error) {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) PauseBulkLoad(tableName string) error {
+func (m *fakeMeta) PauseBulkLoad(_ string) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) RestartBulkLoad(tableName string) error {
+func (m *fakeMeta) RestartBulkLoad(_ string) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) CancelBulkLoad(tableName string, forced bool) error {
+func (m *fakeMeta) CancelBulkLoad(_ string, _ bool) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) ClearBulkLoad(tableName string) error {
+func (m *fakeMeta) ClearBulkLoad(_ string) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) StartManualCompaction(tableName string, targetLevel int, maxRunningCount int, bottommost bool) error {
+func (m *fakeMeta) StartManualCompaction(_ string, _ int, _ int, _ bool) error {
 	panic("unimplemented")
 }
 
-func (m *fakeMeta) QueryManualCompaction(tableName string) (*admin.QueryAppManualCompactResponse, error) {
+func (m *fakeMeta) QueryManualCompaction(_ string) (*admin.QueryAppManualCompactResponse, error) {
 	panic("unimplemented")
 }

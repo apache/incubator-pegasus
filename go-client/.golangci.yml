@@ -24,3 +24,4 @@ linters:
   enable:
     - gofmt
     - goimports
+    - revive

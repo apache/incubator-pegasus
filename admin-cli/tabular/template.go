@@ -225,7 +225,7 @@ func megabyteStatFormatter(v interface{}) string {
 type columnValueFormatter func(interface{}) string
 
 // The default column aggregate type, sum(value...)
-func defaultAggregator(rows int, totalRowColumns []string, index int, deltaValue float64) {
+func defaultAggregator(_ int, totalRowColumns []string, index int, deltaValue float64) {
 	oldValue, _ := strconv.ParseFloat(totalRowColumns[index], 64)
 	total := oldValue + deltaValue
 	totalRowColumns[index] = strconv.FormatFloat(total, 'g', 5, 64)
