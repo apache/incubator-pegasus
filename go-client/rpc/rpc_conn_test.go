@@ -30,11 +30,11 @@ import (
 )
 
 // This test ensures that:
-// - RPCConn can be reopened after it closed.
-func TestRPCConn_CreateConnected(t *testing.T) {
+// - RpcConn can be reopened after it closed.
+func TestRpcConn_CreateConnected(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	conn := NewRPCConn("0.0.0.0:8800")
+	conn := NewRpcConn("0.0.0.0:8800")
 	for i := 0; i < 3; i++ {
 		err := conn.TryConnect()
 
@@ -48,10 +48,10 @@ func TestRPCConn_CreateConnected(t *testing.T) {
 }
 
 // Ensure that read write from a not-ready connection returns ErrConnectionNotReady.
-func TestRPCConn_ReadWriteNotReady(t *testing.T) {
+func TestRpcConn_ReadWriteNotReady(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	conn := NewRPCConn("0.0.0.0:8800")
+	conn := NewRpcConn("0.0.0.0:8800")
 	err := conn.TryConnect()
 	assert.Nil(t, err)
 
@@ -68,11 +68,11 @@ func TestRPCConn_ReadWriteNotReady(t *testing.T) {
 	}()
 }
 
-// Ensure that a blocked read can be cancelled by closing the RPCConn.
-func TestRPCConn_ReadCancelled(t *testing.T) {
+// Ensure that a blocked read can be cancelled by closing the RpcConn.
+func TestRpcConn_ReadCancelled(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	conn := NewRPCConn("0.0.0.0:8800")
+	conn := NewRpcConn("0.0.0.0:8800")
 	err := conn.TryConnect()
 	assert.Nil(t, err)
 
@@ -85,23 +85,23 @@ func TestRPCConn_ReadCancelled(t *testing.T) {
 	conn.Close()
 }
 
-func TestRPCConn_NewRPCConnectFailed(t *testing.T) {
+func TestRpcConn_NewRpcConnectFailed(t *testing.T) {
 	defer leaktest.CheckTimeout(t, time.Second*6)()
 
 	// it must time out.
-	conn := NewRPCConn("www.baidu.com:12321")
+	conn := NewRpcConn("www.baidu.com:12321")
 	err := conn.TryConnect()
 	assert.NotNil(t, err)
 	assert.Equal(t, ConnStateTransientFailure, conn.cstate)
 	conn.Close()
 }
 
-// This test verifies that a connecting RPCConn can be cancelled
+// This test verifies that a connecting RpcConn can be cancelled
 // immediately by Close.
-func TestRPCConn_CancelConnecting(t *testing.T) {
+func TestRpcConn_CancelConnecting(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	conn := NewRPCConn("www.baidu.com:12321")
+	conn := NewRpcConn("www.baidu.com:12321")
 	go func() {
 		conn.TryConnect()
 	}()
@@ -111,11 +111,11 @@ func TestRPCConn_CancelConnecting(t *testing.T) {
 	conn.Close()
 }
 
-func TestRPCConn_WriteAndRead(t *testing.T) {
+func TestRpcConn_WriteAndRead(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	conn := NewRPCConn("0.0.0.0:8800")
+	conn := NewRpcConn("0.0.0.0:8800")
 	defer conn.Close()
 
 	assert.Nil(t, conn.TryConnect())
@@ -145,18 +145,18 @@ func Test_IsNetworkTimeoutErr(t *testing.T) {
 	// timeout error but not a network error
 	assert.False(t, IsNetworkTimeoutErr(context.DeadlineExceeded))
 
-	err := NewRPCConn("www.baidu.com:12321").TryConnect()
+	err := NewRpcConn("www.baidu.com:12321").TryConnect()
 	assert.True(t, IsNetworkTimeoutErr(err))
 }
 
 // Ensure reading a huge size of data (size > 4096) will not
 // cause overflow.
-func TestRPCConn_ReadHugeSizeData(t *testing.T) {
+func TestRpcConn_ReadHugeSizeData(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	dataSizes := []int{1024 * 16, 1024 * 256, 1024 * 512}
 	for _, sz := range dataSizes {
-		conn := NewRPCConn("0.0.0.0:8800")
+		conn := NewRpcConn("0.0.0.0:8800")
 		defer conn.Close()
 		assert.Nil(t, conn.TryConnect())
 

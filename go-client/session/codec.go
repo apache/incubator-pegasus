@@ -466,7 +466,7 @@ func MarshallPegasusRpc(codec rpc.Codec, seqId int32, gpid *base.Gpid, partition
 	return rcall, nil
 }
 
-func ReadRpcResponse(conn *rpc.RPCConn, codec rpc.Codec) (*PegasusRpcCall, error) {
+func ReadRpcResponse(conn *rpc.RpcConn, codec rpc.Codec) (*PegasusRpcCall, error) {
 	// read length field
 	lenBuf, err := conn.Read(4)
 	if err != nil && len(lenBuf) < 4 {

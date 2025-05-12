@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/apache/incubator-pegasus/pegic/interactive"
+	"github.com/apache/incubator-pegasus/pegic/interactive/cmd"
 	"github.com/spf13/cobra"
 )
 
