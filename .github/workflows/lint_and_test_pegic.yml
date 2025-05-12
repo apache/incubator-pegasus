@@ -30,6 +30,7 @@ on:
       - '*dev'
     paths:
       - .github/workflows/lint_and_test_pegic.yml
+      - .golangci.yml
       - pegic/**
 
   # for manually triggering workflow
