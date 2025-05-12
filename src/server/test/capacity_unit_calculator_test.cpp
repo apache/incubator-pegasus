@@ -104,9 +104,9 @@ protected:
 public:
     dsn::blob key, hash_key;
 
-    capacity_unit_calculator_test() : pegasus_server_test_base()
+    capacity_unit_calculator_test()
     {
-        _cal = std::make_unique<mock_capacity_unit_calculator>(_server.get());
+        _cal = std::make_unique<mock_capacity_unit_calculator>(_server);
         pegasus_generate_key(key, dsn::blob::create_from_bytes("h"), dsn::blob());
         hash_key = dsn::blob::create_from_bytes("key");
     }

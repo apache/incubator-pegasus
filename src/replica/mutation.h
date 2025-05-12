@@ -81,9 +81,6 @@ public:
     mutation();
     ~mutation() override;
 
-    DISALLOW_COPY_AND_ASSIGN(mutation);
-    DISALLOW_MOVE_AND_ASSIGN(mutation);
-
     // copy mutation from an existing mutation, typically used in partition split
     // mutation should not reply to client, because parent has already replied
     static mutation_ptr copy_no_reply(const mutation_ptr &old_mu);
@@ -238,6 +235,9 @@ private:
     uint64_t _tid;          // trace id, unique in process
     static std::atomic<uint64_t> s_tid;
     bool _is_sync_to_child; // for partition split
+
+    DISALLOW_COPY_AND_ASSIGN(mutation);
+    DISALLOW_MOVE_AND_ASSIGN(mutation);
 };
 
 class replica;

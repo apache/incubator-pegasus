@@ -34,6 +34,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include "common/json_helper.h"
@@ -61,13 +62,12 @@
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
+#include "utils_types.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 class pegasus_server_test_base;
 class rocksdb_wrapper_test;
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server
 
 namespace dsn {
 class gpid;
@@ -289,9 +289,23 @@ public:
     // - `callback`: the callback processor handling the error code of triggering checkpoint.
     void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree,
                                                    uint32_t delay_ms,
-                                                   trigger_checkpoint_callback callback = {});
+                                                   trigger_checkpoint_callback callback);
 
-    void on_query_last_checkpoint(learn_response &response);
+    // The same as the above except that `callback` is empty.
+    void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree, uint32_t delay_ms);
+
+    // Get the last checkpoint info and put it into the response to reply to the dup follower.
+    //
+    // Parameters:
+    // - `checksum_type`: specify which algorithm the server (namely dup master) will use to
+    // calculate the checksum for each file. This parameter is used to implement resumable
+    // checkpoint download for duplication: the client (namely dup follower) receives the file
+    // sizes and checksums, then decides which files it should fetch from the server accordingly.
+    // CST_NONE means do not calculate file size and checksum.
+    // - `response`: the output parameter, used to respond to the dup follower.
+    void on_query_last_checkpoint(utils::checksum_type::type checksum_type,
+                                  learn_response &response);
+
     std::shared_ptr<replica_duplicator_manager> get_duplication_manager() const
     {
         return _duplication_mgr;
@@ -703,7 +717,17 @@ private:
     // Currently only used for unit test to get the count of backup requests.
     int64_t get_backup_request_count() const;
 
-private:
+    // Support self-defined `replication_app_base` at runtime which is only used for test.
+    template <typename TApp,
+              typename... Args,
+              typename = typename std::enable_if<
+                  std::is_base_of<replication_app_base,
+                                  typename std::remove_pointer<TApp>::type>::value>::type>
+    void create_app_for_test(Args &&...args)
+    {
+        _app = std::make_unique<TApp>(std::forward<Args>(args)...);
+    }
+
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_log_tool;
     friend class ::dsn::replication::mutation_queue;
