@@ -35,6 +35,7 @@ linters:
 linters-settings:
   revive:
     rules:
+      # https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS.md#var-naming
       - name: var-naming
         severity: warning
         disabled: false
