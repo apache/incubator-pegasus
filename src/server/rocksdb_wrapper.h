@@ -59,6 +59,8 @@ public:
     /// \result ctx.expired=true if record expired. Still rocksdb::Status::kOk is returned.
     /// \result ctx.found=false if record is not found. Still rocksdb::Status::kOk is returned.
     int get(std::string_view raw_key, /*out*/ db_get_context *ctx);
+    int get(const dsn::blob &raw_key,
+            /*out*/ db_get_context *ctx);
 
     int write_batch_put(int64_t decree,
                         std::string_view raw_key,
@@ -74,6 +76,7 @@ public:
                             int32_t expire_sec);
     int write(int64_t decree);
     int write_batch_delete(int64_t decree, std::string_view raw_key);
+    int write_batch_delete(int64_t decree, const dsn::blob &raw_key);
     void clear_up_write_batch();
     int ingest_files(int64_t decree,
                      const std::vector<std::string> &sst_file_list,
