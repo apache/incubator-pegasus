@@ -49,7 +49,7 @@ const (
 	// The state that indicates some error occurred in the previous operations.
 	ConnStateTransientFailure
 
-	// The state that RpcConn will turn into after Close() is called.
+	// The state that RPCConn will turn into after Close() is called.
 	ConnStateClosed
 )
 
@@ -72,8 +72,8 @@ func (s ConnState) String() string {
 
 var ErrConnectionNotReady = errors.New("connection is not ready")
 
-// RpcConn maintains a network connection to a particular endpoint.
-type RpcConn struct {
+// RPCConn maintains a network connection to a particular endpoint.
+type RPCConn struct {
 	Endpoint string
 
 	wstream *WriteStream
@@ -90,21 +90,21 @@ type RpcConn struct {
 }
 
 // thread-safe
-func (rc *RpcConn) GetState() ConnState {
+func (rc *RPCConn) GetState() ConnState {
 	rc.mu.RLock()
 	defer rc.mu.RUnlock()
 	return rc.cstate
 }
 
 // thread-safe
-func (rc *RpcConn) setState(state ConnState) {
+func (rc *RPCConn) setState(state ConnState) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	rc.cstate = state
 }
 
 // This function is thread-safe.
-func (rc *RpcConn) TryConnect() (err error) {
+func (rc *RPCConn) TryConnect() (err error) {
 	err = func() error {
 		// set state to ConnStateConnecting to
 		// make sure there's only 1 goroutine dialing simultaneously.
@@ -139,7 +139,7 @@ func (rc *RpcConn) TryConnect() (err error) {
 }
 
 // This function is thread-safe.
-func (rc *RpcConn) Close() (err error) {
+func (rc *RPCConn) Close() (err error) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
@@ -151,7 +151,7 @@ func (rc *RpcConn) Close() (err error) {
 	return
 }
 
-func (rc *RpcConn) Write(msgBytes []byte) (err error) {
+func (rc *RPCConn) Write(msgBytes []byte) (err error) {
 	err = func() error {
 		if rc.GetState() != ConnStateReady {
 			return ErrConnectionNotReady
@@ -177,7 +177,7 @@ func (rc *RpcConn) Write(msgBytes []byte) (err error) {
 // fail and return error immediately.
 // This function is not-thread-safe, because the underlying TCP IO buffer
 // is not-thread-safe. Package users should call Read in a single goroutine.
-func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
+func (rc *RPCConn) Read(size int) (bytes []byte, err error) {
 	bytes, err = func() ([]byte, error) {
 		if rc.GetState() != ConnStateReady {
 			return nil, ErrConnectionNotReady
@@ -199,8 +199,8 @@ func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
 }
 
 // Returns an idle connection.
-func NewRpcConn(addr string) *RpcConn {
-	return &RpcConn{
+func NewRPCConn(addr string) *RPCConn {
+	return &RPCConn{
 		Endpoint:     addr,
 		logger:       pegalog.GetLogger(),
 		cstate:       ConnStateInit,
@@ -210,24 +210,24 @@ func NewRpcConn(addr string) *RpcConn {
 }
 
 // Not thread-safe
-func (rc *RpcConn) SetWriteTimeout(timeout time.Duration) {
+func (rc *RPCConn) SetWriteTimeout(timeout time.Duration) {
 	rc.writeTimeout = timeout
 }
 
 // Not thread-safe
-func (rc *RpcConn) SetReadTimeout(timeout time.Duration) {
+func (rc *RPCConn) SetReadTimeout(timeout time.Duration) {
 	rc.readTimeout = timeout
 }
 
-func (rc *RpcConn) setReady(reader io.Reader, writer io.Writer) {
+func (rc *RPCConn) setReady(reader io.Reader, writer io.Writer) {
 	rc.cstate = ConnStateReady
 	rc.rstream = NewReadStream(reader)
 	rc.wstream = NewWriteStream(writer)
 }
 
 // Create a fake client with specified reader and writer.
-func NewFakeRpcConn(reader io.Reader, writer io.Writer) *RpcConn {
-	conn := NewRpcConn("")
+func NewFakeRPCConn(reader io.Reader, writer io.Writer) *RPCConn {
+	conn := NewRPCConn("")
 	conn.setReady(reader, writer)
 	return conn
 }

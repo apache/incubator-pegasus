@@ -36,11 +36,11 @@ func init() {
 	Root = &cobra.Command{
 		Use:   "pegic [--meta|-m <meta-list>]",
 		Short: "pegic: Pegasus Interactive Command-Line tool",
-		PreRun: func(cmd *cobra.Command, _ []string) {
+		PreRun: func(c *cobra.Command, _ []string) {
 			metaAddrs := strings.Split(*metaList, ",")
 			err := cmd.Init(metaAddrs)
 			if err != nil {
-				cmd.PrintErrln(err)
+				c.PrintErrln(err)
 				os.Exit(1)
 			}
 		},

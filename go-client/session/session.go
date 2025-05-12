@@ -80,7 +80,7 @@ type nodeSession struct {
 
 	addr  string
 	ntype NodeType
-	conn  *rpc.RpcConn
+	conn  *rpc.RPCConn
 
 	tom *tomb.Tomb
 
@@ -129,7 +129,7 @@ func newNodeSessionAddr(addr string, ntype NodeType) *nodeSession {
 
 // NewNodeSession always returns a non-nil value even when the
 // connection attempt failed.
-// Each nodeSession corresponds to an RpcConn.
+// Each nodeSession corresponds to an RPCConn.
 func NewNodeSession(addr string, ntype NodeType) NodeSession {
 	return newNodeSession(addr, ntype)
 }
@@ -140,7 +140,7 @@ func newNodeSession(addr string, ntype NodeType) *nodeSession {
 	n := newNodeSessionAddr(addr, ntype)
 	logger.Printf("create session with %s", n)
 
-	n.conn = rpc.NewRpcConn(addr)
+	n.conn = rpc.NewRPCConn(addr)
 
 	n.tom.Go(n.loopForDialing)
 	return n

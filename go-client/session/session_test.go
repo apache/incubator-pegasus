@@ -40,7 +40,7 @@ import (
 
 func newFakeNodeSession(reader io.Reader, writer io.Writer) *nodeSession {
 	n := newNodeSessionAddr("", NodeTypeMeta)
-	n.conn = rpc.NewFakeRpcConn(reader, writer)
+	n.conn = rpc.NewFakeRPCConn(reader, writer)
 	n.codec = &MockCodec{}
 	return n
 }
@@ -94,7 +94,7 @@ func TestNodeSession_LoopForDialingSuccess(t *testing.T) {
 
 	addr := "www.baidu.com:80"
 	n := newNodeSessionAddr(addr, "meta")
-	n.conn = rpc.NewRpcConn(addr)
+	n.conn = rpc.NewRPCConn(addr)
 
 	n.tom.Go(n.loopForDialing)
 
@@ -117,7 +117,7 @@ func TestNodeSession_LoopForDialingCancelled(t *testing.T) {
 
 	addr := "www.baidu.com:12321"
 	n := newNodeSessionAddr(addr, "meta")
-	n.conn = rpc.NewRpcConn(addr)
+	n.conn = rpc.NewRPCConn(addr)
 
 	n.tom.Go(n.loopForDialing)
 	n.tryDial()
@@ -354,7 +354,7 @@ func TestNodeSession_Redial(t *testing.T) {
 
 	addr := "0.0.0.0:8800"
 	n := newNodeSessionAddr(addr, "meta")
-	n.conn = rpc.NewRpcConn(addr)
+	n.conn = rpc.NewRPCConn(addr)
 	defer n.Close()
 
 	n.tom.Go(n.loopForDialing)
