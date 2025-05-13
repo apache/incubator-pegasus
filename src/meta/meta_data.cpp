@@ -32,6 +32,7 @@
 #include "common/gpid.h"
 #include "common/replication_enums.h"
 #include "meta_data.h"
+#include "rpc/rpc_host_port.h"
 #include "rpc/dns_resolver.h" // IWYU pragma: keep
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_message.h"
@@ -77,6 +78,42 @@ DSN_TAG_VARIABLE(max_reserved_dropped_replicas, FT_MUTABLE);
 
 namespace dsn {
 namespace replication {
+
+void maintain_drops_both(/*inout*/ configuration_update_request &request)
+{
+    auto pc = request.config;
+    auto t = request.type;
+    auto make_proc = [](auto &drops, auto &node){
+        return [&drops, &node](bool is_adding) {
+            auto it = std::find(drops.begin(), drops.end(), node);
+            if (is_adding) {
+                if (it != drops.end()) {
+                    drops.erase(it);
+                }
+            } else {
+                CHECK(
+                    it == drops.end(), "the node({}) cannot be in drops set before this update", node);
+                drops.push_back(node);
+                if (drops.size() > 3) {
+                    drops.erase(drops.begin());
+                }
+            }
+        };
+    };
+
+    if (pc.hp_primary) {
+        std::vector<host_port> drops;
+        const auto &node = pc.hp_primary;
+        GET_HOST_PORTS(pc, last_drops, drops);
+        when_update_replicas(t, make_proc(drops, node));
+    }
+    
+    if (pc.primary) {
+        auto &drops = pc.last_drops;
+        const auto &node = pc.primary;
+        when_update_replicas(t, make_proc(drops, node));
+    }
+}
 
 void when_update_replicas(config_type::type t, const std::function<void(bool)> &func)
 {

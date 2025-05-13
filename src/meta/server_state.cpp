@@ -2052,6 +2052,8 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     request.type = config_type::CT_DROP_PARTITION;
     SET_OBJ_IP_AND_HOST_PORT(request, node, pc, primary);
 
+    // dsn::replication::maintain_drops_both(request, true);
+    // dsn::replication::maintain_drops_both(request, false);
     request.config = pc;
     for (const auto &secondary : pc.hp_secondaries) {
         maintain_drops(request.config.hp_last_drops, secondary, request.type);
@@ -2059,12 +2061,13 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     for (const auto &secondary : pc.secondaries) {
         maintain_drops(request.config.last_drops, secondary, request.type);
     }
-    if (pc.hp_primary) {
-        maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);
-    }
-    if (pc.primary) {
-        maintain_drops(request.config.last_drops, pc.primary, request.type);
-    }
+    dsn::replication::maintain_drops_both(request);
+    // if (pc.hp_primary) {
+    //     maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);
+    // }
+    // if (pc.primary) {
+    //     maintain_drops(request.config.last_drops, pc.primary, request.type);
+    // }
     RESET_IP_AND_HOST_PORT(request.config, primary);
     CLEAR_IP_AND_HOST_PORT(request.config, secondaries);
 

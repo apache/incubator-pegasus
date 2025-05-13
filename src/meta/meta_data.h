@@ -565,6 +565,8 @@ void maintain_drops(/*inout*/ std::vector<T> &drops, const T &node, config_type:
     when_update_replicas(t, action);
 }
 
+void maintain_drops_both(/*inout*/ configuration_update_request &request);
+
 // Try to construct a replica-group by current replica-infos of a gpid
 // ret:
 //   if construct the replica successfully, return true.
