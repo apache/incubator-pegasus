@@ -30,7 +30,6 @@ on:
       - '*dev'
     paths:
       - .github/workflows/lint_and_test_go-client.yml
-      - .golangci.yml
       - go-client/**
 
   # for manually triggering workflow
