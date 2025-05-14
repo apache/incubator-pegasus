@@ -276,7 +276,7 @@ public:
     //  - decree: the decree of the mutation which these requests are batched into.
     //  - timestamp: an incremental timestamp generated for this batch of requests.
     //  - requests: the requests to be applied.
-    //  - request_length: the number of the requests.
+    //  - count: the number of the requests.
     //  - original_request: the original request received from the client. Must be an atomic
     //  request (i.e. incr, check_and_set and check_and_mutate) if non-null, and another
     //  parameter `requests` must hold the idempotent request translated from it. Used to
@@ -287,7 +287,7 @@ public:
     virtual int on_batched_write_requests(int64_t decree,
                                           uint64_t timestamp,
                                           message_ex **requests,
-                                          int request_length,
+                                          uint32_t count,
                                           message_ex *original_request);
 
     // Query compact state.

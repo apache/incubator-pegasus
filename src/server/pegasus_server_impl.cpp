@@ -355,7 +355,7 @@ int pegasus_server_impl::make_idempotent(dsn::message_ex *request, dsn::message_
 int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                                                    uint64_t timestamp,
                                                    dsn::message_ex **requests,
-                                                   int count,
+                                                   uint32_t count,
                                                    dsn::message_ex *original_request)
 {
     CHECK_TRUE(_is_open);

@@ -18,7 +18,6 @@
  */
 
 #include <fmt/core.h>
-#include <rocksdb/status.h>
 #include <thrift/transport/TTransportException.h>
 #include <algorithm>
 #include <string_view>
@@ -35,8 +34,8 @@
 #include "pegasus_utils.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_message.h"
+#include "rpc/serialization.h"
 #include "rrdb/rrdb.code.definition.h"
-#include "runtime/message_utils.h"
 #include "server/pegasus_write_service.h"
 #include "task/task_spec.h"
 #include "utils/autoref_ptr.h"
@@ -66,9 +65,11 @@ pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
 }
 
 int pegasus_server_write::make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request)
+int pegasus_server_write::make_idempotent(dsn::message_ex *request,
+                                          std::vector<dsn::message_ex *> &new_requests)
 {
     auto iter = std::as_const(_make_idempotent_handlers).find(request->rpc_code());
-    if (iter != _make_idempotent_handlers.end()) {
+    if (dsn_likely(iter != _make_idempotent_handlers.end())) {
         return iter->second(request, new_request);
     }
 
@@ -78,7 +79,7 @@ int pegasus_server_write::make_idempotent(dsn::message_ex *request, dsn::message
 }
 
 int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
-                                                    int count,
+                                                    uint32_t count,
                                                     int64_t decree,
                                                     uint64_t timestamp,
                                                     dsn::message_ex *original_request)
@@ -115,17 +116,23 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
         // The request is regarded as idempotent once its original request is attached.
         CHECK_EQ(count, 1);
         return on_idempotent(requests[0], original_request);
+        return on_idempotent_write(requests, count, original_request);
     }
 
     return on_batched_writes(requests, count);
 }
 
-int pegasus_server_write::on_idempotent(dsn::message_ex *request, dsn::message_ex *original_request)
+int pegasus_server_write::on_idempotent(dsn::message_ex **request, 
+                                              uint32_t count,
+        dsn::message_ex *original_request)
 {
+    // `requests` should consist of at least one request.
+    dcheck_gt(count, 0);
+
     try {
         auto iter = std::as_const(_on_idempotent_handlers).find(request->rpc_code());
-        if (iter != _on_idempotent_handlers.end()) {
-            return iter->second(request, original_request);
+        if (dsn_likely(iter != _on_idempotent_handlers.end())) {
+            return iter->second(request, count, original_request);
         }
     } catch (TTransportException &ex) {
         METRIC_VAR_INCREMENT(corrupt_writes);
@@ -142,14 +149,73 @@ int pegasus_server_write::on_idempotent(dsn::message_ex *request, dsn::message_e
     return rocksdb::Status::kNotSupported;
 }
 
+int pegasus_server_write::apply_idempotent(dsn::message_ex **requests, int32_t count, dsn::message_ex *original_request)
+{
+             // `requests` should consist of at least one request.
+             CHECK_GT(count, 0);
+
+            std::vector<dsn::apps::update_request> updates;
+             updates.reserve(count);
+
+             for (uint32_t i = 0; i < count; ++i) {
+             CHECK_EQ(request[i]->rpc_code(), dsn::apps::RPC_RRDB_RRDB_PUT);
+
+                 // Use the message to create the real idempotent request.
+                 updates.emplace_back();
+                 dsn::unmarshall(requests[i], updates.back());
+             CHECK(updates.back().__isset.type, "update_request::type is not set for idempotent write: "
+                     "index = {}", i);
+             }
+
+             if (update.type == dsn::apps::update_type::UT_INCR) {
+                 auto incr = incr_rpc::auto_reply(original_request);
+                 return _write_svc->put(_write_ctx, update, incr.response());
+             }
+
+             const auto &first_update = updates.front();
+
+             if (first_update.type == dsn::apps::update_type::UT_INCR) {
+                 // A non-idempotent incr request would be translated to only one idempotent
+                 // put request.
+                 dcheck_eq(count, 1);
+
+                 auto incr = incr_rpc::auto_reply(original_request);
+                 return _write_svc->put(_write_ctx, first_update, incr.response());
+             }
+
+             if (first_update.type == dsn::apps::update_type::UT_CHECK_AND_SET) {
+                 // A non-idempotent check_and_set request would be translated to only one
+                 // idempotent put request.
+                 dcheck_eq(count, 1);
+
+                 auto cas = check_and_set_rpc::auto_reply(original_request);
+                 return _write_svc->put(_write_ctx, first_update, cas.request(), cas.response());
+             }
+
+             if (first_update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT ||
+                 first_update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE) {
+                 // A non-idempotent check_and_mutate request would be translated to at least
+                 // one idempotent put request. UT_CHECK_AND_MUTATE_PUT means this put request
+                 // performs single put, while UT_CHECK_AND_MUTATE_REMOVE means this put request
+                 // performs single remove.
+                 auto cam = check_and_mutate_rpc::auto_reply(original_request);
+                 return _write_svc->put(_write_ctx, puts, cam.request(), cam.response());
+             }
+
+             CHECK(false,
+                   "unsupported update_request::type for idempotent write {}",
+                   static_cast<int>(update.type));
+             return rocksdb::Status::kNotSupported;
+}
+
 void pegasus_server_write::set_default_ttl(uint32_t ttl) { _write_svc->set_default_ttl(ttl); }
 
-int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int count)
+int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, uint32_t count)
 {
     _write_svc->batch_prepare(_decree);
 
     int err = rocksdb::Status::kOk;
-    for (int i = 0; i < count; ++i) {
+    for (uint32_t i = 0; i < count; ++i) {
         CHECK_NOTNULL(requests[i], "request[{}] is null", i);
 
         // Make sure all writes are batched even if some of them failed, since we need to record
@@ -174,6 +240,17 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                     // batched in plog.
                     CHECK_EQ(count, 1);
                 }
+                    } else if (update.type == dsn::apps::update_type::UT_CHECK_AND_SET) {
+                        // A CHECK_AND_SET request would only be translated to one PUT request,
+                        // and never be batched in plog.
+                        dcheck_eq(count, 1);
+                    } else if (update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT ||
+                               update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE) {
+                        // A CHECK_AND_MUTATE request mignt be translated to one or multiple PUT
+                        // requests(including both put and remove), thus might be batched in plog.
+                        dcheck_gt(count, 0);
+                    }
+
 
                 local_err = on_single_put_in_batch(rpc);
                 _put_rpc_batch.emplace_back(std::move(rpc));
@@ -251,7 +328,9 @@ void pegasus_server_write::init_make_idempotent_handlers()
              dsn::apps::update_request update;
              // Translate an incr request into a single-put request.
              const auto err = _write_svc->make_idempotent(rpc.request(), rpc.response(), update);
-             if (dsn_likely(err == rocksdb::Status::kOk)) {
+             // When condition not met for check_and_set and check_and_mutate, so there is
+             // a certain probability that return non-ok.
+             if (err == rocksdb::Status::kOk) {
                  // Build the message based on the resulting put request.
                  *new_request = dsn::from_thrift_request_to_received_message(
                      update,
@@ -266,6 +345,21 @@ void pegasus_server_write::init_make_idempotent_handlers()
              }
 
              return err;
+         }},
+        {dsn::apps::RPC_RRDB_RRDB_INCR,
+         [this](dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests) -> int {
+             return make_idempotent<incr_rpc>(
+                 dsn::apps::RPC_RRDB_RRDB_PUT, request, new_requests);
+         }},
+        {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
+         [this](dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests) -> int {
+             return make_idempotent<check_and_set_rpc>(
+                 dsn::apps::RPC_RRDB_RRDB_PUT, request, new_requests);
+         }},
+        {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE,
+         [this](dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests) -> int {
+             return make_idempotent<check_and_mutate_rpc>(
+                 dsn::apps::RPC_RRDB_RRDB_PUT, request, new_requests);
          }},
     };
 }
@@ -307,29 +401,6 @@ void pegasus_server_write::init_non_batch_write_handlers()
          [this](dsn::message_ex *request) -> int {
              auto rpc = ingestion_rpc::auto_reply(request);
              return _write_svc->ingest_files(_decree, rpc.request(), rpc.response());
-         }},
-    };
-}
-
-void pegasus_server_write::init_on_idempotent_handlers()
-{
-    _on_idempotent_handlers = {
-        {dsn::apps::RPC_RRDB_RRDB_PUT,
-         [this](dsn::message_ex *request, dsn::message_ex *original_request) -> int {
-             auto put = put_rpc(request);
-
-             const auto &update = put.request();
-             CHECK(update.__isset.type, "update_request::type is not set for idempotent write");
-
-             if (update.type == dsn::apps::update_type::UT_INCR) {
-                 auto incr = incr_rpc::auto_reply(original_request);
-                 return _write_svc->put(_write_ctx, update, incr.response());
-             }
-
-             CHECK(false,
-                   "unsupported update_request::type for idempotent write {}",
-                   static_cast<int>(update.type));
-             return rocksdb::Status::kNotSupported;
          }},
     };
 }

@@ -548,6 +548,15 @@ public:
         return make_idempotent(req, err_resp, updates.front());
     }
 
+    template <typename TResponse>
+    int put(const db_write_context &ctx,
+            const std::vector<dsn::apps::update_request> &updates,
+            TResponse &resp)
+    {
+        CHECK_EQ(updates.size(), 1);
+        return put(ctx, updates.front(), resp);
+    }
+
     // Tranlate a check_and_mutate request into multiple single-put and single-remove requests
     // which are certainly idempotent. Return current status for RocksDB. Only called by primary
     // replicas.

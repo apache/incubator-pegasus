@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "base/pegasus_rpc_types.h"
 #include "replica/replica_base.h"
 #include "utils/metrics.h"
 
@@ -140,13 +141,13 @@ public:
     // replicas.
     int make_idempotent(const dsn::apps::incr_request &req,
                         dsn::apps::incr_response &err_resp,
-                        dsn::apps::update_request &update);
+                        std::vector<dsn::apps::update_request> &updates);
 
     // Write an idempotent INCR record (i.e. a PUT record) and reply to the client with INCR
     // response. Only called by primary replicas.
     int put(const db_write_context &ctx,
-            const dsn::apps::update_request &update,
-            dsn::apps::incr_response &resp);
+            const std::vector<dsn::apps::update_request> &updates,
+            incr_rpc &rpc);
 
     // Write a non-idempotent INCR record.
     int incr(int64_t decree, const dsn::apps::incr_request &update, dsn::apps::incr_response &resp);
@@ -155,19 +156,31 @@ public:
     // primary replicas.
     int make_idempotent(const dsn::apps::check_and_set_request &req,
                         dsn::apps::check_and_set_response &err_resp,
-                        dsn::apps::update_request &update);
+                        std::vector<dsn::apps::update_request> &updates);
 
     // Write an idempotent CHECK_AND_SET record (i.e. a PUT record) and reply to the client
     // with CHECK_AND_SET response. Only called by primary replicas.
     int put(const db_write_context &ctx,
-            const dsn::apps::update_request &update,
-            const dsn::apps::check_and_set_request &req,
-            dsn::apps::check_and_set_response &resp);
+            const std::vector<dsn::apps::update_request> &updates,
+            check_and_set_rpc &rpc);
 
     // Write CHECK_AND_SET record.
     int check_and_set(int64_t decree,
                       const dsn::apps::check_and_set_request &update,
                       dsn::apps::check_and_set_response &resp);
+
+    // Translate a CHECK_AND_MUTATE request into multiple idempotent PUT requests, which are
+    // shared by both single-put and single-remove operations. Only called by primary replicas.
+    int make_idempotent(const dsn::apps::check_and_set_request &req,
+                        dsn::apps::check_and_set_response &err_resp,
+                        std::vector<dsn::apps::update_request> &updates);
+
+    // Write an idempotent CHECK_AND_MUTATE record (i.e. batched PUT records including both
+    // single-put and single-remove operations) and reply to the client with CHECK_AND_MUTATE
+    // response. Only called by primary replicas.
+    int put(const db_write_context &ctx,
+            const std::vector<dsn::apps::update_request> &updates,
+            check_and_mutate_rpc &rpc);
 
     // Write CHECK_AND_MUTATE record.
     int check_and_mutate(int64_t decree,
@@ -217,6 +230,14 @@ private:
     // Finish batch write with metrics such as latencies calculated and some states cleared.
     void batch_finish();
 
+    uint32_t put_batch_size() const {
+        return _batch_sizes[static_cast<uint32_t>(batch_write_type::put)];
+    }
+
+    uint32_t remove_batch_size() const {
+        return _batch_sizes[static_cast<uint32_t>(batch_write_type::remove)];
+    }
+
     friend class pegasus_write_service_test;
     friend class PegasusWriteServiceImplTest;
     friend class pegasus_server_write_test;
@@ -242,6 +263,7 @@ private:
 
     METRIC_VAR_DECLARE_percentile_int64(make_incr_idempotent_latency_ns);
     METRIC_VAR_DECLARE_percentile_int64(make_check_and_set_idempotent_latency_ns);
+    METRIC_VAR_DECLARE_percentile_int64(make_check_and_mutate_idempotent_latency_ns);
 
     METRIC_VAR_DECLARE_percentile_int64(put_latency_ns);
     METRIC_VAR_DECLARE_percentile_int64(multi_put_latency_ns);
@@ -255,19 +277,34 @@ private:
     METRIC_VAR_DECLARE_percentile_int64(dup_time_lag_ms);
     METRIC_VAR_DECLARE_counter(dup_lagging_writes);
 
-    // Measure the size of single-put requests in batch applied into RocksDB for metrics.
-    uint32_t _put_batch_size;
-
-    // Measure the size of single-remove requests in batch applied into RocksDB for metrics.
-    uint32_t _remove_batch_size;
-
-    // Measure the size of incr requests (with each translated into an idempotent put request)
-    // in batch applied into RocksDB for metrics.
-    uint32_t _incr_batch_size;
-
-    // Measure the size of check_and_set requests (with each translated into an idempotent put
-    // request) in batch applied into RocksDB for metrics.
-    uint32_t _check_and_set_batch_size;
+    // To calculate the metrics such as the number of requests and latency for the writes
+    // allowed to be batched, measure the size of requests in batch applied into RocksDB
+    // for single put, single remove, incr, check_and_set and check_and_mutate, all of which
+    // are contained in batch_write_type. In fact, incr, check_and_set and check_and_mutate
+    // are not batched; the reason why they are contained in batch_write_type is because
+    // all of them are not actually incr, check_and_set, or check_and_mutate themselves, but
+    // rather single put operations that have been transformed from these operations to be
+    // idempotent. Therefore, they essentially all appear in the form of single puts with an
+    // extra field indicating what the original request is.
+    //
+    // Each request of single put, single remove, incr and check_and_set contains only one
+    // write operation, while check_and_mutate may contain multiple operations of single 
+    // puts and removes.
+    //
+    // `_batch_write_type_map` is used to map dsn::apps::update_type field in the single put
+    // request to batch_write_type, to measure the size of requests in batch for each kind
+    // of write into `_batch_sizes`.
+    enum class batch_write_type : uint32_t
+    {
+        put = 0,
+        remove,
+        incr,
+        check_and_set,
+        check_and_mutate,
+        count,
+    };
+    std::array<batch_write_type, 5> _batch_write_type_map;
+    std::array<uint32_t, static_cast<size_t>(batch_write_type::count)> _batch_sizes{};
 
     // TODO(wutao1): add metrics for failed rpc.
 };

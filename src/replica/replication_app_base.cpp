@@ -265,19 +265,21 @@ error_code replication_app_base::apply_checkpoint(chkpt_apply_mode mode, const l
 int replication_app_base::on_batched_write_requests(int64_t decree,
                                                     uint64_t timestamp,
                                                     message_ex **requests,
-                                                    int request_length,
+                                                    uint32_t count,
                                                     message_ex *original_request)
 {
-    int storage_error = rocksdb::Status::kOk;
-    for (int i = 0; i < request_length; ++i) {
-        int e = on_request(requests[i]);
-        if (e != rocksdb::Status::kOk) {
-            LOG_ERROR_PREFIX("got storage engine error when handler request({})",
-                             requests[i]->header->rpc_name);
-            storage_error = e;
+    int result = rocksdb::Status::kOk;
+    for (uint32_t i = 0; i < count; ++i) {
+        const int err = on_request(requests[i]);
+        if (err == rocksdb::Status::kOk) {
+            continue;
         }
+
+            LOG_ERROR_PREFIX("got storage engine error when handler request({}): error = {}",
+                             requests[i]->header->rpc_name, err);
+            result = err;
     }
-    return storage_error;
+    return result;
 }
 
 error_code replication_app_base::apply_mutation(const mutation_ptr &mu)
@@ -294,12 +296,12 @@ error_code replication_app_base::apply_mutation(const mutation_ptr &mu)
     }
 
     bool has_ingestion_request = false;
-    const int request_count = static_cast<int>(mu->client_requests.size());
+    const auto request_count = static_cast<uint32_t>(mu->client_requests.size());
     auto **batched_requests = ALLOC_STACK(message_ex *, request_count);
     auto **faked_requests = ALLOC_STACK(message_ex *, request_count);
-    int batched_count = 0; // write-empties are not included.
-    int faked_count = 0;
-    for (int i = 0; i < request_count; ++i) {
+    uint32_t batched_count = 0; // write-empties are not included.
+    uint32_t faked_count = 0;
+    for (uint32_t i = 0; i < request_count; ++i) {
         const mutation_update &update = mu->data.updates[i];
         LOG_DEBUG_PREFIX("mutation {} #{}: dispatch rpc call {}", mu->name(), i, update.code);
         if (update.code == RPC_REPLICATION_WRITE_EMPTY) {
@@ -329,7 +331,7 @@ error_code replication_app_base::apply_mutation(const mutation_ptr &mu)
                                                         mu->original_request);
 
     // release faked requests
-    for (int i = 0; i < faked_count; ++i) {
+    for (uint32_t i = 0; i < faked_count; ++i) {
         faked_requests[i]->release_ref();
     }
 

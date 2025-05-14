@@ -19,7 +19,8 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <rocksdb/status.h>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -29,6 +30,7 @@
 #include "pegasus_write_service.h"
 #include "replica/replica_base.h"
 #include "rrdb/rrdb_types.h"
+#include "runtime/message_utils.h"
 #include "task/task_code.h"
 #include "utils/metrics.h"
 
@@ -49,6 +51,7 @@ public:
 
     // See replication_app_base::make_idempotent() for details.
     int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request);
+    int make_idempotent(dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests);
 
     // See replication_app_base::on_batched_write_requests() for details.
     //
@@ -61,7 +64,7 @@ public:
     /// successfully applied into rocksdb, which means an empty_put will be called
     /// even if there's no write.
     int on_batched_write_requests(dsn::message_ex **requests,
-                                  int count,
+                                  uint32_t count,
                                   int64_t decree,
                                   uint64_t timestamp,
                                   dsn::message_ex *original_request);
@@ -69,11 +72,48 @@ public:
     void set_default_ttl(uint32_t ttl);
 
 private:
+    template <typename TRpcHolder>
+    int make_idempotent(const dsn::task_code &code,
+                        dsn::message_ex *request,
+                        std::vector<dsn::message_ex *> &new_requests)
+    {
+        auto rpc = TRpcHolder(request);
+
+        new_requests.clear();
+
+        // Translate the non-idempotent request into one or multiple idempotent requests.
+        std::vector<dsn::apps::update_request> updates;
+        const int err = _write_svc->make_idempotent(rpc.request(), rpc.response(), updates);
+        if (dsn_likely(err == rocksdb::Status::kOk)) {
+            // Build new messages based on the generated idempotent requests.
+            for (const auto &update : updates) {
+                new_requests.push_back(dsn::from_thrift_request_to_received_message(update, code));
+            }
+        } else {
+            // Once it failed to translate the non-idempotent request into idempotent ones,
+            // reply to the client with error immediately.
+            rpc.enable_auto_reply();
+        }
+
+        return err;
+    }
+
+    template <typename TRpcHolder>
+    inline int put(
+            const std::vector<dsn::apps::update_request> &updates,
+            dsn::message_ex *original_request)
+    {
+        auto rpc = TRpcHolder::auto_reply(original_request);
+        return _write_svc->put(_write_ctx, updates, rpc);
+    }
+
     // Apply the idempotent request and respond to its original request.
-    int on_idempotent(dsn::message_ex *request, dsn::message_ex *original_request);
+    int
+    on_idempotent(dsn::message_ex **requests, uint32_t count, dsn::message_ex *original_request);
+
 
     // Delay replying for the batched requests until all of them complete.
-    int on_batched_writes(dsn::message_ex **requests, int count);
+    int on_batched_writes(dsn::message_ex **requests, uint32_t count);
 
     int on_single_put_in_batch(put_rpc &rpc)
     {
@@ -112,6 +152,8 @@ private:
     // Handlers that make an atomic request idempotent.
     using make_idempotent_map =
         std::map<dsn::task_code, std::function<int(dsn::message_ex *, dsn::message_ex **)>>;
+        std::map<dsn::task_code,
+                 std::function<int(dsn::message_ex *, std::vector<dsn::message_ex *> &)>>;
     make_idempotent_map _make_idempotent_handlers;
 
     // Handlers that process a request could not be batched, e.g. multi put/remove.
@@ -119,9 +161,9 @@ private:
     non_batch_write_map _non_batch_write_handlers;
 
     // Handlers that apply the idempotent request and respond to its original request.
-    using on_idempotent_map =
-        std::map<dsn::task_code, std::function<int(dsn::message_ex *, dsn::message_ex *)>>;
-    on_idempotent_map _on_idempotent_handlers;
+    using idempotent_writer_map =
+        std::array<std::function<int(const std::vector<dsn::apps::update_request> &, dsn::message_ex *)>, 5>;
+        idempotent_writer_map _idempotent_writers;
 
     METRIC_VAR_DECLARE_counter(corrupt_writes);
 };
