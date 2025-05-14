@@ -71,13 +71,14 @@ func QueryReplicaDataVersion(client *Client, table string) (*TableDataVersion, e
 		for _, version := range versions {
 			if finalVersion.DataVersion == "" {
 				finalVersion = version
-			} else {
-				if version.DataVersion == finalVersion.DataVersion {
-					continue
-				} else {
-					return nil, fmt.Errorf("replica versions are not consistent")
-				}
+				continue
 			}
+
+			if version.DataVersion == finalVersion.DataVersion {
+				continue
+			}
+
+			return nil, fmt.Errorf("replica versions are not consistent")
 		}
 	}
 	return &finalVersion, nil

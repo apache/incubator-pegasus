@@ -55,7 +55,7 @@ func timeoutConfig() Config {
 	}
 }
 
-func testAdmin_Timeout(t *testing.T, exec func(c Client) error) {
+func testAdminTimeout(t *testing.T, exec func(c Client) error) {
 	c := NewClient(timeoutConfig())
 	assert.Equal(t, context.DeadlineExceeded, exec(c))
 }
@@ -92,7 +92,7 @@ func TestAdmin_Table(t *testing.T) {
 }
 
 func TestAdmin_ListTablesTimeout(t *testing.T) {
-	testAdmin_Timeout(t, func(c Client) error {
+	testAdminTimeout(t, func(c Client) error {
 		_, err := c.ListTables()
 		return err
 	})
@@ -183,7 +183,7 @@ func TestAdmin_ListNodes(t *testing.T) {
 }
 
 func TestAdmin_ListNodesTimeout(t *testing.T) {
-	testAdmin_Timeout(t, func(c Client) error {
+	testAdminTimeout(t, func(c Client) error {
 		_, err := c.ListNodes()
 		return err
 	})

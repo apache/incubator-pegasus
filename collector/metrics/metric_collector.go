@@ -357,7 +357,7 @@ func mergeIntoClusterLevelServerMetric(metrics []gjson.Result, metricsOfCluster 
 		name := metric.Get("name").String()
 		mtype := metric.Get("type").String()
 		value := metric.Get("value").Float()
-		var isExisted bool = false
+		isExisted := false
 		for _, m := range metricsOfCluster {
 			if m.name == name {
 				isExisted = true
