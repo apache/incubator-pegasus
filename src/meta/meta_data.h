@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <fmt/core.h>
 #include <stdint.h>
 #include <algorithm>
 #include <atomic>
@@ -46,6 +47,7 @@
 #include "meta/duplication/duplication_info.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
+#include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
 #include "task/task.h"
@@ -543,26 +545,46 @@ inline int count_partitions(const app_mapper &apps)
 
 void when_update_replicas(config_type::type t, const std::function<void(bool)> &func);
 
-// TODO(yingchun): refactor to deal both rpc_address and host_port
-template <typename T>
-void maintain_drops(/*inout*/ std::vector<T> &drops, const T &node, config_type::type t)
+inline void maintain_drops(/*inout*/ configuration_update_request &request, bool is_group_check)
 {
-    auto action = [&drops, &node](bool is_adding) {
-        auto it = std::find(drops.begin(), drops.end(), node);
-        if (is_adding) {
-            if (it != drops.end()) {
-                drops.erase(it);
+    auto &pc = request.config;
+    auto t = request.type;
+    auto make_proc = [](auto &drops, const auto &node) {
+        return [&drops, &node](bool is_adding) {
+            auto it = std::find(drops.begin(), drops.end(), node);
+            if (is_adding) {
+                if (it != drops.end()) {
+                    drops.erase(it);
+                }
+            } else {
+                CHECK(it == drops.end(),
+                      "the node({}) cannot be in drops set before this update",
+                      node);
+                drops.push_back(node);
+                if (drops.size() > 3) {
+                    drops.erase(drops.begin());
+                }
             }
-        } else {
-            CHECK(
-                it == drops.end(), "the node({}) cannot be in drops set before this update", node);
-            drops.push_back(node);
-            if (drops.size() > 3) {
-                drops.erase(drops.begin());
-            }
-        }
+        };
     };
-    when_update_replicas(t, action);
+
+    if (is_group_check) {
+        for (const auto &secondary : pc.hp_secondaries) {
+            when_update_replicas(t, make_proc(pc.hp_last_drops, secondary));
+        }
+
+        for (const auto &secondary : pc.secondaries) {
+            when_update_replicas(t, make_proc(pc.last_drops, secondary));
+        }
+    } else {
+        if (pc.hp_primary) {
+            when_update_replicas(t, make_proc(pc.hp_last_drops, pc.hp_primary));
+        }
+
+        if (pc.primary) {
+            when_update_replicas(t, make_proc(pc.last_drops, pc.primary));
+        }
+    }
 }
 
 // Try to construct a replica-group by current replica-infos of a gpid
