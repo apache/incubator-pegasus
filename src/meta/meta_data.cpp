@@ -25,7 +25,6 @@
  */
 
 #include <boost/lexical_cast.hpp>
-#include <fmt/core.h>
 #include <algorithm>
 #include <cstdint>
 #include <ostream>
@@ -35,7 +34,6 @@
 #include "meta_data.h"
 #include "rpc/dns_resolver.h" // IWYU pragma: keep
 #include "rpc/rpc_address.h"
-#include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
 #include "utils/flags.h"
@@ -77,39 +75,8 @@ DSN_DEFINE_uint32(meta_server,
                   "max reserved number allowed for dropped replicas");
 DSN_TAG_VARIABLE(max_reserved_dropped_replicas, FT_MUTABLE);
 
-namespace dsn::replication {
-
-void maintain_drops_both(/*inout*/ configuration_update_request &request)
-{
-    auto &pc = request.config;
-    auto t = request.type;
-    auto make_proc = [](auto &drops, auto &node) {
-        return [&drops, &node](bool is_adding) {
-            auto it = std::find(drops.begin(), drops.end(), node);
-            if (is_adding) {
-                if (it != drops.end()) {
-                    drops.erase(it);
-                }
-            } else {
-                CHECK(it == drops.end(),
-                      "the node({}) cannot be in drops set before this update",
-                      node);
-                drops.push_back(node);
-                if (drops.size() > 3) {
-                    drops.erase(drops.begin());
-                }
-            }
-        };
-    };
-
-    if (pc.hp_primary) {
-        when_update_replicas(t, make_proc(pc.hp_last_drops, pc.hp_primary));
-    }
-
-    if (pc.primary) {
-        when_update_replicas(t, make_proc(pc.last_drops, pc.primary));
-    }
-}
+namespace dsn {
+namespace replication {
 
 void when_update_replicas(config_type::type t, const std::function<void(bool)> &func)
 {
@@ -721,4 +688,5 @@ partition_status::type node_state::served_as(const gpid &pid) const
         return partition_status::PS_SECONDARY;
     return partition_status::PS_INACTIVE;
 }
-} // namespace dsn::replication
+} // namespace replication
+} // namespace dsn
