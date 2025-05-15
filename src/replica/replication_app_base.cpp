@@ -275,9 +275,10 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
             continue;
         }
 
-            LOG_ERROR_PREFIX("got storage engine error when handler request({}): error = {}",
-                             requests[i]->header->rpc_name, err);
-            result = err;
+        LOG_ERROR_PREFIX("got storage engine error when handler request({}): error = {}",
+                         requests[i]->header->rpc_name,
+                         err);
+        result = err;
     }
     return result;
 }

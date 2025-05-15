@@ -202,12 +202,6 @@ pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
       METRIC_VAR_INIT_replica(dup_time_lag_ms),
       METRIC_VAR_INIT_replica(dup_lagging_writes)
 {
-    static_assert(dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE + 1 == _batch_write_type_map.size(), "The size of _batch_write_type_map is not large enough");
-    _batch_write_type_map[dsn::apps::update_type::UT_PUT] = batch_write_type::put;
-    _batch_write_type_map[dsn::apps::update_type::UT_INCR] = batch_write_type::incr;
-    _batch_write_type_map[dsn::apps::update_type::UT_CHECK_AND_SET] = batch_write_type::check_and_set;
-    _batch_write_type_map[dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT] = batch_write_type::check_and_mutate;
-    _batch_write_type_map[dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE] = batch_write_type::check_and_mutate;
 }
 
 pegasus_write_service::~pegasus_write_service() {}
@@ -256,9 +250,8 @@ int pegasus_write_service::make_idempotent(const dsn::apps::incr_request &req,
 }
 
 int pegasus_write_service::put(const db_write_context &ctx,
-            const std::vector<dsn::apps::update_request> &updates,
-incr_rpc &rpc
-                               )
+                               const std::vector<dsn::apps::update_request> &updates,
+                               incr_rpc &rpc)
 {
     METRIC_VAR_AUTO_LATENCY(incr_latency_ns);
     METRIC_VAR_INCREMENT(incr_requests);
@@ -267,7 +260,7 @@ incr_rpc &rpc
     const int err = _impl->put(ctx, updates, resp);
 
     if (_server->is_primary()) {
-        const auto &req=rpc.request();
+        const auto &req = rpc.request();
         _cu_calculator->add_incr_cu(resp.error, req.key);
     }
 
@@ -292,7 +285,7 @@ int pegasus_write_service::incr(int64_t decree,
 
 int pegasus_write_service::make_idempotent(const dsn::apps::check_and_set_request &req,
                                            dsn::apps::check_and_set_response &err_resp,
-                                           dsn::apps::update_request &update)
+                                           std::vector<dsn::apps::update_request> &updates)
 {
     METRIC_VAR_AUTO_LATENCY(make_check_and_set_idempotent_latency_ns);
 
@@ -306,11 +299,11 @@ int pegasus_write_service::put(const db_write_context &ctx,
     METRIC_VAR_AUTO_LATENCY(check_and_set_latency_ns);
     METRIC_VAR_INCREMENT(check_and_set_requests);
 
-        auto &resp=rpc.response();
+    auto &resp = rpc.response();
     const int err = _impl->put(ctx, updates, resp);
 
     if (_server->is_primary()) {
-        const auto &req=rpc.request();
+        const auto &req = rpc.request();
         _cu_calculator->add_check_and_set_cu(
             resp.error, req.hash_key, req.check_sort_key, req.set_sort_key, req.set_value);
     }
@@ -348,18 +341,17 @@ int pegasus_write_service::make_idempotent(const dsn::apps::check_and_mutate_req
 }
 
 int pegasus_write_service::put(const db_write_context &ctx,
-            const std::vector<dsn::apps::update_request> &updates,
-                               const dsn::apps::check_and_mutate_request &req,
+                               const std::vector<dsn::apps::update_request> &updates,
                                check_and_mutate_rpc &rpc)
 {
     METRIC_VAR_AUTO_LATENCY(check_and_mutate_latency_ns);
     METRIC_VAR_INCREMENT(check_and_mutate_requests);
 
-        auto &resp=rpc.response();
+    auto &resp = rpc.response();
     const int err = _impl->put(ctx, updates, resp);
 
     if (_server->is_primary()) {
-        const auto &req=rpc.request();
+        const auto &req = rpc.request();
         _cu_calculator->add_check_and_mutate_cu(
             resp.error, req.hash_key, req.check_sort_key, req.mutate_list);
     }
@@ -396,6 +388,20 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
                                      const dsn::apps::update_request &update,
                                      dsn::apps::update_response &resp)
 {
+    // `kBatchWriteTypeMap` is used to map dsn::apps::update_type field in the single put
+    // request to batch_write_type, to measure the size of requests in batch for each kind
+    // of write into `_batch_sizes`.
+    static const std::array kBatchWriteTypeMap = {
+        batch_write_type::put,
+        batch_write_type::incr,
+        batch_write_type::check_and_set,
+        batch_write_type::check_and_mutate,
+        batch_write_type::check_and_mutate,
+    };
+    static_assert(dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE + 1 ==
+                      kBatchWriteTypeMap.size(),
+                  "The size of kBatchWriteTypeMap is not large enough");
+
     CHECK_GT_MSG(_batch_start_time, 0, "batch_put must be called after batch_prepare");
 
     if (!update.__isset.type) {
@@ -410,9 +416,9 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
         //
         // Though this is a put request, we choose to udapte the metrics of its original
         // request (i.e. the atomic write).
-        if (dsn_likely(update.type < _batch_write_type_map.size())) {
-            ++_batch_sizes[static_cast<uint32_t>(_batch_write_type_map[update.type])];
-        } 
+        if (dsn_likely(update.type < kBatchWriteTypeMap.size())) {
+            ++_batch_sizes[static_cast<uint32_t>(kBatchWriteTypeMap[update.type])];
+        }
     }
 
     const int err = _impl->batch_put(ctx, update, resp);
@@ -463,14 +469,17 @@ void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_t
 
 void pegasus_write_service::batch_finish()
 {
-#define UPDATE_BATCH_METRICS(op, nrequests)                                                             \
+#define UPDATE_BATCH_METRICS(op, nrequests)                                                        \
     do {                                                                                           \
-        METRIC_VAR_INCREMENT_BY(op##_requests, static_cast<int64_t>(nrequests));          \
-        METRIC_VAR_SET(op##_latency_ns, static_cast<size_t>(_batch_sizes[static_cast<uint32_t>(batch_write_type::op)]), latency_ns);      \
+        METRIC_VAR_INCREMENT_BY(op##_requests, static_cast<int64_t>(nrequests));                   \
+        METRIC_VAR_SET(                                                                            \
+            op##_latency_ns,                                                                       \
+            static_cast<size_t>(_batch_sizes[static_cast<uint32_t>(batch_write_type::op)]),        \
+            latency_ns);                                                                           \
     } while (0)
 
-#define UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(op) \
-        UPDATE_BATCH_METRICS(op, _batch_sizes[static_cast<uint32_t>(batch_write_type::op)])  
+#define UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(op)                                                  \
+    UPDATE_BATCH_METRICS(op, _batch_sizes[static_cast<uint32_t>(batch_write_type::op)])
 
     const auto latency_ns = static_cast<int64_t>(dsn_now_ns() - _batch_start_time);
 

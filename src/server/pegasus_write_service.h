@@ -171,8 +171,8 @@ public:
 
     // Translate a CHECK_AND_MUTATE request into multiple idempotent PUT requests, which are
     // shared by both single-put and single-remove operations. Only called by primary replicas.
-    int make_idempotent(const dsn::apps::check_and_set_request &req,
-                        dsn::apps::check_and_set_response &err_resp,
+    int make_idempotent(const dsn::apps::check_and_mutate_request &req,
+                        dsn::apps::check_and_mutate_response &err_resp,
                         std::vector<dsn::apps::update_request> &updates);
 
     // Write an idempotent CHECK_AND_MUTATE record (i.e. batched PUT records including both
@@ -230,11 +230,13 @@ private:
     // Finish batch write with metrics such as latencies calculated and some states cleared.
     void batch_finish();
 
-    uint32_t put_batch_size() const {
+    uint32_t put_batch_size() const
+    {
         return _batch_sizes[static_cast<uint32_t>(batch_write_type::put)];
     }
 
-    uint32_t remove_batch_size() const {
+    uint32_t remove_batch_size() const
+    {
         return _batch_sizes[static_cast<uint32_t>(batch_write_type::remove)];
     }
 
@@ -288,12 +290,8 @@ private:
     // extra field indicating what the original request is.
     //
     // Each request of single put, single remove, incr and check_and_set contains only one
-    // write operation, while check_and_mutate may contain multiple operations of single 
+    // write operation, while check_and_mutate may contain multiple operations of single
     // puts and removes.
-    //
-    // `_batch_write_type_map` is used to map dsn::apps::update_type field in the single put
-    // request to batch_write_type, to measure the size of requests in batch for each kind
-    // of write into `_batch_sizes`.
     enum class batch_write_type : uint32_t
     {
         put = 0,
@@ -303,7 +301,6 @@ private:
         check_and_mutate,
         count,
     };
-    std::array<batch_write_type, 5> _batch_write_type_map;
     std::array<uint32_t, static_cast<size_t>(batch_write_type::count)> _batch_sizes{};
 
     // TODO(wutao1): add metrics for failed rpc.

@@ -287,7 +287,7 @@ int replica::make_idempotent(mutation_ptr &mu)
     CHECK_EQ(mu->client_requests.size(), 1);
 
     std::vector<dsn::message_ex *> new_requests;
-    const int err = _app->make_idempotent(request, &new_requests);
+    const int err = _app->make_idempotent(request, new_requests);
     if (err != rocksdb::Status::kOk) {
         // Once some error occurred, the response with error must have been returned to the
         // client during _app->make_idempotent(). Thus do nothing here.
@@ -295,7 +295,7 @@ int replica::make_idempotent(mutation_ptr &mu)
     }
 
     CHECK(!new_requests.empty(),
-                  "new_requests should not be empty since its original write request must be atomic");
+          "new_requests should not be empty since its original write request must be atomic");
 
     // During make_idempotent(), the request has been deserialized (i.e. unmarshall() in the
     // constructor of `rpc_holder::internal`). Once deserialize it again, assertion would fail for
