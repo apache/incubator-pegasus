@@ -391,7 +391,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
     // `kBatchWriteTypeMap` is used to map dsn::apps::update_type field in the single put
     // request to batch_write_type, to measure the size of requests in batch for each kind
     // of write into `_batch_sizes`.
-    static const std::array kBatchWriteTypeMap = {
+    constexpr std::array kBatchWriteTypeMap = {
         batch_write_type::put,
         batch_write_type::incr,
         batch_write_type::check_and_set,
@@ -400,7 +400,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
     };
     static_assert(dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE + 1 ==
                       kBatchWriteTypeMap.size(),
-                  "The size of kBatchWriteTypeMap is not large enough");
+                  "kBatchWriteTypeMap does not match update_type::type");
 
     CHECK_GT_MSG(_batch_start_time, 0, "batch_put must be called after batch_prepare");
 

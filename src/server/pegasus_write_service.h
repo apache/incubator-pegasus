@@ -230,12 +230,12 @@ private:
     // Finish batch write with metrics such as latencies calculated and some states cleared.
     void batch_finish();
 
-    uint32_t put_batch_size() const
+    [[nodiscard]] uint32_t put_batch_size() const
     {
         return _batch_sizes[static_cast<uint32_t>(batch_write_type::put)];
     }
 
-    uint32_t remove_batch_size() const
+    [[nodiscard]] uint32_t remove_batch_size() const
     {
         return _batch_sizes[static_cast<uint32_t>(batch_write_type::remove)];
     }
