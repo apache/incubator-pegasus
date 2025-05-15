@@ -276,7 +276,7 @@ bool replica::need_make_idempotent(message_ex *request) const
 
 int replica::make_idempotent(mutation_ptr &mu)
 {
-    CHECK_TRUE(!mu->client_requests.empty());
+    CHECK_FALSE(mu->client_requests.empty());
 
     message_ex *request = mu->client_requests.front();
     if (!need_make_idempotent(request)) {
@@ -286,16 +286,16 @@ int replica::make_idempotent(mutation_ptr &mu)
     // The original atomic write request must not be batched.
     CHECK_EQ(mu->client_requests.size(), 1);
 
-    dsn::message_ex *new_request = nullptr;
-    const int err = _app->make_idempotent(request, &new_request);
-    if (dsn_unlikely(err != rocksdb::Status::kOk)) {
+    std::vector<dsn::message_ex *> new_requests;
+    const int err = _app->make_idempotent(request, &new_requests);
+    if (err != rocksdb::Status::kOk) {
         // Once some error occurred, the response with error must have been returned to the
         // client during _app->make_idempotent(). Thus do nothing here.
         return err;
     }
 
-    CHECK_NOTNULL(new_request,
-                  "new_request should not be null since its original write request must be atomic");
+    CHECK(!new_requests.empty(),
+                  "new_requests should not be empty since its original write request must be atomic");
 
     // During make_idempotent(), the request has been deserialized (i.e. unmarshall() in the
     // constructor of `rpc_holder::internal`). Once deserialize it again, assertion would fail for
@@ -310,7 +310,10 @@ int replica::make_idempotent(mutation_ptr &mu)
     // Create a new mutation to hold the new idempotent request. The old mutation holding the
     // original atomic write request will be released automatically.
     mu = new_mutation(invalid_decree, request);
-    mu->add_client_request(new_request);
+    for (dsn::message_ex *new_request : new_requests) {
+        mu->add_client_request(new_request);
+    }
+
     return rocksdb::Status::kOk;
 }
 

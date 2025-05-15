@@ -29,9 +29,11 @@
 #include "base/pegasus_rpc_types.h"
 #include "pegasus_write_service.h"
 #include "replica/replica_base.h"
+#include "rpc/rpc_message.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
 #include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/metrics.h"
 
 namespace dsn {
@@ -50,7 +52,6 @@ public:
     explicit pegasus_server_write(pegasus_server_impl *server);
 
     // See replication_app_base::make_idempotent() for details.
-    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request);
     int make_idempotent(dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests);
 
     // See replication_app_base::on_batched_write_requests() for details.
@@ -73,29 +74,37 @@ public:
 
 private:
     template <typename TRpcHolder>
-    int make_idempotent(const dsn::task_code &code,
+    int make_idempotent(
                         dsn::message_ex *request,
                         std::vector<dsn::message_ex *> &new_requests)
     {
         auto rpc = TRpcHolder(request);
 
-        new_requests.clear();
-
-        // Translate the non-idempotent request into one or multiple idempotent requests.
+        // Translate an atomic request into one or multiple idempotent single-update requests.
         std::vector<dsn::apps::update_request> updates;
         const int err = _write_svc->make_idempotent(rpc.request(), rpc.response(), updates);
-        if (dsn_likely(err == rocksdb::Status::kOk)) {
-            // Build new messages based on the generated idempotent requests.
-            for (const auto &update : updates) {
-                new_requests.push_back(dsn::from_thrift_request_to_received_message(update, code));
-            }
-        } else {
-            // Once it failed to translate the non-idempotent request into idempotent ones,
-            // reply to the client with error immediately.
+
+             // When condition not met for check_and_set and check_and_mutate, so there is
+             // a certain probability that return non-ok.
+        if (err != rocksdb::Status::kOk) {
+            // Once it failed, just reply to the client with error immediately.
             rpc.enable_auto_reply();
+            return err;
         }
 
-        return err;
+            // Build new messages based on the generated idempotent requests.
+        new_requests.clear();
+            for (const auto &update : updates) {
+                 // Build the message based on the resulting single-update request.
+                new_requests.push_back(dsn::from_thrift_request_to_received_message(update, 
+                     dsn::apps::RPC_RRDB_RRDB_PUT,
+                     request->header->client.thread_hash,
+                     request->header->client.partition_hash,
+                     static_cast<dsn::dsn_msg_serialize_format>(
+                         request->header->context.u.serialize_format)));
+            }
+
+        return rocksdb::Status::kOk;
     }
 
     template <typename TRpcHolder>
@@ -135,7 +144,7 @@ private:
 
     void init_make_idempotent_handlers();
     void init_non_batch_write_handlers();
-    void init_on_idempotent_handlers();
+    void init_idempotent_writers();
 
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;
@@ -163,7 +172,7 @@ private:
     // Handlers that apply the idempotent request and respond to its original request.
     using idempotent_writer_map =
         std::array<std::function<int(const std::vector<dsn::apps::update_request> &, dsn::message_ex *)>, 5>;
-        idempotent_writer_map _idempotent_writers;
+        idempotent_writer_map _idempotent_writers{};
 
     METRIC_VAR_DECLARE_counter(corrupt_writes);
 };

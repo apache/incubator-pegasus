@@ -345,11 +345,12 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
                     max_d);
 }
 
-int pegasus_server_impl::make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request)
+int pegasus_server_impl::make_idempotent(dsn::message_ex *request,
+                                         std::vector<dsn::message_ex *> &new_requests)
 {
     CHECK_TRUE(_is_open);
 
-    return _server_write->make_idempotent(request, new_request);
+    return _server_write->make_idempotent(request, new_requests);
 }
 
 int pegasus_server_impl::on_batched_write_requests(int64_t decree,

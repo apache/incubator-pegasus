@@ -259,14 +259,14 @@ public:
     //
     // Parameters:
     // - request: the original request received from a client.
-    // - new_request: as the output parameter pointing to the resulting idempotent request if the
+    // - new_requests: the output parameter, points to the resulting idempotent requests if the
     // original request is atomic, otherwise keeping unchanged.
     //
     // Return:
     // - for an idempotent requess always return rocksdb::Status::kOk .
     // - for an atomic request, return rocksdb::Status::kOk if succeed in making it idempotent;
     // otherwise, return error code (rocksdb::Status::Code).
-    virtual int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) = 0;
+    virtual int make_idempotent(dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests) = 0;
 
     // Apply batched write requests from a mutation. This is a virtual function, and base class
     // provide a naive implementation that just call on_request for each request. Storage engine
