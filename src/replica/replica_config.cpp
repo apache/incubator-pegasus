@@ -179,7 +179,6 @@ void replica::assign_primary(configuration_update_request &proposal)
     REMOVE_IP_AND_HOST_PORT(
         _stub->primary_address(), _stub->primary_host_port(), proposal.config, secondaries);
 
-
     update_configuration_on_meta_server(proposal.type, node, proposal.config);
 }
 
@@ -371,7 +370,7 @@ void replica::remove(configuration_update_request &proposal)
         break;
     case partition_status::PS_SECONDARY: {
         CHECK(proposal.config.__isset.hp_secondaries,
-              "The proposal's partition_configuration is not normalized");              
+              "The proposal's partition_configuration is not normalized");
         CHECK(REMOVE_IP_AND_HOST_PORT_BY_OBJ(proposal, node, proposal.config, secondaries),
               "remove node failed, node = {}",
               FMT_HOST_PORT_AND_IP(proposal, node));
