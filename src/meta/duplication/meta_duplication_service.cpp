@@ -765,9 +765,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
                 } else {
                     for (const auto &pc : resp.partitions) {
                         host_port primary;
-                        std::vector<host_port> secondaries;
                         GET_HOST_PORT(pc, primary, primary);
-                        GET_HOST_PORTS(pc, secondaries, secondaries);
                         if (!primary) {
                             // Fail once the primary replica is unavailable.
                             query_err = ERR_INACTIVE_STATE;
@@ -776,6 +774,8 @@ void meta_duplication_service::check_follower_app_if_create_completed(
 
                         // Once replica count is more than 1, at least one secondary replica
                         // is required.
+                        std::vector<host_port> secondaries;
+                        GET_HOST_PORTS(pc, secondaries, secondaries);
                         if (1 + secondaries.size() < pc.max_replica_count && secondaries.empty()) {
                             query_err = ERR_NOT_ENOUGH_MEMBER;
                             break;

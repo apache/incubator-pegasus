@@ -153,8 +153,7 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
             return false;
         }
 
-        config_context &cc = *ctx;
-        if (cc.find_from_serving(n) == cc.serving.end()) {
+        if (ctx->find_from_serving(n) == ctx->serving.end()) {
             LOG_INFO("meta server hasn't collected gpid({})'s info of {}", pid, n);
             return false;
         }

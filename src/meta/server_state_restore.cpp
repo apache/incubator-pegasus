@@ -252,11 +252,15 @@ void server_state::on_query_restore_status(configuration_query_restore_rpc rpc)
         const auto &r_state = app->helpers->restore_states[i];
         const auto &pc = app->pcs[i];
         host_port primary;
-        std::vector<host_port> secondaries;
         GET_HOST_PORT(pc, primary, primary);
-        GET_HOST_PORTS(pc, secondaries, secondaries);
-        if (primary || !secondaries.empty()) {
+        if (primary) {
             // already have primary, restore succeed
+            continue;
+        }
+
+        std::vector<host_port> secondaries;
+        GET_HOST_PORTS(pc, secondaries, secondaries);
+        if (!secondaries.empty()) {
             continue;
         }
         if (r_state.progress < response.restore_progress[i]) {
