@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <fmt/core.h>
 #include <stdint.h>
 #include <algorithm>
 #include <atomic>
@@ -46,6 +47,7 @@
 #include "meta/duplication/duplication_info.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
+#include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
 #include "task/task.h"
