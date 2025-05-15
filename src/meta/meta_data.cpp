@@ -25,6 +25,7 @@
  */
 
 #include <boost/lexical_cast.hpp>
+#include <fmt/core.h>
 #include <algorithm>
 #include <cstdint>
 #include <ostream>
@@ -32,9 +33,9 @@
 #include "common/gpid.h"
 #include "common/replication_enums.h"
 #include "meta_data.h"
-#include "rpc/rpc_host_port.h"
 #include "rpc/dns_resolver.h" // IWYU pragma: keep
 #include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
 #include "utils/flags.h"
@@ -76,12 +77,11 @@ DSN_DEFINE_uint32(meta_server,
                   "max reserved number allowed for dropped replicas");
 DSN_TAG_VARIABLE(max_reserved_dropped_replicas, FT_MUTABLE);
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 void maintain_drops_both(/*inout*/ configuration_update_request &request)
 {
-    auto pc = request.config;
+    auto &pc = request.config;
     auto t = request.type;
     auto make_proc = [](auto &drops, auto &node) {
         return [&drops, &node](bool is_adding) {
@@ -103,16 +103,11 @@ void maintain_drops_both(/*inout*/ configuration_update_request &request)
     };
 
     if (pc.hp_primary) {
-        std::vector<host_port> drops;
-        const auto &node = pc.hp_primary;
-        GET_HOST_PORTS(pc, last_drops, drops);
-        when_update_replicas(t, make_proc(drops, node));
+        when_update_replicas(t, make_proc(pc.hp_last_drops, pc.hp_primary));
     }
 
     if (pc.primary) {
-        auto &drops = pc.last_drops;
-        const auto &node = pc.primary;
-        when_update_replicas(t, make_proc(drops, node));
+        when_update_replicas(t, make_proc(pc.last_drops, pc.primary));
     }
 }
 
@@ -726,5 +721,4 @@ partition_status::type node_state::served_as(const gpid &pid) const
         return partition_status::PS_SECONDARY;
     return partition_status::PS_INACTIVE;
 }
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
