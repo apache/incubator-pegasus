@@ -251,16 +251,15 @@ int pegasus_write_service::make_idempotent(const dsn::apps::incr_request &req,
 
 int pegasus_write_service::put(const db_write_context &ctx,
                                const std::vector<dsn::apps::update_request> &updates,
-                               incr_rpc &rpc)
+                               const dsn::apps::incr_request &req,
+                               dsn::apps::incr_response &resp)
 {
     METRIC_VAR_AUTO_LATENCY(incr_latency_ns);
     METRIC_VAR_INCREMENT(incr_requests);
 
-    auto &resp = rpc.response();
     const int err = _impl->put(ctx, updates, resp);
 
     if (_server->is_primary()) {
-        const auto &req = rpc.request();
         _cu_calculator->add_incr_cu(resp.error, req.key);
     }
 
@@ -294,16 +293,15 @@ int pegasus_write_service::make_idempotent(const dsn::apps::check_and_set_reques
 
 int pegasus_write_service::put(const db_write_context &ctx,
                                const std::vector<dsn::apps::update_request> &updates,
-                               check_and_set_rpc &rpc)
+                               const dsn::apps::check_and_set_request &req,
+                               dsn::apps::check_and_set_response &resp)
 {
     METRIC_VAR_AUTO_LATENCY(check_and_set_latency_ns);
     METRIC_VAR_INCREMENT(check_and_set_requests);
 
-    auto &resp = rpc.response();
     const int err = _impl->put(ctx, updates, resp);
 
     if (_server->is_primary()) {
-        const auto &req = rpc.request();
         _cu_calculator->add_check_and_set_cu(
             resp.error, req.hash_key, req.check_sort_key, req.set_sort_key, req.set_value);
     }
@@ -342,16 +340,15 @@ int pegasus_write_service::make_idempotent(const dsn::apps::check_and_mutate_req
 
 int pegasus_write_service::put(const db_write_context &ctx,
                                const std::vector<dsn::apps::update_request> &updates,
-                               check_and_mutate_rpc &rpc)
+                               const dsn::apps::check_and_mutate_request &req,
+                               dsn::apps::check_and_mutate_response &resp)
 {
     METRIC_VAR_AUTO_LATENCY(check_and_mutate_latency_ns);
     METRIC_VAR_INCREMENT(check_and_mutate_requests);
 
-    auto &resp = rpc.response();
     const int err = _impl->put(ctx, updates, resp);
 
     if (_server->is_primary()) {
-        const auto &req = rpc.request();
         _cu_calculator->add_check_and_mutate_cu(
             resp.error, req.hash_key, req.check_sort_key, req.mutate_list);
     }
@@ -391,7 +388,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
     // `kBatchWriteTypeMap` is used to map dsn::apps::update_type field in the single put
     // request to batch_write_type, to measure the size of requests in batch for each kind
     // of write into `_batch_sizes`.
-    constexpr std::array kBatchWriteTypeMap = {
+    static constexpr std::array kBatchWriteTypeMap = {
         batch_write_type::put,
         batch_write_type::incr,
         batch_write_type::check_and_set,
@@ -417,7 +414,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
         // Though this is a put request, we choose to udapte the metrics of its original
         // request (i.e. the atomic write).
         if (dsn_likely(update.type < kBatchWriteTypeMap.size())) {
-            ++_batch_sizes[static_cast<uint32_t>(kBatchWriteTypeMap[update.type])];
+            ++_batch_sizes.at(static_cast<uint32_t>(kBatchWriteTypeMap.at(update.type)));
         }
     }
 

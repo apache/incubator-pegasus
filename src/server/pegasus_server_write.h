@@ -111,7 +111,7 @@ private:
                    dsn::message_ex *original_request)
     {
         auto rpc = TRpcHolder::auto_reply(original_request);
-        return _write_svc->put(_write_ctx, updates, rpc);
+        return _write_svc->put(_write_ctx, updates, rpc.request(), rpc.response());
     }
 
     // Apply the idempotent request and respond to its original request.

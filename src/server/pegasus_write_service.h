@@ -22,7 +22,6 @@
 #include <cstdint>
 #include <memory>
 
-#include "base/pegasus_rpc_types.h"
 #include "replica/replica_base.h"
 #include "utils/metrics.h"
 
@@ -147,7 +146,8 @@ public:
     // response. Only called by primary replicas.
     int put(const db_write_context &ctx,
             const std::vector<dsn::apps::update_request> &updates,
-            incr_rpc &rpc);
+            const dsn::apps::incr_request &req,
+            dsn::apps::incr_response &resp);
 
     // Write a non-idempotent INCR record.
     int incr(int64_t decree, const dsn::apps::incr_request &update, dsn::apps::incr_response &resp);
@@ -162,7 +162,8 @@ public:
     // with CHECK_AND_SET response. Only called by primary replicas.
     int put(const db_write_context &ctx,
             const std::vector<dsn::apps::update_request> &updates,
-            check_and_set_rpc &rpc);
+            const dsn::apps::check_and_set_request &req,
+            dsn::apps::check_and_set_response &resp);
 
     // Write CHECK_AND_SET record.
     int check_and_set(int64_t decree,
@@ -180,7 +181,8 @@ public:
     // response. Only called by primary replicas.
     int put(const db_write_context &ctx,
             const std::vector<dsn::apps::update_request> &updates,
-            check_and_mutate_rpc &rpc);
+            const dsn::apps::check_and_mutate_request &req,
+            dsn::apps::check_and_mutate_response &resp);
 
     // Write CHECK_AND_MUTATE record.
     int check_and_mutate(int64_t decree,
