@@ -936,10 +936,12 @@ void replica_bulk_loader::report_group_download_progress(/*out*/ bulk_load_respo
         primary_state.__set_download_progress(_download_progress.load());
         primary_state.__set_download_status(_download_status.load());
     }
+    host_port primary;
+    GET_HOST_PORT(_replica->_primary_states.pc, primary, primary);
     SET_VALUE_FROM_IP_AND_HOST_PORT(response,
                                     group_bulk_load_state,
                                     _replica->_primary_states.pc.primary,
-                                    _replica->_primary_states.pc.hp_primary,
+                                    primary,
                                     primary_state);
     LOG_INFO_PREFIX("primary = {}, download progress = {}%, status = {}",
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),
@@ -978,10 +980,12 @@ void replica_bulk_loader::report_group_ingestion_status(/*out*/ bulk_load_respon
 
     partition_bulk_load_state primary_state;
     primary_state.__set_ingest_status(_replica->_app->get_ingestion_status());
+    host_port primary;
+    GET_HOST_PORT(_replica->_primary_states.pc, primary, primary);
     SET_VALUE_FROM_IP_AND_HOST_PORT(response,
                                     group_bulk_load_state,
                                     _replica->_primary_states.pc.primary,
-                                    _replica->_primary_states.pc.hp_primary,
+                                    primary,
                                     primary_state);
     LOG_INFO_PREFIX("primary = {}, ingestion status = {}",
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),
@@ -1025,10 +1029,12 @@ void replica_bulk_loader::report_group_cleaned_up(bulk_load_response &response)
 
     partition_bulk_load_state primary_state;
     primary_state.__set_is_cleaned_up(is_cleaned_up());
+    host_port primary;
+    GET_HOST_PORT(_replica->_primary_states.pc, primary, primary);
     SET_VALUE_FROM_IP_AND_HOST_PORT(response,
                                     group_bulk_load_state,
                                     _replica->_primary_states.pc.primary,
-                                    _replica->_primary_states.pc.hp_primary,
+                                    primary,
                                     primary_state);
     LOG_INFO_PREFIX("primary = {}, bulk load states cleaned_up = {}",
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),
@@ -1064,10 +1070,12 @@ void replica_bulk_loader::report_group_is_paused(bulk_load_response &response)
 
     partition_bulk_load_state primary_state;
     primary_state.__set_is_paused(_status == bulk_load_status::BLS_PAUSED);
+    host_port primary;
+    GET_HOST_PORT(_replica->_primary_states.pc, primary, primary);
     SET_VALUE_FROM_IP_AND_HOST_PORT(response,
                                     group_bulk_load_state,
                                     _replica->_primary_states.pc.primary,
-                                    _replica->_primary_states.pc.hp_primary,
+                                    primary,
                                     primary_state);
     LOG_INFO_PREFIX("primary = {}, bulk_load is_paused = {}",
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),

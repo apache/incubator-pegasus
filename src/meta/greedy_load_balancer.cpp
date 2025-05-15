@@ -147,8 +147,13 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
 {
     const auto &n = ns.host_port();
     return ns.for_each_partition([this, n](const dsn::gpid &pid) {
-        config_context &cc = *get_config_context(*(t_global_view->apps), pid);
-        if (cc.find_from_serving(n) == cc.serving.end()) {
+        config_context *ctx = get_config_context(*(t_global_view->apps), pid);
+        if (ctx == nullptr) {
+            LOG_INFO("get_config_context return nullptr for gpid({})", pid);
+            return false;
+        }
+
+        if (ctx->find_from_serving(n) == ctx->serving.end()) {
             LOG_INFO("meta server hasn't collected gpid({})'s info of {}", pid, n);
             return false;
         }
