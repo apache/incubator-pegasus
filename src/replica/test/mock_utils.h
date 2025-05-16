@@ -78,7 +78,8 @@ public:
         return ERR_OK;
     }
     int on_request(message_ex *request) override WARN_UNUSED_RESULT { return 0; }
-    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) override
+    int make_idempotent(dsn::message_ex *request,
+                        std::vector<dsn::message_ex *> &new_requests) override
     {
         return rocksdb::Status::kOk;
     }

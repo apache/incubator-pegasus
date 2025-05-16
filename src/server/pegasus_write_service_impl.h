@@ -34,8 +34,7 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 /// internal error codes used for fail injection
 // TODO(yingchun): Use real rocksdb::Status::code.
@@ -260,7 +259,7 @@ public:
               update.key,
               update.value);
 
-        return resp.error;
+        return rocksdb::Status::kOk;
     }
 
     int incr(int64_t decree, const dsn::apps::incr_request &update, dsn::apps::incr_response &resp)
@@ -546,6 +545,15 @@ public:
         updates.clear();
         updates.emplace_back();
         return make_idempotent(req, err_resp, updates.front());
+    }
+
+    template <typename TResponse>
+    int put(const db_write_context &ctx,
+            const std::vector<dsn::apps::update_request> &updates,
+            TResponse &resp)
+    {
+        CHECK_EQ(updates.size(), 1);
+        return put(ctx, updates.front(), resp);
     }
 
     // Tranlate a check_and_mutate request into multiple single-put and single-remove requests
@@ -1278,5 +1286,4 @@ private:
     std::vector<dsn::apps::update_response *> _update_responses;
 };
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server
