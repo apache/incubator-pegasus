@@ -268,7 +268,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
                                                     uint32_t count,
                                                     message_ex *original_request)
 {
-    int result = rocksdb::Status::kOk;
+    int storage_error = rocksdb::Status::kOk;
     for (uint32_t i = 0; i < count; ++i) {
         const int err = on_request(requests[i]);
         if (err == rocksdb::Status::kOk) {
@@ -278,9 +278,9 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
         LOG_ERROR_PREFIX("got storage engine error when handler request({}): error = {}",
                          requests[i]->header->rpc_name,
                          err);
-        result = err;
+        storage_error = err;
     }
-    return result;
+    return storage_error;
 }
 
 error_code replication_app_base::apply_mutation(const mutation_ptr &mu)

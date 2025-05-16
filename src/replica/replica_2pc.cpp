@@ -148,20 +148,20 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     if (dsn_unlikely(request->rpc_code() == TASK_CODE_INVALID)) {
-        LOG_ERROR("recv message with invalid RPC code {} from {}, trace_id = {}",
-                  request->rpc_code(),
-                  request->header->from_address,
-                  request->header->trace_id);
+        LOG_ERROR_PREFIX("recv message with invalid RPC code {} from {}, trace_id = {}",
+                         request->rpc_code(),
+                         request->header->from_address,
+                         request->header->trace_id);
         response_client_write(request, ERR_INVALID_PARAMETERS);
         return;
     }
 
     const auto *spec = task_spec::get(request->rpc_code());
     if (dsn_unlikely(spec == nullptr)) {
-        LOG_ERROR("recv message with unhandled RPC code {} from {}, trace_id = {}",
-                  request->rpc_code(),
-                  request->header->from_address,
-                  request->header->trace_id);
+        LOG_ERROR_PREFIX("recv message with unhandled RPC code {} from {}, trace_id = {}",
+                         request->rpc_code(),
+                         request->header->from_address,
+                         request->header->trace_id);
         response_client_write(request, ERR_HANDLER_NOT_FOUND);
         return;
     }
@@ -239,13 +239,18 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 bool replica::need_reject_non_idempotent(const task_spec *spec) const
 {
     if (!is_duplication_master()) {
+        // This is not the master that needs to duplicate writes to followers, thus
+        // non-idempotent requests are accepted.
         return false;
     }
 
     if (_app_info.atomic_idempotent) {
+        // Since the table which this replica belongs to has been configured to make
+        // all atomic write requests idempotent, certainly they are accepted.
         return false;
     }
 
+    // Any atomic write request should be rejected.
     return !spec->rpc_request_is_write_idempotent;
 }
 
@@ -255,6 +260,7 @@ bool replica::need_make_idempotent(const task_spec *spec) const
         return false;
     }
 
+    // Only atomic write requests need to be made idempotent.
     return !spec->rpc_request_is_write_idempotent;
 }
 
@@ -265,18 +271,21 @@ bool replica::need_make_idempotent(message_ex *request) const
     }
 
     if (!_app_info.atomic_idempotent) {
+        // The table which this replica belongs to is not configured to make all atomic
+        // write requests idempotent.
         return false;
     }
 
     const auto *spec = task_spec::get(request->rpc_code());
     CHECK_NOTNULL(spec, "RPC code {} not found", request->rpc_code());
 
+    // Only atomic write requests need to be made idempotent.
     return !spec->rpc_request_is_write_idempotent;
 }
 
 int replica::make_idempotent(mutation_ptr &mu)
 {
-    CHECK_FALSE(mu->client_requests.empty());
+    CHECK(!mu->client_requests.empty(), "the mutation should include at least one request");
 
     message_ex *request = mu->client_requests.front();
     if (!need_make_idempotent(request)) {
@@ -295,7 +304,8 @@ int replica::make_idempotent(mutation_ptr &mu)
     }
 
     CHECK(!new_requests.empty(),
-          "new_requests should not be empty since its original write request must be atomic");
+          "new_requests should not be empty since its original write request must be atomic "
+          "and translated into at least one idempotent request");
 
     // During make_idempotent(), the request has been deserialized (i.e. unmarshall() in the
     // constructor of `rpc_holder::internal`). Once deserialize it again, assertion would fail for
@@ -307,7 +317,7 @@ int replica::make_idempotent(mutation_ptr &mu)
     // The decree must have not been assigned.
     CHECK_EQ(mu->get_decree(), invalid_decree);
 
-    // Create a new mutation to hold the new idempotent request. The old mutation holding the
+    // Create a new mutation to hold the new idempotent requests. The old mutation holding the
     // original atomic write request will be released automatically.
     mu = new_mutation(invalid_decree, request);
     for (dsn::message_ex *new_request : new_requests) {

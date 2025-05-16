@@ -20,6 +20,8 @@
 #pragma once
 
 #include <rocksdb/status.h>
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -30,6 +32,7 @@
 #include "pegasus_write_service.h"
 #include "replica/replica_base.h"
 #include "rpc/rpc_message.h"
+#include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
 #include "task/task_code.h"
@@ -38,7 +41,6 @@
 
 namespace dsn {
 class blob;
-class message_ex;
 } // namespace dsn
 
 namespace pegasus {
@@ -56,14 +58,14 @@ public:
 
     // See replication_app_base::on_batched_write_requests() for details.
     //
-    /// \return error code returned by rocksdb, i.e rocksdb::Status::code.
-    /// **NOTE**
-    /// Error returned is regarded as the failure of replica, thus will trigger
-    /// cluster membership changes. Make sure no error is returned because of
-    /// invalid user argument.
-    /// As long as the returned error is rocksdb::Status::kOk, the operation is guaranteed to be
-    /// successfully applied into rocksdb, which means an empty_put will be called
-    /// even if there's no write.
+    // **NOTE**
+    // An error code other than rocksdb::Status::kOk would be regarded as the failure of the
+    // replica, leading to cluster membership changes. Make sure no errors occur due to
+    // invalid parameters.
+    //
+    // As long as the returned error is rocksdb::Status::kOk, the write requests are guaranteed
+    // to be applied into RocksDB successfully, which means empty_put() will be called even if
+    // there's no write.
     int on_batched_write_requests(dsn::message_ex **requests,
                                   uint32_t count,
                                   int64_t decree,
@@ -82,18 +84,19 @@ private:
         std::vector<dsn::apps::update_request> updates;
         const int err = _write_svc->make_idempotent(rpc.request(), rpc.response(), updates);
 
-        // When condition not met for check_and_set and check_and_mutate, so there is
-        // a certain probability that return non-ok.
+        // When the condition checks of `check_and_set` and `check_and_mutate` fail,
+        // make_idempotent() would return rocksdb::Status::kTryAgain. Therefore, there is
+        // still a certain probability that a status code other than rocksdb::Status::kOk
+        // is returned.
         if (err != rocksdb::Status::kOk) {
             // Once it failed, just reply to the client with error immediately.
             rpc.enable_auto_reply();
             return err;
         }
 
-        // Build new messages based on the generated idempotent requests.
+        // Build new messages based on the generated idempotent updates.
         new_requests.clear();
         for (const auto &update : updates) {
-            // Build the message based on the resulting single-update request.
             new_requests.push_back(dsn::from_thrift_request_to_received_message(
                 update,
                 dsn::apps::RPC_RRDB_RRDB_PUT,

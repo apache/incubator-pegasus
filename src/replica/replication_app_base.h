@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "bulk_load_types.h"
 #include "common/json_helper.h"
@@ -254,12 +255,12 @@ public:
     // not idempotent. This function is used to translate them into requests like single put
     // which is naturally idempotent.
     //
-    // For the other requests which must be idempotent such as single put/remove or non-batch
-    // writes, this function would do nothing.
+    // For the other requests such as single put/remove or non-batch writes all of which must be
+    // idempotent, this function would do nothing.
     //
     // Parameters:
     // - request: the original request received from a client.
-    // - new_requests: the output parameter, points to the resulting idempotent requests if the
+    // - new_requests: the output parameter, holding the resulting idempotent requests if the
     // original request is atomic, otherwise keeping unchanged.
     //
     // Return:

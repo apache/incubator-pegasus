@@ -147,6 +147,7 @@ public:
     //  - ERR_FILE_OPERATION_FAILED
     ::dsn::error_code stop(bool clear_state) override;
 
+    // See replication_app_base::make_idempotent() for details.
     int make_idempotent(dsn::message_ex *request,
                         std::vector<dsn::message_ex *> &new_requests) override;
 

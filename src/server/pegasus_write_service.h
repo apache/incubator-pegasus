@@ -19,8 +19,11 @@
 
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "replica/replica_base.h"
 #include "utils/metrics.h"

@@ -260,7 +260,7 @@ public:
               update.key,
               update.value);
 
-        return resp.error;
+        return rocksdb::Status::kOk;
     }
 
     int incr(int64_t decree, const dsn::apps::incr_request &update, dsn::apps::incr_response &resp)
