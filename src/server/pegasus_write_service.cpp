@@ -19,7 +19,6 @@
 
 #include <fmt/core.h>
 #include <rocksdb/status.h>
-#include <stddef.h>
 #include <functional>
 #include <set>
 #include <string_view>
@@ -171,8 +170,8 @@ namespace dsn {
 class blob;
 class message_ex;
 } // namespace dsn
-namespace pegasus {
-namespace server {
+
+namespace pegasus::server {
 
 DEFINE_TASK_CODE(LPC_INGESTION, TASK_PRIORITY_COMMON, THREAD_POOL_INGESTION)
 
@@ -609,5 +608,4 @@ int pegasus_write_service::ingest_files(int64_t decree,
     return rocksdb::Status::kOk;
 }
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

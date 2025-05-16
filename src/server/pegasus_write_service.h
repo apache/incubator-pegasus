@@ -52,8 +52,7 @@ class ingestion_response;
 } // namespace replication
 } // namespace dsn
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 // The context of an mutation to the database.
 struct db_write_context
@@ -311,5 +310,4 @@ private:
     // TODO(wutao1): add metrics for failed rpc.
 };
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

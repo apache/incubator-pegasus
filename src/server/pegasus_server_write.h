@@ -43,8 +43,8 @@ namespace dsn {
 class blob;
 } // namespace dsn
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
+
 class pegasus_server_impl;
 
 /// This class implements the interface of `pegasus_sever_impl::on_batched_write_requests`.
@@ -53,7 +53,7 @@ class pegasus_server_write : public dsn::replication::replica_base
 public:
     explicit pegasus_server_write(pegasus_server_impl *server);
 
-    // See replication_app_base::make_idempotent() for details.
+    // See replication_app_base::make_idempotent() for details. Only called by primary replicas.
     int make_idempotent(dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests);
 
     // See replication_app_base::on_batched_write_requests() for details.
@@ -75,6 +75,8 @@ public:
     void set_default_ttl(uint32_t ttl);
 
 private:
+    // Used to call make_idempotent() for each type (specified by TRpcHolder) of atomic write.
+    // Only called by primary replicas.
     template <typename TRpcHolder>
     int make_idempotent(dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests)
     {
@@ -109,10 +111,15 @@ private:
         return rocksdb::Status::kOk;
     }
 
+    // Apply the batched (one or multiple) single-update requests into the storage engine.
+    // Only called by primary replicas.
     template <typename TRpcHolder>
     inline int put(const std::vector<dsn::apps::update_request> &updates,
                    dsn::message_ex *original_request)
     {
+        // Enable auto reply, since in primary replicas we need to reply to the client with
+        // the response to the original atomic write request after the idempotent updates
+        // were applied into the storage engine.
         auto rpc = TRpcHolder::auto_reply(original_request);
         return _write_svc->put(_write_ctx, updates, rpc.request(), rpc.response());
     }
@@ -179,5 +186,4 @@ private:
     METRIC_VAR_DECLARE_counter(corrupt_writes);
 };
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

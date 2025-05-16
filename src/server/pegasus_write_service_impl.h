@@ -34,8 +34,7 @@
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 /// internal error codes used for fail injection
 // TODO(yingchun): Use real rocksdb::Status::code.
@@ -1287,5 +1286,4 @@ private:
     std::vector<dsn::apps::update_response *> _update_responses;
 };
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

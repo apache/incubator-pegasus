@@ -49,8 +49,7 @@ METRIC_DEFINE_counter(replica,
 
 DSN_DECLARE_bool(rocksdb_verbose_log);
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
     : replica_base(server),
@@ -377,5 +376,4 @@ void pegasus_server_write::init_idempotent_writers()
     CHECK_EQ(dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE + 1, _idempotent_writers.size());
 }
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server
