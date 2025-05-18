@@ -49,7 +49,10 @@ RUN apt-get update -y; \
                        libkrb5-dev \
                        libsasl2-dev \
                        maven \
-                       flex; \
+                       flex \
+                       libsnappy-dev \
+                       liblz4-dev \
+                       libzstd-dev; \
     rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository ppa:git-core/ppa -y; \
