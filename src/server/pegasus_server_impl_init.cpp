@@ -588,6 +588,58 @@ DSN_DEFINE_uint64(pegasus.server,
                   600, // 600 is the default value in RocksDB.
                   "If not zero, dump rocksdb.stats to RocksDB every stats_persist_period_sec");
 
+/* Rocksdb blobdb for Key-value separation.
+ * For more infomation, see: https://github.com/facebook/rocksdb/wiki/BlobDB */
+DSN_DEFINE_bool(
+    pegasus.server,
+    rocksdb_enable_blob_files,
+    false,
+    "switch of the key-value separation function"
+);
+
+DSN_DEFINE_uint32(
+    pegasus.server,
+    rocksdb_min_blob_size,
+    4 * 1024,  // 4KB
+    "minimum value size (in bytes) to trigger blob file writing"
+);
+
+DSN_DEFINE_uint64(
+    pegasus.server,
+    rocksdb_blob_file_size,
+    256 * 1024 * 1024,
+    "maximum size (in bytes) of a blob file"
+);
+
+DSN_DEFINE_bool(
+    pegasus.server,
+    rocksdb_enable_blob_garbage_collection,
+    true,
+    "whether to enable blob file garbage collection"
+);
+
+DSN_DEFINE_double(
+    pegasus.server,
+    rocksdb_blob_garbage_collection_age_cutoff,
+    0.25,
+    "age cutoff of oldest blob files (as a fraction) to be considered in GC"
+);
+
+DSN_DEFINE_double(
+    pegasus.server,
+    rocksdb_blob_garbage_collection_force_threshold,
+    0.60,
+    "threshold of garbage ratio in old blob files to force GC"
+);
+
+DSN_DEFINE_int32(
+    pegasus.server,
+    rocksdb_blob_file_starting_level,
+    2,
+    "the lowest LSM tree level at which blob files can be created"
+);
+
+
 namespace dsn {
 namespace replication {
 class replica;
@@ -692,6 +744,15 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _data_cf_opts.target_file_size_multiplier = FLAGS_rocksdb_target_file_size_multiplier;
     _data_cf_opts.max_bytes_for_level_base = FLAGS_rocksdb_max_bytes_for_level_base;
     _data_cf_opts.max_bytes_for_level_multiplier = FLAGS_rocksdb_max_bytes_for_level_multiplier;
+
+    // open db with key-value separation option (rocksdb blobdb)
+    _data_cf_opts.enable_blob_files = FLAGS_rocksdb_enable_blob_files;
+    _data_cf_opts.min_blob_size = FLAGS_rocksdb_min_blob_size;
+    _data_cf_opts.blob_file_size = FLAGS_rocksdb_blob_file_size;
+    _data_cf_opts.enable_blob_garbage_collection = FLAGS_rocksdb_enable_blob_garbage_collection;
+    _data_cf_opts.blob_garbage_collection_age_cutoff = FLAGS_rocksdb_blob_garbage_collection_age_cutoff;
+    _data_cf_opts.blob_garbage_collection_force_threshold = FLAGS_rocksdb_blob_garbage_collection_force_threshold;
+    _data_cf_opts.blob_file_starting_level = FLAGS_rocksdb_blob_file_starting_level;
 
     // we need set max_compaction_bytes definitely because set_usage_scenario() depends on it.
     _data_cf_opts.max_compaction_bytes = _data_cf_opts.target_file_size_base * 25;
