@@ -19,6 +19,7 @@
 
 #include <fmt/core.h>
 #include <rocksdb/status.h>
+#include <algorithm>
 #include <functional>
 #include <set>
 #include <string_view>
@@ -397,7 +398,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
     };
     static_assert(dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE + 1 ==
                       kBatchWriteTypeMap.size(),
-                  "kBatchWriteTypeMap does not match update_type::type");
+                  "kBatchWriteTypeMap does not match update_type");
 
     CHECK_GT_MSG(_batch_start_time, 0, "batch_put must be called after batch_prepare");
 
@@ -466,17 +467,15 @@ void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_t
 
 void pegasus_write_service::batch_finish()
 {
+#define BATCH_SIZE(op) _batch_sizes[static_cast<uint32_t>(batch_write_type::op)]
+
 #define UPDATE_BATCH_METRICS(op, nrequests)                                                        \
     do {                                                                                           \
         METRIC_VAR_INCREMENT_BY(op##_requests, static_cast<int64_t>(nrequests));                   \
-        METRIC_VAR_SET(                                                                            \
-            op##_latency_ns,                                                                       \
-            static_cast<size_t>(_batch_sizes[static_cast<uint32_t>(batch_write_type::op)]),        \
-            latency_ns);                                                                           \
+        METRIC_VAR_SET(op##_latency_ns, static_cast<size_t>(nrequests), latency_ns);               \
     } while (0)
 
-#define UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(op)                                                  \
-    UPDATE_BATCH_METRICS(op, _batch_sizes[static_cast<uint32_t>(batch_write_type::op)])
+#define UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(op) UPDATE_BATCH_METRICS(op, BATCH_SIZE(op))
 
     const auto latency_ns = static_cast<int64_t>(dsn_now_ns() - _batch_start_time);
 
@@ -489,7 +488,8 @@ void pegasus_write_service::batch_finish()
     // for the two possible situations where we are now.
     UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(incr);
     UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(check_and_set);
-    UPDATE_BATCH_METRICS(check_and_mutate, 1);
+
+    UPDATE_BATCH_METRICS(check_and_mutate, std::min(1U, BATCH_SIZE(check_and_mutate)));
 
     _batch_sizes.fill(0);
 
@@ -497,6 +497,7 @@ void pegasus_write_service::batch_finish()
 
 #undef UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE
 #undef UPDATE_BATCH_METRICS
+#undef BATCH_SIZE
 }
 
 int pegasus_write_service::duplicate(int64_t decree,

@@ -239,7 +239,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 bool replica::need_reject_non_idempotent(const task_spec *spec) const
 {
     if (!is_duplication_master()) {
-        // This is not the master that needs to duplicate writes to followers, thus
+        // This is not the dup master that needs to duplicate writes to followers, thus
         // non-idempotent requests are accepted.
         return false;
     }
@@ -277,7 +277,7 @@ bool replica::need_make_idempotent(message_ex *request) const
     }
 
     const auto *spec = task_spec::get(request->rpc_code());
-    CHECK_NOTNULL(spec, "RPC code {} not found", request->rpc_code());
+    CHECK_NOTNULL_PREFIX_MSG(spec, "RPC code {} not found", request->rpc_code());
 
     // Only atomic write requests need to be made idempotent.
     return !spec->rpc_request_is_write_idempotent;
@@ -285,15 +285,16 @@ bool replica::need_make_idempotent(message_ex *request) const
 
 int replica::make_idempotent(mutation_ptr &mu)
 {
-    CHECK(!mu->client_requests.empty(), "the mutation should include at least one request");
+    CHECK_PREFIX_MSG(!mu->client_requests.empty(),
+                     "the mutation should include at least one request");
 
     message_ex *request = mu->client_requests.front();
     if (!need_make_idempotent(request)) {
         return rocksdb::Status::kOk;
     }
 
-    // The original atomic write request must not be batched.
-    CHECK_EQ(mu->client_requests.size(), 1);
+    CHECK_EQ_PREFIX_MSG(
+        mu->client_requests.size(), 1, "the original atomic write request must not be batched");
 
     std::vector<dsn::message_ex *> new_requests;
     const int err = _app->make_idempotent(request, new_requests);
@@ -303,9 +304,10 @@ int replica::make_idempotent(mutation_ptr &mu)
         return err;
     }
 
-    CHECK(!new_requests.empty(),
-          "new_requests should not be empty since its original write request must be atomic "
-          "and translated into at least one idempotent request");
+    CHECK_PREFIX_MSG(
+        !new_requests.empty(),
+        "new_requests should not be empty since its original write request must be atomic "
+        "and translated into at least one idempotent request");
 
     // During make_idempotent(), the request has been deserialized (i.e. unmarshall() in the
     // constructor of `rpc_holder::internal`). Once deserialize it again, assertion would fail for
@@ -314,8 +316,7 @@ int replica::make_idempotent(mutation_ptr &mu)
     // To make it deserializable again to be applied into RocksDB, restore read for it.
     request->restore_read();
 
-    // The decree must have not been assigned.
-    CHECK_EQ(mu->get_decree(), invalid_decree);
+    CHECK_EQ_PREFIX_MSG(mu->get_decree(), invalid_decree, "the decree must have not been assigned");
 
     // Create a new mutation to hold the new idempotent requests. The old mutation holding the
     // original atomic write request will be released automatically.

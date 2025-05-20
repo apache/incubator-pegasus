@@ -53,7 +53,7 @@ namespace pegasus::server {
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
     : replica_base(server),
-      _write_svc(new pegasus_write_service(server)),
+      _write_svc(std::make_unique<pegasus_write_service>(server)),
       METRIC_VAR_INIT_replica(corrupt_writes)
 {
     init_make_idempotent_handlers();
@@ -64,14 +64,29 @@ pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
 int pegasus_server_write::make_idempotent(dsn::message_ex *request,
                                           std::vector<dsn::message_ex *> &new_requests)
 {
-    auto iter = std::as_const(_make_idempotent_handlers).find(request->rpc_code());
-    if (iter != _make_idempotent_handlers.end()) {
-        return iter->second(request, new_requests);
+    const auto make_idempotent_handler =
+        std::as_const(_make_idempotent_handlers).find(request->rpc_code());
+    if (make_idempotent_handler == _make_idempotent_handlers.end()) {
+        // Those requests not in the handlers are considered as idempotent. Always be
+        // successful for them.
+        return rocksdb::Status::kOk;
     }
 
-    // Those requests not in the handlers are considered as idempotent. Always be successful
-    // for them.
-    return rocksdb::Status::kOk;
+    try {
+        return make_idempotent_handler->second(request, new_requests);
+    } catch (TTransportException &ex) {
+        METRIC_VAR_INCREMENT(corrupt_writes);
+        LOG_ERROR_PREFIX("make idempotent handler for {} failed: from = {}, exception = {}",
+                         request->rpc_code(),
+                         request->header->from_address,
+                         ex.what());
+
+        // The corrupt write is likely to be an attack or a scan for security. It needs to return
+        // `rocksdb::Status::kCorruption` to inform the caller that `make_idempotent()` has failed
+        // and that the subsequent 2PC should not proceed.
+        // See https://github.com/apache/incubator-pegasus/pull/798.
+        return rocksdb::Status::kCorruption;
+    }
 }
 
 int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
@@ -90,88 +105,117 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
         return _write_svc->empty_put(_decree);
     }
 
-    try {
-        auto iter = std::as_const(_non_batch_write_handlers).find(requests[0]->rpc_code());
-        if (iter != _non_batch_write_handlers.end()) {
-            CHECK_EQ(count, 1);
-            return iter->second(requests[0]);
-        }
-    } catch (TTransportException &ex) {
-        METRIC_VAR_INCREMENT(corrupt_writes);
-        LOG_ERROR_PREFIX("pegasus non-batch write handler failed, from = {}, exception = {}",
-                         requests[0]->header->from_address,
-                         ex.what());
+    const auto non_batch_write_handler =
+        std::as_const(_non_batch_write_handlers).find(requests[0]->rpc_code());
+    if (non_batch_write_handler != _non_batch_write_handlers.end()) {
+        CHECK_EQ_PREFIX_MSG(count,
+                            1,
+                            "there should be only one request for the non-batch "
+                            "write {}: from = {}, decree = {}",
+                            requests[0]->rpc_code(),
+                            requests[0]->header->from_address,
+                            _decree);
 
-        // The corrupt write is likely to be an attack or a scan for security. Since it has
-        // been in plog, just return rocksdb::Status::kOk to ignore it.
-        // See https://github.com/apache/incubator-pegasus/pull/798.
-        return rocksdb::Status::kOk;
+        try {
+            return non_batch_write_handler->second(requests[0]);
+        } catch (TTransportException &ex) {
+            METRIC_VAR_INCREMENT(corrupt_writes);
+            LOG_ERROR_PREFIX("non-batch write handler for {} failed: from = {}, "
+                             "decree = {}, exception = {}",
+                             requests[0]->rpc_code(),
+                             requests[0]->header->from_address,
+                             _decree,
+                             ex.what());
+
+            // The corrupt write is likely to be an attack or a scan for security. Since it has
+            // been in plog, just return rocksdb::Status::kOk to ignore it.
+            // See https://github.com/apache/incubator-pegasus/pull/798.
+            return rocksdb::Status::kOk;
+        }
     }
 
     if (original_request != nullptr) {
         // Once `original_request` is set, `requests` must be idempotent and translated from
-        // an atomic request.
-        return on_idempotent(requests, count, original_request);
+        // an atomic write request.
+        return apply_idempotent(requests, count, original_request);
     }
 
     return on_batched_writes(requests, count);
-}
-
-int pegasus_server_write::on_idempotent(dsn::message_ex **requests,
-                                        uint32_t count,
-                                        dsn::message_ex *original_request)
-{
-    try {
-        return apply_idempotent(requests, count, original_request);
-    } catch (TTransportException &ex) {
-        METRIC_VAR_INCREMENT(corrupt_writes);
-        LOG_ERROR_PREFIX("pegasus on idempotent handler failed, from = {}, exception = {}",
-                         original_request->header->from_address,
-                         ex.what());
-        // The corrupt write is likely to be an attack or a scan for security. Since it has
-        // been in plog, just return rocksdb::Status::kOk to ignore it.
-        // See https://github.com/apache/incubator-pegasus/pull/798.
-        return rocksdb::Status::kOk;
-    }
 }
 
 int pegasus_server_write::apply_idempotent(dsn::message_ex **requests,
                                            uint32_t count,
                                            dsn::message_ex *original_request)
 {
-    // `requests` should consist of at least one request.
-    CHECK_GT(count, 0);
+    CHECK_GT_PREFIX_MSG(count,
+                        0,
+                        "`requests` should consist of at least one request "
+                        "original_request = ({}, {}), decree = {}",
+                        original_request->header->from_address,
+                        original_request->rpc_code(),
+                        _decree);
 
     std::vector<dsn::apps::update_request> updates;
     updates.reserve(count);
 
     for (uint32_t i = 0; i < count; ++i) {
-        CHECK_EQ(requests[i]->rpc_code(), dsn::apps::RPC_RRDB_RRDB_PUT);
+        CHECK_EQ_PREFIX_MSG(requests[i]->rpc_code(),
+                            dsn::apps::RPC_RRDB_RRDB_PUT,
+                            "now all translated idempotent writes are RPC_RRDB_RRDB_PUT "
+                            "requests: original_request = ({}, {}), decree = {}, "
+                            "count = {}, index = {}",
+                            original_request->header->from_address,
+                            original_request->rpc_code(),
+                            _decree,
+                            count,
+                            i);
 
-        // Use the message to create the real idempotent request.
         updates.emplace_back();
+
+        // Deserialize the message to create the real idempotent update.
+        //
+        // There is no need to catch TTransportException, since `requests` are freshly
+        // generated by serializing the idempotent updates within make_idempotent().
         dsn::unmarshall(requests[i], updates.back());
+
         CHECK(updates.back().__isset.type,
-              "update_request::type is not set for idempotent write {}: "
-              "request_index = {}",
+              "update_request::type is not set for {} request: original_request = ({}, {}) "
+              "decree = {}, count = {}, index = {},",
+              requests[i]->rpc_code(),
+              original_request->header->from_address,
               original_request->rpc_code(),
+              _decree,
+              count,
               i);
     }
 
-    const auto &first_update = updates.front();
-    const auto update_type = static_cast<uint32_t>(first_update.type);
+    const auto update_type = static_cast<uint32_t>(updates.front().type);
     CHECK_LT_PREFIX_MSG(update_type,
                         _idempotent_writers.size(),
-                        "unsupported update_request::type {} for idempotent write {}",
+                        "unsupported update_request::type {} for idempotent writer: "
+                        "original_request = ({}, {}), decree = {}, count = {}",
                         update_type,
-                        original_request->rpc_code());
+                        original_request->header->from_address,
+                        original_request->rpc_code(),
+                        _decree,
+                        count);
 
-    const auto writer = _idempotent_writers[first_update.type];
-    CHECK(writer,
-          "writer with update_request::type {} for idempotent write {} should not be empty",
-          update_type,
-          original_request->rpc_code());
+    // If the corresponding writer is retrieved using original_request->rpc_code(), a map
+    // would be needed. However, by choosing to obtain the writer based on the type of the
+    // first idempotent update, the writers can be stored in an array instead, which offers
+    // better performance than a map.
+    const auto writer = _idempotent_writers[update_type];
+    CHECK_PREFIX_MSG(writer,
+                     "idempotent writer for update_request::type {} should not be empty: "
+                     "original_request = ({}, {}), decree = {}, count = {}",
+                     update_type,
+                     original_request->header->from_address,
+                     original_request->rpc_code(),
+                     _decree,
+                     count);
 
+    // There is no need to catch TTransportException, since `original_request` has just
+    // been successfully deserialized in make_idempotent().
     return writer(updates, original_request);
 }
 
@@ -183,7 +227,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, uint32_t
 
     int err = rocksdb::Status::kOk;
     for (uint32_t i = 0; i < count; ++i) {
-        CHECK_NOTNULL(requests[i], "request[{}] is null", i);
+        CHECK_NOTNULL_PREFIX_MSG(requests[i], "batched requests[{}] should not be null", i);
 
         // Make sure all writes are batched even if some of them failed, since we need to record
         // the total QPS and RPC latencies, and respond for all RPCs regardless of their result.
@@ -202,19 +246,6 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, uint32_t
                 if (!update.__isset.type || update.type == dsn::apps::update_type::UT_PUT) {
                     // We must reply to the client for the plain single-put request.
                     rpc.enable_auto_reply();
-                } else if (update.type == dsn::apps::update_type::UT_INCR) {
-                    // This put request must originate from an incr request, thus never be
-                    // batched in plog.
-                    CHECK_EQ(count, 1);
-                } else if (update.type == dsn::apps::update_type::UT_CHECK_AND_SET) {
-                    // This put request must originate from a check_and_set request, thus
-                    // never be batched in plog.
-                    CHECK_EQ(count, 1);
-                } else if (update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT ||
-                           update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE) {
-                    // This put request must originate from a check_and_mutate request,
-                    // thus might be batched in plog.
-                    CHECK_GT(count, 0);
                 }
 
                 local_err = on_single_put_in_batch(rpc);
@@ -346,34 +377,39 @@ void pegasus_server_write::init_non_batch_write_handlers()
 void pegasus_server_write::init_idempotent_writers()
 {
     _idempotent_writers = {
-        nullptr,
+        nullptr, // No writer for update_type::UT_PUT.
         [this](const std::vector<dsn::apps::update_request> &updates,
                dsn::message_ex *original_request) -> int {
+            // For the idempotent updates whose types are update_type::UT_INCR.
             CHECK_EQ(updates.size(), 1);
             CHECK_EQ(original_request->rpc_code(), dsn::apps::RPC_RRDB_RRDB_INCR);
             return put<incr_rpc>(updates, original_request);
         },
         [this](const std::vector<dsn::apps::update_request> &updates,
                dsn::message_ex *original_request) -> int {
+            // For the idempotent updates whose types are update_type::UT_CHECK_AND_SET.
             CHECK_EQ(updates.size(), 1);
             CHECK_EQ(original_request->rpc_code(), dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET);
             return put<check_and_set_rpc>(updates, original_request);
         },
         [this](const std::vector<dsn::apps::update_request> &updates,
                dsn::message_ex *original_request) -> int {
+            // For the idempotent updates whose types are update_type::UT_CHECK_AND_MUTATE_PUT.
             CHECK_GT(updates.size(), 0);
             CHECK_EQ(original_request->rpc_code(), dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE);
             return put<check_and_mutate_rpc>(updates, original_request);
         },
         [this](const std::vector<dsn::apps::update_request> &updates,
                dsn::message_ex *original_request) -> int {
+            // For the idempotent updates whose types are update_type::UT_CHECK_AND_MUTATE_REMOVE.
             CHECK_GT(updates.size(), 0);
             CHECK_EQ(original_request->rpc_code(), dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE);
             return put<check_and_mutate_rpc>(updates, original_request);
         },
     };
 
-    CHECK_EQ(dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE + 1, _idempotent_writers.size());
+    CHECK_EQ_PREFIX(dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE + 1,
+                    _idempotent_writers.size());
 }
 
 } // namespace pegasus::server

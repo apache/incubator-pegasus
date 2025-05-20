@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "base/pegasus_rpc_types.h"
+#include "common/replication_other_types.h"
 #include "pegasus_write_service.h"
 #include "replica/replica_base.h"
 #include "rpc/rpc_message.h"
@@ -124,9 +125,9 @@ private:
         return _write_svc->put(_write_ctx, updates, rpc.request(), rpc.response());
     }
 
-    // Apply the idempotent request and respond to its original request.
-    int
-    on_idempotent(dsn::message_ex **requests, uint32_t count, dsn::message_ex *original_request);
+    // Apply the idempotent updates `requests` into storage engine and respond to the original
+    // atomic write request `original_request`. Both of `requests` and `original_request` should
+    // not be nullptr, while `count` should always be > 0.
     int
     apply_idempotent(dsn::message_ex **requests, uint32_t count, dsn::message_ex *original_request);
 
@@ -165,19 +166,19 @@ private:
     std::vector<remove_rpc> _remove_rpc_batch;
 
     db_write_context _write_ctx;
-    int64_t _decree;
+    int64_t _decree{invalid_decree};
 
-    // Handlers that make an atomic request idempotent.
+    // Handlers that translate an atomic write request into one or multiple idempotent updates.
     using make_idempotent_map =
         std::map<dsn::task_code,
                  std::function<int(dsn::message_ex *, std::vector<dsn::message_ex *> &)>>;
     make_idempotent_map _make_idempotent_handlers;
 
-    // Handlers that process a request could not be batched, e.g. multi put/remove.
+    // Handlers that process a write request which could not be batched, e.g. multi put/remove.
     using non_batch_write_map = std::map<dsn::task_code, std::function<int(dsn::message_ex *)>>;
     non_batch_write_map _non_batch_write_handlers;
 
-    // Handlers that apply the idempotent request and respond to its original request.
+    // Writers that apply idempotent updates and respond to the original atomic write request.
     using idempotent_writer_map = std::array<
         std::function<int(const std::vector<dsn::apps::update_request> &, dsn::message_ex *)>,
         5>;
