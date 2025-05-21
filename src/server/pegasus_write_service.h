@@ -249,7 +249,7 @@ private:
     // Read/change the batch size of the writes with the given type.
     uint32_t &batch_size(batch_write_type type)
     {
-        return _batch_sizes[static_cast<uint32_t>(type)];
+        return _batch_sizes.at(static_cast<uint32_t>(type));
     }
 
     uint32_t &put_batch_size() { return batch_size(batch_write_type::put); }
