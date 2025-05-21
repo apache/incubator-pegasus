@@ -30,6 +30,7 @@ on:
       - '*dev'
     paths:
       - .github/workflows/lint_and_test_collector.yml
+      - .golangci.yml
       - collector/**
       - go-client/**
 

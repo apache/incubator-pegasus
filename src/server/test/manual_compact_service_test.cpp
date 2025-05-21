@@ -48,16 +48,16 @@ public:
     manual_compact_service_test()
     {
         start();
-        manual_compact_svc = std::make_unique<pegasus_manual_compact_service>(_server.get());
+        manual_compact_svc = std::make_unique<pegasus_manual_compact_service>(_server);
     }
 
-    void set_compact_time(int64_t ts)
+    void set_compact_time(int64_t ts) const
     {
         manual_compact_svc->_manual_compact_last_finish_time_ms.store(
             static_cast<uint64_t>(ts * 1000));
     }
 
-    void set_mock_now(uint64_t mock_now_sec)
+    void set_mock_now(uint64_t mock_now_sec) const
     {
         manual_compact_svc->_mock_now_timestamp = mock_now_sec * 1000;
     }

@@ -1224,11 +1224,12 @@ void replica_stub::on_query_last_checkpoint(query_last_checkpoint_info_rpc rpc)
     learn_response &response = rpc.response();
 
     replica_ptr rep = get_replica(request.pid);
-    if (rep != nullptr) {
-        rep->on_query_last_checkpoint(response);
-    } else {
+    if (dsn_unlikely(rep == nullptr)) {
         response.err = ERR_OBJECT_NOT_FOUND;
+        return;
     }
+
+    rep->on_query_last_checkpoint(request.checksum_type, response);
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
@@ -1712,7 +1713,9 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_,
                                 req.__isset.meta_split_status ? req.meta_split_status
                                                               : split_status::NOT_SPLIT);
     } else {
-        if (req.config.hp_primary == _primary_host_port) {
+        host_port primary;
+        GET_HOST_PORT(req.config, primary, primary);
+        if (primary == _primary_host_port) {
             LOG_INFO("{}@{}: replica not exists on replica server, which is primary, remove it "
                      "from meta server",
                      req.config.pid,
@@ -1763,7 +1766,9 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
     SET_IP_AND_HOST_PORT(*request, node, primary_address(), _primary_host_port);
     request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
 
-    if (_primary_host_port == pc.hp_primary) {
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    if (_primary_host_port == primary) {
         RESET_IP_AND_HOST_PORT(request->config, primary);
     } else if (REMOVE_IP_AND_HOST_PORT(
                    primary_address(), _primary_host_port, request->config, secondaries)) {

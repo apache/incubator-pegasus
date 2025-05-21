@@ -479,7 +479,8 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
     const std::string &app_name = request.app_name;
     const gpid &pid = request.pid;
     const auto &primary_addr = request.primary;
-    const auto &primary_hp = request.hp_primary;
+    host_port primary_hp;
+    GET_HOST_PORT(request, primary, primary_hp);
 
     if (err != ERR_OK) {
         LOG_ERROR("app({}), partition({}) failed to receive bulk load response from node({}), "

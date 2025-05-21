@@ -96,7 +96,7 @@ func resetEncoding(c *grumble.Context, encPtr *util.Encoder) error {
 	return nil
 }
 
-func encodingCompleter(prefix string, args []string) []string {
+func encodingCompleter(prefix string, _ []string) []string {
 	return filterStringWithPrefix(supportedEncodings, prefix)
 }
 

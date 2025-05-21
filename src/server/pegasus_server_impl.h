@@ -249,6 +249,7 @@ public:
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
+    friend class pegasus_server_test_base;
     friend class pegasus_server_impl_test;
     friend class hotkey_collector_test;
     FRIEND_TEST(pegasus_server_impl_test, default_data_version);
@@ -478,7 +479,6 @@ private:
     void
     log_expired_data(const char *op, const dsn::rpc_address &addr, const rocksdb::Slice &key) const;
 
-private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
 

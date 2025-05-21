@@ -90,7 +90,7 @@ func ConfigCommand(client *Client, nodeType session.NodeType, nodeAddr string, n
 	return nil
 }
 
-func listConfig(addr string, cmd util.Arguments) (string, error) {
+func listConfig(addr string, _ util.Arguments) (string, error) {
 	url := fmt.Sprintf("http://%s/configs", addr)
 	return util.CallHTTPGet(url)
 }
@@ -160,7 +160,7 @@ func updateConfig(addr string, cmd util.Arguments) (string, error) {
 	return util.CallHTTPGet(url)
 }
 
-func printConfigUpdate(nodeType session.NodeType, sortedNodeList []string, results map[string]*util.Result) {
+func printConfigUpdate(_ session.NodeType, sortedNodeList []string, results map[string]*util.Result) {
 	fmt.Printf("CMD: set \n")
 	for _, node := range sortedNodeList {
 		cmdRes := results[node]

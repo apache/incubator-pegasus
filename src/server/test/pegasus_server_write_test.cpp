@@ -52,10 +52,10 @@ class pegasus_server_write_test : public pegasus_server_test_base
     std::unique_ptr<pegasus_server_write> _server_write;
 
 public:
-    pegasus_server_write_test() : pegasus_server_test_base()
+    pegasus_server_write_test()
     {
         start();
-        _server_write = std::make_unique<pegasus_server_write>(_server.get());
+        _server_write = std::make_unique<pegasus_server_write>(_server);
     }
 
     void test_batch_writes()
