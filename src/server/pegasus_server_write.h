@@ -112,6 +112,12 @@ private:
         return rocksdb::Status::kOk;
     }
 
+    // Apply the idempotent updates `requests` into storage engine and respond to the original
+    // atomic write request `original_request`. Both of `requests` and `original_request` should
+    // not be null, while `count` should always be > 0.
+    int
+    apply_idempotent(dsn::message_ex **requests, uint32_t count, dsn::message_ex *original_request);
+
     // Apply the batched (one or multiple) single-update requests into the storage engine.
     // Only called by primary replicas.
     template <typename TRpcHolder>
@@ -125,11 +131,14 @@ private:
         return _write_svc->put(_write_ctx, updates, rpc.request(), rpc.response());
     }
 
-    // Apply the idempotent updates `requests` into storage engine and respond to the original
-    // atomic write request `original_request`. Both of `requests` and `original_request` should
-    // not be nullptr, while `count` should always be > 0.
-    int
-    apply_idempotent(dsn::message_ex **requests, uint32_t count, dsn::message_ex *original_request);
+    // Following functions are the writers that apply the idempotent updates translated from
+    // incr, check_and_set and check_and_mutate requests and then respond to them.
+    int put_incr(const std::vector<dsn::apps::update_request> &updates,
+                 dsn::message_ex *original_request);
+    int put_check_and_set(const std::vector<dsn::apps::update_request> &updates,
+                          dsn::message_ex *original_request);
+    int put_check_and_mutate(const std::vector<dsn::apps::update_request> &updates,
+                             dsn::message_ex *original_request);
 
     // Delay replying for the batched requests until all of them complete.
     int on_batched_writes(dsn::message_ex **requests, uint32_t count);
@@ -179,6 +188,8 @@ private:
     non_batch_write_map _non_batch_write_handlers;
 
     // Writers that apply idempotent updates and respond to the original atomic write request.
+    // Each dsn::apps::update_type has its corresponding writer, therefore the number of writers
+    // must match the number of dsn::apps::update_type.
     using idempotent_writer_map = std::array<
         std::function<int(const std::vector<dsn::apps::update_request> &, dsn::message_ex *)>,
         5>;

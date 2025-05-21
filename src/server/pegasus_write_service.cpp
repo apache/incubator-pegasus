@@ -398,13 +398,13 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
     };
     static_assert(dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE + 1 ==
                       kBatchWriteTypeMap.size(),
-                  "kBatchWriteTypeMap does not match update_type");
+                  "kBatchWriteTypeMap does not match dsn::apps::update_type");
 
     CHECK_GT_MSG(_batch_start_time, 0, "batch_put must be called after batch_prepare");
 
     if (!update.__isset.type) {
         // This is a general single-put request.
-        ++_batch_sizes[static_cast<uint32_t>(batch_write_type::put)];
+        ++put_batch_size();
     } else {
         // There are only two possible situations for batch_put() where this put request
         // originates from an atomic write request:
@@ -415,7 +415,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
         // Though this is a put request, we choose to udapte the metrics of its original
         // request (i.e. the atomic write).
         if (dsn_likely(update.type < kBatchWriteTypeMap.size())) {
-            ++_batch_sizes.at(static_cast<uint32_t>(kBatchWriteTypeMap.at(update.type)));
+            ++batch_size(kBatchWriteTypeMap.at(update.type));
         }
     }
 
@@ -434,7 +434,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
 {
     CHECK_GT_MSG(_batch_start_time, 0, "batch_remove must be called after batch_prepare");
 
-    ++_batch_sizes[static_cast<uint32_t>(batch_write_type::remove)];
+    ++remove_batch_size();
 
     const int err = _impl->batch_remove(decree, key, resp);
 
@@ -467,15 +467,15 @@ void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_t
 
 void pegasus_write_service::batch_finish()
 {
-#define BATCH_SIZE(op) _batch_sizes[static_cast<uint32_t>(batch_write_type::op)]
-
 #define UPDATE_BATCH_METRICS(op, nrequests)                                                        \
     do {                                                                                           \
-        METRIC_VAR_INCREMENT_BY(op##_requests, static_cast<int64_t>(nrequests));                   \
-        METRIC_VAR_SET(op##_latency_ns, static_cast<size_t>(nrequests), latency_ns);               \
+        const auto __nrequests = (nrequests);                                                      \
+        METRIC_VAR_INCREMENT_BY(op##_requests, static_cast<int64_t>(__nrequests));                 \
+        METRIC_VAR_SET(op##_latency_ns, static_cast<size_t>(__nrequests), latency_ns);             \
     } while (0)
 
-#define UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(op) UPDATE_BATCH_METRICS(op, BATCH_SIZE(op))
+#define UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(op)                                                  \
+    UPDATE_BATCH_METRICS(op, batch_size(batch_write_type::op))
 
     const auto latency_ns = static_cast<int64_t>(dsn_now_ns() - _batch_start_time);
 
@@ -484,20 +484,26 @@ void pegasus_write_service::batch_finish()
     UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(put);
     UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(remove);
 
-    // These put requests are translated from atomic requests. See comments in batch_put()
-    // for the two possible situations where we are now.
+    // These idempotent updates are translated from the atomic write requests. See comments
+    // in batch_put() for the two possible situations where we are now.
+    //
+    // A batch only contains one update translated from an incr or check_and_set request.
+    // However, a batch may contain multiple updates translated from a check_and_mutate.
+    // Therefore, we need to measure the number of check_and_mutate requests:
+    // - 1 if the number of idempotent updates is at least 1;
+    // - 0 otherwise.
     UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(incr);
     UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE(check_and_set);
+    UPDATE_BATCH_METRICS(check_and_mutate,
+                         std::min(1U, batch_size(batch_write_type::check_and_mutate)));
 
-    UPDATE_BATCH_METRICS(check_and_mutate, std::min(1U, BATCH_SIZE(check_and_mutate)));
-
+    // Reset _batch_sizes for next calculation.
     _batch_sizes.fill(0);
 
     _batch_start_time = 0;
 
 #undef UPDATE_BATCH_METRICS_FOR_SINGLE_WRITE
 #undef UPDATE_BATCH_METRICS
-#undef BATCH_SIZE
 }
 
 int pegasus_write_service::duplicate(int64_t decree,

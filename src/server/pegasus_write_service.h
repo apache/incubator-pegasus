@@ -234,15 +234,27 @@ private:
     // Finish batch write with metrics such as latencies calculated and some states cleared.
     void batch_finish();
 
-    [[nodiscard]] uint32_t put_batch_size() const
+    // Used to store the batch size for each type of write into an array, see comments for
+    // `_batch_sizes` for details.
+    enum class batch_write_type : uint32_t
     {
-        return _batch_sizes[static_cast<uint32_t>(batch_write_type::put)];
+        put = 0,
+        remove,
+        incr,
+        check_and_set,
+        check_and_mutate,
+        count,
+    };
+
+    // Read/change the batch size of the writes with the given type.
+    uint32_t &batch_size(batch_write_type type)
+    {
+        return _batch_sizes[static_cast<uint32_t>(type)];
     }
 
-    [[nodiscard]] uint32_t remove_batch_size() const
-    {
-        return _batch_sizes[static_cast<uint32_t>(batch_write_type::remove)];
-    }
+    uint32_t &put_batch_size() { return batch_size(batch_write_type::put); }
+
+    uint32_t &remove_batch_size() { return batch_size(batch_write_type::remove); }
 
     friend class pegasus_write_service_test;
     friend class PegasusWriteServiceImplTest;
@@ -258,6 +270,21 @@ private:
     uint64_t _batch_start_time;
 
     capacity_unit_calculator *_cu_calculator;
+
+    // To calculate the metrics such as the number of requests and latency for the writes
+    // allowed to be batched, measure the size of requests in batch applied into RocksDB
+    // for single put, single remove, incr, check_and_set and check_and_mutate, all of which
+    // are contained in batch_write_type. In fact, incr, check_and_set and check_and_mutate
+    // are not batched; the reason why they are contained in batch_write_type is because
+    // all of them are not actually incr, check_and_set, or check_and_mutate themselves, but
+    // rather single put operations that have been transformed from these operations to be
+    // idempotent. Therefore, they essentially all appear in the form of single puts with an
+    // extra field indicating what the original request is.
+    //
+    // Each request of single put, single remove, incr and check_and_set contains only one
+    // write operation, while check_and_mutate may contain multiple operations of single
+    // puts and removes.
+    std::array<uint32_t, static_cast<size_t>(batch_write_type::count)> _batch_sizes{};
 
     METRIC_VAR_DECLARE_counter(put_requests);
     METRIC_VAR_DECLARE_counter(multi_put_requests);
@@ -282,30 +309,6 @@ private:
     METRIC_VAR_DECLARE_counter(dup_requests);
     METRIC_VAR_DECLARE_percentile_int64(dup_time_lag_ms);
     METRIC_VAR_DECLARE_counter(dup_lagging_writes);
-
-    // To calculate the metrics such as the number of requests and latency for the writes
-    // allowed to be batched, measure the size of requests in batch applied into RocksDB
-    // for single put, single remove, incr, check_and_set and check_and_mutate, all of which
-    // are contained in batch_write_type. In fact, incr, check_and_set and check_and_mutate
-    // are not batched; the reason why they are contained in batch_write_type is because
-    // all of them are not actually incr, check_and_set, or check_and_mutate themselves, but
-    // rather single put operations that have been transformed from these operations to be
-    // idempotent. Therefore, they essentially all appear in the form of single puts with an
-    // extra field indicating what the original request is.
-    //
-    // Each request of single put, single remove, incr and check_and_set contains only one
-    // write operation, while check_and_mutate may contain multiple operations of single
-    // puts and removes.
-    enum class batch_write_type : uint32_t
-    {
-        put = 0,
-        remove,
-        incr,
-        check_and_set,
-        check_and_mutate,
-        count,
-    };
-    std::array<uint32_t, static_cast<size_t>(batch_write_type::count)> _batch_sizes{};
 
     // TODO(wutao1): add metrics for failed rpc.
 };
