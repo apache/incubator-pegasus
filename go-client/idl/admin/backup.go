@@ -24,8 +24,8 @@ var _ = base.GoUnusedProtection__
 var _ = replication.GoUnusedProtection__
 
 // Attributes:
-//   - PolicyName
-//   - BackupProviderType
+//  - PolicyName
+//  - BackupProviderType
 type PolicyInfo struct {
 	PolicyName         string `thrift:"policy_name,1" db:"policy_name" json:"policy_name"`
 	BackupProviderType string `thrift:"backup_provider_type,2" db:"backup_provider_type" json:"backup_provider_type"`
@@ -164,15 +164,15 @@ func (p *PolicyInfo) String() string {
 }
 
 // Attributes:
-//   - ClusterName
-//   - PolicyName
-//   - TimeStamp
-//   - AppName
-//   - AppID
-//   - NewAppName_
-//   - BackupProviderName
-//   - SkipBadPartition
-//   - RestorePath
+//  - ClusterName
+//  - PolicyName
+//  - TimeStamp
+//  - AppName
+//  - AppID
+//  - NewAppName_
+//  - BackupProviderName
+//  - SkipBadPartition
+//  - RestorePath
 type ConfigurationRestoreRequest struct {
 	ClusterName        string  `thrift:"cluster_name,1" db:"cluster_name" json:"cluster_name"`
 	PolicyName         string  `thrift:"policy_name,2" db:"policy_name" json:"policy_name"`
@@ -602,11 +602,11 @@ func (p *ConfigurationRestoreRequest) String() string {
 }
 
 // Attributes:
-//   - Pid
-//   - Policy
-//   - AppName
-//   - BackupID
-//   - BackupPath
+//  - Pid
+//  - Policy
+//  - AppName
+//  - BackupID
+//  - BackupPath
 type BackupRequest struct {
 	Pid        *base.Gpid  `thrift:"pid,1" db:"pid" json:"pid"`
 	Policy     *PolicyInfo `thrift:"policy,2" db:"policy" json:"policy"`
@@ -892,12 +892,12 @@ func (p *BackupRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Pid
-//   - Progress
-//   - PolicyName
-//   - BackupID
-//   - CheckpointTotalSize
+//  - Err
+//  - Pid
+//  - Progress
+//  - PolicyName
+//  - BackupID
+//  - CheckpointTotalSize
 type BackupResponse struct {
 	Err                 *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	Pid                 *base.Gpid      `thrift:"pid,2" db:"pid" json:"pid"`
@@ -1212,8 +1212,8 @@ func (p *BackupResponse) String() string {
 }
 
 // Attributes:
-//   - Pid
-//   - PolicyName
+//  - Pid
+//  - PolicyName
 type BackupClearRequest struct {
 	Pid        *base.Gpid `thrift:"pid,1" db:"pid" json:"pid"`
 	PolicyName string     `thrift:"policy_name,2" db:"policy_name" json:"policy_name"`
@@ -1360,13 +1360,14 @@ func (p *BackupClearRequest) String() string {
 }
 
 // Attributes:
-//   - PolicyName
-//   - AddAppids
-//   - RemovalAppids
-//   - NewBackupIntervalSec_
-//   - BackupHistoryCountToKeep
-//   - IsDisable
-//   - StartTime
+//  - PolicyName
+//  - AddAppids
+//  - RemovalAppids
+//  - NewBackupIntervalSec_
+//  - BackupHistoryCountToKeep
+//  - IsDisable
+//  - StartTime
+//  - ForceDisable
 type ConfigurationModifyBackupPolicyRequest struct {
 	PolicyName               string  `thrift:"policy_name,1" db:"policy_name" json:"policy_name"`
 	AddAppids                []int32 `thrift:"add_appids,2" db:"add_appids" json:"add_appids,omitempty"`
@@ -1375,6 +1376,7 @@ type ConfigurationModifyBackupPolicyRequest struct {
 	BackupHistoryCountToKeep *int32  `thrift:"backup_history_count_to_keep,5" db:"backup_history_count_to_keep" json:"backup_history_count_to_keep,omitempty"`
 	IsDisable                *bool   `thrift:"is_disable,6" db:"is_disable" json:"is_disable,omitempty"`
 	StartTime                *string `thrift:"start_time,7" db:"start_time" json:"start_time,omitempty"`
+	ForceDisable             *bool   `thrift:"force_disable,8" db:"force_disable" json:"force_disable,omitempty"`
 }
 
 func NewConfigurationModifyBackupPolicyRequest() *ConfigurationModifyBackupPolicyRequest {
@@ -1432,6 +1434,15 @@ func (p *ConfigurationModifyBackupPolicyRequest) GetStartTime() string {
 	}
 	return *p.StartTime
 }
+
+var ConfigurationModifyBackupPolicyRequest_ForceDisable_DEFAULT bool
+
+func (p *ConfigurationModifyBackupPolicyRequest) GetForceDisable() bool {
+	if !p.IsSetForceDisable() {
+		return ConfigurationModifyBackupPolicyRequest_ForceDisable_DEFAULT
+	}
+	return *p.ForceDisable
+}
 func (p *ConfigurationModifyBackupPolicyRequest) IsSetAddAppids() bool {
 	return p.AddAppids != nil
 }
@@ -1454,6 +1465,10 @@ func (p *ConfigurationModifyBackupPolicyRequest) IsSetIsDisable() bool {
 
 func (p *ConfigurationModifyBackupPolicyRequest) IsSetStartTime() bool {
 	return p.StartTime != nil
+}
+
+func (p *ConfigurationModifyBackupPolicyRequest) IsSetForceDisable() bool {
+	return p.ForceDisable != nil
 }
 
 func (p *ConfigurationModifyBackupPolicyRequest) Read(iprot thrift.TProtocol) error {
@@ -1533,6 +1548,16 @@ func (p *ConfigurationModifyBackupPolicyRequest) Read(iprot thrift.TProtocol) er
 		case 7:
 			if fieldTypeId == thrift.STRING {
 				if err := p.ReadField7(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField8(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -1644,6 +1669,15 @@ func (p *ConfigurationModifyBackupPolicyRequest) ReadField7(iprot thrift.TProtoc
 	return nil
 }
 
+func (p *ConfigurationModifyBackupPolicyRequest) ReadField8(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 8: ", err)
+	} else {
+		p.ForceDisable = &v
+	}
+	return nil
+}
+
 func (p *ConfigurationModifyBackupPolicyRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("configuration_modify_backup_policy_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1668,6 +1702,9 @@ func (p *ConfigurationModifyBackupPolicyRequest) Write(oprot thrift.TProtocol) e
 			return err
 		}
 		if err := p.writeField7(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField8(oprot); err != nil {
 			return err
 		}
 	}
@@ -1799,6 +1836,21 @@ func (p *ConfigurationModifyBackupPolicyRequest) writeField7(oprot thrift.TProto
 	return err
 }
 
+func (p *ConfigurationModifyBackupPolicyRequest) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetForceDisable() {
+		if err := oprot.WriteFieldBegin("force_disable", thrift.BOOL, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:force_disable: ", p), err)
+		}
+		if err := oprot.WriteBool(bool(*p.ForceDisable)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.force_disable (8) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:force_disable: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *ConfigurationModifyBackupPolicyRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1807,8 +1859,8 @@ func (p *ConfigurationModifyBackupPolicyRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMessage
+//  - Err
+//  - HintMessage
 type ConfigurationModifyBackupPolicyResponse struct {
 	Err         *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMessage string          `thrift:"hint_message,2" db:"hint_message" json:"hint_message"`
@@ -1955,12 +2007,12 @@ func (p *ConfigurationModifyBackupPolicyResponse) String() string {
 }
 
 // Attributes:
-//   - BackupProviderType
-//   - PolicyName
-//   - AppIds
-//   - BackupIntervalSeconds
-//   - BackupHistoryCountToKeep
-//   - StartTime
+//  - BackupProviderType
+//  - PolicyName
+//  - AppIds
+//  - BackupIntervalSeconds
+//  - BackupHistoryCountToKeep
+//  - StartTime
 type ConfigurationAddBackupPolicyRequest struct {
 	BackupProviderType       string  `thrift:"backup_provider_type,1" db:"backup_provider_type" json:"backup_provider_type"`
 	PolicyName               string  `thrift:"policy_name,2" db:"policy_name" json:"policy_name"`
@@ -2280,8 +2332,8 @@ func (p *ConfigurationAddBackupPolicyRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMessage
+//  - Err
+//  - HintMessage
 type ConfigurationAddBackupPolicyResponse struct {
 	Err         *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMessage string          `thrift:"hint_message,2" db:"hint_message" json:"hint_message"`
@@ -2428,13 +2480,13 @@ func (p *ConfigurationAddBackupPolicyResponse) String() string {
 }
 
 // Attributes:
-//   - PolicyName
-//   - BackupProviderType
-//   - BackupIntervalSeconds
-//   - AppIds
-//   - BackupHistoryCountToKeep
-//   - StartTime
-//   - IsDisable
+//  - PolicyName
+//  - BackupProviderType
+//  - BackupIntervalSeconds
+//  - AppIds
+//  - BackupHistoryCountToKeep
+//  - StartTime
+//  - IsDisable
 type PolicyEntry struct {
 	PolicyName               string  `thrift:"policy_name,1" db:"policy_name" json:"policy_name"`
 	BackupProviderType       string  `thrift:"backup_provider_type,2" db:"backup_provider_type" json:"backup_provider_type"`
@@ -2801,10 +2853,10 @@ func (p *PolicyEntry) String() string {
 }
 
 // Attributes:
-//   - BackupID
-//   - StartTimeMs
-//   - EndTimeMs
-//   - AppIds
+//  - BackupID
+//  - StartTimeMs
+//  - EndTimeMs
+//  - AppIds
 type BackupEntry struct {
 	BackupID    int64   `thrift:"backup_id,1" db:"backup_id" json:"backup_id"`
 	StartTimeMs int64   `thrift:"start_time_ms,2" db:"start_time_ms" json:"start_time_ms"`
@@ -3051,8 +3103,8 @@ func (p *BackupEntry) String() string {
 }
 
 // Attributes:
-//   - PolicyNames
-//   - BackupInfoCount
+//  - PolicyNames
+//  - BackupInfoCount
 type ConfigurationQueryBackupPolicyRequest struct {
 	PolicyNames     []string `thrift:"policy_names,1" db:"policy_names" json:"policy_names"`
 	BackupInfoCount int32    `thrift:"backup_info_count,2" db:"backup_info_count" json:"backup_info_count"`
@@ -3212,10 +3264,10 @@ func (p *ConfigurationQueryBackupPolicyRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Policys
-//   - BackupInfos
-//   - HintMsg
+//  - Err
+//  - Policys
+//  - BackupInfos
+//  - HintMsg
 type ConfigurationQueryBackupPolicyResponse struct {
 	Err         *base.ErrorCode  `thrift:"err,1" db:"err" json:"err"`
 	Policys     []*PolicyEntry   `thrift:"policys,2" db:"policys" json:"policys"`
@@ -3511,10 +3563,10 @@ func (p *ConfigurationQueryBackupPolicyResponse) String() string {
 }
 
 // Attributes:
-//   - Pid
-//   - RestoreStatus
-//   - Progress
-//   - Reason
+//  - Pid
+//  - RestoreStatus
+//  - Progress
+//  - Reason
 type ConfigurationReportRestoreStatusRequest struct {
 	Pid           *base.Gpid      `thrift:"pid,1" db:"pid" json:"pid"`
 	RestoreStatus *base.ErrorCode `thrift:"restore_status,2" db:"restore_status" json:"restore_status"`
@@ -3760,7 +3812,7 @@ func (p *ConfigurationReportRestoreStatusRequest) String() string {
 }
 
 // Attributes:
-//   - Err
+//  - Err
 type ConfigurationReportRestoreStatusResponse struct {
 	Err *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 }
@@ -3867,7 +3919,7 @@ func (p *ConfigurationReportRestoreStatusResponse) String() string {
 }
 
 // Attributes:
-//   - RestoreAppID
+//  - RestoreAppID
 type ConfigurationQueryRestoreRequest struct {
 	RestoreAppID int32 `thrift:"restore_app_id,1" db:"restore_app_id" json:"restore_app_id"`
 }
@@ -3966,9 +4018,9 @@ func (p *ConfigurationQueryRestoreRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - RestoreStatus
-//   - RestoreProgress
+//  - Err
+//  - RestoreStatus
+//  - RestoreProgress
 type ConfigurationQueryRestoreResponse struct {
 	Err             *base.ErrorCode   `thrift:"err,1" db:"err" json:"err"`
 	RestoreStatus   []*base.ErrorCode `thrift:"restore_status,2" db:"restore_status" json:"restore_status"`
@@ -4195,9 +4247,9 @@ func (p *ConfigurationQueryRestoreResponse) String() string {
 }
 
 // Attributes:
-//   - BackupProviderType
-//   - AppID
-//   - BackupPath
+//  - BackupProviderType
+//  - AppID
+//  - BackupPath
 type StartBackupAppRequest struct {
 	BackupProviderType string  `thrift:"backup_provider_type,1" db:"backup_provider_type" json:"backup_provider_type"`
 	AppID              int32   `thrift:"app_id,2" db:"app_id" json:"app_id"`
@@ -4387,9 +4439,9 @@ func (p *StartBackupAppRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMessage
-//   - BackupID
+//  - Err
+//  - HintMessage
+//  - BackupID
 type StartBackupAppResponse struct {
 	Err         *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMessage string          `thrift:"hint_message,2" db:"hint_message" json:"hint_message"`
@@ -4587,13 +4639,13 @@ func (p *StartBackupAppResponse) String() string {
 }
 
 // Attributes:
-//   - BackupID
-//   - AppName
-//   - BackupProviderType
-//   - BackupPath
-//   - StartTimeMs
-//   - EndTimeMs
-//   - IsBackupFailed
+//  - BackupID
+//  - AppName
+//  - BackupProviderType
+//  - BackupPath
+//  - StartTimeMs
+//  - EndTimeMs
+//  - IsBackupFailed
 type BackupItem struct {
 	BackupID           int64  `thrift:"backup_id,1" db:"backup_id" json:"backup_id"`
 	AppName            string `thrift:"app_name,2" db:"app_name" json:"app_name"`
@@ -4932,8 +4984,8 @@ func (p *BackupItem) String() string {
 }
 
 // Attributes:
-//   - AppID
-//   - BackupID
+//  - AppID
+//  - BackupID
 type QueryBackupStatusRequest struct {
 	AppID    int32  `thrift:"app_id,1" db:"app_id" json:"app_id"`
 	BackupID *int64 `thrift:"backup_id,2" db:"backup_id" json:"backup_id,omitempty"`
@@ -5083,9 +5135,9 @@ func (p *QueryBackupStatusRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMessage
-//   - BackupItems
+//  - Err
+//  - HintMessage
+//  - BackupItems
 type QueryBackupStatusResponse struct {
 	Err         *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMessage string          `thrift:"hint_message,2" db:"hint_message" json:"hint_message"`

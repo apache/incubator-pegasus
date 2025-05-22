@@ -255,8 +255,8 @@ func (p *BulkLoadControlType) Value() (driver.Value, error) {
 }
 
 // Attributes:
-//   - Files
-//   - FileTotalSize
+//  - Files
+//  - FileTotalSize
 type BulkLoadMetadata struct {
 	Files         []*FileMeta `thrift:"files,1" db:"files" json:"files"`
 	FileTotalSize int64       `thrift:"file_total_size,2" db:"file_total_size" json:"file_total_size"`
@@ -414,11 +414,11 @@ func (p *BulkLoadMetadata) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - ClusterName
-//   - FileProviderType
-//   - RemoteRootPath
-//   - IngestBehind
+//  - AppName
+//  - ClusterName
+//  - FileProviderType
+//  - RemoteRootPath
+//  - IngestBehind
 type StartBulkLoadRequest struct {
 	AppName          string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	ClusterName      string `thrift:"cluster_name,2" db:"cluster_name" json:"cluster_name"`
@@ -677,8 +677,8 @@ func (p *StartBulkLoadRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMsg
+//  - Err
+//  - HintMsg
 type StartBulkLoadResponse struct {
 	Err     *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMsg string          `thrift:"hint_msg,2" db:"hint_msg" json:"hint_msg"`
@@ -825,11 +825,11 @@ func (p *StartBulkLoadResponse) String() string {
 }
 
 // Attributes:
-//   - DownloadProgress
-//   - DownloadStatus
-//   - IngestStatus
-//   - IsCleanedUp
-//   - IsPaused
+//  - DownloadProgress
+//  - DownloadStatus
+//  - IngestStatus
+//  - IsCleanedUp
+//  - IsPaused
 type PartitionBulkLoadState struct {
 	DownloadProgress int32           `thrift:"download_progress,1" db:"download_progress" json:"download_progress"`
 	DownloadStatus   *base.ErrorCode `thrift:"download_status,2" db:"download_status" json:"download_status,omitempty"`
@@ -1133,16 +1133,16 @@ func (p *PartitionBulkLoadState) String() string {
 }
 
 // Attributes:
-//   - Pid
-//   - AppName
-//   - Primary
-//   - RemoteProviderName
-//   - ClusterName
-//   - Ballot
-//   - MetaBulkLoadStatus
-//   - QueryBulkLoadMetadata
-//   - RemoteRootPath
-//   - HpPrimary
+//  - Pid
+//  - AppName
+//  - Primary
+//  - RemoteProviderName
+//  - ClusterName
+//  - Ballot
+//  - MetaBulkLoadStatus
+//  - QueryBulkLoadMetadata
+//  - RemoteRootPath
+//  - HpPrimary
 type BulkLoadRequest struct {
 	Pid                   *base.Gpid       `thrift:"pid,1" db:"pid" json:"pid"`
 	AppName               string           `thrift:"app_name,2" db:"app_name" json:"app_name"`
@@ -1628,17 +1628,17 @@ func (p *BulkLoadRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Pid
-//   - AppName
-//   - PrimaryBulkLoadStatus
-//   - GroupBulkLoadState
-//   - Metadata
-//   - TotalDownloadProgress
-//   - IsGroupIngestionFinished
-//   - IsGroupBulkLoadContextCleanedUp
-//   - IsGroupBulkLoadPaused
-//   - HpGroupBulkLoadState
+//  - Err
+//  - Pid
+//  - AppName
+//  - PrimaryBulkLoadStatus
+//  - GroupBulkLoadState
+//  - Metadata
+//  - TotalDownloadProgress
+//  - IsGroupIngestionFinished
+//  - IsGroupBulkLoadContextCleanedUp
+//  - IsGroupBulkLoadPaused
+//  - HpGroupBulkLoadState
 type BulkLoadResponse struct {
 	Err                             *base.ErrorCode                              `thrift:"err,1" db:"err" json:"err"`
 	Pid                             *base.Gpid                                   `thrift:"pid,2" db:"pid" json:"pid"`
@@ -2272,14 +2272,14 @@ func (p *BulkLoadResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - Target
-//   - Config
-//   - ProviderName
-//   - ClusterName
-//   - MetaBulkLoadStatus
-//   - RemoteRootPath
-//   - HpTarget
+//  - AppName
+//  - Target
+//  - Config
+//  - ProviderName
+//  - ClusterName
+//  - MetaBulkLoadStatus
+//  - RemoteRootPath
+//  - HpTarget
 type GroupBulkLoadRequest struct {
 	AppName            string                `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	Target             *base.RPCAddress      `thrift:"target,2" db:"target" json:"target"`
@@ -2687,9 +2687,9 @@ func (p *GroupBulkLoadRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Status
-//   - BulkLoadState
+//  - Err
+//  - Status
+//  - BulkLoadState
 type GroupBulkLoadResponse struct {
 	Err           *base.ErrorCode         `thrift:"err,1" db:"err" json:"err"`
 	Status        BulkLoadStatus          `thrift:"status,2" db:"status" json:"status"`
@@ -2887,11 +2887,11 @@ func (p *GroupBulkLoadResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - Metadata
-//   - IngestBehind
-//   - Ballot
-//   - VerifyBeforeIngest
+//  - AppName
+//  - Metadata
+//  - IngestBehind
+//  - Ballot
+//  - VerifyBeforeIngest
 type IngestionRequest struct {
 	AppName            string            `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	Metadata           *BulkLoadMetadata `thrift:"metadata,2" db:"metadata" json:"metadata"`
@@ -3158,8 +3158,8 @@ func (p *IngestionRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - RocksdbError
+//  - Err
+//  - RocksdbError
 type IngestionResponse struct {
 	Err          *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	RocksdbError int32           `thrift:"rocksdb_error,2" db:"rocksdb_error" json:"rocksdb_error"`
@@ -3306,8 +3306,8 @@ func (p *IngestionResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - Type
+//  - AppName
+//  - Type
 type ControlBulkLoadRequest struct {
 	AppName string              `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	Type    BulkLoadControlType `thrift:"type,2" db:"type" json:"type"`
@@ -3447,8 +3447,8 @@ func (p *ControlBulkLoadRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMsg
+//  - Err
+//  - HintMsg
 type ControlBulkLoadResponse struct {
 	Err     *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMsg *string         `thrift:"hint_msg,2" db:"hint_msg" json:"hint_msg,omitempty"`
@@ -3606,7 +3606,7 @@ func (p *ControlBulkLoadResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
+//  - AppName
 type QueryBulkLoadRequest struct {
 	AppName string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 }
@@ -3705,15 +3705,15 @@ func (p *QueryBulkLoadRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - AppName
-//   - AppStatus
-//   - PartitionsStatus
-//   - MaxReplicaCount
-//   - BulkLoadStates
-//   - HintMsg
-//   - IsBulkLoading
-//   - HpBulkLoadStates
+//  - Err
+//  - AppName
+//  - AppStatus
+//  - PartitionsStatus
+//  - MaxReplicaCount
+//  - BulkLoadStates
+//  - HintMsg
+//  - IsBulkLoading
+//  - HpBulkLoadStates
 type QueryBulkLoadResponse struct {
 	Err              *base.ErrorCode                                `thrift:"err,1" db:"err" json:"err"`
 	AppName          string                                         `thrift:"app_name,2" db:"app_name" json:"app_name"`
@@ -4289,7 +4289,7 @@ func (p *QueryBulkLoadResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
+//  - AppName
 type ClearBulkLoadStateRequest struct {
 	AppName string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 }
@@ -4388,8 +4388,8 @@ func (p *ClearBulkLoadStateRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMsg
+//  - Err
+//  - HintMsg
 type ClearBulkLoadStateResponse struct {
 	Err     *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMsg string          `thrift:"hint_msg,2" db:"hint_msg" json:"hint_msg"`

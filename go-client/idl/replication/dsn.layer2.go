@@ -112,17 +112,17 @@ func (p *AppStatus) Value() (driver.Value, error) {
 }
 
 // Attributes:
-//   - Pid
-//   - Ballot
-//   - MaxReplicaCount
-//   - Primary
-//   - Secondaries
-//   - LastDrops
-//   - LastCommittedDecree
-//   - PartitionFlags
-//   - HpPrimary
-//   - HpSecondaries
-//   - HpLastDrops
+//  - Pid
+//  - Ballot
+//  - MaxReplicaCount
+//  - Primary
+//  - Secondaries
+//  - LastDrops
+//  - LastCommittedDecree
+//  - PartitionFlags
+//  - HpPrimary
+//  - HpSecondaries
+//  - HpLastDrops
 type PartitionConfiguration struct {
 	Pid                 *base.Gpid         `thrift:"pid,1" db:"pid" json:"pid"`
 	Ballot              int64              `thrift:"ballot,2" db:"ballot" json:"ballot"`
@@ -739,8 +739,8 @@ func (p *PartitionConfiguration) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - PartitionIndices
+//  - AppName
+//  - PartitionIndices
 type QueryCfgRequest struct {
 	AppName          string  `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	PartitionIndices []int32 `thrift:"partition_indices,2" db:"partition_indices" json:"partition_indices"`
@@ -900,11 +900,11 @@ func (p *QueryCfgRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - AppID
-//   - PartitionCount
-//   - IsStateful
-//   - Partitions
+//  - Err
+//  - AppID
+//  - PartitionCount
+//  - IsStateful
+//  - Partitions
 type QueryCfgResponse struct {
 	Err            *base.ErrorCode           `thrift:"err,1" db:"err" json:"err"`
 	AppID          int32                     `thrift:"app_id,2" db:"app_id" json:"app_id"`
@@ -1190,11 +1190,11 @@ func (p *QueryCfgResponse) String() string {
 }
 
 // Attributes:
-//   - AppID
-//   - PartitionIndex
-//   - ClientTimeout
-//   - PartitionHash
-//   - IsBackupRequest
+//  - AppID
+//  - PartitionIndex
+//  - ClientTimeout
+//  - PartitionHash
+//  - IsBackupRequest
 type RequestMeta struct {
 	AppID           int32 `thrift:"app_id,1" db:"app_id" json:"app_id"`
 	PartitionIndex  int32 `thrift:"partition_index,2" db:"partition_index" json:"partition_index"`
@@ -1453,20 +1453,21 @@ func (p *RequestMeta) String() string {
 }
 
 // Attributes:
-//   - Status
-//   - AppType
-//   - AppName
-//   - AppID
-//   - PartitionCount
-//   - Envs
-//   - IsStateful
-//   - MaxReplicaCount
-//   - ExpireSecond
-//   - CreateSecond
-//   - DropSecond
-//   - Duplicating
-//   - InitPartitionCount
-//   - IsBulkLoading
+//  - Status
+//  - AppType
+//  - AppName
+//  - AppID
+//  - PartitionCount
+//  - Envs
+//  - IsStateful
+//  - MaxReplicaCount
+//  - ExpireSecond
+//  - CreateSecond
+//  - DropSecond
+//  - Duplicating
+//  - InitPartitionCount
+//  - IsBulkLoading
+//  - AtomicIdempotent
 type AppInfo struct {
 	Status             AppStatus         `thrift:"status,1" db:"status" json:"status"`
 	AppType            string            `thrift:"app_type,2" db:"app_type" json:"app_type"`
@@ -1482,6 +1483,7 @@ type AppInfo struct {
 	Duplicating        bool              `thrift:"duplicating,12" db:"duplicating" json:"duplicating"`
 	InitPartitionCount int32             `thrift:"init_partition_count,13" db:"init_partition_count" json:"init_partition_count"`
 	IsBulkLoading      bool              `thrift:"is_bulk_loading,14" db:"is_bulk_loading" json:"is_bulk_loading"`
+	AtomicIdempotent   bool              `thrift:"atomic_idempotent,15" db:"atomic_idempotent" json:"atomic_idempotent"`
 }
 
 func NewAppInfo() *AppInfo {
@@ -1551,12 +1553,22 @@ var AppInfo_IsBulkLoading_DEFAULT bool = false
 func (p *AppInfo) GetIsBulkLoading() bool {
 	return p.IsBulkLoading
 }
+
+var AppInfo_AtomicIdempotent_DEFAULT bool = false
+
+func (p *AppInfo) GetAtomicIdempotent() bool {
+	return p.AtomicIdempotent
+}
 func (p *AppInfo) IsSetDuplicating() bool {
 	return p.Duplicating != AppInfo_Duplicating_DEFAULT
 }
 
 func (p *AppInfo) IsSetIsBulkLoading() bool {
 	return p.IsBulkLoading != AppInfo_IsBulkLoading_DEFAULT
+}
+
+func (p *AppInfo) IsSetAtomicIdempotent() bool {
+	return p.AtomicIdempotent != AppInfo_AtomicIdempotent_DEFAULT
 }
 
 func (p *AppInfo) Read(iprot thrift.TProtocol) error {
@@ -1706,6 +1718,16 @@ func (p *AppInfo) Read(iprot thrift.TProtocol) error {
 		case 14:
 			if fieldTypeId == thrift.BOOL {
 				if err := p.ReadField14(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 15:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField15(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -1874,6 +1896,15 @@ func (p *AppInfo) ReadField14(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *AppInfo) ReadField15(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 15: ", err)
+	} else {
+		p.AtomicIdempotent = v
+	}
+	return nil
+}
+
 func (p *AppInfo) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("app_info"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1919,6 +1950,9 @@ func (p *AppInfo) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField14(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField15(oprot); err != nil {
 			return err
 		}
 	}
@@ -2123,6 +2157,21 @@ func (p *AppInfo) writeField14(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 14:is_bulk_loading: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *AppInfo) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAtomicIdempotent() {
+		if err := oprot.WriteFieldBegin("atomic_idempotent", thrift.BOOL, 15); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 15:atomic_idempotent: ", p), err)
+		}
+		if err := oprot.WriteBool(bool(p.AtomicIdempotent)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.atomic_idempotent (15) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 15:atomic_idempotent: ", p), err)
 		}
 	}
 	return err

@@ -289,14 +289,95 @@ func (p *MutateOperation) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type UpdateType int64
+
+const (
+	UpdateType_UT_PUT                     UpdateType = 0
+	UpdateType_UT_INCR                    UpdateType = 1
+	UpdateType_UT_CHECK_AND_SET           UpdateType = 2
+	UpdateType_UT_CHECK_AND_MUTATE_PUT    UpdateType = 3
+	UpdateType_UT_CHECK_AND_MUTATE_REMOVE UpdateType = 4
+)
+
+func (p UpdateType) String() string {
+	switch p {
+	case UpdateType_UT_PUT:
+		return "UT_PUT"
+	case UpdateType_UT_INCR:
+		return "UT_INCR"
+	case UpdateType_UT_CHECK_AND_SET:
+		return "UT_CHECK_AND_SET"
+	case UpdateType_UT_CHECK_AND_MUTATE_PUT:
+		return "UT_CHECK_AND_MUTATE_PUT"
+	case UpdateType_UT_CHECK_AND_MUTATE_REMOVE:
+		return "UT_CHECK_AND_MUTATE_REMOVE"
+	}
+	return "<UNSET>"
+}
+
+func UpdateTypeFromString(s string) (UpdateType, error) {
+	switch s {
+	case "UT_PUT":
+		return UpdateType_UT_PUT, nil
+	case "UT_INCR":
+		return UpdateType_UT_INCR, nil
+	case "UT_CHECK_AND_SET":
+		return UpdateType_UT_CHECK_AND_SET, nil
+	case "UT_CHECK_AND_MUTATE_PUT":
+		return UpdateType_UT_CHECK_AND_MUTATE_PUT, nil
+	case "UT_CHECK_AND_MUTATE_REMOVE":
+		return UpdateType_UT_CHECK_AND_MUTATE_REMOVE, nil
+	}
+	return UpdateType(0), fmt.Errorf("not a valid UpdateType string")
+}
+
+func UpdateTypePtr(v UpdateType) *UpdateType { return &v }
+
+func (p UpdateType) MarshalText() ([]byte, error) {
+	return []byte(p.String()), nil
+}
+
+func (p *UpdateType) UnmarshalText(text []byte) error {
+	q, err := UpdateTypeFromString(string(text))
+	if err != nil {
+		return err
+	}
+	*p = q
+	return nil
+}
+
+func (p *UpdateType) Scan(value interface{}) error {
+	v, ok := value.(int64)
+	if !ok {
+		return errors.New("Scan value is not int64")
+	}
+	*p = UpdateType(v)
+	return nil
+}
+
+func (p *UpdateType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 // Attributes:
-//   - Key
-//   - Value
-//   - ExpireTsSeconds
+//  - Key
+//  - Value
+//  - ExpireTsSeconds
+//  - Type
+//  - CheckValueReturned
+//  - CheckValueExist
+//  - CheckValue
 type UpdateRequest struct {
-	Key             *base.Blob `thrift:"key,1" db:"key" json:"key"`
-	Value           *base.Blob `thrift:"value,2" db:"value" json:"value"`
-	ExpireTsSeconds int32      `thrift:"expire_ts_seconds,3" db:"expire_ts_seconds" json:"expire_ts_seconds"`
+	Key                *base.Blob  `thrift:"key,1" db:"key" json:"key"`
+	Value              *base.Blob  `thrift:"value,2" db:"value" json:"value"`
+	ExpireTsSeconds    int32       `thrift:"expire_ts_seconds,3" db:"expire_ts_seconds" json:"expire_ts_seconds"`
+	Type               *UpdateType `thrift:"type,4" db:"type" json:"type,omitempty"`
+	CheckValueReturned *bool       `thrift:"check_value_returned,5" db:"check_value_returned" json:"check_value_returned,omitempty"`
+	CheckValueExist    *bool       `thrift:"check_value_exist,6" db:"check_value_exist" json:"check_value_exist,omitempty"`
+	CheckValue         *base.Blob  `thrift:"check_value,7" db:"check_value" json:"check_value,omitempty"`
 }
 
 func NewUpdateRequest() *UpdateRequest {
@@ -324,12 +405,64 @@ func (p *UpdateRequest) GetValue() *base.Blob {
 func (p *UpdateRequest) GetExpireTsSeconds() int32 {
 	return p.ExpireTsSeconds
 }
+
+var UpdateRequest_Type_DEFAULT UpdateType
+
+func (p *UpdateRequest) GetType() UpdateType {
+	if !p.IsSetType() {
+		return UpdateRequest_Type_DEFAULT
+	}
+	return *p.Type
+}
+
+var UpdateRequest_CheckValueReturned_DEFAULT bool
+
+func (p *UpdateRequest) GetCheckValueReturned() bool {
+	if !p.IsSetCheckValueReturned() {
+		return UpdateRequest_CheckValueReturned_DEFAULT
+	}
+	return *p.CheckValueReturned
+}
+
+var UpdateRequest_CheckValueExist_DEFAULT bool
+
+func (p *UpdateRequest) GetCheckValueExist() bool {
+	if !p.IsSetCheckValueExist() {
+		return UpdateRequest_CheckValueExist_DEFAULT
+	}
+	return *p.CheckValueExist
+}
+
+var UpdateRequest_CheckValue_DEFAULT *base.Blob
+
+func (p *UpdateRequest) GetCheckValue() *base.Blob {
+	if !p.IsSetCheckValue() {
+		return UpdateRequest_CheckValue_DEFAULT
+	}
+	return p.CheckValue
+}
 func (p *UpdateRequest) IsSetKey() bool {
 	return p.Key != nil
 }
 
 func (p *UpdateRequest) IsSetValue() bool {
 	return p.Value != nil
+}
+
+func (p *UpdateRequest) IsSetType() bool {
+	return p.Type != nil
+}
+
+func (p *UpdateRequest) IsSetCheckValueReturned() bool {
+	return p.CheckValueReturned != nil
+}
+
+func (p *UpdateRequest) IsSetCheckValueExist() bool {
+	return p.CheckValueExist != nil
+}
+
+func (p *UpdateRequest) IsSetCheckValue() bool {
+	return p.CheckValue != nil
 }
 
 func (p *UpdateRequest) Read(iprot thrift.TProtocol) error {
@@ -369,6 +502,46 @@ func (p *UpdateRequest) Read(iprot thrift.TProtocol) error {
 		case 3:
 			if fieldTypeId == thrift.I32 {
 				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField6(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField7(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -416,6 +589,42 @@ func (p *UpdateRequest) ReadField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *UpdateRequest) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		temp := UpdateType(v)
+		p.Type = &temp
+	}
+	return nil
+}
+
+func (p *UpdateRequest) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 5: ", err)
+	} else {
+		p.CheckValueReturned = &v
+	}
+	return nil
+}
+
+func (p *UpdateRequest) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 6: ", err)
+	} else {
+		p.CheckValueExist = &v
+	}
+	return nil
+}
+
+func (p *UpdateRequest) ReadField7(iprot thrift.TProtocol) error {
+	p.CheckValue = &base.Blob{}
+	if err := p.CheckValue.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CheckValue), err)
+	}
+	return nil
+}
+
 func (p *UpdateRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("update_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -428,6 +637,18 @@ func (p *UpdateRequest) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField6(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField7(oprot); err != nil {
 			return err
 		}
 	}
@@ -479,6 +700,66 @@ func (p *UpdateRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
+func (p *UpdateRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetType() {
+		if err := oprot.WriteFieldBegin("type", thrift.I32, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:type: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.Type)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.type (4) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:type: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *UpdateRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCheckValueReturned() {
+		if err := oprot.WriteFieldBegin("check_value_returned", thrift.BOOL, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:check_value_returned: ", p), err)
+		}
+		if err := oprot.WriteBool(bool(*p.CheckValueReturned)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.check_value_returned (5) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:check_value_returned: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *UpdateRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCheckValueExist() {
+		if err := oprot.WriteFieldBegin("check_value_exist", thrift.BOOL, 6); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:check_value_exist: ", p), err)
+		}
+		if err := oprot.WriteBool(bool(*p.CheckValueExist)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.check_value_exist (6) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:check_value_exist: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *UpdateRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCheckValue() {
+		if err := oprot.WriteFieldBegin("check_value", thrift.STRUCT, 7); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:check_value: ", p), err)
+		}
+		if err := p.CheckValue.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CheckValue), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:check_value: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *UpdateRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -487,11 +768,11 @@ func (p *UpdateRequest) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - AppID
-//   - PartitionIndex
-//   - Decree
-//   - Server
+//  - Error
+//  - AppID
+//  - PartitionIndex
+//  - Decree
+//  - Server
 type UpdateResponse struct {
 	Error          int32  `thrift:"error,1" db:"error" json:"error"`
 	AppID          int32  `thrift:"app_id,2" db:"app_id" json:"app_id"`
@@ -750,11 +1031,11 @@ func (p *UpdateResponse) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - Value
-//   - AppID
-//   - PartitionIndex
-//   - Server
+//  - Error
+//  - Value
+//  - AppID
+//  - PartitionIndex
+//  - Server
 type ReadResponse struct {
 	Error          int32      `thrift:"error,1" db:"error" json:"error"`
 	Value          *base.Blob `thrift:"value,2" db:"value" json:"value"`
@@ -1022,11 +1303,11 @@ func (p *ReadResponse) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - TTLSeconds
-//   - AppID
-//   - PartitionIndex
-//   - Server
+//  - Error
+//  - TTLSeconds
+//  - AppID
+//  - PartitionIndex
+//  - Server
 type TTLResponse struct {
 	Error          int32 `thrift:"error,1" db:"error" json:"error"`
 	TTLSeconds     int32 `thrift:"ttl_seconds,2" db:"ttl_seconds" json:"ttl_seconds"`
@@ -1286,11 +1567,11 @@ func (p *TTLResponse) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - Count
-//   - AppID
-//   - PartitionIndex
-//   - Server
+//  - Error
+//  - Count
+//  - AppID
+//  - PartitionIndex
+//  - Server
 type CountResponse struct {
 	Error          int32 `thrift:"error,1" db:"error" json:"error"`
 	Count          int64 `thrift:"count,2" db:"count" json:"count"`
@@ -1550,9 +1831,9 @@ func (p *CountResponse) String() string {
 }
 
 // Attributes:
-//   - Key
-//   - Value
-//   - ExpireTsSeconds
+//  - Key
+//  - Value
+//  - ExpireTsSeconds
 type KeyValue struct {
 	Key             *base.Blob `thrift:"key,1" db:"key" json:"key"`
 	Value           *base.Blob `thrift:"value,2" db:"value" json:"value"`
@@ -1758,9 +2039,9 @@ func (p *KeyValue) String() string {
 }
 
 // Attributes:
-//   - HashKey
-//   - Kvs
-//   - ExpireTsSeconds
+//  - HashKey
+//  - Kvs
+//  - ExpireTsSeconds
 type MultiPutRequest struct {
 	HashKey         *base.Blob  `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
 	Kvs             []*KeyValue `thrift:"kvs,2" db:"kvs" json:"kvs"`
@@ -1966,9 +2247,9 @@ func (p *MultiPutRequest) String() string {
 }
 
 // Attributes:
-//   - HashKey
-//   - SortKeys
-//   - MaxCount
+//  - HashKey
+//  - SortKeys
+//  - MaxCount
 type MultiRemoveRequest struct {
 	HashKey  *base.Blob   `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
 	SortKeys []*base.Blob `thrift:"sort_keys,2" db:"sort_keys" json:"sort_keys"`
@@ -2174,12 +2455,12 @@ func (p *MultiRemoveRequest) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - Count
-//   - AppID
-//   - PartitionIndex
-//   - Decree
-//   - Server
+//  - Error
+//  - Count
+//  - AppID
+//  - PartitionIndex
+//  - Decree
+//  - Server
 type MultiRemoveResponse struct {
 	Error          int32  `thrift:"error,1" db:"error" json:"error"`
 	Count          int64  `thrift:"count,2" db:"count" json:"count"`
@@ -2478,18 +2759,18 @@ func (p *MultiRemoveResponse) String() string {
 }
 
 // Attributes:
-//   - HashKey
-//   - SortKeys
-//   - MaxKvCount
-//   - MaxKvSize
-//   - NoValue
-//   - StartSortkey
-//   - StopSortkey
-//   - StartInclusive
-//   - StopInclusive
-//   - SortKeyFilterType
-//   - SortKeyFilterPattern
-//   - Reverse
+//  - HashKey
+//  - SortKeys
+//  - MaxKvCount
+//  - MaxKvSize
+//  - NoValue
+//  - StartSortkey
+//  - StopSortkey
+//  - StartInclusive
+//  - StopInclusive
+//  - SortKeyFilterType
+//  - SortKeyFilterPattern
+//  - Reverse
 type MultiGetRequest struct {
 	HashKey              *base.Blob   `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
 	SortKeys             []*base.Blob `thrift:"sort_keys,2" db:"sort_keys" json:"sort_keys"`
@@ -3080,11 +3361,11 @@ func (p *MultiGetRequest) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - Kvs
-//   - AppID
-//   - PartitionIndex
-//   - Server
+//  - Error
+//  - Kvs
+//  - AppID
+//  - PartitionIndex
+//  - Server
 type MultiGetResponse struct {
 	Error          int32       `thrift:"error,1" db:"error" json:"error"`
 	Kvs            []*KeyValue `thrift:"kvs,2" db:"kvs" json:"kvs"`
@@ -3363,8 +3644,8 @@ func (p *MultiGetResponse) String() string {
 }
 
 // Attributes:
-//   - HashKey
-//   - SortKey
+//  - HashKey
+//  - SortKey
 type FullKey struct {
 	HashKey *base.Blob `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
 	SortKey *base.Blob `thrift:"sort_key,2" db:"sort_key" json:"sort_key"`
@@ -3519,7 +3800,7 @@ func (p *FullKey) String() string {
 }
 
 // Attributes:
-//   - Keys
+//  - Keys
 type BatchGetRequest struct {
 	Keys []*FullKey `thrift:"keys,1" db:"keys" json:"keys"`
 }
@@ -3637,9 +3918,9 @@ func (p *BatchGetRequest) String() string {
 }
 
 // Attributes:
-//   - HashKey
-//   - SortKey
-//   - Value
+//  - HashKey
+//  - SortKey
+//  - Value
 type FullData struct {
 	HashKey *base.Blob `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
 	SortKey *base.Blob `thrift:"sort_key,2" db:"sort_key" json:"sort_key"`
@@ -3842,11 +4123,11 @@ func (p *FullData) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - Data
-//   - AppID
-//   - PartitionIndex
-//   - Server
+//  - Error
+//  - Data
+//  - AppID
+//  - PartitionIndex
+//  - Server
 type BatchGetResponse struct {
 	Error          int32       `thrift:"error,1" db:"error" json:"error"`
 	Data           []*FullData `thrift:"data,2" db:"data" json:"data"`
@@ -4125,9 +4406,9 @@ func (p *BatchGetResponse) String() string {
 }
 
 // Attributes:
-//   - Key
-//   - Increment
-//   - ExpireTsSeconds
+//  - Key
+//  - Increment
+//  - ExpireTsSeconds
 type IncrRequest struct {
 	Key             *base.Blob `thrift:"key,1" db:"key" json:"key"`
 	Increment       int64      `thrift:"increment,2" db:"increment" json:"increment"`
@@ -4314,12 +4595,12 @@ func (p *IncrRequest) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - NewValue_
-//   - AppID
-//   - PartitionIndex
-//   - Decree
-//   - Server
+//  - Error
+//  - NewValue_
+//  - AppID
+//  - PartitionIndex
+//  - Decree
+//  - Server
 type IncrResponse struct {
 	Error          int32  `thrift:"error,1" db:"error" json:"error"`
 	NewValue_      int64  `thrift:"new_value,2" db:"new_value" json:"new_value"`
@@ -4618,15 +4899,15 @@ func (p *IncrResponse) String() string {
 }
 
 // Attributes:
-//   - HashKey
-//   - CheckSortKey
-//   - CheckType
-//   - CheckOperand
-//   - SetDiffSortKey
-//   - SetSortKey
-//   - SetValue
-//   - SetExpireTsSeconds
-//   - ReturnCheckValue
+//  - HashKey
+//  - CheckSortKey
+//  - CheckType
+//  - CheckOperand
+//  - SetDiffSortKey
+//  - SetSortKey
+//  - SetValue
+//  - SetExpireTsSeconds
+//  - ReturnCheckValue
 type CheckAndSetRequest struct {
 	HashKey            *base.Blob   `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
 	CheckSortKey       *base.Blob   `thrift:"check_sort_key,2" db:"check_sort_key" json:"check_sort_key"`
@@ -5086,14 +5367,14 @@ func (p *CheckAndSetRequest) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - CheckValueReturned
-//   - CheckValueExist
-//   - CheckValue
-//   - AppID
-//   - PartitionIndex
-//   - Decree
-//   - Server
+//  - Error
+//  - CheckValueReturned
+//  - CheckValueExist
+//  - CheckValue
+//  - AppID
+//  - PartitionIndex
+//  - Decree
+//  - Server
 type CheckAndSetResponse struct {
 	Error              int32      `thrift:"error,1" db:"error" json:"error"`
 	CheckValueReturned bool       `thrift:"check_value_returned,2" db:"check_value_returned" json:"check_value_returned"`
@@ -5480,10 +5761,10 @@ func (p *CheckAndSetResponse) String() string {
 }
 
 // Attributes:
-//   - Operation
-//   - SortKey
-//   - Value
-//   - SetExpireTsSeconds
+//  - Operation
+//  - SortKey
+//  - Value
+//  - SetExpireTsSeconds
 type Mutate struct {
 	Operation          MutateOperation `thrift:"operation,1" db:"operation" json:"operation"`
 	SortKey            *base.Blob      `thrift:"sort_key,2" db:"sort_key" json:"sort_key"`
@@ -5719,12 +6000,12 @@ func (p *Mutate) String() string {
 }
 
 // Attributes:
-//   - HashKey
-//   - CheckSortKey
-//   - CheckType
-//   - CheckOperand
-//   - MutateList
-//   - ReturnCheckValue
+//  - HashKey
+//  - CheckSortKey
+//  - CheckType
+//  - CheckOperand
+//  - MutateList
+//  - ReturnCheckValue
 type CheckAndMutateRequest struct {
 	HashKey          *base.Blob   `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
 	CheckSortKey     *base.Blob   `thrift:"check_sort_key,2" db:"check_sort_key" json:"check_sort_key"`
@@ -6067,14 +6348,14 @@ func (p *CheckAndMutateRequest) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - CheckValueReturned
-//   - CheckValueExist
-//   - CheckValue
-//   - AppID
-//   - PartitionIndex
-//   - Decree
-//   - Server
+//  - Error
+//  - CheckValueReturned
+//  - CheckValueExist
+//  - CheckValue
+//  - AppID
+//  - PartitionIndex
+//  - Decree
+//  - Server
 type CheckAndMutateResponse struct {
 	Error              int32      `thrift:"error,1" db:"error" json:"error"`
 	CheckValueReturned bool       `thrift:"check_value_returned,2" db:"check_value_returned" json:"check_value_returned"`
@@ -6461,20 +6742,20 @@ func (p *CheckAndMutateResponse) String() string {
 }
 
 // Attributes:
-//   - StartKey
-//   - StopKey
-//   - StartInclusive
-//   - StopInclusive
-//   - BatchSize
-//   - NoValue
-//   - HashKeyFilterType
-//   - HashKeyFilterPattern
-//   - SortKeyFilterType
-//   - SortKeyFilterPattern
-//   - ValidatePartitionHash
-//   - ReturnExpireTs
-//   - FullScan
-//   - OnlyReturnCount
+//  - StartKey
+//  - StopKey
+//  - StartInclusive
+//  - StopInclusive
+//  - BatchSize
+//  - NoValue
+//  - HashKeyFilterType
+//  - HashKeyFilterPattern
+//  - SortKeyFilterType
+//  - SortKeyFilterPattern
+//  - ValidatePartitionHash
+//  - ReturnExpireTs
+//  - FullScan
+//  - OnlyReturnCount
 type GetScannerRequest struct {
 	StartKey              *base.Blob `thrift:"start_key,1" db:"start_key" json:"start_key"`
 	StopKey               *base.Blob `thrift:"stop_key,2" db:"stop_key" json:"stop_key"`
@@ -7168,7 +7449,7 @@ func (p *GetScannerRequest) String() string {
 }
 
 // Attributes:
-//   - ContextID
+//  - ContextID
 type ScanRequest struct {
 	ContextID int64 `thrift:"context_id,1" db:"context_id" json:"context_id"`
 }
@@ -7267,13 +7548,13 @@ func (p *ScanRequest) String() string {
 }
 
 // Attributes:
-//   - Error
-//   - Kvs
-//   - ContextID
-//   - AppID
-//   - PartitionIndex
-//   - Server
-//   - KvCount
+//  - Error
+//  - Kvs
+//  - ContextID
+//  - AppID
+//  - PartitionIndex
+//  - Server
+//  - KvCount
 type ScanResponse struct {
 	Error          int32       `thrift:"error,1" db:"error" json:"error"`
 	Kvs            []*KeyValue `thrift:"kvs,2" db:"kvs" json:"kvs"`
@@ -7716,7 +7997,7 @@ func (p *RrdbClient) Client_() thrift.TClient {
 }
 
 // Parameters:
-//   - Update
+//  - Update
 func (p *RrdbClient) Put(ctx context.Context, update *UpdateRequest) (r *UpdateResponse, err error) {
 	var _args8 RrdbPutArgs
 	_args8.Update = update
@@ -7728,7 +8009,7 @@ func (p *RrdbClient) Put(ctx context.Context, update *UpdateRequest) (r *UpdateR
 }
 
 // Parameters:
-//   - Request
+//  - Request
 func (p *RrdbClient) MultiPut(ctx context.Context, request *MultiPutRequest) (r *UpdateResponse, err error) {
 	var _args10 RrdbMultiPutArgs
 	_args10.Request = request
@@ -7740,7 +8021,7 @@ func (p *RrdbClient) MultiPut(ctx context.Context, request *MultiPutRequest) (r 
 }
 
 // Parameters:
-//   - Key
+//  - Key
 func (p *RrdbClient) Remove(ctx context.Context, key *base.Blob) (r *UpdateResponse, err error) {
 	var _args12 RrdbRemoveArgs
 	_args12.Key = key
@@ -7752,7 +8033,7 @@ func (p *RrdbClient) Remove(ctx context.Context, key *base.Blob) (r *UpdateRespo
 }
 
 // Parameters:
-//   - Request
+//  - Request
 func (p *RrdbClient) MultiRemove(ctx context.Context, request *MultiRemoveRequest) (r *MultiRemoveResponse, err error) {
 	var _args14 RrdbMultiRemoveArgs
 	_args14.Request = request
@@ -7764,7 +8045,7 @@ func (p *RrdbClient) MultiRemove(ctx context.Context, request *MultiRemoveReques
 }
 
 // Parameters:
-//   - Request
+//  - Request
 func (p *RrdbClient) Incr(ctx context.Context, request *IncrRequest) (r *IncrResponse, err error) {
 	var _args16 RrdbIncrArgs
 	_args16.Request = request
@@ -7776,7 +8057,7 @@ func (p *RrdbClient) Incr(ctx context.Context, request *IncrRequest) (r *IncrRes
 }
 
 // Parameters:
-//   - Request
+//  - Request
 func (p *RrdbClient) CheckAndSet(ctx context.Context, request *CheckAndSetRequest) (r *CheckAndSetResponse, err error) {
 	var _args18 RrdbCheckAndSetArgs
 	_args18.Request = request
@@ -7788,7 +8069,7 @@ func (p *RrdbClient) CheckAndSet(ctx context.Context, request *CheckAndSetReques
 }
 
 // Parameters:
-//   - Request
+//  - Request
 func (p *RrdbClient) CheckAndMutate(ctx context.Context, request *CheckAndMutateRequest) (r *CheckAndMutateResponse, err error) {
 	var _args20 RrdbCheckAndMutateArgs
 	_args20.Request = request
@@ -7800,7 +8081,7 @@ func (p *RrdbClient) CheckAndMutate(ctx context.Context, request *CheckAndMutate
 }
 
 // Parameters:
-//   - Key
+//  - Key
 func (p *RrdbClient) Get(ctx context.Context, key *base.Blob) (r *ReadResponse, err error) {
 	var _args22 RrdbGetArgs
 	_args22.Key = key
@@ -7812,7 +8093,7 @@ func (p *RrdbClient) Get(ctx context.Context, key *base.Blob) (r *ReadResponse, 
 }
 
 // Parameters:
-//   - Request
+//  - Request
 func (p *RrdbClient) MultiGet(ctx context.Context, request *MultiGetRequest) (r *MultiGetResponse, err error) {
 	var _args24 RrdbMultiGetArgs
 	_args24.Request = request
@@ -7824,7 +8105,7 @@ func (p *RrdbClient) MultiGet(ctx context.Context, request *MultiGetRequest) (r 
 }
 
 // Parameters:
-//   - Request
+//  - Request
 func (p *RrdbClient) BatchGet(ctx context.Context, request *BatchGetRequest) (r *BatchGetResponse, err error) {
 	var _args26 RrdbBatchGetArgs
 	_args26.Request = request
@@ -7836,7 +8117,7 @@ func (p *RrdbClient) BatchGet(ctx context.Context, request *BatchGetRequest) (r 
 }
 
 // Parameters:
-//   - HashKey
+//  - HashKey
 func (p *RrdbClient) SortkeyCount(ctx context.Context, hash_key *base.Blob) (r *CountResponse, err error) {
 	var _args28 RrdbSortkeyCountArgs
 	_args28.HashKey = hash_key
@@ -7848,7 +8129,7 @@ func (p *RrdbClient) SortkeyCount(ctx context.Context, hash_key *base.Blob) (r *
 }
 
 // Parameters:
-//   - Key
+//  - Key
 func (p *RrdbClient) TTL(ctx context.Context, key *base.Blob) (r *TTLResponse, err error) {
 	var _args30 RrdbTTLArgs
 	_args30.Key = key
@@ -7860,7 +8141,7 @@ func (p *RrdbClient) TTL(ctx context.Context, key *base.Blob) (r *TTLResponse, e
 }
 
 // Parameters:
-//   - Request
+//  - Request
 func (p *RrdbClient) GetScanner(ctx context.Context, request *GetScannerRequest) (r *ScanResponse, err error) {
 	var _args32 RrdbGetScannerArgs
 	_args32.Request = request
@@ -7872,7 +8153,7 @@ func (p *RrdbClient) GetScanner(ctx context.Context, request *GetScannerRequest)
 }
 
 // Parameters:
-//   - Request
+//  - Request
 func (p *RrdbClient) Scan(ctx context.Context, request *ScanRequest) (r *ScanResponse, err error) {
 	var _args34 RrdbScanArgs
 	_args34.Request = request
@@ -7884,7 +8165,7 @@ func (p *RrdbClient) Scan(ctx context.Context, request *ScanRequest) (r *ScanRes
 }
 
 // Parameters:
-//   - ContextID
+//  - ContextID
 func (p *RrdbClient) ClearScanner(ctx context.Context, context_id int64) (err error) {
 	var _args36 RrdbClearScannerArgs
 	_args36.ContextID = context_id
@@ -8646,7 +8927,7 @@ func (p *rrdbProcessorClearScanner) Process(ctx context.Context, seqId int32, ip
 // HELPER FUNCTIONS AND STRUCTURES
 
 // Attributes:
-//   - Update
+//  - Update
 type RrdbPutArgs struct {
 	Update *UpdateRequest `thrift:"update,1" db:"update" json:"update"`
 }
@@ -8753,7 +9034,7 @@ func (p *RrdbPutArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbPutResult struct {
 	Success *UpdateResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -8862,7 +9143,7 @@ func (p *RrdbPutResult) String() string {
 }
 
 // Attributes:
-//   - Request
+//  - Request
 type RrdbMultiPutArgs struct {
 	Request *MultiPutRequest `thrift:"request,1" db:"request" json:"request"`
 }
@@ -8969,7 +9250,7 @@ func (p *RrdbMultiPutArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbMultiPutResult struct {
 	Success *UpdateResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -9078,7 +9359,7 @@ func (p *RrdbMultiPutResult) String() string {
 }
 
 // Attributes:
-//   - Key
+//  - Key
 type RrdbRemoveArgs struct {
 	Key *base.Blob `thrift:"key,1" db:"key" json:"key"`
 }
@@ -9185,7 +9466,7 @@ func (p *RrdbRemoveArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbRemoveResult struct {
 	Success *UpdateResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -9294,7 +9575,7 @@ func (p *RrdbRemoveResult) String() string {
 }
 
 // Attributes:
-//   - Request
+//  - Request
 type RrdbMultiRemoveArgs struct {
 	Request *MultiRemoveRequest `thrift:"request,1" db:"request" json:"request"`
 }
@@ -9401,7 +9682,7 @@ func (p *RrdbMultiRemoveArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbMultiRemoveResult struct {
 	Success *MultiRemoveResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -9510,7 +9791,7 @@ func (p *RrdbMultiRemoveResult) String() string {
 }
 
 // Attributes:
-//   - Request
+//  - Request
 type RrdbIncrArgs struct {
 	Request *IncrRequest `thrift:"request,1" db:"request" json:"request"`
 }
@@ -9617,7 +9898,7 @@ func (p *RrdbIncrArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbIncrResult struct {
 	Success *IncrResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -9726,7 +10007,7 @@ func (p *RrdbIncrResult) String() string {
 }
 
 // Attributes:
-//   - Request
+//  - Request
 type RrdbCheckAndSetArgs struct {
 	Request *CheckAndSetRequest `thrift:"request,1" db:"request" json:"request"`
 }
@@ -9833,7 +10114,7 @@ func (p *RrdbCheckAndSetArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbCheckAndSetResult struct {
 	Success *CheckAndSetResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -9942,7 +10223,7 @@ func (p *RrdbCheckAndSetResult) String() string {
 }
 
 // Attributes:
-//   - Request
+//  - Request
 type RrdbCheckAndMutateArgs struct {
 	Request *CheckAndMutateRequest `thrift:"request,1" db:"request" json:"request"`
 }
@@ -10049,7 +10330,7 @@ func (p *RrdbCheckAndMutateArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbCheckAndMutateResult struct {
 	Success *CheckAndMutateResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -10158,7 +10439,7 @@ func (p *RrdbCheckAndMutateResult) String() string {
 }
 
 // Attributes:
-//   - Key
+//  - Key
 type RrdbGetArgs struct {
 	Key *base.Blob `thrift:"key,1" db:"key" json:"key"`
 }
@@ -10265,7 +10546,7 @@ func (p *RrdbGetArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbGetResult struct {
 	Success *ReadResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -10374,7 +10655,7 @@ func (p *RrdbGetResult) String() string {
 }
 
 // Attributes:
-//   - Request
+//  - Request
 type RrdbMultiGetArgs struct {
 	Request *MultiGetRequest `thrift:"request,1" db:"request" json:"request"`
 }
@@ -10481,7 +10762,7 @@ func (p *RrdbMultiGetArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbMultiGetResult struct {
 	Success *MultiGetResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -10590,7 +10871,7 @@ func (p *RrdbMultiGetResult) String() string {
 }
 
 // Attributes:
-//   - Request
+//  - Request
 type RrdbBatchGetArgs struct {
 	Request *BatchGetRequest `thrift:"request,1" db:"request" json:"request"`
 }
@@ -10697,7 +10978,7 @@ func (p *RrdbBatchGetArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbBatchGetResult struct {
 	Success *BatchGetResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -10806,7 +11087,7 @@ func (p *RrdbBatchGetResult) String() string {
 }
 
 // Attributes:
-//   - HashKey
+//  - HashKey
 type RrdbSortkeyCountArgs struct {
 	HashKey *base.Blob `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
 }
@@ -10913,7 +11194,7 @@ func (p *RrdbSortkeyCountArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbSortkeyCountResult struct {
 	Success *CountResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -11022,7 +11303,7 @@ func (p *RrdbSortkeyCountResult) String() string {
 }
 
 // Attributes:
-//   - Key
+//  - Key
 type RrdbTTLArgs struct {
 	Key *base.Blob `thrift:"key,1" db:"key" json:"key"`
 }
@@ -11129,7 +11410,7 @@ func (p *RrdbTTLArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbTTLResult struct {
 	Success *TTLResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -11238,7 +11519,7 @@ func (p *RrdbTTLResult) String() string {
 }
 
 // Attributes:
-//   - Request
+//  - Request
 type RrdbGetScannerArgs struct {
 	Request *GetScannerRequest `thrift:"request,1" db:"request" json:"request"`
 }
@@ -11345,7 +11626,7 @@ func (p *RrdbGetScannerArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbGetScannerResult struct {
 	Success *ScanResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -11454,7 +11735,7 @@ func (p *RrdbGetScannerResult) String() string {
 }
 
 // Attributes:
-//   - Request
+//  - Request
 type RrdbScanArgs struct {
 	Request *ScanRequest `thrift:"request,1" db:"request" json:"request"`
 }
@@ -11561,7 +11842,7 @@ func (p *RrdbScanArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RrdbScanResult struct {
 	Success *ScanResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -11670,7 +11951,7 @@ func (p *RrdbScanResult) String() string {
 }
 
 // Attributes:
-//   - ContextID
+//  - ContextID
 type RrdbClearScannerArgs struct {
 	ContextID int64 `thrift:"context_id,1" db:"context_id" json:"context_id"`
 }
@@ -11801,7 +12082,7 @@ func (p *MetaClient) Client_() thrift.TClient {
 }
 
 // Parameters:
-//   - Query
+//  - Query
 func (p *MetaClient) QueryCfg(ctx context.Context, query *replication.QueryCfgRequest) (r *replication.QueryCfgResponse, err error) {
 	var _args124 MetaQueryCfgArgs
 	_args124.Query = query
@@ -11907,7 +12188,7 @@ func (p *metaProcessorQueryCfg) Process(ctx context.Context, seqId int32, iprot,
 // HELPER FUNCTIONS AND STRUCTURES
 
 // Attributes:
-//   - Query
+//  - Query
 type MetaQueryCfgArgs struct {
 	Query *replication.QueryCfgRequest `thrift:"query,1" db:"query" json:"query"`
 }
@@ -12014,7 +12295,7 @@ func (p *MetaQueryCfgArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type MetaQueryCfgResult struct {
 	Success *replication.QueryCfgResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
