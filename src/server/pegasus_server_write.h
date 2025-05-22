@@ -19,26 +19,33 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <rocksdb/status.h>
+#include <algorithm>
+#include <array>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
 #include <vector>
 
 #include "base/pegasus_rpc_types.h"
+#include "common/replication_other_types.h"
 #include "pegasus_write_service.h"
 #include "replica/replica_base.h"
+#include "rpc/rpc_message.h"
+#include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
+#include "runtime/message_utils.h"
 #include "task/task_code.h"
+#include "task/task_spec.h"
 #include "utils/metrics.h"
 
 namespace dsn {
 class blob;
-class message_ex;
 } // namespace dsn
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
+
 class pegasus_server_impl;
 
 /// This class implements the interface of `pegasus_sever_impl::on_batched_write_requests`.
@@ -47,21 +54,21 @@ class pegasus_server_write : public dsn::replication::replica_base
 public:
     explicit pegasus_server_write(pegasus_server_impl *server);
 
-    // See replication_app_base::make_idempotent() for details.
-    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request);
+    // See replication_app_base::make_idempotent() for details. Only called by primary replicas.
+    int make_idempotent(dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests);
 
     // See replication_app_base::on_batched_write_requests() for details.
     //
-    /// \return error code returned by rocksdb, i.e rocksdb::Status::code.
-    /// **NOTE**
-    /// Error returned is regarded as the failure of replica, thus will trigger
-    /// cluster membership changes. Make sure no error is returned because of
-    /// invalid user argument.
-    /// As long as the returned error is rocksdb::Status::kOk, the operation is guaranteed to be
-    /// successfully applied into rocksdb, which means an empty_put will be called
-    /// even if there's no write.
+    // **NOTE**
+    // An error code other than rocksdb::Status::kOk would be regarded as the failure of the
+    // replica, leading to cluster membership changes. Make sure no errors occur due to
+    // invalid parameters.
+    //
+    // As long as the returned error is rocksdb::Status::kOk, the write requests are guaranteed
+    // to be applied into RocksDB successfully, which means empty_put() will be called even if
+    // there's no write.
     int on_batched_write_requests(dsn::message_ex **requests,
-                                  int count,
+                                  uint32_t count,
                                   int64_t decree,
                                   uint64_t timestamp,
                                   dsn::message_ex *original_request);
@@ -69,11 +76,72 @@ public:
     void set_default_ttl(uint32_t ttl);
 
 private:
-    // Apply the idempotent request and respond to its original request.
-    int on_idempotent(dsn::message_ex *request, dsn::message_ex *original_request);
+    // Used to call make_idempotent() for each type (specified by TRpcHolder) of atomic write.
+    // Only called by primary replicas.
+    template <typename TRpcHolder>
+    int make_idempotent(dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests)
+    {
+        auto rpc = TRpcHolder(request);
+
+        // Translate an atomic request into one or multiple idempotent single-update requests.
+        std::vector<dsn::apps::update_request> updates;
+        const int err = _write_svc->make_idempotent(rpc.request(), rpc.response(), updates);
+
+        // When the condition checks of `check_and_set` and `check_and_mutate` fail,
+        // make_idempotent() would return rocksdb::Status::kTryAgain. Therefore, there is
+        // still a certain probability that a status code other than rocksdb::Status::kOk
+        // is returned.
+        if (err != rocksdb::Status::kOk) {
+            // Once it failed, just reply to the client with error immediately.
+            rpc.enable_auto_reply();
+            return err;
+        }
+
+        // Build new messages based on the generated idempotent updates.
+        new_requests.clear();
+        for (const auto &update : updates) {
+            new_requests.push_back(dsn::from_thrift_request_to_received_message(
+                update,
+                dsn::apps::RPC_RRDB_RRDB_PUT,
+                request->header->client.thread_hash,
+                request->header->client.partition_hash,
+                static_cast<dsn::dsn_msg_serialize_format>(
+                    request->header->context.u.serialize_format)));
+        }
+
+        return rocksdb::Status::kOk;
+    }
+
+    // Apply the idempotent updates `requests` into storage engine and respond to the original
+    // atomic write request `original_request`. Both of `requests` and `original_request` should
+    // not be null, while `count` should always be > 0.
+    int
+    apply_idempotent(dsn::message_ex **requests, uint32_t count, dsn::message_ex *original_request);
+
+    // Apply the batched (one or multiple) single-update requests into the storage engine.
+    // Only called by primary replicas.
+    template <typename TRpcHolder>
+    inline int put(const std::vector<dsn::apps::update_request> &updates,
+                   dsn::message_ex *original_request)
+    {
+        // Enable auto reply, since in primary replicas we need to reply to the client with
+        // the response to the original atomic write request after the idempotent updates
+        // were applied into the storage engine.
+        auto rpc = TRpcHolder::auto_reply(original_request);
+        return _write_svc->put(_write_ctx, updates, rpc.request(), rpc.response());
+    }
+
+    // Following functions are the writers that apply the idempotent updates translated from
+    // incr, check_and_set and check_and_mutate requests and then respond to them.
+    int put_incr(const std::vector<dsn::apps::update_request> &updates,
+                 dsn::message_ex *original_request);
+    int put_check_and_set(const std::vector<dsn::apps::update_request> &updates,
+                          dsn::message_ex *original_request);
+    int put_check_and_mutate(const std::vector<dsn::apps::update_request> &updates,
+                             dsn::message_ex *original_request);
 
     // Delay replying for the batched requests until all of them complete.
-    int on_batched_writes(dsn::message_ex **requests, int count);
+    int on_batched_writes(dsn::message_ex **requests, uint32_t count);
 
     int on_single_put_in_batch(put_rpc &rpc)
     {
@@ -95,7 +163,7 @@ private:
 
     void init_make_idempotent_handlers();
     void init_non_batch_write_handlers();
-    void init_on_idempotent_handlers();
+    void init_idempotent_writers();
 
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;
@@ -107,24 +175,27 @@ private:
     std::vector<remove_rpc> _remove_rpc_batch;
 
     db_write_context _write_ctx;
-    int64_t _decree;
+    int64_t _decree{invalid_decree};
 
-    // Handlers that make an atomic request idempotent.
+    // Handlers that translate an atomic write request into one or multiple idempotent updates.
     using make_idempotent_map =
-        std::map<dsn::task_code, std::function<int(dsn::message_ex *, dsn::message_ex **)>>;
+        std::map<dsn::task_code,
+                 std::function<int(dsn::message_ex *, std::vector<dsn::message_ex *> &)>>;
     make_idempotent_map _make_idempotent_handlers;
 
-    // Handlers that process a request could not be batched, e.g. multi put/remove.
+    // Handlers that process a write request which could not be batched, e.g. multi put/remove.
     using non_batch_write_map = std::map<dsn::task_code, std::function<int(dsn::message_ex *)>>;
     non_batch_write_map _non_batch_write_handlers;
 
-    // Handlers that apply the idempotent request and respond to its original request.
-    using on_idempotent_map =
-        std::map<dsn::task_code, std::function<int(dsn::message_ex *, dsn::message_ex *)>>;
-    on_idempotent_map _on_idempotent_handlers;
+    // Writers that apply idempotent updates and respond to the original atomic write request.
+    // Each dsn::apps::update_type has its corresponding writer, therefore the number of writers
+    // must match the number of dsn::apps::update_type.
+    using idempotent_writer_map = std::array<
+        std::function<int(const std::vector<dsn::apps::update_request> &, dsn::message_ex *)>,
+        5>;
+    idempotent_writer_map _idempotent_writers{};
 
     METRIC_VAR_DECLARE_counter(corrupt_writes);
 };
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

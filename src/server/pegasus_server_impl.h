@@ -147,7 +147,9 @@ public:
     //  - ERR_FILE_OPERATION_FAILED
     ::dsn::error_code stop(bool clear_state) override;
 
-    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) override;
+    // See replication_app_base::make_idempotent() for details. Only called by primary replicas.
+    int make_idempotent(dsn::message_ex *request,
+                        std::vector<dsn::message_ex *> &new_requests) override;
 
     /// Each of the write request (specifically, the rpc that's configured as write, see
     /// option `rpc_request_is_write_operation` in rDSN `task_spec`) will first be
@@ -159,7 +161,7 @@ public:
     int on_batched_write_requests(int64_t decree,
                                   uint64_t timestamp,
                                   dsn::message_ex **requests,
-                                  int count,
+                                  uint32_t count,
                                   dsn::message_ex *original_request) override;
 
     ::dsn::error_code prepare_get_checkpoint(dsn::blob &learn_req) override

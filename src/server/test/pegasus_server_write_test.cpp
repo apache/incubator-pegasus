@@ -75,23 +75,23 @@ public:
                 req.key = key;
                 req.value.assign("value", 0, 5);
 
-                int put_rpc_cnt = dsn::rand::next_u32(1, 10);
-                int remove_rpc_cnt = dsn::rand::next_u32(1, 10);
-                int total_rpc_cnt = put_rpc_cnt + remove_rpc_cnt;
+                const uint32_t put_rpc_cnt = dsn::rand::next_u32(1, 10);
+                const uint32_t remove_rpc_cnt = dsn::rand::next_u32(1, 10);
+                const uint32_t total_rpc_cnt = put_rpc_cnt + remove_rpc_cnt;
                 /**
                  * writes[0] ~ writes[total_rpc_cnt-1] will be released by their corresponding
                  * rpc_holders, which created in on_batched_write_requests. So we don't need to
                  * release them here
                  **/
                 dsn::message_ex *writes[total_rpc_cnt];
-                for (int i = 0; i < put_rpc_cnt; i++) {
+                for (uint32_t i = 0; i < put_rpc_cnt; i++) {
                     writes[i] = pegasus::create_put_request(req);
                 }
-                for (int i = put_rpc_cnt; i < total_rpc_cnt; i++) {
+                for (uint32_t i = put_rpc_cnt; i < total_rpc_cnt; i++) {
                     writes[i] = pegasus::create_remove_request(key);
                 }
 
-                int err = _server_write->on_batched_write_requests(
+                const int err = _server_write->on_batched_write_requests(
                     writes, total_rpc_cnt, decree, 0, nullptr);
                 switch (err) {
                 case FAIL_DB_WRITE_BATCH_PUT:
@@ -106,8 +106,8 @@ public:
                 // make sure everything is cleanup after batch write.
                 ASSERT_TRUE(_server_write->_put_rpc_batch.empty());
                 ASSERT_TRUE(_server_write->_remove_rpc_batch.empty());
-                ASSERT_EQ(_server_write->_write_svc->_put_batch_size, 0);
-                ASSERT_EQ(_server_write->_write_svc->_remove_batch_size, 0);
+                ASSERT_EQ(_server_write->_write_svc->put_batch_size(), 0);
+                ASSERT_EQ(_server_write->_write_svc->remove_batch_size(), 0);
                 ASSERT_EQ(_server_write->_write_svc->_batch_start_time, 0);
                 ASSERT_EQ(_server_write->_write_svc->_impl->_rocksdb_wrapper->_write_batch->Count(),
                           0);
