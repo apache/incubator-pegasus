@@ -313,9 +313,9 @@ func (p *ManualCompactionStatus) Value() (driver.Value, error) {
 }
 
 // Attributes:
-//   - Name
-//   - Size
-//   - Md5
+//  - Name
+//  - Size
+//  - Md5
 type FileMeta struct {
 	Name string `thrift:"name,1" db:"name" json:"name"`
 	Size int64  `thrift:"size,2" db:"size" json:"size"`
@@ -494,14 +494,14 @@ func (p *FileMeta) String() string {
 }
 
 // Attributes:
-//   - Pid
-//   - Ballot
-//   - Primary
-//   - Status
-//   - LearnerSignature
-//   - PopAll
-//   - SplitSyncToChild
-//   - HpPrimary
+//  - Pid
+//  - Ballot
+//  - Primary
+//  - Status
+//  - LearnerSignature
+//  - PopAll
+//  - SplitSyncToChild
+//  - HpPrimary
 type ReplicaConfiguration struct {
 	Pid              *base.Gpid       `thrift:"pid,1" db:"pid" json:"pid"`
 	Ballot           int64            `thrift:"ballot,2" db:"ballot" json:"ballot"`
@@ -925,15 +925,15 @@ func (p *ReplicaConfiguration) String() string {
 }
 
 // Attributes:
-//   - Pid
-//   - Ballot
-//   - Status
-//   - LastCommittedDecree
-//   - LastPreparedDecree
-//   - LastDurableDecree
-//   - AppType
-//   - DiskTag
-//   - ManualCompactStatus
+//  - Pid
+//  - Ballot
+//  - Status
+//  - LastCommittedDecree
+//  - LastPreparedDecree
+//  - LastDurableDecree
+//  - AppType
+//  - DiskTag
+//  - ManualCompactStatus
 type ReplicaInfo struct {
 	Pid                 *base.Gpid              `thrift:"pid,1" db:"pid" json:"pid"`
 	Ballot              int64                   `thrift:"ballot,2" db:"ballot" json:"ballot"`
