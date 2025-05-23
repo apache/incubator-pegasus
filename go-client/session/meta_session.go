@@ -97,9 +97,11 @@ func (m *MetaManager) call(ctx context.Context, callFunc metaCallFunc) (metaResp
 	call := newMetaCall(lead, m.metas, callFunc, m.metaIPAddrs)
 	resp, err := call.Run(ctx)
 	if err == nil {
+		call.lock.Lock()
 		m.setCurrentLeader(int(call.newLead))
 		m.setNewMetas(call.metas)
 		m.setMetaIPAddrs(call.metaIPAddrs)
+		call.lock.Unlock()
 	}
 	return resp, err
 }

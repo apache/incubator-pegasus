@@ -116,7 +116,7 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 	resp, err := c.callFunc(ctx, meta)
 
 	if err == nil && resp.GetErr().Errno == base.ERR_FORWARD_TO_OTHERS.String() {
-		forwardAddr := c.getMetaServiceForwardAddress(resp)
+		forwardAddr := getMetaServiceForwardAddress(resp)
 		if forwardAddr == nil {
 			return false
 		}
@@ -137,10 +137,12 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 				NodeSession: newNodeSession(addr, NodeTypeMeta),
 				logger:      pegalog.GetLogger(),
 			})
-			c.lock.Unlock()
 			curLeader = len(c.metas) - 1
 			c.metas[curLeader].logger.Printf("add forward address %s as meta server", addr)
-			resp, err = c.callFunc(ctx, c.metas[curLeader])
+			meta = c.metas[curLeader]
+			c.lock.Unlock()
+
+			resp, err = c.callFunc(ctx, meta)
 		}
 	}
 
@@ -169,13 +171,15 @@ func (c *metaCall) issueBackupMetas(ctx context.Context) {
 	}
 }
 
-func (c *metaCall) getMetaServiceForwardAddress(resp metaResponse) *base.RPCAddress {
+func getMetaServiceForwardAddress(resp metaResponse) *base.RPCAddress {
 	rep, ok := resp.(*replication.QueryCfgResponse)
 	if !ok || rep.GetErr().Errno != base.ERR_FORWARD_TO_OTHERS.String() {
 		return nil
-	} else if rep.GetPartitions() == nil || len(rep.GetPartitions()) == 0 {
-		return nil
-	} else {
-		return rep.Partitions[0].Primary
 	}
+
+	if rep.GetPartitions() == nil || len(rep.GetPartitions()) == 0 {
+		return nil
+	}
+
+	return rep.Partitions[0].Primary
 }
