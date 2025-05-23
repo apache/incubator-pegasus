@@ -172,11 +172,11 @@ func (c *metaCall) issueBackupMetas(ctx context.Context) {
 
 	var wg sync.WaitGroup
 	for i := range metas {
-		wg.Add(1)
-
 		if i == lead {
 			continue
 		}
+
+		wg.Add(1)
 
 		// concurrently issue RPC to the rest of meta servers.
 		go func(idx int) {
