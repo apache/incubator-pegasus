@@ -35,6 +35,8 @@
 #include "replica/replica.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
 #include "task/async_calls.h"
 #include "utils/autoref_ptr.h"
@@ -235,9 +237,13 @@ void replica_backup_manager::send_clear_request_to_secondaries(const gpid &pid,
     request.__set_pid(pid);
     request.__set_policy_name(policy_name);
 
-    for (const auto &secondary : _replica->_primary_states.pc.secondaries) {
-        rpc::call_one_way_typed(
-            secondary, RPC_CLEAR_COLD_BACKUP, request, get_gpid().thread_hash());
+    std::vector<dsn::host_port> secondaries;
+    GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, secondaries);
+    for (const auto &secondary : secondaries) {
+        rpc::call_one_way_typed(dsn::dns_resolver::instance().resolve_address(secondary),
+                                RPC_CLEAR_COLD_BACKUP,
+                                request,
+                                get_gpid().thread_hash());
     }
 }
 
