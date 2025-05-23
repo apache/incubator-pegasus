@@ -217,9 +217,9 @@ func (p *DetectAction) Value() (driver.Value, error) {
 }
 
 // Attributes:
-//   - Pid
-//   - Node1
-//   - HpNode1
+//  - Pid
+//  - Node1
+//  - HpNode1
 type QueryReplicaDecreeRequest struct {
 	Pid     *base.Gpid       `thrift:"pid,1" db:"pid" json:"pid"`
 	Node1   *base.RPCAddress `thrift:"node1,2" db:"node1" json:"node1"`
@@ -424,8 +424,8 @@ func (p *QueryReplicaDecreeRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - LastDecree
+//  - Err
+//  - LastDecree
 type QueryReplicaDecreeResponse struct {
 	Err        *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	LastDecree int64           `thrift:"last_decree,2" db:"last_decree" json:"last_decree"`
@@ -572,8 +572,8 @@ func (p *QueryReplicaDecreeResponse) String() string {
 }
 
 // Attributes:
-//   - Node1
-//   - HpNode1
+//  - Node1
+//  - HpNode1
 type QueryReplicaInfoRequest struct {
 	Node1   *base.RPCAddress `thrift:"node1,1" db:"node1" json:"node1"`
 	HpNode1 *base.HostPort   `thrift:"hp_node1,2" db:"hp_node1" json:"hp_node1,omitempty"`
@@ -730,8 +730,8 @@ func (p *QueryReplicaInfoRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Replicas
+//  - Err
+//  - Replicas
 type QueryReplicaInfoResponse struct {
 	Err      *base.ErrorCode      `thrift:"err,1" db:"err" json:"err"`
 	Replicas []*admin.ReplicaInfo `thrift:"replicas,2" db:"replicas" json:"replicas"`
@@ -897,12 +897,12 @@ func (p *QueryReplicaInfoResponse) String() string {
 }
 
 // Attributes:
-//   - Tag
-//   - FullDir
-//   - DiskCapacityMb
-//   - DiskAvailableMb
-//   - HoldingPrimaryReplicas
-//   - HoldingSecondaryReplicas
+//  - Tag
+//  - FullDir
+//  - DiskCapacityMb
+//  - DiskAvailableMb
+//  - HoldingPrimaryReplicas
+//  - HoldingSecondaryReplicas
 type DiskInfo struct {
 	Tag                      string                 `thrift:"tag,1" db:"tag" json:"tag"`
 	FullDir                  string                 `thrift:"full_dir,2" db:"full_dir" json:"full_dir"`
@@ -1311,9 +1311,9 @@ func (p *DiskInfo) String() string {
 }
 
 // Attributes:
-//   - Node1
-//   - AppName
-//   - HpNode1
+//  - Node1
+//  - AppName
+//  - HpNode1
 type QueryDiskInfoRequest struct {
 	Node1   *base.RPCAddress `thrift:"node1,1" db:"node1" json:"node1"`
 	AppName string           `thrift:"app_name,2" db:"app_name" json:"app_name"`
@@ -1510,10 +1510,10 @@ func (p *QueryDiskInfoRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - TotalCapacityMb
-//   - TotalAvailableMb
-//   - DiskInfos
+//  - Err
+//  - TotalCapacityMb
+//  - TotalAvailableMb
+//  - DiskInfos
 type QueryDiskInfoResponse struct {
 	Err              *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	TotalCapacityMb  int64           `thrift:"total_capacity_mb,2" db:"total_capacity_mb" json:"total_capacity_mb"`
@@ -1759,9 +1759,9 @@ func (p *QueryDiskInfoResponse) String() string {
 }
 
 // Attributes:
-//   - Pid
-//   - OriginDisk
-//   - TargetDisk
+//  - Pid
+//  - OriginDisk
+//  - TargetDisk
 type ReplicaDiskMigrateRequest struct {
 	Pid        *base.Gpid `thrift:"pid,1" db:"pid" json:"pid"`
 	OriginDisk string     `thrift:"origin_disk,2" db:"origin_disk" json:"origin_disk"`
@@ -1948,8 +1948,8 @@ func (p *ReplicaDiskMigrateRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Hint
+//  - Err
+//  - Hint
 type ReplicaDiskMigrateResponse struct {
 	Err  *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	Hint *string         `thrift:"hint,2" db:"hint" json:"hint,omitempty"`
@@ -2107,9 +2107,9 @@ func (p *ReplicaDiskMigrateResponse) String() string {
 }
 
 // Attributes:
-//   - Type
-//   - Action
-//   - Pid
+//  - Type
+//  - Action
+//  - Pid
 type DetectHotkeyRequest struct {
 	Type   HotkeyType   `thrift:"type,1" db:"type" json:"type"`
 	Action DetectAction `thrift:"action,2" db:"action" json:"action"`
@@ -2298,9 +2298,9 @@ func (p *DetectHotkeyRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - ErrHint
-//   - HotkeyResult_
+//  - Err
+//  - ErrHint
+//  - HotkeyResult_
 type DetectHotkeyResponse struct {
 	Err           *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	ErrHint       *string         `thrift:"err_hint,2" db:"err_hint" json:"err_hint,omitempty"`
@@ -2509,7 +2509,7 @@ func (p *DetectHotkeyResponse) String() string {
 }
 
 // Attributes:
-//   - DiskStr
+//  - DiskStr
 type AddNewDiskRequest struct {
 	DiskStr string `thrift:"disk_str,1" db:"disk_str" json:"disk_str"`
 }
@@ -2608,8 +2608,8 @@ func (p *AddNewDiskRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - ErrHint
+//  - Err
+//  - ErrHint
 type AddNewDiskResponse struct {
 	Err     *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	ErrHint *string         `thrift:"err_hint,2" db:"err_hint" json:"err_hint,omitempty"`
@@ -2775,6 +2775,9 @@ type ReplicaClient interface {
 	DiskMigrate(ctx context.Context, req *ReplicaDiskMigrateRequest) (r *ReplicaDiskMigrateResponse, err error)
 	// Parameters:
 	//  - Req
+	DetectHotkey(ctx context.Context, req *DetectHotkeyRequest) (r *DetectHotkeyResponse, err error)
+	// Parameters:
+	//  - Req
 	AddDisk(ctx context.Context, req *AddNewDiskRequest) (r *AddNewDiskResponse, err error)
 }
 
@@ -2805,7 +2808,7 @@ func (p *ReplicaClientClient) Client_() thrift.TClient {
 }
 
 // Parameters:
-//   - Req
+//  - Req
 func (p *ReplicaClientClient) QueryDiskInfo(ctx context.Context, req *QueryDiskInfoRequest) (r *QueryDiskInfoResponse, err error) {
 	var _args8 ReplicaClientQueryDiskInfoArgs
 	_args8.Req = req
@@ -2817,7 +2820,7 @@ func (p *ReplicaClientClient) QueryDiskInfo(ctx context.Context, req *QueryDiskI
 }
 
 // Parameters:
-//   - Req
+//  - Req
 func (p *ReplicaClientClient) DiskMigrate(ctx context.Context, req *ReplicaDiskMigrateRequest) (r *ReplicaDiskMigrateResponse, err error) {
 	var _args10 ReplicaClientDiskMigrateArgs
 	_args10.Req = req
@@ -2829,15 +2832,27 @@ func (p *ReplicaClientClient) DiskMigrate(ctx context.Context, req *ReplicaDiskM
 }
 
 // Parameters:
-//   - Req
-func (p *ReplicaClientClient) AddDisk(ctx context.Context, req *AddNewDiskRequest) (r *AddNewDiskResponse, err error) {
-	var _args12 ReplicaClientAddDiskArgs
+//  - Req
+func (p *ReplicaClientClient) DetectHotkey(ctx context.Context, req *DetectHotkeyRequest) (r *DetectHotkeyResponse, err error) {
+	var _args12 ReplicaClientDetectHotkeyArgs
 	_args12.Req = req
-	var _result13 ReplicaClientAddDiskResult
-	if err = p.Client_().Call(ctx, "add_disk", &_args12, &_result13); err != nil {
+	var _result13 ReplicaClientDetectHotkeyResult
+	if err = p.Client_().Call(ctx, "detect_hotkey", &_args12, &_result13); err != nil {
 		return
 	}
 	return _result13.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Req
+func (p *ReplicaClientClient) AddDisk(ctx context.Context, req *AddNewDiskRequest) (r *AddNewDiskResponse, err error) {
+	var _args14 ReplicaClientAddDiskArgs
+	_args14.Req = req
+	var _result15 ReplicaClientAddDiskResult
+	if err = p.Client_().Call(ctx, "add_disk", &_args14, &_result15); err != nil {
+		return
+	}
+	return _result15.GetSuccess(), nil
 }
 
 type ReplicaClientProcessor struct {
@@ -2860,11 +2875,12 @@ func (p *ReplicaClientProcessor) ProcessorMap() map[string]thrift.TProcessorFunc
 
 func NewReplicaClientProcessor(handler ReplicaClient) *ReplicaClientProcessor {
 
-	self14 := &ReplicaClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self14.processorMap["query_disk_info"] = &replicaClientProcessorQueryDiskInfo{handler: handler}
-	self14.processorMap["disk_migrate"] = &replicaClientProcessorDiskMigrate{handler: handler}
-	self14.processorMap["add_disk"] = &replicaClientProcessorAddDisk{handler: handler}
-	return self14
+	self16 := &ReplicaClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self16.processorMap["query_disk_info"] = &replicaClientProcessorQueryDiskInfo{handler: handler}
+	self16.processorMap["disk_migrate"] = &replicaClientProcessorDiskMigrate{handler: handler}
+	self16.processorMap["detect_hotkey"] = &replicaClientProcessorDetectHotkey{handler: handler}
+	self16.processorMap["add_disk"] = &replicaClientProcessorAddDisk{handler: handler}
+	return self16
 }
 
 func (p *ReplicaClientProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -2877,12 +2893,12 @@ func (p *ReplicaClientProcessor) Process(ctx context.Context, iprot, oprot thrif
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x15 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x17 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x15.Write(oprot)
+	x17.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush(ctx)
-	return false, x15
+	return false, x17
 
 }
 
@@ -2982,6 +2998,54 @@ func (p *replicaClientProcessorDiskMigrate) Process(ctx context.Context, seqId i
 	return true, err
 }
 
+type replicaClientProcessorDetectHotkey struct {
+	handler ReplicaClient
+}
+
+func (p *replicaClientProcessorDetectHotkey) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ReplicaClientDetectHotkeyArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("detect_hotkey", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := ReplicaClientDetectHotkeyResult{}
+	var retval *DetectHotkeyResponse
+	var err2 error
+	if retval, err2 = p.handler.DetectHotkey(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing detect_hotkey: "+err2.Error())
+		oprot.WriteMessageBegin("detect_hotkey", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("detect_hotkey", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
 type replicaClientProcessorAddDisk struct {
 	handler ReplicaClient
 }
@@ -3033,7 +3097,7 @@ func (p *replicaClientProcessorAddDisk) Process(ctx context.Context, seqId int32
 // HELPER FUNCTIONS AND STRUCTURES
 
 // Attributes:
-//   - Req
+//  - Req
 type ReplicaClientQueryDiskInfoArgs struct {
 	Req *QueryDiskInfoRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -3140,7 +3204,7 @@ func (p *ReplicaClientQueryDiskInfoArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type ReplicaClientQueryDiskInfoResult struct {
 	Success *QueryDiskInfoResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -3249,7 +3313,7 @@ func (p *ReplicaClientQueryDiskInfoResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type ReplicaClientDiskMigrateArgs struct {
 	Req *ReplicaDiskMigrateRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -3356,7 +3420,7 @@ func (p *ReplicaClientDiskMigrateArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type ReplicaClientDiskMigrateResult struct {
 	Success *ReplicaDiskMigrateResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -3465,7 +3529,223 @@ func (p *ReplicaClientDiskMigrateResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
+type ReplicaClientDetectHotkeyArgs struct {
+	Req *DetectHotkeyRequest `thrift:"req,1" db:"req" json:"req"`
+}
+
+func NewReplicaClientDetectHotkeyArgs() *ReplicaClientDetectHotkeyArgs {
+	return &ReplicaClientDetectHotkeyArgs{}
+}
+
+var ReplicaClientDetectHotkeyArgs_Req_DEFAULT *DetectHotkeyRequest
+
+func (p *ReplicaClientDetectHotkeyArgs) GetReq() *DetectHotkeyRequest {
+	if !p.IsSetReq() {
+		return ReplicaClientDetectHotkeyArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ReplicaClientDetectHotkeyArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ReplicaClientDetectHotkeyArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ReplicaClientDetectHotkeyArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req = &DetectHotkeyRequest{}
+	if err := p.Req.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Req), err)
+	}
+	return nil
+}
+
+func (p *ReplicaClientDetectHotkeyArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("detect_hotkey_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ReplicaClientDetectHotkeyArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:req: ", p), err)
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Req), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:req: ", p), err)
+	}
+	return err
+}
+
+func (p *ReplicaClientDetectHotkeyArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ReplicaClientDetectHotkeyArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type ReplicaClientDetectHotkeyResult struct {
+	Success *DetectHotkeyResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewReplicaClientDetectHotkeyResult() *ReplicaClientDetectHotkeyResult {
+	return &ReplicaClientDetectHotkeyResult{}
+}
+
+var ReplicaClientDetectHotkeyResult_Success_DEFAULT *DetectHotkeyResponse
+
+func (p *ReplicaClientDetectHotkeyResult) GetSuccess() *DetectHotkeyResponse {
+	if !p.IsSetSuccess() {
+		return ReplicaClientDetectHotkeyResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ReplicaClientDetectHotkeyResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ReplicaClientDetectHotkeyResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField0(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ReplicaClientDetectHotkeyResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &DetectHotkeyResponse{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *ReplicaClientDetectHotkeyResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("detect_hotkey_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ReplicaClientDetectHotkeyResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ReplicaClientDetectHotkeyResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ReplicaClientDetectHotkeyResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Req
 type ReplicaClientAddDiskArgs struct {
 	Req *AddNewDiskRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -3572,7 +3852,7 @@ func (p *ReplicaClientAddDiskArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type ReplicaClientAddDiskResult struct {
 	Success *AddNewDiskResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }

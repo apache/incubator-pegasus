@@ -60,6 +60,22 @@ func (rs *ReplicaSession) DiskMigrate(ctx context.Context, req *radmin.ReplicaDi
 	return nil, err
 }
 
+// DetectHotkey is auto-generated
+func (rs *ReplicaSession) DetectHotkey(ctx context.Context, req *radmin.DetectHotkeyRequest) (*radmin.DetectHotkeyResponse, error) {
+	arg := radmin.NewReplicaClientDetectHotkeyArgs()
+	arg.Req = req
+	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, 0, arg, "RPC_DETECT_HOTKEY")
+	if err == nil {
+		ret, _ := result.(*radmin.ReplicaClientDetectHotkeyResult)
+		resp := ret.GetSuccess()
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp, fmt.Errorf("DetectHotkey to session %s failed: %s", rs, resp.GetErr().String())
+		}
+		return resp, nil
+	}
+	return nil, err
+}
+
 // AddDisk is auto-generated
 func (rs *ReplicaSession) AddDisk(ctx context.Context, req *radmin.AddNewDiskRequest) (*radmin.AddNewDiskResponse, error) {
 	arg := radmin.NewReplicaClientAddDiskArgs()

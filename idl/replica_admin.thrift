@@ -169,5 +169,7 @@ service replica_client
 
     replica_disk_migrate_response disk_migrate(1:replica_disk_migrate_request req);
 
+    detect_hotkey_response detect_hotkey(1:detect_hotkey_request req);
+
     add_new_disk_response add_disk(1:add_new_disk_request req);
 }

@@ -19,8 +19,8 @@ var _ = reflect.DeepEqual
 var _ = bytes.Equal
 
 // Attributes:
-//   - Cmd
-//   - Arguments
+//  - Cmd
+//  - Arguments
 type Command struct {
 	Cmd       string   `thrift:"cmd,1" db:"cmd" json:"cmd"`
 	Arguments []string `thrift:"arguments,2" db:"arguments" json:"arguments"`
@@ -212,7 +212,7 @@ func (p *RemoteCmdServiceClient) Client_() thrift.TClient {
 }
 
 // Parameters:
-//   - Cmd
+//  - Cmd
 func (p *RemoteCmdServiceClient) CallCommand(ctx context.Context, cmd *Command) (r string, err error) {
 	var _args1 RemoteCmdServiceCallCommandArgs
 	_args1.Cmd = cmd
@@ -318,7 +318,7 @@ func (p *remoteCmdServiceProcessorCallCommand) Process(ctx context.Context, seqI
 // HELPER FUNCTIONS AND STRUCTURES
 
 // Attributes:
-//   - Cmd
+//  - Cmd
 type RemoteCmdServiceCallCommandArgs struct {
 	Cmd *Command `thrift:"cmd,1" db:"cmd" json:"cmd"`
 }
@@ -425,7 +425,7 @@ func (p *RemoteCmdServiceCallCommandArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type RemoteCmdServiceCallCommandResult struct {
 	Success *string `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
