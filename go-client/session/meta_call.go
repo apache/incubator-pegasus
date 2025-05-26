@@ -125,6 +125,7 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 		if forwardAddr == nil {
 			return false
 		}
+
 		addr := forwardAddr.GetAddress()
 		found := false
 		c.lock.Lock()
@@ -135,6 +136,7 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 			}
 		}
 		c.lock.Unlock()
+
 		if !found {
 			c.lock.Lock()
 			c.metaIPAddrs = append(c.metaIPAddrs, addr)
@@ -143,8 +145,8 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 				logger:      pegalog.GetLogger(),
 			})
 			curLeader = len(c.metas) - 1
-			c.metas[curLeader].logger.Printf("add forward address %s as meta server", addr)
 			meta = c.metas[curLeader]
+			meta.logger.Printf("add forward address %s as meta server", addr)
 			c.lock.Unlock()
 
 			resp, err = c.callFunc(ctx, meta)
@@ -154,6 +156,7 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 	if err != nil || resp.GetErr().Errno == base.ERR_FORWARD_TO_OTHERS.String() {
 		return false
 	}
+
 	// the RPC succeeds, this meta becomes the new leader now.
 	atomic.StoreUint32(&c.newLead, uint32(curLeader))
 	select {
@@ -165,6 +168,8 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 }
 
 func (c *metaCall) issueBackupMetas(ctx context.Context) {
+	// In issueSingleMeta() function, c.metas might be modified, so here we first copy
+	// the contents of c.metas to another slice as a snapshot for range iteration.
 	c.lock.RLock()
 	metas := append([]*metaSession(nil), c.metas...)
 	lead := c.lead
@@ -178,7 +183,7 @@ func (c *metaCall) issueBackupMetas(ctx context.Context) {
 
 		wg.Add(1)
 
-		// concurrently issue RPC to the rest of meta servers.
+		// Send RPCs concurrently to all backup meta servers.
 		go func(idx int) {
 			defer wg.Done()
 			c.issueSingleMeta(ctx, idx)
@@ -200,6 +205,6 @@ func getMetaServiceForwardAddress(resp metaResponse) *base.RPCAddress {
 
 	// The forward address will be put in partitions[0].primary if exist.
 	// See query_cfg_response's definition in idl/dsn.layer2.thrift and
-	// meta_service::on_query_configuration_by_index
+	// meta_service::on_query_configuration_by_index().
 	return queryCfgResp.Partitions[0].Primary
 }
