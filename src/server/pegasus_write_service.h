@@ -243,7 +243,7 @@ private:
         incr,
         check_and_set,
         check_and_mutate,
-        count,
+        COUNT,
     };
 
     // Read/change the batch size of the writes with the given type.
@@ -284,7 +284,7 @@ private:
     // Each request of single put, single remove, incr and check_and_set contains only one
     // write operation, while check_and_mutate may contain multiple operations of single
     // puts and removes.
-    std::array<uint32_t, static_cast<size_t>(batch_write_type::count)> _batch_sizes{};
+    std::array<uint32_t, static_cast<size_t>(batch_write_type::COUNT)> _batch_sizes{};
 
     METRIC_VAR_DECLARE_counter(put_requests);
     METRIC_VAR_DECLARE_counter(multi_put_requests);

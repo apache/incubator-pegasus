@@ -250,7 +250,6 @@ bool replica::need_reject_non_idempotent(const task_spec *spec) const
         return false;
     }
 
-    // Any atomic write request should be rejected.
     return !spec->rpc_request_is_write_idempotent;
 }
 
@@ -260,7 +259,6 @@ bool replica::need_make_idempotent(const task_spec *spec) const
         return false;
     }
 
-    // Only atomic write requests need to be made idempotent.
     return !spec->rpc_request_is_write_idempotent;
 }
 
@@ -279,7 +277,6 @@ bool replica::need_make_idempotent(message_ex *request) const
     const auto *spec = task_spec::get(request->rpc_code());
     CHECK_NOTNULL_PREFIX_MSG(spec, "RPC code {} not found", request->rpc_code());
 
-    // Only atomic write requests need to be made idempotent.
     return !spec->rpc_request_is_write_idempotent;
 }
 
@@ -298,6 +295,10 @@ int replica::make_idempotent(mutation_ptr &mu)
 
     std::vector<dsn::message_ex *> new_requests;
     const int err = _app->make_idempotent(request, new_requests);
+
+    // When the condition checks of `check_and_set` and `check_and_mutate` fail, make_idempotent()
+    // would return rocksdb::Status::kTryAgain. Therefore, there is still a certain probability
+    // that a status code other than rocksdb::Status::kOk is returned.
     if (err != rocksdb::Status::kOk) {
         // Once some error occurred, the response with error must have been returned to the
         // client during _app->make_idempotent(). Thus do nothing here.
