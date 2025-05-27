@@ -50,12 +50,12 @@ namespace dist {
 class distributed_lock_service_simple : public distributed_lock_service
 {
 public:
-    virtual ~distributed_lock_service_simple() { _tracker.cancel_outstanding_tasks(); }
+    ~distributed_lock_service_simple() { _tracker.cancel_outstanding_tasks(); }
     // no parameter need
-    virtual error_code initialize(const std::vector<std::string> &args) override;
-    virtual error_code finalize() override { return ERR_OK; }
+    error_code initialize(const std::vector<std::string> &args) override;
+    error_code finalize() override { return ERR_OK; }
 
-    virtual std::pair<task_ptr, task_ptr> lock(const std::string &lock_id,
+    std::pair<task_ptr, task_ptr> lock(const std::string &lock_id,
                                                const std::string &myself_id,
                                                task_code lock_cb_code,
                                                const lock_callback &lock_cb,
@@ -63,23 +63,23 @@ public:
                                                const lock_callback &lease_expire_callback,
                                                const lock_options &opt) override;
 
-    virtual task_ptr cancel_pending_lock(const std::string &lock_id,
+    task_ptr cancel_pending_lock(const std::string &lock_id,
                                          const std::string &myself_id,
                                          task_code cb_code,
                                          const lock_callback &cb) override;
 
-    virtual task_ptr unlock(const std::string &lock_id,
+    task_ptr unlock(const std::string &lock_id,
                             const std::string &myself_id,
                             bool destroy,
                             task_code cb_code,
                             const err_callback &cb) override;
 
-    virtual task_ptr
+    task_ptr
     query_lock(const std::string &lock_id, task_code cb_code, const lock_callback &cb) override;
 
-    virtual error_code query_cache(const std::string &lock_id,
+    error_code query_cache(const std::string &lock_id,
                                    /*out*/ std::string &owner,
-                                   /*out*/ uint64_t &version) override;
+                                   /*out*/ uint64_t &version) const override;
 
 private:
     void random_lock_lease_expire(const std::string &lock_id);
@@ -102,7 +102,7 @@ private:
 
     typedef std::unordered_map<std::string, lock_info> locks;
 
-    zlock _lock;
+    mutable zlock _lock;
     locks _dlocks; // lock -> owner
 
     dsn::task_tracker _tracker;

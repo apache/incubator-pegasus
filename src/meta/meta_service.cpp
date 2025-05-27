@@ -571,13 +571,18 @@ void meta_service::register_rpc_handlers()
                                          &meta_service::on_set_atomic_idempotent);
 }
 
-meta_leader_state meta_service::check_leader(dsn::message_ex *req, dsn::host_port *forward_address)
+meta_leader_state meta_service::check_leader(dsn::message_ex *req, dsn::host_port *forward_address) const
 {
     host_port leader;
-    if (!_failure_detector->get_leader(&leader)) {
+    if (_failure_detector->get_leader(&leader)) {
+    return meta_leader_state::kIsLeader;
+    }
+
         if (!req->header->context.u.is_forward_supported) {
-            if (forward_address != nullptr)
+            if (forward_address != nullptr) {
                 *forward_address = leader;
+            }
+
             return meta_leader_state::kNotLeaderAndCannotForwardRpc;
         }
 
@@ -585,13 +590,13 @@ meta_leader_state meta_service::check_leader(dsn::message_ex *req, dsn::host_por
         if (leader) {
             dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
             return meta_leader_state::kNotLeaderAndCanForwardRpc;
-        } else {
-            if (forward_address != nullptr)
+        } 
+
+            if (forward_address != nullptr) {
                 forward_address->reset();
+            }
+
             return meta_leader_state::kNotLeaderAndCannotForwardRpc;
-        }
-    }
-    return meta_leader_state::kIsLeader;
 }
 
 // table operations
@@ -673,9 +678,9 @@ void meta_service::on_recall_app(dsn::message_ex *req)
                      server_state::sStateHash);
 }
 
-void meta_service::on_list_apps(configuration_list_apps_rpc rpc)
+void meta_service::on_list_apps(configuration_list_apps_rpc rpc) const
 {
-    if (!check_leader_status(rpc)) {
+    if (!check_leader_status(rpc, nullptr)) {
         return;
     }
 
@@ -1121,11 +1126,12 @@ void meta_service::update_app_env(app_env_rpc env_rpc)
     }
 }
 
-void meta_service::ddd_diagnose(ddd_diagnose_rpc rpc)
+void meta_service::ddd_diagnose(ddd_diagnose_rpc rpc) const
 {
     CHECK_APP_ID_STATUS_AND_AUTHZ(rpc.request().pid.get_app_id());
+
     auto &response = rpc.response();
-    get_partition_guardian()->get_ddd_partitions(rpc.request().pid, response.partitions);
+    _partition_guardian->get_ddd_partitions(rpc.request().pid, response.partitions);
     response.err = ERR_OK;
 }
 

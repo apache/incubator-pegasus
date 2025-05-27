@@ -285,21 +285,18 @@ task_ptr distributed_lock_service_simple::query_lock(const std::string &lock_id,
 
 error_code distributed_lock_service_simple::query_cache(const std::string &lock_id,
                                                         /*out*/ std::string &owner,
-                                                        /*out*/ uint64_t &version)
+                                                        /*out*/ uint64_t &version) const 
 {
-    error_code err;
-    {
-        zauto_lock l(_lock);
-        auto it = _dlocks.find(lock_id);
-        if (it == _dlocks.end()) {
-            err = ERR_OBJECT_NOT_FOUND;
-        } else {
-            err = ERR_OK;
-            owner = it->second.owner;
-            version = it->second.version;
-        }
+    zauto_lock l(_lock);
+    const auto it = std::as_const(_dlocks).find(lock_id);
+    if (it == _dlocks.end()) {
+        return ERR_OBJECT_NOT_FOUND;
     }
-    return err;
+
+    owner = it->second.owner;
+    version = it->second.version;
+    return ERR_OK;
 }
+
 } // namespace dist
 } // namespace dsn

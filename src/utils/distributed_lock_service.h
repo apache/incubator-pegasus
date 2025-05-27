@@ -72,7 +72,7 @@ public:
         bool create_enable_cache;
     };
 
-    virtual ~distributed_lock_service() {}
+    virtual ~distributed_lock_service() = default;
     /*
      * initialization routine
      */
@@ -171,7 +171,7 @@ public:
      */
     virtual error_code query_cache(const std::string &lock_id,
                                    /*out*/ std::string &owner,
-                                   /*out*/ uint64_t &version) = 0;
+                                   /*out*/ uint64_t &version) const = 0;
 };
 } // namespace dist
 } // namespace dsn

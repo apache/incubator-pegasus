@@ -54,7 +54,7 @@ public:
     cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action);
     void reconfig(meta_view view, const configuration_update_request &request);
     void register_ctrl_commands();
-    void get_ddd_partitions(const gpid &pid, std::vector<ddd_partition_info> &partitions);
+    void get_ddd_partitions(const gpid &pid, std::vector<ddd_partition_info> &partitions) const;
     void clear_ddd_partitions()
     {
         zauto_lock l(_ddd_partitions_lock);

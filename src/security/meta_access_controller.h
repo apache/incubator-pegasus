@@ -44,6 +44,8 @@ public:
 private:
     void register_allowed_rpc_code_list(const std::vector<std::string> &rpc_list);
 
+    bool rpc_allowed(int rpc_code) const;
+
     std::unordered_set<int> _allowed_rpc_code_list;
 
     std::shared_ptr<ranger::ranger_resource_policy_manager> _ranger_resource_policy_manager;

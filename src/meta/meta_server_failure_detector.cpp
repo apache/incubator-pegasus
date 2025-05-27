@@ -105,7 +105,7 @@ void meta_server_failure_detector::on_worker_connected(const host_port &node)
     _svc->set_node_state({node}, true);
 }
 
-bool meta_server_failure_detector::get_leader(host_port *leader)
+bool meta_server_failure_detector::get_leader(host_port *leader) const
 {
     FAIL_POINT_INJECT_F("meta_server_failure_detector_get_leader", [leader](std::string_view str) {
         /// the format of str is : true#{ip}:{port} or false#{ip}:{port}
@@ -141,7 +141,7 @@ bool meta_server_failure_detector::get_leader(host_port *leader)
 
     std::string lock_owner;
     uint64_t version;
-    error_code err = _lock_svc->query_cache(_primary_lock_id, lock_owner, version);
+    const auto err = _lock_svc->query_cache(_primary_lock_id, lock_owner, version);
     if (err != dsn::ERR_OK) {
         LOG_WARNING("query leader from cache got error({})", err);
         leader->reset();

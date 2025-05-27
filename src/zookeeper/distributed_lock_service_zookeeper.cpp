@@ -230,17 +230,18 @@ task_ptr distributed_lock_service_zookeeper::query_lock(const std::string &lock_
 
 error_code distributed_lock_service_zookeeper::query_cache(const std::string &lock_id,
                                                            /*out*/ std::string &owner,
-                                                           /*out*/ uint64_t &version)
+                                                           /*out*/ uint64_t &version) const
 {
     utils::auto_read_lock l(_service_lock);
-    auto iter = _lock_cache.find(lock_id);
-    if (_lock_cache.end() == iter)
+
+    const auto iter = std::as_const(_lock_cache).find(lock_id);
+    if (iter == _lock_cache.end()) {
         return ERR_OBJECT_NOT_FOUND;
-    else {
-        owner = iter->second.first;
-        version = iter->second.second;
-        return ERR_OK;
     }
+
+    owner = iter->second.first;
+    version = iter->second.second;
+    return ERR_OK;
 }
 
 void distributed_lock_service_zookeeper::refresh_lock_cache(const std::string &lock_id,
