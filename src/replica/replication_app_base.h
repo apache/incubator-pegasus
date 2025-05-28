@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "bulk_load_types.h"
 #include "common/json_helper.h"
@@ -254,19 +255,20 @@ public:
     // not idempotent. This function is used to translate them into requests like single put
     // which is naturally idempotent.
     //
-    // For the other requests which must be idempotent such as single put/remove or non-batch
-    // writes, this function would do nothing.
+    // For the other requests such as single put/remove or non-batch writes all of which must be
+    // idempotent, this function would do nothing.
     //
     // Parameters:
     // - request: the original request received from a client.
-    // - new_request: as the output parameter pointing to the resulting idempotent request if the
+    // - new_requests: the output parameter, holding the resulting idempotent requests if the
     // original request is atomic, otherwise keeping unchanged.
     //
     // Return:
     // - for an idempotent requess always return rocksdb::Status::kOk .
     // - for an atomic request, return rocksdb::Status::kOk if succeed in making it idempotent;
     // otherwise, return error code (rocksdb::Status::Code).
-    virtual int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) = 0;
+    virtual int make_idempotent(dsn::message_ex *request,
+                                std::vector<dsn::message_ex *> &new_requests) = 0;
 
     // Apply batched write requests from a mutation. This is a virtual function, and base class
     // provide a naive implementation that just call on_request for each request. Storage engine
@@ -276,7 +278,7 @@ public:
     //  - decree: the decree of the mutation which these requests are batched into.
     //  - timestamp: an incremental timestamp generated for this batch of requests.
     //  - requests: the requests to be applied.
-    //  - request_length: the number of the requests.
+    //  - count: the number of the requests.
     //  - original_request: the original request received from the client. Must be an atomic
     //  request (i.e. incr, check_and_set and check_and_mutate) if non-null, and another
     //  parameter `requests` must hold the idempotent request translated from it. Used to
@@ -287,7 +289,7 @@ public:
     virtual int on_batched_write_requests(int64_t decree,
                                           uint64_t timestamp,
                                           message_ex **requests,
-                                          int request_length,
+                                          uint32_t count,
                                           message_ex *original_request);
 
     // Query compact state.

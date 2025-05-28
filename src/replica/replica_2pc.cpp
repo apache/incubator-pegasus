@@ -148,20 +148,20 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     if (dsn_unlikely(request->rpc_code() == TASK_CODE_INVALID)) {
-        LOG_ERROR("recv message with invalid RPC code {} from {}, trace_id = {}",
-                  request->rpc_code(),
-                  request->header->from_address,
-                  request->header->trace_id);
+        LOG_ERROR_PREFIX("recv message with invalid RPC code {} from {}, trace_id = {}",
+                         request->rpc_code(),
+                         request->header->from_address,
+                         request->header->trace_id);
         response_client_write(request, ERR_INVALID_PARAMETERS);
         return;
     }
 
     const auto *spec = task_spec::get(request->rpc_code());
     if (dsn_unlikely(spec == nullptr)) {
-        LOG_ERROR("recv message with unhandled RPC code {} from {}, trace_id = {}",
-                  request->rpc_code(),
-                  request->header->from_address,
-                  request->header->trace_id);
+        LOG_ERROR_PREFIX("recv message with unhandled RPC code {} from {}, trace_id = {}",
+                         request->rpc_code(),
+                         request->header->from_address,
+                         request->header->trace_id);
         response_client_write(request, ERR_HANDLER_NOT_FOUND);
         return;
     }
@@ -239,10 +239,14 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 bool replica::need_reject_non_idempotent(const task_spec *spec) const
 {
     if (!is_duplication_master()) {
+        // This is not the dup master that needs to duplicate writes to followers, thus
+        // non-idempotent requests are accepted.
         return false;
     }
 
     if (_app_info.atomic_idempotent) {
+        // Since the table which this replica belongs to has been configured to make
+        // all atomic write requests idempotent, certainly they are accepted.
         return false;
     }
 
@@ -265,37 +269,46 @@ bool replica::need_make_idempotent(message_ex *request) const
     }
 
     if (!_app_info.atomic_idempotent) {
+        // The table which this replica belongs to is not configured to make all atomic
+        // write requests idempotent.
         return false;
     }
 
     const auto *spec = task_spec::get(request->rpc_code());
-    CHECK_NOTNULL(spec, "RPC code {} not found", request->rpc_code());
+    CHECK_NOTNULL_PREFIX_MSG(spec, "RPC code {} not found", request->rpc_code());
 
     return !spec->rpc_request_is_write_idempotent;
 }
 
 int replica::make_idempotent(mutation_ptr &mu)
 {
-    CHECK_TRUE(!mu->client_requests.empty());
+    CHECK_PREFIX_MSG(!mu->client_requests.empty(),
+                     "the mutation should include at least one request");
 
     message_ex *request = mu->client_requests.front();
     if (!need_make_idempotent(request)) {
         return rocksdb::Status::kOk;
     }
 
-    // The original atomic write request must not be batched.
-    CHECK_EQ(mu->client_requests.size(), 1);
+    CHECK_EQ_PREFIX_MSG(
+        mu->client_requests.size(), 1, "the original atomic write request must not be batched");
 
-    dsn::message_ex *new_request = nullptr;
-    const int err = _app->make_idempotent(request, &new_request);
-    if (dsn_unlikely(err != rocksdb::Status::kOk)) {
+    std::vector<dsn::message_ex *> new_requests;
+    const int err = _app->make_idempotent(request, new_requests);
+
+    // When the condition checks of `check_and_set` and `check_and_mutate` fail, make_idempotent()
+    // would return rocksdb::Status::kTryAgain. Therefore, there is still a certain probability
+    // that a status code other than rocksdb::Status::kOk is returned.
+    if (err != rocksdb::Status::kOk) {
         // Once some error occurred, the response with error must have been returned to the
         // client during _app->make_idempotent(). Thus do nothing here.
         return err;
     }
 
-    CHECK_NOTNULL(new_request,
-                  "new_request should not be null since its original write request must be atomic");
+    CHECK_PREFIX_MSG(
+        !new_requests.empty(),
+        "new_requests should not be empty since its original write request must be atomic "
+        "and translated into at least one idempotent request");
 
     // During make_idempotent(), the request has been deserialized (i.e. unmarshall() in the
     // constructor of `rpc_holder::internal`). Once deserialize it again, assertion would fail for
@@ -304,13 +317,15 @@ int replica::make_idempotent(mutation_ptr &mu)
     // To make it deserializable again to be applied into RocksDB, restore read for it.
     request->restore_read();
 
-    // The decree must have not been assigned.
-    CHECK_EQ(mu->get_decree(), invalid_decree);
+    CHECK_EQ_PREFIX_MSG(mu->get_decree(), invalid_decree, "the decree must have not been assigned");
 
-    // Create a new mutation to hold the new idempotent request. The old mutation holding the
+    // Create a new mutation to hold the new idempotent requests. The old mutation holding the
     // original atomic write request will be released automatically.
     mu = new_mutation(invalid_decree, request);
-    mu->add_client_request(new_request);
+    for (dsn::message_ex *new_request : new_requests) {
+        mu->add_client_request(new_request);
+    }
+
     return rocksdb::Status::kOk;
 }
 
