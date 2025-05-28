@@ -56,30 +56,30 @@ public:
     error_code finalize() override { return ERR_OK; }
 
     std::pair<task_ptr, task_ptr> lock(const std::string &lock_id,
-                                               const std::string &myself_id,
-                                               task_code lock_cb_code,
-                                               const lock_callback &lock_cb,
-                                               task_code lease_expire_code,
-                                               const lock_callback &lease_expire_callback,
-                                               const lock_options &opt) override;
+                                       const std::string &myself_id,
+                                       task_code lock_cb_code,
+                                       const lock_callback &lock_cb,
+                                       task_code lease_expire_code,
+                                       const lock_callback &lease_expire_callback,
+                                       const lock_options &opt) override;
 
     task_ptr cancel_pending_lock(const std::string &lock_id,
-                                         const std::string &myself_id,
-                                         task_code cb_code,
-                                         const lock_callback &cb) override;
+                                 const std::string &myself_id,
+                                 task_code cb_code,
+                                 const lock_callback &cb) override;
 
     task_ptr unlock(const std::string &lock_id,
-                            const std::string &myself_id,
-                            bool destroy,
-                            task_code cb_code,
-                            const err_callback &cb) override;
+                    const std::string &myself_id,
+                    bool destroy,
+                    task_code cb_code,
+                    const err_callback &cb) override;
 
     task_ptr
     query_lock(const std::string &lock_id, task_code cb_code, const lock_callback &cb) override;
 
     error_code query_cache(const std::string &lock_id,
-                                   /*out*/ std::string &owner,
-                                   /*out*/ uint64_t &version) const override;
+                           /*out*/ std::string &owner,
+                           /*out*/ uint64_t &version) const override;
 
 private:
     void random_lock_lease_expire(const std::string &lock_id);

@@ -406,27 +406,27 @@ meta_leader_state meta_service::check_leader(TRpcHolder rpc, host_port *forward_
 {
     host_port leader;
     if (_failure_detector->get_leader(&leader)) {
-    return meta_leader_state::kIsLeader;
+        return meta_leader_state::kIsLeader;
     }
 
-        if (!rpc.dsn_request()->header->context.u.is_forward_supported) {
-            if (forward_address != nullptr) {
-                *forward_address = leader;
-            }
-
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
+    if (!rpc.dsn_request()->header->context.u.is_forward_supported) {
+        if (forward_address != nullptr) {
+            *forward_address = leader;
         }
 
-        if (leader) {
-            rpc.forward(dsn::dns_resolver::instance().resolve_address(leader));
-            return meta_leader_state::kNotLeaderAndCanForwardRpc;
-        } 
+        return meta_leader_state::kNotLeaderAndCannotForwardRpc;
+    }
 
-            if (forward_address != nullptr) {
-                forward_address->reset();
-            }
+    if (leader) {
+        rpc.forward(dsn::dns_resolver::instance().resolve_address(leader));
+        return meta_leader_state::kNotLeaderAndCanForwardRpc;
+    }
 
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
+    if (forward_address != nullptr) {
+        forward_address->reset();
+    }
+
+    return meta_leader_state::kNotLeaderAndCannotForwardRpc;
 }
 
 template <typename TRpcHolder>

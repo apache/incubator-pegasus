@@ -795,7 +795,7 @@ void partition_guardian::get_ddd_partitions(const gpid &pid,
 
         return;
     }
-    
+
     if (pid.get_partition_index() == -1) {
         for (const auto &ddd_partition : _ddd_partitions) {
             if (ddd_partition.first.get_app_id() == pid.get_app_id()) {
@@ -804,12 +804,12 @@ void partition_guardian::get_ddd_partitions(const gpid &pid,
         }
 
         return;
-    } 
+    }
 
-        const auto ddd_partition = std::as_const(_ddd_partitions).find(pid);
-        if (ddd_partition != _ddd_partitions.end()) {
-            partitions.push_back(ddd_partition->second);
-        }
+    const auto ddd_partition = std::as_const(_ddd_partitions).find(pid);
+    if (ddd_partition != _ddd_partitions.end()) {
+        partitions.push_back(ddd_partition->second);
+    }
 }
 
 } // namespace replication

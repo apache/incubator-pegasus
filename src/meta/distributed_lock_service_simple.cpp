@@ -285,7 +285,7 @@ task_ptr distributed_lock_service_simple::query_lock(const std::string &lock_id,
 
 error_code distributed_lock_service_simple::query_cache(const std::string &lock_id,
                                                         /*out*/ std::string &owner,
-                                                        /*out*/ uint64_t &version) const 
+                                                        /*out*/ uint64_t &version) const
 {
     zauto_lock l(_lock);
     const auto it = std::as_const(_dlocks).find(lock_id);

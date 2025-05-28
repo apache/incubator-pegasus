@@ -571,32 +571,33 @@ void meta_service::register_rpc_handlers()
                                          &meta_service::on_set_atomic_idempotent);
 }
 
-meta_leader_state meta_service::check_leader(dsn::message_ex *req, dsn::host_port *forward_address) const
+meta_leader_state meta_service::check_leader(dsn::message_ex *req,
+                                             dsn::host_port *forward_address) const
 {
     host_port leader;
     if (_failure_detector->get_leader(&leader)) {
-    return meta_leader_state::kIsLeader;
+        return meta_leader_state::kIsLeader;
     }
 
-        if (!req->header->context.u.is_forward_supported) {
-            if (forward_address != nullptr) {
-                *forward_address = leader;
-            }
-
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
+    if (!req->header->context.u.is_forward_supported) {
+        if (forward_address != nullptr) {
+            *forward_address = leader;
         }
 
-        LOG_DEBUG("leader address: {}", leader);
-        if (leader) {
-            dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
-            return meta_leader_state::kNotLeaderAndCanForwardRpc;
-        } 
+        return meta_leader_state::kNotLeaderAndCannotForwardRpc;
+    }
 
-            if (forward_address != nullptr) {
-                forward_address->reset();
-            }
+    LOG_DEBUG("leader address: {}", leader);
+    if (leader) {
+        dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
+        return meta_leader_state::kNotLeaderAndCanForwardRpc;
+    }
 
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
+    if (forward_address != nullptr) {
+        forward_address->reset();
+    }
+
+    return meta_leader_state::kNotLeaderAndCannotForwardRpc;
 }
 
 // table operations

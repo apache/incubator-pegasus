@@ -110,6 +110,8 @@ public:
     explicit serverlet(const char *nm);
     virtual ~serverlet() = default;
 
+    const std::string &name() const { return _name; }
+
 protected:
     template <typename TRequest>
     bool register_rpc_handler(task_code rpc_code,
@@ -126,6 +128,11 @@ protected:
                                               const char *extra_name,
                                               void (T::*handler)(TRpcHolder));
 
+    template <typename TRpcHolder>
+    bool register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
+                                              const char *extra_name,
+                                              void (T::*handler)(TRpcHolder) const);
+
     template <typename TRequest, typename TResponse>
     bool register_async_rpc_handler(task_code rpc_code,
                                     const char *extra_name,
@@ -139,9 +146,6 @@ protected:
 
     template <typename TResponse>
     void reply(dsn::message_ex *request, const TResponse &resp);
-
-public:
-    const std::string &name() const { return _name; }
 
 private:
     std::string _name;
@@ -192,8 +196,21 @@ inline bool serverlet<T>::register_rpc_handler_with_rpc_holder(dsn::task_code rp
                                                                const char *extra_name,
                                                                void (T::*handler)(TRpcHolder))
 {
-    rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
+    const rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
         (((T *)this)->*(handler))(TRpcHolder::auto_reply(request));
+    };
+
+    return dsn_rpc_register_handler(rpc_code, extra_name, cb);
+}
+
+template <typename T>
+template <typename TRpcHolder>
+inline bool serverlet<T>::register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
+                                                               const char *extra_name,
+                                                               void (T::*handler)(TRpcHolder) const)
+{
+    const rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
+        (((const T *)this)->*(handler))(TRpcHolder::auto_reply(request));
     };
 
     return dsn_rpc_register_handler(rpc_code, extra_name, cb);
