@@ -68,10 +68,13 @@ func newMetaCall(lead int, metas []*metaSession, callFunc metaCallFunc, meatIPAd
 func (c *metaCall) Run(ctx context.Context) (metaResponse, error) {
 	// the subroutines will be cancelled when this call ends
 	subCtx, cancel := context.WithCancel(ctx)
-	wg := &sync.WaitGroup{}
+
+	var wg sync.WaitGroup
 	wg.Add(2) // this waitgroup is used to ensure all goroutines exit after Run ends.
 
 	go func() {
+		defer wg.Done()
+
 		// issue RPC to leader
 		if !c.issueSingleMeta(subCtx, c.lead) {
 			select {
@@ -81,10 +84,11 @@ func (c *metaCall) Run(ctx context.Context) (metaResponse, error) {
 				// RPC to the backup.
 			}
 		}
-		wg.Done()
 	}()
 
 	go func() {
+		defer wg.Done()
+
 		// Automatically issue backup RPC after a period
 		// when the current leader is suspected unvailable.
 		select {
@@ -94,7 +98,6 @@ func (c *metaCall) Run(ctx context.Context) (metaResponse, error) {
 			c.issueBackupMetas(subCtx)
 		case <-subCtx.Done():
 		}
-		wg.Done()
 	}()
 
 	// The result of meta query is always a context error, or success.
@@ -112,14 +115,17 @@ func (c *metaCall) Run(ctx context.Context) (metaResponse, error) {
 
 // issueSingleMeta returns false if we should try another meta
 func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
+	c.lock.RLock()
 	meta := c.metas[curLeader]
-	resp, err := c.callFunc(ctx, meta)
+	c.lock.RUnlock()
 
+	resp, err := c.callFunc(ctx, meta)
 	if err == nil && resp.GetErr().Errno == base.ERR_FORWARD_TO_OTHERS.String() {
-		forwardAddr := c.getMetaServiceForwardAddress(resp)
+		forwardAddr := getMetaServiceForwardAddress(resp)
 		if forwardAddr == nil {
 			return false
 		}
+
 		addr := forwardAddr.GetAddress()
 		found := false
 		c.lock.Lock()
@@ -130,6 +136,7 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 			}
 		}
 		c.lock.Unlock()
+
 		if !found {
 			c.lock.Lock()
 			c.metaIPAddrs = append(c.metaIPAddrs, addr)
@@ -137,16 +144,19 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 				NodeSession: newNodeSession(addr, NodeTypeMeta),
 				logger:      pegalog.GetLogger(),
 			})
-			c.lock.Unlock()
 			curLeader = len(c.metas) - 1
-			c.metas[curLeader].logger.Printf("add forward address %s as meta server", addr)
-			resp, err = c.callFunc(ctx, c.metas[curLeader])
+			meta = c.metas[curLeader]
+			meta.logger.Printf("add forward address %s as meta server", addr)
+			c.lock.Unlock()
+
+			resp, err = c.callFunc(ctx, meta)
 		}
 	}
 
 	if err != nil || resp.GetErr().Errno == base.ERR_FORWARD_TO_OTHERS.String() {
 		return false
 	}
+
 	// the RPC succeeds, this meta becomes the new leader now.
 	atomic.StoreUint32(&c.newLead, uint32(curLeader))
 	select {
@@ -158,24 +168,43 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 }
 
 func (c *metaCall) issueBackupMetas(ctx context.Context) {
-	for i := range c.metas {
-		if i == c.lead {
+	// In issueSingleMeta() function, c.metas might be modified, so here we first copy
+	// the contents of c.metas to another slice as a snapshot for range iteration.
+	c.lock.RLock()
+	metas := append([]*metaSession(nil), c.metas...)
+	lead := c.lead
+	c.lock.RUnlock()
+
+	var wg sync.WaitGroup
+	for i := range metas {
+		if i == lead {
 			continue
 		}
-		// concurrently issue RPC to the rest of meta servers.
+
+		wg.Add(1)
+
+		// Send RPCs concurrently to all backup meta servers.
 		go func(idx int) {
+			defer wg.Done()
 			c.issueSingleMeta(ctx, idx)
 		}(i)
 	}
+
+	wg.Wait()
 }
 
-func (c *metaCall) getMetaServiceForwardAddress(resp metaResponse) *base.RPCAddress {
-	rep, ok := resp.(*replication.QueryCfgResponse)
-	if !ok || rep.GetErr().Errno != base.ERR_FORWARD_TO_OTHERS.String() {
+func getMetaServiceForwardAddress(resp metaResponse) *base.RPCAddress {
+	queryCfgResp, ok := resp.(*replication.QueryCfgResponse)
+	if !ok || queryCfgResp.GetErr().Errno != base.ERR_FORWARD_TO_OTHERS.String() {
 		return nil
-	} else if rep.GetPartitions() == nil || len(rep.GetPartitions()) == 0 {
-		return nil
-	} else {
-		return rep.Partitions[0].Primary
 	}
+
+	if queryCfgResp.GetPartitions() == nil || len(queryCfgResp.GetPartitions()) == 0 {
+		return nil
+	}
+
+	// The forward address will be put in partitions[0].primary if exist.
+	// See query_cfg_response's definition in idl/dsn.layer2.thrift and
+	// meta_service::on_query_configuration_by_index().
+	return queryCfgResp.Partitions[0].Primary
 }

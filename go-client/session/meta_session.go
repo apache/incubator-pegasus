@@ -93,13 +93,14 @@ func NewMetaManager(addrs []string, creator NodeSessionCreator) *MetaManager {
 }
 
 func (m *MetaManager) call(ctx context.Context, callFunc metaCallFunc) (metaResponse, error) {
-	lead := m.getCurrentLeader()
-	call := newMetaCall(lead, m.metas, callFunc, m.metaIPAddrs)
+	call := newMetaCall(m.getCurrentLeader(), m.metas, callFunc, m.metaIPAddrs)
 	resp, err := call.Run(ctx)
 	if err == nil {
+		call.lock.RLock()
 		m.setCurrentLeader(int(call.newLead))
 		m.setNewMetas(call.metas)
 		m.setMetaIPAddrs(call.metaIPAddrs)
+		call.lock.RUnlock()
 	}
 	return resp, err
 }
