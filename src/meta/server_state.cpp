@@ -2053,18 +2053,9 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     SET_OBJ_IP_AND_HOST_PORT(request, node, pc, primary);
 
     request.config = pc;
-    for (const auto &secondary : pc.hp_secondaries) {
-        maintain_drops(request.config.hp_last_drops, secondary, request.type);
-    }
-    for (const auto &secondary : pc.secondaries) {
-        maintain_drops(request.config.last_drops, secondary, request.type);
-    }
-    if (pc.hp_primary) {
-        maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);
-    }
-    if (pc.primary) {
-        maintain_drops(request.config.last_drops, pc.primary, request.type);
-    }
+    maintain_drops(request, true);
+    maintain_drops(request, false);
+
     RESET_IP_AND_HOST_PORT(request.config, primary);
     CLEAR_IP_AND_HOST_PORT(request.config, secondaries);
 
@@ -2125,8 +2116,7 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
     SET_OBJ_IP_AND_HOST_PORT(request, node, pc, primary);
     request.config.ballot++;
     RESET_IP_AND_HOST_PORT(request.config, primary);
-    maintain_drops(request.config.hp_last_drops, pc.hp_primary, request.type);
-    maintain_drops(request.config.last_drops, pc.primary, request.type);
+    maintain_drops(request, false);
 
     cc.stage = config_status::pending_remote_sync;
     cc.pending_sync_request = req;
@@ -2263,8 +2253,7 @@ void server_state::on_update_configuration(
         msg->release_ref();
         return;
     } else {
-        maintain_drops(cfg_request->config.hp_last_drops, cfg_request->hp_node, cfg_request->type);
-        maintain_drops(cfg_request->config.last_drops, cfg_request->node, cfg_request->type);
+        maintain_drops(*cfg_request, false);
     }
 
     if (response.err != ERR_IO_PENDING) {
