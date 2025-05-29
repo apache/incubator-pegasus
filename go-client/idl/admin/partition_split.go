@@ -89,8 +89,8 @@ func (p *SplitControlType) Value() (driver.Value, error) {
 }
 
 // Attributes:
-//   - AppName
-//   - NewPartitionCount_
+//  - AppName
+//  - NewPartitionCount_
 type StartPartitionSplitRequest struct {
 	AppName            string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	NewPartitionCount_ int32  `thrift:"new_partition_count,2" db:"new_partition_count" json:"new_partition_count"`
@@ -229,8 +229,8 @@ func (p *StartPartitionSplitRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMsg
+//  - Err
+//  - HintMsg
 type StartPartitionSplitResponse struct {
 	Err     *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMsg string          `thrift:"hint_msg,2" db:"hint_msg" json:"hint_msg"`
@@ -377,10 +377,10 @@ func (p *StartPartitionSplitResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - ControlType
-//   - ParentPidx
-//   - OldPartitionCount
+//  - AppName
+//  - ControlType
+//  - ParentPidx
+//  - OldPartitionCount
 type ControlSplitRequest struct {
 	AppName           string           `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	ControlType       SplitControlType `thrift:"control_type,2" db:"control_type" json:"control_type"`
@@ -611,8 +611,8 @@ func (p *ControlSplitRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMsg
+//  - Err
+//  - HintMsg
 type ControlSplitResponse struct {
 	Err     *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMsg *string         `thrift:"hint_msg,2" db:"hint_msg" json:"hint_msg,omitempty"`
@@ -770,7 +770,7 @@ func (p *ControlSplitResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
+//  - AppName
 type QuerySplitRequest struct {
 	AppName string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 }
@@ -869,10 +869,10 @@ func (p *QuerySplitRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - NewPartitionCount_
-//   - Status
-//   - HintMsg
+//  - Err
+//  - NewPartitionCount_
+//  - Status
+//  - HintMsg
 type QuerySplitResponse struct {
 	Err                *base.ErrorCode       `thrift:"err,1" db:"err" json:"err"`
 	NewPartitionCount_ int32                 `thrift:"new_partition_count,2" db:"new_partition_count" json:"new_partition_count"`
@@ -1141,11 +1141,11 @@ func (p *QuerySplitResponse) String() string {
 }
 
 // Attributes:
-//   - ParentGpid
-//   - ChildGpid
-//   - ChildBallot
-//   - Child
-//   - HpChild
+//  - ParentGpid
+//  - ChildGpid
+//  - ChildBallot
+//  - Child
+//  - HpChild
 type NotifyCatchUpRequest struct {
 	ParentGpid  *base.Gpid       `thrift:"parent_gpid,1" db:"parent_gpid" json:"parent_gpid"`
 	ChildGpid   *base.Gpid       `thrift:"child_gpid,2" db:"child_gpid" json:"child_gpid"`
@@ -1438,7 +1438,7 @@ func (p *NotifyCatchUpRequest) String() string {
 }
 
 // Attributes:
-//   - Err
+//  - Err
 type NotifyCacthUpResponse struct {
 	Err *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 }
@@ -1545,11 +1545,11 @@ func (p *NotifyCacthUpResponse) String() string {
 }
 
 // Attributes:
-//   - Target
-//   - NewPartitionCount_
-//   - ChildPid
-//   - Ballot
-//   - HpTarget
+//  - Target
+//  - NewPartitionCount_
+//  - ChildPid
+//  - Ballot
+//  - HpTarget
 type UpdateChildGroupPartitionCountRequest struct {
 	Target             *base.RPCAddress `thrift:"target,1" db:"target" json:"target"`
 	NewPartitionCount_ int32            `thrift:"new_partition_count,2" db:"new_partition_count" json:"new_partition_count"`
@@ -1834,7 +1834,7 @@ func (p *UpdateChildGroupPartitionCountRequest) String() string {
 }
 
 // Attributes:
-//   - Err
+//  - Err
 type UpdateChildGroupPartitionCountResponse struct {
 	Err *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 }
@@ -1941,11 +1941,11 @@ func (p *UpdateChildGroupPartitionCountResponse) String() string {
 }
 
 // Attributes:
-//   - App
-//   - ParentConfig
-//   - ChildConfig
-//   - Primary
-//   - HpPrimary
+//  - App
+//  - ParentConfig
+//  - ChildConfig
+//  - Primary
+//  - HpPrimary
 type RegisterChildRequest struct {
 	App          *replication.AppInfo                `thrift:"app,1" db:"app" json:"app"`
 	ParentConfig *replication.PartitionConfiguration `thrift:"parent_config,2" db:"parent_config" json:"parent_config"`
@@ -2250,10 +2250,10 @@ func (p *RegisterChildRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - App
-//   - ParentConfig
-//   - ChildConfig
+//  - Err
+//  - App
+//  - ParentConfig
+//  - ChildConfig
 type RegisterChildResponse struct {
 	Err          *base.ErrorCode                     `thrift:"err,1" db:"err" json:"err"`
 	App          *replication.AppInfo                `thrift:"app,2" db:"app" json:"app"`
@@ -2508,10 +2508,10 @@ func (p *RegisterChildResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - ParentGpid
-//   - MetaSplitStatus
-//   - PartitionCount
+//  - AppName
+//  - ParentGpid
+//  - MetaSplitStatus
+//  - PartitionCount
 type NotifyStopSplitRequest struct {
 	AppName         string      `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	ParentGpid      *base.Gpid  `thrift:"parent_gpid,2" db:"parent_gpid" json:"parent_gpid"`
@@ -2739,7 +2739,7 @@ func (p *NotifyStopSplitRequest) String() string {
 }
 
 // Attributes:
-//   - Err
+//  - Err
 type NotifyStopSplitResponse struct {
 	Err *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 }
@@ -2846,9 +2846,9 @@ func (p *NotifyStopSplitResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - Pid
-//   - PartitionCount
+//  - AppName
+//  - Pid
+//  - PartitionCount
 type QueryChildStateRequest struct {
 	AppName        string     `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	Pid            *base.Gpid `thrift:"pid,2" db:"pid" json:"pid"`
@@ -3035,9 +3035,9 @@ func (p *QueryChildStateRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - PartitionCount
-//   - ChildConfig
+//  - Err
+//  - PartitionCount
+//  - ChildConfig
 type QueryChildStateResponse struct {
 	Err            *base.ErrorCode                     `thrift:"err,1" db:"err" json:"err"`
 	PartitionCount *int32                              `thrift:"partition_count,2" db:"partition_count" json:"partition_count,omitempty"`

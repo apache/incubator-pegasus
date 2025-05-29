@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/idl/utils"
 	"github.com/apache/thrift/lib/go/thrift"
 	"reflect"
 )
@@ -24,6 +25,7 @@ var _ = bytes.Equal
 
 var _ = base.GoUnusedProtection__
 var _ = replication.GoUnusedProtection__
+var _ = utils.GoUnusedProtection__
 
 type ConfigType int64
 
@@ -406,13 +408,13 @@ func (p *BalancerRequestType) Value() (driver.Value, error) {
 }
 
 // Attributes:
-//   - Info
-//   - Config
-//   - Type
-//   - Node
-//   - HostNode
-//   - MetaSplitStatus
-//   - HpNode
+//  - Info
+//  - Config
+//  - Type
+//  - Node
+//  - HostNode
+//  - MetaSplitStatus
+//  - HpNode
 type ConfigurationUpdateRequest struct {
 	Info            *replication.AppInfo                `thrift:"info,1" db:"info" json:"info"`
 	Config          *replication.PartitionConfiguration `thrift:"config,2" db:"config" json:"config"`
@@ -812,8 +814,8 @@ func (p *ConfigurationUpdateRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Config
+//  - Err
+//  - Config
 type ConfigurationUpdateResponse struct {
 	Err    *base.ErrorCode                     `thrift:"err,1" db:"err" json:"err"`
 	Config *replication.PartitionConfiguration `thrift:"config,2" db:"config" json:"config"`
@@ -968,8 +970,8 @@ func (p *ConfigurationUpdateResponse) String() string {
 }
 
 // Attributes:
-//   - GeoTags
-//   - TotalCapacityMb
+//  - GeoTags
+//  - TotalCapacityMb
 type ReplicaServerInfo struct {
 	GeoTags         map[string]string `thrift:"geo_tags,1" db:"geo_tags" json:"geo_tags"`
 	TotalCapacityMb int64             `thrift:"total_capacity_mb,2" db:"total_capacity_mb" json:"total_capacity_mb"`
@@ -1138,10 +1140,10 @@ func (p *ReplicaServerInfo) String() string {
 }
 
 // Attributes:
-//   - Node
-//   - StoredReplicas
-//   - Info
-//   - HpNode
+//  - Node
+//  - StoredReplicas
+//  - Info
+//  - HpNode
 type ConfigurationQueryByNodeRequest struct {
 	Node           *base.RPCAddress   `thrift:"node,1" db:"node" json:"node"`
 	StoredReplicas []*ReplicaInfo     `thrift:"stored_replicas,2" db:"stored_replicas" json:"stored_replicas,omitempty"`
@@ -1415,9 +1417,9 @@ func (p *ConfigurationQueryByNodeRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Partitions
-//   - GcReplicas
+//  - Err
+//  - Partitions
+//  - GcReplicas
 type ConfigurationQueryByNodeResponse struct {
 	Err        *base.ErrorCode               `thrift:"err,1" db:"err" json:"err"`
 	Partitions []*ConfigurationUpdateRequest `thrift:"partitions,2" db:"partitions" json:"partitions"`
@@ -1652,10 +1654,10 @@ func (p *ConfigurationQueryByNodeResponse) String() string {
 }
 
 // Attributes:
-//   - RecoveryNodes
-//   - SkipBadNodes
-//   - SkipLostPartitions
-//   - HpRecoveryNodes
+//  - RecoveryNodes
+//  - SkipBadNodes
+//  - SkipLostPartitions
+//  - HpRecoveryNodes
 type ConfigurationRecoveryRequest struct {
 	RecoveryNodes      []*base.RPCAddress `thrift:"recovery_nodes,1" db:"recovery_nodes" json:"recovery_nodes"`
 	SkipBadNodes       bool               `thrift:"skip_bad_nodes,2" db:"skip_bad_nodes" json:"skip_bad_nodes"`
@@ -1920,8 +1922,8 @@ func (p *ConfigurationRecoveryRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMessage
+//  - Err
+//  - HintMessage
 type ConfigurationRecoveryResponse struct {
 	Err         *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMessage string          `thrift:"hint_message,2" db:"hint_message" json:"hint_message"`
@@ -2068,19 +2070,21 @@ func (p *ConfigurationRecoveryResponse) String() string {
 }
 
 // Attributes:
-//   - PartitionCount
-//   - ReplicaCount
-//   - SuccessIfExist
-//   - AppType
-//   - IsStateful
-//   - Envs
+//  - PartitionCount
+//  - ReplicaCount
+//  - SuccessIfExist
+//  - AppType
+//  - IsStateful
+//  - Envs
+//  - AtomicIdempotent
 type CreateAppOptions struct {
-	PartitionCount int32             `thrift:"partition_count,1" db:"partition_count" json:"partition_count"`
-	ReplicaCount   int32             `thrift:"replica_count,2" db:"replica_count" json:"replica_count"`
-	SuccessIfExist bool              `thrift:"success_if_exist,3" db:"success_if_exist" json:"success_if_exist"`
-	AppType        string            `thrift:"app_type,4" db:"app_type" json:"app_type"`
-	IsStateful     bool              `thrift:"is_stateful,5" db:"is_stateful" json:"is_stateful"`
-	Envs           map[string]string `thrift:"envs,6" db:"envs" json:"envs"`
+	PartitionCount   int32             `thrift:"partition_count,1" db:"partition_count" json:"partition_count"`
+	ReplicaCount     int32             `thrift:"replica_count,2" db:"replica_count" json:"replica_count"`
+	SuccessIfExist   bool              `thrift:"success_if_exist,3" db:"success_if_exist" json:"success_if_exist"`
+	AppType          string            `thrift:"app_type,4" db:"app_type" json:"app_type"`
+	IsStateful       bool              `thrift:"is_stateful,5" db:"is_stateful" json:"is_stateful"`
+	Envs             map[string]string `thrift:"envs,6" db:"envs" json:"envs"`
+	AtomicIdempotent bool              `thrift:"atomic_idempotent,7" db:"atomic_idempotent" json:"atomic_idempotent"`
 }
 
 func NewCreateAppOptions() *CreateAppOptions {
@@ -2110,6 +2114,16 @@ func (p *CreateAppOptions) GetIsStateful() bool {
 func (p *CreateAppOptions) GetEnvs() map[string]string {
 	return p.Envs
 }
+
+var CreateAppOptions_AtomicIdempotent_DEFAULT bool = false
+
+func (p *CreateAppOptions) GetAtomicIdempotent() bool {
+	return p.AtomicIdempotent
+}
+func (p *CreateAppOptions) IsSetAtomicIdempotent() bool {
+	return p.AtomicIdempotent != CreateAppOptions_AtomicIdempotent_DEFAULT
+}
+
 func (p *CreateAppOptions) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -2177,6 +2191,16 @@ func (p *CreateAppOptions) Read(iprot thrift.TProtocol) error {
 		case 6:
 			if fieldTypeId == thrift.MAP {
 				if err := p.ReadField6(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField7(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -2272,6 +2296,15 @@ func (p *CreateAppOptions) ReadField6(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *CreateAppOptions) ReadField7(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 7: ", err)
+	} else {
+		p.AtomicIdempotent = v
+	}
+	return nil
+}
+
 func (p *CreateAppOptions) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("create_app_options"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -2293,6 +2326,9 @@ func (p *CreateAppOptions) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField6(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField7(oprot); err != nil {
 			return err
 		}
 	}
@@ -2394,6 +2430,21 @@ func (p *CreateAppOptions) writeField6(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
+func (p *CreateAppOptions) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAtomicIdempotent() {
+		if err := oprot.WriteFieldBegin("atomic_idempotent", thrift.BOOL, 7); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:atomic_idempotent: ", p), err)
+		}
+		if err := oprot.WriteBool(bool(p.AtomicIdempotent)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.atomic_idempotent (7) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:atomic_idempotent: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *CreateAppOptions) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2402,8 +2453,8 @@ func (p *CreateAppOptions) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - Options
+//  - AppName
+//  - Options
 type ConfigurationCreateAppRequest struct {
 	AppName string            `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	Options *CreateAppOptions `thrift:"options,2" db:"options" json:"options"`
@@ -2550,8 +2601,8 @@ func (p *ConfigurationCreateAppRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Appid
+//  - Err
+//  - Appid
 type ConfigurationCreateAppResponse struct {
 	Err   *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	Appid int32           `thrift:"appid,2" db:"appid" json:"appid"`
@@ -2698,8 +2749,8 @@ func (p *ConfigurationCreateAppResponse) String() string {
 }
 
 // Attributes:
-//   - SuccessIfNotExist
-//   - ReserveSeconds
+//  - SuccessIfNotExist
+//  - ReserveSeconds
 type DropAppOptions struct {
 	SuccessIfNotExist bool   `thrift:"success_if_not_exist,1" db:"success_if_not_exist" json:"success_if_not_exist"`
 	ReserveSeconds    *int64 `thrift:"reserve_seconds,2" db:"reserve_seconds" json:"reserve_seconds,omitempty"`
@@ -2849,8 +2900,8 @@ func (p *DropAppOptions) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - Options
+//  - AppName
+//  - Options
 type ConfigurationDropAppRequest struct {
 	AppName string          `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	Options *DropAppOptions `thrift:"options,2" db:"options" json:"options"`
@@ -2997,7 +3048,7 @@ func (p *ConfigurationDropAppRequest) String() string {
 }
 
 // Attributes:
-//   - Err
+//  - Err
 type ConfigurationDropAppResponse struct {
 	Err *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 }
@@ -3104,8 +3155,8 @@ func (p *ConfigurationDropAppResponse) String() string {
 }
 
 // Attributes:
-//   - OldAppName
-//   - NewAppName_
+//  - OldAppName
+//  - NewAppName_
 type ConfigurationRenameAppRequest struct {
 	OldAppName  string `thrift:"old_app_name,1" db:"old_app_name" json:"old_app_name"`
 	NewAppName_ string `thrift:"new_app_name,2" db:"new_app_name" json:"new_app_name"`
@@ -3244,8 +3295,8 @@ func (p *ConfigurationRenameAppRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMessage
+//  - Err
+//  - HintMessage
 type ConfigurationRenameAppResponse struct {
 	Err         *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMessage string          `thrift:"hint_message,2" db:"hint_message" json:"hint_message"`
@@ -3392,8 +3443,8 @@ func (p *ConfigurationRenameAppResponse) String() string {
 }
 
 // Attributes:
-//   - AppID
-//   - NewAppName_
+//  - AppID
+//  - NewAppName_
 type ConfigurationRecallAppRequest struct {
 	AppID       int32  `thrift:"app_id,1" db:"app_id" json:"app_id"`
 	NewAppName_ string `thrift:"new_app_name,2" db:"new_app_name" json:"new_app_name"`
@@ -3532,8 +3583,8 @@ func (p *ConfigurationRecallAppRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Info
+//  - Err
+//  - Info
 type ConfigurationRecallAppResponse struct {
 	Err  *base.ErrorCode      `thrift:"err,1" db:"err" json:"err"`
 	Info *replication.AppInfo `thrift:"info,2" db:"info" json:"info"`
@@ -3692,9 +3743,13 @@ func (p *ConfigurationRecallAppResponse) String() string {
 }
 
 // Attributes:
-//   - Status
+//  - Status
+//  - AppNamePattern
+//  - MatchType
 type ConfigurationListAppsRequest struct {
-	Status replication.AppStatus `thrift:"status,1" db:"status" json:"status"`
+	Status         replication.AppStatus   `thrift:"status,1" db:"status" json:"status"`
+	AppNamePattern *string                 `thrift:"app_name_pattern,2" db:"app_name_pattern" json:"app_name_pattern,omitempty"`
+	MatchType      *utils.PatternMatchType `thrift:"match_type,3" db:"match_type" json:"match_type,omitempty"`
 }
 
 func NewConfigurationListAppsRequest() *ConfigurationListAppsRequest {
@@ -3706,6 +3761,32 @@ func NewConfigurationListAppsRequest() *ConfigurationListAppsRequest {
 func (p *ConfigurationListAppsRequest) GetStatus() replication.AppStatus {
 	return p.Status
 }
+
+var ConfigurationListAppsRequest_AppNamePattern_DEFAULT string
+
+func (p *ConfigurationListAppsRequest) GetAppNamePattern() string {
+	if !p.IsSetAppNamePattern() {
+		return ConfigurationListAppsRequest_AppNamePattern_DEFAULT
+	}
+	return *p.AppNamePattern
+}
+
+var ConfigurationListAppsRequest_MatchType_DEFAULT utils.PatternMatchType
+
+func (p *ConfigurationListAppsRequest) GetMatchType() utils.PatternMatchType {
+	if !p.IsSetMatchType() {
+		return ConfigurationListAppsRequest_MatchType_DEFAULT
+	}
+	return *p.MatchType
+}
+func (p *ConfigurationListAppsRequest) IsSetAppNamePattern() bool {
+	return p.AppNamePattern != nil
+}
+
+func (p *ConfigurationListAppsRequest) IsSetMatchType() bool {
+	return p.MatchType != nil
+}
+
 func (p *ConfigurationListAppsRequest) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -3723,6 +3804,26 @@ func (p *ConfigurationListAppsRequest) Read(iprot thrift.TProtocol) error {
 		case 1:
 			if fieldTypeId == thrift.I32 {
 				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField3(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -3755,12 +3856,37 @@ func (p *ConfigurationListAppsRequest) ReadField1(iprot thrift.TProtocol) error 
 	return nil
 }
 
+func (p *ConfigurationListAppsRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.AppNamePattern = &v
+	}
+	return nil
+}
+
+func (p *ConfigurationListAppsRequest) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		temp := utils.PatternMatchType(v)
+		p.MatchType = &temp
+	}
+	return nil
+}
+
 func (p *ConfigurationListAppsRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("configuration_list_apps_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if p != nil {
 		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
 			return err
 		}
 	}
@@ -3786,6 +3912,36 @@ func (p *ConfigurationListAppsRequest) writeField1(oprot thrift.TProtocol) (err 
 	return err
 }
 
+func (p *ConfigurationListAppsRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAppNamePattern() {
+		if err := oprot.WriteFieldBegin("app_name_pattern", thrift.STRING, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:app_name_pattern: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.AppNamePattern)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.app_name_pattern (2) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:app_name_pattern: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ConfigurationListAppsRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMatchType() {
+		if err := oprot.WriteFieldBegin("match_type", thrift.I32, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:match_type: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.MatchType)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.match_type (3) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:match_type: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *ConfigurationListAppsRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -3794,11 +3950,13 @@ func (p *ConfigurationListAppsRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Infos
+//  - Err
+//  - Infos
+//  - HintMessage
 type ConfigurationListAppsResponse struct {
-	Err   *base.ErrorCode        `thrift:"err,1" db:"err" json:"err"`
-	Infos []*replication.AppInfo `thrift:"infos,2" db:"infos" json:"infos"`
+	Err         *base.ErrorCode        `thrift:"err,1" db:"err" json:"err"`
+	Infos       []*replication.AppInfo `thrift:"infos,2" db:"infos" json:"infos"`
+	HintMessage *string                `thrift:"hint_message,3" db:"hint_message" json:"hint_message,omitempty"`
 }
 
 func NewConfigurationListAppsResponse() *ConfigurationListAppsResponse {
@@ -3817,8 +3975,21 @@ func (p *ConfigurationListAppsResponse) GetErr() *base.ErrorCode {
 func (p *ConfigurationListAppsResponse) GetInfos() []*replication.AppInfo {
 	return p.Infos
 }
+
+var ConfigurationListAppsResponse_HintMessage_DEFAULT string
+
+func (p *ConfigurationListAppsResponse) GetHintMessage() string {
+	if !p.IsSetHintMessage() {
+		return ConfigurationListAppsResponse_HintMessage_DEFAULT
+	}
+	return *p.HintMessage
+}
 func (p *ConfigurationListAppsResponse) IsSetErr() bool {
 	return p.Err != nil
+}
+
+func (p *ConfigurationListAppsResponse) IsSetHintMessage() bool {
+	return p.HintMessage != nil
 }
 
 func (p *ConfigurationListAppsResponse) Read(iprot thrift.TProtocol) error {
@@ -3848,6 +4019,16 @@ func (p *ConfigurationListAppsResponse) Read(iprot thrift.TProtocol) error {
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField3(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -3902,6 +4083,15 @@ func (p *ConfigurationListAppsResponse) ReadField2(iprot thrift.TProtocol) error
 	return nil
 }
 
+func (p *ConfigurationListAppsResponse) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.HintMessage = &v
+	}
+	return nil
+}
+
 func (p *ConfigurationListAppsResponse) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("configuration_list_apps_response"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -3911,6 +4101,9 @@ func (p *ConfigurationListAppsResponse) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
 			return err
 		}
 	}
@@ -3957,6 +4150,21 @@ func (p *ConfigurationListAppsResponse) writeField2(oprot thrift.TProtocol) (err
 	return err
 }
 
+func (p *ConfigurationListAppsResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHintMessage() {
+		if err := oprot.WriteFieldBegin("hint_message", thrift.STRING, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:hint_message: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.HintMessage)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.hint_message (3) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:hint_message: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *ConfigurationListAppsResponse) String() string {
 	if p == nil {
 		return "<nil>"
@@ -3965,8 +4173,8 @@ func (p *ConfigurationListAppsResponse) String() string {
 }
 
 // Attributes:
-//   - MetaServer
-//   - HpMetaServer
+//  - MetaServer
+//  - HpMetaServer
 type QueryAppInfoRequest struct {
 	MetaServer   *base.RPCAddress `thrift:"meta_server,1" db:"meta_server" json:"meta_server"`
 	HpMetaServer *base.HostPort   `thrift:"hp_meta_server,2" db:"hp_meta_server" json:"hp_meta_server,omitempty"`
@@ -4123,8 +4331,8 @@ func (p *QueryAppInfoRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Apps
+//  - Err
+//  - Apps
 type QueryAppInfoResponse struct {
 	Err  *base.ErrorCode        `thrift:"err,1" db:"err" json:"err"`
 	Apps []*replication.AppInfo `thrift:"apps,2" db:"apps" json:"apps"`
@@ -4294,11 +4502,11 @@ func (p *QueryAppInfoResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - Op
-//   - Keys
-//   - Values
-//   - ClearPrefix
+//  - AppName
+//  - Op
+//  - Keys
+//  - Values
+//  - ClearPrefix
 type ConfigurationUpdateAppEnvRequest struct {
 	AppName     string          `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	Op          AppEnvOperation `thrift:"op,2" db:"op" json:"op"`
@@ -4629,8 +4837,8 @@ func (p *ConfigurationUpdateAppEnvRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMessage
+//  - Err
+//  - HintMessage
 type ConfigurationUpdateAppEnvResponse struct {
 	Err         *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMessage string          `thrift:"hint_message,2" db:"hint_message" json:"hint_message"`
@@ -4777,11 +4985,11 @@ func (p *ConfigurationUpdateAppEnvResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - TriggerTime
-//   - TargetLevel
-//   - Bottommost
-//   - MaxRunningCount
+//  - AppName
+//  - TriggerTime
+//  - TargetLevel
+//  - Bottommost
+//  - MaxRunningCount
 type StartAppManualCompactRequest struct {
 	AppName         string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	TriggerTime     *int64 `thrift:"trigger_time,2" db:"trigger_time" json:"trigger_time,omitempty"`
@@ -5084,8 +5292,8 @@ func (p *StartAppManualCompactRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMsg
+//  - Err
+//  - HintMsg
 type StartAppManualCompactResponse struct {
 	Err     *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMsg string          `thrift:"hint_msg,2" db:"hint_msg" json:"hint_msg"`
@@ -5232,7 +5440,7 @@ func (p *StartAppManualCompactResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
+//  - AppName
 type QueryAppManualCompactRequest struct {
 	AppName string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 }
@@ -5331,9 +5539,9 @@ func (p *QueryAppManualCompactRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - HintMsg
-//   - Progress
+//  - Err
+//  - HintMsg
+//  - Progress
 type QueryAppManualCompactResponse struct {
 	Err      *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	HintMsg  string          `thrift:"hint_msg,2" db:"hint_msg" json:"hint_msg"`
@@ -5531,9 +5739,9 @@ func (p *QueryAppManualCompactResponse) String() string {
 }
 
 // Attributes:
-//   - Status
-//   - Node
-//   - HpNode
+//  - Status
+//  - Node
+//  - HpNode
 type NodeInfo struct {
 	Status NodeStatus       `thrift:"status,1" db:"status" json:"status"`
 	Node   *base.RPCAddress `thrift:"node,2" db:"node" json:"node"`
@@ -5733,7 +5941,7 @@ func (p *NodeInfo) String() string {
 }
 
 // Attributes:
-//   - Status
+//  - Status
 type ConfigurationListNodesRequest struct {
 	Status NodeStatus `thrift:"status,1" db:"status" json:"status"`
 }
@@ -5835,8 +6043,8 @@ func (p *ConfigurationListNodesRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Infos
+//  - Err
+//  - Infos
 type ConfigurationListNodesResponse struct {
 	Err   *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	Infos []*NodeInfo     `thrift:"infos,2" db:"infos" json:"infos"`
@@ -6059,9 +6267,9 @@ func (p *ConfigurationClusterInfoRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Keys
-//   - Values
+//  - Err
+//  - Keys
+//  - Values
 type ConfigurationClusterInfoResponse struct {
 	Err    *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	Keys   []string        `thrift:"keys,2" db:"keys" json:"keys"`
@@ -6290,7 +6498,7 @@ func (p *ConfigurationClusterInfoResponse) String() string {
 }
 
 // Attributes:
-//   - Level
+//  - Level
 type ConfigurationMetaControlRequest struct {
 	Level MetaFunctionLevel `thrift:"level,1" db:"level" json:"level"`
 }
@@ -6390,8 +6598,8 @@ func (p *ConfigurationMetaControlRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - OldLevel
+//  - Err
+//  - OldLevel
 type ConfigurationMetaControlResponse struct {
 	Err      *base.ErrorCode   `thrift:"err,1" db:"err" json:"err"`
 	OldLevel MetaFunctionLevel `thrift:"old_level,2" db:"old_level" json:"old_level"`
@@ -6539,11 +6747,11 @@ func (p *ConfigurationMetaControlResponse) String() string {
 }
 
 // Attributes:
-//   - Target
-//   - Node
-//   - Type
-//   - HpTarget
-//   - HpNode
+//  - Target
+//  - Node
+//  - Type
+//  - HpTarget
+//  - HpNode
 type ConfigurationProposalAction struct {
 	Target *base.RPCAddress `thrift:"target,1" db:"target" json:"target"`
 	Node   *base.RPCAddress `thrift:"node,2" db:"node" json:"node"`
@@ -6840,10 +7048,10 @@ func (p *ConfigurationProposalAction) String() string {
 }
 
 // Attributes:
-//   - Gpid
-//   - ActionList
-//   - Force
-//   - BalanceType
+//  - Gpid
+//  - ActionList
+//  - Force
+//  - BalanceType
 type ConfigurationBalancerRequest struct {
 	Gpid        *base.Gpid                     `thrift:"gpid,1" db:"gpid" json:"gpid"`
 	ActionList  []*ConfigurationProposalAction `thrift:"action_list,2" db:"action_list" json:"action_list"`
@@ -7109,7 +7317,7 @@ func (p *ConfigurationBalancerRequest) String() string {
 }
 
 // Attributes:
-//   - Err
+//  - Err
 type ConfigurationBalancerResponse struct {
 	Err *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 }
@@ -7216,7 +7424,7 @@ func (p *ConfigurationBalancerResponse) String() string {
 }
 
 // Attributes:
-//   - Pid
+//  - Pid
 type DddDiagnoseRequest struct {
 	Pid *base.Gpid `thrift:"pid,1" db:"pid" json:"pid"`
 }
@@ -7323,14 +7531,14 @@ func (p *DddDiagnoseRequest) String() string {
 }
 
 // Attributes:
-//   - Node
-//   - DropTimeMs
-//   - IsAlive
-//   - IsCollected
-//   - Ballot
-//   - LastCommittedDecree
-//   - LastPreparedDecree
-//   - HpNode
+//  - Node
+//  - DropTimeMs
+//  - IsAlive
+//  - IsCollected
+//  - Ballot
+//  - LastCommittedDecree
+//  - LastPreparedDecree
+//  - HpNode
 type DddNodeInfo struct {
 	Node                *base.RPCAddress `thrift:"node,1" db:"node" json:"node"`
 	DropTimeMs          int64            `thrift:"drop_time_ms,2" db:"drop_time_ms" json:"drop_time_ms"`
@@ -7727,9 +7935,9 @@ func (p *DddNodeInfo) String() string {
 }
 
 // Attributes:
-//   - Config
-//   - Dropped
-//   - Reason
+//  - Config
+//  - Dropped
+//  - Reason
 type DddPartitionInfo struct {
 	Config  *replication.PartitionConfiguration `thrift:"config,1" db:"config" json:"config"`
 	Dropped []*DddNodeInfo                      `thrift:"dropped,2" db:"dropped" json:"dropped"`
@@ -7935,8 +8143,8 @@ func (p *DddPartitionInfo) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Partitions
+//  - Err
+//  - Partitions
 type DddDiagnoseResponse struct {
 	Err        *base.ErrorCode     `thrift:"err,1" db:"err" json:"err"`
 	Partitions []*DddPartitionInfo `thrift:"partitions,2" db:"partitions" json:"partitions"`
@@ -8102,7 +8310,7 @@ func (p *DddDiagnoseResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
+//  - AppName
 type ConfigurationGetMaxReplicaCountRequest struct {
 	AppName string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 }
@@ -8201,9 +8409,9 @@ func (p *ConfigurationGetMaxReplicaCountRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - MaxReplicaCount
-//   - HintMessage
+//  - Err
+//  - MaxReplicaCount
+//  - HintMessage
 type ConfigurationGetMaxReplicaCountResponse struct {
 	Err             *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	MaxReplicaCount int32           `thrift:"max_replica_count,2" db:"max_replica_count" json:"max_replica_count"`
@@ -8390,8 +8598,8 @@ func (p *ConfigurationGetMaxReplicaCountResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - MaxReplicaCount
+//  - AppName
+//  - MaxReplicaCount
 type ConfigurationSetMaxReplicaCountRequest struct {
 	AppName         string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	MaxReplicaCount int32  `thrift:"max_replica_count,2" db:"max_replica_count" json:"max_replica_count"`
@@ -8530,9 +8738,9 @@ func (p *ConfigurationSetMaxReplicaCountRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - OldMaxReplicaCount
-//   - HintMessage
+//  - Err
+//  - OldMaxReplicaCount
+//  - HintMessage
 type ConfigurationSetMaxReplicaCountResponse struct {
 	Err                *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	OldMaxReplicaCount int32           `thrift:"old_max_replica_count,2" db:"old_max_replica_count" json:"old_max_replica_count"`
@@ -8718,6 +8926,623 @@ func (p *ConfigurationSetMaxReplicaCountResponse) String() string {
 	return fmt.Sprintf("ConfigurationSetMaxReplicaCountResponse(%+v)", *p)
 }
 
+// Attributes:
+//  - AppName
+type ConfigurationGetAtomicIdempotentRequest struct {
+	AppName string `thrift:"app_name,1" db:"app_name" json:"app_name"`
+}
+
+func NewConfigurationGetAtomicIdempotentRequest() *ConfigurationGetAtomicIdempotentRequest {
+	return &ConfigurationGetAtomicIdempotentRequest{}
+}
+
+func (p *ConfigurationGetAtomicIdempotentRequest) GetAppName() string {
+	return p.AppName
+}
+func (p *ConfigurationGetAtomicIdempotentRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ConfigurationGetAtomicIdempotentRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.AppName = v
+	}
+	return nil
+}
+
+func (p *ConfigurationGetAtomicIdempotentRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("configuration_get_atomic_idempotent_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ConfigurationGetAtomicIdempotentRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_name", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:app_name: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.AppName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_name (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:app_name: ", p), err)
+	}
+	return err
+}
+
+func (p *ConfigurationGetAtomicIdempotentRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ConfigurationGetAtomicIdempotentRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Err
+//  - AtomicIdempotent
+//  - HintMessage
+type ConfigurationGetAtomicIdempotentResponse struct {
+	Err              *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
+	AtomicIdempotent bool            `thrift:"atomic_idempotent,2" db:"atomic_idempotent" json:"atomic_idempotent"`
+	HintMessage      string          `thrift:"hint_message,3" db:"hint_message" json:"hint_message"`
+}
+
+func NewConfigurationGetAtomicIdempotentResponse() *ConfigurationGetAtomicIdempotentResponse {
+	return &ConfigurationGetAtomicIdempotentResponse{}
+}
+
+var ConfigurationGetAtomicIdempotentResponse_Err_DEFAULT *base.ErrorCode
+
+func (p *ConfigurationGetAtomicIdempotentResponse) GetErr() *base.ErrorCode {
+	if !p.IsSetErr() {
+		return ConfigurationGetAtomicIdempotentResponse_Err_DEFAULT
+	}
+	return p.Err
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) GetAtomicIdempotent() bool {
+	return p.AtomicIdempotent
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) GetHintMessage() string {
+	return p.HintMessage
+}
+func (p *ConfigurationGetAtomicIdempotentResponse) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) ReadField1(iprot thrift.TProtocol) error {
+	p.Err = &base.ErrorCode{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.AtomicIdempotent = v
+	}
+	return nil
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.HintMessage = v
+	}
+	return nil
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("configuration_get_atomic_idempotent_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:err: ", p), err)
+	}
+	if err := p.Err.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:err: ", p), err)
+	}
+	return err
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("atomic_idempotent", thrift.BOOL, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:atomic_idempotent: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.AtomicIdempotent)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.atomic_idempotent (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:atomic_idempotent: ", p), err)
+	}
+	return err
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("hint_message", thrift.STRING, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:hint_message: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.HintMessage)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.hint_message (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:hint_message: ", p), err)
+	}
+	return err
+}
+
+func (p *ConfigurationGetAtomicIdempotentResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ConfigurationGetAtomicIdempotentResponse(%+v)", *p)
+}
+
+// Attributes:
+//  - AppName
+//  - AtomicIdempotent
+type ConfigurationSetAtomicIdempotentRequest struct {
+	AppName          string `thrift:"app_name,1" db:"app_name" json:"app_name"`
+	AtomicIdempotent bool   `thrift:"atomic_idempotent,2" db:"atomic_idempotent" json:"atomic_idempotent"`
+}
+
+func NewConfigurationSetAtomicIdempotentRequest() *ConfigurationSetAtomicIdempotentRequest {
+	return &ConfigurationSetAtomicIdempotentRequest{}
+}
+
+func (p *ConfigurationSetAtomicIdempotentRequest) GetAppName() string {
+	return p.AppName
+}
+
+func (p *ConfigurationSetAtomicIdempotentRequest) GetAtomicIdempotent() bool {
+	return p.AtomicIdempotent
+}
+func (p *ConfigurationSetAtomicIdempotentRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.AppName = v
+	}
+	return nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.AtomicIdempotent = v
+	}
+	return nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("configuration_set_atomic_idempotent_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_name", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:app_name: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.AppName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_name (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:app_name: ", p), err)
+	}
+	return err
+}
+
+func (p *ConfigurationSetAtomicIdempotentRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("atomic_idempotent", thrift.BOOL, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:atomic_idempotent: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.AtomicIdempotent)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.atomic_idempotent (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:atomic_idempotent: ", p), err)
+	}
+	return err
+}
+
+func (p *ConfigurationSetAtomicIdempotentRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ConfigurationSetAtomicIdempotentRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Err
+//  - OldAtomicIdempotent
+//  - HintMessage
+type ConfigurationSetAtomicIdempotentResponse struct {
+	Err                 *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
+	OldAtomicIdempotent bool            `thrift:"old_atomic_idempotent,2" db:"old_atomic_idempotent" json:"old_atomic_idempotent"`
+	HintMessage         string          `thrift:"hint_message,3" db:"hint_message" json:"hint_message"`
+}
+
+func NewConfigurationSetAtomicIdempotentResponse() *ConfigurationSetAtomicIdempotentResponse {
+	return &ConfigurationSetAtomicIdempotentResponse{}
+}
+
+var ConfigurationSetAtomicIdempotentResponse_Err_DEFAULT *base.ErrorCode
+
+func (p *ConfigurationSetAtomicIdempotentResponse) GetErr() *base.ErrorCode {
+	if !p.IsSetErr() {
+		return ConfigurationSetAtomicIdempotentResponse_Err_DEFAULT
+	}
+	return p.Err
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) GetOldAtomicIdempotent() bool {
+	return p.OldAtomicIdempotent
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) GetHintMessage() string {
+	return p.HintMessage
+}
+func (p *ConfigurationSetAtomicIdempotentResponse) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) ReadField1(iprot thrift.TProtocol) error {
+	p.Err = &base.ErrorCode{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.OldAtomicIdempotent = v
+	}
+	return nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.HintMessage = v
+	}
+	return nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("configuration_set_atomic_idempotent_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:err: ", p), err)
+	}
+	if err := p.Err.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:err: ", p), err)
+	}
+	return err
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("old_atomic_idempotent", thrift.BOOL, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:old_atomic_idempotent: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.OldAtomicIdempotent)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.old_atomic_idempotent (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:old_atomic_idempotent: ", p), err)
+	}
+	return err
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("hint_message", thrift.STRING, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:hint_message: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.HintMessage)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.hint_message (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:hint_message: ", p), err)
+	}
+	return err
+}
+
+func (p *ConfigurationSetAtomicIdempotentResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ConfigurationSetAtomicIdempotentResponse(%+v)", *p)
+}
+
 type AdminClient interface {
 	// Parameters:
 	//  - Req
@@ -8740,6 +9565,9 @@ type AdminClient interface {
 	// Parameters:
 	//  - Req
 	ModifyDuplication(ctx context.Context, req *DuplicationModifyRequest) (r *DuplicationModifyResponse, err error)
+	// Parameters:
+	//  - Req
+	ListDuplication(ctx context.Context, req *DuplicationListRequest) (r *DuplicationListResponse, err error)
 	// Parameters:
 	//  - Req
 	QueryAppInfo(ctx context.Context, req *QueryAppInfoRequest) (r *QueryAppInfoResponse, err error)
@@ -8826,7 +9654,7 @@ func (p *AdminClientClient) Client_() thrift.TClient {
 }
 
 // Parameters:
-//   - Req
+//  - Req
 func (p *AdminClientClient) CreateApp(ctx context.Context, req *ConfigurationCreateAppRequest) (r *ConfigurationCreateAppResponse, err error) {
 	var _args19 AdminClientCreateAppArgs
 	_args19.Req = req
@@ -8838,7 +9666,7 @@ func (p *AdminClientClient) CreateApp(ctx context.Context, req *ConfigurationCre
 }
 
 // Parameters:
-//   - Req
+//  - Req
 func (p *AdminClientClient) DropApp(ctx context.Context, req *ConfigurationDropAppRequest) (r *ConfigurationDropAppResponse, err error) {
 	var _args21 AdminClientDropAppArgs
 	_args21.Req = req
@@ -8850,7 +9678,7 @@ func (p *AdminClientClient) DropApp(ctx context.Context, req *ConfigurationDropA
 }
 
 // Parameters:
-//   - Req
+//  - Req
 func (p *AdminClientClient) RecallApp(ctx context.Context, req *ConfigurationRecallAppRequest) (r *ConfigurationRecallAppResponse, err error) {
 	var _args23 AdminClientRecallAppArgs
 	_args23.Req = req
@@ -8862,7 +9690,7 @@ func (p *AdminClientClient) RecallApp(ctx context.Context, req *ConfigurationRec
 }
 
 // Parameters:
-//   - Req
+//  - Req
 func (p *AdminClientClient) ListApps(ctx context.Context, req *ConfigurationListAppsRequest) (r *ConfigurationListAppsResponse, err error) {
 	var _args25 AdminClientListAppsArgs
 	_args25.Req = req
@@ -8874,7 +9702,7 @@ func (p *AdminClientClient) ListApps(ctx context.Context, req *ConfigurationList
 }
 
 // Parameters:
-//   - Req
+//  - Req
 func (p *AdminClientClient) AddDuplication(ctx context.Context, req *DuplicationAddRequest) (r *DuplicationAddResponse, err error) {
 	var _args27 AdminClientAddDuplicationArgs
 	_args27.Req = req
@@ -8886,7 +9714,7 @@ func (p *AdminClientClient) AddDuplication(ctx context.Context, req *Duplication
 }
 
 // Parameters:
-//   - Req
+//  - Req
 func (p *AdminClientClient) QueryDuplication(ctx context.Context, req *DuplicationQueryRequest) (r *DuplicationQueryResponse, err error) {
 	var _args29 AdminClientQueryDuplicationArgs
 	_args29.Req = req
@@ -8898,7 +9726,7 @@ func (p *AdminClientClient) QueryDuplication(ctx context.Context, req *Duplicati
 }
 
 // Parameters:
-//   - Req
+//  - Req
 func (p *AdminClientClient) ModifyDuplication(ctx context.Context, req *DuplicationModifyRequest) (r *DuplicationModifyResponse, err error) {
 	var _args31 AdminClientModifyDuplicationArgs
 	_args31.Req = req
@@ -8910,231 +9738,243 @@ func (p *AdminClientClient) ModifyDuplication(ctx context.Context, req *Duplicat
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) QueryAppInfo(ctx context.Context, req *QueryAppInfoRequest) (r *QueryAppInfoResponse, err error) {
-	var _args33 AdminClientQueryAppInfoArgs
+//  - Req
+func (p *AdminClientClient) ListDuplication(ctx context.Context, req *DuplicationListRequest) (r *DuplicationListResponse, err error) {
+	var _args33 AdminClientListDuplicationArgs
 	_args33.Req = req
-	var _result34 AdminClientQueryAppInfoResult
-	if err = p.Client_().Call(ctx, "query_app_info", &_args33, &_result34); err != nil {
+	var _result34 AdminClientListDuplicationResult
+	if err = p.Client_().Call(ctx, "list_duplication", &_args33, &_result34); err != nil {
 		return
 	}
 	return _result34.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) UpdateAppEnv(ctx context.Context, req *ConfigurationUpdateAppEnvRequest) (r *ConfigurationUpdateAppEnvResponse, err error) {
-	var _args35 AdminClientUpdateAppEnvArgs
+//  - Req
+func (p *AdminClientClient) QueryAppInfo(ctx context.Context, req *QueryAppInfoRequest) (r *QueryAppInfoResponse, err error) {
+	var _args35 AdminClientQueryAppInfoArgs
 	_args35.Req = req
-	var _result36 AdminClientUpdateAppEnvResult
-	if err = p.Client_().Call(ctx, "update_app_env", &_args35, &_result36); err != nil {
+	var _result36 AdminClientQueryAppInfoResult
+	if err = p.Client_().Call(ctx, "query_app_info", &_args35, &_result36); err != nil {
 		return
 	}
 	return _result36.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) ListNodes(ctx context.Context, req *ConfigurationListNodesRequest) (r *ConfigurationListNodesResponse, err error) {
-	var _args37 AdminClientListNodesArgs
+//  - Req
+func (p *AdminClientClient) UpdateAppEnv(ctx context.Context, req *ConfigurationUpdateAppEnvRequest) (r *ConfigurationUpdateAppEnvResponse, err error) {
+	var _args37 AdminClientUpdateAppEnvArgs
 	_args37.Req = req
-	var _result38 AdminClientListNodesResult
-	if err = p.Client_().Call(ctx, "list_nodes", &_args37, &_result38); err != nil {
+	var _result38 AdminClientUpdateAppEnvResult
+	if err = p.Client_().Call(ctx, "update_app_env", &_args37, &_result38); err != nil {
 		return
 	}
 	return _result38.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) QueryClusterInfo(ctx context.Context, req *ConfigurationClusterInfoRequest) (r *ConfigurationClusterInfoResponse, err error) {
-	var _args39 AdminClientQueryClusterInfoArgs
+//  - Req
+func (p *AdminClientClient) ListNodes(ctx context.Context, req *ConfigurationListNodesRequest) (r *ConfigurationListNodesResponse, err error) {
+	var _args39 AdminClientListNodesArgs
 	_args39.Req = req
-	var _result40 AdminClientQueryClusterInfoResult
-	if err = p.Client_().Call(ctx, "query_cluster_info", &_args39, &_result40); err != nil {
+	var _result40 AdminClientListNodesResult
+	if err = p.Client_().Call(ctx, "list_nodes", &_args39, &_result40); err != nil {
 		return
 	}
 	return _result40.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) MetaControl(ctx context.Context, req *ConfigurationMetaControlRequest) (r *ConfigurationMetaControlResponse, err error) {
-	var _args41 AdminClientMetaControlArgs
+//  - Req
+func (p *AdminClientClient) QueryClusterInfo(ctx context.Context, req *ConfigurationClusterInfoRequest) (r *ConfigurationClusterInfoResponse, err error) {
+	var _args41 AdminClientQueryClusterInfoArgs
 	_args41.Req = req
-	var _result42 AdminClientMetaControlResult
-	if err = p.Client_().Call(ctx, "meta_control", &_args41, &_result42); err != nil {
+	var _result42 AdminClientQueryClusterInfoResult
+	if err = p.Client_().Call(ctx, "query_cluster_info", &_args41, &_result42); err != nil {
 		return
 	}
 	return _result42.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) QueryBackupPolicy(ctx context.Context, req *ConfigurationQueryBackupPolicyRequest) (r *ConfigurationQueryBackupPolicyResponse, err error) {
-	var _args43 AdminClientQueryBackupPolicyArgs
+//  - Req
+func (p *AdminClientClient) MetaControl(ctx context.Context, req *ConfigurationMetaControlRequest) (r *ConfigurationMetaControlResponse, err error) {
+	var _args43 AdminClientMetaControlArgs
 	_args43.Req = req
-	var _result44 AdminClientQueryBackupPolicyResult
-	if err = p.Client_().Call(ctx, "query_backup_policy", &_args43, &_result44); err != nil {
+	var _result44 AdminClientMetaControlResult
+	if err = p.Client_().Call(ctx, "meta_control", &_args43, &_result44); err != nil {
 		return
 	}
 	return _result44.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) Balance(ctx context.Context, req *ConfigurationBalancerRequest) (r *ConfigurationBalancerResponse, err error) {
-	var _args45 AdminClientBalanceArgs
+//  - Req
+func (p *AdminClientClient) QueryBackupPolicy(ctx context.Context, req *ConfigurationQueryBackupPolicyRequest) (r *ConfigurationQueryBackupPolicyResponse, err error) {
+	var _args45 AdminClientQueryBackupPolicyArgs
 	_args45.Req = req
-	var _result46 AdminClientBalanceResult
-	if err = p.Client_().Call(ctx, "balance", &_args45, &_result46); err != nil {
+	var _result46 AdminClientQueryBackupPolicyResult
+	if err = p.Client_().Call(ctx, "query_backup_policy", &_args45, &_result46); err != nil {
 		return
 	}
 	return _result46.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) StartBackupApp(ctx context.Context, req *StartBackupAppRequest) (r *StartBackupAppResponse, err error) {
-	var _args47 AdminClientStartBackupAppArgs
+//  - Req
+func (p *AdminClientClient) Balance(ctx context.Context, req *ConfigurationBalancerRequest) (r *ConfigurationBalancerResponse, err error) {
+	var _args47 AdminClientBalanceArgs
 	_args47.Req = req
-	var _result48 AdminClientStartBackupAppResult
-	if err = p.Client_().Call(ctx, "start_backup_app", &_args47, &_result48); err != nil {
+	var _result48 AdminClientBalanceResult
+	if err = p.Client_().Call(ctx, "balance", &_args47, &_result48); err != nil {
 		return
 	}
 	return _result48.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) QueryBackupStatus(ctx context.Context, req *QueryBackupStatusRequest) (r *QueryBackupStatusResponse, err error) {
-	var _args49 AdminClientQueryBackupStatusArgs
+//  - Req
+func (p *AdminClientClient) StartBackupApp(ctx context.Context, req *StartBackupAppRequest) (r *StartBackupAppResponse, err error) {
+	var _args49 AdminClientStartBackupAppArgs
 	_args49.Req = req
-	var _result50 AdminClientQueryBackupStatusResult
-	if err = p.Client_().Call(ctx, "query_backup_status", &_args49, &_result50); err != nil {
+	var _result50 AdminClientStartBackupAppResult
+	if err = p.Client_().Call(ctx, "start_backup_app", &_args49, &_result50); err != nil {
 		return
 	}
 	return _result50.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) RestoreApp(ctx context.Context, req *ConfigurationRestoreRequest) (r *ConfigurationCreateAppResponse, err error) {
-	var _args51 AdminClientRestoreAppArgs
+//  - Req
+func (p *AdminClientClient) QueryBackupStatus(ctx context.Context, req *QueryBackupStatusRequest) (r *QueryBackupStatusResponse, err error) {
+	var _args51 AdminClientQueryBackupStatusArgs
 	_args51.Req = req
-	var _result52 AdminClientRestoreAppResult
-	if err = p.Client_().Call(ctx, "restore_app", &_args51, &_result52); err != nil {
+	var _result52 AdminClientQueryBackupStatusResult
+	if err = p.Client_().Call(ctx, "query_backup_status", &_args51, &_result52); err != nil {
 		return
 	}
 	return _result52.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) StartPartitionSplit(ctx context.Context, req *StartPartitionSplitRequest) (r *StartPartitionSplitResponse, err error) {
-	var _args53 AdminClientStartPartitionSplitArgs
+//  - Req
+func (p *AdminClientClient) RestoreApp(ctx context.Context, req *ConfigurationRestoreRequest) (r *ConfigurationCreateAppResponse, err error) {
+	var _args53 AdminClientRestoreAppArgs
 	_args53.Req = req
-	var _result54 AdminClientStartPartitionSplitResult
-	if err = p.Client_().Call(ctx, "start_partition_split", &_args53, &_result54); err != nil {
+	var _result54 AdminClientRestoreAppResult
+	if err = p.Client_().Call(ctx, "restore_app", &_args53, &_result54); err != nil {
 		return
 	}
 	return _result54.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) QuerySplitStatus(ctx context.Context, req *QuerySplitRequest) (r *QuerySplitResponse, err error) {
-	var _args55 AdminClientQuerySplitStatusArgs
+//  - Req
+func (p *AdminClientClient) StartPartitionSplit(ctx context.Context, req *StartPartitionSplitRequest) (r *StartPartitionSplitResponse, err error) {
+	var _args55 AdminClientStartPartitionSplitArgs
 	_args55.Req = req
-	var _result56 AdminClientQuerySplitStatusResult
-	if err = p.Client_().Call(ctx, "query_split_status", &_args55, &_result56); err != nil {
+	var _result56 AdminClientStartPartitionSplitResult
+	if err = p.Client_().Call(ctx, "start_partition_split", &_args55, &_result56); err != nil {
 		return
 	}
 	return _result56.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) ControlPartitionSplit(ctx context.Context, req *ControlSplitRequest) (r *ControlSplitResponse, err error) {
-	var _args57 AdminClientControlPartitionSplitArgs
+//  - Req
+func (p *AdminClientClient) QuerySplitStatus(ctx context.Context, req *QuerySplitRequest) (r *QuerySplitResponse, err error) {
+	var _args57 AdminClientQuerySplitStatusArgs
 	_args57.Req = req
-	var _result58 AdminClientControlPartitionSplitResult
-	if err = p.Client_().Call(ctx, "control_partition_split", &_args57, &_result58); err != nil {
+	var _result58 AdminClientQuerySplitStatusResult
+	if err = p.Client_().Call(ctx, "query_split_status", &_args57, &_result58); err != nil {
 		return
 	}
 	return _result58.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) StartBulkLoad(ctx context.Context, req *StartBulkLoadRequest) (r *StartBulkLoadResponse, err error) {
-	var _args59 AdminClientStartBulkLoadArgs
+//  - Req
+func (p *AdminClientClient) ControlPartitionSplit(ctx context.Context, req *ControlSplitRequest) (r *ControlSplitResponse, err error) {
+	var _args59 AdminClientControlPartitionSplitArgs
 	_args59.Req = req
-	var _result60 AdminClientStartBulkLoadResult
-	if err = p.Client_().Call(ctx, "start_bulk_load", &_args59, &_result60); err != nil {
+	var _result60 AdminClientControlPartitionSplitResult
+	if err = p.Client_().Call(ctx, "control_partition_split", &_args59, &_result60); err != nil {
 		return
 	}
 	return _result60.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) QueryBulkLoadStatus(ctx context.Context, req *QueryBulkLoadRequest) (r *QueryBulkLoadResponse, err error) {
-	var _args61 AdminClientQueryBulkLoadStatusArgs
+//  - Req
+func (p *AdminClientClient) StartBulkLoad(ctx context.Context, req *StartBulkLoadRequest) (r *StartBulkLoadResponse, err error) {
+	var _args61 AdminClientStartBulkLoadArgs
 	_args61.Req = req
-	var _result62 AdminClientQueryBulkLoadStatusResult
-	if err = p.Client_().Call(ctx, "query_bulk_load_status", &_args61, &_result62); err != nil {
+	var _result62 AdminClientStartBulkLoadResult
+	if err = p.Client_().Call(ctx, "start_bulk_load", &_args61, &_result62); err != nil {
 		return
 	}
 	return _result62.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) ControlBulkLoad(ctx context.Context, req *ControlBulkLoadRequest) (r *ControlBulkLoadResponse, err error) {
-	var _args63 AdminClientControlBulkLoadArgs
+//  - Req
+func (p *AdminClientClient) QueryBulkLoadStatus(ctx context.Context, req *QueryBulkLoadRequest) (r *QueryBulkLoadResponse, err error) {
+	var _args63 AdminClientQueryBulkLoadStatusArgs
 	_args63.Req = req
-	var _result64 AdminClientControlBulkLoadResult
-	if err = p.Client_().Call(ctx, "control_bulk_load", &_args63, &_result64); err != nil {
+	var _result64 AdminClientQueryBulkLoadStatusResult
+	if err = p.Client_().Call(ctx, "query_bulk_load_status", &_args63, &_result64); err != nil {
 		return
 	}
 	return _result64.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) ClearBulkLoad(ctx context.Context, req *ClearBulkLoadStateRequest) (r *ClearBulkLoadStateResponse, err error) {
-	var _args65 AdminClientClearBulkLoadArgs
+//  - Req
+func (p *AdminClientClient) ControlBulkLoad(ctx context.Context, req *ControlBulkLoadRequest) (r *ControlBulkLoadResponse, err error) {
+	var _args65 AdminClientControlBulkLoadArgs
 	_args65.Req = req
-	var _result66 AdminClientClearBulkLoadResult
-	if err = p.Client_().Call(ctx, "clear_bulk_load", &_args65, &_result66); err != nil {
+	var _result66 AdminClientControlBulkLoadResult
+	if err = p.Client_().Call(ctx, "control_bulk_load", &_args65, &_result66); err != nil {
 		return
 	}
 	return _result66.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) StartManualCompact(ctx context.Context, req *StartAppManualCompactRequest) (r *StartAppManualCompactResponse, err error) {
-	var _args67 AdminClientStartManualCompactArgs
+//  - Req
+func (p *AdminClientClient) ClearBulkLoad(ctx context.Context, req *ClearBulkLoadStateRequest) (r *ClearBulkLoadStateResponse, err error) {
+	var _args67 AdminClientClearBulkLoadArgs
 	_args67.Req = req
-	var _result68 AdminClientStartManualCompactResult
-	if err = p.Client_().Call(ctx, "start_manual_compact", &_args67, &_result68); err != nil {
+	var _result68 AdminClientClearBulkLoadResult
+	if err = p.Client_().Call(ctx, "clear_bulk_load", &_args67, &_result68); err != nil {
 		return
 	}
 	return _result68.GetSuccess(), nil
 }
 
 // Parameters:
-//   - Req
-func (p *AdminClientClient) QueryManualCompact(ctx context.Context, req *QueryAppManualCompactRequest) (r *QueryAppManualCompactResponse, err error) {
-	var _args69 AdminClientQueryManualCompactArgs
+//  - Req
+func (p *AdminClientClient) StartManualCompact(ctx context.Context, req *StartAppManualCompactRequest) (r *StartAppManualCompactResponse, err error) {
+	var _args69 AdminClientStartManualCompactArgs
 	_args69.Req = req
-	var _result70 AdminClientQueryManualCompactResult
-	if err = p.Client_().Call(ctx, "query_manual_compact", &_args69, &_result70); err != nil {
+	var _result70 AdminClientStartManualCompactResult
+	if err = p.Client_().Call(ctx, "start_manual_compact", &_args69, &_result70); err != nil {
 		return
 	}
 	return _result70.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Req
+func (p *AdminClientClient) QueryManualCompact(ctx context.Context, req *QueryAppManualCompactRequest) (r *QueryAppManualCompactResponse, err error) {
+	var _args71 AdminClientQueryManualCompactArgs
+	_args71.Req = req
+	var _result72 AdminClientQueryManualCompactResult
+	if err = p.Client_().Call(ctx, "query_manual_compact", &_args71, &_result72); err != nil {
+		return
+	}
+	return _result72.GetSuccess(), nil
 }
 
 type AdminClientProcessor struct {
@@ -9157,34 +9997,35 @@ func (p *AdminClientProcessor) ProcessorMap() map[string]thrift.TProcessorFuncti
 
 func NewAdminClientProcessor(handler AdminClient) *AdminClientProcessor {
 
-	self71 := &AdminClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self71.processorMap["create_app"] = &adminClientProcessorCreateApp{handler: handler}
-	self71.processorMap["drop_app"] = &adminClientProcessorDropApp{handler: handler}
-	self71.processorMap["recall_app"] = &adminClientProcessorRecallApp{handler: handler}
-	self71.processorMap["list_apps"] = &adminClientProcessorListApps{handler: handler}
-	self71.processorMap["add_duplication"] = &adminClientProcessorAddDuplication{handler: handler}
-	self71.processorMap["query_duplication"] = &adminClientProcessorQueryDuplication{handler: handler}
-	self71.processorMap["modify_duplication"] = &adminClientProcessorModifyDuplication{handler: handler}
-	self71.processorMap["query_app_info"] = &adminClientProcessorQueryAppInfo{handler: handler}
-	self71.processorMap["update_app_env"] = &adminClientProcessorUpdateAppEnv{handler: handler}
-	self71.processorMap["list_nodes"] = &adminClientProcessorListNodes{handler: handler}
-	self71.processorMap["query_cluster_info"] = &adminClientProcessorQueryClusterInfo{handler: handler}
-	self71.processorMap["meta_control"] = &adminClientProcessorMetaControl{handler: handler}
-	self71.processorMap["query_backup_policy"] = &adminClientProcessorQueryBackupPolicy{handler: handler}
-	self71.processorMap["balance"] = &adminClientProcessorBalance{handler: handler}
-	self71.processorMap["start_backup_app"] = &adminClientProcessorStartBackupApp{handler: handler}
-	self71.processorMap["query_backup_status"] = &adminClientProcessorQueryBackupStatus{handler: handler}
-	self71.processorMap["restore_app"] = &adminClientProcessorRestoreApp{handler: handler}
-	self71.processorMap["start_partition_split"] = &adminClientProcessorStartPartitionSplit{handler: handler}
-	self71.processorMap["query_split_status"] = &adminClientProcessorQuerySplitStatus{handler: handler}
-	self71.processorMap["control_partition_split"] = &adminClientProcessorControlPartitionSplit{handler: handler}
-	self71.processorMap["start_bulk_load"] = &adminClientProcessorStartBulkLoad{handler: handler}
-	self71.processorMap["query_bulk_load_status"] = &adminClientProcessorQueryBulkLoadStatus{handler: handler}
-	self71.processorMap["control_bulk_load"] = &adminClientProcessorControlBulkLoad{handler: handler}
-	self71.processorMap["clear_bulk_load"] = &adminClientProcessorClearBulkLoad{handler: handler}
-	self71.processorMap["start_manual_compact"] = &adminClientProcessorStartManualCompact{handler: handler}
-	self71.processorMap["query_manual_compact"] = &adminClientProcessorQueryManualCompact{handler: handler}
-	return self71
+	self73 := &AdminClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self73.processorMap["create_app"] = &adminClientProcessorCreateApp{handler: handler}
+	self73.processorMap["drop_app"] = &adminClientProcessorDropApp{handler: handler}
+	self73.processorMap["recall_app"] = &adminClientProcessorRecallApp{handler: handler}
+	self73.processorMap["list_apps"] = &adminClientProcessorListApps{handler: handler}
+	self73.processorMap["add_duplication"] = &adminClientProcessorAddDuplication{handler: handler}
+	self73.processorMap["query_duplication"] = &adminClientProcessorQueryDuplication{handler: handler}
+	self73.processorMap["modify_duplication"] = &adminClientProcessorModifyDuplication{handler: handler}
+	self73.processorMap["list_duplication"] = &adminClientProcessorListDuplication{handler: handler}
+	self73.processorMap["query_app_info"] = &adminClientProcessorQueryAppInfo{handler: handler}
+	self73.processorMap["update_app_env"] = &adminClientProcessorUpdateAppEnv{handler: handler}
+	self73.processorMap["list_nodes"] = &adminClientProcessorListNodes{handler: handler}
+	self73.processorMap["query_cluster_info"] = &adminClientProcessorQueryClusterInfo{handler: handler}
+	self73.processorMap["meta_control"] = &adminClientProcessorMetaControl{handler: handler}
+	self73.processorMap["query_backup_policy"] = &adminClientProcessorQueryBackupPolicy{handler: handler}
+	self73.processorMap["balance"] = &adminClientProcessorBalance{handler: handler}
+	self73.processorMap["start_backup_app"] = &adminClientProcessorStartBackupApp{handler: handler}
+	self73.processorMap["query_backup_status"] = &adminClientProcessorQueryBackupStatus{handler: handler}
+	self73.processorMap["restore_app"] = &adminClientProcessorRestoreApp{handler: handler}
+	self73.processorMap["start_partition_split"] = &adminClientProcessorStartPartitionSplit{handler: handler}
+	self73.processorMap["query_split_status"] = &adminClientProcessorQuerySplitStatus{handler: handler}
+	self73.processorMap["control_partition_split"] = &adminClientProcessorControlPartitionSplit{handler: handler}
+	self73.processorMap["start_bulk_load"] = &adminClientProcessorStartBulkLoad{handler: handler}
+	self73.processorMap["query_bulk_load_status"] = &adminClientProcessorQueryBulkLoadStatus{handler: handler}
+	self73.processorMap["control_bulk_load"] = &adminClientProcessorControlBulkLoad{handler: handler}
+	self73.processorMap["clear_bulk_load"] = &adminClientProcessorClearBulkLoad{handler: handler}
+	self73.processorMap["start_manual_compact"] = &adminClientProcessorStartManualCompact{handler: handler}
+	self73.processorMap["query_manual_compact"] = &adminClientProcessorQueryManualCompact{handler: handler}
+	return self73
 }
 
 func (p *AdminClientProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -9197,12 +10038,12 @@ func (p *AdminClientProcessor) Process(ctx context.Context, iprot, oprot thrift.
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x72 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x74 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x72.Write(oprot)
+	x74.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush(ctx)
-	return false, x72
+	return false, x74
 
 }
 
@@ -9525,6 +10366,54 @@ func (p *adminClientProcessorModifyDuplication) Process(ctx context.Context, seq
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("modify_duplication", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type adminClientProcessorListDuplication struct {
+	handler AdminClient
+}
+
+func (p *adminClientProcessorListDuplication) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := AdminClientListDuplicationArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("list_duplication", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := AdminClientListDuplicationResult{}
+	var retval *DuplicationListResponse
+	var err2 error
+	if retval, err2 = p.handler.ListDuplication(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing list_duplication: "+err2.Error())
+		oprot.WriteMessageBegin("list_duplication", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("list_duplication", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -10457,7 +11346,7 @@ func (p *adminClientProcessorQueryManualCompact) Process(ctx context.Context, se
 // HELPER FUNCTIONS AND STRUCTURES
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientCreateAppArgs struct {
 	Req *ConfigurationCreateAppRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -10564,7 +11453,7 @@ func (p *AdminClientCreateAppArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientCreateAppResult struct {
 	Success *ConfigurationCreateAppResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -10673,7 +11562,7 @@ func (p *AdminClientCreateAppResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientDropAppArgs struct {
 	Req *ConfigurationDropAppRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -10780,7 +11669,7 @@ func (p *AdminClientDropAppArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientDropAppResult struct {
 	Success *ConfigurationDropAppResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -10889,7 +11778,7 @@ func (p *AdminClientDropAppResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientRecallAppArgs struct {
 	Req *ConfigurationRecallAppRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -10996,7 +11885,7 @@ func (p *AdminClientRecallAppArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientRecallAppResult struct {
 	Success *ConfigurationRecallAppResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -11105,7 +11994,7 @@ func (p *AdminClientRecallAppResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientListAppsArgs struct {
 	Req *ConfigurationListAppsRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -11214,7 +12103,7 @@ func (p *AdminClientListAppsArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientListAppsResult struct {
 	Success *ConfigurationListAppsResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -11323,7 +12212,7 @@ func (p *AdminClientListAppsResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientAddDuplicationArgs struct {
 	Req *DuplicationAddRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -11432,7 +12321,7 @@ func (p *AdminClientAddDuplicationArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientAddDuplicationResult struct {
 	Success *DuplicationAddResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -11541,7 +12430,7 @@ func (p *AdminClientAddDuplicationResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientQueryDuplicationArgs struct {
 	Req *DuplicationQueryRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -11648,7 +12537,7 @@ func (p *AdminClientQueryDuplicationArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientQueryDuplicationResult struct {
 	Success *DuplicationQueryResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -11757,7 +12646,7 @@ func (p *AdminClientQueryDuplicationResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientModifyDuplicationArgs struct {
 	Req *DuplicationModifyRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -11864,7 +12753,7 @@ func (p *AdminClientModifyDuplicationArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientModifyDuplicationResult struct {
 	Success *DuplicationModifyResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -11973,7 +12862,223 @@ func (p *AdminClientModifyDuplicationResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
+type AdminClientListDuplicationArgs struct {
+	Req *DuplicationListRequest `thrift:"req,1" db:"req" json:"req"`
+}
+
+func NewAdminClientListDuplicationArgs() *AdminClientListDuplicationArgs {
+	return &AdminClientListDuplicationArgs{}
+}
+
+var AdminClientListDuplicationArgs_Req_DEFAULT *DuplicationListRequest
+
+func (p *AdminClientListDuplicationArgs) GetReq() *DuplicationListRequest {
+	if !p.IsSetReq() {
+		return AdminClientListDuplicationArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *AdminClientListDuplicationArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *AdminClientListDuplicationArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *AdminClientListDuplicationArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req = &DuplicationListRequest{}
+	if err := p.Req.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Req), err)
+	}
+	return nil
+}
+
+func (p *AdminClientListDuplicationArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("list_duplication_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *AdminClientListDuplicationArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:req: ", p), err)
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Req), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:req: ", p), err)
+	}
+	return err
+}
+
+func (p *AdminClientListDuplicationArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AdminClientListDuplicationArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type AdminClientListDuplicationResult struct {
+	Success *DuplicationListResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewAdminClientListDuplicationResult() *AdminClientListDuplicationResult {
+	return &AdminClientListDuplicationResult{}
+}
+
+var AdminClientListDuplicationResult_Success_DEFAULT *DuplicationListResponse
+
+func (p *AdminClientListDuplicationResult) GetSuccess() *DuplicationListResponse {
+	if !p.IsSetSuccess() {
+		return AdminClientListDuplicationResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *AdminClientListDuplicationResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *AdminClientListDuplicationResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField0(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *AdminClientListDuplicationResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &DuplicationListResponse{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *AdminClientListDuplicationResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("list_duplication_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *AdminClientListDuplicationResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *AdminClientListDuplicationResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AdminClientListDuplicationResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Req
 type AdminClientQueryAppInfoArgs struct {
 	Req *QueryAppInfoRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -12080,7 +13185,7 @@ func (p *AdminClientQueryAppInfoArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientQueryAppInfoResult struct {
 	Success *QueryAppInfoResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -12189,7 +13294,7 @@ func (p *AdminClientQueryAppInfoResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientUpdateAppEnvArgs struct {
 	Req *ConfigurationUpdateAppEnvRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -12298,7 +13403,7 @@ func (p *AdminClientUpdateAppEnvArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientUpdateAppEnvResult struct {
 	Success *ConfigurationUpdateAppEnvResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -12407,7 +13512,7 @@ func (p *AdminClientUpdateAppEnvResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientListNodesArgs struct {
 	Req *ConfigurationListNodesRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -12516,7 +13621,7 @@ func (p *AdminClientListNodesArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientListNodesResult struct {
 	Success *ConfigurationListNodesResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -12625,7 +13730,7 @@ func (p *AdminClientListNodesResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientQueryClusterInfoArgs struct {
 	Req *ConfigurationClusterInfoRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -12732,7 +13837,7 @@ func (p *AdminClientQueryClusterInfoArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientQueryClusterInfoResult struct {
 	Success *ConfigurationClusterInfoResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -12841,7 +13946,7 @@ func (p *AdminClientQueryClusterInfoResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientMetaControlArgs struct {
 	Req *ConfigurationMetaControlRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -12948,7 +14053,7 @@ func (p *AdminClientMetaControlArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientMetaControlResult struct {
 	Success *ConfigurationMetaControlResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -13057,7 +14162,7 @@ func (p *AdminClientMetaControlResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientQueryBackupPolicyArgs struct {
 	Req *ConfigurationQueryBackupPolicyRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -13164,7 +14269,7 @@ func (p *AdminClientQueryBackupPolicyArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientQueryBackupPolicyResult struct {
 	Success *ConfigurationQueryBackupPolicyResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -13273,7 +14378,7 @@ func (p *AdminClientQueryBackupPolicyResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientBalanceArgs struct {
 	Req *ConfigurationBalancerRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -13380,7 +14485,7 @@ func (p *AdminClientBalanceArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientBalanceResult struct {
 	Success *ConfigurationBalancerResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -13489,7 +14594,7 @@ func (p *AdminClientBalanceResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientStartBackupAppArgs struct {
 	Req *StartBackupAppRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -13596,7 +14701,7 @@ func (p *AdminClientStartBackupAppArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientStartBackupAppResult struct {
 	Success *StartBackupAppResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -13705,7 +14810,7 @@ func (p *AdminClientStartBackupAppResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientQueryBackupStatusArgs struct {
 	Req *QueryBackupStatusRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -13812,7 +14917,7 @@ func (p *AdminClientQueryBackupStatusArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientQueryBackupStatusResult struct {
 	Success *QueryBackupStatusResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -13921,7 +15026,7 @@ func (p *AdminClientQueryBackupStatusResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientRestoreAppArgs struct {
 	Req *ConfigurationRestoreRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -14028,7 +15133,7 @@ func (p *AdminClientRestoreAppArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientRestoreAppResult struct {
 	Success *ConfigurationCreateAppResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -14137,7 +15242,7 @@ func (p *AdminClientRestoreAppResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientStartPartitionSplitArgs struct {
 	Req *StartPartitionSplitRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -14244,7 +15349,7 @@ func (p *AdminClientStartPartitionSplitArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientStartPartitionSplitResult struct {
 	Success *StartPartitionSplitResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -14353,7 +15458,7 @@ func (p *AdminClientStartPartitionSplitResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientQuerySplitStatusArgs struct {
 	Req *QuerySplitRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -14460,7 +15565,7 @@ func (p *AdminClientQuerySplitStatusArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientQuerySplitStatusResult struct {
 	Success *QuerySplitResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -14569,7 +15674,7 @@ func (p *AdminClientQuerySplitStatusResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientControlPartitionSplitArgs struct {
 	Req *ControlSplitRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -14676,7 +15781,7 @@ func (p *AdminClientControlPartitionSplitArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientControlPartitionSplitResult struct {
 	Success *ControlSplitResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -14785,7 +15890,7 @@ func (p *AdminClientControlPartitionSplitResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientStartBulkLoadArgs struct {
 	Req *StartBulkLoadRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -14892,7 +15997,7 @@ func (p *AdminClientStartBulkLoadArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientStartBulkLoadResult struct {
 	Success *StartBulkLoadResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -15001,7 +16106,7 @@ func (p *AdminClientStartBulkLoadResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientQueryBulkLoadStatusArgs struct {
 	Req *QueryBulkLoadRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -15108,7 +16213,7 @@ func (p *AdminClientQueryBulkLoadStatusArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientQueryBulkLoadStatusResult struct {
 	Success *QueryBulkLoadResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -15217,7 +16322,7 @@ func (p *AdminClientQueryBulkLoadStatusResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientControlBulkLoadArgs struct {
 	Req *ControlBulkLoadRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -15324,7 +16429,7 @@ func (p *AdminClientControlBulkLoadArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientControlBulkLoadResult struct {
 	Success *ControlBulkLoadResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -15433,7 +16538,7 @@ func (p *AdminClientControlBulkLoadResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientClearBulkLoadArgs struct {
 	Req *ClearBulkLoadStateRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -15540,7 +16645,7 @@ func (p *AdminClientClearBulkLoadArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientClearBulkLoadResult struct {
 	Success *ClearBulkLoadStateResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -15649,7 +16754,7 @@ func (p *AdminClientClearBulkLoadResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientStartManualCompactArgs struct {
 	Req *StartAppManualCompactRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -15756,7 +16861,7 @@ func (p *AdminClientStartManualCompactArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientStartManualCompactResult struct {
 	Success *StartAppManualCompactResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }
@@ -15865,7 +16970,7 @@ func (p *AdminClientStartManualCompactResult) String() string {
 }
 
 // Attributes:
-//   - Req
+//  - Req
 type AdminClientQueryManualCompactArgs struct {
 	Req *QueryAppManualCompactRequest `thrift:"req,1" db:"req" json:"req"`
 }
@@ -15972,7 +17077,7 @@ func (p *AdminClientQueryManualCompactArgs) String() string {
 }
 
 // Attributes:
-//   - Success
+//  - Success
 type AdminClientQueryManualCompactResult struct {
 	Success *QueryAppManualCompactResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
 }

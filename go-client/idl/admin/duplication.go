@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/idl/utils"
 	"github.com/apache/thrift/lib/go/thrift"
 	"reflect"
 )
@@ -24,6 +25,65 @@ var _ = bytes.Equal
 
 var _ = base.GoUnusedProtection__
 var _ = replication.GoUnusedProtection__
+var _ = utils.GoUnusedProtection__
+
+type DuplicationMode int64
+
+const (
+	DuplicationMode_FULL        DuplicationMode = 0
+	DuplicationMode_INCREMENTAL DuplicationMode = 1
+)
+
+func (p DuplicationMode) String() string {
+	switch p {
+	case DuplicationMode_FULL:
+		return "FULL"
+	case DuplicationMode_INCREMENTAL:
+		return "INCREMENTAL"
+	}
+	return "<UNSET>"
+}
+
+func DuplicationModeFromString(s string) (DuplicationMode, error) {
+	switch s {
+	case "FULL":
+		return DuplicationMode_FULL, nil
+	case "INCREMENTAL":
+		return DuplicationMode_INCREMENTAL, nil
+	}
+	return DuplicationMode(0), fmt.Errorf("not a valid DuplicationMode string")
+}
+
+func DuplicationModePtr(v DuplicationMode) *DuplicationMode { return &v }
+
+func (p DuplicationMode) MarshalText() ([]byte, error) {
+	return []byte(p.String()), nil
+}
+
+func (p *DuplicationMode) UnmarshalText(text []byte) error {
+	q, err := DuplicationModeFromString(string(text))
+	if err != nil {
+		return err
+	}
+	*p = q
+	return nil
+}
+
+func (p *DuplicationMode) Scan(value interface{}) error {
+	v, ok := value.(int64)
+	if !ok {
+		return errors.New("Scan value is not int64")
+	}
+	*p = DuplicationMode(v)
+	return nil
+}
+
+func (p *DuplicationMode) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
 
 type DuplicationStatus int64
 
@@ -167,11 +227,11 @@ func (p *DuplicationFailMode) Value() (driver.Value, error) {
 }
 
 // Attributes:
-//   - AppName
-//   - RemoteClusterName
-//   - IsDuplicatingCheckpoint
-//   - RemoteAppName
-//   - RemoteReplicaCount
+//  - AppName
+//  - RemoteClusterName
+//  - IsDuplicatingCheckpoint
+//  - RemoteAppName
+//  - RemoteReplicaCount
 type DuplicationAddRequest struct {
 	AppName                 string  `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	RemoteClusterName       string  `thrift:"remote_cluster_name,2" db:"remote_cluster_name" json:"remote_cluster_name"`
@@ -462,12 +522,12 @@ func (p *DuplicationAddRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Appid
-//   - Dupid
-//   - Hint
-//   - RemoteAppName
-//   - RemoteReplicaCount
+//  - Err
+//  - Appid
+//  - Dupid
+//  - Hint
+//  - RemoteAppName
+//  - RemoteReplicaCount
 type DuplicationAddResponse struct {
 	Err                *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	Appid              int32           `thrift:"appid,2" db:"appid" json:"appid"`
@@ -807,10 +867,10 @@ func (p *DuplicationAddResponse) String() string {
 }
 
 // Attributes:
-//   - AppName
-//   - Dupid
-//   - Status
-//   - FailMode
+//  - AppName
+//  - Dupid
+//  - Status
+//  - FailMode
 type DuplicationModifyRequest struct {
 	AppName  string               `thrift:"app_name,1" db:"app_name" json:"app_name"`
 	Dupid    int32                `thrift:"dupid,2" db:"dupid" json:"dupid"`
@@ -1053,8 +1113,8 @@ func (p *DuplicationModifyRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Appid
+//  - Err
+//  - Appid
 type DuplicationModifyResponse struct {
 	Err   *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	Appid int32           `thrift:"appid,2" db:"appid" json:"appid"`
@@ -1201,14 +1261,156 @@ func (p *DuplicationModifyResponse) String() string {
 }
 
 // Attributes:
-//   - Dupid
-//   - Status
-//   - Remote
-//   - CreateTs
-//   - Progress
-//   - FailMode
-//   - RemoteAppName
-//   - RemoteReplicaCount
+//  - ConfirmedDecree
+//  - LastCommittedDecree
+type DuplicationPartitionState struct {
+	ConfirmedDecree     int64 `thrift:"confirmed_decree,1" db:"confirmed_decree" json:"confirmed_decree"`
+	LastCommittedDecree int64 `thrift:"last_committed_decree,2" db:"last_committed_decree" json:"last_committed_decree"`
+}
+
+func NewDuplicationPartitionState() *DuplicationPartitionState {
+	return &DuplicationPartitionState{}
+}
+
+func (p *DuplicationPartitionState) GetConfirmedDecree() int64 {
+	return p.ConfirmedDecree
+}
+
+func (p *DuplicationPartitionState) GetLastCommittedDecree() int64 {
+	return p.LastCommittedDecree
+}
+func (p *DuplicationPartitionState) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *DuplicationPartitionState) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.ConfirmedDecree = v
+	}
+	return nil
+}
+
+func (p *DuplicationPartitionState) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.LastCommittedDecree = v
+	}
+	return nil
+}
+
+func (p *DuplicationPartitionState) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("duplication_partition_state"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *DuplicationPartitionState) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("confirmed_decree", thrift.I64, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:confirmed_decree: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.ConfirmedDecree)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.confirmed_decree (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:confirmed_decree: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationPartitionState) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("last_committed_decree", thrift.I64, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:last_committed_decree: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.LastCommittedDecree)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.last_committed_decree (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:last_committed_decree: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationPartitionState) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DuplicationPartitionState(%+v)", *p)
+}
+
+// Attributes:
+//  - Dupid
+//  - Status
+//  - Remote
+//  - CreateTs
+//  - Progress
+//  - FailMode
+//  - RemoteAppName
+//  - RemoteReplicaCount
+//  - Mode
+//  - PartitionStates
 type DuplicationEntry struct {
 	Dupid    int32             `thrift:"dupid,1" db:"dupid" json:"dupid"`
 	Status   DuplicationStatus `thrift:"status,2" db:"status" json:"status"`
@@ -1216,9 +1418,11 @@ type DuplicationEntry struct {
 	CreateTs int64             `thrift:"create_ts,4" db:"create_ts" json:"create_ts"`
 	Progress map[int32]int64   `thrift:"progress,5" db:"progress" json:"progress,omitempty"`
 	// unused field # 6
-	FailMode           *DuplicationFailMode `thrift:"fail_mode,7" db:"fail_mode" json:"fail_mode,omitempty"`
-	RemoteAppName      *string              `thrift:"remote_app_name,8" db:"remote_app_name" json:"remote_app_name,omitempty"`
-	RemoteReplicaCount *int32               `thrift:"remote_replica_count,9" db:"remote_replica_count" json:"remote_replica_count,omitempty"`
+	FailMode           *DuplicationFailMode                 `thrift:"fail_mode,7" db:"fail_mode" json:"fail_mode,omitempty"`
+	RemoteAppName      *string                              `thrift:"remote_app_name,8" db:"remote_app_name" json:"remote_app_name,omitempty"`
+	RemoteReplicaCount *int32                               `thrift:"remote_replica_count,9" db:"remote_replica_count" json:"remote_replica_count,omitempty"`
+	Mode               *DuplicationMode                     `thrift:"mode,10" db:"mode" json:"mode,omitempty"`
+	PartitionStates    map[int32]*DuplicationPartitionState `thrift:"partition_states,11" db:"partition_states" json:"partition_states,omitempty"`
 }
 
 func NewDuplicationEntry() *DuplicationEntry {
@@ -1273,6 +1477,21 @@ func (p *DuplicationEntry) GetRemoteReplicaCount() int32 {
 	}
 	return *p.RemoteReplicaCount
 }
+
+var DuplicationEntry_Mode_DEFAULT DuplicationMode
+
+func (p *DuplicationEntry) GetMode() DuplicationMode {
+	if !p.IsSetMode() {
+		return DuplicationEntry_Mode_DEFAULT
+	}
+	return *p.Mode
+}
+
+var DuplicationEntry_PartitionStates_DEFAULT map[int32]*DuplicationPartitionState
+
+func (p *DuplicationEntry) GetPartitionStates() map[int32]*DuplicationPartitionState {
+	return p.PartitionStates
+}
 func (p *DuplicationEntry) IsSetProgress() bool {
 	return p.Progress != nil
 }
@@ -1287,6 +1506,14 @@ func (p *DuplicationEntry) IsSetRemoteAppName() bool {
 
 func (p *DuplicationEntry) IsSetRemoteReplicaCount() bool {
 	return p.RemoteReplicaCount != nil
+}
+
+func (p *DuplicationEntry) IsSetMode() bool {
+	return p.Mode != nil
+}
+
+func (p *DuplicationEntry) IsSetPartitionStates() bool {
+	return p.PartitionStates != nil
 }
 
 func (p *DuplicationEntry) Read(iprot thrift.TProtocol) error {
@@ -1376,6 +1603,26 @@ func (p *DuplicationEntry) Read(iprot thrift.TProtocol) error {
 		case 9:
 			if fieldTypeId == thrift.I32 {
 				if err := p.ReadField9(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField10(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.MAP {
+				if err := p.ReadField11(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -1491,6 +1738,42 @@ func (p *DuplicationEntry) ReadField9(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *DuplicationEntry) ReadField10(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 10: ", err)
+	} else {
+		temp := DuplicationMode(v)
+		p.Mode = &temp
+	}
+	return nil
+}
+
+func (p *DuplicationEntry) ReadField11(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[int32]*DuplicationPartitionState, size)
+	p.PartitionStates = tMap
+	for i := 0; i < size; i++ {
+		var _key2 int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_key2 = v
+		}
+		_val3 := &DuplicationPartitionState{}
+		if err := _val3.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val3), err)
+		}
+		p.PartitionStates[_key2] = _val3
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
 func (p *DuplicationEntry) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("duplication_entry"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1518,6 +1801,12 @@ func (p *DuplicationEntry) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField9(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField10(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField11(oprot); err != nil {
 			return err
 		}
 	}
@@ -1653,6 +1942,47 @@ func (p *DuplicationEntry) writeField9(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
+func (p *DuplicationEntry) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMode() {
+		if err := oprot.WriteFieldBegin("mode", thrift.I32, 10); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:mode: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.Mode)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.mode (10) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:mode: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *DuplicationEntry) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionStates() {
+		if err := oprot.WriteFieldBegin("partition_states", thrift.MAP, 11); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:partition_states: ", p), err)
+		}
+		if err := oprot.WriteMapBegin(thrift.I32, thrift.STRUCT, len(p.PartitionStates)); err != nil {
+			return thrift.PrependError("error writing map begin: ", err)
+		}
+		for k, v := range p.PartitionStates {
+			if err := oprot.WriteI32(int32(k)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+			if err := v.Write(oprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return thrift.PrependError("error writing map end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:partition_states: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *DuplicationEntry) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1661,7 +1991,257 @@ func (p *DuplicationEntry) String() string {
 }
 
 // Attributes:
-//   - AppName
+//  - Appid
+//  - Duplications
+//  - AppName
+//  - PartitionCount
+type DuplicationAppState struct {
+	Appid          int32                       `thrift:"appid,1" db:"appid" json:"appid"`
+	Duplications   map[int32]*DuplicationEntry `thrift:"duplications,2" db:"duplications" json:"duplications"`
+	AppName        string                      `thrift:"app_name,3" db:"app_name" json:"app_name"`
+	PartitionCount int32                       `thrift:"partition_count,4" db:"partition_count" json:"partition_count"`
+}
+
+func NewDuplicationAppState() *DuplicationAppState {
+	return &DuplicationAppState{}
+}
+
+func (p *DuplicationAppState) GetAppid() int32 {
+	return p.Appid
+}
+
+func (p *DuplicationAppState) GetDuplications() map[int32]*DuplicationEntry {
+	return p.Duplications
+}
+
+func (p *DuplicationAppState) GetAppName() string {
+	return p.AppName
+}
+
+func (p *DuplicationAppState) GetPartitionCount() int32 {
+	return p.PartitionCount
+}
+func (p *DuplicationAppState) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.MAP {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *DuplicationAppState) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Appid = v
+	}
+	return nil
+}
+
+func (p *DuplicationAppState) ReadField2(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[int32]*DuplicationEntry, size)
+	p.Duplications = tMap
+	for i := 0; i < size; i++ {
+		var _key4 int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_key4 = v
+		}
+		_val5 := &DuplicationEntry{}
+		if err := _val5.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val5), err)
+		}
+		p.Duplications[_key4] = _val5
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
+func (p *DuplicationAppState) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.AppName = v
+	}
+	return nil
+}
+
+func (p *DuplicationAppState) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		p.PartitionCount = v
+	}
+	return nil
+}
+
+func (p *DuplicationAppState) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("duplication_app_state"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *DuplicationAppState) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("appid", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:appid: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.Appid)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.appid (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:appid: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationAppState) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("duplications", thrift.MAP, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:duplications: ", p), err)
+	}
+	if err := oprot.WriteMapBegin(thrift.I32, thrift.STRUCT, len(p.Duplications)); err != nil {
+		return thrift.PrependError("error writing map begin: ", err)
+	}
+	for k, v := range p.Duplications {
+		if err := oprot.WriteI32(int32(k)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+		}
+		if err := v.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+		}
+	}
+	if err := oprot.WriteMapEnd(); err != nil {
+		return thrift.PrependError("error writing map end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:duplications: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationAppState) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_name", thrift.STRING, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:app_name: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.AppName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_name (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:app_name: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationAppState) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("partition_count", thrift.I32, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:partition_count: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.PartitionCount)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.partition_count (4) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:partition_count: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationAppState) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DuplicationAppState(%+v)", *p)
+}
+
+// Attributes:
+//  - AppName
 type DuplicationQueryRequest struct {
 	AppName string `thrift:"app_name,1" db:"app_name" json:"app_name"`
 }
@@ -1760,9 +2340,9 @@ func (p *DuplicationQueryRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - Appid
-//   - EntryList
+//  - Err
+//  - Appid
+//  - EntryList
 type DuplicationQueryResponse struct {
 	Err *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
 	// unused field # 2
@@ -1878,11 +2458,11 @@ func (p *DuplicationQueryResponse) ReadField4(iprot thrift.TProtocol) error {
 	tSlice := make([]*DuplicationEntry, 0, size)
 	p.EntryList = tSlice
 	for i := 0; i < size; i++ {
-		_elem2 := &DuplicationEntry{}
-		if err := _elem2.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem2), err)
+		_elem6 := &DuplicationEntry{}
+		if err := _elem6.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem6), err)
 		}
-		p.EntryList = append(p.EntryList, _elem2)
+		p.EntryList = append(p.EntryList, _elem6)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -1969,13 +2549,15 @@ func (p *DuplicationQueryResponse) String() string {
 }
 
 // Attributes:
-//   - Dupid
-//   - ConfirmedDecree
-//   - CheckpointPrepared
+//  - Dupid
+//  - ConfirmedDecree
+//  - CheckpointPrepared
+//  - LastCommittedDecree
 type DuplicationConfirmEntry struct {
-	Dupid              int32 `thrift:"dupid,1" db:"dupid" json:"dupid"`
-	ConfirmedDecree    int64 `thrift:"confirmed_decree,2" db:"confirmed_decree" json:"confirmed_decree"`
-	CheckpointPrepared bool  `thrift:"checkpoint_prepared,3" db:"checkpoint_prepared" json:"checkpoint_prepared"`
+	Dupid               int32  `thrift:"dupid,1" db:"dupid" json:"dupid"`
+	ConfirmedDecree     int64  `thrift:"confirmed_decree,2" db:"confirmed_decree" json:"confirmed_decree"`
+	CheckpointPrepared  bool   `thrift:"checkpoint_prepared,3" db:"checkpoint_prepared" json:"checkpoint_prepared"`
+	LastCommittedDecree *int64 `thrift:"last_committed_decree,4" db:"last_committed_decree" json:"last_committed_decree,omitempty"`
 }
 
 func NewDuplicationConfirmEntry() *DuplicationConfirmEntry {
@@ -1995,8 +2577,21 @@ var DuplicationConfirmEntry_CheckpointPrepared_DEFAULT bool = false
 func (p *DuplicationConfirmEntry) GetCheckpointPrepared() bool {
 	return p.CheckpointPrepared
 }
+
+var DuplicationConfirmEntry_LastCommittedDecree_DEFAULT int64
+
+func (p *DuplicationConfirmEntry) GetLastCommittedDecree() int64 {
+	if !p.IsSetLastCommittedDecree() {
+		return DuplicationConfirmEntry_LastCommittedDecree_DEFAULT
+	}
+	return *p.LastCommittedDecree
+}
 func (p *DuplicationConfirmEntry) IsSetCheckpointPrepared() bool {
 	return p.CheckpointPrepared != DuplicationConfirmEntry_CheckpointPrepared_DEFAULT
+}
+
+func (p *DuplicationConfirmEntry) IsSetLastCommittedDecree() bool {
+	return p.LastCommittedDecree != nil
 }
 
 func (p *DuplicationConfirmEntry) Read(iprot thrift.TProtocol) error {
@@ -2036,6 +2631,16 @@ func (p *DuplicationConfirmEntry) Read(iprot thrift.TProtocol) error {
 		case 3:
 			if fieldTypeId == thrift.BOOL {
 				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField4(iprot); err != nil {
 					return err
 				}
 			} else {
@@ -2085,6 +2690,15 @@ func (p *DuplicationConfirmEntry) ReadField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *DuplicationConfirmEntry) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		p.LastCommittedDecree = &v
+	}
+	return nil
+}
+
 func (p *DuplicationConfirmEntry) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("duplication_confirm_entry"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -2097,6 +2711,9 @@ func (p *DuplicationConfirmEntry) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
 			return err
 		}
 	}
@@ -2150,6 +2767,21 @@ func (p *DuplicationConfirmEntry) writeField3(oprot thrift.TProtocol) (err error
 	return err
 }
 
+func (p *DuplicationConfirmEntry) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLastCommittedDecree() {
+		if err := oprot.WriteFieldBegin("last_committed_decree", thrift.I64, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:last_committed_decree: ", p), err)
+		}
+		if err := oprot.WriteI64(int64(*p.LastCommittedDecree)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.last_committed_decree (4) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:last_committed_decree: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *DuplicationConfirmEntry) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2158,9 +2790,9 @@ func (p *DuplicationConfirmEntry) String() string {
 }
 
 // Attributes:
-//   - Node
-//   - ConfirmList
-//   - HpNode
+//  - Node
+//  - ConfirmList
+//  - HpNode
 type DuplicationSyncRequest struct {
 	Node        *base.RPCAddress                          `thrift:"node,1" db:"node" json:"node"`
 	ConfirmList map[*base.Gpid][]*DuplicationConfirmEntry `thrift:"confirm_list,2" db:"confirm_list" json:"confirm_list"`
@@ -2275,27 +2907,27 @@ func (p *DuplicationSyncRequest) ReadField2(iprot thrift.TProtocol) error {
 	tMap := make(map[*base.Gpid][]*DuplicationConfirmEntry, size)
 	p.ConfirmList = tMap
 	for i := 0; i < size; i++ {
-		_key3 := &base.Gpid{}
-		if err := _key3.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _key3), err)
+		_key7 := &base.Gpid{}
+		if err := _key7.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _key7), err)
 		}
 		_, size, err := iprot.ReadListBegin()
 		if err != nil {
 			return thrift.PrependError("error reading list begin: ", err)
 		}
 		tSlice := make([]*DuplicationConfirmEntry, 0, size)
-		_val4 := tSlice
+		_val8 := tSlice
 		for i := 0; i < size; i++ {
-			_elem5 := &DuplicationConfirmEntry{}
-			if err := _elem5.Read(iprot); err != nil {
-				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem5), err)
+			_elem9 := &DuplicationConfirmEntry{}
+			if err := _elem9.Read(iprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem9), err)
 			}
-			_val4 = append(_val4, _elem5)
+			_val8 = append(_val8, _elem9)
 		}
 		if err := iprot.ReadListEnd(); err != nil {
 			return thrift.PrependError("error reading list end: ", err)
 		}
-		p.ConfirmList[_key3] = _val4
+		p.ConfirmList[_key7] = _val8
 	}
 	if err := iprot.ReadMapEnd(); err != nil {
 		return thrift.PrependError("error reading map end: ", err)
@@ -2401,8 +3033,8 @@ func (p *DuplicationSyncRequest) String() string {
 }
 
 // Attributes:
-//   - Err
-//   - DupMap
+//  - Err
+//  - DupMap
 type DuplicationSyncResponse struct {
 	Err    *base.ErrorCode                       `thrift:"err,1" db:"err" json:"err"`
 	DupMap map[int32]map[int32]*DuplicationEntry `thrift:"dup_map,2" db:"dup_map" json:"dup_map"`
@@ -2493,35 +3125,35 @@ func (p *DuplicationSyncResponse) ReadField2(iprot thrift.TProtocol) error {
 	tMap := make(map[int32]map[int32]*DuplicationEntry, size)
 	p.DupMap = tMap
 	for i := 0; i < size; i++ {
-		var _key6 int32
+		var _key10 int32
 		if v, err := iprot.ReadI32(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_key6 = v
+			_key10 = v
 		}
 		_, _, size, err := iprot.ReadMapBegin()
 		if err != nil {
 			return thrift.PrependError("error reading map begin: ", err)
 		}
 		tMap := make(map[int32]*DuplicationEntry, size)
-		_val7 := tMap
+		_val11 := tMap
 		for i := 0; i < size; i++ {
-			var _key8 int32
+			var _key12 int32
 			if v, err := iprot.ReadI32(); err != nil {
 				return thrift.PrependError("error reading field 0: ", err)
 			} else {
-				_key8 = v
+				_key12 = v
 			}
-			_val9 := &DuplicationEntry{}
-			if err := _val9.Read(iprot); err != nil {
-				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val9), err)
+			_val13 := &DuplicationEntry{}
+			if err := _val13.Read(iprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val13), err)
 			}
-			_val7[_key8] = _val9
+			_val11[_key12] = _val13
 		}
 		if err := iprot.ReadMapEnd(); err != nil {
 			return thrift.PrependError("error reading map end: ", err)
 		}
-		p.DupMap[_key6] = _val7
+		p.DupMap[_key10] = _val11
 	}
 	if err := iprot.ReadMapEnd(); err != nil {
 		return thrift.PrependError("error reading map end: ", err)
@@ -2603,4 +3235,362 @@ func (p *DuplicationSyncResponse) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("DuplicationSyncResponse(%+v)", *p)
+}
+
+// Attributes:
+//  - AppNamePattern
+//  - MatchType
+type DuplicationListRequest struct {
+	AppNamePattern string                 `thrift:"app_name_pattern,1" db:"app_name_pattern" json:"app_name_pattern"`
+	MatchType      utils.PatternMatchType `thrift:"match_type,2" db:"match_type" json:"match_type"`
+}
+
+func NewDuplicationListRequest() *DuplicationListRequest {
+	return &DuplicationListRequest{}
+}
+
+func (p *DuplicationListRequest) GetAppNamePattern() string {
+	return p.AppNamePattern
+}
+
+func (p *DuplicationListRequest) GetMatchType() utils.PatternMatchType {
+	return p.MatchType
+}
+func (p *DuplicationListRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *DuplicationListRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.AppNamePattern = v
+	}
+	return nil
+}
+
+func (p *DuplicationListRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		temp := utils.PatternMatchType(v)
+		p.MatchType = temp
+	}
+	return nil
+}
+
+func (p *DuplicationListRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("duplication_list_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *DuplicationListRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_name_pattern", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:app_name_pattern: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.AppNamePattern)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_name_pattern (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:app_name_pattern: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationListRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("match_type", thrift.I32, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:match_type: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.MatchType)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.match_type (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:match_type: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationListRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DuplicationListRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Err
+//  - HintMessage
+//  - AppStates
+type DuplicationListResponse struct {
+	Err         *base.ErrorCode                 `thrift:"err,1" db:"err" json:"err"`
+	HintMessage string                          `thrift:"hint_message,2" db:"hint_message" json:"hint_message"`
+	AppStates   map[string]*DuplicationAppState `thrift:"app_states,3" db:"app_states" json:"app_states"`
+}
+
+func NewDuplicationListResponse() *DuplicationListResponse {
+	return &DuplicationListResponse{}
+}
+
+var DuplicationListResponse_Err_DEFAULT *base.ErrorCode
+
+func (p *DuplicationListResponse) GetErr() *base.ErrorCode {
+	if !p.IsSetErr() {
+		return DuplicationListResponse_Err_DEFAULT
+	}
+	return p.Err
+}
+
+func (p *DuplicationListResponse) GetHintMessage() string {
+	return p.HintMessage
+}
+
+func (p *DuplicationListResponse) GetAppStates() map[string]*DuplicationAppState {
+	return p.AppStates
+}
+func (p *DuplicationListResponse) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *DuplicationListResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *DuplicationListResponse) ReadField1(iprot thrift.TProtocol) error {
+	p.Err = &base.ErrorCode{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *DuplicationListResponse) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.HintMessage = v
+	}
+	return nil
+}
+
+func (p *DuplicationListResponse) ReadField3(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[string]*DuplicationAppState, size)
+	p.AppStates = tMap
+	for i := 0; i < size; i++ {
+		var _key14 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_key14 = v
+		}
+		_val15 := &DuplicationAppState{}
+		if err := _val15.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val15), err)
+		}
+		p.AppStates[_key14] = _val15
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
+func (p *DuplicationListResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("duplication_list_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *DuplicationListResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:err: ", p), err)
+	}
+	if err := p.Err.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:err: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationListResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("hint_message", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:hint_message: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.HintMessage)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.hint_message (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:hint_message: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationListResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_states", thrift.MAP, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:app_states: ", p), err)
+	}
+	if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.AppStates)); err != nil {
+		return thrift.PrependError("error writing map begin: ", err)
+	}
+	for k, v := range p.AppStates {
+		if err := oprot.WriteString(string(k)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+		}
+		if err := v.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+		}
+	}
+	if err := oprot.WriteMapEnd(); err != nil {
+		return thrift.PrependError("error writing map end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:app_states: ", p), err)
+	}
+	return err
+}
+
+func (p *DuplicationListResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DuplicationListResponse(%+v)", *p)
 }
