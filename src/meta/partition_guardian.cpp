@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <ostream>
+#include <type_traits>
 #include <unordered_map>
 
 #include "common/replication_common.h"

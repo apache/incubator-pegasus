@@ -106,8 +106,8 @@ private:
 
     std::string _lock_root; // lock path: ${lock_root}/${lock_id}/${LOCK_NODE_PREFIX}${i}
 
-    typedef std::unordered_map<lock_key, lock_struct_ptr, pair_hash> lock_map;
-    typedef std::map<std::string, std::pair<std::string, uint64_t>> cache_map;
+    using lock_map = std::unordered_map<lock_key, lock_struct_ptr, pair_hash>;
+    using cache_map = std::map<std::string, std::pair<std::string, uint64_t>>;
 
     mutable utils::rw_lock_nr _service_lock;
     lock_map _zookeeper_locks;

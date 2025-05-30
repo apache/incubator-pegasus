@@ -71,6 +71,7 @@ class configuration_recovery_request;
 class configuration_recovery_response;
 class configuration_restore_request;
 class configuration_update_request;
+class ddd_partition_info;
 class query_app_info_response;
 class query_replica_info_response;
 
@@ -159,7 +160,7 @@ public:
 
     void query_configuration_by_index(const query_cfg_request &request,
                                       /*out*/ query_cfg_response &response);
-    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &pc);
+    bool query_configuration_by_gpid(dsn::gpid id, /*out*/ partition_configuration &pc);
 
     // Foo access control.
     void get_allowed_partitions(dsn::message_ex *msg,

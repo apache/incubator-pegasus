@@ -40,6 +40,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/distributed_lock_service.h"
 #include "utils/error_code.h"
+#include "utils/ports.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -50,7 +51,9 @@ namespace dist {
 class distributed_lock_service_simple : public distributed_lock_service
 {
 public:
-    ~distributed_lock_service_simple() { _tracker.cancel_outstanding_tasks(); }
+    distributed_lock_service_simple() = default;
+    ~distributed_lock_service_simple() override { _tracker.cancel_outstanding_tasks(); }
+
     // no parameter need
     error_code initialize(const std::vector<std::string> &args) override;
     error_code finalize() override { return ERR_OK; }
@@ -84,7 +87,6 @@ public:
 private:
     void random_lock_lease_expire(const std::string &lock_id);
 
-private:
     struct lock_wait_info
     {
         task_ptr grant_callback;
@@ -100,12 +102,16 @@ private:
         std::list<lock_wait_info> pending_list;
     };
 
-    typedef std::unordered_map<std::string, lock_info> locks;
+    using locks = std::unordered_map<std::string, lock_info>;
 
     mutable zlock _lock;
     locks _dlocks; // lock -> owner
 
     dsn::task_tracker _tracker;
+
+    DISALLOW_COPY_AND_ASSIGN(distributed_lock_service_simple);
+    DISALLOW_MOVE_AND_ASSIGN(distributed_lock_service_simple);
 };
+
 } // namespace dist
 } // namespace dsn

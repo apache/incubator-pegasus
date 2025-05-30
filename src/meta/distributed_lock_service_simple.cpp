@@ -25,6 +25,7 @@
  */
 
 #include <chrono>
+#include <type_traits>
 
 #include "common/replication.codes.h"
 #include "distributed_lock_service_simple.h"

@@ -109,18 +109,16 @@ bool meta_server_failure_detector::get_leader(host_port *leader) const
 {
     FAIL_POINT_INJECT_F("meta_server_failure_detector_get_leader", [leader](std::string_view str) {
         /// the format of str is : true#{ip}:{port} or false#{ip}:{port}
-        auto pos = str.find("#");
+        const auto pos = str.find('#');
         // get leader host_port
-        auto addr_part = str.substr(pos + 1, str.length() - pos - 1);
+        const auto addr_part = str.substr(pos + 1, str.length() - pos - 1);
         *leader = host_port::from_string(addr_part.data());
         CHECK(*leader, "parse {} to rpc_address failed", addr_part);
 
         // get the return value which implies whether the current node is primary or not
         bool is_leader = true;
-        auto is_leader_part = str.substr(0, pos);
-        if (!dsn::buf2bool(is_leader_part, is_leader)) {
-            CHECK(false, "parse {} to bool failed", is_leader_part);
-        }
+        const auto is_leader_part = str.substr(0, pos);
+        CHECK(dsn::buf2bool(is_leader_part, is_leader), "parse {} to bool failed", is_leader_part);
         return is_leader;
     });
 
@@ -140,7 +138,7 @@ bool meta_server_failure_detector::get_leader(host_port *leader) const
     }
 
     std::string lock_owner;
-    uint64_t version;
+    uint64_t version = 0;
     const auto err = _lock_svc->query_cache(_primary_lock_id, lock_owner, version);
     if (err != dsn::ERR_OK) {
         LOG_WARNING("query leader from cache got error({})", err);

@@ -19,6 +19,7 @@
 
 #include <vector>
 
+#include "gutil/map_util.h"
 #include "ranger/ranger_resource_policy.h"
 #include "ranger/ranger_resource_policy_manager.h"
 #include "rpc/network.h"

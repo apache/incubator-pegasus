@@ -110,7 +110,7 @@ public:
     explicit serverlet(const char *nm);
     virtual ~serverlet() = default;
 
-    const std::string &name() const { return _name; }
+    [[nodiscard]] const std::string &name() const { return _name; }
 
 protected:
     template <typename TRequest>
@@ -197,7 +197,7 @@ inline bool serverlet<T>::register_rpc_handler_with_rpc_holder(dsn::task_code rp
                                                                void (T::*handler)(TRpcHolder))
 {
     const rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
-        (((T *)this)->*(handler))(TRpcHolder::auto_reply(request));
+        (static_cast<T *>(this)->*handler)(TRpcHolder::auto_reply(request));
     };
 
     return dsn_rpc_register_handler(rpc_code, extra_name, cb);
@@ -210,7 +210,7 @@ inline bool serverlet<T>::register_rpc_handler_with_rpc_holder(dsn::task_code rp
                                                                void (T::*handler)(TRpcHolder) const)
 {
     const rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
-        (((const T *)this)->*(handler))(TRpcHolder::auto_reply(request));
+        (static_cast<const T *>(this)->*handler)(TRpcHolder::auto_reply(request));
     };
 
     return dsn_rpc_register_handler(rpc_code, extra_name, cb);
