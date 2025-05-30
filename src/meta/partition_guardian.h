@@ -105,6 +105,9 @@ private:
     int64_t _replica_assign_delay_ms_for_dropouts;
 
     friend class meta_partition_guardian_test;
+
+    DISALLOW_COPY_AND_ASSIGN(partition_guardian);
+    DISALLOW_MOVE_AND_ASSIGN(partition_guardian);
 };
 
 } // namespace dsn::replication
