@@ -44,8 +44,7 @@
 
 DSN_DECLARE_int32(timeout_ms);
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 std::string distributed_lock_service_zookeeper::LOCK_NODE_PREFIX = "LOCKNODE";
 
@@ -283,5 +282,5 @@ void distributed_lock_service_zookeeper::on_zoo_session_evt(lock_srv_ptr _this, 
         LOG_WARNING("get zoo state: {}, ignore it", zookeeper_session::string_zoo_state(zoo_state));
     }
 }
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

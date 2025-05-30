@@ -43,8 +43,7 @@
 #include "utils/ports.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 // A simple version of distributed lock service.
 // NOTE: Only for test purpose.
@@ -113,5 +112,4 @@ private:
     DISALLOW_MOVE_AND_ASSIGN(distributed_lock_service_simple);
 };
 
-} // namespace dist
-} // namespace dsn
+} // namespace dsn::dist

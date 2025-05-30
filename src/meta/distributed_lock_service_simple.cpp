@@ -32,8 +32,8 @@
 #include "runtime/api_layer1.h"
 #include "task/async_calls.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
+
 DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE, TASK_PRIORITY_COMMON, THREAD_POOL_META_SERVER)
 
 static void __lock_cb_bind_and_enqueue(task_ptr lock_task,
@@ -299,5 +299,4 @@ error_code distributed_lock_service_simple::query_cache(const std::string &lock_
     return ERR_OK;
 }
 
-} // namespace dist
-} // namespace dsn
+} // namespace dsn::dist

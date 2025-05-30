@@ -44,8 +44,7 @@
 #include "utils/error_code.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 class zookeeper_session;
 
@@ -126,5 +125,5 @@ private:
 
     friend class lock_struct;
 };
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

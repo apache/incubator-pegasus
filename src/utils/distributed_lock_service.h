@@ -45,8 +45,7 @@
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 typedef std::function<void(error_code ec, const std::string &owner_id, uint64_t version)>
     lock_callback;
@@ -173,5 +172,5 @@ public:
                                    /*out*/ std::string &owner,
                                    /*out*/ uint64_t &version) const = 0;
 };
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

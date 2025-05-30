@@ -33,8 +33,8 @@
 #include "utils/command_manager.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
+
 class meta_service;
 
 class partition_guardian
@@ -107,5 +107,4 @@ private:
     friend class meta_partition_guardian_test;
 };
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

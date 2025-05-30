@@ -59,8 +59,7 @@ DSN_DEFINE_int64(meta_server,
                  "recovered beyond this time threshold, an attempt will be made to add new "
                  "secondary replicas on other nodes");
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 partition_guardian::partition_guardian(meta_service *svc) : _svc(svc)
 {
@@ -813,5 +812,4 @@ void partition_guardian::get_ddd_partitions(const gpid &pid,
     }
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
