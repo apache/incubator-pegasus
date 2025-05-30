@@ -156,7 +156,7 @@ namespace replication {
         const auto &_app_id = (app_id);                                                            \
         const auto &_app = _state->get_app(_app_id);                                               \
         if (!_app) {                                                                               \
-            rpc.response().err = ERR_APP_NOT_EXIST;                                           \
+            rpc.response().err = ERR_APP_NOT_EXIST;                                                \
             LOG_WARNING("reject request on app_id = {}", _app_id);                                 \
             return;                                                                                \
         }                                                                                          \
@@ -1129,11 +1129,11 @@ void meta_service::on_ddd_diagnose(ddd_diagnose_rpc rpc) const
     const auto app_id = pid.get_app_id();
 
     if (app_id == -1) {
-    if (!check_leader_status(rpc)) {
-        return;
-    }
+        if (!check_leader_status(rpc)) {
+            return;
+        }
     } else {
-    CHECK_APP_ID_STATUS_AND_AUTHZ(app_id );
+        CHECK_APP_ID_STATUS_AND_AUTHZ(app_id);
     }
 
     std::vector<ddd_partition_info> ddd_partitions;
@@ -1141,9 +1141,9 @@ void meta_service::on_ddd_diagnose(ddd_diagnose_rpc rpc) const
 
     auto &response = rpc.response();
     if (app_id == -1) {
-    _state->get_allowed_partitions(rpc.dsn_request(), ddd_partitions, response.partitions);
+        _state->get_allowed_partitions(rpc.dsn_request(), ddd_partitions, response.partitions);
     } else {
-response.partitions = std::move(ddd_partitions);
+        response.partitions = std::move(ddd_partitions);
     }
 
     response.err = ERR_OK;

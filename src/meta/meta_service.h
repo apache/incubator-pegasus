@@ -307,15 +307,13 @@ private:
     //    true:  rpc request check and authentication succeed
     template <typename TRpcHolder>
     bool check_status_and_authz(TRpcHolder rpc,
-                                /*out*/ host_port *forward_address ,
-                                const std::string &app_name ) const;
+                                /*out*/ host_port *forward_address,
+                                const std::string &app_name) const;
     template <typename TRpcHolder>
     bool check_status_and_authz(TRpcHolder rpc,
-                                /*out*/ host_port *forward_address
-                                ) const;
+                                /*out*/ host_port *forward_address) const;
     template <typename TRpcHolder>
-    bool check_status_and_authz(TRpcHolder rpc
-                                ) const;
+    bool check_status_and_authz(TRpcHolder rpc) const;
 
     // app_name: when the Ranger ACL is enabled, some rpc requests need to verify the app_name
     // ret:
@@ -331,8 +329,8 @@ private:
     template <typename TRpcHolder>
     bool check_leader_status(TRpcHolder rpc, host_port *forward_address) const;
 
-template <typename TRpcHolder>
-bool check_leader_status(TRpcHolder rpc) const;
+    template <typename TRpcHolder>
+    bool check_leader_status(TRpcHolder rpc) const;
 
     error_code remote_storage_initialize();
     bool check_freeze() const;
@@ -493,16 +491,13 @@ bool meta_service::check_status_and_authz(TRpcHolder rpc,
 }
 
 template <typename TRpcHolder>
-bool meta_service::check_status_and_authz(TRpcHolder rpc,
-                                          host_port *forward_address
-                                          ) const
+bool meta_service::check_status_and_authz(TRpcHolder rpc, host_port *forward_address) const
 {
     return check_status_and_authz(rpc, forward_address, "");
 }
 
 template <typename TRpcHolder>
-bool meta_service::check_status_and_authz(TRpcHolder rpc
-                                          ) const
+bool meta_service::check_status_and_authz(TRpcHolder rpc) const
 {
     return check_status_and_authz(rpc, nullptr);
 }

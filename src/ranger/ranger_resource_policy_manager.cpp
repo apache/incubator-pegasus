@@ -165,7 +165,8 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CLI_CLI_CALL_ACK"},
                              _ac_type_of_global_rpcs);
     // DATABASE - kList
-    register_rpc_access_type(access_type::kList, {"RPC_CM_LIST_APPS", "RPC_CM_DDD_DIAGNOSE"}, _ac_type_of_database_rpcs);
+    register_rpc_access_type(
+        access_type::kList, {"RPC_CM_LIST_APPS", "RPC_CM_DDD_DIAGNOSE"}, _ac_type_of_database_rpcs);
     // DATABASE - kCreate
     register_rpc_access_type(
         access_type::kCreate, {"RPC_CM_CREATE_APP"}, _ac_type_of_database_rpcs);
