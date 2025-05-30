@@ -71,6 +71,7 @@ class configuration_recovery_request;
 class configuration_recovery_response;
 class configuration_restore_request;
 class configuration_update_request;
+class ddd_partition_info;
 class query_app_info_response;
 class query_replica_info_response;
 
@@ -159,16 +160,23 @@ public:
 
     void query_configuration_by_index(const query_cfg_request &request,
                                       /*out*/ query_cfg_response &response);
-    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &pc);
+    bool query_configuration_by_gpid(dsn::gpid id, /*out*/ partition_configuration &pc);
+
+    // Foo access control.
+    void get_allowed_partitions(dsn::message_ex *msg,
+                                const std::vector<ddd_partition_info> &ddd_partitions,
+                                std::vector<ddd_partition_info> &allowed_partitions) const;
 
     // app options
     void create_app(dsn::message_ex *msg);
     void drop_app(dsn::message_ex *msg);
     void recall_app(dsn::message_ex *msg);
     void rename_app(configuration_rename_app_rpc rpc);
+    void list_apps(dsn::message_ex *msg,
+                   const configuration_list_apps_request &request,
+                   configuration_list_apps_response &response) const;
     void list_apps(const configuration_list_apps_request &request,
-                   configuration_list_apps_response &response,
-                   dsn::message_ex *msg = nullptr) const;
+                   configuration_list_apps_response &response) const;
     void restore_app(dsn::message_ex *msg);
 
     // app env operations

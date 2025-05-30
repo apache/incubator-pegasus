@@ -17,6 +17,7 @@
 
 #include "access_controller.h"
 
+#include "gutil/map_util.h"
 #include "meta_access_controller.h"
 #include "replica_access_controller.h"
 #include "utils/flags.h"
@@ -56,7 +57,7 @@ bool access_controller::is_enable_ranger_acl() const { return FLAGS_enable_range
 
 bool access_controller::is_super_user(const std::string &user_name) const
 {
-    return _super_users.find(user_name) != _super_users.end();
+    return gutil::ContainsKey(_super_users, user_name);
 }
 
 std::shared_ptr<access_controller> create_meta_access_controller(

@@ -143,15 +143,15 @@ public:
     dist::meta_state_service *get_remote_storage() const { return _storage.get(); }
     mss::meta_storage *get_meta_storage() const { return _meta_storage.get(); }
 
-    server_state *get_server_state() { return _state.get(); }
-    security::access_controller *get_access_controller() { return _access_controller.get(); }
-    server_load_balancer *get_balancer() { return _balancer.get(); }
-    partition_guardian *get_partition_guardian() { return _partition_guardian.get(); }
+    server_state *get_server_state() const { return _state.get(); }
+    security::access_controller *get_access_controller() const { return _access_controller.get(); }
+    server_load_balancer *get_balancer() const { return _balancer.get(); }
+    partition_guardian *get_partition_guardian() const { return _partition_guardian.get(); }
     dist::block_service::block_service_manager &get_block_service_manager()
     {
         return _block_service_manager;
     }
-    bulk_load_service *get_bulk_load_service() { return _bulk_load_svc.get(); }
+    bulk_load_service *get_bulk_load_service() const { return _bulk_load_svc.get(); }
 
     meta_function_level::type get_function_level()
     {
@@ -231,14 +231,14 @@ private:
     void on_drop_app(dsn::message_ex *req);
     void on_recall_app(dsn::message_ex *req);
     void on_rename_app(configuration_rename_app_rpc rpc);
-    void on_list_apps(configuration_list_apps_rpc rpc);
+    void on_list_apps(configuration_list_apps_rpc rpc) const;
     void on_list_nodes(configuration_list_nodes_rpc rpc);
 
     // app env operations
     void update_app_env(app_env_rpc env_rpc);
 
     // ddd diagnose
-    void ddd_diagnose(ddd_diagnose_rpc rpc);
+    void on_ddd_diagnose(ddd_diagnose_rpc rpc) const;
 
     // cluster info
     void on_query_cluster_info(configuration_cluster_info_rpc rpc);
@@ -297,9 +297,9 @@ private:
 
     // if return 'kNotLeaderAndCannotForwardRpc' and 'forward_address' != nullptr, then return
     // leader by 'forward_address'.
-    meta_leader_state check_leader(dsn::message_ex *req, dsn::host_port *forward_address);
+    meta_leader_state check_leader(dsn::message_ex *req, dsn::host_port *forward_address) const;
     template <typename TRpcHolder>
-    meta_leader_state check_leader(TRpcHolder rpc, /*out*/ host_port *forward_address);
+    meta_leader_state check_leader(TRpcHolder rpc, /*out*/ host_port *forward_address) const;
 
     // app_name: when the Ranger ACL is enabled, some rpc requests need to verify the app_name
     // ret:
@@ -307,8 +307,13 @@ private:
     //    true:  rpc request check and authentication succeed
     template <typename TRpcHolder>
     bool check_status_and_authz(TRpcHolder rpc,
-                                /*out*/ host_port *forward_address = nullptr,
-                                const std::string &app_name = "");
+                                /*out*/ host_port *forward_address,
+                                const std::string &app_name) const;
+    template <typename TRpcHolder>
+    bool check_status_and_authz(TRpcHolder rpc,
+                                /*out*/ host_port *forward_address) const;
+    template <typename TRpcHolder>
+    bool check_status_and_authz(TRpcHolder rpc) const;
 
     // app_name: when the Ranger ACL is enabled, some rpc requests need to verify the app_name
     // ret:
@@ -322,7 +327,10 @@ private:
     bool check_status_and_authz_with_reply(message_ex *msg);
 
     template <typename TRpcHolder>
-    bool check_leader_status(TRpcHolder rpc, host_port *forward_address = nullptr);
+    bool check_leader_status(TRpcHolder rpc, host_port *forward_address) const;
+
+    template <typename TRpcHolder>
+    bool check_leader_status(TRpcHolder rpc) const;
 
     error_code remote_storage_initialize();
     bool check_freeze() const;
@@ -402,34 +410,41 @@ private:
 };
 
 template <typename TRpcHolder>
-meta_leader_state meta_service::check_leader(TRpcHolder rpc, host_port *forward_address)
+meta_leader_state meta_service::check_leader(TRpcHolder rpc, host_port *forward_address) const
 {
     host_port leader;
-    if (!_failure_detector->get_leader(&leader)) {
-        if (!rpc.dsn_request()->header->context.u.is_forward_supported) {
-            if (forward_address != nullptr)
-                *forward_address = leader;
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
+    if (_failure_detector->get_leader(&leader)) {
+        return meta_leader_state::kIsLeader;
+    }
+
+    if (!rpc.dsn_request()->header->context.u.is_forward_supported) {
+        if (forward_address != nullptr) {
+            *forward_address = leader;
         }
 
-        if (leader) {
-            rpc.forward(dsn::dns_resolver::instance().resolve_address(leader));
-            return meta_leader_state::kNotLeaderAndCanForwardRpc;
-        } else {
-            if (forward_address != nullptr)
-                forward_address->reset();
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
-        }
+        return meta_leader_state::kNotLeaderAndCannotForwardRpc;
     }
-    return meta_leader_state::kIsLeader;
+
+    if (leader) {
+        rpc.forward(dsn::dns_resolver::instance().resolve_address(leader));
+        return meta_leader_state::kNotLeaderAndCanForwardRpc;
+    }
+
+    if (forward_address != nullptr) {
+        forward_address->reset();
+    }
+
+    return meta_leader_state::kNotLeaderAndCannotForwardRpc;
 }
 
 template <typename TRpcHolder>
-bool meta_service::check_leader_status(TRpcHolder rpc, host_port *forward_address)
+bool meta_service::check_leader_status(TRpcHolder rpc, host_port *forward_address) const
 {
-    auto result = check_leader(rpc, forward_address);
-    if (result == meta_leader_state::kNotLeaderAndCanForwardRpc)
+    const auto result = check_leader(rpc, forward_address);
+    if (result == meta_leader_state::kNotLeaderAndCanForwardRpc) {
         return false;
+    }
+
     if (result == meta_leader_state::kNotLeaderAndCannotForwardRpc || !_started) {
         if (result == meta_leader_state::kNotLeaderAndCannotForwardRpc) {
             rpc.response().err = ERR_FORWARD_TO_OTHERS;
@@ -441,7 +456,14 @@ bool meta_service::check_leader_status(TRpcHolder rpc, host_port *forward_addres
         LOG_INFO("reject request with {}", rpc.response().err);
         return false;
     }
+
     return true;
+}
+
+template <typename TRpcHolder>
+bool meta_service::check_leader_status(TRpcHolder rpc) const
+{
+    return check_leader_status(rpc, nullptr);
 }
 
 // when the Ranger ACL is enabled, only the leader meta_server will pull Ranger policy, so if it is
@@ -450,11 +472,12 @@ bool meta_service::check_leader_status(TRpcHolder rpc, host_port *forward_addres
 template <typename TRpcHolder>
 bool meta_service::check_status_and_authz(TRpcHolder rpc,
                                           host_port *forward_address,
-                                          const std::string &app_name)
+                                          const std::string &app_name) const
 {
     if (!check_leader_status(rpc, forward_address)) {
         return false;
     }
+
     if (!_access_controller->allowed(rpc.dsn_request(), app_name)) {
         rpc.response().err = ERR_ACL_DENY;
         LOG_DEBUG("not authorized {} to operate on app({}) for user({})",
@@ -463,7 +486,20 @@ bool meta_service::check_status_and_authz(TRpcHolder rpc,
                   rpc.dsn_request()->io_session->get_client_username());
         return false;
     }
+
     return true;
+}
+
+template <typename TRpcHolder>
+bool meta_service::check_status_and_authz(TRpcHolder rpc, host_port *forward_address) const
+{
+    return check_status_and_authz(rpc, forward_address, "");
+}
+
+template <typename TRpcHolder>
+bool meta_service::check_status_and_authz(TRpcHolder rpc) const
+{
+    return check_status_and_authz(rpc, nullptr);
 }
 
 template <typename TRespType>
@@ -471,10 +507,11 @@ bool meta_service::check_status_and_authz_with_reply(message_ex *req,
                                                      TRespType &response_struct,
                                                      const std::string &app_name)
 {
-    auto result = check_leader(req, nullptr);
+    const auto result = check_leader(req, nullptr);
     if (result == meta_leader_state::kNotLeaderAndCanForwardRpc) {
         return false;
     }
+
     if (result == meta_leader_state::kNotLeaderAndCannotForwardRpc || !_started) {
         if (result == meta_leader_state::kNotLeaderAndCannotForwardRpc) {
             response_struct.err = ERR_FORWARD_TO_OTHERS;
@@ -487,6 +524,7 @@ bool meta_service::check_status_and_authz_with_reply(message_ex *req,
         reply(req, response_struct);
         return false;
     }
+
     if (!_access_controller->allowed(req, app_name)) {
         response_struct.err = ERR_ACL_DENY;
         LOG_DEBUG("not authorized {} to operate on app({}) for user({})",
@@ -496,6 +534,7 @@ bool meta_service::check_status_and_authz_with_reply(message_ex *req,
         reply(req, response_struct);
         return false;
     }
+
     return true;
 }
 

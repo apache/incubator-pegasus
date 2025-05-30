@@ -156,7 +156,7 @@ namespace replication {
         const auto &_app_id = (app_id);                                                            \
         const auto &_app = _state->get_app(_app_id);                                               \
         if (!_app) {                                                                               \
-            rpc.response().err = ERR_INVALID_PARAMETERS;                                           \
+            rpc.response().err = ERR_APP_NOT_EXIST;                                                \
             LOG_WARNING("reject request on app_id = {}", _app_id);                                 \
             return;                                                                                \
         }                                                                                          \
@@ -521,7 +521,7 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler_with_rpc_holder(
         RPC_CM_UPDATE_APP_ENV, "update_app_env(set/del/clear)", &meta_service::update_app_env);
     register_rpc_handler_with_rpc_holder(
-        RPC_CM_DDD_DIAGNOSE, "ddd_diagnose", &meta_service::ddd_diagnose);
+        RPC_CM_DDD_DIAGNOSE, "ddd_diagnose", &meta_service::on_ddd_diagnose);
     register_rpc_handler_with_rpc_holder(RPC_CM_START_PARTITION_SPLIT,
                                          "start_partition_split",
                                          &meta_service::on_start_partition_split);
@@ -571,27 +571,33 @@ void meta_service::register_rpc_handlers()
                                          &meta_service::on_set_atomic_idempotent);
 }
 
-meta_leader_state meta_service::check_leader(dsn::message_ex *req, dsn::host_port *forward_address)
+meta_leader_state meta_service::check_leader(dsn::message_ex *req,
+                                             dsn::host_port *forward_address) const
 {
     host_port leader;
-    if (!_failure_detector->get_leader(&leader)) {
-        if (!req->header->context.u.is_forward_supported) {
-            if (forward_address != nullptr)
-                *forward_address = leader;
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
+    if (_failure_detector->get_leader(&leader)) {
+        return meta_leader_state::kIsLeader;
+    }
+
+    if (!req->header->context.u.is_forward_supported) {
+        if (forward_address != nullptr) {
+            *forward_address = leader;
         }
 
-        LOG_DEBUG("leader address: {}", leader);
-        if (leader) {
-            dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
-            return meta_leader_state::kNotLeaderAndCanForwardRpc;
-        } else {
-            if (forward_address != nullptr)
-                forward_address->reset();
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
-        }
+        return meta_leader_state::kNotLeaderAndCannotForwardRpc;
     }
-    return meta_leader_state::kIsLeader;
+
+    LOG_DEBUG("leader address: {}", leader);
+    if (leader) {
+        dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
+        return meta_leader_state::kNotLeaderAndCanForwardRpc;
+    }
+
+    if (forward_address != nullptr) {
+        forward_address->reset();
+    }
+
+    return meta_leader_state::kNotLeaderAndCannotForwardRpc;
 }
 
 // table operations
@@ -673,17 +679,13 @@ void meta_service::on_recall_app(dsn::message_ex *req)
                      server_state::sStateHash);
 }
 
-void meta_service::on_list_apps(configuration_list_apps_rpc rpc)
+void meta_service::on_list_apps(configuration_list_apps_rpc rpc) const
 {
     if (!check_leader_status(rpc)) {
         return;
     }
 
-    dsn::message_ex *msg = nullptr;
-    if (_access_controller->is_enable_ranger_acl()) {
-        msg = rpc.dsn_request();
-    }
-    _state->list_apps(rpc.request(), rpc.response(), msg);
+    _state->list_apps(rpc.dsn_request(), rpc.request(), rpc.response());
 }
 
 void meta_service::on_list_nodes(configuration_list_nodes_rpc rpc)
@@ -1121,11 +1123,29 @@ void meta_service::update_app_env(app_env_rpc env_rpc)
     }
 }
 
-void meta_service::ddd_diagnose(ddd_diagnose_rpc rpc)
+void meta_service::on_ddd_diagnose(ddd_diagnose_rpc rpc) const
 {
-    CHECK_APP_ID_STATUS_AND_AUTHZ(rpc.request().pid.get_app_id());
+    const auto pid = rpc.request().pid;
+    const auto app_id = pid.get_app_id();
+
+    if (app_id == -1) {
+        if (!check_leader_status(rpc)) {
+            return;
+        }
+    } else {
+        CHECK_APP_ID_STATUS_AND_AUTHZ(app_id);
+    }
+
+    std::vector<ddd_partition_info> ddd_partitions;
+    _partition_guardian->get_ddd_partitions(pid, ddd_partitions);
+
     auto &response = rpc.response();
-    get_partition_guardian()->get_ddd_partitions(rpc.request().pid, response.partitions);
+    if (app_id == -1) {
+        _state->get_allowed_partitions(rpc.dsn_request(), ddd_partitions, response.partitions);
+    } else {
+        response.partitions = std::move(ddd_partitions);
+    }
+
     response.err = ERR_OK;
 }
 

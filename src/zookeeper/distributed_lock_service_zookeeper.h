@@ -44,8 +44,7 @@
 #include "utils/error_code.h"
 #include "utils/synchronize.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 class zookeeper_session;
 
@@ -53,11 +52,11 @@ class distributed_lock_service_zookeeper : public distributed_lock_service, publ
 {
 public:
     explicit distributed_lock_service_zookeeper();
-    virtual ~distributed_lock_service_zookeeper() override;
+    ~distributed_lock_service_zookeeper() override;
 
     // lock_root = argv[0]
-    virtual error_code initialize(const std::vector<std::string> &args) override;
-    virtual error_code finalize() override;
+    error_code initialize(const std::vector<std::string> &args) override;
+    error_code finalize() override;
 
     //
     // distributed lock service implemented by zk.
@@ -66,28 +65,28 @@ public:
     // lease_expire_callback is called when the session-expire's zk-event is encountered
     // use should exist the process when lease expires
     //
-    virtual std::pair<task_ptr, task_ptr> lock(const std::string &lock_id,
-                                               const std::string &myself_id,
-                                               task_code lock_cb_code,
-                                               const lock_callback &lock_cb,
-                                               task_code lease_expire_code,
-                                               const lock_callback &lease_expire_callback,
-                                               const lock_options &opt) override;
+    std::pair<task_ptr, task_ptr> lock(const std::string &lock_id,
+                                       const std::string &myself_id,
+                                       task_code lock_cb_code,
+                                       const lock_callback &lock_cb,
+                                       task_code lease_expire_code,
+                                       const lock_callback &lease_expire_callback,
+                                       const lock_options &opt) override;
 
-    virtual task_ptr cancel_pending_lock(const std::string &lock_id,
-                                         const std::string &myself_id,
-                                         task_code cb_code,
-                                         const lock_callback &cb) override;
-    virtual task_ptr unlock(const std::string &lock_id,
-                            const std::string &myself_id,
-                            bool destroy,
-                            task_code cb_code,
-                            const err_callback &cb) override;
-    virtual task_ptr
+    task_ptr cancel_pending_lock(const std::string &lock_id,
+                                 const std::string &myself_id,
+                                 task_code cb_code,
+                                 const lock_callback &cb) override;
+    task_ptr unlock(const std::string &lock_id,
+                    const std::string &myself_id,
+                    bool destroy,
+                    task_code cb_code,
+                    const err_callback &cb) override;
+    task_ptr
     query_lock(const std::string &lock_id, task_code cb_code, const lock_callback &cb) override;
-    virtual error_code query_cache(const std::string &lock_id,
-                                   /*out*/ std::string &owner,
-                                   /*out*/ uint64_t &version);
+    error_code query_cache(const std::string &lock_id,
+                           /*out*/ std::string &owner,
+                           /*out*/ uint64_t &version) const override;
 
     void refresh_lock_cache(const std::string &lock_id, const std::string &owner, uint64_t version);
 
@@ -106,10 +105,10 @@ private:
 
     std::string _lock_root; // lock path: ${lock_root}/${lock_id}/${LOCK_NODE_PREFIX}${i}
 
-    typedef std::unordered_map<lock_key, lock_struct_ptr, pair_hash> lock_map;
-    typedef std::map<std::string, std::pair<std::string, uint64_t>> cache_map;
+    using lock_map = std::unordered_map<lock_key, lock_struct_ptr, pair_hash>;
+    using cache_map = std::map<std::string, std::pair<std::string, uint64_t>>;
 
-    utils::rw_lock_nr _service_lock;
+    mutable utils::rw_lock_nr _service_lock;
     lock_map _zookeeper_locks;
     cache_map _lock_cache;
 
@@ -126,5 +125,5 @@ private:
 
     friend class lock_struct;
 };
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

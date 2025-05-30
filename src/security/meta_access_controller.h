@@ -36,13 +36,15 @@ namespace security {
 class meta_access_controller : public access_controller
 {
 public:
-    meta_access_controller(
+    explicit meta_access_controller(
         const std::shared_ptr<ranger::ranger_resource_policy_manager> &policy_manager);
 
-    bool allowed(message_ex *msg, const std::string &app_name = "") const override;
+    bool allowed(message_ex *msg, const std::string &app_name) const override;
 
 private:
     void register_allowed_rpc_code_list(const std::vector<std::string> &rpc_list);
+
+    bool rpc_allowed(int rpc_code) const;
 
     std::unordered_set<int> _allowed_rpc_code_list;
 
