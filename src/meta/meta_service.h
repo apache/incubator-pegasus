@@ -143,15 +143,15 @@ public:
     dist::meta_state_service *get_remote_storage() const { return _storage.get(); }
     mss::meta_storage *get_meta_storage() const { return _meta_storage.get(); }
 
-    server_state *get_server_state() { return _state.get(); }
-    security::access_controller *get_access_controller() { return _access_controller.get(); }
-    server_load_balancer *get_balancer() { return _balancer.get(); }
-    partition_guardian *get_partition_guardian() { return _partition_guardian.get(); }
+    server_state *get_server_state() const { return _state.get(); }
+    security::access_controller *get_access_controller() const { return _access_controller.get(); }
+    server_load_balancer *get_balancer() const { return _balancer.get(); }
+    partition_guardian *get_partition_guardian() const { return _partition_guardian.get(); }
     dist::block_service::block_service_manager &get_block_service_manager()
     {
         return _block_service_manager;
     }
-    bulk_load_service *get_bulk_load_service() { return _bulk_load_svc.get(); }
+    bulk_load_service *get_bulk_load_service() const { return _bulk_load_svc.get(); }
 
     meta_function_level::type get_function_level()
     {
@@ -238,7 +238,7 @@ private:
     void update_app_env(app_env_rpc env_rpc);
 
     // ddd diagnose
-    void ddd_diagnose(ddd_diagnose_rpc rpc) const;
+    void on_ddd_diagnose(ddd_diagnose_rpc rpc) const;
 
     // cluster info
     void on_query_cluster_info(configuration_cluster_info_rpc rpc);
@@ -307,8 +307,15 @@ private:
     //    true:  rpc request check and authentication succeed
     template <typename TRpcHolder>
     bool check_status_and_authz(TRpcHolder rpc,
-                                /*out*/ host_port *forward_address = nullptr,
-                                const std::string &app_name = "") const;
+                                /*out*/ host_port *forward_address ,
+                                const std::string &app_name ) const;
+    template <typename TRpcHolder>
+    bool check_status_and_authz(TRpcHolder rpc,
+                                /*out*/ host_port *forward_address
+                                ) const;
+    template <typename TRpcHolder>
+    bool check_status_and_authz(TRpcHolder rpc
+                                ) const;
 
     // app_name: when the Ranger ACL is enabled, some rpc requests need to verify the app_name
     // ret:
@@ -323,6 +330,9 @@ private:
 
     template <typename TRpcHolder>
     bool check_leader_status(TRpcHolder rpc, host_port *forward_address) const;
+
+template <typename TRpcHolder>
+bool check_leader_status(TRpcHolder rpc) const;
 
     error_code remote_storage_initialize();
     bool check_freeze() const;
@@ -452,6 +462,12 @@ bool meta_service::check_leader_status(TRpcHolder rpc, host_port *forward_addres
     return true;
 }
 
+template <typename TRpcHolder>
+bool meta_service::check_leader_status(TRpcHolder rpc) const
+{
+    return check_leader_status(rpc, nullptr);
+}
+
 // when the Ranger ACL is enabled, only the leader meta_server will pull Ranger policy, so if it is
 // not the leader, _access_controller may be a null pointer, or a new leader is elected, and the
 // above policy information may be out of date.
@@ -474,6 +490,21 @@ bool meta_service::check_status_and_authz(TRpcHolder rpc,
     }
 
     return true;
+}
+
+template <typename TRpcHolder>
+bool meta_service::check_status_and_authz(TRpcHolder rpc,
+                                          host_port *forward_address
+                                          ) const
+{
+    return check_status_and_authz(rpc, forward_address, "");
+}
+
+template <typename TRpcHolder>
+bool meta_service::check_status_and_authz(TRpcHolder rpc
+                                          ) const
+{
+    return check_status_and_authz(rpc, nullptr);
 }
 
 template <typename TRespType>

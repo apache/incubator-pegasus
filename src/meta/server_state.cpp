@@ -1093,6 +1093,19 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
         app_partition_path, LPC_META_STATE_HIGH, on_create_app_partition, value);
 }
 
+void server_state::get_allowed_partitions(dsn::message_ex *msg,std::vector<ddd_partition_info> &&ddd_partitions,
+        std::vector<ddd_partition_info> &allowed_partitions) const
+{
+    zauto_read_lock l(_lock);
+
+    for (const auto &ddd_partition : ddd_partitions) {
+        const auto &app = get_app(ddd_partition.config.pid);
+    if (_meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
+        allowed_partitions.push_back(ddd_partition);
+    }
+    }
+}
+
 void server_state::do_app_create(std::shared_ptr<app_state> &app)
 {
     auto on_create_app_root = [this, app](error_code ec) mutable {
@@ -1616,9 +1629,10 @@ void server_state::recall_app(dsn::message_ex *msg)
     do_app_recall(target_app);
 }
 
-void server_state::list_apps(const configuration_list_apps_request &request,
-                             configuration_list_apps_response &response,
-                             dsn::message_ex *msg) const
+void server_state::list_apps(dsn::message_ex *msg,
+        const configuration_list_apps_request &request,
+                             configuration_list_apps_response &response
+                             ) const
 {
     LOG_DEBUG("list app request: {}{}status={}",
               request.__isset.app_name_pattern
@@ -1658,12 +1672,20 @@ void server_state::list_apps(const configuration_list_apps_request &request,
             continue;
         }
 
-        if (msg == nullptr || _meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
+        if (_meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
             response.infos.push_back(*app);
         }
     }
 
     response.err = dsn::ERR_OK;
+}
+
+void server_state::list_apps(
+        const configuration_list_apps_request &request,
+                             configuration_list_apps_response &response
+                             ) const
+{
+    list_apps(nullptr, request, response);
 }
 
 void server_state::send_proposal(const host_port &target,
