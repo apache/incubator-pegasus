@@ -55,8 +55,11 @@ distributed_lock_service_zookeeper::~distributed_lock_service_zookeeper()
     std::vector<lock_struct_ptr> handle_vec;
     {
         utils::auto_write_lock l(_service_lock);
-        for (auto &kv : _zookeeper_locks)
+
+        for (auto &kv : _zookeeper_locks) {
             handle_vec.push_back(kv.second);
+        }
+
         _zookeeper_locks.clear();
     }
 

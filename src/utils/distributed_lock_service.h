@@ -63,7 +63,7 @@ public:
         return new T();
     }
 
-    typedef distributed_lock_service *(*factory)();
+    using factory = distributed_lock_service *(*)();
 
     struct lock_options
     {

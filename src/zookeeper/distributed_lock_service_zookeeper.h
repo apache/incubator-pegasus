@@ -43,6 +43,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/distributed_lock_service.h"
 #include "utils/error_code.h"
+#include "utils/ports.h"
 #include "utils/synchronize.h"
 
 namespace dsn::dist {
@@ -125,6 +126,9 @@ private:
     static void on_zoo_session_evt(lock_srv_ptr _this, int zoo_state);
 
     friend class lock_struct;
+
+    DISALLOW_COPY_AND_ASSIGN(distributed_lock_service_zookeeper);
+    DISALLOW_MOVE_AND_ASSIGN(distributed_lock_service_zookeeper);
 };
 
 } // namespace dsn::dist
