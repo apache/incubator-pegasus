@@ -38,8 +38,7 @@
 #include "utils/fmt_utils.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 enum lock_state
 {
@@ -59,6 +58,10 @@ struct zoolock_pair
     std::string _node_seq_name;
     int64_t _sequence_id;
 };
+
+class lock_struct;
+
+using lock_struct_ptr = ref_ptr<lock_struct>;
 
 class lock_struct : public ref_counter
 {
@@ -122,5 +125,5 @@ private:
 
     thread_access_checker _checker;
 };
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

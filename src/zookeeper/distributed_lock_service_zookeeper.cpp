@@ -36,6 +36,8 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
+#include "zookeeper/lock_struct.h"
+#include "zookeeper/lock_types.h"
 #include "zookeeper/zookeeper_session_mgr.h"
 #include "zookeeper_error.h"
 #include "zookeeper_session.h"
