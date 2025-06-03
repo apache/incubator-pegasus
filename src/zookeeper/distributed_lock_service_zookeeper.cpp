@@ -58,14 +58,14 @@ distributed_lock_service_zookeeper::~distributed_lock_service_zookeeper()
     {
         utils::auto_write_lock l(_service_lock);
 
-        for (auto &kv : _zookeeper_locks) {
-            handle_vec.push_back(kv.second);
+        for (const auto &zk_lock : _zookeeper_locks) {
+            handle_vec.push_back(zk_lock.second);
         }
 
         _zookeeper_locks.clear();
     }
 
-    for (lock_struct_ptr &ptr : handle_vec) {
+    for (const lock_struct_ptr &ptr : handle_vec) {
         _session->detach(ptr.get());
     }
 

@@ -17,20 +17,21 @@
 
 #include "ranger_resource_policy.h"
 
+#include "gutil/map_util.h"
 #include "ranger/access_type.h"
 #include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace ranger {
 
-bool policy_item::match(const access_type &ac_type, const std::string &user_name) const
+bool policy_item::match(access_type ac_type, const std::string &user_name) const
 {
     return static_cast<bool>(access_types & ac_type) && users.count(user_name) != 0;
 }
 
 template <>
 policy_check_status
-acl_policies::policies_check<policy_check_type::kAllow>(const access_type &ac_type,
+acl_policies::policies_check<policy_check_type::kAllow>(access_type ac_type,
                                                         const std::string &user_name) const
 {
     return do_policies_check<policy_check_type::kAllow, policy_check_status::kAllowed>(ac_type,
@@ -39,7 +40,7 @@ acl_policies::policies_check<policy_check_type::kAllow>(const access_type &ac_ty
 
 template <>
 policy_check_status
-acl_policies::policies_check<policy_check_type::kDeny>(const access_type &ac_type,
+acl_policies::policies_check<policy_check_type::kDeny>(access_type ac_type,
                                                        const std::string &user_name) const
 {
     return do_policies_check<policy_check_type::kDeny, policy_check_status::kDenied>(ac_type,
@@ -49,7 +50,7 @@ acl_policies::policies_check<policy_check_type::kDeny>(const access_type &ac_typ
 template <>
 policy_check_status
 acl_policies::do_policies_check<policy_check_type::kAllow, policy_check_status::kAllowed>(
-    const access_type &ac_type, const std::string &user_name) const
+    access_type ac_type, const std::string &user_name) const
 {
     for (const auto &policy : allow_policies) {
         // 1. Doesn't match an allow_policies.
@@ -73,7 +74,7 @@ acl_policies::do_policies_check<policy_check_type::kAllow, policy_check_status::
 template <>
 policy_check_status
 acl_policies::do_policies_check<policy_check_type::kDeny, policy_check_status::kDenied>(
-    const access_type &ac_type, const std::string &user_name) const
+    access_type ac_type, const std::string &user_name) const
 {
     for (const auto &policy : deny_policies) {
         // 1. Doesn't match a deny_policies.
@@ -96,9 +97,9 @@ acl_policies::do_policies_check<policy_check_type::kDeny, policy_check_status::k
 
 access_control_result
 check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &policies,
-                                     const access_type &ac_type,
+                                     access_type ac_type,
                                      const std::string &user_name,
-                                     const match_database_type &md_type,
+                                     match_database_type md_type,
                                      const std::string &database_name,
                                      const std::string &default_database_name)
 {
@@ -122,81 +123,92 @@ check_ranger_resource_policy_allowed(const std::vector<ranger_resource_policy> &
     return access_control_result::kDenied;
 }
 
+namespace {
+
+bool match_database_name(match_database_type md_type,
+                         const ranger_resource_policy &policy,
+                         const std::string &database_name,
+                         const std::string &default_database_name)
+{
+    if (md_type != match_database_type::kNeed) {
+        // No need to match.
+        return true;
+    }
+
+    if (gutil::ContainsKey(policy.database_names, "*")) {
+        // An asterisk(*) matches any database name.
+        return true;
+    }
+
+    // `default_database_name` is used for the lagacy table name, which does not include the
+    // part of the database name.
+    const std::string &check_name = database_name.empty() ? default_database_name : database_name;
+    return gutil::ContainsKey(policy.database_names, check_name);
+}
+
+} // anonymous namespace
+
 template <>
 access_control_result do_check_ranger_resource_policy<policy_check_type::kAllow>(
     const std::vector<ranger_resource_policy> &policies,
-    const access_type &ac_type,
+    access_type ac_type,
     const std::string &user_name,
-    const match_database_type &md_type,
+    match_database_type md_type,
     const std::string &database_name,
     const std::string &default_database_name)
 {
     for (const auto &policy : policies) {
-        if (match_database_type::kNeed == md_type) {
-            // Lagacy table not match any database.
-            if (database_name.empty() && policy.database_names.count("*") == 0 &&
-                policy.database_names.count(default_database_name) == 0) {
-                continue;
-            }
-            // New table not match any database.
-            if (!database_name.empty() && policy.database_names.count("*") == 0 &&
-                policy.database_names.count(database_name) == 0) {
-                continue;
-            }
+        if (!match_database_name(md_type, policy, database_name, default_database_name)) {
+            continue;
         }
-        auto check_status =
+
+        const auto check_status =
             policy.policies.policies_check<policy_check_type::kAllow>(ac_type, user_name);
-        if (policy_check_status::kAllowed == check_status) {
+        if (check_status == policy_check_status::kAllowed) {
             return access_control_result::kAllowed;
         }
 
         // In a 'allow_policies' and in a 'allow_policies_exclude' or not match.
-        CHECK(policy_check_status::kPending == check_status ||
-                  policy_check_status::kNotMatched == check_status,
+        CHECK(check_status == policy_check_status::kPending ||
+                  check_status == policy_check_status::kNotMatched,
               "the policy check status must be kPending or kNotMatched");
     }
+
     return access_control_result::kPending;
 }
 
 template <>
 access_control_result do_check_ranger_resource_policy<policy_check_type::kDeny>(
     const std::vector<ranger_resource_policy> &policies,
-    const access_type &ac_type,
+    access_type ac_type,
     const std::string &user_name,
-    const match_database_type &md_type,
+    match_database_type md_type,
     const std::string &database_name,
     const std::string &default_database_name)
 {
     for (const auto &policy : policies) {
-        if (match_database_type::kNeed == md_type) {
-            // Lagacy table not match any database.
-            if (database_name.empty() && policy.database_names.count("*") == 0 &&
-                policy.database_names.count(default_database_name) == 0) {
-                continue;
-            }
-            // New table not match any database.
-            if (!database_name.empty() && policy.database_names.count("*") == 0 &&
-                policy.database_names.count(database_name) == 0) {
-                continue;
-            }
+        if (!match_database_name(md_type, policy, database_name, default_database_name)) {
+            continue;
         }
-        auto check_status =
+
+        const auto check_status =
             policy.policies.policies_check<policy_check_type::kDeny>(ac_type, user_name);
-        if (policy_check_status::kDenied == check_status) {
+        if (check_status == policy_check_status::kDenied) {
             return access_control_result::kDenied;
         }
 
         // In a 'deny_policies' and in a 'deny_policies_exclude' or not match.
-        CHECK(policy_check_status::kPending == check_status ||
-                  policy_check_status::kNotMatched == check_status,
+        CHECK(check_status == policy_check_status::kPending ||
+                  check_status == policy_check_status::kNotMatched,
               "the policy check status must be kPending or kNotMatched");
     }
+
     return access_control_result::kPending;
 }
 
 access_control_result check_ranger_database_table_policy_allowed(
     const std::vector<matched_database_table_policy> &policies,
-    const access_type &ac_type,
+    access_type ac_type,
     const std::string &user_name)
 {
     // Check if it is denied by any DATABASE_TABLE policy.
@@ -222,7 +234,7 @@ access_control_result check_ranger_database_table_policy_allowed(
 template <>
 access_control_result do_check_ranger_database_table_policy<policy_check_type::kDeny>(
     const std::vector<matched_database_table_policy> &policies,
-    const access_type &ac_type,
+    access_type ac_type,
     const std::string &user_name)
 {
     for (const auto &policy : policies) {
@@ -245,7 +257,7 @@ access_control_result do_check_ranger_database_table_policy<policy_check_type::k
 template <>
 access_control_result do_check_ranger_database_table_policy<policy_check_type::kAllow>(
     const std::vector<matched_database_table_policy> &policies,
-    const access_type &ac_type,
+    access_type ac_type,
     const std::string &user_name)
 {
     for (const auto &policy : policies) {

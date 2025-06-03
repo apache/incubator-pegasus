@@ -109,7 +109,6 @@ private:
     static void owner_change(lock_struct_ptr _this, int zoo_event);
     static void my_lock_removed(lock_struct_ptr _this, int zoo_event);
 
-private:
     lock_future_ptr _lock_callback;
     lock_future_ptr _lease_expire_callback;
     lock_future_ptr _cancel_callback;

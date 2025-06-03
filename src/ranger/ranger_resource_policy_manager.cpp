@@ -645,7 +645,7 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
 
 std::string get_database_name_from_app_name(const std::string &app_name)
 {
-    std::string prefix = utils::find_string_prefix(app_name, '.');
+    const auto &prefix = utils::find_string_prefix(app_name, '.');
     if (prefix.empty() || prefix == app_name) {
         return std::string();
     }

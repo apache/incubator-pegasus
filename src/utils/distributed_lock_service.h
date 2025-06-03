@@ -51,7 +51,7 @@ namespace dsn::dist {
 using lock_callback =
     std::function<void(error_code ec, const std::string &owner_id, uint64_t version)>;
 using lock_future = future_task<error_code, std::string, uint64_t>;
-using lock_future_ptr = dsn::ref_ptr<lock_future>;
+using lock_future_ptr = ref_ptr<lock_future>;
 
 // The interface of the reliable distributed lock service.
 class distributed_lock_service
