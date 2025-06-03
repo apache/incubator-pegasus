@@ -31,8 +31,6 @@
 #include <utility>
 
 #include "distributed_lock_service_zookeeper.h"
-#include "lock_struct.h"
-#include "lock_types.h"
 #include "runtime/service_app.h"
 #include "task/async_calls.h"
 #include "utils/flags.h"
@@ -48,27 +46,26 @@ namespace dsn::dist {
 
 std::string distributed_lock_service_zookeeper::LOCK_NODE_PREFIX = "LOCKNODE";
 
-distributed_lock_service_zookeeper::distributed_lock_service_zookeeper() : ref_counter()
-{
-    _first_call = true;
-}
-
 distributed_lock_service_zookeeper::~distributed_lock_service_zookeeper()
 {
-    if (_session) {
-        std::vector<lock_struct_ptr> handle_vec;
-        {
-            utils::auto_write_lock l(_service_lock);
-            for (auto &kv : _zookeeper_locks)
-                handle_vec.push_back(kv.second);
-            _zookeeper_locks.clear();
-        }
-        for (lock_struct_ptr &ptr : handle_vec)
-            _session->detach(ptr.get());
-        _session->detach(this);
-
-        _session = nullptr;
+    if (_session == nullptr) {
+        return;
     }
+
+    std::vector<lock_struct_ptr> handle_vec;
+    {
+        utils::auto_write_lock l(_service_lock);
+        for (auto &kv : _zookeeper_locks)
+            handle_vec.push_back(kv.second);
+        _zookeeper_locks.clear();
+    }
+
+    for (lock_struct_ptr &ptr : handle_vec) {
+        _session->detach(ptr.get());
+    }
+
+    _session->detach(this);
+    _session = nullptr;
 }
 
 error_code distributed_lock_service_zookeeper::finalize()

@@ -43,6 +43,7 @@
 #include "task/future_types.h"
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
+#include "utils/ports.h"
 #include "utils/threadpool_code.h"
 
 namespace dsn::dist {
@@ -64,7 +65,6 @@ public:
 
     typedef distributed_lock_service *(*factory)();
 
-public:
     struct lock_options
     {
         bool create_if_not_exist;
@@ -72,6 +72,7 @@ public:
     };
 
     virtual ~distributed_lock_service() = default;
+
     /*
      * initialization routine
      */
@@ -171,6 +172,13 @@ public:
     virtual error_code query_cache(const std::string &lock_id,
                                    /*out*/ std::string &owner,
                                    /*out*/ uint64_t &version) const = 0;
+
+protected:
+    distributed_lock_service() = default;
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(distributed_lock_service);
+    DISALLOW_MOVE_AND_ASSIGN(distributed_lock_service);
 };
 
 } // namespace dsn::dist

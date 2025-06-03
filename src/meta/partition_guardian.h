@@ -31,6 +31,7 @@
 #include "meta_data.h"
 #include "rpc/rpc_host_port.h"
 #include "utils/command_manager.h"
+#include "utils/ports.h"
 #include "utils/zlocks.h"
 
 namespace dsn::replication {

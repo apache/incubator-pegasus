@@ -38,21 +38,29 @@ DEFINE_TASK_CODE(LPC_DIST_LOCK_SVC_RANDOM_EXPIRE, TASK_PRIORITY_COMMON, THREAD_P
 
 namespace {
 
-static void lock_cb_bind_and_enqueue(task_ptr lock_task,
-                                     error_code err,
-                                     const std::string &owner,
-                                     uint64_t version,
-                                     int delay_milliseconds = 0)
+void lock_cb_bind_and_enqueue(task_ptr lock_task,
+                              error_code err,
+                              const std::string &owner,
+                              uint64_t version,
+                              int delay_milliseconds)
 {
-    auto t = dynamic_cast<lock_future *>(lock_task.get());
+    auto *t = dynamic_cast<lock_future *>(lock_task.get());
     t->enqueue_with(err, owner, version, delay_milliseconds);
+}
+
+void lock_cb_bind_and_enqueue(task_ptr lock_task,
+                              error_code err,
+                              const std::string &owner,
+                              uint64_t version)
+{
+    lock_cb_bind_and_enqueue(lock_task, err, owner, version, 0);
 }
 
 } // anonymous namespace
 
 void distributed_lock_service_simple::random_lock_lease_expire(const std::string &lock_id)
 {
-    // TODO: let's test without failure first
+    // TODO(wangdan): let's test without failure first
     return;
 
     std::string owner;
@@ -90,12 +98,12 @@ void distributed_lock_service_simple::random_lock_lease_expire(const std::string
         }
     }
 
-    lock_cb_bind_and_enqueue(lease_callback, ERR_EXPIRED, owner, version, 0);
+    lock_cb_bind_and_enqueue(lease_callback, ERR_EXPIRED, owner, version);
 
     if (!next.owner.empty()) {
         version++;
         error_code err = ERR_OK;
-        lock_cb_bind_and_enqueue(next.grant_callback, err, next.owner, version, 0);
+        lock_cb_bind_and_enqueue(next.grant_callback, err, next.owner, version);
     }
 }
 
@@ -180,7 +188,7 @@ distributed_lock_service_simple::lock(const std::string &lock_id,
         lock_cb_bind_and_enqueue(grant_cb, err, cowner, version);
     }
 
-    return std::pair<task_ptr, task_ptr>(grant_cb, lease_cb);
+    return {grant_cb, lease_cb};
 }
 
 task_ptr distributed_lock_service_simple::cancel_pending_lock(const std::string &lock_id,
@@ -259,7 +267,7 @@ task_ptr distributed_lock_service_simple::unlock(const std::string &lock_id,
 
     if (!next.owner.empty()) {
         error_code err = ERR_OK;
-        lock_cb_bind_and_enqueue(next.grant_callback, err, next.owner, next_version, 0);
+        lock_cb_bind_and_enqueue(next.grant_callback, err, next.owner, next_version);
     }
 
     return t;

@@ -35,6 +35,7 @@
 #include <vector>
 
 #include "boost/container/detail/std_fwd.hpp"
+#include "lock_struct.h"
 #include "lock_types.h"
 #include "task/future_types.h"
 #include "task/task.h"
@@ -51,7 +52,7 @@ class zookeeper_session;
 class distributed_lock_service_zookeeper : public distributed_lock_service, public ref_counter
 {
 public:
-    explicit distributed_lock_service_zookeeper();
+    distributed_lock_service_zookeeper() = default;
     ~distributed_lock_service_zookeeper() override;
 
     // lock_root = argv[0]
@@ -112,9 +113,9 @@ private:
     lock_map _zookeeper_locks;
     cache_map _lock_cache;
 
-    zookeeper_session *_session;
-    int _zoo_state;
-    bool _first_call;
+    zookeeper_session *_session{nullptr};
+    int _zoo_state{0};
+    bool _first_call{true};
     utils::notify_event _waiting_attach;
 
     void erase(const lock_key &key);
