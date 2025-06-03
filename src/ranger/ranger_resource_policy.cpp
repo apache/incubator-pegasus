@@ -21,8 +21,7 @@
 #include "ranger/access_type.h"
 #include "utils/fmt_logging.h"
 
-namespace dsn {
-namespace ranger {
+namespace dsn::ranger {
 
 bool policy_item::match(access_type ac_type, const std::string &user_name) const
 {
@@ -276,5 +275,4 @@ access_control_result do_check_ranger_database_table_policy<policy_check_type::k
     return access_control_result::kPending;
 }
 
-} // namespace ranger
-} // namespace dsn
+} // namespace dsn::ranger

@@ -467,7 +467,7 @@ std::string find_string_prefix(const std::string &input, char separator)
 {
     const auto pos = input.find(separator);
     if (pos == 0 || pos == std::string::npos) {
-        return std::string();
+        return {};
     }
 
     return input.substr(0, pos);

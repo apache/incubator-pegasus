@@ -74,8 +74,7 @@ DSN_DEFINE_string(ranger,
                   "The name of the Ranger database policy matched by the legacy table(The table "
                   "name does not follow the naming rules of {database_name}.{table_name})");
 
-namespace dsn {
-namespace ranger {
+namespace dsn::ranger {
 
 #define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
     do {                                                                                           \
@@ -645,18 +644,15 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
 
 std::string get_database_name_from_app_name(const std::string &app_name)
 {
-    const auto &prefix = utils::find_string_prefix(app_name, '.');
-    if (prefix.empty() || prefix == app_name) {
-        return std::string();
-    }
-
-    return prefix;
+    return utils::find_string_prefix(app_name, '.');
 }
 
 std::string get_table_name_from_app_name(const std::string &app_name)
 {
-    std::string database_name = get_database_name_from_app_name(app_name);
+    // TODO(wangdan): optimize getting table name by finding the separator without initializing
+    // an extra string object.
+    const auto &database_name = get_database_name_from_app_name(app_name);
     return database_name.empty() ? app_name : app_name.substr(database_name.size() + 1);
 }
-} // namespace ranger
-} // namespace dsn
+
+} // namespace dsn::ranger

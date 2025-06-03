@@ -25,8 +25,7 @@
 #include "common/json_helper.h"
 #include "utils/enum_helper.h"
 
-namespace dsn {
-namespace ranger {
+namespace dsn::ranger {
 
 // Types of policy checks.
 // kAllow means this checks for 'allow_policies' and 'allow_policies_exclude'.
@@ -105,29 +104,31 @@ struct acl_policies
     // Check if 'allow_policies' or 'deny_policies' allow or deny 'user_name' to access the resource
     // by type 'ac_type'.
     template <policy_check_type check_type>
-    policy_check_status policies_check(access_type ac_type, const std::string &user_name) const;
+    [[nodiscard]] policy_check_status policies_check(access_type ac_type,
+                                                     const std::string &user_name) const;
 
     template <policy_check_type check_type, policy_check_status check_status>
-    policy_check_status do_policies_check(access_type ac_type, const std::string &user_name) const;
+    [[nodiscard]] policy_check_status do_policies_check(access_type ac_type,
+                                                        const std::string &user_name) const;
 };
 
 template <>
-policy_check_status
+[[nodiscard]] policy_check_status
 acl_policies::policies_check<policy_check_type::kAllow>(access_type ac_type,
                                                         const std::string &user_name) const;
 
 template <>
-policy_check_status
+[[nodiscard]] policy_check_status
 acl_policies::policies_check<policy_check_type::kDeny>(access_type ac_type,
                                                        const std::string &user_name) const;
 
 template <>
-policy_check_status
+[[nodiscard]] policy_check_status
 acl_policies::do_policies_check<policy_check_type::kAllow, policy_check_status::kAllowed>(
     access_type ac_type, const std::string &user_name) const;
 
 template <>
-policy_check_status
+[[nodiscard]] policy_check_status
 acl_policies::do_policies_check<policy_check_type::kDeny, policy_check_status::kDenied>(
     access_type ac_type, const std::string &user_name) const;
 
@@ -271,5 +272,4 @@ access_control_result do_check_ranger_database_table_policy<policy_check_type::k
     access_type ac_type,
     const std::string &user_name);
 
-} // namespace ranger
-} // namespace dsn
+} // namespace dsn::ranger
