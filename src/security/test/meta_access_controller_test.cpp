@@ -17,7 +17,7 @@
 
 #include <memory>
 #include <string>
-#include <unordered_set>
+#include <vector>
 
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"
@@ -60,7 +60,7 @@ protected:
         _meta_access_controller = create_meta_access_controller(nullptr);
     }
 
-    bool is_super_user(const std::string &user_name) const
+    [[nodiscard]] bool is_super_user(const std::string &user_name) const
     {
         return _meta_access_controller->is_super_user(user_name);
     }
@@ -142,7 +142,6 @@ TEST_P(RpcAclTest, RpcAllowed)
     const dsn::message_ptr msg = message_ex::create_request(test_case.rpc_code);
     msg->io_session = sim_session;
 
-    std::cout << "ready to test" << std::endl;
     ASSERT_EQ(test_case.is_allowed, allowed(msg));
 }
 

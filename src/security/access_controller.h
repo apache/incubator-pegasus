@@ -43,7 +43,7 @@ public:
     virtual void update_allowed_users(const std::string &users) {}
 
     // Check whether the Ranger ACL is enabled or not.
-    bool is_enable_ranger_acl() const;
+    static bool is_enable_ranger_acl();
 
     // Update the access controller policy
     // policies -  the new Ranger policies to update

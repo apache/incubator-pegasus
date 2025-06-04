@@ -50,7 +50,7 @@ access_controller::access_controller()
     utils::split_args(FLAGS_super_users, _super_users, ',');
 }
 
-bool access_controller::is_enable_ranger_acl() const { return FLAGS_enable_ranger_acl; }
+/* static */ bool access_controller::is_enable_ranger_acl() { return FLAGS_enable_ranger_acl; }
 
 bool access_controller::is_super_user(const std::string &user_name) const
 {
