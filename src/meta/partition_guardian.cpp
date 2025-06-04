@@ -789,17 +789,17 @@ void partition_guardian::get_ddd_partitions(const gpid &pid,
 
     if (pid.get_app_id() == -1) {
         partitions.reserve(_ddd_partitions.size());
-        for (const auto &ddd_partition : _ddd_partitions) {
-            partitions.push_back(ddd_partition.second);
+        for (const auto &[_, ddd_partition] : _ddd_partitions) {
+            partitions.push_back(ddd_partition);
         }
 
         return;
     }
 
     if (pid.get_partition_index() == -1) {
-        for (const auto &ddd_partition : _ddd_partitions) {
-            if (ddd_partition.first.get_app_id() == pid.get_app_id()) {
-                partitions.push_back(ddd_partition.second);
+        for (const auto &[ddd_pid, ddd_partition] : _ddd_partitions) {
+            if (ddd_pid.get_app_id() == pid.get_app_id()) {
+                partitions.push_back(ddd_partition);
             }
         }
 

@@ -63,7 +63,7 @@ public:
         return new T();
     }
 
-    using factory = distributed_lock_service *(*)();
+    using factory = std::function<distributed_lock_service *()>;
 
     struct lock_options
     {

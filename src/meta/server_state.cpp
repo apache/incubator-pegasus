@@ -996,15 +996,17 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
              response.gc_replicas.size());
 }
 
-bool server_state::query_configuration_by_gpid(dsn::gpid id,
-                                               /*out*/ partition_configuration &pc)
+bool server_state::query_configuration_by_gpid(const dsn::gpid &id,
+                                               /*out*/ partition_configuration &pc) const
 {
     zauto_read_lock l(_lock);
-    const auto *ppc = get_config(_all_apps, id);
+
+    const auto *ppc = get_config(std::as_const(_all_apps), id);
     if (ppc != nullptr) {
         pc = *ppc;
         return true;
     }
+
     return false;
 }
 
@@ -1672,7 +1674,7 @@ void server_state::list_apps(dsn::message_ex *msg,
             continue;
         }
 
-        if (_meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
+        if (msg == nullptr || _meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
             response.infos.push_back(*app);
         }
     }

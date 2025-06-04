@@ -160,7 +160,8 @@ public:
 
     void query_configuration_by_index(const query_cfg_request &request,
                                       /*out*/ query_cfg_response &response);
-    bool query_configuration_by_gpid(dsn::gpid id, /*out*/ partition_configuration &pc);
+    bool query_configuration_by_gpid(const dsn::gpid &id,
+                                     /*out*/ partition_configuration &pc) const;
 
     // Foo access control.
     void get_allowed_partitions(dsn::message_ex *msg,

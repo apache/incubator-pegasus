@@ -56,7 +56,7 @@ public:
     // Check if the received message is allowd to access the table.
     //
     // Parameters:
-    // - msg: the message received
+    // - msg: the message received, should never be NULL.
     // - app_name: tables involved in ACL
     virtual bool allowed(message_ex *msg, const std::string &app_name) const { return false; }
 

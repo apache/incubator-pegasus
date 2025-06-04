@@ -47,22 +47,25 @@
 #include "zookeeper/zookeeper.jute.h"
 #include "zookeeper_session.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
-static const char *states[] = {
-    "uninitialized", "pending", "locked", "expired", "cancelled", "unlocking"};
+namespace {
 
-static inline const char *string_state(lock_state state)
+constexpr const char *string_state(lock_state state)
 {
-    CHECK_LT(state, lock_state::state_count);
-    return states[state];
+    constexpr std::array kStates = {
+        "uninitialized", "pending", "locked", "expired", "cancelled", "unlocking"};
+    static_assert(kStates.size() == lock_state::state_count, "States do not match messages");
+
+    return kStates.at(state);
 }
 
-static bool is_zookeeper_timeout(int zookeeper_error)
+bool is_zookeeper_timeout(int zookeeper_error)
 {
     return zookeeper_error == ZCONNECTIONLOSS || zookeeper_error == ZOPERATIONTIMEOUT;
 }
+
+} // anonymous namespace
 
 #define __check_code(code, allow_list, allow_list_size, code_str)                                  \
     do {                                                                                           \
@@ -799,5 +802,5 @@ void lock_struct::lock_expired(lock_struct_ptr _this)
     _this->_checker.only_one_thread_access();
     _this->on_expire();
 }
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

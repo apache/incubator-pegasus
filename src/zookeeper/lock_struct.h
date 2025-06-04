@@ -42,7 +42,7 @@ namespace dsn::dist {
 
 enum lock_state
 {
-    uninitialized,
+    uninitialized = 0,
     pending,
     locked,
     expired,
@@ -66,7 +66,7 @@ using lock_struct_ptr = ref_ptr<lock_struct>;
 class lock_struct : public ref_counter
 {
 public:
-    lock_struct(lock_srv_ptr srv);
+    explicit lock_struct(lock_srv_ptr srv);
     void initialize(std::string lock_id, std::string myself_id);
     const int hash() const { return _hash; }
 
