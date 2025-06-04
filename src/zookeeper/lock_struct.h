@@ -54,9 +54,18 @@ USER_DEFINED_ENUM_FORMATTER(lock_state)
 
 struct zoolock_pair
 {
+    zoolock_pair() = default;
+
+    void clear()
+    {
+        _node_value.clear();
+        _node_seq_name.clear();
+        _sequence_id = -1;
+    }
+
     std::string _node_value;
     std::string _node_seq_name;
-    int64_t _sequence_id;
+    int64_t _sequence_id{-1};
 };
 
 class lock_struct;
@@ -68,7 +77,7 @@ class lock_struct : public ref_counter
 public:
     explicit lock_struct(lock_srv_ptr srv);
     void initialize(std::string lock_id, std::string myself_id);
-    const int hash() const { return _hash; }
+    [[nodiscard]] int hash() const { return _hash; }
 
     static void
     try_lock(lock_struct_ptr _this, lock_future_ptr lock_callback, lock_future_ptr expire_callback);
@@ -109,16 +118,17 @@ private:
     static void owner_change(lock_struct_ptr _this, int zoo_event);
     static void my_lock_removed(lock_struct_ptr _this, int zoo_event);
 
-    lock_future_ptr _lock_callback;
-    lock_future_ptr _lease_expire_callback;
-    lock_future_ptr _cancel_callback;
-    error_code_future_ptr _unlock_callback;
+    lock_future_ptr _lock_callback{nullptr};
+    lock_future_ptr _lease_expire_callback{nullptr};
+    lock_future_ptr _cancel_callback{nullptr};
+    error_code_future_ptr _unlock_callback{nullptr};
 
     std::string _lock_id;
     std::string _lock_dir; // ${lock_root}/${lock_id}
-    zoolock_pair _myself, _owner;
-    lock_state _state;
-    int _hash;
+    zoolock_pair _myself;
+    zoolock_pair _owner;
+    lock_state _state{lock_state::uninitialized};
+    int _hash{0};
 
     lock_srv_ptr _dist_lock_service;
 

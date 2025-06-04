@@ -36,7 +36,7 @@ class access_controller
 {
 public:
     access_controller();
-    virtual ~access_controller();
+    virtual ~access_controller() = default;
 
     // Update the access controller.
     // users - the new allowed users to update
@@ -68,7 +68,7 @@ protected:
 
     std::unordered_set<std::string> _super_users;
 
-    friend class meta_access_controller_test;
+    friend class SuperUserTest;
 };
 
 std::shared_ptr<access_controller> create_meta_access_controller(
@@ -76,5 +76,6 @@ std::shared_ptr<access_controller> create_meta_access_controller(
 
 std::unique_ptr<access_controller>
 create_replica_access_controller(const std::string &replica_name);
+
 } // namespace security
 } // namespace dsn

@@ -39,8 +39,7 @@ DSN_DEFINE_string(security,
                   "Name of the cluster key that is used to encrypt server encryption keys as"
                   "stored in Ranger KMS.");
 
-namespace dsn {
-namespace security {
+namespace dsn::security {
 
 access_controller::access_controller()
 {
@@ -50,8 +49,6 @@ access_controller::access_controller()
           "when FLAGS_enable_ranger_acl is true, FLAGS_enable_acl must be true too");
     utils::split_args(FLAGS_super_users, _super_users, ',');
 }
-
-access_controller::~access_controller() {}
 
 bool access_controller::is_enable_ranger_acl() const { return FLAGS_enable_ranger_acl; }
 
@@ -70,5 +67,5 @@ std::unique_ptr<access_controller> create_replica_access_controller(const std::s
 {
     return std::make_unique<replica_access_controller>(replica_name);
 }
-} // namespace security
-} // namespace dsn
+
+} // namespace dsn::security

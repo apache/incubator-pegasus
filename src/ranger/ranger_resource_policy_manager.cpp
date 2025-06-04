@@ -205,7 +205,12 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
 
 void ranger_resource_policy_manager::start()
 {
-    CHECK_NOTNULL(_meta_svc, "");
+    if (_meta_svc == nullptr) {
+        // `_meta_svc` being null implies that the policies will be updated manually,
+        // which is often used for testing purposes.
+        return;
+    }
+
     _ranger_policy_meta_root = dsn::utils::filesystem::concat_path_unix_style(
         _meta_svc->cluster_root(), "ranger_policy_meta_root");
     tasking::enqueue_timer(

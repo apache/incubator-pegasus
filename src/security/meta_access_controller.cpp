@@ -50,6 +50,7 @@ meta_access_controller::meta_access_controller(
     if (utils::is_empty(FLAGS_meta_acl_rpc_allow_list)) {
         register_allowed_rpc_code_list({"RPC_CM_CLUSTER_INFO",
                                         "RPC_CM_LIST_APPS",
+                                        "RPC_CM_DDD_DIAGNOSE",
                                         "RPC_CM_LIST_NODES",
                                         "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX"});
     } else {

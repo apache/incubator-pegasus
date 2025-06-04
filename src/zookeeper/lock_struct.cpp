@@ -24,7 +24,8 @@
  * THE SOFTWARE.
  */
 
-#include <ctype.h>
+#include <array>
+#include <cctype>
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -67,19 +68,20 @@ bool is_zookeeper_timeout(int zookeeper_error)
 
 } // anonymous namespace
 
-#define __check_code(code, allow_list, allow_list_size, code_str)                                  \
+#define CHECK_CODE(code, allow_list, allow_list_size, code_str)                                    \
     do {                                                                                           \
         int i = 0;                                                                                 \
-        for (; i != allow_list_size; ++i) {                                                        \
-            if (code == allow_list[i])                                                             \
+        for (; i < allow_list_size; ++i) {                                                         \
+            if (code == allow_list[i]) {                                                           \
                 break;                                                                             \
+            }                                                                                      \
         }                                                                                          \
         CHECK_LT_MSG(i, allow_list_size, "invalid code({})", code_str);                            \
     } while (0)
 
-#define __execute(cb, _this) tasking::enqueue(TASK_CODE_DLOCK, nullptr, cb, _this->hash())
+#define EXECUTE(cb, _this) tasking::enqueue(TASK_CODE_DLOCK, nullptr, cb, _this->hash())
 
-#define __add_ref_and_delay_call(op, _this)                                                        \
+#define ADD_REF_AND_DELAY_CALL(op, _this)                                                          \
     LOG_WARNING("operation {} on {} encounter error, retry later",                                 \
                 zookeeper_session::string_zoo_operation(op->_optype),                              \
                 op->_input._path);                                                                 \
@@ -96,14 +98,7 @@ bool is_zookeeper_timeout(int zookeeper_error)
 #define REMOVE_FOR_UNLOCK true
 #define REMOVE_FOR_CANCEL false
 
-lock_struct::lock_struct(lock_srv_ptr srv) : ref_counter()
-{
-    _dist_lock_service = srv;
-    clear();
-    _state = lock_state::uninitialized;
-
-    _hash = 0;
-}
+lock_struct::lock_struct(lock_srv_ptr srv) : _dist_lock_service(srv) {}
 
 void lock_struct::initialize(std::string lock_id, std::string myself_id)
 {
@@ -120,10 +115,11 @@ void lock_struct::clear()
     _cancel_callback = nullptr;
     _unlock_callback = nullptr;
 
-    _lock_id = _lock_dir = "";
-    _myself._node_value = _owner._node_value = "";
-    _myself._node_seq_name = _owner._node_seq_name = "";
-    _myself._sequence_id = _owner._sequence_id = -1;
+    _lock_id.clear();
+    _lock_dir.clear();
+
+    _myself.clear();
+    _owner.clear();
 }
 
 void lock_struct::remove_lock()
@@ -181,7 +177,7 @@ void lock_struct::my_lock_removed(lock_struct_ptr _this, int zoo_event)
     static const lock_state allow_state[] = {
         lock_state::locked, lock_state::unlocking, lock_state::expired};
     _this->_checker.only_one_thread_access();
-    __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
+    CHECK_CODE(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::unlocking || _this->_state == lock_state::expired) {
         return;
@@ -195,7 +191,7 @@ void lock_struct::owner_change(lock_struct_ptr _this, int zoo_event)
     static const lock_state allow_state[] = {
         lock_state::uninitialized, lock_state::pending, lock_state::cancelled, lock_state::expired};
     _this->_checker.only_one_thread_access();
-    __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
+    CHECK_CODE(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::uninitialized) {
         LOG_WARNING("this is mainly due to a timeout happens before, just ignore the event {}",
@@ -228,8 +224,8 @@ void lock_struct::after_remove_duplicated_locknode(lock_struct_ptr _this,
     static const int allow_state[] = {
         lock_state::pending, lock_state::cancelled, lock_state::expired, lock_state::locked};
     _this->_checker.only_one_thread_access();
-    __check_code(ec, allow_ec, 3, zerror(ec));
-    __check_code(_this->_state, allow_state, 4, string_state(_this->_state));
+    CHECK_CODE(ec, allow_ec, 3, zerror(ec));
+    CHECK_CODE(_this->_state, allow_state, 4, string_state(_this->_state));
 
     if (_this->_state == lock_state::cancelled || _this->_state == lock_state::expired) {
         return;
@@ -267,14 +263,14 @@ void lock_struct::remove_duplicated_locknode(std::string &&znode_path)
 
     auto delete_callback_wrapper = [_this](zookeeper_session::zoo_opcontext *op) {
         if (is_zookeeper_timeout(op->_output.error)) {
-            __add_ref_and_delay_call(op, _this);
+            ADD_REF_AND_DELAY_CALL(op, _this);
         } else {
-            __execute(std::bind(&lock_struct::after_remove_duplicated_locknode,
-                                _this,
-                                op->_output.error,
-                                std::shared_ptr<std::string>(
-                                    new std::string(std::move(op->_input._path)))),
-                      _this);
+            EXECUTE(std::bind(
+                        &lock_struct::after_remove_duplicated_locknode,
+                        _this,
+                        op->_output.error,
+                        std::shared_ptr<std::string>(new std::string(std::move(op->_input._path)))),
+                    _this);
         }
     };
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
@@ -296,8 +292,8 @@ void lock_struct::after_get_lock_owner(lock_struct_ptr _this,
     static const int allow_state[] = {
         lock_state::pending, lock_state::cancelled, lock_state::expired};
     _this->_checker.only_one_thread_access();
-    __check_code(ec, allow_ec, 3, zerror(ec));
-    __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
+    CHECK_CODE(ec, allow_ec, 3, zerror(ec));
+    CHECK_CODE(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::cancelled || _this->_state == lock_state::expired) {
         return;
@@ -351,8 +347,8 @@ void lock_struct::after_self_check(lock_struct_ptr _this,
     static const lock_state allow_state[] = {
         lock_state::locked, lock_state::unlocking, lock_state::expired};
     _this->_checker.only_one_thread_access();
-    __check_code(ec, allow_ec, 3, zerror(ec));
-    __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
+    CHECK_CODE(ec, allow_ec, 3, zerror(ec));
+    CHECK_CODE(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::unlocking || _this->_state == lock_state::expired) {
         LOG_INFO("skip lock({}) owner self check, do nothing, myself({}:{})",
@@ -385,9 +381,9 @@ void lock_struct::get_lock_owner(bool watch_myself)
         LOG_INFO("get watcher callback, event type({})",
                  zookeeper_session::string_zoo_event(event));
         if (watch_myself)
-            __execute(std::bind(&lock_struct::my_lock_removed, _this, event), _this);
+            EXECUTE(std::bind(&lock_struct::my_lock_removed, _this, event), _this);
         else
-            __execute(std::bind(&lock_struct::owner_change, _this, event), _this);
+            EXECUTE(std::bind(&lock_struct::owner_change, _this, event), _this);
     };
 
     auto after_get_owner_wrapper = [_this, watch_myself](zookeeper_session::zoo_opcontext *op) {
@@ -407,13 +403,13 @@ void lock_struct::get_lock_owner(bool watch_myself)
         if (is_zookeeper_timeout(output.error)) {
             _this->_dist_lock_service->session()->detach(
                 _this.get()); // before retry, first we need to remove the watcher
-            __add_ref_and_delay_call(op, _this);
+            ADD_REF_AND_DELAY_CALL(op, _this);
         } else if (output.error != ZOK)
-            __execute(std::bind(cb, output.error, nullptr), _this);
+            EXECUTE(std::bind(cb, output.error, nullptr), _this);
         else {
             std::shared_ptr<std::string> buf(
                 new std::string(output.get_op.value, output.get_op.value_length));
-            __execute(std::bind(cb, ZOK, buf), _this);
+            EXECUTE(std::bind(cb, ZOK, buf), _this);
         }
     };
 
@@ -441,8 +437,8 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
         lock_state::pending, lock_state::cancelled, lock_state::expired};
 
     _this->_checker.only_one_thread_access();
-    __check_code(ec, allow_ec, 2, zerror(ec));
-    __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
+    CHECK_CODE(ec, allow_ec, 2, zerror(ec));
+    CHECK_CODE(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::cancelled || _this->_state == lock_state::expired) {
         return;
@@ -513,9 +509,9 @@ void lock_struct::get_lockdir_nodes()
     lock_struct_ptr _this = this;
     auto result_wrapper = [_this](zookeeper_session::zoo_opcontext *op) {
         if (is_zookeeper_timeout(op->_output.error)) {
-            __add_ref_and_delay_call(op, _this);
+            ADD_REF_AND_DELAY_CALL(op, _this);
         } else if (op->_output.error != ZOK) {
-            __execute(
+            EXECUTE(
                 std::bind(&lock_struct::after_get_lockdir_nodes, _this, op->_output.error, nullptr),
                 _this);
         } else {
@@ -524,10 +520,9 @@ void lock_struct::get_lockdir_nodes()
                 new std::vector<std::string>(vec->count));
             for (int i = 0; i != vec->count; ++i)
                 (*children)[i].assign(vec->data[i]);
-            __execute(
-                std::bind(
-                    &lock_struct::after_get_lockdir_nodes, _this, op->_output.error, children),
-                _this);
+            EXECUTE(std::bind(
+                        &lock_struct::after_get_lockdir_nodes, _this, op->_output.error, children),
+                    _this);
         }
     };
 
@@ -552,8 +547,8 @@ void lock_struct::after_create_locknode(lock_struct_ptr _this,
         lock_state::pending, lock_state::cancelled, lock_state::expired};
 
     _this->_checker.only_one_thread_access();
-    __check_code(ec, allow_ec, 2, zerror(ec));
-    __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
+    CHECK_CODE(ec, allow_ec, 2, zerror(ec));
+    CHECK_CODE(_this->_state, allow_state, 3, string_state(_this->_state));
 
     LOG_DEBUG("after create seq and ephe node, error({}), path({})", zerror(ec), *path);
     if (_this->_state == lock_state::cancelled || _this->_state == lock_state::expired) {
@@ -592,14 +587,14 @@ void lock_struct::create_locknode()
     lock_struct_ptr _this = this;
     auto result_wrapper = [_this](zookeeper_session::zoo_opcontext *op) {
         if (is_zookeeper_timeout(op->_output.error)) {
-            __add_ref_and_delay_call(op, _this);
+            ADD_REF_AND_DELAY_CALL(op, _this);
         } else if (op->_output.error != ZOK) {
-            __execute(
+            EXECUTE(
                 std::bind(&lock_struct::after_create_locknode, _this, op->_output.error, nullptr),
                 _this);
         } else {
             std::shared_ptr<std::string> path(new std::string(op->_output.create_op._created_path));
-            __execute(std::bind(&lock_struct::after_create_locknode, _this, ZOK, path), _this);
+            EXECUTE(std::bind(&lock_struct::after_create_locknode, _this, ZOK, path), _this);
         }
     };
 
@@ -621,8 +616,8 @@ void lock_struct::after_create_lockdir(lock_struct_ptr _this, int ec)
     };
     static const lock_state allow_state[] = {
         lock_state::pending, lock_state::cancelled, lock_state::expired};
-    __check_code(ec, allow_ec, 3, zerror(ec));
-    __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
+    CHECK_CODE(ec, allow_ec, 3, zerror(ec));
+    CHECK_CODE(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::cancelled || _this->_state == lock_state::expired) {
         LOG_INFO("current state({}), ignore event create lockdir({})",
@@ -658,10 +653,10 @@ void lock_struct::try_lock(lock_struct_ptr _this,
         _this->_lock_dir = _this->_dist_lock_service->_lock_root + "/" + _this->_lock_id;
         auto result_wrapper = [_this](zookeeper_session::zoo_opcontext *op) {
             if (is_zookeeper_timeout(op->_output.error)) {
-                __add_ref_and_delay_call(op, _this);
+                ADD_REF_AND_DELAY_CALL(op, _this);
             } else {
-                __execute(std::bind(&lock_struct::after_create_lockdir, _this, op->_output.error),
-                          _this);
+                EXECUTE(std::bind(&lock_struct::after_create_lockdir, _this, op->_output.error),
+                        _this);
             }
         };
         zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
@@ -687,8 +682,8 @@ void lock_struct::after_remove_my_locknode(lock_struct_ptr _this, int ec, bool r
     static const int allow_state[] = {
         lock_state::cancelled, lock_state::unlocking, lock_state::expired};
     _this->_checker.only_one_thread_access();
-    __check_code(ec, allow_ec, 3, zerror(ec));
-    __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
+    CHECK_CODE(ec, allow_ec, 3, zerror(ec));
+    CHECK_CODE(_this->_state, allow_state, 3, string_state(_this->_state));
 
     error_code dsn_ec;
     if (lock_state::expired == _this->_state) {
@@ -732,16 +727,16 @@ void lock_struct::remove_my_locknode(std::string &&znode_path,
         [_this, ignore_callback, remove_for_unlock](zookeeper_session::zoo_opcontext *op) {
             LOG_INFO("delete node {}, result({})", op->_input._path, zerror(op->_output.error));
             if (is_zookeeper_timeout(op->_output.error)) {
-                __add_ref_and_delay_call(op, _this);
+                ADD_REF_AND_DELAY_CALL(op, _this);
                 return;
             }
 
             if (IGNORE_CALLBACK != ignore_callback) {
-                __execute(std::bind(&lock_struct::after_remove_my_locknode,
-                                    _this,
-                                    op->_output.error,
-                                    remove_for_unlock),
-                          _this);
+                EXECUTE(std::bind(&lock_struct::after_remove_my_locknode,
+                                  _this,
+                                  op->_output.error,
+                                  remove_for_unlock),
+                        _this);
             }
         };
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
