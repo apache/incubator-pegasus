@@ -112,7 +112,7 @@ private:
     static void after_remove_duplicated_locknode(lock_struct_ptr _this,
                                                  int ec,
                                                  std::shared_ptr<std::string> value);
-    static void after_remove_my_locknode(lock_struct_ptr _this, int ec, bool need_to_notify);
+    static void after_remove_my_locknode(lock_struct_ptr _this, int ec, bool remove_for_unlock);
 
     /*lock owner watch callback*/
     static void owner_change(lock_struct_ptr _this, int zoo_event);

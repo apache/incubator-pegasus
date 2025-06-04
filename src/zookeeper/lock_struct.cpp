@@ -715,8 +715,9 @@ void lock_struct::after_remove_my_locknode(lock_struct_ptr _this, int ec, bool r
             dsn_ec = ERR_OK;
     }
 
-    if (dsn_ec == ERR_OK)
+    if (dsn_ec == ERR_OK) {
         _this->remove_lock();
+    }
 
     if (remove_for_unlock) {
         _this->_unlock_callback->enqueue_with(dsn_ec);
