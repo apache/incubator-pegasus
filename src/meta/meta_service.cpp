@@ -1129,10 +1129,14 @@ void meta_service::on_ddd_diagnose(ddd_diagnose_rpc rpc) const
     const auto app_id = pid.get_app_id();
 
     if (app_id == -1) {
+        // -1 means returning all DDD partitions. Perform the ACL check only after all DDD
+        // partitions have been obtained.
         if (!check_leader_status(rpc)) {
             return;
         }
     } else {
+        // The table has been specified with `app_id` by client. Just perform ACL check on
+        // the specified table.
         CHECK_APP_ID_STATUS_AND_AUTHZ(app_id);
     }
 
@@ -1141,8 +1145,11 @@ void meta_service::on_ddd_diagnose(ddd_diagnose_rpc rpc) const
 
     auto &response = rpc.response();
     if (app_id == -1) {
+        // Perform ACL checks on all DDD partitions, and only those that pass will be returned
+        // to the client.
         _state->get_allowed_partitions(rpc.dsn_request(), ddd_partitions, response.partitions);
     } else {
+        // ACL check has already passed, just move the result to the response.
         response.partitions = std::move(ddd_partitions);
     }
 

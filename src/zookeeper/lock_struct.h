@@ -118,10 +118,10 @@ private:
     static void owner_change(lock_struct_ptr _this, int zoo_event);
     static void my_lock_removed(lock_struct_ptr _this, int zoo_event);
 
-    lock_future_ptr _lock_callback{nullptr};
-    lock_future_ptr _lease_expire_callback{nullptr};
-    lock_future_ptr _cancel_callback{nullptr};
-    error_code_future_ptr _unlock_callback{nullptr};
+    lock_future_ptr _lock_callback;
+    lock_future_ptr _lease_expire_callback;
+    lock_future_ptr _cancel_callback;
+    error_code_future_ptr _unlock_callback;
 
     std::string _lock_id;
     std::string _lock_dir; // ${lock_root}/${lock_id}

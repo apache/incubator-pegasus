@@ -788,6 +788,7 @@ void partition_guardian::get_ddd_partitions(const gpid &pid,
     zauto_lock l(_ddd_partitions_lock);
 
     if (pid.get_app_id() == -1) {
+        // Choose all ddd partitions.
         partitions.reserve(_ddd_partitions.size());
         for (const auto &[_, ddd_partition] : _ddd_partitions) {
             partitions.push_back(ddd_partition);
@@ -797,6 +798,7 @@ void partition_guardian::get_ddd_partitions(const gpid &pid,
     }
 
     if (pid.get_partition_index() == -1) {
+        // Choose the ddd partitions of the given table.
         for (const auto &[ddd_pid, ddd_partition] : _ddd_partitions) {
             if (ddd_pid.get_app_id() == pid.get_app_id()) {
                 partitions.push_back(ddd_partition);
@@ -806,6 +808,7 @@ void partition_guardian::get_ddd_partitions(const gpid &pid,
         return;
     }
 
+    // If the given partition is ddd, choose it.
     const auto ddd_partition = std::as_const(_ddd_partitions).find(pid);
     if (ddd_partition != _ddd_partitions.end()) {
         partitions.push_back(ddd_partition->second);

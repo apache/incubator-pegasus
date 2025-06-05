@@ -1103,6 +1103,11 @@ void server_state::get_allowed_partitions(dsn::message_ex *msg,
 
     for (const auto &ddd_partition : ddd_partitions) {
         const auto &app = get_app(ddd_partition.config.pid.get_app_id());
+        if (!app) {
+            LOG_WARNING("app does not exist: ddd_partition = {}", ddd_partition.config.pid);
+            continue;
+        }
+
         if (_meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
             allowed_partitions.push_back(ddd_partition);
         }

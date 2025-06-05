@@ -164,6 +164,9 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CLI_CLI_CALL_ACK"},
                              _ac_type_of_global_rpcs);
     // DATABASE - kList
+    // The `RPC_CM_DDD_DIAGNOSE` request is only used to retrieve information about DDD
+    // partitions and does not modify any data or metadata, so it is more appropriate to
+    // classify it as `kList` rather than `kControl`.
     register_rpc_access_type(
         access_type::kList, {"RPC_CM_LIST_APPS", "RPC_CM_DDD_DIAGNOSE"}, _ac_type_of_database_rpcs);
     // DATABASE - kCreate
