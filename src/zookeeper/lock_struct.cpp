@@ -159,13 +159,13 @@ int64_t lock_struct::parse_seq_path(const std::string &path)
 {
     int64_t ans = 0;
     int64_t power = 1;
-    int i = static_cast<int>(path.size()) - 1;
+    int i = ((int)path.size()) - 1;
     for (; i >= 0 && isdigit(path[i]); --i) {
         ans = ans + (path[i] - '0') * power;
         power *= 10;
     }
     const std::string &match = distributed_lock_service_zookeeper::LOCK_NODE_PREFIX;
-    int j = static_cast<int>(match.size()) - 1;
+    int j = ((int)match.size()) - 1;
     for (; i >= 0 && j >= 0 && path[i] == match[j]; --i, --j)
         ;
     if (power == 1 || j >= 0) {
@@ -331,29 +331,28 @@ void lock_struct::after_get_lock_owner(lock_struct_ptr _this,
         return;
     }
 
-    if (ZOK == ec) {
-        _this->_owner._node_value = std::move(*value);
-        if (_this->_myself._node_value == _this->_owner._node_value)
-            _this->remove_duplicated_locknode(_this->_lock_dir + "/" +
-                                              _this->_owner._node_seq_name);
-        else {
-            _this->_dist_lock_service->refresh_lock_cache(
-                _this->_lock_id, _this->_owner._node_value, _this->_owner._sequence_id);
-            LOG_INFO("wait the lock({}) owner({}:{}) to remove, myself({}:{})",
-                     _this->_lock_id,
-                     _this->_owner._node_seq_name,
-                     _this->_owner._node_value,
-                     _this->_myself._node_seq_name,
-                     _this->_myself._node_value);
-        }
-
+    if (ec != ZOK) {
+        LOG_ERROR("lock_dir({}), myself({}), sessin expired",
+                  _this->_lock_dir,
+                  _this->_myself._node_seq_name);
+        _this->on_expire();
         return;
     }
 
-    LOG_ERROR("lock_dir({}), myself({}), sessin expired",
-              _this->_lock_dir,
-              _this->_myself._node_seq_name);
-    _this->on_expire();
+    _this->_owner._node_value = std::move(*value);
+    if (_this->_myself._node_value == _this->_owner._node_value) {
+        _this->remove_duplicated_locknode(_this->_lock_dir + "/" + _this->_owner._node_seq_name);
+        return;
+    }
+
+    _this->_dist_lock_service->refresh_lock_cache(
+        _this->_lock_id, _this->_owner._node_value, _this->_owner._sequence_id);
+    LOG_INFO("wait the lock({}) owner({}:{}) to remove, myself({}:{})",
+             _this->_lock_id,
+             _this->_owner._node_seq_name,
+             _this->_owner._node_value,
+             _this->_myself._node_seq_name,
+             _this->_myself._node_value);
 }
 
 /*static*/
@@ -761,9 +760,9 @@ void lock_struct::after_remove_my_locknode(lock_struct_ptr _this, int ec, bool r
             _this->on_expire(); // when expire, only expire_callback is called, the unlock/cancel's
                                 // callback is ignored
             return;
-        } else {
-            dsn_ec = ERR_OK;
         }
+
+        dsn_ec = ERR_OK;
     }
 
     if (dsn_ec == ERR_OK) {
