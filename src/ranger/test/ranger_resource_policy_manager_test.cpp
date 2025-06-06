@@ -479,8 +479,11 @@ TEST_F(ranger_resource_policy_manager_function_test, allowed)
         {"TASK_CODE_INVALID", "user1", "database1", access_control_result::kDenied},
         {"RPC_CM_CREATE_APP", "user1", "database1", access_control_result::kDenied},
         {"RPC_CM_CREATE_APP", "user2", "database1", access_control_result::kDenied},
+        // Both RPC_CM_LIST_APPS and RPC_CM_DDD_DIAGNOSE belong to access_type::kList.
         {"RPC_CM_LIST_APPS", "user1", "database1", access_control_result::kAllowed},
         {"RPC_CM_LIST_APPS", "user2", "database1", access_control_result::kAllowed},
+        {"RPC_CM_DDD_DIAGNOSE", "user1", "database1", access_control_result::kAllowed},
+        {"RPC_CM_DDD_DIAGNOSE", "user2", "database1", access_control_result::kAllowed},
         {"RPC_CM_GET_MAX_REPLICA_COUNT", "user1", "database1", access_control_result::kAllowed},
         {"RPC_CM_GET_MAX_REPLICA_COUNT", "user2", "database1", access_control_result::kDenied},
         {"TASK_CODE_INVALID", "user3", "database2", access_control_result::kDenied},
@@ -502,11 +505,15 @@ TEST_F(ranger_resource_policy_manager_function_test, allowed)
         // RPC_CM_LIST_APPS has been removed from global resources.
         {"RPC_CM_LIST_APPS", "user7", "database3", access_control_result::kDenied},
         {"RPC_CM_LIST_APPS", "user8", "database3", access_control_result::kDenied},
+        {"RPC_CM_DDD_DIAGNOSE", "user7", "database3", access_control_result::kDenied},
+        {"RPC_CM_DDD_DIAGNOSE", "user8", "database3", access_control_result::kDenied},
         {"TASK_CODE_INVALID", "user9", "database4", access_control_result::kDenied},
         {"RPC_CM_LIST_NODES", "user9", "database4", access_control_result::kDenied},
         {"RPC_CM_LIST_NODES", "user10", "database4", access_control_result::kDenied},
         {"RPC_CM_LIST_APPS", "user9", "database4", access_control_result::kDenied},
         {"RPC_CM_LIST_APPS", "user10", "database4", access_control_result::kDenied},
+        {"RPC_CM_DDD_DIAGNOSE", "user9", "database4", access_control_result::kDenied},
+        {"RPC_CM_DDD_DIAGNOSE", "user10", "database4", access_control_result::kDenied},
         {"RPC_CM_CONTROL_META", "user9", "database4", access_control_result::kAllowed},
         {"RPC_CM_CONTROL_META", "user10", "database4", access_control_result::kDenied}};
     for (const auto &test : tests) {

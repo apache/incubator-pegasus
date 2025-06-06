@@ -19,6 +19,7 @@
 
 #include <vector>
 
+#include "gutil/map_util.h"
 #include "ranger/ranger_resource_policy.h"
 #include "ranger/ranger_resource_policy_manager.h"
 #include "rpc/network.h"
@@ -49,6 +50,7 @@ meta_access_controller::meta_access_controller(
     if (utils::is_empty(FLAGS_meta_acl_rpc_allow_list)) {
         register_allowed_rpc_code_list({"RPC_CM_CLUSTER_INFO",
                                         "RPC_CM_LIST_APPS",
+                                        "RPC_CM_DDD_DIAGNOSE",
                                         "RPC_CM_LIST_NODES",
                                         "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX"});
     } else {
@@ -91,32 +93,39 @@ meta_access_controller::meta_access_controller(
 
 bool meta_access_controller::allowed(message_ex *msg, const std::string &app_name) const
 {
-    const auto rpc_code = msg->rpc_code().code();
-    const auto &user_name = msg->io_session->get_client_username();
-
-    // when the Ranger ACL is not enabled, the old ACL will be used in these three cases, the ACL
-    // will be allowed:
-    // 1. enable_acl is false
-    // 2. the user_name is super user
-    // 3. the rpc_code is in _allowed_rpc_code_list
+    // Once the Ranger ACL is not enabled, the old ACL check will pass as long as any one of
+    // these three conditions is met:
+    // 1. the old ACL is disabled, or
+    // 2. the client user is a super user, or
+    // 3. the RPC code is in the allow list.
     if (!FLAGS_enable_ranger_acl) {
-        return !FLAGS_enable_acl || is_super_user(user_name) ||
-               _allowed_rpc_code_list.find(rpc_code) != _allowed_rpc_code_list.end();
+        return !FLAGS_enable_acl || is_super_user(msg->io_session->get_client_username()) ||
+               rpc_allowed(msg->rpc_code().code());
     }
 
-    // in this case, the Ranger ACL is enabled. In both cases, the ACL will be allowed:
-    // 1. the rpc_code is in _allowed_rpc_code_list.(usually internal rpc)
-    // 2. the user_name and resource have passed the validation of Ranger policy
-    if (_allowed_rpc_code_list.find(rpc_code) != _allowed_rpc_code_list.end()) {
+    // Once the Ranger ACL is enabled, the ACL check will pass as long as any one of these
+    // two conditions is met:
+    // 1. the RPC code is in the allow list (usually internal RPCs), or
+    // 2. the username and the target database have both been verified through the Ranger
+    // policy.
+    const auto rpc_code = msg->rpc_code().code();
+    if (rpc_allowed(rpc_code)) {
         return true;
     }
-    auto database_name = ranger::get_database_name_from_app_name(app_name);
+
+    const auto &user_name = msg->io_session->get_client_username();
+    const auto &database_name = ranger::get_database_name_from_app_name(app_name);
     LOG_DEBUG("Ranger access controller with user_name = {}, rpc = {}, database_name = {}",
               user_name,
               msg->rpc_code(),
               database_name);
     return _ranger_resource_policy_manager->allowed(rpc_code, user_name, database_name) ==
            ranger::access_control_result::kAllowed;
+}
+
+bool meta_access_controller::rpc_allowed(int rpc_code) const
+{
+    return gutil::ContainsKey(_allowed_rpc_code_list, rpc_code);
 }
 
 void meta_access_controller::register_allowed_rpc_code_list(

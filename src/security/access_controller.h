@@ -36,14 +36,14 @@ class access_controller
 {
 public:
     access_controller();
-    virtual ~access_controller();
+    virtual ~access_controller() = default;
 
     // Update the access controller.
     // users - the new allowed users to update
     virtual void update_allowed_users(const std::string &users) {}
 
     // Check whether the Ranger ACL is enabled or not.
-    bool is_enable_ranger_acl() const;
+    static bool is_enable_ranger_acl();
 
     // Update the access controller policy
     // policies -  the new Ranger policies to update
@@ -53,10 +53,14 @@ public:
     // msg - the message received
     virtual bool allowed(message_ex *msg, dsn::ranger::access_type req_type) const { return false; }
 
-    // Check if the message received is allowd to access the table.
-    // msg - the message received
-    // app_name - tables involved in ACL
-    virtual bool allowed(message_ex *msg, const std::string &app_name = "") const { return false; }
+    // Check if the received request is allowd to access the table.
+    //
+    // Parameters:
+    // - msg: the received request, should never be NULL.
+    // - app_name: the name of the table on which the ACL check is performed.
+    virtual bool allowed(message_ex *msg, const std::string &app_name) const { return false; }
+
+    bool allowed(message_ex *msg) const { return allowed(msg, std::string()); }
 
 protected:
     // Check if 'user_name' is the super user.
@@ -64,7 +68,7 @@ protected:
 
     std::unordered_set<std::string> _super_users;
 
-    friend class meta_access_controller_test;
+    friend class SuperUserTest;
 };
 
 std::shared_ptr<access_controller> create_meta_access_controller(
@@ -72,5 +76,6 @@ std::shared_ptr<access_controller> create_meta_access_controller(
 
 std::unique_ptr<access_controller>
 create_replica_access_controller(const std::string &replica_name);
+
 } // namespace security
 } // namespace dsn

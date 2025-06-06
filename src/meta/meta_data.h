@@ -453,17 +453,21 @@ inline bool is_node_alive(const node_mapper &nodes, const host_port &hp)
 
 inline const partition_configuration *get_config(const app_mapper &apps, const dsn::gpid &gpid)
 {
-    auto iter = apps.find(gpid.get_app_id());
-    if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED)
+    const auto iter = apps.find(gpid.get_app_id());
+    if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED) {
         return nullptr;
+    }
+
     return &(iter->second->pcs[gpid.get_partition_index()]);
 }
 
 inline partition_configuration *get_config(app_mapper &apps, const dsn::gpid &gpid)
 {
-    auto iter = apps.find(gpid.get_app_id());
-    if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED)
+    const auto iter = apps.find(gpid.get_app_id());
+    if (iter == apps.end() || iter->second->status == app_status::AS_DROPPED) {
         return nullptr;
+    }
+
     return &(iter->second->pcs[gpid.get_partition_index()]);
 }
 

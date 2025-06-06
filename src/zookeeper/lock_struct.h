@@ -38,12 +38,11 @@
 #include "utils/fmt_utils.h"
 #include "utils/thread_access_checker.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 enum lock_state
 {
-    uninitialized,
+    uninitialized = 0,
     pending,
     locked,
     expired,
@@ -55,17 +54,30 @@ USER_DEFINED_ENUM_FORMATTER(lock_state)
 
 struct zoolock_pair
 {
+    zoolock_pair() = default;
+
+    void clear()
+    {
+        _node_value.clear();
+        _node_seq_name.clear();
+        _sequence_id = -1;
+    }
+
     std::string _node_value;
     std::string _node_seq_name;
-    int64_t _sequence_id;
+    int64_t _sequence_id{-1};
 };
+
+class lock_struct;
+
+using lock_struct_ptr = ref_ptr<lock_struct>;
 
 class lock_struct : public ref_counter
 {
 public:
-    lock_struct(lock_srv_ptr srv);
+    explicit lock_struct(lock_srv_ptr srv);
     void initialize(std::string lock_id, std::string myself_id);
-    const int hash() const { return _hash; }
+    [[nodiscard]] int hash() const { return _hash; }
 
     static void
     try_lock(lock_struct_ptr _this, lock_future_ptr lock_callback, lock_future_ptr expire_callback);
@@ -99,14 +111,13 @@ private:
     static void after_self_check(lock_struct_ptr _this, int ec, std::shared_ptr<std::string> value);
     static void after_remove_duplicated_locknode(lock_struct_ptr _this,
                                                  int ec,
-                                                 std::shared_ptr<std::string> value);
-    static void after_remove_my_locknode(lock_struct_ptr _this, int ec, bool need_to_notify);
+                                                 std::shared_ptr<std::string> path);
+    static void after_remove_my_locknode(lock_struct_ptr _this, int ec, bool remove_for_unlock);
 
     /*lock owner watch callback*/
     static void owner_change(lock_struct_ptr _this, int zoo_event);
     static void my_lock_removed(lock_struct_ptr _this, int zoo_event);
 
-private:
     lock_future_ptr _lock_callback;
     lock_future_ptr _lease_expire_callback;
     lock_future_ptr _cancel_callback;
@@ -114,13 +125,14 @@ private:
 
     std::string _lock_id;
     std::string _lock_dir; // ${lock_root}/${lock_id}
-    zoolock_pair _myself, _owner;
-    lock_state _state;
-    int _hash;
+    zoolock_pair _myself;
+    zoolock_pair _owner;
+    lock_state _state{lock_state::uninitialized};
+    int _hash{0};
 
     lock_srv_ptr _dist_lock_service;
 
     thread_access_checker _checker;
 };
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

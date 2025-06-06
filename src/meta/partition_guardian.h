@@ -31,10 +31,11 @@
 #include "meta_data.h"
 #include "rpc/rpc_host_port.h"
 #include "utils/command_manager.h"
+#include "utils/ports.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
+
 class meta_service;
 
 class partition_guardian
@@ -54,7 +55,7 @@ public:
     cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action);
     void reconfig(meta_view view, const configuration_update_request &request);
     void register_ctrl_commands();
-    void get_ddd_partitions(const gpid &pid, std::vector<ddd_partition_info> &partitions);
+    void get_ddd_partitions(const gpid &pid, std::vector<ddd_partition_info> &partitions) const;
     void clear_ddd_partitions()
     {
         zauto_lock l(_ddd_partitions_lock);
@@ -105,7 +106,9 @@ private:
     int64_t _replica_assign_delay_ms_for_dropouts;
 
     friend class meta_partition_guardian_test;
+
+    DISALLOW_COPY_AND_ASSIGN(partition_guardian);
+    DISALLOW_MOVE_AND_ASSIGN(partition_guardian);
 };
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

@@ -40,51 +40,52 @@
 #include "utils/autoref_ptr.h"
 #include "utils/distributed_lock_service.h"
 #include "utils/error_code.h"
+#include "utils/ports.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 // A simple version of distributed lock service.
 // NOTE: Only for test purpose.
 class distributed_lock_service_simple : public distributed_lock_service
 {
 public:
-    virtual ~distributed_lock_service_simple() { _tracker.cancel_outstanding_tasks(); }
+    distributed_lock_service_simple() = default;
+    ~distributed_lock_service_simple() override { _tracker.cancel_outstanding_tasks(); }
+
     // no parameter need
-    virtual error_code initialize(const std::vector<std::string> &args) override;
-    virtual error_code finalize() override { return ERR_OK; }
+    error_code initialize(const std::vector<std::string> &args) override;
+    error_code finalize() override { return ERR_OK; }
 
-    virtual std::pair<task_ptr, task_ptr> lock(const std::string &lock_id,
-                                               const std::string &myself_id,
-                                               task_code lock_cb_code,
-                                               const lock_callback &lock_cb,
-                                               task_code lease_expire_code,
-                                               const lock_callback &lease_expire_callback,
-                                               const lock_options &opt) override;
+    std::pair<task_ptr, task_ptr> lock(const std::string &lock_id,
+                                       const std::string &myself_id,
+                                       task_code lock_cb_code,
+                                       const lock_callback &lock_cb,
+                                       task_code lease_expire_code,
+                                       const lock_callback &lease_expire_callback,
+                                       const lock_options &opt) override;
 
-    virtual task_ptr cancel_pending_lock(const std::string &lock_id,
-                                         const std::string &myself_id,
-                                         task_code cb_code,
-                                         const lock_callback &cb) override;
+    task_ptr cancel_pending_lock(const std::string &lock_id,
+                                 const std::string &myself_id,
+                                 task_code cb_code,
+                                 const lock_callback &cb) override;
 
-    virtual task_ptr unlock(const std::string &lock_id,
-                            const std::string &myself_id,
-                            bool destroy,
-                            task_code cb_code,
-                            const err_callback &cb) override;
+    task_ptr unlock(const std::string &lock_id,
+                    const std::string &myself_id,
+                    bool destroy,
+                    task_code cb_code,
+                    const err_callback &cb) override;
 
-    virtual task_ptr
+    task_ptr
     query_lock(const std::string &lock_id, task_code cb_code, const lock_callback &cb) override;
 
-    virtual error_code query_cache(const std::string &lock_id,
-                                   /*out*/ std::string &owner,
-                                   /*out*/ uint64_t &version) override;
+    error_code query_cache(const std::string &lock_id,
+                           /*out*/ std::string &owner,
+                           /*out*/ uint64_t &version) const override;
 
 private:
     void random_lock_lease_expire(const std::string &lock_id);
 
-private:
     struct lock_wait_info
     {
         task_ptr grant_callback;
@@ -100,12 +101,15 @@ private:
         std::list<lock_wait_info> pending_list;
     };
 
-    typedef std::unordered_map<std::string, lock_info> locks;
+    using locks = std::unordered_map<std::string, lock_info>;
 
-    zlock _lock;
+    mutable zlock _lock;
     locks _dlocks; // lock -> owner
 
     dsn::task_tracker _tracker;
+
+    DISALLOW_COPY_AND_ASSIGN(distributed_lock_service_simple);
+    DISALLOW_MOVE_AND_ASSIGN(distributed_lock_service_simple);
 };
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist
