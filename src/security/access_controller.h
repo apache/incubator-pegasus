@@ -53,11 +53,11 @@ public:
     // msg - the message received
     virtual bool allowed(message_ex *msg, dsn::ranger::access_type req_type) const { return false; }
 
-    // Check if the received message is allowd to access the table.
+    // Check if the received request is allowd to access the table.
     //
     // Parameters:
-    // - msg: the message received, should never be NULL.
-    // - app_name: tables involved in ACL
+    // - msg: the received request, should never be NULL.
+    // - app_name: the name of the table on which the ACL check is performed.
     virtual bool allowed(message_ex *msg, const std::string &app_name) const { return false; }
 
     bool allowed(message_ex *msg) const { return allowed(msg, std::string()); }

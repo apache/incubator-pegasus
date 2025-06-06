@@ -93,19 +93,21 @@ meta_access_controller::meta_access_controller(
 
 bool meta_access_controller::allowed(message_ex *msg, const std::string &app_name) const
 {
-    // when the Ranger ACL is not enabled, the old ACL will be used in these three cases, the ACL
-    // will be allowed:
-    // 1. enable_acl is false
-    // 2. the client user is a super user
-    // 3. the rpc_code is allowed
+    // Once the Ranger ACL is not enabled, the old ACL check will pass as long as any one of
+    // these three conditions is met:
+    // 1. the old ACL is disabled, or
+    // 2. the client user is a super user, or
+    // 3. the RPC code is in the allow list.
     if (!FLAGS_enable_ranger_acl) {
         return !FLAGS_enable_acl || is_super_user(msg->io_session->get_client_username()) ||
                rpc_allowed(msg->rpc_code().code());
     }
 
-    // in this case, the Ranger ACL is enabled. In both cases, the ACL will be allowed:
-    // 1. the rpc_code is in _allowed_rpc_code_list.(usually internal rpc)
-    // 2. the user_name and resource have passed the validation of Ranger policy
+    // Once the Ranger ACL is enabled, the ACL check will pass as long as any one of these
+    // two conditions is met:
+    // 1. the RPC code is in the allow list (usually internal RPCs), or
+    // 2. the username and the target database have both been verified through the Ranger
+    // policy.
     const auto rpc_code = msg->rpc_code().code();
     if (rpc_allowed(rpc_code)) {
         return true;

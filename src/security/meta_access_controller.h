@@ -44,6 +44,7 @@ public:
 private:
     void register_allowed_rpc_code_list(const std::vector<std::string> &rpc_list);
 
+    // Return true if the RPC code is in the allow list, otherwise false.
     bool rpc_allowed(int rpc_code) const;
 
     std::unordered_set<int> _allowed_rpc_code_list;
