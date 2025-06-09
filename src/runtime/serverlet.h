@@ -145,7 +145,7 @@ protected:
     bool unregister_rpc_handler(task_code rpc_code);
 
     template <typename TResponse>
-    void reply(dsn::message_ex *request, const TResponse &resp);
+    static void reply(dsn::message_ex *request, const TResponse &resp);
 
 private:
     std::string _name;

@@ -295,40 +295,60 @@ private:
     // Set `atomic_idempotent` of a table.
     void on_set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc);
 
-    // if return 'kNotLeaderAndCannotForwardRpc' and 'forward_address' != nullptr, then return
-    // leader by 'forward_address'.
+    // Both following functions are used to check the leader of the meta servers:
+    // - if this meta server is serving as leader, return kIsLeader;
+    // - otherwise,
+    //     * if the leader exists and the request(`req` and `rpc`) is supported for forwarding,
+    //       just forward the request and return kNotLeaderAndCanForwardRpc;
+    //     * or else assign `forward_address` with leader (if `forward_address` is not null and
+    //       the leader exists) and return kNotLeaderAndCannotForwardRpc.
     meta_leader_state check_leader(dsn::message_ex *req, dsn::host_port *forward_address) const;
     template <typename TRpcHolder>
     meta_leader_state check_leader(TRpcHolder rpc, /*out*/ host_port *forward_address) const;
 
-    // app_name: when the Ranger ACL is enabled, some rpc requests need to verify the app_name
-    // ret:
-    //    false: rpc request check failed because check leader failed or ACL authentication failed
-    //    true:  rpc request check and authentication succeed
+    // If this meta server is the leader, perform ACL check on `rpc`; also, once the Ranger ACL
+    // is enabled, database operations would be required to check the permission on the table
+    // whose name is `app_name`. Default databse name (legacy_table_database_mapping_policy_name)
+    // would be used if `aap_name` is empty.
+    //
+    // Reture true if this meta server is not the leader and the ACL checks pass, otherwise
+    // false.
     template <typename TRpcHolder>
     bool check_status_and_authz(TRpcHolder rpc,
                                 /*out*/ host_port *forward_address,
                                 const std::string &app_name) const;
+
+    // The same as the above function, except that `app_name` is given as empty string.
     template <typename TRpcHolder>
     bool check_status_and_authz(TRpcHolder rpc,
                                 /*out*/ host_port *forward_address) const;
+
+    // The same as the above function, except that `forward_address` is given as nullptr.
     template <typename TRpcHolder>
     bool check_status_and_authz(TRpcHolder rpc) const;
 
-    // app_name: when the Ranger ACL is enabled, some rpc requests need to verify the app_name
-    // ret:
-    //    false: rpc request check failed because check leader failed or ACL authentication failed
-    //    true:  rpc request check and authentication succeed
+    // The same as check_status_and_authz(), except that this function would reply to the client
+    // automatically if it returns false.
     template <typename TRespType>
     bool check_status_and_authz_with_reply(message_ex *req,
                                            TRespType &response_struct,
-                                           const std::string &app_name = "");
-    template <typename TReqType, typename TRespType>
-    bool check_status_and_authz_with_reply(message_ex *msg);
+                                           const std::string &app_name) const;
 
+    // The same as the above function, except that `app_name` is given as empty string.
+    template <typename TRespType>
+    bool check_status_and_authz_with_reply(message_ex *req, TRespType &response_struct) const;
+
+    // The same as the above function, except that `response_struct` is initialized by default
+    // constructor and `app_name` is extracted from `msg`.
+    template <typename TReqType, typename TRespType>
+    bool check_status_and_authz_with_reply(message_ex *msg) const;
+
+    // Rteurn true if this meta server is the leader, otherwise false with `forward_address` set
+    // if it is not null.
     template <typename TRpcHolder>
     bool check_leader_status(TRpcHolder rpc, host_port *forward_address) const;
 
+    // The same as the above function, except that `forward_address` is null.
     template <typename TRpcHolder>
     bool check_leader_status(TRpcHolder rpc) const;
 
@@ -466,14 +486,15 @@ bool meta_service::check_leader_status(TRpcHolder rpc) const
     return check_leader_status(rpc, nullptr);
 }
 
-// when the Ranger ACL is enabled, only the leader meta_server will pull Ranger policy, so if it is
-// not the leader, _access_controller may be a null pointer, or a new leader is elected, and the
-// above policy information may be out of date.
 template <typename TRpcHolder>
 bool meta_service::check_status_and_authz(TRpcHolder rpc,
                                           host_port *forward_address,
                                           const std::string &app_name) const
 {
+    // Once the Ranger ACL is enabled, only the leader will pull Ranger policies. Therefore,
+    // - `_access_controller` will be null if this meta server is not the leader;
+    // - the policies may be outdated if thie meta server was just newly elected as the
+    // leader.
     if (!check_leader_status(rpc, forward_address)) {
         return false;
     }
@@ -505,7 +526,7 @@ bool meta_service::check_status_and_authz(TRpcHolder rpc) const
 template <typename TRespType>
 bool meta_service::check_status_and_authz_with_reply(message_ex *req,
                                                      TRespType &response_struct,
-                                                     const std::string &app_name)
+                                                     const std::string &app_name) const
 {
     const auto result = check_leader(req, nullptr);
     if (result == meta_leader_state::kNotLeaderAndCanForwardRpc) {
@@ -538,8 +559,15 @@ bool meta_service::check_status_and_authz_with_reply(message_ex *req,
     return true;
 }
 
+template <typename TRespType>
+bool meta_service::check_status_and_authz_with_reply(message_ex *req,
+                                                     TRespType &response_struct) const
+{
+    return check_status_and_authz_with_reply(req, response_struct, "");
+}
+
 template <typename TReqType, typename TRespType>
-bool meta_service::check_status_and_authz_with_reply(message_ex *msg)
+bool meta_service::check_status_and_authz_with_reply(message_ex *msg) const
 {
     TReqType req;
     TRespType resp;
