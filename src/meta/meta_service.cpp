@@ -69,6 +69,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
 
 DSN_DECLARE_string(hosts_list);
@@ -153,15 +154,16 @@ namespace replication {
 
 #define CHECK_APP_ID_STATUS_AND_AUTHZ(app_id)                                                      \
     do {                                                                                           \
-        const auto &_app_id = (app_id);                                                            \
-        const auto &_app = _state->get_app(_app_id);                                               \
-        if (!_app) {                                                                               \
-            rpc.response().err = ERR_APP_NOT_EXIST;                                                \
-            LOG_WARNING("reject request on app_id = {}", _app_id);                                 \
+        const auto &__app_id = (app_id);                                                           \
+        std::string __app_name;                                                                    \
+        const auto __err = _state->get_app_name(__app_id, __app_name);                             \
+        if (__err != ERR_OK) {                                                                     \
+            rpc.response().err = __err;                                                            \
+            LOG_WARNING("reject request on app_id = {}, err = {}", __app_id, __err);               \
             return;                                                                                \
         }                                                                                          \
-        const std::string &app_name = _app->app_name;                                              \
-        if (!check_status_and_authz(rpc, nullptr, app_name)) {                                     \
+                                                                                                   \
+        if (!check_status_and_authz(rpc, nullptr, __app_name)) {                                   \
             return;                                                                                \
         }                                                                                          \
     } while (0)

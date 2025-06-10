@@ -996,6 +996,19 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
              response.gc_replicas.size());
 }
 
+error_code server_state::get_app_name(int32_t app_id, std::string &app_name) const
+{
+    zauto_read_lock l(_lock);
+
+    const auto &app = get_app(app_id);
+    if (!app) {
+        return ERR_APP_NOT_EXIST;
+    }
+
+    app_name = app->app_name;
+    return ERR_OK;
+}
+
 bool server_state::query_configuration_by_gpid(const dsn::gpid &id,
                                                /*out*/ partition_configuration &pc) const
 {

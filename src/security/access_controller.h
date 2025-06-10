@@ -56,11 +56,12 @@ public:
     // Check if the received request is allowd to access the table.
     //
     // Parameters:
-    // - msg: the received request, should never be NULL.
+    // - msg: the received request, should never be null.
     // - app_name: the name of the table on which the ACL check is performed.
     virtual bool allowed(message_ex *msg, const std::string &app_name) const { return false; }
 
-    bool allowed(message_ex *msg) const { return allowed(msg, std::string()); }
+    // The same as the above function, except that `app_name` is set empty.
+    bool allowed(message_ex *msg) const { return allowed(msg, ""); }
 
 protected:
     // Check if 'user_name' is the super user.

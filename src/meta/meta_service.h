@@ -344,7 +344,7 @@ private:
     bool check_status_and_authz_with_reply(message_ex *msg) const;
 
     // Rteurn true if this meta server is the leader, otherwise false with `forward_address` set
-    // if it is not null.
+    // if not null.
     template <typename TRpcHolder>
     bool check_leader_status(TRpcHolder rpc, host_port *forward_address) const;
 
@@ -493,7 +493,7 @@ bool meta_service::check_status_and_authz(TRpcHolder rpc,
 {
     // Once the Ranger ACL is enabled, only the leader will pull Ranger policies. Therefore,
     // - `_access_controller` will be null if this meta server is not the leader;
-    // - the policies may be outdated if thie meta server was just newly elected as the
+    // - the policies may be outdated if this meta server was just newly elected as the
     // leader.
     if (!check_leader_status(rpc, forward_address)) {
         return false;
