@@ -17,6 +17,7 @@
 
 #include "meta_access_controller.h"
 
+#include <utility>
 #include <vector>
 
 #include "gutil/map_util.h"
@@ -42,13 +43,13 @@ namespace dsn {
 namespace security {
 
 meta_access_controller::meta_access_controller(
-    const std::shared_ptr<ranger::ranger_resource_policy_manager> &policy_manager)
-    : _ranger_resource_policy_manager(policy_manager)
+    std::shared_ptr<ranger::ranger_resource_policy_manager> policy_manager)
+    : _ranger_resource_policy_manager(std::move(policy_manager))
 {
     // For the old ACL:
     // 1. the meta server accepts and processes any RPC requests in the allow list from
     // all users;
-    // 2. for the RPC requests not in the allow list, only those sent by the superuser
+    // 2. for the RPC requests not in the allow list, only those issued by the superuser
     // are accepted.
     if (utils::is_empty(FLAGS_meta_acl_rpc_allow_list)) {
         register_allowed_rpc_code_list({"RPC_CM_CLUSTER_INFO",

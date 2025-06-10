@@ -160,7 +160,7 @@ const std::vector<rpc_acl_case> rpc_acl_tests = {
     {false, "non_super_user", RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, true},
     {false, "non_super_user", RPC_CM_START_RECOVERY, false},
 
-    // All RPC requests will be allowed for old ACL once Ranger ACL is disabled and the
+    // Any RPC request will be allowed for old ACL once Ranger ACL is disabled and the
     // client user is a super user.
     {false, "super_user_1", RPC_CM_CLUSTER_INFO, true},
     {false, "super_user_2", RPC_CM_LIST_APPS, true},

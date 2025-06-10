@@ -123,11 +123,13 @@ protected:
                               const char *extra_name,
                               void (T::*handler)(const TRequest &, TResponse &));
 
+    // Register non-const member function of class T as handler.
     template <typename TRpcHolder>
     bool register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
                                               const char *extra_name,
                                               void (T::*handler)(TRpcHolder));
 
+    // Register const member function of class T as handler.
     template <typename TRpcHolder>
     bool register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
                                               const char *extra_name,
