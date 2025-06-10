@@ -40,11 +40,11 @@ namespace dsn::security {
 
 struct super_user_case
 {
-    std::string super_users;
     std::string user_name;
     bool is_super_user;
 };
 
+// The super user tests are only for old ACL.
 class SuperUserTest : public testing::TestWithParam<super_user_case>
 {
 protected:
@@ -52,8 +52,7 @@ protected:
     {
         PRESERVE_FLAG(super_users);
 
-        const auto &test_case = GetParam();
-        FLAGS_super_users = test_case.super_users.c_str();
+        FLAGS_super_users = "super_user_1, super_user_2";
 
         // `_meta_access_controller` should be initialized after `FLAGS_super_users`
         // is assigned, since it parses its own super users from `FLAGS_super_users`.
@@ -76,10 +75,10 @@ TEST_P(SuperUserTest, IsSuperUser)
 }
 
 const std::vector<super_user_case> super_user_tests = {
-    {"super_user_1, super_user_2", "", false},
-    {"super_user_1, super_user_2", "non_super_user", false},
-    {"super_user_1, super_user_2", "super_user_1", true},
-    {"super_user_1, super_user_2", "super_user_2", true},
+    {"", false},
+    {"non_super_user", false},
+    {"super_user_1", true},
+    {"super_user_2", true},
 };
 
 INSTANTIATE_TEST_SUITE_P(MetaAccessControllerTest,
@@ -89,10 +88,12 @@ INSTANTIATE_TEST_SUITE_P(MetaAccessControllerTest,
 struct rpc_acl_case
 {
     bool enable_ranger_acl;
+    std::string user_name;
     task_code rpc_code;
     bool is_allowed;
 };
 
+// The RPC allow list tests are for both old and Ranger ACLs.
 class RpcAclTest : public testing::TestWithParam<rpc_acl_case>
 {
 protected:
@@ -102,12 +103,14 @@ protected:
         PRESERVE_FLAG(enable_ranger_acl);
         PRESERVE_FLAG(super_users);
 
+        // Always make old ACL enabled, since once Ranger ACL is enabled old ACL is also required
+        // to be enabled.
         FLAGS_enable_acl = true;
 
         const auto &test_case = GetParam();
         FLAGS_enable_ranger_acl = test_case.enable_ranger_acl;
 
-        FLAGS_super_users = "super_user_1";
+        FLAGS_super_users = "super_user_1, super_user_2";
 
         // `_meta_access_controller` should be initialized after `FLAGS_super_users`
         // is assigned, since it parses its own super users from `FLAGS_super_users`.
@@ -126,6 +129,8 @@ TEST_P(RpcAclTest, RpcAllowed)
     PRESERVE_FLAG(enable_acl);
     PRESERVE_FLAG(enable_ranger_acl);
 
+    // Always make old ACL enabled, since once Ranger ACL is enabled old ACL is also required
+    // to be enabled.
     FLAGS_enable_acl = true;
 
     const auto &test_case = GetParam();
@@ -136,8 +141,8 @@ TEST_P(RpcAclTest, RpcAllowed)
     const auto sim_session =
         sim_net->create_client_session(rpc_address::from_host_port("localhost", 10086));
 
-    // Make sure that a non-super user is specified as the client user.
-    sim_session->set_client_username("non_super_user");
+    // Specify the client user.
+    sim_session->set_client_username(test_case.user_name);
 
     const dsn::message_ptr msg = message_ex::create_request(test_case.rpc_code);
     msg->io_session = sim_session;
@@ -146,21 +151,41 @@ TEST_P(RpcAclTest, RpcAllowed)
 }
 
 const std::vector<rpc_acl_case> rpc_acl_tests = {
-    // Whether RPC is allowed depends on ranger policy once it is enabled.
-    {false, RPC_CM_CLUSTER_INFO, true},
-    {false, RPC_CM_LIST_APPS, true},
-    {false, RPC_CM_DDD_DIAGNOSE, true},
-    {false, RPC_CM_LIST_NODES, true},
-    {false, RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, true},
-    {false, RPC_CM_START_RECOVERY, false},
+    // Whether an RPC request is allowed depends on the allow list for old ACL once Ranger
+    // ACL is disabled and the client user is a non-super user.
+    {false, "non_super_user", RPC_CM_CLUSTER_INFO, true},
+    {false, "non_super_user", RPC_CM_LIST_APPS, true},
+    {false, "non_super_user", RPC_CM_DDD_DIAGNOSE, true},
+    {false, "non_super_user", RPC_CM_LIST_NODES, true},
+    {false, "non_super_user", RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, true},
+    {false, "non_super_user", RPC_CM_START_RECOVERY, false},
 
-    // Whether RPC is allowed depends on ranger policy once it is enabled.
-    {true, RPC_CM_CLUSTER_INFO, false},
-    {true, RPC_CM_LIST_APPS, false},
-    {true, RPC_CM_DDD_DIAGNOSE, false},
-    {true, RPC_CM_LIST_NODES, false},
-    {true, RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, true},
-    {true, RPC_CM_START_RECOVERY, false},
+    // All RPC requests will be allowed for old ACL once Ranger ACL is disabled and the
+    // client user is a super user.
+    {false, "super_user_1", RPC_CM_CLUSTER_INFO, true},
+    {false, "super_user_2", RPC_CM_LIST_APPS, true},
+    {false, "super_user_1", RPC_CM_DDD_DIAGNOSE, true},
+    {false, "super_user_2", RPC_CM_LIST_NODES, true},
+    {false, "super_user_1", RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, true},
+    {false, "super_user_2", RPC_CM_START_RECOVERY, true},
+
+    // Whether an RPC request is allowed depends on the allow list for Ranger ACL once it
+    // is enabled.
+    {true, "non_super_user", RPC_CM_CLUSTER_INFO, false},
+    {true, "non_super_user", RPC_CM_LIST_APPS, false},
+    {true, "non_super_user", RPC_CM_DDD_DIAGNOSE, false},
+    {true, "non_super_user", RPC_CM_LIST_NODES, false},
+    {true, "non_super_user", RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, true},
+    {true, "non_super_user", RPC_CM_START_RECOVERY, false},
+
+    // Whether an RPC request is allowed depends on the allow list for Ranger ACL once it
+    // is enabled even if the client user is a super user for old ACL.
+    {true, "super_user_1", RPC_CM_CLUSTER_INFO, false},
+    {true, "super_user_2", RPC_CM_LIST_APPS, false},
+    {true, "super_user_1", RPC_CM_DDD_DIAGNOSE, false},
+    {true, "super_user_2", RPC_CM_LIST_NODES, false},
+    {true, "super_user_1", RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, true},
+    {true, "super_user_2", RPC_CM_START_RECOVERY, false},
 };
 
 INSTANTIATE_TEST_SUITE_P(MetaAccessControllerTest, RpcAclTest, testing::ValuesIn(rpc_acl_tests));

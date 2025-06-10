@@ -25,7 +25,7 @@ namespace dsn::ranger {
 
 bool policy_item::match(access_type ac_type, const std::string &user_name) const
 {
-    return static_cast<bool>(access_types & ac_type) && users.count(user_name) != 0;
+    return static_cast<bool>(access_types & ac_type) && gutil::ContainsKey(users, user_name);
 }
 
 template <>

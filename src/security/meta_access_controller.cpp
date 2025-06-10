@@ -45,8 +45,11 @@ meta_access_controller::meta_access_controller(
     const std::shared_ptr<ranger::ranger_resource_policy_manager> &policy_manager)
     : _ranger_resource_policy_manager(policy_manager)
 {
-    // MetaServer serves the allow-list RPC from all users. RPCs unincluded are accessible to only
-    // superusers.
+    // For the old ACL:
+    // 1. the meta server accepts and processes any RPC requests in the allow list from
+    // all users;
+    // 2. for the RPC requests not in the allow list, only those sent by the superuser
+    // are accepted.
     if (utils::is_empty(FLAGS_meta_acl_rpc_allow_list)) {
         register_allowed_rpc_code_list({"RPC_CM_CLUSTER_INFO",
                                         "RPC_CM_LIST_APPS",
@@ -59,7 +62,8 @@ meta_access_controller::meta_access_controller(
         register_allowed_rpc_code_list(rpc_code_white_list);
     }
 
-    // use Ranger policy
+    // Once Ranger ACL is enabled, the allow list registered by the old ACL will be cleared
+    // and replaced by the allow list from the Ranger ACL.
     if (FLAGS_enable_ranger_acl) {
         register_allowed_rpc_code_list({"RPC_BULK_LOAD",
                                         "RPC_CALL_RAW_MESSAGE",
