@@ -662,7 +662,7 @@ void meta_service::on_recall_app(dsn::message_ex *req)
     // check new_app_name reasonable.
     // when the Ranger ACL is enabled, ensure that the prefix of new_app_name is consistent with
     // old, or it is empty
-    if (_access_controller->is_enable_ranger_acl() && !request.new_app_name.empty()) {
+    if (_access_controller->is_ranger_acl_enabled() && !request.new_app_name.empty()) {
         std::string app_name_prefix = ranger::get_database_name_from_app_name(app_name);
         std::string new_app_name_prefix =
             ranger::get_database_name_from_app_name(request.new_app_name);
@@ -686,7 +686,12 @@ void meta_service::on_list_apps(configuration_list_apps_rpc rpc) const
         return;
     }
 
-    _state->list_apps(rpc.dsn_request(), rpc.request(), rpc.response());
+    // Short-cut the ACL check: if any ACL (Ranger or old ACL) is disabled, there's no need to
+    // perform ACL verification for each table (by setting the request `msg` to null, the ACL
+    // check can be skipped).
+    _state->list_apps(_access_controller->is_acl_enabled() ? rpc.dsn_request() : nullptr,
+                      rpc.request(),
+                      rpc.response());
 }
 
 void meta_service::on_list_nodes(configuration_list_nodes_rpc rpc)
@@ -1145,12 +1150,17 @@ void meta_service::on_ddd_diagnose(ddd_diagnose_rpc rpc) const
     _partition_guardian->get_ddd_partitions(pid, ddd_partitions);
 
     auto &response = rpc.response();
-    if (app_id == -1) {
+
+    // While the client is requesting all DDD partitions (with app_id = -1), we could short-cut
+    // the ACL check: if any ACL (Ranger or old ACL) is disabled, there's no need to
+    // perform ACL verification for each DDD partition (just skip the ACL check).
+    if (app_id == -1 && _access_controller->is_acl_enabled()) {
         // Perform ACL checks on all DDD partitions, and only those that pass will be returned
         // to the client.
         _state->get_allowed_partitions(rpc.dsn_request(), ddd_partitions, response.partitions);
     } else {
-        // ACL check has already passed, just move the result to the response.
+        // ACL check has already passed or there's no need to perform ACL check, just move the
+        // result to the response.
         response.partitions = std::move(ddd_partitions);
     }
 

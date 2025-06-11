@@ -180,8 +180,8 @@ public:
     void recall_app(dsn::message_ex *msg);
     void rename_app(configuration_rename_app_rpc rpc);
 
-    // List tables according to `request` into `response`, with non-null `msg` used for ACL
-    // checks.
+    // List tables according to `request` into `response`, with non-null request `msg` from
+    // client used for ACL checks. Null `msg` means disabling ACL checks.
     void list_apps(dsn::message_ex *msg,
                    const configuration_list_apps_request &request,
                    configuration_list_apps_response &response) const;

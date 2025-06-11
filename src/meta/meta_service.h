@@ -309,7 +309,7 @@ private:
     // If this meta server is the leader, perform ACL check on `rpc`; also, once the Ranger ACL
     // is enabled, database operations would be required to check the permission on the table
     // whose name is `app_name`. Default databse name (legacy_table_database_mapping_policy_name)
-    // would be used if `aap_name` is empty.
+    // would be used if `app_name` is empty.
     //
     // Reture true if this meta server is not the leader and the ACL checks pass, otherwise
     // false.
@@ -338,17 +338,18 @@ private:
     template <typename TRespType>
     bool check_status_and_authz_with_reply(message_ex *req, TRespType &response_struct) const;
 
-    // The same as the above function, except that `response_struct` is initialized by default
-    // constructor and `app_name` is extracted from `msg`.
+    // The same as the above function, except that `response_struct` is initialized inside the
+    // function by default constructor and `app_name` is extracted from `msg`.
     template <typename TReqType, typename TRespType>
     bool check_status_and_authz_with_reply(message_ex *msg) const;
 
-    // Rteurn true if this meta server is the leader, otherwise false with `forward_address` set
-    // if not null.
+    // Rteurn true if this meta server is the leader, otherwise false with *forward_address
+    // assigned leader (may be empty as HOST_TYPE_INVALID if failed) if `forward_address` is
+    // not null.
     template <typename TRpcHolder>
     bool check_leader_status(TRpcHolder rpc, host_port *forward_address) const;
 
-    // The same as the above function, except that `forward_address` is null.
+    // The same as the above function, except that `forward_address` is set null.
     template <typename TRpcHolder>
     bool check_leader_status(TRpcHolder rpc) const;
 

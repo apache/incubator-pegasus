@@ -38,22 +38,32 @@ public:
     access_controller();
     virtual ~access_controller() = default;
 
-    // Update the access controller.
-    // users - the new allowed users to update
+    // Return true if Ranger ACL is enabled, otherwise false.
+    static bool is_ranger_acl_enabled();
+
+    // Return true if either Ranger ACL or old ACL is enabled, otherwise false.
+    static bool is_acl_enabled();
+
+    // Update allowed users for old ACL.
+    //
+    // Parameters:
+    // - users: the new allowed users used to update.
     virtual void update_allowed_users(const std::string &users) {}
 
-    // Check whether the Ranger ACL is enabled or not.
-    static bool is_enable_ranger_acl();
-
-    // Update the access controller policy
-    // policies -  the new Ranger policies to update
+    // Update policies for Ranger ACL.
+    //
+    // Parameters:
+    // - policies: the new policies used to update.
     virtual void update_ranger_policies(const std::string &policies) {}
 
-    // Check if the message received is allowd to access the system.
-    // msg - the message received
+    // Return true if the received request is allowd to access the system with specified type.
+    //
+    // Parameters:
+    // - msg: the received request, should never be null.
+    // - req_type: the access type.
     virtual bool allowed(message_ex *msg, dsn::ranger::access_type req_type) const { return false; }
 
-    // Check if the received request is allowd to access the table.
+    // Return true if the received request is allowd to access the table, otherwise false.
     //
     // Parameters:
     // - msg: the received request, should never be null.

@@ -1345,7 +1345,7 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
             // when the Ranger ACL is enabled, access control will be checked for each table.
             auto access_controller = _meta_svc->get_access_controller();
             // adding multiple judgments here is to adapt to the old ACL and avoid checking again.
-            if (access_controller->is_enable_ranger_acl() &&
+            if (access_controller->is_ranger_acl_enabled() &&
                 !access_controller->allowed(copied_msg, app->app_name)) {
                 response.err = ERR_ACL_DENY;
                 response.hint_message =
@@ -1631,7 +1631,7 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
                             appid);
                 continue;
             }
-            if (access_controller->is_enable_ranger_acl() &&
+            if (access_controller->is_ranger_acl_enabled() &&
                 !access_controller->allowed(rpc.dsn_request(), app->app_name)) {
                 LOG_WARNING("not authorized to modify backup policy({}) for app id: {}, skip it",
                             cur_policy.policy_name,
