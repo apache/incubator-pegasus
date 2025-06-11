@@ -56,7 +56,8 @@ public:
     // - policies: the new policies used to update.
     virtual void update_ranger_policies(const std::string &policies) {}
 
-    // Return true if the received request is allowd to access the system with specified type.
+    // Return true if the received request is allowd to access the system with specified
+    // type, otherwise false.
     //
     // Parameters:
     // - msg: the received request, should never be null.
