@@ -1624,13 +1624,14 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
 
         for (const auto &appid : request.add_appids) {
             const auto &app = _state->get_app(appid);
-            // TODO: if app is dropped, how to process
+            // TODO(wangdan): if app is dropped, how to process.
             if (app == nullptr) {
                 LOG_WARNING("{}: add app to policy failed, because invalid app({}), ignore it",
                             cur_policy.policy_name,
                             appid);
                 continue;
             }
+
             if (security::access_controller::is_ranger_acl_enabled() &&
                 !_meta_svc->get_access_controller()->allowed(rpc.dsn_request(), app->app_name)) {
                 LOG_WARNING("not authorized to modify backup policy({}) for app id: {}, skip it",
