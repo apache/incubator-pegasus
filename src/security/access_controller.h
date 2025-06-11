@@ -41,10 +41,10 @@ public:
     // Return true if Ranger ACL is enabled, otherwise false.
     static bool is_ranger_acl_enabled();
 
-    // Return true if either Ranger ACL or old ACL is enabled, otherwise false.
+    // Return true if either Ranger ACL or legacy ACL is enabled, otherwise false.
     static bool is_acl_enabled();
 
-    // Update allowed users for old ACL.
+    // Update allowed users for legacy ACL.
     //
     // Parameters:
     // - users: the new allowed users used to update.

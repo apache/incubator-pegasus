@@ -686,8 +686,8 @@ void meta_service::on_list_apps(configuration_list_apps_rpc rpc) const
         return;
     }
 
-    // Short-cut the ACL check: if any ACL (Ranger or old ACL) is disabled, there's no need to
-    // perform ACL verification for each table (by setting the request `msg` to null the ACL
+    // Short-cut the ACL check: if any ACL (Ranger or legacy ACL) is disabled, there's no need
+    // to perform ACL verification for each table (by setting the request `msg` to null the ACL
     // checks can be skipped).
     _state->list_apps(_access_controller->is_acl_enabled() ? rpc.dsn_request() : nullptr,
                       rpc.request(),
@@ -1152,8 +1152,8 @@ void meta_service::on_ddd_diagnose(ddd_diagnose_rpc rpc) const
     auto &response = rpc.response();
 
     // While the client is requesting all DDD partitions (with app_id = -1), we could short-cut
-    // the ACL check: if any ACL (Ranger or old ACL) is disabled, there's no need to perform ACL
-    // verification for each DDD partition (we can just skip the ACL checks).
+    // the ACL check: if any ACL (Ranger or legacy ACL) is disabled, there's no need to perform
+    // ACL verification for each DDD partition (we can just skip the ACL checks).
     if (app_id == -1 && _access_controller->is_acl_enabled()) {
         // Perform ACL checks on all DDD partitions, and only those that pass will be returned
         // to the client.

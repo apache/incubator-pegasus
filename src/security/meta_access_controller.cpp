@@ -46,7 +46,7 @@ meta_access_controller::meta_access_controller(
     std::shared_ptr<ranger::ranger_resource_policy_manager> policy_manager)
     : _ranger_resource_policy_manager(std::move(policy_manager))
 {
-    // For the old ACL:
+    // For the legacy ACL:
     // 1. the meta server accepts and processes any RPC requests in the allow list from
     // all users;
     // 2. for the RPC requests not in the allow list, only those issued by the superuser
@@ -63,8 +63,8 @@ meta_access_controller::meta_access_controller(
         register_allowed_rpc_code_list(rpc_code_white_list);
     }
 
-    // Once Ranger ACL is enabled, the allow list registered by the old ACL will be cleared
-    // and replaced by the allow list from the Ranger ACL.
+    // Once Ranger ACL is enabled, the allow list registered by the legacy ACL will be
+    // cleared and replaced by the allow list from the Ranger ACL.
     if (FLAGS_enable_ranger_acl) {
         register_allowed_rpc_code_list({"RPC_BULK_LOAD",
                                         "RPC_CALL_RAW_MESSAGE",
@@ -98,9 +98,9 @@ meta_access_controller::meta_access_controller(
 
 bool meta_access_controller::allowed(message_ex *msg, const std::string &app_name) const
 {
-    // Once the Ranger ACL is not enabled, the old ACL check will pass as long as any one of
-    // these three conditions is met:
-    // 1. the old ACL is disabled, or
+    // Once the Ranger ACL is not enabled, the legacy ACL check will pass as long as any one
+    // of these three conditions is met:
+    // 1. the legacy ACL is disabled, or
     // 2. the client user is a super user, or
     // 3. the RPC code is in the allow list.
     if (!FLAGS_enable_ranger_acl) {

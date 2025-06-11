@@ -1344,7 +1344,7 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
             }
 
             // Once the Ranger ACL is enabled, access control will be checked for each table.
-            // Adding multiple judgments here is to adapt to the old ACL and avoid checking
+            // Adding multiple judgments here is to adapt to the legacy ACL and avoid checking
             // again.
             if (security::access_controller::is_ranger_acl_enabled() &&
                 !_meta_svc->get_access_controller()->allowed(copied_msg, app->app_name)) {
