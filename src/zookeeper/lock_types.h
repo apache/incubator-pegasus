@@ -33,15 +33,12 @@
 #include "common/gpid.h"
 #include "utils/distributed_lock_service.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_DLOCK)
 DEFINE_TASK_CODE(TASK_CODE_DLOCK, TASK_PRIORITY_HIGH, THREAD_POOL_DLOCK)
 
 class distributed_lock_service_zookeeper;
-class lock_struct;
-typedef ref_ptr<distributed_lock_service_zookeeper> lock_srv_ptr;
-typedef ref_ptr<lock_struct> lock_struct_ptr;
-} // namespace dist
-} // namespace dsn
+using lock_srv_ptr = ref_ptr<distributed_lock_service_zookeeper>;
+
+} // namespace dsn::dist

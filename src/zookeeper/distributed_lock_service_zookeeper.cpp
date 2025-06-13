@@ -31,45 +31,46 @@
 #include <utility>
 
 #include "distributed_lock_service_zookeeper.h"
-#include "lock_struct.h"
-#include "lock_types.h"
 #include "runtime/service_app.h"
 #include "task/async_calls.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
+#include "zookeeper/lock_struct.h"
+#include "zookeeper/lock_types.h"
 #include "zookeeper/zookeeper_session_mgr.h"
 #include "zookeeper_error.h"
 #include "zookeeper_session.h"
 
 DSN_DECLARE_int32(timeout_ms);
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 std::string distributed_lock_service_zookeeper::LOCK_NODE_PREFIX = "LOCKNODE";
 
-distributed_lock_service_zookeeper::distributed_lock_service_zookeeper() : ref_counter()
-{
-    _first_call = true;
-}
-
 distributed_lock_service_zookeeper::~distributed_lock_service_zookeeper()
 {
-    if (_session) {
-        std::vector<lock_struct_ptr> handle_vec;
-        {
-            utils::auto_write_lock l(_service_lock);
-            for (auto &kv : _zookeeper_locks)
-                handle_vec.push_back(kv.second);
-            _zookeeper_locks.clear();
-        }
-        for (lock_struct_ptr &ptr : handle_vec)
-            _session->detach(ptr.get());
-        _session->detach(this);
-
-        _session = nullptr;
+    if (_session == nullptr) {
+        return;
     }
+
+    std::vector<lock_struct_ptr> owners;
+    {
+        utils::auto_write_lock l(_service_lock);
+
+        for (const auto &[_, lock] : _zookeeper_locks) {
+            owners.push_back(lock);
+        }
+
+        _zookeeper_locks.clear();
+    }
+
+    for (const auto &owner : owners) {
+        _session->detach(owner.get());
+    }
+
+    _session->detach(this);
+    _session = nullptr;
 }
 
 error_code distributed_lock_service_zookeeper::finalize()
@@ -230,17 +231,18 @@ task_ptr distributed_lock_service_zookeeper::query_lock(const std::string &lock_
 
 error_code distributed_lock_service_zookeeper::query_cache(const std::string &lock_id,
                                                            /*out*/ std::string &owner,
-                                                           /*out*/ uint64_t &version)
+                                                           /*out*/ uint64_t &version) const
 {
     utils::auto_read_lock l(_service_lock);
-    auto iter = _lock_cache.find(lock_id);
-    if (_lock_cache.end() == iter)
+
+    const auto iter = std::as_const(_lock_cache).find(lock_id);
+    if (iter == _lock_cache.end()) {
         return ERR_OBJECT_NOT_FOUND;
-    else {
-        owner = iter->second.first;
-        version = iter->second.second;
-        return ERR_OK;
     }
+
+    owner = iter->second.first;
+    version = iter->second.second;
+    return ERR_OK;
 }
 
 void distributed_lock_service_zookeeper::refresh_lock_cache(const std::string &lock_id,
@@ -282,5 +284,5 @@ void distributed_lock_service_zookeeper::on_zoo_session_evt(lock_srv_ptr _this, 
         LOG_WARNING("get zoo state: {}, ignore it", zookeeper_session::string_zoo_state(zoo_state));
     }
 }
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

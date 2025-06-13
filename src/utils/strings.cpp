@@ -465,11 +465,12 @@ std::string string_md5(const char *buffer, unsigned length)
 
 std::string find_string_prefix(const std::string &input, char separator)
 {
-    auto current = input.find(separator);
-    if (current == 0 || current == std::string::npos) {
-        return std::string();
+    const auto pos = input.find(separator);
+    if (pos == 0 || pos == std::string::npos) {
+        return {};
     }
-    return input.substr(0, current);
+
+    return input.substr(0, pos);
 }
 
 bool has_space(const std::string &str)

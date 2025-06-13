@@ -1342,11 +1342,12 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
                 msg->release_ref();
                 return;
             }
-            // when the Ranger ACL is enabled, access control will be checked for each table.
-            auto access_controller = _meta_svc->get_access_controller();
-            // adding multiple judgments here is to adapt to the old ACL and avoid checking again.
-            if (access_controller->is_enable_ranger_acl() &&
-                !access_controller->allowed(copied_msg, app->app_name)) {
+
+            // Once the Ranger ACL is enabled, access control will be checked for each table.
+            // Adding multiple judgments here is to adapt to the legacy ACL and avoid checking
+            // again.
+            if (security::access_controller::is_ranger_acl_enabled() &&
+                !_meta_svc->get_access_controller()->allowed(copied_msg, app->app_name)) {
                 response.err = ERR_ACL_DENY;
                 response.hint_message =
                     fmt::format("not authorized to add backup policy({}) for app id: {}",
@@ -1623,16 +1624,16 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
 
         for (const auto &appid : request.add_appids) {
             const auto &app = _state->get_app(appid);
-            auto access_controller = _meta_svc->get_access_controller();
-            // TODO: if app is dropped, how to process
+            // TODO(wangdan): if app is dropped, how to process.
             if (app == nullptr) {
                 LOG_WARNING("{}: add app to policy failed, because invalid app({}), ignore it",
                             cur_policy.policy_name,
                             appid);
                 continue;
             }
-            if (access_controller->is_enable_ranger_acl() &&
-                !access_controller->allowed(rpc.dsn_request(), app->app_name)) {
+
+            if (security::access_controller::is_ranger_acl_enabled() &&
+                !_meta_svc->get_access_controller()->allowed(rpc.dsn_request(), app->app_name)) {
                 LOG_WARNING("not authorized to modify backup policy({}) for app id: {}, skip it",
                             cur_policy.policy_name,
                             appid);

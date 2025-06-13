@@ -71,6 +71,7 @@ class configuration_recovery_request;
 class configuration_recovery_response;
 class configuration_restore_request;
 class configuration_update_request;
+class ddd_partition_info;
 class query_app_info_response;
 class query_replica_info_response;
 
@@ -147,6 +148,8 @@ public:
 
     meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
 
+    // TODO(wangdan): some calls to get_app() function are not thread-safe and need to be
+    // fixed.
     std::shared_ptr<app_state> get_app(const std::string &app_name) const
     {
         return gutil::FindWithDefault(_exist_apps, app_name);
@@ -157,18 +160,36 @@ public:
         return gutil::FindWithDefault(_all_apps, app_id);
     }
 
+    error_code get_app_name(int32_t app_id, std::string &app_name) const;
+
     void query_configuration_by_index(const query_cfg_request &request,
                                       /*out*/ query_cfg_response &response);
-    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &pc);
+    bool query_configuration_by_gpid(const dsn::gpid &id,
+                                     /*out*/ partition_configuration &pc) const;
+
+    // This function is used for ACL checks. Given `ddd_partitions`, this function would
+    // select the partitions that pass the ACL checks (based on `msg`) and place them into
+    // `allowed_partitions`. `msg` should never be null.
+    void get_allowed_partitions(dsn::message_ex *msg,
+                                const std::vector<ddd_partition_info> &ddd_partitions,
+                                std::vector<ddd_partition_info> &allowed_partitions) const;
 
     // app options
     void create_app(dsn::message_ex *msg);
     void drop_app(dsn::message_ex *msg);
     void recall_app(dsn::message_ex *msg);
     void rename_app(configuration_rename_app_rpc rpc);
+
+    // List tables according to `request` into `response`, with non-null request `msg` from
+    // client used for ACL checks. Null `msg` means disabling ACL checks.
+    void list_apps(dsn::message_ex *msg,
+                   const configuration_list_apps_request &request,
+                   configuration_list_apps_response &response) const;
+
+    // The same as the above function, except that `msg` is set null to disable ACL checks.
     void list_apps(const configuration_list_apps_request &request,
-                   configuration_list_apps_response &response,
-                   dsn::message_ex *msg = nullptr) const;
+                   configuration_list_apps_response &response) const;
+
     void restore_app(dsn::message_ex *msg);
 
     // app env operations

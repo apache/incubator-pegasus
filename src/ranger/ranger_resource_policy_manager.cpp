@@ -74,8 +74,7 @@ DSN_DEFINE_string(ranger,
                   "The name of the Ranger database policy matched by the legacy table(The table "
                   "name does not follow the naming rules of {database_name}.{table_name})");
 
-namespace dsn {
-namespace ranger {
+namespace dsn::ranger {
 
 #define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
     do {                                                                                           \
@@ -165,7 +164,11 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CLI_CLI_CALL_ACK"},
                              _ac_type_of_global_rpcs);
     // DATABASE - kList
-    register_rpc_access_type(access_type::kList, {"RPC_CM_LIST_APPS"}, _ac_type_of_database_rpcs);
+    // The `RPC_CM_DDD_DIAGNOSE` request is only used to retrieve information about DDD
+    // partitions and does not modify any data or metadata, so it is more appropriate to
+    // classify it as `kList` rather than `kControl`.
+    register_rpc_access_type(
+        access_type::kList, {"RPC_CM_LIST_APPS", "RPC_CM_DDD_DIAGNOSE"}, _ac_type_of_database_rpcs);
     // DATABASE - kCreate
     register_rpc_access_type(
         access_type::kCreate, {"RPC_CM_CREATE_APP"}, _ac_type_of_database_rpcs);
@@ -191,7 +194,6 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_ADD_DUPLICATION",
                               "RPC_CM_MODIFY_DUPLICATION",
                               "RPC_CM_UPDATE_APP_ENV",
-                              "RPC_CM_DDD_DIAGNOSE",
                               "RPC_CM_START_PARTITION_SPLIT",
                               "RPC_CM_CONTROL_PARTITION_SPLIT",
                               "RPC_CM_START_BULK_LOAD",
@@ -206,7 +208,16 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
 
 void ranger_resource_policy_manager::start()
 {
+#ifdef MOCK_TEST
+    if (_meta_svc == nullptr) {
+        // `_meta_svc` being null implies that the policies will be updated manually,
+        // which is only used for testing purposes.
+        return;
+    }
+#else
     CHECK_NOTNULL(_meta_svc, "");
+#endif
+
     _ranger_policy_meta_root = dsn::utils::filesystem::concat_path_unix_style(
         _meta_svc->cluster_root(), "ranger_policy_meta_root");
     tasking::enqueue_timer(
@@ -645,18 +656,15 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
 
 std::string get_database_name_from_app_name(const std::string &app_name)
 {
-    std::string prefix = utils::find_string_prefix(app_name, '.');
-    if (prefix.empty() || prefix == app_name) {
-        return std::string();
-    }
-
-    return prefix;
+    return utils::find_string_prefix(app_name, '.');
 }
 
 std::string get_table_name_from_app_name(const std::string &app_name)
 {
-    std::string database_name = get_database_name_from_app_name(app_name);
+    // TODO(wangdan): optimize getting table name by finding the separator without initializing
+    // an extra string object.
+    const auto &database_name = get_database_name_from_app_name(app_name);
     return database_name.empty() ? app_name : app_name.substr(database_name.size() + 1);
 }
-} // namespace ranger
-} // namespace dsn
+
+} // namespace dsn::ranger

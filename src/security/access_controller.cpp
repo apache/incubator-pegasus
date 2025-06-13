@@ -17,6 +17,7 @@
 
 #include "access_controller.h"
 
+#include "gutil/map_util.h"
 #include "meta_access_controller.h"
 #include "replica_access_controller.h"
 #include "utils/flags.h"
@@ -38,8 +39,7 @@ DSN_DEFINE_string(security,
                   "Name of the cluster key that is used to encrypt server encryption keys as"
                   "stored in Ranger KMS.");
 
-namespace dsn {
-namespace security {
+namespace dsn::security {
 
 access_controller::access_controller()
 {
@@ -50,13 +50,16 @@ access_controller::access_controller()
     utils::split_args(FLAGS_super_users, _super_users, ',');
 }
 
-access_controller::~access_controller() {}
+/* static */ bool access_controller::is_ranger_acl_enabled() { return FLAGS_enable_ranger_acl; }
 
-bool access_controller::is_enable_ranger_acl() const { return FLAGS_enable_ranger_acl; }
+/* static */ bool access_controller::is_acl_enabled()
+{
+    return FLAGS_enable_ranger_acl || FLAGS_enable_acl;
+}
 
 bool access_controller::is_super_user(const std::string &user_name) const
 {
-    return _super_users.find(user_name) != _super_users.end();
+    return gutil::ContainsKey(_super_users, user_name);
 }
 
 std::shared_ptr<access_controller> create_meta_access_controller(
@@ -69,5 +72,5 @@ std::unique_ptr<access_controller> create_replica_access_controller(const std::s
 {
     return std::make_unique<replica_access_controller>(replica_name);
 }
-} // namespace security
-} // namespace dsn
+
+} // namespace dsn::security

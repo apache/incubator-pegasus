@@ -153,15 +153,16 @@ namespace replication {
 
 #define CHECK_APP_ID_STATUS_AND_AUTHZ(app_id)                                                      \
     do {                                                                                           \
-        const auto &_app_id = (app_id);                                                            \
-        const auto &_app = _state->get_app(_app_id);                                               \
-        if (!_app) {                                                                               \
-            rpc.response().err = ERR_INVALID_PARAMETERS;                                           \
-            LOG_WARNING("reject request on app_id = {}", _app_id);                                 \
+        const auto &__app_id = (app_id);                                                           \
+        std::string __app_name;                                                                    \
+        const auto __err = _state->get_app_name(__app_id, __app_name);                             \
+        if (__err != ERR_OK) {                                                                     \
+            rpc.response().err = __err;                                                            \
+            LOG_WARNING("reject request on app_id = {}, err = {}", __app_id, __err);               \
             return;                                                                                \
         }                                                                                          \
-        const std::string &app_name = _app->app_name;                                              \
-        if (!check_status_and_authz(rpc, nullptr, app_name)) {                                     \
+                                                                                                   \
+        if (!check_status_and_authz(rpc, nullptr, __app_name)) {                                   \
             return;                                                                                \
         }                                                                                          \
     } while (0)
@@ -521,7 +522,7 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler_with_rpc_holder(
         RPC_CM_UPDATE_APP_ENV, "update_app_env(set/del/clear)", &meta_service::update_app_env);
     register_rpc_handler_with_rpc_holder(
-        RPC_CM_DDD_DIAGNOSE, "ddd_diagnose", &meta_service::ddd_diagnose);
+        RPC_CM_DDD_DIAGNOSE, "ddd_diagnose", &meta_service::on_ddd_diagnose);
     register_rpc_handler_with_rpc_holder(RPC_CM_START_PARTITION_SPLIT,
                                          "start_partition_split",
                                          &meta_service::on_start_partition_split);
@@ -571,27 +572,33 @@ void meta_service::register_rpc_handlers()
                                          &meta_service::on_set_atomic_idempotent);
 }
 
-meta_leader_state meta_service::check_leader(dsn::message_ex *req, dsn::host_port *forward_address)
+meta_leader_state meta_service::check_leader(dsn::message_ex *req,
+                                             dsn::host_port *forward_address) const
 {
     host_port leader;
-    if (!_failure_detector->get_leader(&leader)) {
-        if (!req->header->context.u.is_forward_supported) {
-            if (forward_address != nullptr)
-                *forward_address = leader;
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
+    if (_failure_detector->get_leader(&leader)) {
+        return meta_leader_state::kIsLeader;
+    }
+
+    if (!req->header->context.u.is_forward_supported) {
+        if (forward_address != nullptr) {
+            *forward_address = leader;
         }
 
-        LOG_DEBUG("leader address: {}", leader);
-        if (leader) {
-            dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
-            return meta_leader_state::kNotLeaderAndCanForwardRpc;
-        } else {
-            if (forward_address != nullptr)
-                forward_address->reset();
-            return meta_leader_state::kNotLeaderAndCannotForwardRpc;
-        }
+        return meta_leader_state::kNotLeaderAndCannotForwardRpc;
     }
-    return meta_leader_state::kIsLeader;
+
+    LOG_DEBUG("leader address: {}", leader);
+    if (leader) {
+        dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
+        return meta_leader_state::kNotLeaderAndCanForwardRpc;
+    }
+
+    if (forward_address != nullptr) {
+        forward_address->reset();
+    }
+
+    return meta_leader_state::kNotLeaderAndCannotForwardRpc;
 }
 
 // table operations
@@ -655,7 +662,7 @@ void meta_service::on_recall_app(dsn::message_ex *req)
     // check new_app_name reasonable.
     // when the Ranger ACL is enabled, ensure that the prefix of new_app_name is consistent with
     // old, or it is empty
-    if (_access_controller->is_enable_ranger_acl() && !request.new_app_name.empty()) {
+    if (_access_controller->is_ranger_acl_enabled() && !request.new_app_name.empty()) {
         std::string app_name_prefix = ranger::get_database_name_from_app_name(app_name);
         std::string new_app_name_prefix =
             ranger::get_database_name_from_app_name(request.new_app_name);
@@ -673,17 +680,18 @@ void meta_service::on_recall_app(dsn::message_ex *req)
                      server_state::sStateHash);
 }
 
-void meta_service::on_list_apps(configuration_list_apps_rpc rpc)
+void meta_service::on_list_apps(configuration_list_apps_rpc rpc) const
 {
     if (!check_leader_status(rpc)) {
         return;
     }
 
-    dsn::message_ex *msg = nullptr;
-    if (_access_controller->is_enable_ranger_acl()) {
-        msg = rpc.dsn_request();
-    }
-    _state->list_apps(rpc.request(), rpc.response(), msg);
+    // Short-cut the ACL check: if any ACL (Ranger or legacy ACL) is disabled, there's no need
+    // to perform ACL verification for each table (by setting the request `msg` to null the ACL
+    // checks can be skipped).
+    _state->list_apps(_access_controller->is_acl_enabled() ? rpc.dsn_request() : nullptr,
+                      rpc.request(),
+                      rpc.response());
 }
 
 void meta_service::on_list_nodes(configuration_list_nodes_rpc rpc)
@@ -1121,11 +1129,41 @@ void meta_service::update_app_env(app_env_rpc env_rpc)
     }
 }
 
-void meta_service::ddd_diagnose(ddd_diagnose_rpc rpc)
+void meta_service::on_ddd_diagnose(ddd_diagnose_rpc rpc) const
 {
-    CHECK_APP_ID_STATUS_AND_AUTHZ(rpc.request().pid.get_app_id());
+    const auto pid = rpc.request().pid;
+    const auto app_id = pid.get_app_id();
+
+    if (app_id == -1) {
+        // -1 means returning all DDD partitions. Perform the ACL check only after all DDD
+        // partitions have been obtained.
+        if (!check_leader_status(rpc)) {
+            return;
+        }
+    } else {
+        // The table has been specified with `app_id` by client. Just perform ACL check on
+        // the specified table.
+        CHECK_APP_ID_STATUS_AND_AUTHZ(app_id);
+    }
+
+    std::vector<ddd_partition_info> ddd_partitions;
+    _partition_guardian->get_ddd_partitions(pid, ddd_partitions);
+
     auto &response = rpc.response();
-    get_partition_guardian()->get_ddd_partitions(rpc.request().pid, response.partitions);
+
+    // While the client is requesting all DDD partitions (with app_id = -1), we could short-cut
+    // the ACL check: if any ACL (Ranger or legacy ACL) is disabled, there's no need to perform
+    // ACL verification for each DDD partition (we can just skip the ACL checks).
+    if (app_id == -1 && _access_controller->is_acl_enabled()) {
+        // Perform ACL checks on all DDD partitions, and only those that pass will be returned
+        // to the client.
+        _state->get_allowed_partitions(rpc.dsn_request(), ddd_partitions, response.partitions);
+    } else {
+        // ACL check has already passed or there's no need to perform ACL check, just move the
+        // result to the response.
+        response.partitions = std::move(ddd_partitions);
+    }
+
     response.err = ERR_OK;
 }
 

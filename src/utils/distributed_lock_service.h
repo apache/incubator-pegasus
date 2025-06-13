@@ -43,15 +43,15 @@
 #include "task/future_types.h"
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
+#include "utils/ports.h"
 #include "utils/threadpool_code.h"
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
-typedef std::function<void(error_code ec, const std::string &owner_id, uint64_t version)>
-    lock_callback;
-typedef future_task<error_code, std::string, uint64_t> lock_future;
-typedef dsn::ref_ptr<lock_future> lock_future_ptr;
+using lock_callback =
+    std::function<void(error_code ec, const std::string &owner_id, uint64_t version)>;
+using lock_future = future_task<error_code, std::string, uint64_t>;
+using lock_future_ptr = ref_ptr<lock_future>;
 
 // The interface of the reliable distributed lock service.
 class distributed_lock_service
@@ -63,16 +63,16 @@ public:
         return new T();
     }
 
-    typedef distributed_lock_service *(*factory)();
+    using factory = std::function<distributed_lock_service *()>;
 
-public:
     struct lock_options
     {
         bool create_if_not_exist;
         bool create_enable_cache;
     };
 
-    virtual ~distributed_lock_service() {}
+    virtual ~distributed_lock_service() = default;
+
     /*
      * initialization routine
      */
@@ -171,7 +171,14 @@ public:
      */
     virtual error_code query_cache(const std::string &lock_id,
                                    /*out*/ std::string &owner,
-                                   /*out*/ uint64_t &version) = 0;
+                                   /*out*/ uint64_t &version) const = 0;
+
+protected:
+    distributed_lock_service() = default;
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(distributed_lock_service);
+    DISALLOW_MOVE_AND_ASSIGN(distributed_lock_service);
 };
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

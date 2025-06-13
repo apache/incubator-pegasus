@@ -297,7 +297,7 @@ public:
                                            ::dsn::rpc_replier<TRespType> &reply,
                                            const ::dsn::ranger::access_type &ac_type) const
     {
-        if (!_access_controller->is_enable_ranger_acl()) {
+        if (!_access_controller->is_ranger_acl_enabled()) {
             return true;
         }
         const auto &pid = request.pid;

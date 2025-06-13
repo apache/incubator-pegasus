@@ -57,9 +57,8 @@ private:
     // Security check to avoid allowed_users is not empty in special scenarios.
     void check_allowed_users_valid() const;
 
-private:
     mutable utils::rw_lock_nr _lock;
-    // Users will pass the access control in the old ACL.
+    // Users will pass the access control in the legacy ACL.
     std::unordered_set<std::string> _allowed_users;
 
     // App_env(REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS) to facilitate whether to update
