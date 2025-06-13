@@ -54,19 +54,19 @@ distributed_lock_service_zookeeper::~distributed_lock_service_zookeeper()
         return;
     }
 
-    std::vector<lock_struct_ptr> handle_vec;
+    std::vector<lock_struct_ptr> owners;
     {
         utils::auto_write_lock l(_service_lock);
 
-        for (const auto &zk_lock : _zookeeper_locks) {
-            handle_vec.push_back(zk_lock.second);
+        for (const auto &[_, lock] : _zookeeper_locks) {
+            owners.push_back(lock);
         }
 
         _zookeeper_locks.clear();
     }
 
-    for (const lock_struct_ptr &ptr : handle_vec) {
-        _session->detach(ptr.get());
+    for (const auto &owner : owners) {
+        _session->detach(owner.get());
     }
 
     _session->detach(this);
