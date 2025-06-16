@@ -26,6 +26,7 @@
 #include "base/pegasus_rpc_types.h"
 #include "rpc/rpc_message.h"
 #include "rrdb/rrdb_types.h"
+#include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
 namespace pegasus {
@@ -52,17 +53,17 @@ public:
                           std::move(apply_func)),
           _updates(std::move(updates))
     {
+        CHECK_NOTNULL(_original_request, "");
     }
 
     ~idempotent_writer() = default;
 
-    const dsn::message_ptr &original_request() const { return _original_request; }
+    [[nodiscard]] const dsn::message_ptr &original_request() const { return _original_request; }
 
-    int apply() const
+    [[nodiscard]] int apply() const
     {
-        return std::visit(
-            [this](auto &executor) -> int { return executor.func(_updates, executor.rpc); },
-            _apply_executor);
+        return std::visit([this](auto &executor) { return executor.func(_updates, executor.rpc); },
+                          _apply_executor);
     }
 
 private:

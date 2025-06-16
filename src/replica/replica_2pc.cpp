@@ -475,7 +475,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
 void replica::reply_with_error(const mutation_ptr &mu, const error_code &err)
 {
     // Respond to the original atomic request if it is non-null. And it could never be batched.
-    if (mu->idem_writer->original_request() != nullptr) {
+    if (mu->idem_writer) {
         response_client_write(mu->idem_writer->original_request(), err);
         return;
     }

@@ -34,7 +34,6 @@
 #include "pegasus_utils.h"
 #include "replica/idempotent_writer.h"
 #include "rpc/rpc_holder.h"
-#include "rpc/serialization.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"

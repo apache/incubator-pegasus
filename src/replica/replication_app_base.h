@@ -37,6 +37,7 @@
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
 #include "mutation.h"
+#include "replica/idempotent_writer.h"
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/error_code.h"

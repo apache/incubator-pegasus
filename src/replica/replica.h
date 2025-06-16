@@ -48,6 +48,7 @@
 #include "prepare_list.h"
 #include "ranger/access_type.h"
 #include "replica/backup/cold_backup_context.h"
+#include "replica/idempotent_writer.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
 #include "rpc/rpc_message.h"

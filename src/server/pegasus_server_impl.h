@@ -45,6 +45,7 @@
 #include "pegasus_utils.h"
 #include "pegasus_value_schema.h"
 #include "range_read_limiter.h"
+#include "replica/idempotent_writer.h"
 #include "replica/replication_app_base.h"
 #include "task/task.h"
 #include "task/task_tracker.h"

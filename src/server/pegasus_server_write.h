@@ -21,18 +21,18 @@
 
 #include <rocksdb/status.h>
 #include <algorithm>
-#include <array>
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "base/pegasus_rpc_types.h"
 #include "common/replication_other_types.h"
 #include "pegasus_write_service.h"
-#include "replica/replica_base.h"
 #include "replica/idempotent_writer.h"
+#include "replica/replica_base.h"
 #include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
