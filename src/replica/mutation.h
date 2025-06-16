@@ -42,6 +42,7 @@
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
+#include "replica/idempotent_writer.h"
 #include "rpc/rpc_message.h"
 #include "runtime/api_layer1.h"
 #include "task/task.h"
@@ -195,10 +196,7 @@ public:
     // This field is only used by primary replicas.
     bool is_blocking_candidate{false};
 
-    // The original request received from the client. While making an atomic request (incr,
-    // check_and_set and check_and_mutate) idempotent, an extra variable is needed to hold
-    // its original request for the purpose of replying to the client.
-    dsn::message_ptr original_request;
+    pegasus::idempotent_writer_ptr idem_writer;
 
     std::shared_ptr<dsn::utils::latency_tracer> _tracer;
 

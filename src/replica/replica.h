@@ -165,9 +165,6 @@ class replica : public serverlet<replica>, public ref_counter, public replica_ba
 public:
     ~replica() override;
 
-    DISALLOW_COPY_AND_ASSIGN(replica);
-    DISALLOW_MOVE_AND_ASSIGN(replica);
-
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
     void reset_prepare_list_after_replay();
@@ -398,10 +395,10 @@ private:
     //
     // Parameters:
     // - d: invalid_decree, or the real decree assigned to this mutation.
-    // - original_request: the original request of the atomic write.
+    // - idem_writer:
     //
     // Return the newly created mutation.
-    mutation_ptr new_mutation(decree d, dsn::message_ex *original_request);
+    mutation_ptr new_mutation(decree d, pegasus::idempotent_writer_ptr &&idem_writer);
 
     // initialization
     replica(replica_stub *stub,
@@ -904,6 +901,9 @@ private:
     bool _allow_ingest_behind{false};
     // Indicate where the storage engine data is corrupted and unrecoverable.
     bool _data_corrupted{false};
+
+    DISALLOW_COPY_AND_ASSIGN(replica);
+    DISALLOW_MOVE_AND_ASSIGN(replica);
 };
 
 using replica_ptr = dsn::ref_ptr<replica>;

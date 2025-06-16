@@ -294,7 +294,8 @@ int replica::make_idempotent(mutation_ptr &mu)
         mu->client_requests.size(), 1, "the original atomic write request must not be batched");
 
     std::vector<dsn::message_ex *> new_requests;
-    const int err = _app->make_idempotent(request, new_requests);
+    pegasus::idempotent_writer_ptr idem_writer;
+    const int err = _app->make_idempotent(request, new_requests, idem_writer);
 
     // When the condition checks of `check_and_set` and `check_and_mutate` fail, make_idempotent()
     // would return rocksdb::Status::kTryAgain. Therefore, there is still a certain probability
@@ -310,6 +311,10 @@ int replica::make_idempotent(mutation_ptr &mu)
         "new_requests should not be empty since its original write request must be atomic "
         "and translated into at least one idempotent request");
 
+    CHECK_PREFIX_MSG(
+        idem_writer,
+        "idempotent_writer should not be empty");
+
     // During make_idempotent(), the request has been deserialized (i.e. unmarshall() in the
     // constructor of `rpc_holder::internal`). Once deserialize it again, assertion would fail for
     // set_read_msg() in the constructor of `rpc_read_stream`.
@@ -321,7 +326,7 @@ int replica::make_idempotent(mutation_ptr &mu)
 
     // Create a new mutation to hold the new idempotent requests. The old mutation holding the
     // original atomic write request will be released automatically.
-    mu = new_mutation(invalid_decree, request);
+    mu = new_mutation(invalid_decree, std::move(idempotent_write));
     for (dsn::message_ex *new_request : new_requests) {
         mu->add_client_request(new_request);
     }
@@ -471,8 +476,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
 void replica::reply_with_error(const mutation_ptr &mu, const error_code &err)
 {
     // Respond to the original atomic request if it is non-null. And it could never be batched.
-    if (mu->original_request != nullptr) {
-        response_client_write(mu->original_request, err);
+    if (mu->idempotent_write->original_request() != nullptr) {
+        response_client_write(mu->idempotent_write->original_request(), err);
         return;
     }
 
