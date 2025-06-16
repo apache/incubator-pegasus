@@ -996,15 +996,30 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
              response.gc_replicas.size());
 }
 
-bool server_state::query_configuration_by_gpid(dsn::gpid id,
-                                               /*out*/ partition_configuration &pc)
+error_code server_state::get_app_name(int32_t app_id, std::string &app_name) const
 {
     zauto_read_lock l(_lock);
-    const auto *ppc = get_config(_all_apps, id);
+
+    const auto &app = get_app(app_id);
+    if (!app) {
+        return ERR_APP_NOT_EXIST;
+    }
+
+    app_name = app->app_name;
+    return ERR_OK;
+}
+
+bool server_state::query_configuration_by_gpid(const dsn::gpid &id,
+                                               /*out*/ partition_configuration &pc) const
+{
+    zauto_read_lock l(_lock);
+
+    const auto *ppc = get_config(std::as_const(_all_apps), id);
     if (ppc != nullptr) {
         pc = *ppc;
         return true;
     }
+
     return false;
 }
 
@@ -1091,6 +1106,25 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
     dsn::blob value = dsn::json::json_forwarder<partition_configuration>::encode(app->pcs[pidx]);
     _meta_svc->get_remote_storage()->create_node(
         app_partition_path, LPC_META_STATE_HIGH, on_create_app_partition, value);
+}
+
+void server_state::get_allowed_partitions(dsn::message_ex *msg,
+                                          const std::vector<ddd_partition_info> &ddd_partitions,
+                                          std::vector<ddd_partition_info> &allowed_partitions) const
+{
+    zauto_read_lock l(_lock);
+
+    for (const auto &ddd_partition : ddd_partitions) {
+        const auto &app = get_app(ddd_partition.config.pid.get_app_id());
+        if (!app) {
+            LOG_WARNING("app does not exist: ddd_partition = {}", ddd_partition.config.pid);
+            continue;
+        }
+
+        if (_meta_svc->get_access_controller()->allowed(msg, app->app_name)) {
+            allowed_partitions.push_back(ddd_partition);
+        }
+    }
 }
 
 void server_state::do_app_create(std::shared_ptr<app_state> &app)
@@ -1616,9 +1650,9 @@ void server_state::recall_app(dsn::message_ex *msg)
     do_app_recall(target_app);
 }
 
-void server_state::list_apps(const configuration_list_apps_request &request,
-                             configuration_list_apps_response &response,
-                             dsn::message_ex *msg) const
+void server_state::list_apps(dsn::message_ex *msg,
+                             const configuration_list_apps_request &request,
+                             configuration_list_apps_response &response) const
 {
     LOG_DEBUG("list app request: {}{}status={}",
               request.__isset.app_name_pattern
@@ -1664,6 +1698,12 @@ void server_state::list_apps(const configuration_list_apps_request &request,
     }
 
     response.err = dsn::ERR_OK;
+}
+
+void server_state::list_apps(const configuration_list_apps_request &request,
+                             configuration_list_apps_response &response) const
+{
+    list_apps(nullptr, request, response);
 }
 
 void server_state::send_proposal(const host_port &target,

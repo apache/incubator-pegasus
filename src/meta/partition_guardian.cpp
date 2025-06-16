@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <ostream>
+#include <type_traits>
 #include <unordered_map>
 
 #include "common/replication_common.h"
@@ -58,8 +59,7 @@ DSN_DEFINE_int64(meta_server,
                  "recovered beyond this time threshold, an attempt will be made to add new "
                  "secondary replicas on other nodes");
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 partition_guardian::partition_guardian(meta_service *svc) : _svc(svc)
 {
@@ -783,26 +783,36 @@ partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::stri
 }
 
 void partition_guardian::get_ddd_partitions(const gpid &pid,
-                                            std::vector<ddd_partition_info> &partitions)
+                                            std::vector<ddd_partition_info> &partitions) const
 {
     zauto_lock l(_ddd_partitions_lock);
+
     if (pid.get_app_id() == -1) {
+        // Choose all ddd partitions.
         partitions.reserve(_ddd_partitions.size());
-        for (const auto &kv : _ddd_partitions) {
-            partitions.push_back(kv.second);
+        for (const auto &[_, ddd_partition] : _ddd_partitions) {
+            partitions.push_back(ddd_partition);
         }
-    } else if (pid.get_partition_index() == -1) {
-        for (const auto &kv : _ddd_partitions) {
-            if (kv.first.get_app_id() == pid.get_app_id()) {
-                partitions.push_back(kv.second);
+
+        return;
+    }
+
+    if (pid.get_partition_index() == -1) {
+        // Choose the ddd partitions of the given table.
+        for (const auto &[ddd_pid, ddd_partition] : _ddd_partitions) {
+            if (ddd_pid.get_app_id() == pid.get_app_id()) {
+                partitions.push_back(ddd_partition);
             }
         }
-    } else {
-        auto find = _ddd_partitions.find(pid);
-        if (find != _ddd_partitions.end()) {
-            partitions.push_back(find->second);
-        }
+
+        return;
+    }
+
+    // If the given partition is ddd, choose it.
+    const auto ddd_partition = std::as_const(_ddd_partitions).find(pid);
+    if (ddd_partition != _ddd_partitions.end()) {
+        partitions.push_back(ddd_partition->second);
     }
 }
-} // namespace replication
-} // namespace dsn
+
+} // namespace dsn::replication

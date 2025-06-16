@@ -83,7 +83,7 @@ public:
     // leader: the leader's host_port. Invalid if no leader selected
     //         if leader==nullptr, then the new leader won't be returned
     // ret true if i'm the current leader; false if not.
-    bool get_leader(/*output*/ dsn::host_port *leader);
+    bool get_leader(/*output*/ dsn::host_port *leader) const;
 
     // return if acquire the leader lock, or-else blocked forever
     void acquire_leader_lock();

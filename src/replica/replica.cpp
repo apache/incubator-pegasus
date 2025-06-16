@@ -747,7 +747,8 @@ error_code replica::load_app_info(app_info &info) const { return load_app_info(_
 
 bool replica::access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const
 {
-    return !_access_controller->is_enable_ranger_acl() || _access_controller->allowed(msg, ac_type);
+    return !_access_controller->is_ranger_acl_enabled() ||
+           _access_controller->allowed(msg, ac_type);
 }
 
 int64_t replica::get_backup_request_count() const { return METRIC_VAR_VALUE(backup_requests); }
