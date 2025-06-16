@@ -586,7 +586,7 @@ mutation_ptr replica::new_mutation(decree d, bool is_blocking_candidate)
 mutation_ptr replica::new_mutation(decree d, pegasus::idempotent_writer_ptr &&idem_writer)
 {
     auto mu = new_mutation(d);
-    mu->idem_writer= std::move(idem_writer);
+    mu->idem_writer = std::move(idem_writer);
     return mu;
 }
 

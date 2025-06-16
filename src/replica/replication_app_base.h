@@ -268,7 +268,8 @@ public:
     // - for an atomic request, return rocksdb::Status::kOk if succeed in making it idempotent;
     // otherwise, return error code (rocksdb::Status::Code).
     virtual int make_idempotent(dsn::message_ex *request,
-                                std::vector<dsn::message_ex *> &new_requests,pegasus::idempotent_writer_ptr &idem_writer) = 0;
+                                std::vector<dsn::message_ex *> &new_requests,
+                                pegasus::idempotent_writer_ptr &idem_writer) = 0;
 
     // Apply batched write requests from a mutation. This is a virtual function, and base class
     // provide a naive implementation that just call on_request for each request. Storage engine

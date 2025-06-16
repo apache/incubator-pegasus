@@ -61,6 +61,7 @@
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
 #include "replica_admin_types.h"
+#include "replica/idempotent_writer.h"
 #include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
@@ -346,7 +347,8 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
 }
 
 int pegasus_server_impl::make_idempotent(dsn::message_ex *request,
-                                         std::vector<dsn::message_ex *> &new_requests,idempotent_writer_ptr &idem_writer)
+                                         std::vector<dsn::message_ex *> &new_requests,
+                                         idempotent_writer_ptr &idem_writer)
 {
     CHECK_TRUE(_is_open);
 

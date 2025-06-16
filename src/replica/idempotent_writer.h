@@ -34,27 +34,35 @@ class idempotent_writer
 {
 public:
     template <typename TRpcHolder>
-    using apply_func_t = std::function<int(const std::vector<dsn::apps::update_request> &, const TRpcHolder &)>;
+    using apply_func_t =
+        std::function<int(const std::vector<dsn::apps::update_request> &, const TRpcHolder &)>;
 
     template <typename TRpcHolder,
-          std::enable_if_t<std::disjunction_v<std::is_same<TRpcHolder, incr_rpc>,
-                                              std::is_same<TRpcHolder, check_and_set_rpc>,
-                                              std::is_same<TRpcHolder, check_and_mutate_rpc>>, int> = 0>
-    idempotent_writer(dsn::message_ex *original_request, TRpcHolder &&original_rpc,
-            apply_func_t<TRpcHolder> &&apply_func,
-            std::vector<dsn::apps::update_request> &&updates): _original_request(original_request, _apply_executor(std::forward<TRpcHolder>(original_rpc), std::move(apply_func)), _updates(std::move(updates)) {}
+              std::enable_if_t<std::disjunction_v<std::is_same<TRpcHolder, incr_rpc>,
+                                                  std::is_same<TRpcHolder, check_and_set_rpc>,
+                                                  std::is_same<TRpcHolder, check_and_mutate_rpc>>,
+                               int> = 0>
+    idempotent_writer(dsn::message_ex *original_request,
+                      TRpcHolder &&original_rpc,
+                      apply_func_t<TRpcHolder> &&apply_func,
+                      std::vector<dsn::apps::update_request> &&updates)
+        : _original_request(original_request),
+          _apply_executor(std::in_place_type<apply_executor<TRpcHolder>>,
+                          std::forward<TRpcHolder>(original_rpc),
+                          std::move(apply_func)),
+          _updates(std::move(updates))
+    {
+    }
 
     ~idempotent_writer() = default;
 
-    const dsn::message_ptr &original_request() const {return _original_request;}
+    const dsn::message_ptr &original_request() const { return _original_request; }
 
-    int apply() const 
+    int apply() const
     {
         return std::visit(
-        [this](auto& executor) -> int {
-            return executor.func(_updates, _apply_executo.rpc);
-        },
-        _apply_executor);
+            [this](auto &executor) -> int { return executor.func(_updates, executor.rpc); },
+            _apply_executor);
     }
 
 private:
@@ -64,17 +72,20 @@ private:
     const dsn::message_ptr _original_request;
 
     template <typename TRpcHolder>
-    struct apply_executor {
-        apply_executor(TRpcHolder &&original_rpc, apply_func_t<TRpcHolder> &&apply_func): rpc(std::forward<TRpcHolder>(original_rpc)), func(std::move(apply_func)) {}
+    struct apply_executor
+    {
+        apply_executor(TRpcHolder &&original_rpc, apply_func_t<TRpcHolder> &&apply_func)
+            : rpc(std::forward<TRpcHolder>(original_rpc)), func(std::move(apply_func))
+        {
+        }
 
         const TRpcHolder rpc;
-        const apply_func_t func;
+        const apply_func_t<TRpcHolder> func;
     };
 
-    using apply_executor_t = std::variant<
-    apply_executor<incr_rpc>,
-    apply_executor<check_and_set_rpc>,
-    apply_executor<check_and_mutate_rpc>>;
+    using apply_executor_t = std::variant<apply_executor<incr_rpc>,
+                                          apply_executor<check_and_set_rpc>,
+                                          apply_executor<check_and_mutate_rpc>>;
 
     const apply_executor_t _apply_executor;
 

@@ -52,6 +52,7 @@
 #include "mutation_log.h"
 #include "ranger/access_type.h"
 #include "replica.h"
+#include "replica/idempotent_writer.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
@@ -311,9 +312,7 @@ int replica::make_idempotent(mutation_ptr &mu)
         "new_requests should not be empty since its original write request must be atomic "
         "and translated into at least one idempotent request");
 
-    CHECK_PREFIX_MSG(
-        idem_writer,
-        "idempotent_writer should not be empty");
+    CHECK_PREFIX_MSG(idem_writer, "idempotent_writer should not be empty");
 
     // During make_idempotent(), the request has been deserialized (i.e. unmarshall() in the
     // constructor of `rpc_holder::internal`). Once deserialize it again, assertion would fail for
@@ -326,7 +325,7 @@ int replica::make_idempotent(mutation_ptr &mu)
 
     // Create a new mutation to hold the new idempotent requests. The old mutation holding the
     // original atomic write request will be released automatically.
-    mu = new_mutation(invalid_decree, std::move(idempotent_write));
+    mu = new_mutation(invalid_decree, std::move(idem_writer));
     for (dsn::message_ex *new_request : new_requests) {
         mu->add_client_request(new_request);
     }
@@ -476,8 +475,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
 void replica::reply_with_error(const mutation_ptr &mu, const error_code &err)
 {
     // Respond to the original atomic request if it is non-null. And it could never be batched.
-    if (mu->idempotent_write->original_request() != nullptr) {
-        response_client_write(mu->idempotent_write->original_request(), err);
+    if (mu->idem_writer->original_request() != nullptr) {
+        response_client_write(mu->idem_writer->original_request(), err);
         return;
     }
 

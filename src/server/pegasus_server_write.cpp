@@ -32,6 +32,7 @@
 #include "pegasus_server_impl.h"
 #include "pegasus_server_write.h"
 #include "pegasus_utils.h"
+#include "replica/idempotent_writer.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/serialization.h"
 #include "rrdb/rrdb.code.definition.h"
@@ -73,7 +74,7 @@ int pegasus_server_write::make_idempotent(dsn::message_ex *request,
     }
 
     try {
-        return make_idempotent_handler->second(request, new_requests);
+        return make_idempotent_handler->second(request, new_requests, idem_writer);
     } catch (TTransportException &ex) {
         METRIC_VAR_INCREMENT(corrupt_writes);
         LOG_ERROR_PREFIX("make idempotent handler for {} failed: from = {}, exception = {}",
@@ -248,15 +249,21 @@ void pegasus_server_write::init_make_idempotent_handlers()
 {
     _make_idempotent_handlers = {
         {dsn::apps::RPC_RRDB_RRDB_INCR,
-         [this](dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests, idempotent_writer_ptr &idem_writer) -> int {
+         [this](dsn::message_ex *request,
+                std::vector<dsn::message_ex *> &new_requests,
+                idempotent_writer_ptr &idem_writer) -> int {
              return make_idempotent<incr_rpc>(request, new_requests, idem_writer);
          }},
         {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
-         [this](dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests, idempotent_writer_ptr &idem_writer) -> int {
+         [this](dsn::message_ex *request,
+                std::vector<dsn::message_ex *> &new_requests,
+                idempotent_writer_ptr &idem_writer) -> int {
              return make_idempotent<check_and_set_rpc>(request, new_requests, idem_writer);
          }},
         {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE,
-         [this](dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests, idempotent_writer_ptr &idem_writer) -> int {
+         [this](dsn::message_ex *request,
+                std::vector<dsn::message_ex *> &new_requests,
+                idempotent_writer_ptr &idem_writer) -> int {
              return make_idempotent<check_and_mutate_rpc>(request, new_requests, idem_writer);
          }},
     };

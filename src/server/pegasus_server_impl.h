@@ -149,7 +149,8 @@ public:
 
     // See replication_app_base::make_idempotent() for details. Only called by primary replicas.
     int make_idempotent(dsn::message_ex *request,
-                        std::vector<dsn::message_ex *> &new_requests,idempotent_writer_ptr &idem_writer) override;
+                        std::vector<dsn::message_ex *> &new_requests,
+                        idempotent_writer_ptr &idem_writer) override;
 
     /// Each of the write request (specifically, the rpc that's configured as write, see
     /// option `rpc_request_is_write_operation` in rDSN `task_spec`) will first be

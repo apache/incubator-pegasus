@@ -32,6 +32,7 @@
 #include "common/replication_other_types.h"
 #include "pegasus_write_service.h"
 #include "replica/replica_base.h"
+#include "replica/idempotent_writer.h"
 #include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
@@ -55,7 +56,9 @@ public:
     explicit pegasus_server_write(pegasus_server_impl *server);
 
     // See replication_app_base::make_idempotent() for details. Only called by primary replicas.
-    int make_idempotent(dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests,idempotent_writer_ptr &idem_writer);
+    int make_idempotent(dsn::message_ex *request,
+                        std::vector<dsn::message_ex *> &new_requests,
+                        idempotent_writer_ptr &idem_writer);
 
     // See replication_app_base::on_batched_write_requests() for details.
     //
@@ -79,8 +82,9 @@ private:
     // Used to call make_idempotent() for each type (specified by TRpcHolder) of atomic write.
     // Only called by primary replicas.
     template <typename TRpcHolder>
-    int make_idempotent(dsn::message_ex *request, std::vector<dsn::message_ex *> &new_requests,
-            idempotent_writer_ptr &idem_writer)
+    int make_idempotent(dsn::message_ex *request,
+                        std::vector<dsn::message_ex *> &new_requests,
+                        idempotent_writer_ptr &idem_writer)
     {
         auto rpc = TRpcHolder::auto_reply(request);
 
@@ -109,11 +113,15 @@ private:
                     request->header->context.u.serialize_format)));
         }
 
-        idem_writer = make_unique<pegasus::idempotent_write_cache>(request, std::move(rpc), 
-                [this](const std::vector<dsn::apps::update_request> &updates, const TRpcHolder &rpc) -> int {
-        return _write_svc->put(_write_ctx, updates, rpc.request(), rpc.response());
-                };
-                std::move(updates));
+        idem_writer = std::make_unique<pegasus::idempotent_writer>(
+            request,
+            std::move(rpc),
+            typename pegasus::idempotent_writer::template apply_func_t<TRpcHolder>(
+                [this](const std::vector<dsn::apps::update_request> &updates,
+                       const TRpcHolder &rpc) -> int {
+                    return _write_svc->put(_write_ctx, updates, rpc.request(), rpc.response());
+                }),
+            std::move(updates));
 
         return rocksdb::Status::kOk;
     }
@@ -155,9 +163,10 @@ private:
     int64_t _decree{invalid_decree};
 
     // Handlers that translate an atomic write request into one or multiple idempotent updates.
-    using make_idempotent_map =
-        std::map<dsn::task_code,
-                 std::function<int(dsn::message_ex *, std::vector<dsn::message_ex *> &, idempotent_writer_ptr &)>>;
+    using make_idempotent_map = std::map<
+        dsn::task_code,
+        std::function<int(
+            dsn::message_ex *, std::vector<dsn::message_ex *> &, idempotent_writer_ptr &)>>;
     make_idempotent_map _make_idempotent_handlers;
 
     // Handlers that process a write request which could not be batched, e.g. multi put/remove.
