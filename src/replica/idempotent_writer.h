@@ -31,6 +31,11 @@
 
 namespace pegasus {
 
+// The `idempotent_writer` class is used by the primary replica to cache the idempotent
+// single-update requests generated during the "make_idempotent" phase, as well as the
+// original atomic write RPCs from the client. Later, during the 2PC process, it can
+// directly apply the cached single-update requests to the storage engine and automatically
+// respond to the client based on the cached atomic write RPCs.
 class idempotent_writer
 {
 public:

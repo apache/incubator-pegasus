@@ -135,9 +135,12 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
     }
 
     if (idem_writer) {
-        // Once `original_request` is set, `requests` must be idempotent and translated from
-        // an atomic write request.
-        return idem_writer->apply();
+        // Pass ownership down the call stack layer by layer, and ultimately transfer it to
+        // the local variable `writer`, so that upon destruction it can automatically reply
+        // to the client and release the memory occupied by the atomic write RPC and the
+        // idempotent single-update requests.
+        const idempotent_writer_ptr writer(std::move(idem_writer));
+        return writer->apply();
     }
 
     return on_batched_writes(requests, count);
