@@ -224,9 +224,13 @@ public:
         dsn_rpc_forward(dsn_request(), addr);
     }
 
-    inline void set_auto_reply(bool auto_reply) { _i->auto_reply = auto_reply; }
+    inline bool is_auto_reply() const { return _i->auto_reply; }
 
-    inline void enable_auto_reply() { set_auto_reply(true); }
+    inline void set_auto_reply(bool auto_reply) const { _i->auto_reply = auto_reply; }
+
+    inline void enable_auto_reply() const { set_auto_reply(true); }
+
+    inline void disable_auto_reply() const { set_auto_reply(false); }
 
     // Returns an rpc_holder that will reply the request after its lifetime ends.
     // By default rpc_holder never replies.

@@ -26,16 +26,18 @@
 #include "base/pegasus_rpc_types.h"
 #include "rpc/rpc_message.h"
 #include "rrdb/rrdb_types.h"
-#include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
 namespace pegasus {
 
 // The `idempotent_writer` class is used by the primary replica to cache the idempotent
-// single-update requests generated during the "make_idempotent" phase, as well as the
-// original atomic write RPCs from the client. Later, during the 2PC process, it can
-// directly apply the cached single-update requests to the storage engine and automatically
-// respond to the client based on the cached atomic write RPCs.
+// single-update requests generated during the "make_idempotent" phase, as well as the original
+// atomic write RPC requests from the client. Later, during the 2PC process, it can directly
+// apply the cached single-update requests to the storage engine and automatically respond to
+// the client based on the cached atomic write RPC requests.
+//
+// With `idempotent_writer`, one extra and unnecessary deserialization of the idempotent write
+// requests and the original atomic write request can be avoided.
 class idempotent_writer
 {
 public:
@@ -43,58 +45,85 @@ public:
     using apply_func_t =
         std::function<int(const std::vector<dsn::apps::update_request> &, const TRpcHolder &)>;
 
+    // Parameters:
+    // - original_rpc: the RPC holder with the deserialized original request, restricted to the
+    // atomic write RPC requests (i.e. incr, check_and_set or check_and_mutate).
+    // - apply_func: the user-defined function that applies the idempotent single-update requests
+    // and builds the response to the client.
+    // - updates: the idempotent single-update requests.
     template <typename TRpcHolder,
               std::enable_if_t<std::disjunction_v<std::is_same<TRpcHolder, incr_rpc>,
                                                   std::is_same<TRpcHolder, check_and_set_rpc>,
                                                   std::is_same<TRpcHolder, check_and_mutate_rpc>>,
                                int> = 0>
-    idempotent_writer(dsn::message_ex *original_request,
-                      TRpcHolder &&original_rpc,
+    idempotent_writer(TRpcHolder &&original_rpc,
                       apply_func_t<TRpcHolder> &&apply_func,
                       std::vector<dsn::apps::update_request> &&updates)
-        : _original_request(original_request),
-          _apply_executor(std::in_place_type<apply_executor<TRpcHolder>>,
-                          std::forward<TRpcHolder>(original_rpc),
-                          std::move(apply_func)),
+        : _apply_runner(std::in_place_type<apply_runner<TRpcHolder>>,
+                        std::forward<TRpcHolder>(original_rpc),
+                        std::move(apply_func)),
           _updates(std::move(updates))
     {
-        CHECK_NOTNULL(_original_request, "");
     }
 
     ~idempotent_writer() = default;
 
-    [[nodiscard]] const dsn::message_ptr &original_request() const { return _original_request; }
+    // Return the serialized message of the original RPC request, which should never be null.
+    [[nodiscard]] dsn::message_ex *request() const
+    {
+        return std::visit([this](auto &runner) { return runner.rpc.dsn_request(); }, _apply_runner);
+    }
 
+    // Apply single-update requests to the storage engine, and automatically respond to the
+    // client while RPC object is destructed. Return rocksdb::Status::kOk if succeed, otherwise
+    // some other error code (rocksdb::Status::Code).
     [[nodiscard]] int apply() const
     {
-        return std::visit([this](auto &executor) { return executor.func(_updates, executor.rpc); },
-                          _apply_executor);
+        return std::visit(
+            [this](auto &runner) {
+                // Enable automatic reply to the client no matter whether it would succeed
+                // or some error might occur.
+                runner.rpc.enable_auto_reply();
+
+                return runner.func(_updates, runner.rpc);
+            },
+            _apply_runner);
     }
 
 private:
-    // The original request received from the client. While making an atomic request (incr,
-    // check_and_set and check_and_mutate) idempotent, an extra variable is needed to hold
-    // its original request for the purpose of replying to the client.
-    const dsn::message_ptr _original_request;
-
     template <typename TRpcHolder>
-    struct apply_executor
+    struct apply_runner
     {
-        apply_executor(TRpcHolder &&original_rpc, apply_func_t<TRpcHolder> &&apply_func)
+        apply_runner(TRpcHolder &&original_rpc, apply_func_t<TRpcHolder> &&apply_func)
             : rpc(std::forward<TRpcHolder>(original_rpc)), func(std::move(apply_func))
         {
+            // Disable automatic reply to make sure we won't respond to the client until we
+            // are ready to apply idempotent single-update requests to the storage engine,
+            // because:
+            // 1. Automatic reply only makes sense after the response is ready, so it should
+            // be enabled right before applying to the storage engine.
+            // 2. Before applying to the storage engine, an error might occur and the client
+            // could be proactively replied to externally (e.g., via reply_with_error()),
+            // so automatic reply needs to be disabled during this stage.
+            rpc.disable_auto_reply();
         }
 
+        // Holds the original RPC request and the response to it.
         const TRpcHolder rpc;
+
+        // The user-defined function that applies idempotent single-update requests to the
+        // storage engine.
         const apply_func_t<TRpcHolder> func;
     };
 
-    using apply_executor_t = std::variant<apply_executor<incr_rpc>,
-                                          apply_executor<check_and_set_rpc>,
-                                          apply_executor<check_and_mutate_rpc>>;
+    using apply_runner_t = std::variant<apply_runner<incr_rpc>,
+                                        apply_runner<check_and_set_rpc>,
+                                        apply_runner<check_and_mutate_rpc>>;
 
-    const apply_executor_t _apply_executor;
+    const apply_runner_t _apply_runner;
 
+    // The idempotent single-update requests that are translated from the original atomic
+    // write request.
     const std::vector<dsn::apps::update_request> _updates;
 
     DISALLOW_COPY_AND_ASSIGN(idempotent_writer);

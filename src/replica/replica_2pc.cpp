@@ -314,13 +314,6 @@ int replica::make_idempotent(mutation_ptr &mu)
 
     CHECK_PREFIX_MSG(idem_writer, "idempotent_writer should not be empty");
 
-    // During make_idempotent(), the request has been deserialized (i.e. unmarshall() in the
-    // constructor of `rpc_holder::internal`). Once deserialize it again, assertion would fail for
-    // set_read_msg() in the constructor of `rpc_read_stream`.
-    //
-    // To make it deserializable again to be applied into RocksDB, restore read for it.
-    request->restore_read();
-
     CHECK_EQ_PREFIX_MSG(mu->get_decree(), invalid_decree, "the decree must have not been assigned");
 
     // Create a new mutation to hold the new idempotent requests. The old mutation holding the
@@ -476,7 +469,7 @@ void replica::reply_with_error(const mutation_ptr &mu, const error_code &err)
 {
     // Respond to the original atomic request if it is non-null. And it could never be batched.
     if (mu->idem_writer) {
-        response_client_write(mu->idem_writer->original_request(), err);
+        response_client_write(mu->idem_writer->request(), err);
         return;
     }
 

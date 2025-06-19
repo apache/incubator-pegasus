@@ -86,7 +86,7 @@ private:
                         std::vector<dsn::message_ex *> &new_requests,
                         idempotent_writer_ptr &idem_writer)
     {
-        auto rpc = TRpcHolder::auto_reply(request);
+        auto rpc = TRpcHolder(request);
 
         // Translate an atomic request into one or multiple idempotent single-update requests.
         std::vector<dsn::apps::update_request> updates;
@@ -98,6 +98,7 @@ private:
         // is returned.
         if (err != rocksdb::Status::kOk) {
             // Once it failed, just reply to the client with error immediately.
+            rpc.enable_auto_reply();
             return err;
         }
 
@@ -114,7 +115,6 @@ private:
         }
 
         idem_writer = std::make_unique<pegasus::idempotent_writer>(
-            request,
             std::move(rpc),
             typename pegasus::idempotent_writer::template apply_func_t<TRpcHolder>(
                 [this](const std::vector<dsn::apps::update_request> &updates,
