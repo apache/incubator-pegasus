@@ -224,7 +224,7 @@ public:
         dsn_rpc_forward(dsn_request(), addr);
     }
 
-    inline bool is_auto_reply() const { return _i->auto_reply; }
+    [[nodiscard]] inline bool is_auto_reply() const { return _i->auto_reply; }
 
     inline void set_auto_reply(bool auto_reply) const { _i->auto_reply = auto_reply; }
 

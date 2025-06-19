@@ -71,7 +71,7 @@ public:
     // Return the serialized message of the original RPC request, which should never be null.
     [[nodiscard]] dsn::message_ex *request() const
     {
-        return std::visit([this](auto &runner) { return runner.rpc.dsn_request(); }, _apply_runner);
+        return std::visit([](auto &runner) { return runner.rpc.dsn_request(); }, _apply_runner);
     }
 
     // Apply single-update requests to the storage engine, and automatically respond to the
