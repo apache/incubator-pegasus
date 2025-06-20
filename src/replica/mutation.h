@@ -196,6 +196,10 @@ public:
     // This field is only used by primary replicas.
     bool is_blocking_candidate{false};
 
+    // While an atomic write request (i.e. incr, check_and_set or check_and_mutate) is received
+    // and required to be idempotent, a data structure is needed to hold the original RPC and
+    // the idempotent single-update requests until all idempotent requests have been applied to
+    // the storage engine and the client has been responded to.
     pegasus::idempotent_writer_ptr idem_writer;
 
     std::shared_ptr<dsn::utils::latency_tracer> _tracer;

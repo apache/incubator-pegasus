@@ -391,12 +391,13 @@ private:
     // Return the newly created mutation.
     mutation_ptr new_mutation(decree d, bool is_blocking_candidate);
 
-    // Create a new mutation with specified decree and the original atomic write request,
-    // which is used to build the response to the client.
+    // Create a new mutation with specified decree and idempotent writer.
     //
     // Parameters:
     // - d: invalid_decree, or the real decree assigned to this mutation.
-    // - idem_writer:
+    // - idem_writer: the data structure that applies the idempotent requests to the storage
+    // engine and automatically responds to the atomic write request (i.e. incr, check_and_set
+    // or check_and_mutate).
     //
     // Return the newly created mutation.
     mutation_ptr new_mutation(decree d, pegasus::idempotent_writer_ptr &&idem_writer);

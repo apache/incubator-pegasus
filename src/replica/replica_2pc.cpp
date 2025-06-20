@@ -312,7 +312,7 @@ int replica::make_idempotent(mutation_ptr &mu)
         "new_requests should not be empty since its original write request must be atomic "
         "and translated into at least one idempotent request");
 
-    CHECK_PREFIX_MSG(idem_writer, "idempotent_writer should not be empty");
+    CHECK_PREFIX_MSG(idem_writer, "idem_writer should not be empty");
 
     CHECK_EQ_PREFIX_MSG(mu->get_decree(), invalid_decree, "the decree must have not been assigned");
 

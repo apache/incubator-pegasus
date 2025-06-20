@@ -32,11 +32,11 @@ namespace pegasus {
 
 // The `idempotent_writer` class is used by the primary replica to cache the idempotent
 // single-update requests generated during the "make_idempotent" phase, as well as the original
-// atomic write RPC requests from the client. Later, during the 2PC process, it can directly
+// atomic write RPC request from the client. Later, during the 2PC process, it can directly
 // apply the cached single-update requests to the storage engine and automatically respond to
-// the client based on the cached atomic write RPC requests.
+// the client based on the cached atomic write RPC request.
 //
-// With `idempotent_writer`, one extra and unnecessary deserialization of the idempotent write
+// With `idempotent_writer`, the extra and unnecessary deserialization of the idempotent write
 // requests and the original atomic write request can be avoided.
 class idempotent_writer
 {
@@ -45,12 +45,13 @@ public:
     using apply_func_t =
         std::function<int(const std::vector<dsn::apps::update_request> &, const TRpcHolder &)>;
 
-    // Parameters:
+    // Parameters for the constructor:
     // - original_rpc: the RPC holder with the deserialized original request, restricted to the
     // atomic write RPC requests (i.e. incr, check_and_set or check_and_mutate).
     // - apply_func: the user-defined function that applies the idempotent single-update requests
     // and builds the response to the client.
-    // - updates: the idempotent single-update requests.
+    // - updates: the idempotent single-update requests translated from the original atomic write
+    // request.
     template <typename TRpcHolder,
               std::enable_if_t<std::disjunction_v<std::is_same<TRpcHolder, incr_rpc>,
                                                   std::is_same<TRpcHolder, check_and_set_rpc>,
@@ -75,8 +76,8 @@ public:
     }
 
     // Apply single-update requests to the storage engine, and automatically respond to the
-    // client while RPC object is destructed. Return rocksdb::Status::kOk if succeed, otherwise
-    // some other error code (rocksdb::Status::Code).
+    // client -- it won't respond until the internal holder of the RPC is destructed. Return
+    // rocksdb::Status::kOk if succeed, otherwise some error code (rocksdb::Status::Code).
     [[nodiscard]] int apply() const
     {
         return std::visit(

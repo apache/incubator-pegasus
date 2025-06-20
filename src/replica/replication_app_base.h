@@ -263,6 +263,7 @@ public:
     // - request: the original request received from a client.
     // - new_requests: the output parameter, holding the resulting idempotent requests if the
     // original request is atomic, otherwise keeping unchanged.
+    // - idem_writer: the output parameter, holding the resulting idempotent writer.
     //
     // Return:
     // - for an idempotent requess always return rocksdb::Status::kOk .
@@ -277,14 +278,16 @@ public:
     // may override this function to get better performance.
     //
     // Parameters:
-    //  - decree: the decree of the mutation which these requests are batched into.
-    //  - timestamp: an incremental timestamp generated for this batch of requests.
-    //  - requests: the requests to be applied.
-    //  - count: the number of the requests.
-    //  - original_request: the original request received from the client. Must be an atomic
-    //  request (i.e. incr, check_and_set and check_and_mutate) if non-null, and another
-    //  parameter `requests` must hold the idempotent request translated from it. Used to
-    //  reply to the client.
+    // - decree: the decree of the mutation which these requests are batched into.
+    // - timestamp: an incremental timestamp generated for this batch of requests.
+    // - requests: the requests to be applied.
+    // - count: the number of the requests.
+    // - idem_writer: the original request received from the client. Must be an atomic
+    // request (i.e. incr, check_and_set and check_and_mutate) if non-null
+    // - idem_writer: if non-null, used to apply the idempotent requests to the storage engine
+    // and automatically responds to the atomic write request (i.e. incr, check_and_set or
+    // check_and_mutate), with the parameter `requests` holding the serialized idempotent
+    // requests and the parameter `count` recording the number.
     //
     // Return rocksdb::Status::kOk or some error code (rocksdb::Status::Code) if these requests
     // failed to be applied by storage engine.

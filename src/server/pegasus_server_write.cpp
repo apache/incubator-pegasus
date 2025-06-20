@@ -137,7 +137,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
     if (idem_writer) {
         // Pass ownership down the call stack layer by layer, and ultimately transfer it to
         // the local variable `writer`, so that upon destruction it can automatically reply
-        // to the client and release the memory occupied by the atomic write RPC and the
+        // to the client and release the memory occupied by the atomic write RPC and its
         // idempotent single-update requests.
         const idempotent_writer_ptr writer(std::move(idem_writer));
         return writer->apply();
