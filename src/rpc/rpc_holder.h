@@ -337,6 +337,9 @@ private:
         dsn::error_code rpc_error = dsn::ERR_OK;
 
         bool auto_reply;
+
+        DISALLOW_COPY_AND_ASSIGN(internal);
+        DISALLOW_MOVE_AND_ASSIGN(internal);
     };
 
     std::shared_ptr<internal> _i;
