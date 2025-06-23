@@ -104,22 +104,23 @@ void dsn_message_parser::prepare_on_send(message_ex *msg)
     auto &header = msg->header;
     auto &buffers = msg->buffers;
 
-#ifndef NDEBUG
-    int i_max = (int)buffers.size() - 1;
+#if defined(MOCK_TEST) || !defined(NDEBUG)
     size_t len = 0;
-    for (int i = 0; i <= i_max; i++) {
-        len += (size_t)buffers[i].length();
+    for (int i = 0; i < static_cast<int>(buffers.size()); ++i) {
+        len += buffers[i].length();
     }
     CHECK_EQ(len, header->body_length + sizeof(message_header));
 #endif
 
-    if (task_spec::get(msg->local_rpc_code)->rpc_message_crc_required) {
+    if (!task_spec::get(msg->local_rpc_code)->rpc_message_crc_required) {
+        return;
+    }
+
         // compute data crc if necessary (only once for the first time)
         if (header->body_crc32 == CRC_INVALID) {
-            int i_max = (int)buffers.size() - 1;
             uint32_t crc32 = 0;
             size_t len = 0;
-            for (int i = 0; i <= i_max; i++) {
+            for (int i = 0; i < static_cast<int>(buffers.size()); ++i) {
                 uint32_t lcrc;
                 const void *ptr;
                 size_t sz;
@@ -145,7 +146,6 @@ void dsn_message_parser::prepare_on_send(message_ex *msg)
         // always compute header crc
         header->hdr_crc32 = CRC_INVALID;
         header->hdr_crc32 = dsn::utils::crc32_calc(header, sizeof(message_header), 0);
-    }
 }
 
 int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers)
