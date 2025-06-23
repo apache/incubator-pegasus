@@ -252,7 +252,7 @@ void task_worker::loop()
         }
 
 #if defined(MOCK_TEST) || !defined(NDEBUG)
-        DCHECK_EQ_MSG(count, batch_size, "returned task count and batch size do not match");
+        CHECK_EQ_MSG(count, batch_size, "returned task count and batch size do not match");
 #endif
 
         _processed_task_count += batch_size;
