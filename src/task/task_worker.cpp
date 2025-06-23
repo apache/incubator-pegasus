@@ -249,7 +249,6 @@ void task_worker::loop()
 #if defined(MOCK_TEST) || !defined(NDEBUG)
             ++count;
 #endif
-
         }
 
 #if defined(MOCK_TEST) || !defined(NDEBUG)
