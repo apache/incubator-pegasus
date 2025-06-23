@@ -226,8 +226,6 @@ public:
 
     [[nodiscard]] inline bool is_auto_reply() const { return _i->auto_reply; }
 
-    inline void set_auto_reply(bool auto_reply) const { _i->auto_reply = auto_reply; }
-
     inline void enable_auto_reply() const { set_auto_reply(true); }
 
     inline void disable_auto_reply() const { set_auto_reply(false); }
@@ -280,6 +278,8 @@ public:
     friend bool operator<(const rpc_holder &lhs, const rpc_holder &rhs) { return lhs._i < rhs._i; }
 
 private:
+    inline void set_auto_reply(bool auto_reply) const { _i->auto_reply = auto_reply; }
+
     friend class rpc_holder_test;
 
     struct internal
