@@ -254,10 +254,10 @@ public:
         }
 
         // Shouldn't fail to parse since the value must be a valid int64.
-        CHECK(dsn::buf2int64(update.value.to_string_view(), resp.new_value),
-              "invalid int64 value for put idempotent incr: key={}, value={}",
-              update.key,
-              update.value);
+        CHECK_PREFIX_MSG(dsn::buf2int64(update.value.to_string_view(), resp.new_value),
+                         "invalid int64 value for put idempotent incr: key={}, value={}",
+                         update.key,
+                         update.value);
 
         return rocksdb::Status::kOk;
     }
@@ -560,7 +560,7 @@ public:
             const std::vector<dsn::apps::update_request> &updates,
             TResponse &resp)
     {
-        CHECK_EQ(updates.size(), 1);
+        CHECK_EQ_PREFIX(updates.size(), 1);
         return put(ctx, updates.front(), resp);
     }
 
@@ -678,6 +678,8 @@ public:
             const std::vector<dsn::apps::update_request> &updates,
             dsn::apps::check_and_mutate_response &resp)
     {
+        CHECK_GT_PREFIX(updates.size(), 0);
+
         make_basic_response(ctx.decree, resp);
 
         // Copy check_value's fields from the first idempotent request to the check_and_mutate

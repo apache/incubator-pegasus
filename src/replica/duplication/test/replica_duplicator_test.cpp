@@ -33,23 +33,11 @@
 #include "replica/mutation_log.h"
 #include "replica/test/mock_utils.h"
 #include "runtime/pipeline.h"
-#include "task/task_code.h"
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
-#include "utils/threadpool_code.h"
 
-namespace dsn {
-namespace apps {
-
-// for loading PUT mutations from log file.
-DEFINE_TASK_CODE_RPC(RPC_RRDB_RRDB_PUT, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT);
-
-} // namespace apps
-} // namespace dsn
-
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class replica_duplicator_test : public duplication_test_base
 {
@@ -223,5 +211,4 @@ TEST_P(replica_duplicator_test, prepare_dup)
     ASSERT_EQ(100, last_durable_decree());
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
