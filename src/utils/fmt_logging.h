@@ -324,7 +324,8 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
         }                                                                                          \
     } while (0)
 
-#if defined(MOCK_TEST) || !defined(NDEBUG)
+// #if defined(MOCK_TEST) || !defined(NDEBUG)
+#ifndef NDEBUG
 #define DCHECK CHECK
 #define DCHECK_NOTNULL CHECK_NOTNULL
 

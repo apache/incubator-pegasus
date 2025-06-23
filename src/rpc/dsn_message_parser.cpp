@@ -102,14 +102,16 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
 void dsn_message_parser::prepare_on_send(message_ex *msg)
 {
     auto &header = msg->header;
-    auto &buffers = msg->buffers;
+    const auto &buffers = msg->buffers;
 
 #if defined(MOCK_TEST) || !defined(NDEBUG)
-    size_t len = 0;
-    for (int i = 0; i < static_cast<int>(buffers.size()); ++i) {
-        len += buffers[i].length();
+    {
+        const size_t len =
+            std::accumulate(buffers.begin(), buffers.end(), 0UL, [](size_t sum, const auto &buf) {
+                return sum + buf.length();
+            });
+        CHECK_EQ(len, header->body_length + sizeof(message_header));
     }
-    CHECK_EQ(len, header->body_length + sizeof(message_header));
 #endif
 
     if (!task_spec::get(msg->local_rpc_code)->rpc_message_crc_required) {
@@ -120,20 +122,20 @@ void dsn_message_parser::prepare_on_send(message_ex *msg)
     if (header->body_crc32 == CRC_INVALID) {
         uint32_t crc32 = 0;
         size_t len = 0;
-        for (int i = 0; i < static_cast<int>(buffers.size()); ++i) {
-            uint32_t lcrc;
-            const void *ptr;
-            size_t sz;
+
+        for (size_t i = 0; i < buffers.size(); ++i) {
+            const auto &buf = buffers[i];
+            const char *ptr = buf.data();
+            size_t sz = buf.length();
 
             if (i == 0) {
-                ptr = (const void *)(buffers[i].data() + sizeof(message_header));
-                sz = (size_t)buffers[i].length() - sizeof(message_header);
-            } else {
-                ptr = (const void *)buffers[i].data();
-                sz = (size_t)buffers[i].length();
+                ptr += sizeof(message_header);
+
+                // TODO(wangdan): buf.length() must be >= sizeof(message_header) ?
+                sz -= sizeof(message_header);
             }
 
-            lcrc = dsn::utils::crc32_calc(ptr, sz, crc32);
+            const auto lcrc = dsn::utils::crc32_calc(ptr, sz, crc32);
             crc32 = dsn::utils::crc32_concat(0, 0, crc32, len, crc32, lcrc, sz);
 
             len += sz;

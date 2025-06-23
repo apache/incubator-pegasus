@@ -31,7 +31,12 @@
 #ifdef CACHELINE_SIZE
 
 #if defined(MOCK_TEST) || !defined(NDEBUG)
+
+#include <cstdint>
+#include <fmt/format.h>
+
 #include "utils/fmt_logging.h"
+
 #endif
 
 namespace dsn {
