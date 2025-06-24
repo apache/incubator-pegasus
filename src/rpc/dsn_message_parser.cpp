@@ -26,9 +26,10 @@
 
 #include "dsn_message_parser.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <numeric>
 #include <vector>
 
 #include "rpc/rpc_message.h"
@@ -131,7 +132,7 @@ void dsn_message_parser::prepare_on_send(message_ex *msg)
             if (i == 0) {
                 ptr += sizeof(message_header);
 
-                // TODO(wangdan): buf.length() must be >= sizeof(message_header) ?
+                // TODO(wangdan): CHECK_GE(sz, sizeof(message_header)) ?
                 sz -= sizeof(message_header);
             }
 
