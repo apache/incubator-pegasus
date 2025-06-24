@@ -30,8 +30,13 @@
 // where CACHELINE_SIZE is defined.
 #ifdef CACHELINE_SIZE
 
-#ifndef NDEBUG
+#if defined(MOCK_TEST) || !defined(NDEBUG)
+
+#include <cstdint>
+#include <fmt/format.h>
+
 #include "utils/fmt_logging.h"
+
 #endif
 
 namespace dsn {
@@ -53,7 +58,7 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len)
 
     T *array = new (buffer) T[len];
 
-#ifndef NDEBUG
+#if defined(MOCK_TEST) || !defined(NDEBUG)
     if (sizeof(T) <= CACHELINE_SIZE && (sizeof(T) & (sizeof(T) - 1)) == 0) {
         for (size_t i = 0; i < len; ++i) {
             T *elem = &(array[i]);

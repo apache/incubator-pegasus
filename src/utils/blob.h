@@ -114,9 +114,11 @@ public:
     /// NOTE: this operation is not efficient since it involves a memory copy.
     [[nodiscard]] static blob create_from_bytes(const char *s, size_t len)
     {
-        DCHECK(s != nullptr || len == 0,
-               "null source pointer with non-zero length would lead to "
-               "undefined behaviour");
+#if defined(MOCK_TEST) || !defined(NDEBUG)
+        CHECK(s != nullptr || len == 0,
+              "null source pointer with non-zero length would lead to "
+              "undefined behaviour");
+#endif
 
         std::shared_ptr<char> s_arr(new char[len], std::default_delete<char[]>());
         memcpy(s_arr.get(), s, len);

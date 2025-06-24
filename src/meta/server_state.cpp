@@ -1829,9 +1829,11 @@ void server_state::update_configuration_locally(
             ns = get_node_state(_nodes, node, false);
             CHECK_NOTNULL(ns, "invalid node: {}", node);
         }
-#ifndef NDEBUG
+
+#if defined(MOCK_TEST) || !defined(NDEBUG)
         request_check(old_pc, *config_request);
 #endif
+
         switch (config_request->type) {
         case config_type::CT_ASSIGN_PRIMARY:
         case config_type::CT_UPGRADE_TO_PRIMARY:
@@ -1940,9 +1942,10 @@ void server_state::update_configuration_locally(
                  boost::lexical_cast<std::string>(*config_request));
     }
 
-#ifndef NDEBUG
+#if defined(MOCK_TEST) || !defined(NDEBUG)
     check_consistency(gpid);
 #endif
+
     if (_config_change_subscriber) {
         _config_change_subscriber(_all_apps);
     }
