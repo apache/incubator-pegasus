@@ -23,9 +23,9 @@ organization := "org.apache"
 
 name := "pegasus-scala-client"
 
-scalaVersion := "2.12.18"
+scalaVersion := "2.13.16"
 
-crossScalaVersions := Seq("2.11.7", "2.12.18")
+crossScalaVersions := Seq("2.12.18", "2.13.16")
 
 publishMavenStyle := true
 
