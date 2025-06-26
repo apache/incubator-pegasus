@@ -43,6 +43,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           java-version: 8
+          distribution: temurin
       - name: Install sbt
         run: |
           curl -s "https://get.sdkman.io" | bash
@@ -91,6 +92,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
       - name: Install sbt
         run: |
           curl -s "https://get.sdkman.io" | bash

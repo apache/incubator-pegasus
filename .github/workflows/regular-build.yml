@@ -146,6 +146,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
       - name: Download thrift
         working-directory: ./java-client/scripts
         run: ./download_thrift.sh

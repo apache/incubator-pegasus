@@ -43,6 +43,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           java-version: 8
+          distribution: temurin
       - name: spotless
         working-directory: ./java-client
         run: mvn spotless:check
@@ -89,6 +90,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Start Pegasus cluster
