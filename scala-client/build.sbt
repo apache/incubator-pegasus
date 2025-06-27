@@ -55,5 +55,5 @@ credentials += Credentials(
 libraryDependencies ++= Seq(
   "com.google.guava" % "guava" % "21.0",
   "org.apache.pegasus" % "pegasus-client" % "2.6.0-SNAPSHOT",
-  "org.scalatest" %% "scalatest" % "3.2.19" % Test
+  "org.scalatest" %% "scalatest" % "3.0.3" % Test
 )

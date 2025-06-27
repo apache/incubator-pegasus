@@ -17,4 +17,6 @@
  * under the License.
  */
 
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.2")
+// TODO(wangdan): replace com.geirsson with org.scalameta since
+// it has been deprecated.
+addSbtPlugin("com.geirsson" % "sbt-scalafmt" % "1.5.1")
