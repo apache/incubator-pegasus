@@ -19,7 +19,9 @@
 
 package org.apache.pegasus.scalaclient
 
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.BeforeAndAfterAll
 import Serializers._
 
 import scala.concurrent.duration.Duration
@@ -32,7 +34,7 @@ import Options.MultiGet
   * Author: oujinliang
   * 3/27/18 8:09 PM
   */
-class TableSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
+class TableSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   val table = "temp"
 
   "client basic get/set/del/ttl/incr" should "work" in {
