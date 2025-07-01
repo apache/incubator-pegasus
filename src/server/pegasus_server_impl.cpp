@@ -61,6 +61,7 @@
 #include "pegasus_rpc_types.h"
 #include "pegasus_server_write.h"
 #include "replica_admin_types.h"
+#include "replica/idempotent_writer.h"
 #include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
@@ -346,24 +347,25 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
 }
 
 int pegasus_server_impl::make_idempotent(dsn::message_ex *request,
-                                         std::vector<dsn::message_ex *> &new_requests)
+                                         std::vector<dsn::message_ex *> &new_requests,
+                                         idempotent_writer_ptr &idem_writer)
 {
     CHECK_TRUE(_is_open);
 
-    return _server_write->make_idempotent(request, new_requests);
+    return _server_write->make_idempotent(request, new_requests, idem_writer);
 }
 
 int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                                                    uint64_t timestamp,
                                                    dsn::message_ex **requests,
                                                    uint32_t count,
-                                                   dsn::message_ex *original_request)
+                                                   idempotent_writer_ptr &&idem_writer)
 {
     CHECK_TRUE(_is_open);
     CHECK_NOTNULL(requests, "");
 
     return _server_write->on_batched_write_requests(
-        requests, count, decree, timestamp, original_request);
+        requests, count, decree, timestamp, std::move(idem_writer));
 }
 
 // Since LOG_ERROR_PREFIX depends on log_prefix(), this method could not be declared as static or

@@ -40,6 +40,7 @@
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
 #include "replica.h"
+#include "replica/idempotent_writer.h"
 #include "replica/mutation.h"
 #include "replica/replication_app_base.h"
 #include "rpc/rpc_message.h"
@@ -266,7 +267,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
                                                     uint64_t timestamp,
                                                     message_ex **requests,
                                                     uint32_t count,
-                                                    message_ex *original_request)
+                                                    pegasus::idempotent_writer_ptr &&idem_writer)
 {
     int storage_error = rocksdb::Status::kOk;
     for (uint32_t i = 0; i < count; ++i) {
@@ -329,7 +330,7 @@ error_code replication_app_base::apply_mutation(const mutation_ptr &mu)
                                                         mu->data.header.timestamp,
                                                         batched_requests,
                                                         batched_count,
-                                                        mu->original_request);
+                                                        std::move(mu->idem_writer));
 
     // release faked requests
     for (uint32_t i = 0; i < faked_count; ++i) {

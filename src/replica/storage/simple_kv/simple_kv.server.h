@@ -54,7 +54,8 @@ public:
     }
 
     int make_idempotent(dsn::message_ex *request,
-                        std::vector<dsn::message_ex *> &new_requests) override
+                        std::vector<dsn::message_ex *> &new_requests,
+                        pegasus::idempotent_writer_ptr &idem_writer) override
     {
         return rocksdb::Status::kOk;
     }

@@ -45,6 +45,7 @@
 #include "pegasus_utils.h"
 #include "pegasus_value_schema.h"
 #include "range_read_limiter.h"
+#include "replica/idempotent_writer.h"
 #include "replica/replication_app_base.h"
 #include "task/task.h"
 #include "task/task_tracker.h"
@@ -149,7 +150,8 @@ public:
 
     // See replication_app_base::make_idempotent() for details. Only called by primary replicas.
     int make_idempotent(dsn::message_ex *request,
-                        std::vector<dsn::message_ex *> &new_requests) override;
+                        std::vector<dsn::message_ex *> &new_requests,
+                        idempotent_writer_ptr &idem_writer) override;
 
     /// Each of the write request (specifically, the rpc that's configured as write, see
     /// option `rpc_request_is_write_operation` in rDSN `task_spec`) will first be
@@ -162,7 +164,7 @@ public:
                                   uint64_t timestamp,
                                   dsn::message_ex **requests,
                                   uint32_t count,
-                                  dsn::message_ex *original_request) override;
+                                  idempotent_writer_ptr &&idem_writer) override;
 
     ::dsn::error_code prepare_get_checkpoint(dsn::blob &learn_req) override
     {

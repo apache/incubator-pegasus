@@ -224,9 +224,11 @@ public:
         dsn_rpc_forward(dsn_request(), addr);
     }
 
-    inline void set_auto_reply(bool auto_reply) { _i->auto_reply = auto_reply; }
+    [[nodiscard]] inline bool is_auto_reply() const { return _i->auto_reply; }
 
-    inline void enable_auto_reply() { set_auto_reply(true); }
+    inline void enable_auto_reply() const { set_auto_reply(true); }
+
+    inline void disable_auto_reply() const { set_auto_reply(false); }
 
     // Returns an rpc_holder that will reply the request after its lifetime ends.
     // By default rpc_holder never replies.
@@ -276,6 +278,8 @@ public:
     friend bool operator<(const rpc_holder &lhs, const rpc_holder &rhs) { return lhs._i < rhs._i; }
 
 private:
+    inline void set_auto_reply(bool auto_reply) const { _i->auto_reply = auto_reply; }
+
     friend class rpc_holder_test;
 
     struct internal
@@ -333,6 +337,9 @@ private:
         dsn::error_code rpc_error = dsn::ERR_OK;
 
         bool auto_reply;
+
+        DISALLOW_COPY_AND_ASSIGN(internal);
+        DISALLOW_MOVE_AND_ASSIGN(internal);
     };
 
     std::shared_ptr<internal> _i;
