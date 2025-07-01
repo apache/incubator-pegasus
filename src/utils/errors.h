@@ -294,7 +294,7 @@ USER_DEFINED_STRUCTURE_FORMATTER(::dsn::error_s);
         }                                                                                          \
     } while (false)
 
-#ifndef NDEBUG
+#if defined(MOCK_TEST) || !defined(NDEBUG)
 #define DCHECK_OK CHECK_OK
 #else
 #define DCHECK_OK(s, ...)
