@@ -134,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '8', '11']
+        java: [ '8', '11', '17' ]
     steps:
       - uses: actions/cache@v3
         with:
@@ -143,9 +143,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
       - name: Download thrift
         working-directory: ./java-client/scripts
         run: ./download_thrift.sh
