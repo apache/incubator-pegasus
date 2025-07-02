@@ -44,8 +44,7 @@
 #include "utils/test_macros.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class backup_service_test : public meta_test_base
 {
@@ -395,5 +394,4 @@ TEST_F(backup_engine_test, test_write_backup_info_failed)
     fail::teardown();
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

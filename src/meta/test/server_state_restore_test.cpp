@@ -40,8 +40,7 @@
 #include "utils/test_macros.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class server_state_restore_test : public meta_test_base
 {
@@ -176,5 +175,4 @@ TEST_F(server_state_restore_test, test_restore_app_with_specific_path)
     test_restore_app("test_path");
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

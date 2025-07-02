@@ -40,6 +40,7 @@
 #include "test_util/test_util.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/test_macros.h"
 
 using namespace ::pegasus;
 using std::map;

@@ -32,12 +32,11 @@
 #include "rpc/rpc_host_port.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class node_context_test : public meta_test_base
 {
-public:
+protected:
     void SetUp() override
     {
         _context = ingestion_context::node_context();
@@ -89,7 +88,6 @@ public:
 
     bool check_if_add() { return _context.check_if_add(TAG); }
 
-public:
     ingestion_context::node_context _context;
     const host_port NODE = host_port("localhost", 10086);
     const std::string TAG = "default";
@@ -161,7 +159,7 @@ TEST_F(node_context_test, check_if_add_test)
 
 class ingestion_context_test : public meta_test_base
 {
-public:
+protected:
     /// mock app and node info context
     ///  node1    node2    node3    node4
     /// p0(tag1) s0(tag1) s0(tag2)
@@ -179,7 +177,7 @@ public:
 
     void TearDown() override { _context->reset_all(); }
 
-    void update_max_node_count(const uint32_t max_node_count)
+    static void update_max_node_count(const uint32_t max_node_count)
     {
         FLAGS_bulk_load_node_max_ingesting_count = max_node_count;
     }
@@ -294,7 +292,6 @@ public:
                get_disk_running_count(node, TAG2) == expected_disk2_count;
     }
 
-public:
     std::unique_ptr<ingestion_context> _context;
     std::shared_ptr<app_state> _app;
     const uint32_t APP_ID = 1;
@@ -380,5 +377,4 @@ TEST_F(ingestion_context_test, operation_test)
     ASSERT_EQ(get_app_ingesting_count(), 0);
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

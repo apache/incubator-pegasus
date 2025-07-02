@@ -67,8 +67,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/test_macros.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
+
 class meta_split_service_test : public meta_test_base
 {
 public:
@@ -836,8 +836,8 @@ TEST_F(meta_split_service_test, query_child_state_test)
 class meta_split_service_failover_test : public meta_split_service_test
 {
 public:
+    // Disable SetUp() of the base fixture since we will mock an app in the test case.
     void SetUp() override {}
-    void TearDown() override { meta_test_base::TearDown(); }
 };
 
 TEST_F(meta_split_service_failover_test, half_split_test)
@@ -851,5 +851,4 @@ TEST_F(meta_split_service_failover_test, half_split_test)
     ASSERT_EQ(app->pcs.size(), NEW_PARTITION_COUNT);
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

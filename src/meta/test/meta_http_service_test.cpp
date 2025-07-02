@@ -50,8 +50,7 @@
 #include "utils/fail_point.h"
 #include "utils/test_macros.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class meta_http_service_test : public meta_test_base
 {
@@ -419,5 +418,4 @@ TEST_F(meta_bulk_load_http_test, update_scenario_test)
     }
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

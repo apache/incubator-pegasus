@@ -55,8 +55,8 @@ protected:
         TRICKY_CODE_TO_AVOID_LINK_ERROR;
         SET_UP_BASE(test_util);
         for (int i = 0; i < dataset_count; ++i) {
-            std::string hash_key = key_prefix + std::to_string(i);
-            std::string sort_key = hash_key;
+            const std::string hash_key(fmt::format("{}{}", key_prefix, i));
+            const std::string sort_key(hash_key);
             std::string value = value_prefix + std::to_string(i);
 
             pegasus::pegasus_client::internal_info info;
@@ -66,7 +66,6 @@ protected:
         }
     }
 
-public:
     // The cluster name "single_master_cluster" (see src/test/function_test/config.ini) means the
     // cluster has only one meta server, while "onebox" means the cluster has 3 meta servers.
     recovery_test() : test_util(std::map<std::string, std::string>(), "single_master_cluster") {}

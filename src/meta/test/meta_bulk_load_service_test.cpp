@@ -63,11 +63,11 @@
 #include "utils/test_macros.h"
 #include "utils/utils.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
+
 class bulk_load_service_test : public meta_test_base
 {
-public:
+protected:
     bulk_load_service_test() = default;
 
     /// bulk load functions
@@ -500,7 +500,6 @@ public:
 
     void unlock_meta_op_status() { return _ms->unlock_meta_op_status(); }
 
-public:
     int32_t APP_ID = 1;
     std::string APP_NAME = "bulk_load_test";
     int32_t PARTITION_COUNT = 8;
@@ -749,7 +748,7 @@ TEST_F(bulk_load_service_test, clear_bulk_load_test)
 /// bulk load process unit tests
 class bulk_load_process_test : public bulk_load_service_test
 {
-public:
+protected:
     void SetUp() override
     {
         SET_UP_BASE(bulk_load_service_test);
@@ -914,11 +913,10 @@ public:
         _ingestion_resp.rocksdb_error = rocksdb_err;
     }
 
-public:
     const int32_t _pidx = 0;
 
-    int32_t _app_id;
-    int32_t _partition_count;
+    int32_t _app_id{-1};
+    int32_t _partition_count{-1};
     bulk_load_request _req;
     bulk_load_response _resp;
     ingestion_response _ingestion_resp;
@@ -1698,5 +1696,4 @@ TEST_F(bulk_load_failover_test, status_inconsistency_wrong_bulk_load_dir)
     ASSERT_TRUE(is_app_bulk_load_states_reset(SYNC_APP_ID));
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

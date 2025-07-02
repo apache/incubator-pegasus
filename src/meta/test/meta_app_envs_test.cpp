@@ -38,8 +38,8 @@
 #include "utils/error_code.h"
 #include "utils/test_macros.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
+
 class meta_app_envs_test : public meta_test_base
 {
 public:
@@ -219,5 +219,4 @@ TEST_F(meta_app_envs_test, update_app_envs_test)
     }
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

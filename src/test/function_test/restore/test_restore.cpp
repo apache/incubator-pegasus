@@ -49,7 +49,7 @@ using namespace pegasus;
 
 class restore_test : public test_util
 {
-public:
+protected:
     void SetUp() override
     {
         SET_UP_BASE(test_util);
@@ -123,7 +123,6 @@ public:
         }
     }
 
-public:
     const int kTestCount = 10000;
     const std::string kNewTableName = "backup_test_new";
 
