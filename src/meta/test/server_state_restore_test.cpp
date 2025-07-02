@@ -37,6 +37,7 @@
 #include "rpc/serialization.h"
 #include "utils/blob.h"
 #include "utils/error_code.h"
+#include "utils/test_macros.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -55,7 +56,7 @@ public:
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
 
         // create a test app with 8 partitions.
         create_app(_old_app_name);

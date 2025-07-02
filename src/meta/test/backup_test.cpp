@@ -58,6 +58,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/synchronize.h"
+#include "utils/test_macros.h"
 #include "utils/time_utils.h"
 #include "utils/zlocks.h"
 
@@ -242,7 +243,7 @@ protected:
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
 
         dsn::error_code ec = _service->remote_storage_initialize();
         ASSERT_EQ(ec, dsn::ERR_OK);
@@ -752,7 +753,7 @@ protected:
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
 
         meta_options &opt = _meta_svc->_meta_opts;
         FLAGS_cluster_root = "/meta_test";

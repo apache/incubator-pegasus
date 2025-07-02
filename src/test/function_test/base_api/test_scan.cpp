@@ -49,7 +49,7 @@ class scan_test : public test_util
 public:
     void SetUp() override
     {
-        test_util::SetUp();
+        SET_UP_BASE(test_util);
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0));
         ASSERT_EQ(dsn::ERR_OK, ddl_client_->create_app(table_name_, "pegasus", 8, 3, {}));
         client_ = pegasus_client_factory::get_client(kClusterName.c_str(), table_name_.c_str());

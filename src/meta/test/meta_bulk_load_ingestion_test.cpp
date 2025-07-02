@@ -38,7 +38,7 @@ namespace replication {
 class node_context_test : public meta_test_base
 {
 public:
-    void SetUp()
+    void SetUp() override
     {
         _context = ingestion_context::node_context();
         _context.node_ingesting_count = 0;
@@ -47,7 +47,7 @@ public:
         FLAGS_bulk_load_node_min_disk_count = 1;
     }
 
-    void TearDown()
+    void TearDown() override
     {
         _context.disk_ingesting_counts.clear();
         _context.node_ingesting_count = 0;
@@ -168,7 +168,7 @@ public:
     /// s1(tag1) s1(tag2)          p1(tag2)
     /// s2(tag2)          p2(tag1) s2(tag1)
     ///          p3(tag1) s3(tag1) s3(tag2)
-    void SetUp()
+    void SetUp() override
     {
         _context = std::make_unique<ingestion_context>();
         add_node_context({NODE1, NODE2, NODE3, NODE4});
@@ -177,7 +177,7 @@ public:
         FLAGS_bulk_load_node_max_ingesting_count = MAX_NODE_COUNT;
     }
 
-    void TearDown() { _context->reset_all(); }
+    void TearDown() override { _context->reset_all(); }
 
     void update_max_node_count(const uint32_t max_node_count)
     {

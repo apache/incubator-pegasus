@@ -36,6 +36,7 @@
 #include "meta_admin_types.h"
 #include "meta_test_base.h"
 #include "utils/error_code.h"
+#include "utils/test_macros.h"
 
 namespace dsn {
 namespace replication {
@@ -46,7 +47,7 @@ public:
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
         create_app(app_name);
     }
 

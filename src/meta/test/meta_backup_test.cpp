@@ -41,6 +41,7 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
+#include "utils/test_macros.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
@@ -59,7 +60,7 @@ public:
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
         _ms->_backup_handler =
             std::make_shared<backup_service>(_ms.get(), _policy_root, _backup_root, nullptr);
         _backup_service = _ms->_backup_handler;
@@ -245,7 +246,7 @@ public:
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
         _ms->_backup_handler =
             std::make_shared<backup_service>(_ms.get(), _policy_root, _backup_root, nullptr);
         _backup_engine = std::make_shared<backup_engine>(_ms->_backup_handler.get());

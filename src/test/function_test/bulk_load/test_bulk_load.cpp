@@ -79,7 +79,7 @@ protected:
 
     void SetUp() override
     {
-        test_util::SetUp();
+        SET_UP_BASE(test_util);
         NO_FATALS(generate_bulk_load_files());
     }
 

@@ -52,7 +52,7 @@ class restore_test : public test_util
 public:
     void SetUp() override
     {
-        test_util::SetUp();
+        SET_UP_BASE(test_util);
 
         backup_path_ = fmt::format("onebox/block_service/local_service/{}", kClusterName);
 

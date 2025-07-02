@@ -65,6 +65,7 @@
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
+#include "utils/test_macros.h"
 
 namespace dsn {
 namespace replication {
@@ -75,12 +76,12 @@ public:
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
         create_app(NAME, PARTITION_COUNT);
         app = find_app(NAME);
     }
 
-    void TearDown()
+    void TearDown() override
     {
         app.reset();
         meta_test_base::TearDown();
@@ -835,8 +836,8 @@ TEST_F(meta_split_service_test, query_child_state_test)
 class meta_split_service_failover_test : public meta_split_service_test
 {
 public:
-    void SetUp() {}
-    void TearDown() { meta_test_base::TearDown(); }
+    void SetUp() override {}
+    void TearDown() override { meta_test_base::TearDown(); }
 };
 
 TEST_F(meta_split_service_failover_test, half_split_test)

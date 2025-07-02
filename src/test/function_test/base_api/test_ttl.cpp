@@ -43,7 +43,7 @@ class ttl_test : public test_util
 public:
     void SetUp() override
     {
-        test_util::SetUp();
+        SET_UP_BASE(test_util);
         ASSERT_NO_FATAL_FAILURE(set_default_ttl_secs(0));
     }
 

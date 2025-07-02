@@ -36,6 +36,7 @@
 #include "test/function_test/utils/test_util.h"
 #include "utils/error_code.h"
 #include "utils/rand.h"
+#include "utils/test_macros.h"
 
 using namespace dsn::replication;
 using namespace pegasus;
@@ -52,7 +53,7 @@ protected:
     void SetUp() override
     {
         TRICKY_CODE_TO_AVOID_LINK_ERROR;
-        test_util::SetUp();
+        SET_UP_BASE(test_util);
         for (int i = 0; i < dataset_count; ++i) {
             std::string hash_key = key_prefix + std::to_string(i);
             std::string sort_key = hash_key;

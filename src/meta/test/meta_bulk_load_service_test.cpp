@@ -60,6 +60,7 @@
 #include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/test_macros.h"
 #include "utils/utils.h"
 
 namespace dsn {
@@ -67,7 +68,7 @@ namespace replication {
 class bulk_load_service_test : public meta_test_base
 {
 public:
-    bulk_load_service_test() {}
+    bulk_load_service_test() = default;
 
     /// bulk load functions
 
@@ -749,9 +750,9 @@ TEST_F(bulk_load_service_test, clear_bulk_load_test)
 class bulk_load_process_test : public bulk_load_service_test
 {
 public:
-    void SetUp()
+    void SetUp() override
     {
-        bulk_load_service_test::SetUp();
+        SET_UP_BASE(bulk_load_service_test);
         create_app(APP_NAME);
 
         fail::setup();
@@ -767,7 +768,7 @@ public:
         ASSERT_EQ(app->is_bulk_loading, true);
     }
 
-    void TearDown()
+    void TearDown() override
     {
         unlock_meta_op_status();
         fail::teardown();
@@ -1192,16 +1193,16 @@ TEST_F(bulk_load_process_test, ingest_succeed)
 class bulk_load_failover_test : public bulk_load_service_test
 {
 public:
-    bulk_load_failover_test() {}
+    bulk_load_failover_test() = default;
 
-    void SetUp()
+    void SetUp() override
     {
         fail::setup();
         fail::cfg("meta_bulk_load_partition_bulk_load", "return()");
         fail::cfg("meta_bulk_load_partition_ingestion", "return()");
     }
 
-    void TearDown()
+    void TearDown() override
     {
         clean_up();
         fail::teardown();
