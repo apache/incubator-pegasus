@@ -71,7 +71,7 @@ test_util::test_util(std::map<std::string, std::string> create_envs)
 {
 }
 
-test_util::test_util() : test_util({}) {}
+test_util::test_util() : test_util(std::map<std::string, std::string>()) {}
 
 void test_util::SetUpTestSuite() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
 

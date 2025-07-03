@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <fmt/core.h>
 #include <rocksdb/env.h>
 #include <rocksdb/options.h>
@@ -88,7 +89,7 @@ protected:
 
     // Generate the '.xxx.meta' file according to the 'xxx' file
     // in path 'file_path'.
-    void generate_metadata_file(const std::string &file_path)
+    static void generate_metadata_file(const std::string &file_path)
     {
         dsn::dist::block_service::file_metadata fm;
         ASSERT_TRUE(dsn::utils::filesystem::file_size(
@@ -152,7 +153,7 @@ protected:
             dsn::replication::bulk_load_metadata blm;
             for (const auto &src_file : src_files) {
                 // Only .sst files are needed.
-                if (src_file.find(".sst") == std::string::npos) {
+                if (!boost::algorithm::ends_with(src_file, ".sst")) {
                     continue;
                 }
 
@@ -215,7 +216,7 @@ protected:
             .err;
     }
 
-    void remove_file(const std::string &file_path)
+    static void remove_file(const std::string &file_path)
     {
         NO_FATALS(run_cmd_from_project_root("rm " + file_path));
     }
@@ -291,7 +292,6 @@ protected:
         NO_FATALS(check_not_found(table_name_, kHashkeyPrefix, 15));
     }
 
-protected:
     std::string bulk_load_local_app_root_;
     const std::string kLocalServiceRoot = "onebox/block_service/local_service";
     const std::string kBulkLoad = "bulk_load_root";
