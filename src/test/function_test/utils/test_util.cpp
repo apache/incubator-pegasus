@@ -52,13 +52,12 @@
 
 namespace pegasus {
 
-test_util::test_util(std::map<std::string, std::string> create_envs,
-                     const std::string &cluster_name)
+test_util::test_util(std::map<std::string, std::string> create_envs, std::string cluster_name)
     : kOpNames({{test_util::OperateDataType::kSet, "set"},
                 {test_util::OperateDataType::kGet, "get"},
                 {test_util::OperateDataType::kDelete, "delete"},
                 {test_util::OperateDataType::kCheckNotFound, "check not found"}}),
-      kClusterName(cluster_name),
+      kClusterName(std::move(cluster_name)),
       kHashkeyPrefix("hashkey_"),
       kSortkey("sortkey"),
       kValuePrefix("value_"),
@@ -67,7 +66,14 @@ test_util::test_util(std::map<std::string, std::string> create_envs,
 {
 }
 
-void test_util::SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
+test_util::test_util(std::map<std::string, std::string> create_envs)
+    : test_util(create_envs, "onebox")
+{
+}
+
+test_util::test_util() : test_util({}) {}
+
+void test_util::SetUpTestSuite() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
 
 void test_util::SetUp()
 {
@@ -103,7 +109,7 @@ void test_util::SetUp()
 void test_util::run_cmd_from_project_root(const std::string &cmd)
 {
     ASSERT_EQ(0, ::chdir(global_env::instance()._pegasus_root.c_str()));
-    ASSERT_NO_FATAL_FAILURE(run_cmd_no_error(cmd));
+    ASSERT_NO_FATAL_FAILURE(run_cmd_no_error(cmd)); // NOLINT
 }
 
 int test_util::get_alive_replica_server_count()

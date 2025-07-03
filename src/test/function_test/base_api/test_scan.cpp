@@ -17,8 +17,6 @@
  * under the License.
  */
 
-#include <string.h>
-#include <time.h>
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>

@@ -33,6 +33,7 @@
 
 #include "dsn.layer2_types.h"
 #include "rpc/rpc_host_port.h"
+#include "utils/ports.h"
 
 // TODO(yingchun): it's too tricky, but I don't know how does it happen, we can fix it later.
 #define TRICKY_CODE_TO_AVOID_LINK_ERROR                                                            \
@@ -52,12 +53,15 @@ class pegasus_client;
 
 class test_util : public ::testing::Test
 {
-protected:
-    test_util(std::map<std::string, std::string> create_envs = {},
-              const std::string &cluster_name = "onebox");
+public:
     ~test_util() override = default;
 
-    static void SetUpTestCase();
+protected:
+    test_util(std::map<std::string, std::string> create_envs, std::string cluster_name);
+    explicit test_util(std::map<std::string, std::string> create_envs);
+    test_util();
+
+    static void SetUpTestSuite();
 
     void SetUp() override;
 
@@ -102,7 +106,7 @@ protected:
         const auto pos = random() % buffer_.size();
         const auto length = random() % buffer_.size() + 1;
         if (pos + length < buffer_.size()) {
-            return std::string(buffer_.data() + pos, length);
+            return {buffer_.data() + pos, length};
         }
 
         return std::string(buffer_.data() + pos, buffer_.size() - pos) +
@@ -140,13 +144,17 @@ protected:
     const std::string kValuePrefix;
     const std::map<std::string, std::string> kCreateEnvs;
     std::string table_name_;
-    int32_t table_id_;
-    int32_t partition_count_ = 8;
+    int32_t table_id_{0};
+    int32_t partition_count_{8};
     std::vector<dsn::partition_configuration> pcs_;
     pegasus_client *client_ = nullptr;
     std::vector<dsn::host_port> meta_list_;
     std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client_;
-    std::array<char, 256> buffer_;
+    std::array<char, 256> buffer_{};
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(test_util);
+    DISALLOW_MOVE_AND_ASSIGN(test_util);
 };
 
 } // namespace pegasus

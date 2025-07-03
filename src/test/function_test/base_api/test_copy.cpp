@@ -20,8 +20,6 @@
 #include <atomic>
 #include <climits>
 #include <cstdint>
-#include <cstdlib>
-#include <cstring>
 #include <functional>
 #include <map>
 #include <memory>
