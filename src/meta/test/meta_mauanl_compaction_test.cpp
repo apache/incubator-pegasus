@@ -39,8 +39,8 @@ namespace dsn::replication {
 
 class meta_app_compaction_test : public meta_test_base
 {
-public:
-    meta_app_compaction_test() {}
+protected:
+    meta_app_compaction_test() = default;
 
     void SetUp() override
     {
@@ -150,7 +150,6 @@ public:
         return rpc.response();
     }
 
-public:
     std::string APP_NAME = "manual_compaction_test";
     int32_t PARTITION_COUNT = 4;
 };

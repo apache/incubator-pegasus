@@ -42,14 +42,11 @@
 #include "utils/fmt_logging.h"
 #include "utils/test_macros.h"
 
-using namespace ::pegasus;
-using std::map;
-using std::string;
-using std::vector;
+namespace pegasus {
 
 class copy_data_test : public test_util
 {
-public:
+protected:
     void SetUp() override
     {
         SET_UP_BASE(test_util);
@@ -67,13 +64,13 @@ public:
     void verify_data()
     {
         pegasus_client::scan_options options;
-        vector<pegasus_client::pegasus_scanner *> scanners;
+        std::vector<pegasus_client::pegasus_scanner *> scanners;
         ASSERT_EQ(PERR_OK, destination_client_->get_unordered_scanners(INT_MAX, options, scanners));
 
-        string hash_key;
-        string sort_key;
-        string value;
-        map<string, map<string, string>> actual_data;
+        std::string hash_key;
+        std::string sort_key;
+        std::string value;
+        std::map<std::string, std::map<std::string, std::string>> actual_data;
         for (auto scanner : scanners) {
             ASSERT_NE(nullptr, scanner);
             int ret = PERR_OK;
@@ -103,15 +100,15 @@ public:
     }
 
     // REQUIRED: 'buffer_' has been filled with random chars.
-    const string random_string() const
+    const std::string random_string() const
     {
         int pos = random() % sizeof(buffer_);
         unsigned int length = random() % sizeof(buffer_) + 1;
         if (pos + length < sizeof(buffer_)) {
-            return string(buffer_ + pos, length);
+            return std::string(buffer_ + pos, length);
         } else {
-            return string(buffer_ + pos, sizeof(buffer_) - pos) +
-                   string(buffer_, length + pos - sizeof(buffer_));
+            return std::string(buffer_ + pos, sizeof(buffer_) - pos) +
+                   std::string(buffer_, length + pos - sizeof(buffer_));
         }
     }
 
@@ -122,9 +119,9 @@ public:
             c = CCH[random() % strlen(CCH)];
         }
 
-        string hash_key;
-        string sort_key;
-        string value;
+        std::string hash_key;
+        std::string sort_key;
+        std::string value;
         while (expect_data_[empty_hash_key].size() < 1000) {
             sort_key = random_string();
             value = random_string();
@@ -145,11 +142,10 @@ public:
         }
     }
 
-protected:
     static const char CCH[];
-    const string empty_hash_key = "";
-    const string source_app_name = "copy_data_source_table";
-    const string destination_app_name = "copy_data_destination_table";
+    const std::string empty_hash_key = "";
+    const std::string source_app_name = "copy_data_source_table";
+    const std::string destination_app_name = "copy_data_destination_table";
 
     const int max_batch_count = 500;
     const int timeout_ms = 5000;
@@ -157,7 +153,7 @@ protected:
     const int32_t default_partitions = 4;
 
     char buffer_[256];
-    map<string, map<string, string>> expect_data_;
+    std::map<std::string, std::map<std::string, std::string>> expect_data_;
 
     pegasus_client *source_client_;
     pegasus_client *destination_client_;
@@ -171,12 +167,12 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
 
     pegasus_client::scan_options options;
     options.return_expire_ts = true;
-    vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
+    std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
     ASSERT_EQ(PERR_OK, source_client_->get_unordered_scanners(INT_MAX, options, raw_scanners));
 
     LOG_INFO("open source app scanner succeed, partition_count = {}", raw_scanners.size());
 
-    vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
+    std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto raw_scanner : raw_scanners) {
         ASSERT_NE(nullptr, raw_scanner);
         scanners.push_back(raw_scanner->get_smart_wrapper());
@@ -187,7 +183,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     LOG_INFO("prepare scanners succeed, split_count = {}", split_count);
 
     std::atomic_bool error_occurred(false);
-    vector<std::unique_ptr<scan_data_context>> contexts;
+    std::vector<std::unique_ptr<scan_data_context>> contexts;
 
     for (int i = 0; i < split_count; i++) {
         scan_data_context *context = new scan_data_context(SCAN_AND_MULTI_SET,
@@ -219,3 +215,5 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     ASSERT_FALSE(error_occurred.load()) << "error occurred, processing terminated or timeout!";
     ASSERT_NO_FATAL_FAILURE(verify_data());
 }
+
+} // namespace pegasus

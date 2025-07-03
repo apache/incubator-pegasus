@@ -38,8 +38,7 @@
 #include "utils/rand.h"
 #include "utils/test_macros.h"
 
-using namespace dsn::replication;
-using namespace pegasus;
+namespace pegasus {
 
 // TODO(yingchun): add a check for it, get config by curl
 // NOTE: THREAD_POOL_META_SERVER worker count should be greater than 1
@@ -56,13 +55,13 @@ protected:
         SET_UP_BASE(test_util);
         for (int i = 0; i < dataset_count; ++i) {
             const std::string hash_key(fmt::format("{}{}", key_prefix, i));
-            const std::string sort_key(hash_key);
-            std::string value = value_prefix + std::to_string(i);
+            const std::string value(fmt::format("{}{}", value_prefix, i));
 
-            pegasus::pegasus_client::internal_info info;
-            int ans = client_->set(hash_key, sort_key, value, 5000, 0, &info);
-            ASSERT_EQ(0, ans);
-            ASSERT_TRUE(info.partition_index < partition_count_);
+            pegasus_client::internal_info info;
+
+            // Use hash key as the sort key.
+            ASSERT_EQ(0, client_->set(hash_key, hash_key, value, 5000, 0, &info));
+            ASSERT_GT(partition_count_, info.partition_index);
         }
     }
 
@@ -157,13 +156,14 @@ protected:
     {
         // then check to read all keys
         for (int i = 0; i < count; ++i) {
-            std::string hash_key = key_prefix + std::to_string(i);
-            std::string sort_key = hash_key;
-            std::string exp_value = value_prefix + std::to_string(i);
+            const std::string hash_key(fmt::format("{}{}", key_prefix, i));
+            const std::string expected_value(fmt::format("{}{}", value_prefix, i));
 
-            std::string act_value;
-            ASSERT_EQ(PERR_OK, client_->get(hash_key, sort_key, act_value));
-            ASSERT_EQ(exp_value, act_value);
+            std::string actual_value;
+
+            // Use hash key as the sort key.
+            ASSERT_EQ(PERR_OK, client_->get(hash_key, hash_key, actual_value));
+            ASSERT_EQ(expected_value, actual_value);
         }
     }
 
@@ -291,3 +291,5 @@ TEST_F(recovery_test, recovery)
         ASSERT_NO_FATAL_FAILURE(verify_data(dataset_count));
     }
 }
+
+} // namespace pegasus

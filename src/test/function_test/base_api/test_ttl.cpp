@@ -35,8 +35,7 @@
 #include "utils/test_macros.h"
 #include "utils/utils.h"
 
-using namespace ::dsn;
-using namespace ::pegasus;
+namespace pegasus {
 
 class ttl_test : public test_util
 {
@@ -52,7 +51,7 @@ public:
     void set_default_ttl_secs(int32_t ttl)
     {
         std::map<std::string, std::string> envs;
-        ASSERT_EQ(ERR_OK, ddl_client_->get_app_envs(client_->get_app_name(), envs));
+        ASSERT_EQ(dsn::ERR_OK, ddl_client_->get_app_envs(client_->get_app_name(), envs));
 
         std::string env = envs[dsn::replica_envs::TABLE_LEVEL_DEFAULT_TTL];
         if ((env.empty() && ttl != 0) || env != std::to_string(ttl)) {
@@ -205,3 +204,5 @@ TEST_F(ttl_test, set_with_default_ttl)
                 default_ttl_secs - sleep_for_expiring - sleep_secs_for_envs_effect,
                 error_allow);
 }
+
+} // namespace pegasus

@@ -42,7 +42,7 @@
 #include "utils/synchronize.h"
 #include "utils/test_macros.h"
 
-using namespace ::pegasus;
+namespace pegasus {
 
 class scan_test : public test_util
 {
@@ -446,3 +446,5 @@ TEST_F(scan_test, ITERATION_TIME_LIMIT)
     NO_FATALS(update_table_env({dsn::replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS},
                                {std::to_string(100)}));
 }
+
+} // namespace pegasus
