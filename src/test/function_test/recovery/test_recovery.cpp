@@ -27,7 +27,6 @@
 #include <thread>
 #include <vector>
 
-#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"

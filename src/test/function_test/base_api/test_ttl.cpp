@@ -33,7 +33,6 @@
 #include "test/function_test/utils/test_util.h"
 #include "utils/error_code.h"
 #include "utils/test_macros.h"
-#include "utils/utils.h"
 
 namespace pegasus {
 

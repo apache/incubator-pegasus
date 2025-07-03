@@ -20,11 +20,15 @@
 #pragma once
 
 #include <gtest/gtest.h>
-#include <stdint.h>
+#include <array>
+#include <cstdint>
+#include <cstdlib>
+#include <ctime>
 #include <map>
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "dsn.layer2_types.h"
@@ -48,10 +52,10 @@ class pegasus_client;
 
 class test_util : public ::testing::Test
 {
-public:
+protected:
     test_util(std::map<std::string, std::string> create_envs = {},
               const std::string &cluster_name = "onebox");
-    virtual ~test_util();
+    ~test_util() override = default;
 
     static void SetUpTestCase();
 
@@ -92,7 +96,27 @@ public:
     void update_table_env(const std::vector<std::string> &keys,
                           const std::vector<std::string> &values) const;
 
-protected:
+    // REQUIRED: `buffer_` has been filled with random chars.
+    [[nodiscard]] std::string random_string() const
+    {
+        const auto pos = random() % buffer_.size();
+        const auto length = random() % buffer_.size() + 1;
+        if (pos + length < buffer_.size()) {
+            return std::string(buffer_.data() + pos, length);
+        }
+
+        return std::string(buffer_.data() + pos, buffer_.size() - pos) +
+               std::string(buffer_.data(), length + pos - buffer_.size());
+    }
+
+    void fill_random()
+    {
+        srandom(static_cast<unsigned int>(time(nullptr)));
+        for (auto &c : buffer_) {
+            c = kCharSet[random() % kCharSet.size()];
+        }
+    }
+
     enum class OperateDataType
     {
         kSet,
@@ -107,6 +131,9 @@ protected:
                       const std::optional<std::string> &value_prefix,
                       int count) const;
 
+    static constexpr std::string_view kCharSet =
+        "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
     const std::string kClusterName;
     const std::string kHashkeyPrefix;
     const std::string kSortkey;
@@ -119,5 +146,7 @@ protected:
     pegasus_client *client_ = nullptr;
     std::vector<dsn::host_port> meta_list_;
     std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client_;
+    std::array<char, 256> buffer_;
 };
+
 } // namespace pegasus

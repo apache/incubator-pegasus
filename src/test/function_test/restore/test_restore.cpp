@@ -30,9 +30,7 @@
 #include <thread>
 #include <vector>
 
-#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
-#include "common/gpid.h"
 #include "gtest/gtest.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/test_util.h"

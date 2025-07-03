@@ -59,26 +59,10 @@ public:
 
     void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0)); }
 
-    // REQUIRED: 'buffer_' has been filled with random chars.
-    const std::string random_string() const
-    {
-        int pos = random() % sizeof(buffer_);
-        unsigned int length = random() % sizeof(buffer_) + 1;
-        if (pos + length < sizeof(buffer_)) {
-            return std::string(buffer_ + pos, length);
-        } else {
-            return std::string(buffer_ + pos, sizeof(buffer_) - pos) +
-                   std::string(buffer_, length + pos - sizeof(buffer_));
-        }
-    }
-
     // REQUIRED: 'expect_kvs_' is empty
     void fill_database()
     {
-        srandom((unsigned int)time(nullptr));
-        for (auto &c : buffer_) {
-            c = CCH[random() % strlen(CCH)];
-        }
+        fill_random();
 
         int i = 0;
         // Fill data with <expected_hash_key_> : <sort_key> -> <value>, there are 1000 sort keys in
@@ -147,17 +131,13 @@ public:
     }
 
 protected:
-    static const char CCH[];
     static constexpr int ttl_seconds = 24 * 60 * 60;
-
-    char buffer_[256];
 
     std::string expected_hash_key_;
     std::map<std::string, std::map<std::string, std::string>> expect_kvs_;
     std::map<std::string, std::map<std::string, std::pair<std::string, uint32_t>>>
         expect_kvs_with_ttl_;
 };
-const char scan_test::CCH[] = "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 TEST_F(scan_test, OVERALL_COUNT_ONLY)
 {

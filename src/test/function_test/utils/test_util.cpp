@@ -50,22 +50,10 @@
 #include "utils/rand.h"
 #include "utils/test_macros.h"
 
-namespace dsn {
-class rpc_address;
-} // namespace dsn
-
-using dsn::partition_configuration;
-using dsn::rpc_address;
-using dsn::replication::replica_helper;
-using dsn::replication::replication_ddl_client;
-using nlohmann::json;
-using std::map;
-using std::string;
-using std::vector;
-
 namespace pegasus {
 
-test_util::test_util(map<string, string> create_envs, const std::string &cluster_name)
+test_util::test_util(std::map<std::string, std::string> create_envs,
+                     const std::string &cluster_name)
     : kOpNames({{test_util::OperateDataType::kSet, "set"},
                 {test_util::OperateDataType::kGet, "get"},
                 {test_util::OperateDataType::kDelete, "delete"},
@@ -79,17 +67,15 @@ test_util::test_util(map<string, string> create_envs, const std::string &cluster
 {
 }
 
-test_util::~test_util() {}
-
 void test_util::SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
 
 void test_util::SetUp()
 {
-    ASSERT_TRUE(replica_helper::load_servers_from_config(
+    ASSERT_TRUE(dsn::replication::replica_helper::load_servers_from_config(
         dsn::PEGASUS_CLUSTER_SECTION_NAME, kClusterName, meta_list_));
     ASSERT_FALSE(meta_list_.empty());
 
-    ddl_client_ = std::make_shared<replication_ddl_client>(meta_list_);
+    ddl_client_ = std::make_shared<dsn::replication::replication_ddl_client>(meta_list_);
     ASSERT_TRUE(ddl_client_ != nullptr);
     ddl_client_->set_max_wait_app_ready_secs(120);
     ddl_client_->set_meta_servers_leader();
@@ -114,7 +100,7 @@ void test_util::SetUp()
     ASSERT_EQ(partition_count_, pcs_.size());
 }
 
-void test_util::run_cmd_from_project_root(const string &cmd)
+void test_util::run_cmd_from_project_root(const std::string &cmd)
 {
     ASSERT_EQ(0, ::chdir(global_env::instance()._pegasus_root.c_str()));
     ASSERT_NO_FATAL_FAILURE(run_cmd_no_error(cmd));
@@ -127,8 +113,8 @@ int test_util::get_alive_replica_server_count()
         dsn::defer([json_filename]() { dsn::utils::filesystem::remove_path(json_filename); });
     run_cmd_from_project_root(fmt::format("echo 'nodes -djo {}' | ./run.sh shell", json_filename));
     std::ifstream f(json_filename);
-    const auto data = json::parse(f);
-    vector<string> rs_addrs;
+    const auto data = nlohmann::json::parse(f);
+    std::vector<std::string> rs_addrs;
     for (const auto &rs : data["details"]) {
         if (rs["status"] == "UNALIVE") {
             continue;
@@ -146,7 +132,7 @@ int test_util::get_alive_replica_server_count()
     return replica_server_count;
 }
 
-int test_util::get_leader_count(const string &table_name, int replica_server_index)
+int test_util::get_leader_count(const std::string &table_name, int replica_server_index)
 {
     const auto json_filename = fmt::format("test_json_file.{}", dsn::rand::next_u32());
     auto cleanup =
@@ -154,11 +140,11 @@ int test_util::get_leader_count(const string &table_name, int replica_server_ind
     run_cmd_from_project_root(
         fmt::format("echo 'app {} -djo {}' | ./run.sh shell", table_name, json_filename));
     std::ifstream f(json_filename);
-    const auto data = json::parse(f);
+    const auto data = nlohmann::json::parse(f);
     int leader_count = 0;
     for (const auto &replica : data["replicas"]) {
         const auto &primary = to_string(replica["primary"]);
-        if (primary.find(fmt::format("3480{}", replica_server_index)) != string::npos) {
+        if (primary.find(fmt::format("3480{}", replica_server_index)) != std::string::npos) {
             leader_count++;
         }
     }
@@ -171,7 +157,7 @@ void test_util::wait_table_healthy(const std::string &table_name) const
         [&] {
             int32_t table_id = 0;
             int32_t pcount = 0;
-            std::vector<partition_configuration> pcs;
+            std::vector<dsn::partition_configuration> pcs;
             ASSERT_EQ(dsn::ERR_OK, ddl_client_->list_app(table_name, table_id, pcount, pcs));
             for (const auto &pc : pcs) {
                 ASSERT_TRUE(pc.primary);

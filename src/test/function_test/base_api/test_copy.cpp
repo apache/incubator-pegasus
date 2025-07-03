@@ -22,7 +22,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <functional>
 #include <map>
 #include <memory>
@@ -71,7 +70,7 @@ protected:
         std::string sort_key;
         std::string value;
         std::map<std::string, std::map<std::string, std::string>> actual_data;
-        for (auto scanner : scanners) {
+        for (auto *scanner : scanners) {
             ASSERT_NE(nullptr, scanner);
             int ret = PERR_OK;
             while (PERR_OK == (ret = (scanner->next(hash_key, sort_key, value)))) {
@@ -99,25 +98,9 @@ protected:
         ASSERT_NE(nullptr, destination_client_);
     }
 
-    // REQUIRED: 'buffer_' has been filled with random chars.
-    const std::string random_string() const
-    {
-        int pos = random() % sizeof(buffer_);
-        unsigned int length = random() % sizeof(buffer_) + 1;
-        if (pos + length < sizeof(buffer_)) {
-            return std::string(buffer_ + pos, length);
-        } else {
-            return std::string(buffer_ + pos, sizeof(buffer_) - pos) +
-                   std::string(buffer_, length + pos - sizeof(buffer_));
-        }
-    }
-
     void fill_data()
     {
-        srandom((unsigned int)time(nullptr));
-        for (auto &c : buffer_) {
-            c = CCH[random() % strlen(CCH)];
-        }
+        fill_random();
 
         std::string hash_key;
         std::string sort_key;
@@ -142,8 +125,7 @@ protected:
         }
     }
 
-    static const char CCH[];
-    const std::string empty_hash_key = "";
+    const std::string empty_hash_key;
     const std::string source_app_name = "copy_data_source_table";
     const std::string destination_app_name = "copy_data_destination_table";
 
@@ -152,14 +134,11 @@ protected:
     const int max_multi_set_concurrency = 20;
     const int32_t default_partitions = 4;
 
-    char buffer_[256];
     std::map<std::string, std::map<std::string, std::string>> expect_data_;
 
-    pegasus_client *source_client_;
-    pegasus_client *destination_client_;
+    pegasus_client *source_client_{nullptr};
+    pegasus_client *destination_client_{nullptr};
 };
-const char copy_data_test::CCH[] =
-    "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
 {
@@ -173,7 +152,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     LOG_INFO("open source app scanner succeed, partition_count = {}", raw_scanners.size());
 
     std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
-    for (auto raw_scanner : raw_scanners) {
+    for (auto *raw_scanner : raw_scanners) {
         ASSERT_NE(nullptr, raw_scanner);
         scanners.push_back(raw_scanner->get_smart_wrapper());
     }
@@ -186,15 +165,15 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     std::vector<std::unique_ptr<scan_data_context>> contexts;
 
     for (int i = 0; i < split_count; i++) {
-        scan_data_context *context = new scan_data_context(SCAN_AND_MULTI_SET,
-                                                           i,
-                                                           max_batch_count,
-                                                           timeout_ms,
-                                                           scanners[i],
-                                                           destination_client_,
-                                                           nullptr,
-                                                           &error_occurred,
-                                                           max_multi_set_concurrency);
+        auto *context = new scan_data_context(SCAN_AND_MULTI_SET,
+                                              i,
+                                              max_batch_count,
+                                              timeout_ms,
+                                              scanners[i],
+                                              destination_client_,
+                                              nullptr,
+                                              &error_occurred,
+                                              max_multi_set_concurrency);
         contexts.emplace_back(context);
         dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_multi_data_next, context));
     }
