@@ -36,7 +36,6 @@
 #include "base/pegasus_value_schema.h"
 #include "block_service/local/local_service.h"
 #include "bulk_load_types.h"
-#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/bulk_load_common.h"
 #include "common/replica_envs.h"
@@ -54,7 +53,6 @@
 #include "utils/flags.h"
 #include "utils/load_dump_object.h"
 #include "utils/test_macros.h"
-#include "utils/utils.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
