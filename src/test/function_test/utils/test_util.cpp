@@ -52,17 +52,16 @@
 
 namespace pegasus {
 
-test_util::test_util(const std::map<std::string, std::string> &create_envs,
-                     const std::string &cluster_name)
+test_util::test_util(std::map<std::string, std::string> create_envs, std::string cluster_name)
     : kOpNames({{test_util::OperateDataType::kSet, "set"},
                 {test_util::OperateDataType::kGet, "get"},
                 {test_util::OperateDataType::kDelete, "delete"},
                 {test_util::OperateDataType::kCheckNotFound, "check not found"}}),
-      kClusterName(cluster_name),
+      kClusterName(std::move(cluster_name)),
       kHashkeyPrefix("hashkey_"),
       kSortkey("sortkey"),
       kValuePrefix("value_"),
-      kCreateEnvs(create_envs),
+      kCreateEnvs(std::move(create_envs)),
       table_name_("temp")
 {
 }

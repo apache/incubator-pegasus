@@ -57,8 +57,7 @@ public:
     ~test_util() override = default;
 
 protected:
-    test_util(const std::map<std::string, std::string> &create_envs,
-              const std::string &cluster_name);
+    test_util(std::map<std::string, std::string> create_envs, std::string cluster_name);
     explicit test_util(const std::map<std::string, std::string> &create_envs);
     test_util();
 
