@@ -160,14 +160,18 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         int read_unhealthy = 0;
         for (const auto &pc : response.partitions) {
             int replica_count = 0;
-            if (pc.hp_primary) {
+            host_port primary;
+            GET_HOST_PORT(pc, primary, primary);
+            std::vector<host_port> secondaries;
+            GET_HOST_PORTS(pc, secondaries, secondaries);
+            if (primary) {
                 replica_count++;
-                node_stat[pc.hp_primary].first++;
+                node_stat[primary].first++;
                 total_prim_count++;
             }
-            replica_count += pc.hp_secondaries.size();
-            total_sec_count += pc.hp_secondaries.size();
-            if (pc.hp_primary) {
+            replica_count += secondaries.size();
+            total_sec_count += secondaries.size();
+            if (primary) {
                 if (replica_count >= pc.max_replica_count) {
                     fully_healthy++;
                 } else if (replica_count < 2) {
@@ -180,9 +184,9 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
             tp_details.add_row(pc.pid.get_partition_index());
             tp_details.append_data(pc.ballot);
             tp_details.append_data(fmt::format("{}/{}", replica_count, pc.max_replica_count));
-            tp_details.append_data(pc.hp_primary ? pc.hp_primary.to_string() : "-");
-            tp_details.append_data(fmt::format("[{}]", fmt::join(pc.hp_secondaries, ",")));
-            for (const auto &secondary : pc.hp_secondaries) {
+            tp_details.append_data(primary ? primary.to_string() : "-");
+            tp_details.append_data(fmt::format("[{}]", fmt::join(secondaries, ",")));
+            for (const auto &secondary : secondaries) {
                 node_stat[secondary].second++;
             }
         }
@@ -327,11 +331,15 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             int read_unhealthy = 0;
             for (const auto &pc : response.partitions) {
                 int replica_count = 0;
-                if (pc.hp_primary) {
+                host_port primary;
+                GET_HOST_PORT(pc, primary, primary);
+                std::vector<host_port> secondaries;
+                GET_HOST_PORTS(pc, secondaries, secondaries);
+                if (primary) {
                     replica_count++;
                 }
-                replica_count += pc.hp_secondaries.size();
-                if (pc.hp_primary) {
+                replica_count += secondaries.size();
+                if (primary) {
                     if (replica_count >= pc.max_replica_count) {
                         fully_healthy++;
                     } else if (replica_count < 2) {
@@ -416,13 +424,17 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
             CHECK_EQ(app.partition_count, response_app.partition_count);
 
             for (const auto &pc : response_app.partitions) {
-                if (pc.hp_primary) {
-                    auto find = tmp_map.find(pc.hp_primary);
+                host_port primary;
+                GET_HOST_PORT(pc, primary, primary);
+                std::vector<host_port> secondaries;
+                GET_HOST_PORTS(pc, secondaries, secondaries);
+                if (primary) {
+                    auto find = tmp_map.find(primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (const auto &secondary : pc.hp_secondaries) {
+                for (const auto &secondary : secondaries) {
                     auto find = tmp_map.find(secondary);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;

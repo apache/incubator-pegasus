@@ -372,7 +372,9 @@ bool bulk_load_service::check_partition_status(
     }
 
     pc = app->pcs[pid.get_partition_index()];
-    if (!pc.hp_primary) {
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    if (!primary) {
         LOG_WARNING("app({}) partition({}) primary is invalid, try it later", app_name, pid);
         tasking::enqueue(
             LPC_META_STATE_NORMAL,
@@ -383,7 +385,9 @@ bool bulk_load_service::check_partition_status(
         return false;
     }
 
-    if (pc.hp_secondaries.size() < pc.max_replica_count - 1) {
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    if (secondaries.size() < pc.max_replica_count - 1) {
         bulk_load_status::type p_status;
         {
             zauto_read_lock l(_lock);
@@ -435,7 +439,7 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
         const app_bulk_load_info &ainfo = _app_bulk_load_info[pid.get_app_id()];
         req->pid = pid;
         req->app_name = app_name;
-        SET_IP_AND_HOST_PORT(*req, primary, pc.primary, pc.hp_primary);
+        SET_OBJ_IP_AND_HOST_PORT(*req, primary, pc, primary);
         req->remote_provider_name = ainfo.file_provider_type;
         req->cluster_name = ainfo.cluster_name;
         req->meta_bulk_load_status = get_partition_bulk_load_status_unlocked(pid);
@@ -1206,8 +1210,12 @@ bool bulk_load_service::check_ever_ingestion_succeed(const partition_configurati
     }
 
     std::vector<host_port> current_nodes;
-    current_nodes.emplace_back(pc.hp_primary);
-    for (const auto &secondary : pc.hp_secondaries) {
+    dsn::host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    current_nodes.emplace_back(primary);
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    for (const auto &secondary : secondaries) {
         current_nodes.emplace_back(secondary);
     }
 
@@ -1276,13 +1284,13 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
-    const auto &primary = pc.hp_primary;
-    ballot meta_ballot = pc.ballot;
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
     tasking::enqueue(
         LPC_BULK_LOAD_INGESTION,
         _meta_svc->tracker(),
         std::bind(
-            &bulk_load_service::send_ingestion_request, this, app_name, pid, primary, meta_ballot),
+            &bulk_load_service::send_ingestion_request, this, app_name, pid, primary, pc.ballot),
         0,
         std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
 }

@@ -29,6 +29,8 @@
 #include "dsn.layer2_types.h"
 #include "partition_kill_testor.h"
 #include "remote_cmd/remote_command.h"
+#include "rpc/dns_resolver.h"
+#include "rpc/rpc_host_port.h"
 #include "task/task.h"
 #include "test/kill_test/kill_testor.h"
 #include "utils/autoref_ptr.h"
@@ -88,11 +90,14 @@ void partition_kill_testor::run()
                 results[i].second = err.to_string();
             }
         };
-        tasks[i] = dsn::dist::cmd::async_call_remote(pc.primary,
-                                                     "replica.kill_partition",
-                                                     arguments,
-                                                     callback,
-                                                     std::chrono::milliseconds(5000));
+        dsn::host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
+        tasks[i] = dsn::dist::cmd::async_call_remote(
+            dsn::dns_resolver::instance().resolve_address(primary),
+            "replica.kill_partition",
+            arguments,
+            callback,
+            std::chrono::milliseconds(5000));
     }
 
     for (int i = 0; i < tasks.size(); ++i) {
