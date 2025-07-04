@@ -33,17 +33,18 @@
 #include "meta_test_base.h"
 #include "metadata_types.h"
 #include "utils/error_code.h"
+#include "utils/test_macros.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
+
 class meta_app_compaction_test : public meta_test_base
 {
-public:
-    meta_app_compaction_test() {}
+protected:
+    meta_app_compaction_test() = default;
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
         prepare();
     }
 
@@ -149,7 +150,6 @@ public:
         return rpc.response();
     }
 
-public:
     std::string APP_NAME = "manual_compaction_test";
     int32_t PARTITION_COUNT = 4;
 };
@@ -253,5 +253,4 @@ TEST_F(meta_app_compaction_test, test_query_compaction)
     }
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

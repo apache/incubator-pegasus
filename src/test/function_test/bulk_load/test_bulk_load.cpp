@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <fmt/core.h>
 #include <rocksdb/env.h>
 #include <rocksdb/options.h>
@@ -35,7 +36,6 @@
 #include "base/pegasus_value_schema.h"
 #include "block_service/local/local_service.h"
 #include "bulk_load_types.h"
-#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
 #include "common/bulk_load_common.h"
 #include "common/replica_envs.h"
@@ -53,20 +53,16 @@
 #include "utils/flags.h"
 #include "utils/load_dump_object.h"
 #include "utils/test_macros.h"
-#include "utils/utils.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
-using namespace ::dsn;
-using namespace ::dsn::replication;
-using namespace pegasus;
-using std::map;
-using std::string;
+namespace pegasus {
 
 class bulk_load_test : public test_util
 {
 protected:
-    bulk_load_test() : test_util(map<string, string>({{"rocksdb.allow_ingest_behind", "true"}}))
+    bulk_load_test()
+        : test_util(std::map<std::string, std::string>({{"rocksdb.allow_ingest_behind", "true"}}))
     {
         TRICKY_CODE_TO_AVOID_LINK_ERROR;
         bulk_load_local_app_root_ = fmt::format("{}/{}/{}/{}/{}",
@@ -79,26 +75,26 @@ protected:
 
     void SetUp() override
     {
-        test_util::SetUp();
+        SET_UP_BASE(test_util);
         NO_FATALS(generate_bulk_load_files());
     }
 
     void TearDown() override
     {
-        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(table_name_, 0));
+        ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0));
         NO_FATALS(run_cmd_from_project_root("rm -rf " + bulk_load_local_app_root_));
     }
 
     // Generate the '.xxx.meta' file according to the 'xxx' file
     // in path 'file_path'.
-    void generate_metadata_file(const std::string &file_path)
+    static void generate_metadata_file(const std::string &file_path)
     {
-        dist::block_service::file_metadata fm;
+        dsn::dist::block_service::file_metadata fm;
         ASSERT_TRUE(dsn::utils::filesystem::file_size(
             file_path, dsn::utils::FileDataType::kSensitive, fm.size));
-        ASSERT_EQ(ERR_OK, dsn::utils::filesystem::md5sum(file_path, fm.md5));
-        auto metadata_file_path = dist::block_service::local_service::get_metafile(file_path);
-        ASSERT_EQ(ERR_OK, dsn::utils::dump_njobj_to_file(fm, metadata_file_path));
+        ASSERT_EQ(dsn::ERR_OK, dsn::utils::filesystem::md5sum(file_path, fm.md5));
+        auto metadata_file_path = dsn::dist::block_service::local_service::get_metafile(file_path);
+        ASSERT_EQ(dsn::ERR_OK, dsn::utils::dump_njobj_to_file(fm, metadata_file_path));
     }
 
     void generate_bulk_load_files()
@@ -152,15 +148,15 @@ protected:
                                                              /* recursive */ false));
             ASSERT_FALSE(src_files.empty());
 
-            bulk_load_metadata blm;
+            dsn::replication::bulk_load_metadata blm;
             for (const auto &src_file : src_files) {
                 // Only .sst files are needed.
-                if (src_file.find(".sst") == std::string::npos) {
+                if (!boost::algorithm::ends_with(src_file, ".sst")) {
                     continue;
                 }
 
                 // Get file name.
-                file_meta fm;
+                dsn::replication::file_meta fm;
                 fm.name = dsn::utils::filesystem::get_file_name(src_file);
 
                 // Get file size.
@@ -182,8 +178,8 @@ protected:
 
             // Generate 'bulk_load_metadata' file for each partition.
             std::string blm_path = dsn::utils::filesystem::path_combine(
-                partition_path, bulk_load_constant::BULK_LOAD_METADATA);
-            ASSERT_EQ(ERR_OK, dsn::utils::dump_rjobj_to_file(blm, blm_path));
+                partition_path, dsn::replication::bulk_load_constant::BULK_LOAD_METADATA);
+            ASSERT_EQ(dsn::ERR_OK, dsn::utils::dump_rjobj_to_file(blm, blm_path));
 
             // Generate '.bulk_load_metadata.meta' file of 'bulk_load_metadata'.
             NO_FATALS(generate_metadata_file(blm_path));
@@ -191,10 +187,10 @@ protected:
 
         // Generate 'bulk_load_info' file for this table.
         auto bulk_load_info_path = fmt::format("{}/bulk_load_info", bulk_load_local_app_root_);
-        ASSERT_EQ(
-            ERR_OK,
-            dsn::utils::dump_rjobj_to_file(bulk_load_info(table_id_, table_name_, partition_count_),
-                                           bulk_load_info_path));
+        ASSERT_EQ(dsn::ERR_OK,
+                  dsn::utils::dump_rjobj_to_file(
+                      dsn::replication::bulk_load_info(table_id_, table_name_, partition_count_),
+                      bulk_load_info_path));
 
         // Generate '.bulk_load_info.meta' file of 'bulk_load_info'.
         NO_FATALS(generate_metadata_file(bulk_load_info_path));
@@ -210,7 +206,7 @@ protected:
         }
     }
 
-    error_code start_bulk_load(bool ingest_behind)
+    dsn::error_code start_bulk_load(bool ingest_behind)
     {
         return ddl_client_
             ->start_bulk_load(table_name_, kClusterName, "local_service", kBulkLoad, ingest_behind)
@@ -218,19 +214,19 @@ protected:
             .err;
     }
 
-    void remove_file(const string &file_path)
+    static void remove_file(const std::string &file_path)
     {
         NO_FATALS(run_cmd_from_project_root("rm " + file_path));
     }
 
-    bulk_load_status::type wait_bulk_load_finish(int64_t remain_seconds)
+    dsn::replication::bulk_load_status::type wait_bulk_load_finish(int64_t remain_seconds)
     {
         int64_t sleep_time = 5;
-        auto err = ERR_OK;
+        auto err = dsn::ERR_OK;
 
-        auto last_status = bulk_load_status::BLS_INVALID;
+        auto last_status = dsn::replication::bulk_load_status::BLS_INVALID;
         // when bulk load end, err will be ERR_INVALID_STATE
-        while (remain_seconds > 0 && err == ERR_OK) {
+        while (remain_seconds > 0 && err == dsn::ERR_OK) {
             sleep_time = std::min(sleep_time, remain_seconds);
             remain_seconds -= sleep_time;
             fmt::print("sleep {}s to query bulk status\n", sleep_time);
@@ -238,7 +234,7 @@ protected:
 
             auto resp = ddl_client_->query_bulk_load(table_name_).get_value();
             err = resp.err;
-            if (err == ERR_OK) {
+            if (err == dsn::ERR_OK) {
                 last_status = resp.app_status;
             }
         }
@@ -260,8 +256,8 @@ protected:
         // <kHashkeyPrefix>${i} : kSortkey -> <kBulkLoadValue>${i}, i=[0, kBulkLoadItemCount]
         // <kNonOverlapHashKeyPrefix>${i} : kSortkey -> <kBulkLoadValue>${i}, i=[0,
         // kBulkLoadItemCount]
-        ASSERT_EQ(ERR_OK, start_bulk_load(ingest_behind));
-        ASSERT_EQ(bulk_load_status::BLS_SUCCEED, wait_bulk_load_finish(300));
+        ASSERT_EQ(dsn::ERR_OK, start_bulk_load(ingest_behind));
+        ASSERT_EQ(dsn::replication::bulk_load_status::BLS_SUCCEED, wait_bulk_load_finish(300));
 
         // 3. Verify the data.
         fmt::print("Start to verify data...\n");
@@ -294,21 +290,20 @@ protected:
         NO_FATALS(check_not_found(table_name_, kHashkeyPrefix, 15));
     }
 
-protected:
-    string bulk_load_local_app_root_;
-    const string kLocalServiceRoot = "onebox/block_service/local_service";
-    const string kBulkLoad = "bulk_load_root";
+    std::string bulk_load_local_app_root_;
+    const std::string kLocalServiceRoot = "onebox/block_service/local_service";
+    const std::string kBulkLoad = "bulk_load_root";
 
     const int32_t kBulkLoadItemCount = 1000;
-    const string kNonOverlapHashKeyPrefix = "hashkey2";
-    const string kBulkLoadValue = "bulkLoadValue";
+    const std::string kNonOverlapHashKeyPrefix = "hashkey2";
+    const std::string kBulkLoadValue = "bulkLoadValue";
 };
 
 // Test bulk load failed because the 'bulk_load_info' file is missing
 TEST_F(bulk_load_test, missing_bulk_load_info)
 {
     NO_FATALS(remove_file(bulk_load_local_app_root_ + "/bulk_load_info"));
-    ASSERT_EQ(ERR_OBJECT_NOT_FOUND, start_bulk_load(/* ingest_behind */ false));
+    ASSERT_EQ(dsn::ERR_OBJECT_NOT_FOUND, start_bulk_load(/* ingest_behind */ false));
 }
 
 // Test bulk load failed because the 'bulk_load_info' file is inconsistent with the actual app info.
@@ -317,17 +312,17 @@ TEST_F(bulk_load_test, inconsistent_bulk_load_info)
     std::string pegasus_root = global_env::instance()._pegasus_root;
     // Only 'app_id' and 'partition_count' will be checked in Pegasus server, so just inject these
     // kind of inconsistencies.
-    bulk_load_info tests[] = {{table_id_ + 1, table_name_, partition_count_},
-                              {table_id_, table_name_, partition_count_ * 2}};
+    dsn::replication::bulk_load_info tests[] = {{table_id_ + 1, table_name_, partition_count_},
+                                                {table_id_, table_name_, partition_count_ * 2}};
     auto bulk_load_info_path = fmt::format("{}/bulk_load_info", bulk_load_local_app_root_);
     for (const auto &test : tests) {
         // Generate inconsistent 'bulk_load_info'.
-        ASSERT_EQ(ERR_OK, dsn::utils::dump_rjobj_to_file(test, bulk_load_info_path));
+        ASSERT_EQ(dsn::ERR_OK, dsn::utils::dump_rjobj_to_file(test, bulk_load_info_path));
 
         // Generate '.bulk_load_info.meta'.
         NO_FATALS(generate_metadata_file(bulk_load_info_path));
 
-        ASSERT_EQ(ERR_INCONSISTENT_STATE, start_bulk_load(/* ingest_behind */ false))
+        ASSERT_EQ(dsn::ERR_INCONSISTENT_STATE, start_bulk_load(/* ingest_behind */ false))
             << test.app_id << "," << test.app_name << "," << test.partition_count;
     }
 }
@@ -336,15 +331,15 @@ TEST_F(bulk_load_test, inconsistent_bulk_load_info)
 TEST_F(bulk_load_test, missing_p0_bulk_load_metadata)
 {
     NO_FATALS(remove_file(bulk_load_local_app_root_ + "/0/bulk_load_metadata"));
-    ASSERT_EQ(ERR_OK, start_bulk_load(/* ingest_behind */ false));
-    ASSERT_EQ(bulk_load_status::BLS_FAILED, wait_bulk_load_finish(300));
+    ASSERT_EQ(dsn::ERR_OK, start_bulk_load(/* ingest_behind */ false));
+    ASSERT_EQ(dsn::replication::bulk_load_status::BLS_FAILED, wait_bulk_load_finish(300));
 }
 
 // Test bulk load failed because the allow_ingest_behind config is inconsistent.
 TEST_F(bulk_load_test, allow_ingest_behind_inconsistent)
 {
     NO_FATALS(update_table_env({dsn::replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND}, {"false"}));
-    ASSERT_EQ(ERR_INCONSISTENT_STATE, start_bulk_load(/* ingest_behind */ true));
+    ASSERT_EQ(dsn::ERR_INCONSISTENT_STATE, start_bulk_load(/* ingest_behind */ true));
 }
 
 // Test normal bulk load, old data will be overwritten by bulk load data.
@@ -357,3 +352,5 @@ TEST_F(bulk_load_test, allow_ingest_behind)
     NO_FATALS(update_table_env({dsn::replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND}, {"true"}));
     check_bulk_load(/* ingest_behind */ true);
 }
+
+} // namespace pegasus

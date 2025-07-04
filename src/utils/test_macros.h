@@ -54,3 +54,14 @@
 // Assert that `str` should not end with the given `suffix`.
 #define ASSERT_STR_NOT_ENDSWITH(str, suffix)                                                       \
     ASSERT_THAT(str, testing::Not(testing::EndsWith(suffix)))
+
+// If a derived test fixture's SetUp() depends on the result of its base fixture's SetUp(), it
+// needs to set up the base fixture by SET_UP_BASE() macro where `base` is the name of the base
+// class, since once ASSERT_* macros failed in SetUp() of the base fixture, SetUp() of the derived
+// fixture would continue to run, leading to failures such as segmentation fault if some members
+// of the base fixture have not been initialized yet.
+//
+// Also see https://google.github.io/googletest/faq.html#can-i-derive-a-test-fixture-from-another.
+#define SET_UP_BASE(base)                                                                          \
+    base::SetUp();                                                                                 \
+    NO_PENDING_FATALS()

@@ -40,6 +40,7 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/string_conv.h"
+#include "utils/test_macros.h"
 
 // IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_FailOnGet_Test
 // IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_FailOnPut_Test
@@ -137,7 +138,7 @@ class IncrTest : public PegasusWriteServiceImplTest
 protected:
     void SetUp() override
     {
-        PegasusWriteServiceImplTest::SetUp();
+        SET_UP_BASE(PegasusWriteServiceImplTest);
         generate_key("incr_hash_key", "incr_sort_key");
         req.expire_ts_seconds = 0;
     }
