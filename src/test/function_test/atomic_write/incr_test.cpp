@@ -20,8 +20,10 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <vector>
 
 #include "atomic_write_test.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
 
