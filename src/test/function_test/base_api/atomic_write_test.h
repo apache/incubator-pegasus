@@ -19,19 +19,13 @@
 
 #include <gtest/gtest.h>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
+#include "client/replication_ddl_client.h"
 #include "rpc/rpc_host_port.h"
 #include "utils/ports.h"
-
-namespace dsn {
-namespace replication {
-
-class replication_ddl_client;
-
-} // namespace replication
-} // namespace dsn
 
 namespace pegasus {
 
@@ -48,14 +42,17 @@ public:
     virtual ~AtomicWriteTest() = default;
 
 protected:
-    explicit AtomicWriteTest(const std::string &table_name);
+    explicit AtomicWriteTest(const std::string &table_name_prefix);
 
     static void SetUpTestCase();
 
     void SetUp() override;
+    void TearDown() override;
 
     static const std::string kClusterName;
     static const int32_t kPartitionCount;
+
+    const std::string _table_name_prefix;
 
     std::vector<dsn::host_port> _meta_list;
     std::unique_ptr<dsn::replication::replication_ddl_client> _ddl_client;
