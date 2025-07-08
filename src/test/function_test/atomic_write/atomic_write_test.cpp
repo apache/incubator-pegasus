@@ -15,12 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "atomic_write_test.h"
-
 #include <fmt/core.h>
+#include <utility>
 
+#include "atomic_write_test.h"
 #include "common/common.h"
 #include "common/replication_other_types.h"
+#include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "utils/error_code.h"
 
@@ -29,12 +30,12 @@ namespace pegasus {
 const std::string AtomicWriteTest::kClusterName("onebox");
 const int32_t AtomicWriteTest::kPartitionCount{8};
 
-AtomicWriteTest::AtomicWriteTest(const std::string &table_name_prefix)
-    : _table_name_prefix(table_name_prefix)
+AtomicWriteTest::AtomicWriteTest(std::string table_name_prefix)
+    : _table_name_prefix(std::move(table_name_prefix))
 {
 }
 
-void AtomicWriteTest::SetUpTestCase()
+void AtomicWriteTest::SetUpTestSuite()
 {
     ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
 }

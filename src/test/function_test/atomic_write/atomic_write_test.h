@@ -39,12 +39,12 @@ struct atomic_write_case
 class AtomicWriteTest : public testing::TestWithParam<atomic_write_case>
 {
 public:
-    virtual ~AtomicWriteTest() = default;
+    ~AtomicWriteTest() override = default;
 
 protected:
-    explicit AtomicWriteTest(const std::string &table_name_prefix);
+    explicit AtomicWriteTest(std::string table_name_prefix);
 
-    static void SetUpTestCase();
+    static void SetUpTestSuite();
 
     void SetUp() override;
     void TearDown() override;
