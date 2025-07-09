@@ -62,7 +62,7 @@ protected:
     void SetUp() override
     {
         TRICKY_CODE_TO_AVOID_LINK_ERROR;
-        test_util::SetUp();
+        SET_UP_BASE(test_util);
 
         NO_FATALS(run_cmd_from_project_root(
             "curl 'localhost:34101/updateConfig?enable_detect_hotkey=true'"));

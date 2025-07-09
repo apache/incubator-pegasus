@@ -48,16 +48,16 @@
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
+#include "utils/test_macros.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class meta_http_service_test : public meta_test_base
 {
 public:
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
         FLAGS_enable_http_server = false; // disable http server
         _mhs = std::make_unique<meta_http_service>(_ms.get());
         create_app(test_app);
@@ -109,7 +109,7 @@ class meta_backup_test_base : public meta_test_base
 public:
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
 
         _ms->_backup_handler = std::make_shared<backup_service>(
             _ms.get(),
@@ -219,7 +219,7 @@ class meta_bulk_load_http_test : public meta_test_base
 public:
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
         FLAGS_enable_http_server = false;
         _mhs = std::make_unique<meta_http_service>(_ms.get());
         create_app(APP_NAME);
@@ -418,5 +418,4 @@ TEST_F(meta_bulk_load_http_test, update_scenario_test)
     }
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

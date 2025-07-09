@@ -30,9 +30,7 @@
 #include <thread>
 #include <vector>
 
-#include "client/partition_resolver.h"
 #include "client/replication_ddl_client.h"
-#include "common/gpid.h"
 #include "gtest/gtest.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/test_util.h"
@@ -43,16 +41,14 @@
 #include "utils/process_utils.h"
 #include "utils/test_macros.h"
 
-using namespace ::dsn;
-using namespace ::dsn::replication;
-using namespace pegasus;
+namespace pegasus {
 
 class restore_test : public test_util
 {
-public:
+protected:
     void SetUp() override
     {
-        test_util::SetUp();
+        SET_UP_BASE(test_util);
 
         backup_path_ = fmt::format("onebox/block_service/local_service/{}", kClusterName);
 
@@ -60,16 +56,16 @@ public:
 
         std::vector<int32_t> app_ids({table_id_});
         ASSERT_EQ(
-            ERR_OK,
+            dsn::ERR_OK,
             ddl_client_->add_backup_policy("policy_1", "local_service", app_ids, 86400, 6, "24:0"));
     }
 
-    void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client_->drop_app(table_name_, 0)); }
+    void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(table_name_, 0)); }
 
     void restore()
     {
         std::this_thread::sleep_for(std::chrono::seconds(30));
-        ASSERT_EQ(ERR_OK,
+        ASSERT_EQ(dsn::ERR_OK,
                   ddl_client_->do_restore("local_service",
                                           kClusterName,
                                           /* policy_name */ "",
@@ -123,11 +119,10 @@ public:
         }
     }
 
-public:
     const int kTestCount = 10000;
     const std::string kNewTableName = "backup_test_new";
 
-    int64_t first_backup_timestamp_;
+    int64_t first_backup_timestamp_{0};
     std::string backup_path_;
 };
 
@@ -142,3 +137,5 @@ TEST_F(restore_test, restore)
     NO_FATALS(verify_data(kNewTableName, kTestCount));
     fmt::print("restore passed...\n");
 }
+
+} // namespace pegasus

@@ -32,13 +32,12 @@
 #include "rpc/rpc_host_port.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class node_context_test : public meta_test_base
 {
-public:
-    void SetUp()
+protected:
+    void SetUp() override
     {
         _context = ingestion_context::node_context();
         _context.node_ingesting_count = 0;
@@ -47,7 +46,7 @@ public:
         FLAGS_bulk_load_node_min_disk_count = 1;
     }
 
-    void TearDown()
+    void TearDown() override
     {
         _context.disk_ingesting_counts.clear();
         _context.node_ingesting_count = 0;
@@ -89,7 +88,6 @@ public:
 
     bool check_if_add() { return _context.check_if_add(TAG); }
 
-public:
     ingestion_context::node_context _context;
     const host_port NODE = host_port("localhost", 10086);
     const std::string TAG = "default";
@@ -161,14 +159,14 @@ TEST_F(node_context_test, check_if_add_test)
 
 class ingestion_context_test : public meta_test_base
 {
-public:
+protected:
     /// mock app and node info context
     ///  node1    node2    node3    node4
     /// p0(tag1) s0(tag1) s0(tag2)
     /// s1(tag1) s1(tag2)          p1(tag2)
     /// s2(tag2)          p2(tag1) s2(tag1)
     ///          p3(tag1) s3(tag1) s3(tag2)
-    void SetUp()
+    void SetUp() override
     {
         _context = std::make_unique<ingestion_context>();
         add_node_context({NODE1, NODE2, NODE3, NODE4});
@@ -177,9 +175,9 @@ public:
         FLAGS_bulk_load_node_max_ingesting_count = MAX_NODE_COUNT;
     }
 
-    void TearDown() { _context->reset_all(); }
+    void TearDown() override { _context->reset_all(); }
 
-    void update_max_node_count(const uint32_t max_node_count)
+    static void update_max_node_count(const uint32_t max_node_count)
     {
         FLAGS_bulk_load_node_max_ingesting_count = max_node_count;
     }
@@ -294,7 +292,6 @@ public:
                get_disk_running_count(node, TAG2) == expected_disk2_count;
     }
 
-public:
     std::unique_ptr<ingestion_context> _context;
     std::shared_ptr<app_state> _app;
     const uint32_t APP_ID = 1;
@@ -380,5 +377,4 @@ TEST_F(ingestion_context_test, operation_test)
     ASSERT_EQ(get_app_ingesting_count(), 0);
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
