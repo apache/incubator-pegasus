@@ -2052,9 +2052,8 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     request.type = config_type::CT_DROP_PARTITION;
     SET_OBJ_IP_AND_HOST_PORT(request, node, pc, primary);
 
-    request.config = pc;
-    maintain_drops(request, true);
-    maintain_drops(request, false);
+    maintain_drops(request, pc, true);
+    maintain_drops(request, pc, false);
 
     RESET_IP_AND_HOST_PORT(request.config, primary);
     CLEAR_IP_AND_HOST_PORT(request.config, secondaries);
@@ -2116,7 +2115,7 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
     SET_OBJ_IP_AND_HOST_PORT(request, node, pc, primary);
     request.config.ballot++;
     RESET_IP_AND_HOST_PORT(request.config, primary);
-    maintain_drops(request, false);
+    maintain_drops(request, pc, false);
 
     cc.stage = config_status::pending_remote_sync;
     cc.pending_sync_request = req;
@@ -2253,7 +2252,12 @@ void server_state::on_update_configuration(
         msg->release_ref();
         return;
     } else {
-        maintain_drops(*cfg_request, false);
+        partition_configuration pc;
+        pc.hp_primary = cfg_request->hp_node;
+        pc.primary = cfg_request->node;
+        pc.hp_secondaries = cfg_request->config.hp_secondaries;
+        pc.secondaries = cfg_request->config.secondaries;
+        maintain_drops(*cfg_request, pc, false);
     }
 
     if (response.err != ERR_IO_PENDING) {

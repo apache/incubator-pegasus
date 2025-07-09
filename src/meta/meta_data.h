@@ -545,9 +545,8 @@ inline int count_partitions(const app_mapper &apps)
 
 void when_update_replicas(config_type::type t, const std::function<void(bool)> &func);
 
-inline void maintain_drops(/*inout*/ configuration_update_request &request, bool is_group_check)
+inline void maintain_drops(/*inout*/ configuration_update_request &request, partition_configuration &pc, bool is_group_check)
 {
-    auto &pc = request.config;
     auto t = request.type;
     auto make_proc = [](auto &drops, const auto &node) {
         return [&drops, &node](bool is_adding) {
@@ -570,19 +569,19 @@ inline void maintain_drops(/*inout*/ configuration_update_request &request, bool
 
     if (is_group_check) {
         for (const auto &secondary : pc.hp_secondaries) {
-            when_update_replicas(t, make_proc(pc.hp_last_drops, secondary));
+            when_update_replicas(t, make_proc(request.config.hp_last_drops, secondary));
         }
 
         for (const auto &secondary : pc.secondaries) {
-            when_update_replicas(t, make_proc(pc.last_drops, secondary));
+            when_update_replicas(t, make_proc(request.config.last_drops, secondary));
         }
     } else {
         if (pc.hp_primary) {
-            when_update_replicas(t, make_proc(pc.hp_last_drops, pc.hp_primary));
+            when_update_replicas(t, make_proc(request.config.hp_last_drops, pc.hp_primary));
         }
 
         if (pc.primary) {
-            when_update_replicas(t, make_proc(pc.last_drops, pc.primary));
+            when_update_replicas(t, make_proc(request.config.last_drops, pc.primary));
         }
     }
 }
