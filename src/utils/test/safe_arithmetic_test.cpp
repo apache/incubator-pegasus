@@ -20,9 +20,7 @@
 
 namespace dsn {
 
-template <typename TInt,
-              std::enable_if_t<std::is_integral<TInt>,
-                               int> = 0>
+template <typename TInt, std::enable_if_t<std::is_integral_v<TInt>, int> = 0>
 struct safe_int_add_case
 {
     TInt a;
@@ -31,15 +29,12 @@ struct safe_int_add_case
     bool expected_safe;
 };
 
-template <typename TInt,
-              std::enable_if_t<std::is_integral<TInt>,
-                               int> = 0>
+template <typename TInt, std::enable_if_t<std::is_integral_v<TInt>, int> = 0>
 class SafeIntAddTest : public testing::TestWithParam<safe_int_add_case<TInt>>
 {
 protected:
-    void test_safe_add() const {
-        const auto &test_case = GetParam();
-
+    void test_safe_add(const safe_int_add_case<TInt> &test_case) const
+    {
         TInt actual_result{0};
         ASSERT_EQ(test_case.expected_safe, safe_add(test_case.a, test_case.b, actual_result));
 
@@ -53,12 +48,9 @@ protected:
 
 class SafeSignedInt64AddTest : public SafeIntAddTest<int64_t>
 {
-
 };
 
-TEST_P(SafeSignedInt64AddTest, SafeAdd) {
-    test_safe_add();
-}
+TEST_P(SafeSignedInt64AddTest, SafeAdd) { test_safe_add(GetParam()); }
 
 const std::vector<safe_int_add_case<int64_t>> safe_signed_int64_add_tests = {
     // Common cases: both a and b are non-zero.
@@ -75,18 +67,30 @@ const std::vector<safe_int_add_case<int64_t>> safe_signed_int64_add_tests = {
 
     // Common case: both a and b are zero.
     {0, 0, 0, true},
-    
+
     // Common cases: the result is zero.
     {271828, -271828, 0, true},
     {-271828, 271828, 0, true},
-    
+
     // Eage cases: both a and b are non-zero and the result is max.
-    {std::numeric_limits<int64_t>::max() / 2, (std::numeric_limits<int64_t>::max()-1)/2+1, std::numeric_limits<int64_t>::max(), true},
-    {(std::numeric_limits<int64_t>::max()-1)/2+1, std::numeric_limits<int64_t>::max()/2, std::numeric_limits<int64_t>::max(),true},
+    {std::numeric_limits<int64_t>::max() / 2,
+     (std::numeric_limits<int64_t>::max() - 1) / 2 + 1,
+     std::numeric_limits<int64_t>::max(),
+     true},
+    {(std::numeric_limits<int64_t>::max() - 1) / 2 + 1,
+     std::numeric_limits<int64_t>::max() / 2,
+     std::numeric_limits<int64_t>::max(),
+     true},
 
     // Eage cases: both a and b are non-zero and the result is min.
-    {std::numeric_limits<int64_t>::min() / 2, (std::numeric_limits<int64_t>::min()+1)/2-1, std::numeric_limits<int64_t>::min(), true},
-    {(std::numeric_limits<int64_t>::min()+1)/2-1, std::numeric_limits<int64_t>::min()/2, std::numeric_limits<int64_t>::min(),true},
+    {std::numeric_limits<int64_t>::min() / 2,
+     (std::numeric_limits<int64_t>::min() + 1) / 2 - 1,
+     std::numeric_limits<int64_t>::min(),
+     true},
+    {(std::numeric_limits<int64_t>::min() + 1) / 2 - 1,
+     std::numeric_limits<int64_t>::min() / 2,
+     std::numeric_limits<int64_t>::min(),
+     true},
 
     // Eage cases: either a or b is zero and the result is max.
     {0, std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::max(), true},
@@ -101,28 +105,39 @@ const std::vector<safe_int_add_case<int64_t>> safe_signed_int64_add_tests = {
     {std::numeric_limits<int64_t>::max(), 1, 0, false},
     {10, std::numeric_limits<int64_t>::max(), 0, false},
     {std::numeric_limits<int64_t>::max(), 10, 0, false},
-    {std::numeric_limits<int64_t>::max() / 2 + 1, (std::numeric_limits<int64_t>::max()-1)/2+1, 0, false},
-    {(std::numeric_limits<int64_t>::max()-1)/2+1, 0, std::numeric_limits<int64_t>::max()/2+1,0, false},
+    {std::numeric_limits<int64_t>::max() / 2 + 1,
+     (std::numeric_limits<int64_t>::max() - 1) / 2 + 1,
+     0,
+     false},
+    {(std::numeric_limits<int64_t>::max() - 1) / 2 + 1,
+     std::numeric_limits<int64_t>::max() / 2 + 1,
+     0,
+     false},
 
     // Eage cases: the result underflows.
     {-1, std::numeric_limits<int64_t>::min(), 0, false},
     {std::numeric_limits<int64_t>::min(), -1, 0, false},
     {-10, std::numeric_limits<int64_t>::min(), 0, false},
     {std::numeric_limits<int64_t>::min(), -10, 0, false},
-    {std::numeric_limits<int64_t>::min() / 2 - 1, (std::numeric_limits<int64_t>::min()+1)/2-1, 0, false},
-    {(std::numeric_limits<int64_t>::min()+1)/2-1, 0, std::numeric_limits<int64_t>::min()/2-1,0, false},
+    {std::numeric_limits<int64_t>::min() / 2 - 1,
+     (std::numeric_limits<int64_t>::min() + 1) / 2 - 1,
+     0,
+     false},
+    {(std::numeric_limits<int64_t>::min() + 1) / 2 - 1,
+     std::numeric_limits<int64_t>::min() / 2 - 1,
+     0,
+     false},
 };
 
-INSTANTIATE_TEST_SUITE_P(SafeArithmeticTest, SafeSignedInt64AddTest, testing::ValuesIn(safe_signed_int64_add_tests));
+INSTANTIATE_TEST_SUITE_P(SafeArithmeticTest,
+                         SafeSignedInt64AddTest,
+                         testing::ValuesIn(safe_signed_int64_add_tests));
 
 class SafeUnsignedInt64AddTest : public SafeIntAddTest<uint64_t>
 {
-
 };
 
-TEST_P(SafeUnsignedInt64AddTest, SafeAdd) {
-    test_safe_add();
-}
+TEST_P(SafeUnsignedInt64AddTest, SafeAdd) { test_safe_add(GetParam()); }
 
 const std::vector<safe_int_add_case<uint64_t>> safe_unsigned_int64_add_tests = {
     // Common cases: both a and b are non-zero.
@@ -135,10 +150,16 @@ const std::vector<safe_int_add_case<uint64_t>> safe_unsigned_int64_add_tests = {
 
     // Common case: both a and b are zero.
     {0, 0, 0, true},
-    
+
     // Eage cases: both a and b are non-zero and the result is max.
-    {std::numeric_limits<uint64_t>::max() / 2, (std::numeric_limits<uint64_t>::max()-1)/2+1, std::numeric_limits<uint64_t>::max(), true},
-    {(std::numeric_limits<uint64_t>::max()-1)/2+1, std::numeric_limits<uint64_t>::max()/2, std::numeric_limits<uint64_t>::max(),true},
+    {std::numeric_limits<uint64_t>::max() / 2,
+     (std::numeric_limits<uint64_t>::max() - 1) / 2 + 1,
+     std::numeric_limits<uint64_t>::max(),
+     true},
+    {(std::numeric_limits<uint64_t>::max() - 1) / 2 + 1,
+     std::numeric_limits<uint64_t>::max() / 2,
+     std::numeric_limits<uint64_t>::max(),
+     true},
 
     // Eage cases: either a or b is zero and the result is max.
     {0, std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max(), true},
@@ -149,10 +170,18 @@ const std::vector<safe_int_add_case<uint64_t>> safe_unsigned_int64_add_tests = {
     {std::numeric_limits<uint64_t>::max(), 1, 0, false},
     {10, std::numeric_limits<uint64_t>::max(), 0, false},
     {std::numeric_limits<uint64_t>::max(), 10, 0, false},
-    {std::numeric_limits<uint64_t>::max() / 2 + 1, (std::numeric_limits<uint64_t>::max()-1)/2+1, 0, false},
-    {(std::numeric_limits<uint64_t>::max()-1)/2+1, 0, std::numeric_limits<uint64_t>::max()/2+1,0, false},
+    {std::numeric_limits<uint64_t>::max() / 2 + 1,
+     (std::numeric_limits<uint64_t>::max() - 1) / 2 + 1,
+     0,
+     false},
+    {(std::numeric_limits<uint64_t>::max() - 1) / 2 + 1,
+     std::numeric_limits<uint64_t>::max() / 2 + 1,
+     0,
+     false},
 };
 
-INSTANTIATE_TEST_SUITE_P(SafeArithmeticTest, SafeUnsignedInt64AddTest, testing::ValuesIn(safe_unsigned_int64_add_tests));
+INSTANTIATE_TEST_SUITE_P(SafeArithmeticTest,
+                         SafeUnsignedInt64AddTest,
+                         testing::ValuesIn(safe_unsigned_int64_add_tests));
 
 } // namespace dsn
