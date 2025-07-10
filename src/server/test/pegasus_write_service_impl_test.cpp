@@ -40,16 +40,15 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/string_conv.h"
-#include "utils/test_macros.h"
 
 // IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_FailOnGet_Test
 // IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_FailOnPut_Test
 // IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_IncrOnNonNumericRecord_Test
-// IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_IncrOverflowed_Test
+// IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_IncrOverflow_Test
 // IWYU pragma: no_forward_declare pegasus::server::NonIdempotentIncrTest_FailOnGet_Test
 // IWYU pragma: no_forward_declare pegasus::server::NonIdempotentIncrTest_FailOnPut_Test
 // IWYU pragma: no_forward_declare pegasus::server::NonIdempotentIncrTest_IncrOnNonNumericRecord_Test
-// IWYU pragma: no_forward_declare pegasus::server::NonIdempotentIncrTest_IncrOverflowed_Test
+// IWYU pragma: no_forward_declare pegasus::server::NonIdempotentIncrTest_IncrOverflow_Test
 
 namespace pegasus::server {
 
@@ -138,7 +137,7 @@ class IncrTest : public PegasusWriteServiceImplTest
 protected:
     void SetUp() override
     {
-        SET_UP_BASE(PegasusWriteServiceImplTest);
+        PegasusWriteServiceImplTest::SetUp();
         generate_key("incr_hash_key", "incr_sort_key");
         req.expire_ts_seconds = 0;
     }
@@ -255,11 +254,21 @@ TEST_P(NonIdempotentIncrTest, IncrOnNonNumericRecord)
     test_non_idempotent_incr(1, rocksdb::Status::kOk, rocksdb::Status::kInvalidArgument);
 }
 
-TEST_P(NonIdempotentIncrTest, IncrOverflowed)
+TEST_P(NonIdempotentIncrTest, IncrOverflow)
 {
-    PUT_BASE_VALUE_INT64(100);
+    PUT_BASE_VALUE_INT64(1);
 
     test_non_idempotent_incr(std::numeric_limits<int64_t>::max(),
+                             rocksdb::Status::kOk,
+                             rocksdb::Status::kInvalidArgument);
+    ASSERT_EQ(kBaseValue, resp.new_value);
+}
+
+TEST_P(NonIdempotentIncrTest, IncrUnderflow)
+{
+    PUT_BASE_VALUE_INT64(-1);
+
+    test_non_idempotent_incr(std::numeric_limits<int64_t>::min(),
                              rocksdb::Status::kOk,
                              rocksdb::Status::kInvalidArgument);
     ASSERT_EQ(kBaseValue, resp.new_value);
@@ -375,11 +384,19 @@ TEST_P(IdempotentIncrTest, IncrOnNonNumericRecord)
     test_make_idempotent(1, rocksdb::Status::kInvalidArgument);
 }
 
-TEST_P(IdempotentIncrTest, IncrOverflowed)
+TEST_P(IdempotentIncrTest, IncrOverflow)
 {
-    PUT_BASE_VALUE_INT64(100);
+    PUT_BASE_VALUE_INT64(1);
 
     test_make_idempotent(std::numeric_limits<int64_t>::max(), rocksdb::Status::kInvalidArgument);
+    ASSERT_EQ(kBaseValue, err_resp.new_value);
+}
+
+TEST_P(IdempotentIncrTest, IncrUnderflow)
+{
+    PUT_BASE_VALUE_INT64(-1);
+
+    test_make_idempotent(std::numeric_limits<int64_t>::min(), rocksdb::Status::kInvalidArgument);
     ASSERT_EQ(kBaseValue, err_resp.new_value);
 }
 

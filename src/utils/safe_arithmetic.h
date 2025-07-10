@@ -22,18 +22,20 @@
 
 namespace dsn {
 
+//  min <= a + b <= max
+//  min - b <= a <= max - b
 template <typename TInt>
 typename std::enable_if_t<std::conjunction_v<std::is_integral<TInt>, std::is_signed<TInt>>, bool>
 safe_add(TInt a, TInt b, TInt &result)
 {
-    //  min <= a + b <= max
-    //  min - b <= a <= max - b
     if ((b > 0) && (a > std::numeric_limits<TInt>::max() - b)) {
         return false;
     }
+
     if ((b < 0) && (a < std::numeric_limits<TInt>::min() - b)) {
         return false;
     }
+
     result = a + b;
     return true;
 }
@@ -45,6 +47,7 @@ safe_add(TInt a, TInt b, TInt &result)
     if (a > std::numeric_limits<TInt>::max() - b) {
         return false;
     }
+
     result = a + b;
     return true;
 }
