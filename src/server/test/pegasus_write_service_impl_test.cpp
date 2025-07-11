@@ -141,7 +141,7 @@ class IncrTest : public PegasusWriteServiceImplTest
 protected:
     void SetUp() override
     {
-        PegasusWriteServiceImplTest::SetUp();
+        SET_UP_BASE(PegasusWriteServiceImplTest);
         generate_key("incr_hash_key", "incr_sort_key");
         req.expire_ts_seconds = 0;
     }
