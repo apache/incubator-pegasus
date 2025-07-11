@@ -214,9 +214,6 @@ public:
                 return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
             }
 
-            // new_int = base_int + req.increment;
-            // if (dsn_unlikely((req.increment > 0 && new_int < base_int) ||
-            //                  (req.increment < 0 && new_int > base_int))) {
             if (dsn_unlikely(!dsn::safe_add(base_int, req.increment, new_int))) {
                 // New value overflows, just respond with the base value.
                 LOG_ERROR_PREFIX("incr failed: error = new value is out of range, "
@@ -307,6 +304,7 @@ public:
                     // we should write empty record to update rocksdb's last flushed decree
                     return empty_put(decree);
                 }
+
                 if (dsn_unlikely(!dsn::safe_add(old_value_int, update.increment, new_value))) {
                     // new value is out of range, return old value by 'new_value'
                     LOG_ERROR_PREFIX("incr failed: decree = {}, error = "

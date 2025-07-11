@@ -15,6 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <cstdint>
+#include <limits>
+#include <type_traits>
+#include <vector>
+
 #include "gtest/gtest.h"
 #include "utils/safe_arithmetic.h"
 
