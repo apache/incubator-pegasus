@@ -40,6 +40,7 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/string_conv.h"
+#include "utils/test_macros.h"
 
 // IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_FailOnGet_Test
 // IWYU pragma: no_forward_declare pegasus::server::IdempotentIncrTest_FailOnPut_Test
