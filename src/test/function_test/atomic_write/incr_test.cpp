@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <fmt/core.h>
 #include <unistd.h>
 #include <cstdint>
 #include <limits>
@@ -32,21 +33,36 @@ class IncrTest : public AtomicWriteTest
 {
 protected:
     IncrTest() : AtomicWriteTest("incr_test") {}
+
+    void del(const std::string &hash_key)
+    {
+        ASSERT_EQ(PERR_OK, _client->del(hash_key, kSortKey));
+        ASSERT_EQ(PERR_NOT_FOUND, _client->exist(hash_key, kSortKey));
+    }
+
+    void test_incr(const std::string &hash_key, int64_t increment, int64_t expected_new_int)
+    {
+        int64_t actual_new_int{0};
+        ASSERT_EQ(PERR_OK, _client->incr(hash_key, kSortKey, increment, actual_new_int));
+        ASSERT_EQ(expected_new_int, actual_new_int);
+
+        std::string actual_new_str;
+        ASSERT_EQ(PERR_OK, _client->get(hash_key, kSortKey, actual_new_str));
+        ASSERT_EQ(fmt::format("{}", expected_new_int), actual_new_str);
+
+        del(hash_key);
+    }
+
+    static const std::string kSortKey;
 };
 
-TEST_P(IncrTest, unexist_key)
+const std::string IncrTest::kSortKey("sort_key");
+
+TEST_P(IncrTest, IncrOnNonExistingKey)
 {
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_unexist_key", ""));
+    del("incr_on_non_existing_key");
 
-    int64_t new_value_int;
-    ASSERT_EQ(PERR_OK, _client->incr("incr_test_unexist_key", "", 100, new_value_int));
-    ASSERT_EQ(100, new_value_int);
-
-    std::string new_value_str;
-    ASSERT_EQ(PERR_OK, _client->get("incr_test_unexist_key", "", new_value_str));
-    ASSERT_EQ("100", new_value_str);
-
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_unexist_key", ""));
+    test_incr("incr_on_non_existing_key", 100, 100);
 }
 
 TEST_P(IncrTest, empty_key)
