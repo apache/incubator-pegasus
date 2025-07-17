@@ -64,7 +64,7 @@
     <mockito.version>2.24.5</mockito.version>
     <dropwizard.version>3.1.2</dropwizard.version>
     <slf4j.version>1.7.36</slf4j.version>
-    <apache.commons.lang3.version>3.12.0</apache.commons.lang3.version>
+    <apache.commons.lang3.version>3.18.0</apache.commons.lang3.version>
     <json.version>20231013</json.version>
     <netty.version>4.1.85.Final</netty.version>
     <zstd-jni.version>1.3.7-1</zstd-jni.version>
