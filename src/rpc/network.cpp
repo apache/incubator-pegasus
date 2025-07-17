@@ -69,10 +69,7 @@ DSN_DEFINE_uint32(network,
                   0,
                   "The maximum connection count to each server per IP address, 0 means no limit");
 
-DSN_DEFINE_uint32(network,
-                  conn_pool_max_size,
-                  4,
-                  "");
+DSN_DEFINE_uint32(network, conn_pool_max_size, 4, "");
 DSN_DEFINE_validator(conn_pool_max_size, [](uint32_t value) -> bool { return value > 0; });
 
 DSN_DEFINE_string(network, unknown_message_header_format, "", "format for unknown message headers");
@@ -91,8 +88,7 @@ namespace dsn {
 
 namespace {
 
-metric_entity_ptr instantiate_connection_metric_entity(const std::string &remote_addr
-                                                 )
+metric_entity_ptr instantiate_connection_metric_entity(const std::string &remote_addr)
 {
     auto entity_id = fmt::format("connection@{}", remote_addr);
 
@@ -113,8 +109,7 @@ const metric_entity_ptr &connection_metrics::connection_metric_entity() const
     CHECK_NOTNULL(_connection_metric_entity,
                   "connection metric entity (remote_addr={}) should has been instantiated: "
                   "uninitialized entity cannot be used to instantiate metric",
-                  _remote_addr
-                  );
+                  _remote_addr);
     return _connection_metric_entity;
 }
 
@@ -135,7 +130,7 @@ rpc_session::~rpc_session()
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         CHECK_EQ_MSG(0, _sending_msgs.size(), "sending queue is not cleared yet");
-        CHECK_EQ_MSG(0, _message_count, "sending queue is not cleared yet");
+        CHECK_EQ_MSG(0, _message_count.load(), "sending queue is not cleared yet");
     }
 }
 
@@ -656,8 +651,7 @@ uint32_t network::get_local_ipv4()
 }
 
 connection_oriented_network::connection_oriented_network(rpc_engine *srv, network *inner_provider)
-    : network(srv, inner_provider),
-      METRIC_VAR_INIT_server(network_server_sessions)
+    : network(srv, inner_provider), METRIC_VAR_INIT_server(network_server_sessions)
 {
 }
 
@@ -705,7 +699,7 @@ void connection_oriented_network::send_message(message_ex *request)
         }
     }
 
-    client_pool.get_rpc_session()->send_message(request);
+    client_pool->get_rpc_session()->send_message(request);
 }
 
 rpc_session_ptr connection_oriented_network::get_server_session(::dsn::rpc_address ep)
@@ -732,8 +726,7 @@ void connection_oriented_network::on_server_session_accepted(rpc_session_ptr &s)
         }
         ip_count = (int)_servers.size();
 
-        auto pr2 =
-            _ip_conn_count.emplace(s->remote_address().ip(), 1);
+        auto pr2 = _ip_conn_count.emplace(s->remote_address().ip(), 1);
         if (!pr2.second) {
             ip_conn_count = ++pr2.first->second;
         }
@@ -860,23 +853,21 @@ void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr
 rpc_session_pool::rpc_session_pool(connection_oriented_network *net, rpc_address server_addr)
     : _net(net), _server_addr(server_addr), _conn_metrics(server_addr.to_string())
 {
-
 }
 
-rpc_session_ptr
-rpc_session_pool::select_rpc_session() const
+rpc_session_ptr rpc_session_pool::select_rpc_session() const
 {
     CHECK_GT(_sessions.size(), 0);
 
-    return std::min_element(
-    _sessions.begin(), _sessions.end(),
-    [](const auto &lhs, const auto &rhs) {
-        return lhs.first->message_count() < rhs.first->message_count();
-    }).second;
+    return std::min_element(_sessions.begin(),
+                            _sessions.end(),
+                            [](const auto &lhs, const auto &rhs) {
+                                return lhs.first->message_count() < rhs.first->message_count();
+                            })
+        ->second;
 }
 
-rpc_session_ptr
-rpc_session_pool::create_rpc_session()
+rpc_session_ptr rpc_session_pool::create_rpc_session()
 {
     const auto session = _net->create_client_session(_server_addr);
     session->connect();
@@ -884,15 +875,14 @@ rpc_session_pool::create_rpc_session()
     _sessions.emplace(session.get(), session);
 
     LOG_INFO("client session created, remote_server = {}, current_count = {}",
-            session->remote_address(),
-            _sessions.size());
+             session->remote_address(),
+             _sessions.size());
     METRIC_SET(_conn_metrics, network_client_sessions, _sessions.size());
 
     return session;
 }
 
-rpc_session_ptr
-rpc_session_pool::get_rpc_session()
+rpc_session_ptr rpc_session_pool::get_rpc_session()
 {
     {
         utils::auto_read_lock l(_lock);
@@ -920,11 +910,11 @@ void rpc_session_pool::on_connected(rpc_session_ptr &session) const
 
     // No need to update metric since no new session was added.
     LOG_INFO("client session connected, remote_server = {}, current_count = {}",
-             _server_addr(),
+             _server_addr,
              _sessions.size());
 }
 
-void rpc_session_pool::on_disconnected(rpc_session_ptr &session) 
+void rpc_session_pool::on_disconnected(rpc_session_ptr &session)
 {
     utils::auto_write_lock l(_lock);
 
@@ -936,7 +926,7 @@ void rpc_session_pool::on_disconnected(rpc_session_ptr &session)
     _sessions.erase(iter);
 
     LOG_INFO("client session disconnected, remote_server = {}, current_count = {}",
-             _server_addr(),
+             _server_addr,
              _sessions.size());
     METRIC_SET(_conn_metrics, network_client_sessions, _sessions.size());
 }
@@ -944,7 +934,7 @@ void rpc_session_pool::on_disconnected(rpc_session_ptr &session)
 void rpc_session_pool::close() const
 {
     utils::auto_read_lock l(_lock);
-    for (const auto [session, _] : _sessions) {
+    for (const auto &[session, _] : _sessions) {
         session->close();
     }
 }

@@ -28,6 +28,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -214,10 +215,10 @@ protected:
 
     using server_session_map = std::unordered_map<dsn::rpc_address, rpc_session_ptr>;
     server_session_map _servers; // from_address => rpc_session
-                                 
+
     using ip_connection_count = std::unordered_map<uint32_t, uint32_t>;
     ip_connection_count _ip_conn_count; // from_ip => connection count
-                                        
+
     mutable utils::rw_lock_nr _servers_lock;
 
     METRIC_VAR_DECLARE_gauge_int64(network_client_sessions);
@@ -389,14 +390,20 @@ class rpc_session_pool
 {
 public:
     template <typename... Args>
-    static rpc_session_pool_ptr create(Args &&...args)
+    static auto create(Args &&...args)
     {
-        return std::make_shared<rpc_session_pool>(std::forward<Args>(args)...);
+        struct enable_make_shared : public rpc_session_pool
+        {
+            enable_make_shared(Args &&...args) : rpc_session_pool(std::forward<Args>(args)...) {}
+        };
+        return std::static_pointer_cast<rpc_session_pool>(
+            std::make_shared<enable_make_shared>(std::forward<Args>(args)...));
     }
 
-    ~rpc_session_pool() = default;
+    virtual ~rpc_session_pool() = default;
 
-    [[nodiscard]] size_t size() const {
+    [[nodiscard]] size_t size() const
+    {
         utils::auto_read_lock l(_lock);
         return _sessions.size();
     }
@@ -409,6 +416,7 @@ public:
 
     void on_connected(rpc_session_ptr &session) const;
     void on_disconnected(rpc_session_ptr &session);
+    void close() const;
 
 private:
     rpc_session_pool(connection_oriented_network *net, rpc_address server_addr);
