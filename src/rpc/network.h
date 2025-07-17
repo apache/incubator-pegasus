@@ -43,9 +43,29 @@
 #include "utils/join_point.h"
 #include "utils/link.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
+
+class connection_metrics
+{
+public:
+    connection_metrics(const std::string &remote_addr);
+    ~connection_metrics() = default;
+
+    const metric_entity_ptr &connection_metric_entity() const;
+
+    METRIC_DEFINE_SET(network_client_sessions, int64_t)
+
+private:
+    const std::string _remote_addr;
+    const metric_entity_ptr _connection_metric_entity;
+    METRIC_VAR_DECLARE_gauge_int64(network_client_sessions);
+
+    DISALLOW_COPY_AND_ASSIGN(connection_metrics);
+    DISALLOW_MOVE_AND_ASSIGN(connection_metrics);
+};
 
 class rpc_engine;
 class service_node;
@@ -81,7 +101,7 @@ public:
     //                  all downcalls should be redirected to the inner provider in the end
     //
     network(rpc_engine *srv, network *inner_provider);
-    virtual ~network() {}
+    virtual ~network() = default;
 
     //
     // when client_only is true, port is faked (equal to app id for tracing purpose)
@@ -152,6 +172,9 @@ private:
     void reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size);
 };
 
+class rpc_session_pool;
+using rpc_session_pool_ptr = std::shared_ptr<rpc_session_pool>;
+
 /*!
   an incomplete network implementation for connection oriented network, e.g., TCP
 */
@@ -159,7 +182,7 @@ class connection_oriented_network : public network
 {
 public:
     connection_oriented_network(rpc_engine *srv, network *inner_provider);
-    virtual ~connection_oriented_network() {}
+    ~connection_oriented_network() override = default;
 
     // server session management
     rpc_session_ptr get_server_session(::dsn::rpc_address ep);
@@ -184,15 +207,18 @@ public:
     virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
 
 protected:
-    typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> client_sessions;
-    client_sessions _clients; // to_address => rpc_session
-    utils::rw_lock_nr _clients_lock;
+    using client_session_map = std::unordered_map<dsn::rpc_address, rpc_session_pool_ptr>;
+    client_session_map _clients; // to_address => rpc_session
 
-    typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> server_sessions;
-    server_sessions _servers; // from_address => rpc_session
-    typedef std::unordered_map<uint32_t, uint32_t> ip_connection_count;
+    mutable utils::rw_lock_nr _clients_lock;
+
+    using server_session_map = std::unordered_map<dsn::rpc_address, rpc_session_ptr>;
+    server_session_map _servers; // from_address => rpc_session
+                                 
+    using ip_connection_count = std::unordered_map<uint32_t, uint32_t>;
     ip_connection_count _ip_conn_count; // from_ip => connection count
-    utils::rw_lock_nr _servers_lock;
+                                        
+    mutable utils::rw_lock_nr _servers_lock;
 
     METRIC_VAR_DECLARE_gauge_int64(network_client_sessions);
     METRIC_VAR_DECLARE_gauge_int64(network_server_sessions);
@@ -216,7 +242,7 @@ public:
     static join_point<bool, message_ex *> on_rpc_recv_message;
     static join_point<bool, message_ex *> on_rpc_send_message;
     /*@}*/
-public:
+
     rpc_session(connection_oriented_network &net,
                 ::dsn::rpc_address remote_addr,
                 message_parser_ptr &parser,
@@ -255,7 +281,6 @@ public:
     void set_client_username(const std::string &user_name);
     const std::string &get_client_username() const;
 
-public:
     ///
     /// for subclass to implement receiving message
     ///
@@ -277,6 +302,8 @@ public:
     virtual void send(uint64_t signature) = 0;
     void on_send_completed(uint64_t signature);
     virtual void on_failure(bool is_write);
+
+    [[nodiscard]] int message_count() const { return _message_count; }
 
 protected:
     ///
@@ -305,7 +332,7 @@ protected:
     // and put them to _sending_msgs; meanwhile, buffers of these messages are put
     // in _sending_buffers
     dlink _messages;
-    int _message_count; // count of _messages
+    std::atomic_int _message_count; // count of _messages
 
     bool _is_sending_next;
 
@@ -357,6 +384,48 @@ inline bool rpc_session::delay_recv(int delay_ms)
     }
     return exchanged;
 }
+
+class rpc_session_pool
+{
+public:
+    template <typename... Args>
+    static rpc_session_pool_ptr create(Args &&...args)
+    {
+        return std::make_shared<rpc_session_pool>(std::forward<Args>(args)...);
+    }
+
+    ~rpc_session_pool() = default;
+
+    [[nodiscard]] size_t size() const {
+        utils::auto_read_lock l(_lock);
+        return _sessions.size();
+    }
+
+    [[nodiscard]] bool empty() const { return size() == 0; }
+
+    [[nodiscard]] rpc_session_ptr select_rpc_session() const;
+    [[nodiscard]] rpc_session_ptr create_rpc_session();
+    [[nodiscard]] rpc_session_ptr get_rpc_session();
+
+    void on_connected(rpc_session_ptr &session) const;
+    void on_disconnected(rpc_session_ptr &session);
+
+private:
+    rpc_session_pool(connection_oriented_network *net, rpc_address server_addr);
+
+    connection_oriented_network *_net;
+    const rpc_address _server_addr;
+
+    // TODO(wangdan): consider using concurrent hash map to improve performance.
+    using rpc_session_map = std::unordered_map<rpc_session *, rpc_session_ptr>;
+    rpc_session_map _sessions;
+    mutable utils::rw_lock_nr _lock;
+
+    connection_metrics _conn_metrics;
+
+    DISALLOW_COPY_AND_ASSIGN(rpc_session_pool);
+    DISALLOW_MOVE_AND_ASSIGN(rpc_session_pool);
+};
 
 /*@}*/
 } // namespace dsn
