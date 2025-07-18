@@ -167,11 +167,11 @@ bool rpc_session::set_disconnected()
 {
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        if (_connect_state != SS_DISCONNECTED) {
-            _connect_state = SS_DISCONNECTED;
-        } else {
+        if (_connect_state == SS_DISCONNECTED) {
             return false;
         }
+
+        _connect_state = SS_DISCONNECTED;
     }
 
     on_rpc_session_disconnected.execute(this);
@@ -677,7 +677,7 @@ void connection_oriented_network::inject_drop_message(message_ex *msg, bool is_s
 void connection_oriented_network::send_message(message_ex *request)
 {
     rpc_session_pool_ptr client_pool;
-    const auto &server_addr = request->to_address;
+    const auto server_addr = request->to_address;
 
     // TODO(wangdan): thread-local client ptr cache
     {
@@ -870,7 +870,6 @@ rpc_session_ptr rpc_session_pool::select_rpc_session() const
 rpc_session_ptr rpc_session_pool::create_rpc_session()
 {
     const auto session = _net->create_client_session(_server_addr);
-    session->connect();
 
     _sessions.emplace(session.get(), session);
 
@@ -891,12 +890,19 @@ rpc_session_ptr rpc_session_pool::get_rpc_session()
         }
     }
 
-    utils::auto_write_lock l(_lock);
-    if (_sessions.size() >= FLAGS_conn_pool_max_size) {
-        return select_rpc_session();
+    rpc_session_ptr session;
+    {
+        utils::auto_write_lock l(_lock);
+        if (_sessions.size() >= FLAGS_conn_pool_max_size) {
+            return select_rpc_session();
+        }
+
+        session = create_rpc_session();
     }
 
-    return create_rpc_session();
+    session->connect();
+
+    return session;
 }
 
 void rpc_session_pool::on_connected(rpc_session_ptr &session) const

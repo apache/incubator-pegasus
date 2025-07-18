@@ -410,8 +410,6 @@ public:
 
     [[nodiscard]] bool empty() const { return size() == 0; }
 
-    [[nodiscard]] rpc_session_ptr select_rpc_session() const;
-    [[nodiscard]] rpc_session_ptr create_rpc_session();
     [[nodiscard]] rpc_session_ptr get_rpc_session();
 
     void on_connected(rpc_session_ptr &session) const;
@@ -420,6 +418,9 @@ public:
 
 private:
     rpc_session_pool(connection_oriented_network *net, rpc_address server_addr);
+
+    [[nodiscard]] rpc_session_ptr select_rpc_session() const;
+    [[nodiscard]] rpc_session_ptr create_rpc_session();
 
     connection_oriented_network *_net;
     const rpc_address _server_addr;
