@@ -77,7 +77,10 @@ void asio_rpc_session::set_options()
     }
 
     boost::system::error_code ec;
-    boost::asio::socket_base::send_buffer_size option, option2(16 * 1024 * 1024);
+
+    boost::asio::socket_base::send_buffer_size option;
+    boost::asio::socket_base::send_buffer_size option2(16 * 1024 * 1024);
+
     _socket->get_option(option, ec);
     if (ec) {
         LOG_WARNING("asio socket get option failed, error = {}", ec.message());
@@ -96,7 +99,9 @@ void asio_rpc_session::set_options()
 
     LOG_DEBUG("boost asio send buffer size is {}, set as 16MB, now is {}", old, option.value());
 
-    boost::asio::socket_base::receive_buffer_size option3, option4(16 * 1024 * 1024);
+    boost::asio::socket_base::receive_buffer_size option3;
+    boost::asio::socket_base::receive_buffer_size option4(16 * 1024 * 1024);
+
     _socket->get_option(option3, ec);
     if (ec) {
         LOG_WARNING("asio socket get option failed, error = {}", ec.message());
@@ -158,11 +163,11 @@ void asio_rpc_session::do_read(int read_next)
 
             int read_next = -1;
 
-            if (!_parser) {
+            if (_parser == nullptr) {
                 read_next = prepare_parser();
             }
 
-            if (_parser) {
+            if (_parser != nullptr) {
                 message_ex *msg = _parser->get_message_on_receive(&_reader, read_next);
 
                 while (msg != nullptr) {

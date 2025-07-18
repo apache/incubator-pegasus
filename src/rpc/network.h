@@ -27,10 +27,12 @@
 #pragma once
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "rpc/message_parser.h"
@@ -52,10 +54,10 @@ namespace dsn {
 class connection_metrics
 {
 public:
-    connection_metrics(const std::string &remote_addr);
+    explicit connection_metrics(const std::string &remote_addr);
     ~connection_metrics() = default;
 
-    const metric_entity_ptr &connection_metric_entity() const;
+    [[nodiscard]] const metric_entity_ptr &connection_metric_entity() const;
 
     METRIC_DEFINE_SET(network_client_sessions, int64_t)
 
@@ -174,6 +176,7 @@ private:
 };
 
 class rpc_session_pool;
+
 using rpc_session_pool_ptr = std::shared_ptr<rpc_session_pool>;
 
 /*!
@@ -187,22 +190,22 @@ public:
 
     // server session management
     rpc_session_ptr get_server_session(::dsn::rpc_address ep);
-    void on_server_session_accepted(rpc_session_ptr &s);
-    void on_server_session_disconnected(rpc_session_ptr &s);
+    void on_server_session_accepted(rpc_session_ptr &session);
+    void on_server_session_disconnected(rpc_session_ptr &session);
 
     // Checks if IP of the incoming session has too much connections.
     // Related config: [network] conn_threshold_per_ip. No limit if the value is 0.
     bool check_if_conn_threshold_exceeded(::dsn::rpc_address ep);
 
     // client session management
-    void on_client_session_connected(rpc_session_ptr &s);
-    void on_client_session_disconnected(rpc_session_ptr &s);
+    void on_client_session_connected(rpc_session_ptr &session);
+    void on_client_session_disconnected(rpc_session_ptr &session);
 
     // called upon RPC call, rpc client session is created on demand
-    virtual void send_message(message_ex *request) override;
+    void send_message(message_ex *request) override;
 
     // called by rpc engine
-    virtual void inject_drop_message(message_ex *msg, bool is_send) override;
+    void inject_drop_message(message_ex *msg, bool is_send) override;
 
     // to be defined
     virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
@@ -216,12 +219,18 @@ protected:
     using server_session_map = std::unordered_map<dsn::rpc_address, rpc_session_ptr>;
     server_session_map _servers; // from_address => rpc_session
 
-    using ip_connection_count = std::unordered_map<uint32_t, uint32_t>;
-    ip_connection_count _ip_conn_count; // from_ip => connection count
+    using ip_conn_count_map = std::unordered_map<uint32_t, uint32_t>;
+    ip_conn_count_map _ip_conn_counts; // from_ip => connection count
 
     mutable utils::rw_lock_nr _servers_lock;
 
-    METRIC_VAR_DECLARE_gauge_int64(network_client_sessions);
+private:
+    void add_server_session(rpc_session_ptr &session);
+    uint32_t add_server_conn_count(rpc_session_ptr &session);
+
+    bool remove_server_session(rpc_session_ptr &session);
+    uint32_t remove_server_conn_count(rpc_session_ptr &session);
+
     METRIC_VAR_DECLARE_gauge_int64(network_server_sessions);
 };
 
@@ -394,7 +403,10 @@ public:
     {
         struct enable_make_shared : public rpc_session_pool
         {
-            enable_make_shared(Args &&...args) : rpc_session_pool(std::forward<Args>(args)...) {}
+            explicit enable_make_shared(Args &&...args)
+                : rpc_session_pool(std::forward<Args>(args)...)
+            {
+            }
         };
         return std::static_pointer_cast<rpc_session_pool>(
             std::make_shared<enable_make_shared>(std::forward<Args>(args)...));
