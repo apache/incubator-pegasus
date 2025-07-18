@@ -836,17 +836,10 @@ bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_ad
         return false;
     }
 
-    bool exceeded = false;
-    int ip_conn_count = 0; // the amount of connections from this ip address.
+    uint32_t ip_conn_count{0}; // the amount of connections from this ip address.
     {
         utils::auto_read_lock l(_servers_lock);
-        auto it = _ip_conn_counts.find(ep.ip());
-        if (it != _ip_conn_counts.end()) {
-            ip_conn_count = it->second;
-        }
-    }
-    if (ip_conn_count >= FLAGS_conn_threshold_per_ip) {
-        exceeded = true;
+        ip_conn_count = gutil::FindWithDefault(_ip_conn_counts, ep.ip());
     }
 
     LOG_DEBUG("new client from {} is connecting to server {}, existing connection count = {}, "
@@ -856,7 +849,7 @@ bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_ad
               ip_conn_count,
               FLAGS_conn_threshold_per_ip);
 
-    return exceeded;
+    return ip_conn_count >= FLAGS_conn_threshold_per_ip;
 }
 
 void connection_oriented_network::on_client_session_connected(rpc_session_ptr &session)
