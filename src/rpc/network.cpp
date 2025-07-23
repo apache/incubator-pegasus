@@ -136,20 +136,21 @@ rpc_session::~rpc_session()
     }
 }
 
-bool rpc_session::set_connecting()
+bool rpc_session::mark_connecting()
 {
     CHECK(is_client(), "must be client session");
 
     utils::auto_lock<utils::ex_lock_nr> l(_lock);
-    if (_connect_state == SS_DISCONNECTED) {
-        _connect_state = SS_CONNECTING;
-        return true;
-    } else {
+
+    if (_connect_state != SS_DISCONNECTED) {
         return false;
     }
+
+    _connect_state = SS_CONNECTING;
+    return true;
 }
 
-void rpc_session::set_connected()
+void rpc_session::mark_connected()
 {
     CHECK(is_client(), "must be client session");
 
@@ -165,7 +166,7 @@ void rpc_session::set_connected()
     on_rpc_session_connected.execute(this);
 }
 
-bool rpc_session::set_disconnected()
+bool rpc_session::mark_disconnected()
 {
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
@@ -283,30 +284,31 @@ DEFINE_TASK_CODE(LPC_DELAY_RPC_REQUEST_RATE, TASK_PRIORITY_COMMON, THREAD_POOL_D
 
 void rpc_session::start_read_next(int read_next)
 {
-    // server only
-    if (!is_client()) {
-        int delay_ms = _delay_server_receive_ms.exchange(0);
-
-        // delayed read
-        if (delay_ms > 0) {
-            this->add_ref();
-            dsn::task_ptr delay_task(new raw_task(LPC_DELAY_RPC_REQUEST_RATE, [this]() {
-                start_read_next();
-                this->release_ref();
-            }));
-            delay_task->enqueue(std::chrono::milliseconds(delay_ms));
-        } else {
-            do_read(read_next);
-        }
-    } else {
+    if (is_client()) {
         do_read(read_next);
+        return;
     }
+
+    int delay_ms = _delay_server_receive_ms.exchange(0);
+    if (delay_ms <= 0) {
+        do_read(read_next);
+        return;
+    }
+
+    // delayed read
+    this->add_ref();
+    dsn::task_ptr delay_task(new raw_task(LPC_DELAY_RPC_REQUEST_RATE, [this]() {
+        start_read_next();
+        this->release_ref();
+    }));
+    delay_task->enqueue(std::chrono::milliseconds(delay_ms));
 }
 
 int rpc_session::prepare_parser()
 {
-    if (_reader._buffer_occupied < sizeof(uint32_t))
+    if (_reader._buffer_occupied < sizeof(uint32_t)) {
         return sizeof(uint32_t) - _reader._buffer_occupied;
+    }
 
     auto hdr_format = message_parser::get_header_type(_reader._buffer.data());
     if (hdr_format == NET_HDR_INVALID) {
@@ -346,13 +348,13 @@ void rpc_session::send_message(message_ex *msg)
         msg->dl.insert_before(&_messages);
         ++_message_count;
 
-        if ((SS_CONNECTED == _connect_state) && !_is_sending_next) {
-            _is_sending_next = true;
-            sig = _message_sent + 1;
-            unlink_message_for_send();
-        } else {
+        if ((SS_CONNECTED != _connect_state) || _is_sending_next) {
             return;
         }
+
+        _is_sending_next = true;
+        sig = _message_sent + 1;
+        unlink_message_for_send();
     }
 
     this->send(sig);
@@ -447,7 +449,7 @@ rpc_session::rpc_session(connection_oriented_network &net,
 bool rpc_session::on_disconnected(bool is_write)
 {
     bool ret;
-    if (set_disconnected()) {
+    if (mark_disconnected()) {
         rpc_session_ptr sp = this;
         if (is_client()) {
             _net.on_client_session_disconnected(sp);
@@ -930,6 +932,10 @@ rpc_session_ptr rpc_session_pool::get_rpc_session()
         session = create_rpc_session();
     }
 
+    // Don't place session->connect() under the protection of `_lock`. This is because some
+    // implementations of rpc_session (such as sim_client_session) are not asynchronous - after
+    // the connection is established, they may immediately invoke mark_connected() within the
+    // same thread (which eventually calls rpc_session_pool::on_connected()), leading to deadlock.
     session->connect();
 
     return session;

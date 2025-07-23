@@ -356,10 +356,10 @@ protected:
     /// change status and check status
     ///
     // return true when it is permitted
-    bool set_connecting();
+    bool mark_connecting();
+    void mark_connected();
     // return true when it is permitted
-    bool set_disconnected();
-    void set_connected();
+    bool mark_disconnected();
 
     void clear_send_queue(bool resend_msgs);
     bool on_disconnected(bool is_write);

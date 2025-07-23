@@ -246,7 +246,7 @@ void asio_rpc_session::close()
 
 void asio_rpc_session::connect()
 {
-    if (!set_connecting()) {
+    if (!mark_connecting()) {
         return;
     }
 
@@ -268,7 +268,7 @@ void asio_rpc_session::connect()
         LOG_DEBUG("client session {} connected", _remote_addr);
 
         set_options();
-        set_connected();
+        mark_connected();
         on_send_completed(0);
         start_read_next();
     });
