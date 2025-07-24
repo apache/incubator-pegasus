@@ -45,6 +45,7 @@
 #include "task/task_code.h"
 #include "utils/blob.h"
 #include "utils/customizable_id.h"
+#include "utils/defer.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -307,7 +308,7 @@ void rpc_session::start_read_next(int read_next)
 int rpc_session::prepare_parser()
 {
     if (_reader._buffer_occupied < sizeof(uint32_t)) {
-        return sizeof(uint32_t) - _reader._buffer_occupied;
+        return static_cast<int>(sizeof(uint32_t) - _reader._buffer_occupied);
     }
 
     auto hdr_format = message_parser::get_header_type(_reader._buffer.data());
@@ -448,25 +449,24 @@ rpc_session::rpc_session(connection_oriented_network &net,
 
 bool rpc_session::on_disconnected(bool is_write)
 {
-    bool ret;
-    if (mark_disconnected()) {
-        rpc_session_ptr sp = this;
-        if (is_client()) {
-            _net.on_client_session_disconnected(sp);
-        } else {
-            _net.on_server_session_disconnected(sp);
+    const auto cleanup = defer([is_write, this]() {
+        if (is_write) {
+            clear_send_queue(false);
         }
+    });
 
-        ret = true;
+    if (!mark_disconnected()) {
+        return false;
+    }
+
+    const rpc_session_ptr session(this);
+    if (is_client()) {
+        _net.on_client_session_disconnected(session);
     } else {
-        ret = false;
+        _net.on_server_session_disconnected(session);
     }
 
-    if (is_write) {
-        clear_send_queue(false);
-    }
-
-    return ret;
+    return true;
 }
 
 void rpc_session::on_failure(bool is_write)
@@ -718,7 +718,7 @@ rpc_session_ptr connection_oriented_network::get_server_session(::dsn::rpc_addre
     return gutil::FindWithDefault(_servers, ep);
 }
 
-void connection_oriented_network::add_server_session(rpc_session_ptr &session)
+void connection_oriented_network::add_server_session(const rpc_session_ptr &session)
 {
     const auto [iter, inserted] = _servers.try_emplace(session->remote_address(), session);
     if (inserted) {
@@ -730,7 +730,7 @@ void connection_oriented_network::add_server_session(rpc_session_ptr &session)
                 session->remote_address());
 }
 
-uint32_t connection_oriented_network::add_server_conn_count(rpc_session_ptr &session)
+uint32_t connection_oriented_network::add_server_conn_count(const rpc_session_ptr &session)
 {
     const auto [iter, inserted] = _ip_conn_counts.try_emplace(session->remote_address().ip(), 1);
     if (inserted) {
@@ -740,7 +740,7 @@ uint32_t connection_oriented_network::add_server_conn_count(rpc_session_ptr &ses
     return ++iter->second;
 }
 
-void connection_oriented_network::on_server_session_accepted(rpc_session_ptr &session)
+void connection_oriented_network::on_server_session_accepted(const rpc_session_ptr &session)
 {
     uint32_t ip_count{0};
     uint32_t ip_conn_count{0};
@@ -766,7 +766,7 @@ void connection_oriented_network::on_server_session_accepted(rpc_session_ptr &se
     METRIC_VAR_SET(network_server_sessions, ip_count);
 }
 
-bool connection_oriented_network::remove_server_session(rpc_session_ptr &session)
+bool connection_oriented_network::remove_server_session(const rpc_session_ptr &session)
 {
     const auto iter = std::as_const(_servers).find(session->remote_address());
     if (iter == _servers.end() || iter->second.get() != session.get()) {
@@ -777,7 +777,7 @@ bool connection_oriented_network::remove_server_session(rpc_session_ptr &session
     return true;
 }
 
-uint32_t connection_oriented_network::remove_server_conn_count(rpc_session_ptr &session)
+uint32_t connection_oriented_network::remove_server_conn_count(const rpc_session_ptr &session)
 {
     const auto iter = _ip_conn_counts.find(session->remote_address().ip());
     if (iter == _ip_conn_counts.end()) {
@@ -792,7 +792,7 @@ uint32_t connection_oriented_network::remove_server_conn_count(rpc_session_ptr &
     return --iter->second;
 }
 
-void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr &session)
+void connection_oriented_network::on_server_session_disconnected(const rpc_session_ptr &session)
 {
     bool session_removed{false};
 
@@ -854,7 +854,7 @@ bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_ad
     return ip_conn_count >= FLAGS_conn_threshold_per_ip;
 }
 
-void connection_oriented_network::on_client_session_connected(rpc_session_ptr &session)
+void connection_oriented_network::on_client_session_connected(const rpc_session_ptr &session)
 {
     utils::auto_read_lock l(_clients_lock);
     const auto iter = std::as_const(_clients).find(session->remote_address());
@@ -865,7 +865,7 @@ void connection_oriented_network::on_client_session_connected(rpc_session_ptr &s
     iter->second->on_connected(session);
 }
 
-void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr &session)
+void connection_oriented_network::on_client_session_disconnected(const rpc_session_ptr &session)
 {
     utils::auto_write_lock l(_clients_lock);
 
@@ -874,12 +874,8 @@ void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr
         return;
     }
 
-    iter->second->on_disconnected(session);
-    if (!iter->second->empty()) {
-        return;
-    }
-
-    _clients.erase(iter);
+    const rpc_session_pool_ptr pool(iter->second);
+    pool->on_disconnected(session, [iter, this]() { _clients.erase(iter); });
 }
 
 rpc_session_pool::rpc_session_pool(connection_oriented_network *net, rpc_address server_addr)
@@ -941,7 +937,7 @@ rpc_session_ptr rpc_session_pool::get_rpc_session()
     return session;
 }
 
-void rpc_session_pool::on_connected(rpc_session_ptr &session) const
+void rpc_session_pool::on_connected(const rpc_session_ptr &session) const
 {
     utils::auto_read_lock l(_lock);
 
@@ -956,7 +952,8 @@ void rpc_session_pool::on_connected(rpc_session_ptr &session) const
              _sessions.size());
 }
 
-void rpc_session_pool::on_disconnected(rpc_session_ptr &session)
+void rpc_session_pool::on_disconnected(const rpc_session_ptr &session,
+                                       std::function<void()> &&on_empty)
 {
     utils::auto_write_lock l(_lock);
 
@@ -971,6 +968,10 @@ void rpc_session_pool::on_disconnected(rpc_session_ptr &session)
              _server_addr,
              _sessions.size());
     METRIC_SET(_conn_metrics, network_client_sessions, _sessions.size());
+
+    if (_sessions.empty()) {
+        on_empty();
+    }
 }
 
 void rpc_session_pool::close() const

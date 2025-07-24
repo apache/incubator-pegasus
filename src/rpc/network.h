@@ -29,6 +29,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -190,16 +191,16 @@ public:
 
     // server session management
     rpc_session_ptr get_server_session(::dsn::rpc_address ep);
-    void on_server_session_accepted(rpc_session_ptr &session);
-    void on_server_session_disconnected(rpc_session_ptr &session);
+    void on_server_session_accepted(const rpc_session_ptr &session);
+    void on_server_session_disconnected(const rpc_session_ptr &session);
 
     // Checks if IP of the incoming session has too much connections.
     // Related config: [network] conn_threshold_per_ip. No limit if the value is 0.
     bool check_if_conn_threshold_exceeded(::dsn::rpc_address ep);
 
     // client session management
-    void on_client_session_connected(rpc_session_ptr &session);
-    void on_client_session_disconnected(rpc_session_ptr &session);
+    void on_client_session_connected(const rpc_session_ptr &session);
+    void on_client_session_disconnected(const rpc_session_ptr &session);
 
     // called upon RPC call, rpc client session is created on demand
     void send_message(message_ex *request) override;
@@ -225,11 +226,11 @@ protected:
     mutable utils::rw_lock_nr _servers_lock;
 
 private:
-    void add_server_session(rpc_session_ptr &session);
-    uint32_t add_server_conn_count(rpc_session_ptr &session);
+    void add_server_session(const rpc_session_ptr &session);
+    uint32_t add_server_conn_count(const rpc_session_ptr &session);
 
-    bool remove_server_session(rpc_session_ptr &session);
-    uint32_t remove_server_conn_count(rpc_session_ptr &session);
+    bool remove_server_session(const rpc_session_ptr &session);
+    uint32_t remove_server_conn_count(const rpc_session_ptr &session);
 
     METRIC_VAR_DECLARE_gauge_int64(network_server_sessions);
 };
@@ -424,8 +425,8 @@ public:
 
     [[nodiscard]] rpc_session_ptr get_rpc_session();
 
-    void on_connected(rpc_session_ptr &session) const;
-    void on_disconnected(rpc_session_ptr &session);
+    void on_connected(const rpc_session_ptr &session) const;
+    void on_disconnected(const rpc_session_ptr &session, std::function<void()> &&on_empty);
     void close() const;
 
 private:
