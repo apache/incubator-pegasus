@@ -314,7 +314,7 @@ public:
     void on_send_completed(uint64_t signature);
     virtual void on_failure(bool is_write);
 
-    [[nodiscard]] int message_count() const { return _message_count; }
+    [[nodiscard]] int sending_count() const { return _sending_count; }
 
 protected:
     ///
@@ -343,7 +343,9 @@ protected:
     // and put them to _sending_msgs; meanwhile, buffers of these messages are put
     // in _sending_buffers
     dlink _messages;
-    std::atomic_int _message_count; // count of _messages
+    int _message_count; // count of _messages
+
+    std::atomic_int _sending_count{0};
 
     bool _is_sending_next;
 
@@ -415,13 +417,13 @@ public:
 
     virtual ~rpc_session_pool() = default;
 
-    [[nodiscard]] size_t size() const
+    /*[[nodiscard]] size_t size() const
     {
         utils::auto_read_lock l(_lock);
         return _sessions.size();
-    }
+    }  */
 
-    [[nodiscard]] bool empty() const { return size() == 0; }
+    // [[nodiscard]] bool empty() const { return size() == 0; }
 
     [[nodiscard]] rpc_session_ptr get_rpc_session();
 

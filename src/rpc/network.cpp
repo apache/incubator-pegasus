@@ -133,7 +133,7 @@ rpc_session::~rpc_session()
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         CHECK_EQ_MSG(0, _sending_msgs.size(), "sending queue is not cleared yet");
-        CHECK_EQ_MSG(0, _message_count.load(), "sending queue is not cleared yet");
+        CHECK_EQ_MSG(0, _message_count, "sending queue is not cleared yet");
     }
 }
 
@@ -199,6 +199,7 @@ void rpc_session::clear_send_queue(bool resend_msgs)
     {
         // protect _sending_msgs and _sending_buffers in lock
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
+        _sending_count -= static_cast<int>(_sending_msgs.size());
         _sending_msgs.swap(swapped_sending_msgs);
         _sending_buffers.clear();
     }
@@ -224,11 +225,13 @@ void rpc_session::clear_send_queue(bool resend_msgs)
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
             msg = _messages.next();
-            if (msg == &_messages)
+            if (msg == &_messages) {
                 break;
+            }
 
             msg->remove();
             --_message_count;
+            --_sending_count;
         }
 
         auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
@@ -277,7 +280,7 @@ inline bool rpc_session::unlink_message_for_send()
     }
 
     // added in send_message
-    _message_count -= (int)_sending_msgs.size();
+    _message_count -= static_cast<int>(_sending_msgs.size());
     return _sending_msgs.size() > 0;
 }
 
@@ -348,6 +351,7 @@ void rpc_session::send_message(message_ex *msg)
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         msg->dl.insert_before(&_messages);
         ++_message_count;
+        ++_sending_count;
 
         if ((SS_CONNECTED != _connect_state) || _is_sending_next) {
             return;
@@ -368,11 +372,14 @@ bool rpc_session::cancel(message_ex *request)
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        if (request->dl.is_alone())
+
+        if (request->dl.is_alone()) {
             return false;
+        }
 
         request->dl.remove();
         --_message_count;
+        --_sending_count;
     }
 
     // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
@@ -403,6 +410,8 @@ void rpc_session::on_send_completed(uint64_t signature)
                 msg->release_ref();
                 _message_sent++;
             }
+
+            _sending_count -= static_cast<int>(_sending_msgs.size());
             _sending_msgs.clear();
             _sending_buffers.clear();
         }
@@ -662,7 +671,7 @@ connection_oriented_network::connection_oriented_network(rpc_engine *srv, networ
 
 void connection_oriented_network::inject_drop_message(message_ex *msg, bool is_send)
 {
-    rpc_session_ptr session = msg->io_session;
+    const rpc_session_ptr session(msg->io_session);
     if (session != nullptr) {
         session->close();
         return;
@@ -890,7 +899,7 @@ rpc_session_ptr rpc_session_pool::select_rpc_session() const
     return std::min_element(_sessions.begin(),
                             _sessions.end(),
                             [](const auto &lhs, const auto &rhs) {
-                                return lhs.first->message_count() < rhs.first->message_count();
+                                return lhs.first->sending_count() < rhs.first->sending_count();
                             })
         ->second;
 }

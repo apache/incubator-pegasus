@@ -190,7 +190,7 @@ void asio_rpc_session::do_read(int read_next)
 void asio_rpc_session::send(uint64_t signature)
 {
     std::vector<boost::asio::const_buffer> asio_wbufs;
-    int bcount = (int)_sending_buffers.size();
+    const auto bcount = static_cast<int>(_sending_buffers.size());
 
     // prepare buffers
     asio_wbufs.resize(bcount);
