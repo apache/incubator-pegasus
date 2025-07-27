@@ -27,7 +27,6 @@
 #pragma once
 
 #include <atomic>
-#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -383,6 +382,9 @@ private:
     // _client_username is only valid if it is a server rpc_session.
     // it represents the name of the corresponding client
     std::string _client_username;
+
+    DISALLOW_COPY_AND_ASSIGN(rpc_session);
+    DISALLOW_MOVE_AND_ASSIGN(rpc_session);
 };
 
 // --------- inline implementation --------------
@@ -416,13 +418,11 @@ public:
 
     virtual ~rpc_session_pool() = default;
 
-    /*[[nodiscard]] size_t size() const
+    [[nodiscard]] size_t size() const
     {
         utils::auto_read_lock l(_lock);
         return _sessions.size();
-    }  */
-
-    // [[nodiscard]] bool empty() const { return size() == 0; }
+    }
 
     [[nodiscard]] rpc_session_ptr get_rpc_session();
 

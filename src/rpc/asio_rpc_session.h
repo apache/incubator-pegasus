@@ -47,7 +47,7 @@ class asio_rpc_session : public rpc_session
 public:
     asio_rpc_session(asio_network_provider &net,
                      ::dsn::rpc_address remote_addr,
-                     const std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
+                     std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
                      message_parser_ptr &parser,
                      bool is_client);
 

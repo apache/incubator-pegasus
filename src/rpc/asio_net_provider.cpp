@@ -98,7 +98,7 @@ const int threads_per_event_loop = 1;
 asio_network_provider::asio_network_provider(rpc_engine *srv, network *inner_provider)
     : connection_oriented_network(srv, inner_provider), _acceptor(nullptr)
 {
-    for (auto i = 0; i < FLAGS_io_service_worker_count; i++) {
+    for (uint32_t i = 0; i < FLAGS_io_service_worker_count; ++i) {
         // Using thread-local operation queues in single-threaded use cases (i.e. when
         // concurrency_hint is 1) to eliminate a lock/unlock pair.
         _io_services.emplace_back(
@@ -122,17 +122,17 @@ asio_network_provider::~asio_network_provider()
 
 error_code asio_network_provider::start(rpc_channel channel, int port, bool client_only)
 {
-    if (_acceptor != nullptr)
+    if (_acceptor != nullptr) {
         return ERR_SERVICE_ALREADY_RUNNING;
+    }
 
-    for (int i = 0; i < FLAGS_io_service_worker_count; i++) {
+    for (uint32_t i = 0; _workers.size() < FLAGS_io_service_worker_count; ++i) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
 
             const char *name = ::dsn::tools::get_service_node_name(node());
-            char buffer[128];
-            sprintf(buffer, "%s.asio.%d", name, i);
-            task_worker::set_name(buffer);
+            const auto full_name = fmt::format("{}.asio.{}", name, i);
+            task_worker::set_name(full_name.c_str());
 
             boost::asio::io_service::work work(*_io_services[i]);
             boost::system::error_code ec;
@@ -151,45 +151,46 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
     _hp = ::dsn::host_port::from_address(_address);
     LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
 
-    if (!client_only) {
-        auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
-        ::boost::asio::ip::tcp::endpoint endpoint(v4_addr, _address.port());
-        boost::system::error_code ec;
-        _acceptor.reset(new boost::asio::ip::tcp::acceptor(get_io_service()));
-        _acceptor->open(endpoint.protocol(), ec);
-        if (ec) {
-            LOG_ERROR("asio tcp acceptor open failed, error = {}", ec.message());
-            _acceptor.reset();
-            return ERR_NETWORK_INIT_FAILED;
-        }
-        _acceptor->set_option(boost::asio::socket_base::reuse_address(true));
-        _acceptor->bind(endpoint, ec);
-        if (ec) {
-            LOG_ERROR(
-                "asio tcp acceptor bind address '{}' failed, error = {}", _address, ec.message());
-            _acceptor.reset();
-            return ERR_NETWORK_INIT_FAILED;
-        }
-        int backlog = boost::asio::socket_base::max_connections;
-        _acceptor->listen(backlog, ec);
-        if (ec) {
-            LOG_ERROR("asio tcp acceptor listen failed, port = {}, error = {}",
-                      _address.port(),
-                      ec.message());
-            _acceptor.reset();
-            return ERR_NETWORK_INIT_FAILED;
-        }
-        do_accept();
+    if (client_only) {
+        return ERR_OK;
     }
+
+    const auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
+    ::boost::asio::ip::tcp::endpoint endpoint(v4_addr, _address.port());
+    boost::system::error_code ec;
+    _acceptor.reset(new boost::asio::ip::tcp::acceptor(get_io_service()));
+    _acceptor->open(endpoint.protocol(), ec);
+    if (ec) {
+        LOG_ERROR("asio tcp acceptor open failed, error = {}", ec.message());
+        _acceptor.reset();
+        return ERR_NETWORK_INIT_FAILED;
+    }
+    _acceptor->set_option(boost::asio::socket_base::reuse_address(true));
+    _acceptor->bind(endpoint, ec);
+    if (ec) {
+        LOG_ERROR("asio tcp acceptor bind address '{}' failed, error = {}", _address, ec.message());
+        _acceptor.reset();
+        return ERR_NETWORK_INIT_FAILED;
+    }
+    int backlog = boost::asio::socket_base::max_connections;
+    _acceptor->listen(backlog, ec);
+    if (ec) {
+        LOG_ERROR("asio tcp acceptor listen failed, port = {}, error = {}",
+                  _address.port(),
+                  ec.message());
+        _acceptor.reset();
+        return ERR_NETWORK_INIT_FAILED;
+    }
+    do_accept();
 
     return ERR_OK;
 }
 
 rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
 {
-    const auto sock = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
+    auto sock = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
     message_parser_ptr parser(new_message_parser(_client_hdr_format));
-    return rpc_session_ptr(new asio_rpc_session(*this, server_addr, sock, parser, true));
+    return {new asio_rpc_session(*this, server_addr, sock, parser, true)};
 }
 
 void asio_network_provider::do_accept()
@@ -462,14 +463,14 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
     _hp = ::dsn::host_port::from_address(_address);
     LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
 
-    for (int i = 0; i < FLAGS_io_service_worker_count; i++) {
+    for (uint32_t i = 0; _workers.size() < FLAGS_io_service_worker_count; ++i) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
 
             const char *name = ::dsn::tools::get_service_node_name(node());
-            char buffer[128];
-            sprintf(buffer, "%s.asio.udp.%d.%d", name, (int)(this->address().port()), i);
-            task_worker::set_name(buffer);
+            const auto full_name =
+                fmt::format("{}.asio.udp.{}.{}", name, this->address().port(), i);
+            task_worker::set_name(full_name.c_str());
 
             boost::asio::io_service::work work(_io_service);
             boost::system::error_code ec;

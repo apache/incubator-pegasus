@@ -215,7 +215,7 @@ void asio_rpc_session::send(uint64_t signature)
 
 asio_rpc_session::asio_rpc_session(asio_network_provider &net,
                                    ::dsn::rpc_address remote_addr,
-                                   const std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
+                                   std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
                                    message_parser_ptr &parser,
                                    bool is_client)
     : rpc_session(net, remote_addr, parser, is_client), _socket(socket)
