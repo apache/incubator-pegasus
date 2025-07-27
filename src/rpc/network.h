@@ -436,6 +436,8 @@ private:
     [[nodiscard]] rpc_session_ptr select_rpc_session() const;
     [[nodiscard]] rpc_session_ptr create_rpc_session();
 
+    friend class mock_pool_network;
+
     connection_oriented_network *_net;
     const rpc_address _server_addr;
 

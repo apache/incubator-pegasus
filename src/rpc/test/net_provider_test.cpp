@@ -295,6 +295,8 @@ public:
     {
     }
 
+    ~mock_pool_network() = default;
+
     rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override
     {
         auto sock = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
@@ -313,10 +315,21 @@ public:
             ASSERT_EQ(i + 1, _clients.begin()->second->size());
         }
 
-        for (uint32_t i = 0; i < pool_size * 16; ++i) {
-            send_request();
-            ASSERT_EQ(1, _clients.size());
-            ASSERT_EQ(pool_size, _clients.begin()->second->size());
+        for (const auto &[session, _] : _clients.begin()->second->_sessions) {
+            ASSERT_EQ(1, session->sending_count());
+        }
+
+        constexpr uint32_t kSendingCount{16};
+        for (uint32_t i = 0; i < kSendingCount; ++i) {
+            for (uint32_t j = 0; j < pool_size; ++j) {
+                send_request();
+                ASSERT_EQ(1, _clients.size());
+                ASSERT_EQ(pool_size, _clients.begin()->second->size());
+            }
+
+            for (const auto &[session, _] : _clients.begin()->second->_sessions) {
+                ASSERT_EQ(i + 2, session->sending_count());
+            }
         }
     }
 
