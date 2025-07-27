@@ -187,7 +187,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
 
 rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
 {
-    auto sock = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
+    const auto sock = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
     message_parser_ptr parser(new_message_parser(_client_hdr_format));
     return rpc_session_ptr(new asio_rpc_session(*this, server_addr, sock, parser, true));
 }

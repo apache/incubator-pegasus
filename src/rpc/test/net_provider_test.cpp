@@ -36,6 +36,7 @@
 #include "runtime/api_task.h"
 #include "runtime/global_config.h"
 #include "rpc/asio_net_provider.h"
+#include "rpc/asio_rpc_session.h"
 #include "rpc/network.h"
 #include "rpc/network.sim.h"
 #include "rpc/rpc_address.h"
@@ -43,10 +44,11 @@
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
 #include "runtime/service_engine.h"
+#include "runtime/test_utils.h"
 #include "task/task.h"
 #include "task/task_code.h"
 #include "task/task_spec.h"
-#include "runtime/test_utils.h"
+#include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/defer.h"
 #include "utils/error_code.h"
@@ -58,18 +60,40 @@ DSN_DECLARE_uint32(conn_threshold_per_ip);
 
 namespace dsn {
 
-namespace {
+DEFINE_TASK_CODE_RPC(RPC_TEST_NETPROVIDER, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
 
-class asio_network_provider_test : public tools::asio_network_provider
+class mock_pool_session : public tools::asio_rpc_session
 {
 public:
-    asio_network_provider_test(rpc_engine *srv, network *inner_provider)
+    mock_pool_session(tools::asio_network_provider &net,
+                      ::dsn::rpc_address remote_addr,
+                      const std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
+                      message_parser_ptr &parser,
+                      bool is_client)
+        : asio_rpc_session(net, remote_addr, socket, parser, is_client)
+    {
+    }
+
+    ~mock_pool_session() override = default;
+
+    void send(uint64_t signature) override {}
+};
+
+class mock_pool_network : public tools::asio_network_provider
+{
+public:
+    mock_pool_network(rpc_engine *srv, network *inner_provider)
         : tools::asio_network_provider(srv, inner_provider)
     {
     }
-};
 
-DEFINE_TASK_CODE_RPC(RPC_TEST_NETPROVIDER, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER)
+    rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override
+    {
+        const auto sock = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
+        message_parser_ptr parser(new_message_parser(_client_hdr_format));
+        return rpc_session_ptr(new mock_pool_session(*this, server_addr, sock, parser, true));
+    }
+};
 
 void rpc_server_response(dsn::message_ex *request)
 {
@@ -79,8 +103,6 @@ void rpc_server_response(dsn::message_ex *request)
     ::dsn::marshall(response, str_command);
     dsn_rpc_reply(response);
 }
-
-} // anonymous namespace
 
 class NetProviderTest : public ::testing::Test
 {
@@ -104,21 +126,21 @@ protected:
         ++_test_port;
     }
 
-    void response_handler(bool reject,
-                          const std::string &expected_content,
-                          dsn::error_code ec,
-                          dsn::message_ex *req,
-                          dsn::message_ex *resp)
+    void check_response(bool reject,
+                        const std::string &expected_content,
+                        dsn::error_code err,
+                        dsn::message_ex *req,
+                        dsn::message_ex *resp)
     {
         const auto on_completed = defer([this]() { _response_completed.notify(); });
 
         if (reject) {
-            ASSERT_EQ(ERR_TIMEOUT, ec);
+            ASSERT_EQ(ERR_TIMEOUT, err);
             return;
         }
 
-        if (ec != ERR_OK) {
-            LOG_INFO("error msg: {}", ec);
+        if (err != ERR_OK) {
+            LOG_INFO("error msg: {}", err);
             return;
         }
 
@@ -127,7 +149,7 @@ protected:
         ASSERT_EQ(expected_content, actual_content);
     }
 
-    void rpc_client_session_send(rpc_session_ptr client_session, bool reject)
+    void test_send(const rpc_session_ptr &client_session, bool reject)
     {
         message_ex *msg = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
 
@@ -138,7 +160,7 @@ protected:
             msg,
             [reject, expected_content, this](
                 dsn::error_code ec, dsn::message_ex *req, dsn::message_ex *resp) {
-                response_handler(reject, expected_content, ec, req, resp);
+                check_response(reject, expected_content, ec, req, resp);
             },
             0));
         client_session->net().engine()->matcher()->on_call(msg, t);
@@ -150,6 +172,7 @@ protected:
     void wait_response() { _response_completed.wait(); }
 
     static int _test_port;
+
     utils::notify_event _response_completed;
 };
 
@@ -157,51 +180,38 @@ int NetProviderTest::_test_port = 20401;
 
 TEST_F(NetProviderTest, AsioNetProvider)
 {
-    std::unique_ptr<tools::asio_network_provider> asio_network(
-        new tools::asio_network_provider(task::get_current_rpc(), nullptr));
+    const auto net =
+        std::make_unique<tools::asio_network_provider>(task::get_current_rpc(), nullptr);
 
-    error_code start_result;
-    start_result = asio_network->start(RPC_CHANNEL_TCP, _test_port, true);
-    ASSERT_TRUE(start_result == ERR_OK);
+    ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_TCP, _test_port, true));
 
     // the same asio network handle, start only client is ok
-    start_result = asio_network->start(RPC_CHANNEL_TCP, _test_port, true);
-    ASSERT_TRUE(start_result == ERR_OK);
+    ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_TCP, _test_port, true));
 
-    rpc_address network_addr = asio_network->address();
-    ASSERT_TRUE(network_addr.port() == _test_port);
+    ASSERT_EQ(_test_port, net->address().port());
 
-    std::unique_ptr<tools::asio_network_provider> asio_network2(
-        new tools::asio_network_provider(task::get_current_rpc(), nullptr));
-    start_result = asio_network2->start(RPC_CHANNEL_TCP, _test_port, true);
-    ASSERT_TRUE(start_result == ERR_OK);
+    const auto another_net =
+        std::make_unique<tools::asio_network_provider>(task::get_current_rpc(), nullptr);
+    ASSERT_EQ(ERR_OK, another_net->start(RPC_CHANNEL_TCP, _test_port, true));
 
-    start_result = asio_network2->start(RPC_CHANNEL_TCP, _test_port, false);
-    ASSERT_TRUE(start_result == ERR_OK);
-    LOG_INFO("result: {}", start_result);
+    ASSERT_EQ(ERR_OK, another_net->start(RPC_CHANNEL_TCP, _test_port, false));
 
-    start_result = asio_network2->start(RPC_CHANNEL_TCP, _test_port, false);
-    ASSERT_TRUE(start_result == ERR_SERVICE_ALREADY_RUNNING);
-    LOG_INFO("result: {}", start_result);
+    ASSERT_EQ(ERR_SERVICE_ALREADY_RUNNING, another_net->start(RPC_CHANNEL_TCP, _test_port, false));
 
-    rpc_session_ptr client_session =
-        asio_network->create_client_session(rpc_address::from_host_port("localhost", _test_port));
-    client_session->connect();
+    const auto client =
+        net->create_client_session(rpc_address::from_host_port("localhost", _test_port));
+    client->connect();
 
-    rpc_client_session_send(client_session, false);
+    test_send(client, false);
 }
 
 TEST_F(NetProviderTest, AsioUdpProvider)
 {
-    std::unique_ptr<tools::asio_udp_provider> client(
-        new tools::asio_udp_provider(task::get_current_rpc(), nullptr));
+    const auto net = std::make_unique<tools::asio_udp_provider>(task::get_current_rpc(), nullptr);
 
-    error_code start_result;
-    start_result = client->start(RPC_CHANNEL_UDP, 0, true);
-    ASSERT_TRUE(start_result == ERR_OK);
+    ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_UDP, 0, true));
 
-    start_result = client->start(RPC_CHANNEL_UDP, _test_port, false);
-    ASSERT_TRUE(start_result == ERR_OK);
+    ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_UDP, _test_port, false));
 
     message_ex *msg = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
 
@@ -211,57 +221,54 @@ TEST_F(NetProviderTest, AsioUdpProvider)
     rpc_response_task_ptr t(new rpc_response_task(
         msg,
         [expected_content, this](dsn::error_code ec, dsn::message_ex *req, dsn::message_ex *resp) {
-            response_handler(false, expected_content, ec, req, resp);
+            check_response(false, expected_content, ec, req, resp);
         },
         0));
-    client->engine()->matcher()->on_call(msg, t);
+    net->engine()->matcher()->on_call(msg, t);
 
-    client->send_message(msg);
+    net->send_message(msg);
     wait_response();
 }
 
 TEST_F(NetProviderTest, SimNetProvider)
 {
-    std::unique_ptr<tools::sim_network_provider> sim_net(
-        new tools::sim_network_provider(task::get_current_rpc(), nullptr));
+    const auto net =
+        std::make_unique<tools::sim_network_provider>(task::get_current_rpc(), nullptr);
 
-    error_code ans;
-    ans = sim_net->start(RPC_CHANNEL_TCP, _test_port, false);
-    ASSERT_TRUE(ans == ERR_OK);
+    ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_TCP, _test_port, false));
 
-    ans = sim_net->start(RPC_CHANNEL_TCP, _test_port, false);
-    ASSERT_TRUE(ans == ERR_ADDRESS_ALREADY_USED);
+    ASSERT_EQ(ERR_ADDRESS_ALREADY_USED, net->start(RPC_CHANNEL_TCP, _test_port, false));
 
-    rpc_session_ptr client_session =
-        sim_net->create_client_session(rpc_address::from_host_port("localhost", _test_port));
-    client_session->connect();
+    const auto client =
+        net->create_client_session(rpc_address::from_host_port("localhost", _test_port));
+    client->connect();
 
-    rpc_client_session_send(client_session, false);
+    test_send(client, false);
 }
 
 TEST_F(NetProviderTest, AsioNetworkProviderConnectionThreshold)
 {
-    std::unique_ptr<asio_network_provider_test> asio_network(
-        new asio_network_provider_test(task::get_current_rpc(), nullptr));
+    const auto net =
+        std::make_unique<tools::asio_network_provider>(task::get_current_rpc(), nullptr);
 
-    error_code start_result;
-    start_result = asio_network->start(RPC_CHANNEL_TCP, _test_port, false);
-    ASSERT_TRUE(start_result == ERR_OK);
+    ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_TCP, _test_port, false));
 
-    auto CONN_THRESHOLD = 3;
+    PRESERVE_FLAG(conn_threshold_per_ip);
+
+    constexpr int kConnThreshold{3};
     LOG_INFO("change FLAGS_conn_threshold_per_ip {} -> {} for test",
              FLAGS_conn_threshold_per_ip,
-             CONN_THRESHOLD);
-    FLAGS_conn_threshold_per_ip = CONN_THRESHOLD;
+             kConnThreshold);
+    FLAGS_conn_threshold_per_ip = kConnThreshold;
 
     // not exceed threshold
-    for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
+    for (int count = 0; count < kConnThreshold + 2; ++count) {
         LOG_INFO("client # {}", count);
-        rpc_session_ptr client_session = asio_network->create_client_session(
-            rpc_address::from_host_port("localhost", _test_port));
+        const auto client_session =
+            net->create_client_session(rpc_address::from_host_port("localhost", _test_port));
         client_session->connect();
 
-        rpc_client_session_send(client_session, false);
+        test_send(client_session, false);
 
         client_session->close();
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -269,15 +276,17 @@ TEST_F(NetProviderTest, AsioNetworkProviderConnectionThreshold)
 
     // exceed threshold
     bool reject = false;
-    for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
+    for (int count = 0; count < kConnThreshold + 2; ++count) {
         LOG_INFO("client # {}", count);
-        rpc_session_ptr client_session = asio_network->create_client_session(
-            rpc_address::from_host_port("localhost", _test_port));
+        const auto client_session =
+            net->create_client_session(rpc_address::from_host_port("localhost", _test_port));
         client_session->connect();
 
-        if (count >= CONN_THRESHOLD)
+        if (count >= kConnThreshold) {
             reject = true;
-        rpc_client_session_send(client_session, reject);
+        }
+
+        test_send(client_session, reject);
     }
 }
 

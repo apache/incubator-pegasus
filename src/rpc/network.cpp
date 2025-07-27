@@ -234,7 +234,7 @@ void rpc_session::clear_send_queue(bool resend_msgs)
             --_sending_count;
         }
 
-        auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
+        auto *rmsg = CONTAINING_RECORD(msg, message_ex, dl); // NOLINT
         rmsg->io_session = nullptr;
 
         if (resend_msgs) {
@@ -281,7 +281,7 @@ inline bool rpc_session::unlink_message_for_send()
 
     // added in send_message
     _message_count -= static_cast<int>(_sending_msgs.size());
-    return _sending_msgs.size() > 0;
+    return !_sending_msgs.empty();
 }
 
 DEFINE_TASK_CODE(LPC_DELAY_RPC_REQUEST_RATE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)

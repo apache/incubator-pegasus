@@ -241,7 +241,6 @@ private:
 class rpc_client_matcher;
 
 class rpc_session : public ref_counter
-
 {
 public:
     /*!
