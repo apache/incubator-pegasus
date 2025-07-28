@@ -222,7 +222,7 @@ void rpc_session::clear_send_queue(bool resend_msgs)
     }
 
     while (true) {
-        dlink *msg;
+        dlink *msg{nullptr};
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
             msg = _batched_msgs.next();
@@ -255,14 +255,14 @@ void rpc_session::clear_send_queue(bool resend_msgs)
 
 inline bool rpc_session::unlink_message_for_send()
 {
-    auto n = _batched_msgs.next();
+    auto *n = _batched_msgs.next();
     int bcount = 0;
 
     DCHECK_EQ(0, _sending_buffers.size());
     DCHECK_EQ(0, _sending_msgs.size());
 
     while (n != &_batched_msgs) {
-        auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
+        auto *lmsg = CONTAINING_RECORD(n, message_ex, dl); // NOLINT
         auto lcount = _parser->get_buffer_count_on_send(lmsg);
         if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send) {
             break;
@@ -347,7 +347,7 @@ void rpc_session::send_message(message_ex *msg)
     CHECK_NOTNULL(_parser, "parser should not be null when send");
     _parser->prepare_on_send(msg);
 
-    uint64_t sig;
+    uint64_t sig{0};
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         msg->dl.insert_before(&_batched_msgs);
@@ -561,7 +561,7 @@ bool rpc_session::try_pend_message(message_ex *msg)
 void rpc_session::clear_pending_messages()
 {
     utils::auto_lock<utils::ex_lock_nr> l(_lock);
-    for (auto msg : _pending_msgs) {
+    for (auto *msg : _pending_msgs) {
         msg->release_ref();
     }
     _pending_msgs.clear();

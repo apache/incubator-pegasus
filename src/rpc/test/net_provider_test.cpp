@@ -35,6 +35,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -130,7 +131,7 @@ protected:
 
     void test_send(const rpc_session_ptr &client, bool reject)
     {
-        message_ex *request = message_ex::create_request(RPC_TEST_NETPROVIDER, 5000, 0);
+        message_ex *request = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
 
         const std::string expected_content("hello world");
         ::dsn::marshall(request, expected_content);
@@ -285,7 +286,7 @@ public:
 
     void send(uint64_t signature) override
     {
-        std::cout << "sending count is " << queued_message_count() << std::endl;
+        LOG_INFO("queued message count is {}", queued_message_count());
     }
 
 private:
@@ -361,7 +362,7 @@ TEST_F(NetProviderTest, GetSessionFromPool)
 
     ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_TCP, _test_port, false));
 
-    net->test_conn(4);
+    net->test_conn(16);
 }
 
 class mock_pool_send_network : public tools::asio_network_provider
@@ -389,6 +390,10 @@ public:
             const std::string content(fmt::format("msg-{}", i));
             ASSERT_TRUE(expected_messages.insert(content).second);
             send_request(content);
+
+            ASSERT_EQ(1, _clients.size());
+            ASSERT_GE(pool_size, _clients.begin()->second->size());
+            LOG_INFO("pool size is {}", _clients.begin()->second->size());
         }
 
         _completed.wait();
@@ -400,7 +405,7 @@ public:
 private:
     void send_request(const std::string &content)
     {
-        message_ex *request = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
+        message_ex *request = message_ex::create_request(RPC_TEST_NETPROVIDER, 10000, 0);
         request->to_address = rpc_address::from_host_port("localhost", _port);
         ::dsn::marshall(request, content);
 
@@ -446,7 +451,7 @@ TEST_F(NetProviderTest, SendMessageByPool)
 
     ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_TCP, _test_port, false));
 
-    net->test_send(16, 678);
+    net->test_send(64, 5678);
 }
 
 } // namespace dsn
