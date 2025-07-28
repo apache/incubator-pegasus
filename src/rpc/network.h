@@ -27,6 +27,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -312,7 +313,7 @@ public:
     void on_send_completed(uint64_t signature);
     virtual void on_failure(bool is_write);
 
-    [[nodiscard]] int sending_count() const { return _sending_count; }
+    [[nodiscard]] int queued_message_count() const { return _queued_msg_count; }
 
 protected:
     ///
@@ -330,20 +331,18 @@ protected:
     volatile session_state _connect_state;
 
     bool negotiation_succeed = false;
-    // when the negotiation of a session isn't succeed,
-    // all messages are queued in _pending_messages.
-    // after connected, all of them are moved to "_messages"
-    std::vector<message_ex *> _pending_messages;
 
-    // messages are sent in batch, firstly all messages are linked together
-    // in a doubly-linked list "_messages".
-    // if no messages are on-the-flying, a batch of messages are fetch from the "_messages"
-    // and put them to _sending_msgs; meanwhile, buffers of these messages are put
-    // in _sending_buffers
-    dlink _messages;
-    int _message_count; // count of _messages
+    // When a session has not succeeded in negotiating, all messages are cached in
+    // `_pending_msgs`. Once succeeded, all of them would be moved to "_batched_msgs".
+    std::vector<message_ex *> _pending_msgs;
 
-    std::atomic_int _sending_count{0};
+    // Messages are sent in batch, firstly all of them are linked together in a doubly-linked
+    // list "_batched_msgs".
+    //
+    // If no message are on-the-flying, a batch of messages are moved from `_batched_msgs`
+    // to `_sending_msgs`, while the buffers of them are put into `_sending_buffers`.
+    dlink _batched_msgs;
+    int _batched_msg_count; // Count of `_batched_msgs`.
 
     bool _is_sending_next;
 
@@ -352,6 +351,9 @@ protected:
 
     uint64_t _message_sent;
     // ]
+
+    // The total number of messages queued in `_batched_msgs` and `_sending_msgs`.
+    std::atomic_int _queued_msg_count{0};
 
     ///
     /// change status and check status
@@ -436,7 +438,7 @@ private:
     [[nodiscard]] rpc_session_ptr select_rpc_session() const;
     [[nodiscard]] rpc_session_ptr create_rpc_session();
 
-    friend class mock_pool_network;
+    friend class mock_pool_conn_network;
 
     connection_oriented_network *_net;
     const rpc_address _server_addr;

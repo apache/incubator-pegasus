@@ -29,11 +29,16 @@
 #include <boost/asio/detail/impl/service_registry.hpp>
 // IWYU pragma: no_include <boost/asio/impl/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <fmt/core.h>
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
+#include <utility>
 
 #include "gtest/gtest.h"
 #include "rpc/asio_net_provider.h"
@@ -59,6 +64,7 @@
 #include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/synchronize.h"
 
 DSN_DECLARE_uint32(conn_threshold_per_ip);
@@ -124,7 +130,7 @@ protected:
 
     void test_send(const rpc_session_ptr &client, bool reject)
     {
-        message_ex *request = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
+        message_ex *request = message_ex::create_request(RPC_TEST_NETPROVIDER, 5000, 0);
 
         const std::string expected_content("hello world");
         ::dsn::marshall(request, expected_content);
@@ -279,7 +285,7 @@ public:
 
     void send(uint64_t signature) override
     {
-        std::cout << "sending count is " << sending_count() << std::endl;
+        std::cout << "sending count is " << queued_message_count() << std::endl;
     }
 
 private:
@@ -287,15 +293,15 @@ private:
     DISALLOW_MOVE_AND_ASSIGN(mock_pool_session);
 };
 
-class mock_pool_network : public tools::asio_network_provider
+class mock_pool_conn_network : public tools::asio_network_provider
 {
 public:
-    mock_pool_network(rpc_engine *srv, network *inner_provider, int port)
+    mock_pool_conn_network(rpc_engine *srv, network *inner_provider, int port)
         : tools::asio_network_provider(srv, inner_provider), _port(port)
     {
     }
 
-    ~mock_pool_network() = default;
+    ~mock_pool_conn_network() override = default;
 
     rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override
     {
@@ -310,55 +316,137 @@ public:
         FLAGS_conn_pool_max_size = pool_size;
 
         for (uint32_t i = 0; i < pool_size; ++i) {
-            send_request();
+            mock_request_for_conn();
             ASSERT_EQ(1, _clients.size());
             ASSERT_EQ(i + 1, _clients.begin()->second->size());
         }
 
         for (const auto &[session, _] : _clients.begin()->second->_sessions) {
-            ASSERT_EQ(1, session->sending_count());
+            ASSERT_EQ(1, session->queued_message_count());
         }
 
-        constexpr uint32_t kSendingCount{16};
-        for (uint32_t i = 0; i < kSendingCount; ++i) {
+        for (uint32_t i = 0; i < pool_size * 16; ++i) {
             for (uint32_t j = 0; j < pool_size; ++j) {
-                send_request();
+                mock_request_for_conn();
                 ASSERT_EQ(1, _clients.size());
                 ASSERT_EQ(pool_size, _clients.begin()->second->size());
             }
 
             for (const auto &[session, _] : _clients.begin()->second->_sessions) {
-                ASSERT_EQ(i + 2, session->sending_count());
+                ASSERT_EQ(i + 2, session->queued_message_count());
             }
         }
     }
 
 private:
-    void send_request()
+    void mock_request_for_conn()
     {
         message_ex *request = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
         request->to_address = rpc_address::from_host_port("localhost", _port);
-
-        const std::string expected_content("hello world");
-        ::dsn::marshall(request, expected_content);
+        ::dsn::marshall(request, std::string("hello world"));
 
         send_message(request);
     }
 
     const int _port;
 
-    DISALLOW_COPY_AND_ASSIGN(mock_pool_network);
-    DISALLOW_MOVE_AND_ASSIGN(mock_pool_network);
+    DISALLOW_COPY_AND_ASSIGN(mock_pool_conn_network);
+    DISALLOW_MOVE_AND_ASSIGN(mock_pool_conn_network);
 };
 
 TEST_F(NetProviderTest, GetSessionFromPool)
 {
     const auto net =
-        std::make_unique<mock_pool_network>(task::get_current_rpc(), nullptr, _test_port);
+        std::make_unique<mock_pool_conn_network>(task::get_current_rpc(), nullptr, _test_port);
 
     ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_TCP, _test_port, false));
 
     net->test_conn(4);
+}
+
+class mock_pool_send_network : public tools::asio_network_provider
+{
+public:
+    mock_pool_send_network(rpc_engine *srv, network *inner_provider, int port)
+        : tools::asio_network_provider(srv, inner_provider), _port(port)
+    {
+    }
+
+    ~mock_pool_send_network() override = default;
+
+    void test_send(uint32_t pool_size, int message_count)
+    {
+        PRESERVE_FLAG(conn_threshold_per_ip);
+        FLAGS_conn_threshold_per_ip = 0;
+
+        PRESERVE_FLAG(conn_pool_max_size);
+        FLAGS_conn_pool_max_size = pool_size;
+
+        _message_count = message_count;
+
+        std::set<std::string> expected_messages;
+        for (int i = 0; i < message_count; ++i) {
+            const std::string content(fmt::format("msg-{}", i));
+            ASSERT_TRUE(expected_messages.insert(content).second);
+            send_request(content);
+        }
+
+        _completed.wait();
+
+        ASSERT_EQ(0, _message_count);
+        ASSERT_EQ(expected_messages, _actual_messages);
+    }
+
+private:
+    void send_request(const std::string &content)
+    {
+        message_ex *request = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
+        request->to_address = rpc_address::from_host_port("localhost", _port);
+        ::dsn::marshall(request, content);
+
+        rpc_response_task_ptr t(new rpc_response_task(
+            request,
+            [this](dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) {
+                ASSERT_EQ(ERR_OK, err);
+
+                std::string actual_content;
+                ::dsn::unmarshall(resp, actual_content);
+
+                {
+                    std::lock_guard<std::mutex> guard(_mtx);
+                    ASSERT_TRUE(_actual_messages.insert(actual_content).second);
+                }
+
+                if (--_message_count == 0) {
+                    _completed.notify();
+                }
+            },
+            0));
+        engine()->matcher()->on_call(request, t);
+
+        send_message(request);
+    }
+
+    const int _port;
+
+    std::mutex _mtx;
+    std::set<std::string> _actual_messages;
+
+    std::atomic_int _message_count{0};
+    utils::notify_event _completed;
+
+    DISALLOW_COPY_AND_ASSIGN(mock_pool_send_network);
+    DISALLOW_MOVE_AND_ASSIGN(mock_pool_send_network);
+};
+
+TEST_F(NetProviderTest, SendMessageByPool)
+{
+    const auto net =
+        std::make_unique<mock_pool_send_network>(task::get_current_rpc(), nullptr, _test_port);
+
+    ASSERT_EQ(ERR_OK, net->start(RPC_CHANNEL_TCP, _test_port, false));
+
+    net->test_send(16, 678);
 }
 
 } // namespace dsn

@@ -46,17 +46,18 @@
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/socket_base.hpp>
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
 #include <limits>
 #include <memory>
 #include <new>
+#include <string>
 #include <utility>
 
 #include "asio_rpc_session.h"
 #include "boost/asio/detail/impl/scheduler.ipp"
 #include "boost/asio/impl/any_io_executor.ipp"
 #include "boost/system/detail/error_code.hpp"
+#include "fmt/core.h"
 #include "runtime/tool_api.h"
 // IWYU pragma: no_include "boost/asio/basic_datagram_socket.hpp"
 // IWYU pragma: no_include "boost/asio/basic_socket_acceptor.hpp"

@@ -132,8 +132,9 @@ rpc_session::~rpc_session()
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        CHECK_EQ_MSG(0, _sending_msgs.size(), "sending queue is not cleared yet");
-        CHECK_EQ_MSG(0, _message_count, "sending queue is not cleared yet");
+        CHECK_EQ_MSG(0, _sending_msgs.size(), "sending messages have not been cleared yet");
+        CHECK_EQ_MSG(0, _batched_msg_count, "batched messages have not been cleared yet");
+        CHECK_EQ_MSG(0, _queued_msg_count.load(), "there should not be any queued message now");
     }
 }
 
@@ -185,7 +186,7 @@ bool rpc_session::mark_disconnected()
 void rpc_session::clear_send_queue(bool resend_msgs)
 {
     //
-    // - in concurrent case, resending _sending_msgs and _messages
+    // - in concurrent case, resending _sending_msgs and _batched_msgs
     //   may not maintain the original sending order
     // - can optimize by batch sending instead of sending one by one
     //
@@ -199,7 +200,7 @@ void rpc_session::clear_send_queue(bool resend_msgs)
     {
         // protect _sending_msgs and _sending_buffers in lock
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        _sending_count -= static_cast<int>(_sending_msgs.size());
+        _queued_msg_count -= static_cast<int>(_sending_msgs.size());
         _sending_msgs.swap(swapped_sending_msgs);
         _sending_buffers.clear();
     }
@@ -224,14 +225,14 @@ void rpc_session::clear_send_queue(bool resend_msgs)
         dlink *msg;
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
-            msg = _messages.next();
-            if (msg == &_messages) {
+            msg = _batched_msgs.next();
+            if (msg == &_batched_msgs) {
                 break;
             }
 
             msg->remove();
-            --_message_count;
-            --_sending_count;
+            --_batched_msg_count;
+            --_queued_msg_count;
         }
 
         auto *rmsg = CONTAINING_RECORD(msg, message_ex, dl); // NOLINT
@@ -254,13 +255,13 @@ void rpc_session::clear_send_queue(bool resend_msgs)
 
 inline bool rpc_session::unlink_message_for_send()
 {
-    auto n = _messages.next();
+    auto n = _batched_msgs.next();
     int bcount = 0;
 
     DCHECK_EQ(0, _sending_buffers.size());
     DCHECK_EQ(0, _sending_msgs.size());
 
-    while (n != &_messages) {
+    while (n != &_batched_msgs) {
         auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
         auto lcount = _parser->get_buffer_count_on_send(lmsg);
         if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send) {
@@ -280,7 +281,7 @@ inline bool rpc_session::unlink_message_for_send()
     }
 
     // added in send_message
-    _message_count -= static_cast<int>(_sending_msgs.size());
+    _batched_msg_count -= static_cast<int>(_sending_msgs.size());
     return !_sending_msgs.empty();
 }
 
@@ -349,9 +350,9 @@ void rpc_session::send_message(message_ex *msg)
     uint64_t sig;
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        msg->dl.insert_before(&_messages);
-        ++_message_count;
-        ++_sending_count;
+        msg->dl.insert_before(&_batched_msgs);
+        ++_batched_msg_count;
+        ++_queued_msg_count;
 
         if ((SS_CONNECTED != _connect_state) || _is_sending_next) {
             return;
@@ -378,8 +379,8 @@ bool rpc_session::cancel(message_ex *request)
         }
 
         request->dl.remove();
-        --_message_count;
-        --_sending_count;
+        --_batched_msg_count;
+        --_queued_msg_count;
     }
 
     // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
@@ -411,7 +412,7 @@ void rpc_session::on_send_completed(uint64_t signature)
                 _message_sent++;
             }
 
-            _sending_count -= static_cast<int>(_sending_msgs.size());
+            _queued_msg_count -= static_cast<int>(_sending_msgs.size());
             _sending_msgs.clear();
             _sending_buffers.clear();
         }
@@ -435,7 +436,7 @@ rpc_session::rpc_session(connection_oriented_network &net,
                          message_parser_ptr &parser,
                          bool is_client)
     : _connect_state(is_client ? SS_DISCONNECTED : SS_CONNECTED),
-      _message_count(0),
+      _batched_msg_count(0),
       _is_sending_next(false),
       _message_sent(0),
       _net(net),
@@ -550,7 +551,7 @@ bool rpc_session::try_pend_message(message_ex *msg)
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (!negotiation_succeed) {
             msg->add_ref();
-            _pending_messages.push_back(msg);
+            _pending_msgs.push_back(msg);
             return true;
         }
     }
@@ -560,10 +561,10 @@ bool rpc_session::try_pend_message(message_ex *msg)
 void rpc_session::clear_pending_messages()
 {
     utils::auto_lock<utils::ex_lock_nr> l(_lock);
-    for (auto msg : _pending_messages) {
+    for (auto msg : _pending_msgs) {
         msg->release_ref();
     }
-    _pending_messages.clear();
+    _pending_msgs.clear();
 }
 
 void rpc_session::set_negotiation_succeed()
@@ -573,7 +574,7 @@ void rpc_session::set_negotiation_succeed()
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         negotiation_succeed = true;
 
-        _pending_messages.swap(swapped_pending_msgs);
+        _pending_msgs.swap(swapped_pending_msgs);
     }
 
     // resend the pending messages
@@ -899,7 +900,8 @@ rpc_session_ptr rpc_session_pool::select_rpc_session() const
     return std::min_element(_sessions.begin(),
                             _sessions.end(),
                             [](const auto &lhs, const auto &rhs) {
-                                return lhs.first->sending_count() < rhs.first->sending_count();
+                                return lhs.first->queued_message_count() <
+                                       rhs.first->queued_message_count();
                             })
         ->second;
 }
