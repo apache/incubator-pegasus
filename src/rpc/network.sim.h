@@ -87,7 +87,7 @@ class sim_network_provider : public connection_oriented_network
 {
 public:
     sim_network_provider(rpc_engine *rpc, network *inner_provider);
-    ~sim_network_provider(void) {}
+    ~sim_network_provider() override = default;
 
     virtual error_code start(rpc_channel channel, int port, bool client_only);
 

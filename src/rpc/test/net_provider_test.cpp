@@ -270,28 +270,46 @@ TEST_F(NetProviderTest, AsioNetworkProviderConnectionThreshold)
     }
 }
 
-class mock_pool_session : public tools::asio_rpc_session
+class mock_pool_conn_session : public tools::asio_rpc_session
 {
 public:
-    mock_pool_session(tools::asio_network_provider &net,
-                      ::dsn::rpc_address remote_addr,
-                      std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
-                      message_parser_ptr &parser,
-                      bool is_client)
-        : asio_rpc_session(net, remote_addr, socket, parser, is_client)
+    mock_pool_conn_session(tools::asio_network_provider &net,
+                           ::dsn::rpc_address remote_addr,
+                           std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
+                           message_parser_ptr &parser,
+                           bool is_client,
+                           std::atomic_int *session_count,
+                           utils::notify_event *on_closed)
+        : asio_rpc_session(net, remote_addr, socket, parser, is_client),
+          _session_count(session_count),
+          _on_closed(on_closed)
     {
     }
 
-    ~mock_pool_session() override = default;
+    ~mock_pool_conn_session() override = default;
 
     void send(uint64_t signature) override
     {
         LOG_INFO("queued message count is {}", queued_message_count());
     }
 
+    void on_failure(bool is_write) override
+    {
+        rpc_session::on_failure(is_write);
+
+        ASSERT_EQ(SS_DISCONNECTED, _connect_state);
+
+        if (--(*_session_count) == 0) {
+            _on_closed->notify();
+        }
+    }
+
 private:
-    DISALLOW_COPY_AND_ASSIGN(mock_pool_session);
-    DISALLOW_MOVE_AND_ASSIGN(mock_pool_session);
+    std::atomic_int *_session_count;
+    utils::notify_event *_on_closed;
+
+    DISALLOW_COPY_AND_ASSIGN(mock_pool_conn_session);
+    DISALLOW_MOVE_AND_ASSIGN(mock_pool_conn_session);
 };
 
 class mock_pool_conn_network : public tools::asio_network_provider
@@ -308,7 +326,8 @@ public:
     {
         auto sock = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
         message_parser_ptr parser(new_message_parser(_client_hdr_format));
-        return {new mock_pool_session(*this, server_addr, sock, parser, true)};
+        return {new mock_pool_conn_session(
+            *this, server_addr, sock, parser, true, &_session_count, &_on_closed)};
     }
 
     void test_conn(uint32_t pool_size)
@@ -337,6 +356,15 @@ public:
                 ASSERT_EQ(i + 2, session->queued_message_count());
             }
         }
+
+        ASSERT_EQ(1, _clients.size());
+        ASSERT_EQ(pool_size, _clients.begin()->second->size());
+
+        _session_count = pool_size;
+        _clients.begin()->second->close();
+
+        _on_closed.wait();
+        ASSERT_TRUE(_clients.empty());
     }
 
 private:
@@ -350,6 +378,9 @@ private:
     }
 
     const int _port;
+
+    std::atomic_int _session_count;
+    utils::notify_event _on_closed;
 
     DISALLOW_COPY_AND_ASSIGN(mock_pool_conn_network);
     DISALLOW_MOVE_AND_ASSIGN(mock_pool_conn_network);
@@ -396,7 +427,7 @@ public:
             LOG_INFO("pool size is {}", _clients.begin()->second->size());
         }
 
-        _completed.wait();
+        _on_completed.wait();
 
         ASSERT_EQ(0, _message_count);
         ASSERT_EQ(expected_messages, _actual_messages);
@@ -423,7 +454,7 @@ private:
                 }
 
                 if (--_message_count == 0) {
-                    _completed.notify();
+                    _on_completed.notify();
                 }
             },
             0));
@@ -438,7 +469,7 @@ private:
     std::set<std::string> _actual_messages;
 
     std::atomic_int _message_count{0};
-    utils::notify_event _completed;
+    utils::notify_event _on_completed;
 
     DISALLOW_COPY_AND_ASSIGN(mock_pool_send_network);
     DISALLOW_MOVE_AND_ASSIGN(mock_pool_send_network);

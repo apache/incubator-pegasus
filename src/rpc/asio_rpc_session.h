@@ -46,12 +46,14 @@ class asio_rpc_session : public rpc_session
 {
 public:
     asio_rpc_session(asio_network_provider &net,
-                     ::dsn::rpc_address remote_addr,
+                     rpc_address remote_addr,
                      std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
                      message_parser_ptr &parser,
                      bool is_client);
 
     ~asio_rpc_session() override;
+
+    rpc_address local_address() const override { return _local_addr; }
 
     void send(uint64_t signature) override;
 
@@ -72,6 +74,8 @@ private:
             on_failure(false);
         }
     }
+
+    rpc_address _local_addr;
 
     std::shared_ptr<boost::asio::ip::tcp::socket> _socket;
 };

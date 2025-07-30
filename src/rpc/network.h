@@ -257,7 +257,7 @@ public:
                 ::dsn::rpc_address remote_addr,
                 message_parser_ptr &parser,
                 bool is_client);
-    virtual ~rpc_session();
+    ~rpc_session() override;
 
     virtual void connect() = 0;
     virtual void close() = 0;
@@ -265,10 +265,15 @@ public:
     // Whether this session is launched on client side.
     bool is_client() const { return _is_client; }
 
-    dsn::rpc_address remote_address() const { return _remote_addr; }
-    dsn::host_port remote_host_port() const { return _remote_host_port; }
+    const char *log_prefix() const { return _log_prefix.c_str(); }
+
+    rpc_address remote_address() const { return _remote_addr; }
+    host_port remote_host_port() const { return _remote_host_port; }
     connection_oriented_network &net() const { return _net; }
     message_parser_ptr parser() const { return _parser; }
+
+    // Invalid address by default.
+    virtual rpc_address local_address() const { return rpc_address(); }
 
     ///
     /// rpc_session's interface for sending and receiving
@@ -369,14 +374,16 @@ protected:
 
     // constant info
     connection_oriented_network &_net;
-    dsn::rpc_address _remote_addr;
-    dsn::host_port _remote_host_port;
+    const rpc_address _remote_addr;
+    const host_port _remote_host_port;
     int _max_buffer_block_count_per_send;
     message_reader _reader;
     message_parser_ptr _parser;
 
 private:
     const bool _is_client;
+    const std::string _log_prefix;
+
     rpc_client_matcher *_matcher;
 
     std::atomic_int _delay_server_receive_ms;

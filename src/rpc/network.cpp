@@ -132,15 +132,16 @@ rpc_session::~rpc_session()
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        CHECK_EQ_MSG(0, _sending_msgs.size(), "sending messages have not been cleared yet");
-        CHECK_EQ_MSG(0, _batched_msg_count, "batched messages have not been cleared yet");
-        CHECK_EQ_MSG(0, _queued_msg_count.load(), "there should not be any queued message now");
+        CHECK_EQ_PREFIX_MSG(0, _sending_msgs.size(), "sending messages have not been cleared yet");
+        CHECK_EQ_PREFIX_MSG(0, _batched_msg_count, "batched messages have not been cleared yet");
+        CHECK_EQ_PREFIX_MSG(
+            0, _queued_msg_count.load(), "there should not be any queued message now");
     }
 }
 
 bool rpc_session::mark_connecting()
 {
-    CHECK(is_client(), "must be client session");
+    CHECK_PREFIX_MSG(is_client(), "must be client session");
 
     utils::auto_lock<utils::ex_lock_nr> l(_lock);
 
@@ -154,11 +155,11 @@ bool rpc_session::mark_connecting()
 
 void rpc_session::mark_connected()
 {
-    CHECK(is_client(), "must be client session");
+    CHECK_PREFIX_MSG(is_client(), "must be client session");
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        CHECK_EQ(_connect_state, SS_CONNECTING);
+        CHECK_EQ_PREFIX(_connect_state, SS_CONNECTING);
         _connect_state = SS_CONNECTED;
     }
 
@@ -258,21 +259,24 @@ inline bool rpc_session::unlink_message_for_send()
     auto *n = _batched_msgs.next();
     int bcount = 0;
 
-    DCHECK_EQ(0, _sending_buffers.size());
-    DCHECK_EQ(0, _sending_msgs.size());
+    DCHECK_EQ_PREFIX(0, _sending_buffers.size());
+    DCHECK_EQ_PREFIX(0, _sending_msgs.size());
 
     while (n != &_batched_msgs) {
         auto *lmsg = CONTAINING_RECORD(n, message_ex, dl); // NOLINT
-        auto lcount = _parser->get_buffer_count_on_send(lmsg);
+        const auto lcount = _parser->get_buffer_count_on_send(lmsg);
         if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send) {
             break;
         }
 
         _sending_buffers.resize(bcount + lcount);
-        auto rcount = _parser->get_buffers_on_send(lmsg, &_sending_buffers[bcount]);
-        CHECK_GE(lcount, rcount);
-        if (lcount != rcount)
+        const auto rcount = _parser->get_buffers_on_send(lmsg, &_sending_buffers[bcount]);
+        CHECK_GE_PREFIX(lcount, rcount);
+
+        if (lcount != rcount) {
             _sending_buffers.resize(bcount + rcount);
+        }
+
         bcount += rcount;
         _sending_msgs.push_back(lmsg);
 
@@ -320,14 +324,15 @@ int rpc_session::prepare_parser()
         hdr_format = _net.unknown_msg_hdr_format();
 
         if (hdr_format == NET_HDR_INVALID) {
-            LOG_ERROR("invalid header type, remote_client = {}, header_type = '{}'",
-                      _remote_addr,
-                      message_parser::get_debug_string(_reader._buffer.data()));
+            LOG_ERROR_PREFIX("invalid header type, remote_client = {}, header_type = '{}'",
+                             _remote_addr,
+                             message_parser::get_debug_string(_reader._buffer.data()));
             return -1;
         }
     }
+
     _parser = _net.new_message_parser(hdr_format);
-    LOG_DEBUG(
+    LOG_DEBUG_PREFIX(
         "message parser created, remote_client = {}, header_format = {}", _remote_addr, hdr_format);
 
     return 0;
@@ -344,16 +349,22 @@ void rpc_session::send_message(message_ex *msg)
         return;
     }
 
-    CHECK_NOTNULL(_parser, "parser should not be null when send");
+    CHECK_NOTNULL_PREFIX_MSG(_parser, "parser should not be null when send");
     _parser->prepare_on_send(msg);
 
     uint64_t sig{0};
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
+
+        // Cache the message firstly, to be sent in batch later.
         msg->dl.insert_before(&_batched_msgs);
         ++_batched_msg_count;
         ++_queued_msg_count;
 
+        // Messages cannot be sent until following conditions are met:
+        // 1. the connection should be established successfully, since connecting to remote
+        // is asynchronous, and
+        // 2. there is not another batch being sent.
         if ((SS_CONNECTED != _connect_state) || _is_sending_next) {
             return;
         }
@@ -395,14 +406,15 @@ void rpc_session::on_send_completed(uint64_t signature)
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (signature != 0) {
-            CHECK(_is_sending_next && signature == _message_sent + 1, "sent msg must be sending");
+            CHECK_PREFIX_MSG(_is_sending_next && signature == _message_sent + 1,
+                             "sent msg must be sending");
             _is_sending_next = false;
 
             // the _sending_msgs may have been cleared when reading of the rpc_session is failed.
             if (_sending_msgs.size() == 0) {
-                CHECK_EQ_MSG(_connect_state,
-                             SS_DISCONNECTED,
-                             "assume sending queue is cleared due to session closed");
+                CHECK_EQ_PREFIX_MSG(_connect_state,
+                                    SS_DISCONNECTED,
+                                    "assume sending queue is cleared due to session closed");
                 return;
             }
 
@@ -448,10 +460,12 @@ rpc_session::rpc_session(connection_oriented_network &net,
       _reader(net.message_buffer_block_size()),
       _parser(parser),
       _is_client(is_client),
+      _log_prefix(fmt::format(
+          "[{}][remote@{}]", is_client ? "client session" : "server session", remote_addr)),
       _matcher(_net.engine()->matcher()),
       _delay_server_receive_ms(0)
 {
-    LOG_WARNING_IF(!_remote_host_port, "'{}' can not be reverse resolved", _remote_addr);
+    LOG_WARNING_IF_PREFIX(!_remote_host_port, "'{}' can not be reverse resolved", _remote_addr);
     if (!is_client) {
         on_rpc_session_connected.execute(this);
     }
@@ -486,9 +500,9 @@ void rpc_session::on_failure(bool is_write)
         // The under layer socket may be used by async_* interfaces concurrently, it's not thread
         // safe to invalidate the '_socket', it should be invalidated when the session is
         // destroyed.
-        LOG_WARNING("disconnect to remote {}, the socket will be lazily closed when the session "
-                    "destroyed",
-                    _remote_addr);
+        LOG_WARNING_PREFIX("disconnect to remote {}, the socket will be lazily closed when "
+                           "the session destroyed",
+                           _remote_addr);
     }
 }
 
@@ -523,13 +537,14 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
         // - the remote address is not listened, which means the remote port is not occupied
         // - operating system chooses the remote port as client's ephemeral port
         if (is_client() && msg->header->from_address == _net.engine()->primary_address()) {
-            LOG_ERROR("self connection detected, address = {}", msg->header->from_address);
-            CHECK_EQ_MSG(msg->get_count(), 0, "message should not be referenced by anybody so far");
+            LOG_ERROR_PREFIX("self connection detected, address = {}", msg->header->from_address);
+            CHECK_EQ_PREFIX_MSG(
+                msg->get_count(), 0, "message should not be referenced by anybody so far");
             delete msg;
             return false;
         }
 
-        DCHECK(!is_client(), "only rpc server session can recv rpc requests");
+        DCHECK_PREFIX_MSG(!is_client(), "only rpc server session can recv rpc requests");
         _net.on_recv_request(msg, delay_ms);
     }
 
@@ -912,7 +927,7 @@ rpc_session_ptr rpc_session_pool::create_rpc_session()
 
     _sessions.try_emplace(session.get(), session);
 
-    LOG_INFO("client session created, remote_server = {}, current_count = {}",
+    LOG_INFO("[pool] client session created: remote = {}, count = {}",
              session->remote_address(),
              _sessions.size());
     METRIC_SET(_conn_metrics, network_client_sessions, _sessions.size());
@@ -958,7 +973,8 @@ void rpc_session_pool::on_connected(const rpc_session_ptr &session) const
     }
 
     // No need to update metric since no new session was added.
-    LOG_INFO("client session connected, remote_server = {}, current_count = {}",
+    LOG_INFO("[pool] client session connected: local = {}, remote = {}, count = {}",
+             session->local_address(),
              _server_addr,
              _sessions.size());
 }
@@ -975,7 +991,8 @@ void rpc_session_pool::on_disconnected(const rpc_session_ptr &session,
 
     _sessions.erase(iter);
 
-    LOG_INFO("client session disconnected, remote_server = {}, current_count = {}",
+    LOG_INFO("[pool] client session disconnected: local = {}, remote = {}, count = {}",
+             session->local_address(),
              _server_addr,
              _sessions.size());
     METRIC_SET(_conn_metrics, network_client_sessions, _sessions.size());

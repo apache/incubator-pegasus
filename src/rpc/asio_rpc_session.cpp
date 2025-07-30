@@ -71,7 +71,6 @@ namespace tools {
 
 void asio_rpc_session::set_options()
 {
-
     if (!_socket->is_open()) {
         return;
     }
@@ -83,42 +82,44 @@ void asio_rpc_session::set_options()
 
     _socket->get_option(option, ec);
     if (ec) {
-        LOG_WARNING("asio socket get option failed, error = {}", ec.message());
+        LOG_WARNING_PREFIX("asio socket get option failed, error = {}", ec.message());
     }
 
     int old = option.value();
     _socket->set_option(option2, ec);
     if (ec) {
-        LOG_WARNING("asio socket set option failed, error = {}", ec.message());
+        LOG_WARNING_PREFIX("asio socket set option failed, error = {}", ec.message());
     }
 
     _socket->get_option(option, ec);
     if (ec) {
-        LOG_WARNING("asio socket get option failed, error = {}", ec.message());
+        LOG_WARNING_PREFIX("asio socket get option failed, error = {}", ec.message());
     }
 
-    LOG_DEBUG("boost asio send buffer size is {}, set as 16MB, now is {}", old, option.value());
+    LOG_DEBUG_PREFIX(
+        "boost asio send buffer size is {}, set as 16MB, now is {}", old, option.value());
 
     boost::asio::socket_base::receive_buffer_size option3;
     boost::asio::socket_base::receive_buffer_size option4(16 * 1024 * 1024);
 
     _socket->get_option(option3, ec);
     if (ec) {
-        LOG_WARNING("asio socket get option failed, error = {}", ec.message());
+        LOG_WARNING_PREFIX("asio socket get option failed, error = {}", ec.message());
     }
 
     old = option3.value();
     _socket->set_option(option4, ec);
     if (ec) {
-        LOG_WARNING("asio socket set option failed, error = {}", ec.message());
+        LOG_WARNING_PREFIX("asio socket set option failed, error = {}", ec.message());
     }
 
     _socket->get_option(option3, ec);
     if (ec) {
-        LOG_WARNING("asio socket get option failed, error = {}", ec.message());
+        LOG_WARNING_PREFIX("asio socket get option failed, error = {}", ec.message());
     }
 
-    LOG_DEBUG("boost asio recv buffer size is {}, set as 16MB, now is {}", old, option.value());
+    LOG_DEBUG_PREFIX(
+        "boost asio recv buffer size is {}, set as 16MB, now is {}", old, option.value());
 
     // Nagle algorithm may cause an extra delay in some cases, because if
     // the data in a single write spans 2n packets, the last packet will be
@@ -130,10 +131,10 @@ void asio_rpc_session::set_options()
     //   * decrease the qps (negative)
     _socket->set_option(boost::asio::ip::tcp::no_delay(true), ec);
     if (ec) {
-        LOG_WARNING("asio socket set option failed, error = {}", ec.message());
+        LOG_WARNING_PREFIX("asio socket set option failed, error = {}", ec.message());
     }
 
-    LOG_DEBUG("boost asio set no_delay = true");
+    LOG_DEBUG_PREFIX("boost asio set no_delay = true");
 }
 
 void asio_rpc_session::do_read(int read_next)
@@ -150,9 +151,15 @@ void asio_rpc_session::do_read(int read_next)
 
             if (ec) {
                 if (ec == boost::asio::error::make_error_code(boost::asio::error::eof)) {
-                    LOG_INFO("asio read from {} failed: {}", _remote_addr, ec.message());
+                    LOG_INFO_PREFIX("asio read from {} failed: error = {}, local = {}",
+                                    _remote_addr,
+                                    ec.message(),
+                                    _local_addr);
                 } else {
-                    LOG_ERROR("asio read from {} failed: {}", _remote_addr, ec.message());
+                    LOG_ERROR_PREFIX("asio read from {} failed: error = {}, local = {}",
+                                     _remote_addr,
+                                     ec.message(),
+                                     _local_addr);
                 }
 
                 on_failure(false);
@@ -177,7 +184,7 @@ void asio_rpc_session::do_read(int read_next)
             }
 
             if (read_next == -1) {
-                LOG_ERROR("asio read from {} failed", _remote_addr);
+                LOG_ERROR_PREFIX("asio read from {} failed: local = {}", _remote_addr, _local_addr);
 
                 on_failure(false);
                 return;
@@ -202,14 +209,18 @@ void asio_rpc_session::send(uint64_t signature)
 
     boost::asio::async_write(
         *_socket, asio_wbufs, [this, signature](boost::system::error_code ec, std::size_t length) {
+            const auto cleanup = dsn::defer([this]() { release_ref(); });
+
             if (ec) {
-                LOG_ERROR("asio write to {} failed: {}", _remote_addr, ec.message());
+                LOG_ERROR_PREFIX("asio write to {} failed: error = {}, local = {}",
+                                 _remote_addr,
+                                 ec.message(),
+                                 _local_addr);
                 on_failure(true);
-            } else {
-                on_send_completed(signature);
+                return;
             }
 
-            release_ref();
+            on_send_completed(signature);
         });
 }
 
@@ -220,6 +231,10 @@ asio_rpc_session::asio_rpc_session(asio_network_provider &net,
                                    bool is_client)
     : rpc_session(net, remote_addr, parser, is_client), _socket(socket)
 {
+    if (!is_client) {
+        _local_addr = net.address();
+    }
+
     set_options();
 }
 
@@ -234,13 +249,21 @@ asio_rpc_session::~asio_rpc_session()
 void asio_rpc_session::close()
 {
     boost::system::error_code ec;
+
     _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
     if (ec) {
-        LOG_WARNING("asio socket shutdown failed, error = {}", ec.message());
+        LOG_WARNING_PREFIX("asio socket shutdown failed: error = {}, local = {}, remote = {}",
+                           ec.message(),
+                           _local_addr,
+                           _remote_addr);
     }
+
     _socket->close(ec);
     if (ec) {
-        LOG_WARNING("asio socket close failed, error = {}", ec.message());
+        LOG_WARNING_PREFIX("asio socket close failed: error = {}, local = {}, remote = {}",
+                           ec.message(),
+                           _local_addr,
+                           _remote_addr);
     }
 }
 
@@ -258,14 +281,16 @@ void asio_rpc_session::connect()
         const auto cleanup = dsn::defer([this]() { release_ref(); });
 
         if (ec) {
-            LOG_ERROR(
-                "client session connect to {} failed, error = {}", _remote_addr, ec.message());
+            LOG_ERROR_PREFIX("connect to {} failed, error = {}", _remote_addr, ec.message());
 
             on_failure(true);
             return;
         }
 
-        LOG_DEBUG("client session {} connected", _remote_addr);
+        const auto local = _socket->local_endpoint();
+        _local_addr = ::dsn::rpc_address(local.address().to_v4().to_ulong(), local.port());
+
+        LOG_DEBUG_PREFIX("connect to {} successfully: local = {}", _remote_addr, _local_addr);
 
         set_options();
         mark_connected();
