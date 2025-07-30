@@ -115,7 +115,7 @@ public:
     //
     // the named address
     //
-    virtual const ::dsn::rpc_address &address() const = 0;
+    virtual const rpc_address &address() const = 0;
     virtual const ::dsn::host_port &host_port() const = 0;
 
     //
@@ -190,13 +190,13 @@ public:
     ~connection_oriented_network() override = default;
 
     // server session management
-    rpc_session_ptr get_server_session(::dsn::rpc_address ep);
+    rpc_session_ptr get_server_session(rpc_address ep);
     void on_server_session_accepted(const rpc_session_ptr &session);
     void on_server_session_disconnected(const rpc_session_ptr &session);
 
     // Checks if IP of the incoming session has too much connections.
     // Related config: [network] conn_threshold_per_ip. No limit if the value is 0.
-    bool check_if_conn_threshold_exceeded(::dsn::rpc_address ep);
+    bool check_if_conn_threshold_exceeded(rpc_address ep);
 
     // client session management
     void on_client_session_connected(const rpc_session_ptr &session);
@@ -209,15 +209,15 @@ public:
     void inject_drop_message(message_ex *msg, bool is_send) override;
 
     // to be defined
-    virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
+    virtual rpc_session_ptr create_client_session(rpc_address server_addr) = 0;
 
 protected:
-    using client_session_map = std::unordered_map<dsn::rpc_address, rpc_session_pool_ptr>;
+    using client_session_map = std::unordered_map<rpc_address, rpc_session_pool_ptr>;
     client_session_map _clients; // to_address => rpc_session
 
     mutable utils::rw_lock_nr _clients_lock;
 
-    using server_session_map = std::unordered_map<dsn::rpc_address, rpc_session_ptr>;
+    using server_session_map = std::unordered_map<rpc_address, rpc_session_ptr>;
     server_session_map _servers; // from_address => rpc_session
 
     using ip_conn_count_map = std::unordered_map<uint32_t, uint32_t>;
@@ -254,7 +254,7 @@ public:
     /*@}*/
 
     rpc_session(connection_oriented_network &net,
-                ::dsn::rpc_address remote_addr,
+                rpc_address remote_addr,
                 message_parser_ptr &parser,
                 bool is_client);
     ~rpc_session() override;
@@ -273,7 +273,7 @@ public:
     message_parser_ptr parser() const { return _parser; }
 
     // Invalid address by default.
-    virtual rpc_address local_address() const { return rpc_address(); }
+    virtual rpc_address local_address() const { return {}; }
 
     ///
     /// rpc_session's interface for sending and receiving

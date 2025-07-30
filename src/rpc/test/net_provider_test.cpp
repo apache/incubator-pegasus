@@ -360,7 +360,7 @@ public:
         ASSERT_EQ(1, _clients.size());
         ASSERT_EQ(pool_size, _clients.begin()->second->size());
 
-        _session_count = pool_size;
+        _session_count = static_cast<int>(pool_size);
         _clients.begin()->second->close();
 
         _on_closed.wait();
@@ -379,7 +379,7 @@ private:
 
     const int _port;
 
-    std::atomic_int _session_count;
+    std::atomic_int _session_count{0};
     utils::notify_event _on_closed;
 
     DISALLOW_COPY_AND_ASSIGN(mock_pool_conn_network);

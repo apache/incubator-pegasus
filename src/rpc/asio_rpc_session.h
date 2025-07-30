@@ -32,10 +32,10 @@
 #include "boost/asio/ip/tcp.hpp"
 #include "rpc/message_parser.h"
 #include "rpc/network.h"
+#include "rpc/rpc_address.h"
 
 namespace dsn {
 class message_ex;
-class rpc_address;
 
 namespace tools {
 class asio_network_provider;

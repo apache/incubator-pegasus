@@ -411,7 +411,7 @@ void rpc_session::on_send_completed(uint64_t signature)
             _is_sending_next = false;
 
             // the _sending_msgs may have been cleared when reading of the rpc_session is failed.
-            if (_sending_msgs.size() == 0) {
+            if (_sending_msgs.empty()) {
                 CHECK_EQ_PREFIX_MSG(_connect_state,
                                     SS_DISCONNECTED,
                                     "assume sending queue is cleared due to session closed");
@@ -444,7 +444,7 @@ void rpc_session::on_send_completed(uint64_t signature)
 }
 
 rpc_session::rpc_session(connection_oriented_network &net,
-                         ::dsn::rpc_address remote_addr,
+                         rpc_address remote_addr,
                          message_parser_ptr &parser,
                          bool is_client)
     : _connect_state(is_client ? SS_DISCONNECTED : SS_CONNECTED),
@@ -737,7 +737,7 @@ void connection_oriented_network::send_message(message_ex *request)
     client_pool->get_rpc_session()->send_message(request);
 }
 
-rpc_session_ptr connection_oriented_network::get_server_session(::dsn::rpc_address ep)
+rpc_session_ptr connection_oriented_network::get_server_session(rpc_address ep)
 {
     utils::auto_read_lock l(_servers_lock);
     return gutil::FindWithDefault(_servers, ep);
@@ -854,7 +854,7 @@ void connection_oriented_network::on_server_session_disconnected(const rpc_sessi
     }
 }
 
-bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_address ep)
+bool connection_oriented_network::check_if_conn_threshold_exceeded(rpc_address ep)
 {
     if (FLAGS_conn_threshold_per_ip <= 0) {
         LOG_DEBUG("new client from {} is connecting to server {}, no connection threshold",

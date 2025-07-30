@@ -44,6 +44,7 @@
 #include <vector>
 
 #include "boost/asio/impl/any_io_executor.ipp"
+#include "boost/asio/ip/basic_endpoint.hpp"
 #include "boost/asio/write.hpp"
 #include "boost/system/detail/error_code.hpp"
 // IWYU pragma: no_include "boost/asio/basic_stream_socket.hpp"
