@@ -97,13 +97,13 @@ public:
     rpc_session_ptr create_client_session(rpc_address server_addr) override
     {
         message_parser_ptr parser(new_message_parser(_client_hdr_format));
-        return rpc_session_ptr(new sim_client_session(*this, server_addr, parser));
+        return {new sim_client_session(*this, server_addr, parser)};
     }
 
     rpc_session_ptr create_server_session(rpc_address client_addr, rpc_session_ptr client_session)
     {
         message_parser_ptr parser(new_message_parser(_client_hdr_format));
-        return rpc_session_ptr(new sim_server_session(*this, client_addr, client_session, parser));
+        return {new sim_server_session(*this, client_addr, client_session, parser)};
     }
 
     uint32_t net_delay_milliseconds() const;

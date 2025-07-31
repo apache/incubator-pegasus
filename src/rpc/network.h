@@ -115,8 +115,8 @@ public:
     //
     // the named address
     //
-    virtual const rpc_address &address() const = 0;
-    virtual const ::dsn::host_port &host_port() const = 0;
+    [[nodiscard]] virtual const rpc_address &address() const = 0;
+    [[nodiscard]] virtual const ::dsn::host_port &host_port() const = 0;
 
     //
     // this is where the upper rpc engine calls down for a RPC call
@@ -272,7 +272,9 @@ public:
     connection_oriented_network &net() const { return _net; }
     message_parser_ptr parser() const { return _parser; }
 
-    // Invalid address by default.
+    // Normally, a session has both a local and a remote address. However, considering that
+    // some implementations (such as `sim_client_session`) may not have a local address, we
+    // implement this as a virtual function and return an invalid address by default.
     virtual rpc_address local_address() const { return {}; }
 
     ///
