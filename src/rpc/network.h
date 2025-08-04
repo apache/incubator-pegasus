@@ -410,9 +410,15 @@ inline bool rpc_session::delay_recv(int delay_ms)
     return exchanged;
 }
 
+// `rpc_session_pool` creates and maintains a client-side connection pool for a remote server
+// identified by its ip:port address. The maximum size of each pool is configurable, and each
+// session in the pool corresponds to a separate socket connection. The connection pool helps
+// improve the client's ability to utilize network bandwidth, especially in scenarios with
+// high network latency.
 class rpc_session_pool
 {
 public:
+    // The create function used to instantiate `rpc_session_pool`.
     template <typename... Args>
     static auto create(Args &&...args)
     {
@@ -435,23 +441,41 @@ public:
         return _sessions.size();
     }
 
+    // Select a session from the pool to send a message to the remote server. The returned
+    // session may either reuse an existing one from the pool or be newly created (the user
+    // does not need to care), and the session is already connected and ready to use.
     [[nodiscard]] rpc_session_ptr get_rpc_session();
 
+    // Called after the connection for `session` is established.
     void on_connected(const rpc_session_ptr &session) const;
+
+    // Called after `session` is disconnected.
     void on_disconnected(const rpc_session_ptr &session, std::function<void()> &&on_empty);
+
+    // Close each session in the pool.
     void close() const;
 
 private:
     rpc_session_pool(connection_oriented_network *net, rpc_address server_addr);
 
+    // Choose an existing session from the pool which has the least queued messages to be
+    // processed.
     [[nodiscard]] rpc_session_ptr select_rpc_session() const;
+
+    // Create a new session and insert it into the pool. This new session will be left
+    // unconnected.
     [[nodiscard]] rpc_session_ptr create_rpc_session();
 
     friend class mock_pool_conn_network;
 
+    // The connection-oriented network from which the sessions in the pool are created.
     connection_oriented_network *_net;
+
+    // The remote server address identified by ip:port.
     const rpc_address _server_addr;
 
+    // The map that maintains each session in the pool.
+    //
     // TODO(wangdan): consider using concurrent hash map to improve performance.
     using rpc_session_map = std::unordered_map<rpc_session *, rpc_session_ptr>;
     rpc_session_map _sessions;

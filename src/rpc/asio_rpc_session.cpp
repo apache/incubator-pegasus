@@ -232,6 +232,9 @@ asio_rpc_session::asio_rpc_session(asio_network_provider &net,
                                    bool is_client)
     : rpc_session(net, remote_addr, parser, is_client), _socket(socket)
 {
+    // For the server-side session, the local address is just the server ip:port. For the
+    // client-side session, the local address is still unknown now since only after the
+    // connection for the session is established could the local port be decided.
     if (!is_client) {
         _local_addr = net.address();
     }

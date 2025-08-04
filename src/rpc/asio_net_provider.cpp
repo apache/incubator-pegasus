@@ -127,7 +127,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
         return ERR_SERVICE_ALREADY_RUNNING;
     }
 
-    for (uint32_t i = 0; _workers.size() < FLAGS_io_service_worker_count; ++i) {
+    for (auto i = _workers.size(); _workers.size() < FLAGS_io_service_worker_count; ++i) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
 
@@ -158,14 +158,17 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
 
     const auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
     ::boost::asio::ip::tcp::endpoint endpoint(v4_addr, _address.port());
-    boost::system::error_code ec;
+
     _acceptor.reset(new boost::asio::ip::tcp::acceptor(get_io_service()));
+
+    boost::system::error_code ec;
     _acceptor->open(endpoint.protocol(), ec);
     if (ec) {
         LOG_ERROR("asio tcp acceptor open failed, error = {}", ec.message());
         _acceptor.reset();
         return ERR_NETWORK_INIT_FAILED;
     }
+
     _acceptor->set_option(boost::asio::socket_base::reuse_address(true));
     _acceptor->bind(endpoint, ec);
     if (ec) {
@@ -173,7 +176,8 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
         _acceptor.reset();
         return ERR_NETWORK_INIT_FAILED;
     }
-    int backlog = boost::asio::socket_base::max_connections;
+
+    const int backlog = boost::asio::socket_base::max_connections;
     _acceptor->listen(backlog, ec);
     if (ec) {
         LOG_ERROR("asio tcp acceptor listen failed, port = {}, error = {}",
@@ -182,6 +186,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
         _acceptor.reset();
         return ERR_NETWORK_INIT_FAILED;
     }
+
     do_accept();
 
     return ERR_OK;
@@ -464,7 +469,7 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
     _hp = ::dsn::host_port::from_address(_address);
     LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
 
-    for (uint32_t i = 0; _workers.size() < FLAGS_io_service_worker_count; ++i) {
+    for (auto i = _workers.size(); _workers.size() < FLAGS_io_service_worker_count; ++i) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
 
