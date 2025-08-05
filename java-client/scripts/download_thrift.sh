@@ -19,7 +19,7 @@
 # under the License.
 #
 
-THRIFT_VERSION=0.13.0
+THRIFT_VERSION=0.14.0
 
 function GenThriftTool() {
     set -e
