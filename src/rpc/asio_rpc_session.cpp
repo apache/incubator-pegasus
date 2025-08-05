@@ -217,6 +217,7 @@ void asio_rpc_session::send(uint64_t signature)
                                  _remote_addr,
                                  ec.message(),
                                  _local_addr);
+
                 on_failure(true);
                 return;
             }
@@ -285,13 +286,22 @@ void asio_rpc_session::connect()
         const auto cleanup = dsn::defer([this]() { release_ref(); });
 
         if (ec) {
-            LOG_ERROR_PREFIX("connect to {} failed, error = {}", _remote_addr, ec.message());
+            LOG_ERROR_PREFIX("connect to {} failed: error = {}", _remote_addr, ec.message());
 
             on_failure(true);
             return;
         }
 
-        const auto local = _socket->local_endpoint();
+        const auto local = _socket->local_endpoint(ec);
+        if (ec) {
+            LOG_ERROR_PREFIX("failed to get the local endpoint: error = {}, remote = {}",
+                             ec.message(),
+                             _remote_addr);
+
+            on_failure(true);
+            return;
+        }
+
         _local_addr = ::dsn::rpc_address(local.address().to_v4().to_ulong(), local.port());
 
         LOG_DEBUG_PREFIX("connect to {} successfully: local = {}", _remote_addr, _local_addr);

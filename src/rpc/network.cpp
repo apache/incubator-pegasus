@@ -72,7 +72,11 @@ DSN_DEFINE_uint32(network,
                   0,
                   "The maximum connection count to each server per IP address, 0 means no limit");
 
-DSN_DEFINE_uint32(network, conn_pool_max_size, 4, "");
+DSN_DEFINE_uint32(network,
+                  conn_pool_max_size,
+                  4,
+                  "The maximum number of client connections allowed for a pool to the same "
+                  "remote address (i.e. <ip>:<port>)");
 DSN_DEFINE_validator(conn_pool_max_size, [](uint32_t value) -> bool { return value > 0; });
 
 DSN_DEFINE_string(network, unknown_message_header_format, "", "format for unknown message headers");
@@ -298,7 +302,7 @@ void rpc_session::start_read_next(int read_next)
         return;
     }
 
-    int delay_ms = _delay_server_receive_ms.exchange(0);
+    const int delay_ms = _delay_server_receive_ms.exchange(0);
     if (delay_ms <= 0) {
         do_read(read_next);
         return;
@@ -737,10 +741,10 @@ void connection_oriented_network::send_message(message_ex *request)
     client_pool->get_rpc_session()->send_message(request);
 }
 
-rpc_session_ptr connection_oriented_network::get_server_session(rpc_address ep)
+rpc_session_ptr connection_oriented_network::get_server_session(rpc_address client_addr)
 {
     utils::auto_read_lock l(_servers_lock);
-    return gutil::FindWithDefault(_servers, ep);
+    return gutil::FindWithDefault(_servers, client_addr);
 }
 
 void connection_oriented_network::add_server_session(const rpc_session_ptr &session)
@@ -854,11 +858,11 @@ void connection_oriented_network::on_server_session_disconnected(const rpc_sessi
     }
 }
 
-bool connection_oriented_network::check_if_conn_threshold_exceeded(rpc_address ep)
+bool connection_oriented_network::check_if_conn_threshold_exceeded(rpc_address client_addr)
 {
     if (FLAGS_conn_threshold_per_ip <= 0) {
         LOG_DEBUG("new client from {} is connecting to server {}, no connection threshold",
-                  ep.ipv4_str(),
+                  client_addr.ipv4_str(),
                   address());
         return false;
     }
@@ -866,12 +870,12 @@ bool connection_oriented_network::check_if_conn_threshold_exceeded(rpc_address e
     uint32_t ip_conn_count{0}; // the amount of connections from this ip address.
     {
         utils::auto_read_lock l(_servers_lock);
-        ip_conn_count = gutil::FindWithDefault(_ip_conn_counts, ep.ip());
+        ip_conn_count = gutil::FindWithDefault(_ip_conn_counts, client_addr.ip());
     }
 
     LOG_DEBUG("new client from {} is connecting to server {}, existing connection count = {}, "
               "threshold = {}",
-              ep.ipv4_str(),
+              client_addr.ipv4_str(),
               address(),
               ip_conn_count,
               FLAGS_conn_threshold_per_ip);

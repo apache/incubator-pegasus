@@ -190,13 +190,13 @@ public:
     ~connection_oriented_network() override = default;
 
     // server session management
-    rpc_session_ptr get_server_session(rpc_address ep);
+    rpc_session_ptr get_server_session(rpc_address client_addr);
     void on_server_session_accepted(const rpc_session_ptr &session);
     void on_server_session_disconnected(const rpc_session_ptr &session);
 
     // Checks if IP of the incoming session has too much connections.
     // Related config: [network] conn_threshold_per_ip. No limit if the value is 0.
-    bool check_if_conn_threshold_exceeded(rpc_address ep);
+    bool check_if_conn_threshold_exceeded(rpc_address client_addr);
 
     // client session management
     void on_client_session_connected(const rpc_session_ptr &session);
@@ -213,7 +213,7 @@ public:
 
 protected:
     using client_session_map = std::unordered_map<rpc_address, rpc_session_pool_ptr>;
-    client_session_map _clients; // to_address => rpc_session
+    client_session_map _clients; // to_address => rpc_session_pool
 
     mutable utils::rw_lock_nr _clients_lock;
 
