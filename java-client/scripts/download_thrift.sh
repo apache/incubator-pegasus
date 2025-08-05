@@ -42,6 +42,11 @@ if [ $? -ne 0 ]; then
 fi
 
 if ! thrift -version | grep "${THRIFT_VERSION}" ; then
+    echo "ERROR: thrift version should be ${THRIFT_VERSION}, try to update"
+    GenThriftTool
+fi
+
+if ! thrift -version | grep "${THRIFT_VERSION}" ; then
     echo "ERROR: thrift version should be ${THRIFT_VERSION}, please manual fix it"
     exit 1
 fi
