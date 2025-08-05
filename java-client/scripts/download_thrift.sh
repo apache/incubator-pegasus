@@ -19,32 +19,30 @@
 # under the License.
 #
 
+THRIFT_VERSION=0.13.0
+
 function GenThriftTool() {
     set -e
-    wget --progress=dot:giga https://archive.apache.org/dist/thrift/0.11.0/thrift-0.11.0.tar.gz -O thrift-0.11.0.tar.gz
-    tar xzf thrift-0.11.0.tar.gz
-    pushd thrift-0.11.0
+    wget --progress=dot:giga https://archive.apache.org/dist/thrift/${THRIFT_VERSION}/thrift-${THRIFT_VERSION}.tar.gz -O thrift-${THRIFT_VERSION}.tar.gz
+    tar xzf thrift-${THRIFT_VERSION}.tar.gz
+    pushd thrift-${THRIFT_VERSION}
     ./bootstrap.sh
     ./configure --enable-libs=no
     make -j$(($(nproc)/2+1))
     make install
     popd
-    rm -rf thrift-0.11.0 thrift-0.11.0.tar.gz
+    rm -rf thrift-${THRIFT_VERSION} thrift-${THRIFT_VERSION}.tar.gz
     set +e
 }
 
-root=`dirname $0`
-root=`cd $root; pwd`
-
-thrift=thrift
 which thrift
 if [ $? -ne 0 ]; then
     echo "ERROR: not found thrift, try to get it"
     GenThriftTool
 fi
 
-if ! $thrift -version | grep "0.11.0" ; then
-    echo "ERROR: thrift version should be 0.11.0, please manual fix it"
+if ! thrift -version | grep "${THRIFT_VERSION}" ; then
+    echo "ERROR: thrift version should be ${THRIFT_VERSION}, please manual fix it"
     exit 1
 fi
 
