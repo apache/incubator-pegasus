@@ -59,6 +59,7 @@
 // IWYU pragma: no_include "boost/asio/ip/impl/address_v4.ipp"
 // IWYU pragma: no_include "boost/asio/socket_base.hpp"
 // IWYU pragma: no_include "boost/system/error_code.hpp"
+#include "fmt/core.h"
 #include "rpc/asio_net_provider.h"
 #include "rpc/rpc_address.h"
 #include "utils/autoref_ptr.h"

@@ -26,12 +26,13 @@
 
 #pragma once
 
-#include <boost/asio/error.hpp>
 #include <cstdint>
-#include <string>
 #include <memory>
+#include <string>
 
+#include "boost/asio/basic_stream_socket.hpp"
 #include "boost/asio/ip/tcp.hpp"
+#include "boost/system/detail/error_code.hpp"
 #include "rpc/message_parser.h"
 #include "rpc/network.h"
 #include "rpc/rpc_address.h"
@@ -122,9 +123,9 @@ private:
         //
         // For example, suppose the original value of send and receive buffer size are 1313280
         // and 530744. Given both values are 212992 in the /proc/sys/net/core/wmem_max and
-        // /proc/sys/net/core/rmem_max files. After set send and receive buffer size with
-        // 16MB, the final values of both will be 212992, which are even less than their
-        // original values each.
+        // /proc/sys/net/core/rmem_max files. After both send and receive buffer size are set
+        // to 16MB, their final values will be 212992, which are even less than their original
+        // values each.
         LOG_DEBUG_PREFIX("[boost asio socket] set {} {} => {} by specifying {}",
                          opt_name,
                          old_val,
