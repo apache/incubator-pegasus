@@ -66,8 +66,13 @@ public:
     void connect() override;
 
 private:
-    void do_read(int read_next) override;
     void set_options();
+    void set_send_buf_size();
+    void set_recv_buf_size();
+    void set_no_delay();
+
+    void do_read(int read_next) override;
+
     void on_message_read(message_ex *msg)
     {
         if (!on_recv_message(msg, 0)) {
