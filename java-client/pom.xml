@@ -68,7 +68,7 @@
     <json.version>20231013</json.version>
     <netty.version>4.1.123.Final</netty.version>
     <zstd-jni.version>1.3.7-1</zstd-jni.version>
-    <libthrift.version>0.11.0</libthrift.version>
+    <libthrift.version>0.13.0</libthrift.version>
     <thrift-maven-plugin.version>0.10.0</thrift-maven-plugin.version>
     <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
     <zookeeper.version>3.7.2</zookeeper.version>
