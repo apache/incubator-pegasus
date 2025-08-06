@@ -63,7 +63,19 @@
 #include "rpc/rpc_address.h"
 #include "utils/autoref_ptr.h"
 #include "utils/defer.h"
-#include "utils/fmt_logging.h"
+#include "utils/flags.h"
+
+DSN_DEFINE_int32(network,
+                 socket_send_buffer_bytes,
+                 16 * 1024 * 1024,
+                 "The send buffer size of a socket in bytes, where a non-positive number "
+                 "means leaving it default");
+
+DSN_DEFINE_int32(network,
+                 socket_recv_buffer_bytes,
+                 16 * 1024 * 1024,
+                 "The receive buffer size of a socket in bytes, where a non-positive number "
+                 "means leaving it default");
 
 namespace dsn {
 class message_ex;
@@ -81,94 +93,26 @@ void asio_rpc_session::set_options()
 
 void asio_rpc_session::set_send_buf_size()
 {
-    if (!_socket->is_open()) {
+    if (FLAGS_socket_send_buffer_bytes <= 0) {
         return;
     }
 
-    boost::system::error_code ec;
-
-    boost::asio::socket_base::send_buffer_size send_buf_size_opt;
-    _socket->get_option(send_buf_size_opt, ec);
-    if (ec) {
-        LOG_WARNING_PREFIX("asio socket get old send_buffer_size failed: error = {}", ec.message());
-    }
-
-    const int old_send_buf_size = send_buf_size_opt.value();
-
-    constexpr int kNewSendBufSize = 16 * 1024 * 1024;
-    boost::asio::socket_base::send_buffer_size new_send_buf_size_opt(kNewSendBufSize);
-    _socket->set_option(new_send_buf_size_opt, ec);
-    if (ec) {
-        LOG_WARNING_PREFIX("asio socket set send_buffer_size to {} failed: error = {}",
-                           kNewSendBufSize,
-                           ec.message());
-    }
-
-    _socket->get_option(send_buf_size_opt, ec);
-    if (ec) {
-        LOG_WARNING_PREFIX("asio socket get new send_buffer_size failed: error = {}", ec.message());
-    }
-
-    LOG_DEBUG_PREFIX("boost asio send_buffer_size {} => {} by specifying {}",
-                     old_send_buf_size,
-                     send_buf_size_opt.value(),
-                     kNewSendBufSize);
+    set_option<boost::asio::socket_base::send_buffer_size, int>("send_buffer_size",
+                                                                FLAGS_socket_send_buffer_bytes);
 }
 
 void asio_rpc_session::set_recv_buf_size()
 {
-    if (!_socket->is_open()) {
+    if (FLAGS_socket_recv_buffer_bytes <= 0) {
         return;
     }
 
-    boost::system::error_code ec;
-
-    boost::asio::socket_base::receive_buffer_size recv_buf_size_opt;
-    _socket->get_option(recv_buf_size_opt, ec);
-    if (ec) {
-        LOG_WARNING_PREFIX("asio socket get old receive_buffer_size failed: error = {}",
-                           ec.message());
-    }
-
-    const int old_recv_buf_size = recv_buf_size_opt.value();
-
-    constexpr int kNewRecvBufSize = 16 * 1024 * 1024;
-    boost::asio::socket_base::receive_buffer_size new_recv_buf_size_opt(kNewRecvBufSize);
-    _socket->set_option(new_recv_buf_size_opt, ec);
-    if (ec) {
-        LOG_WARNING_PREFIX("asio socket set receive_buffer_size to {} failed: error = {}",
-                           kNewRecvBufSize,
-                           ec.message());
-    }
-
-    _socket->get_option(recv_buf_size_opt, ec);
-    if (ec) {
-        LOG_WARNING_PREFIX("asio socket get new receive_buffer_size failed: error = {}",
-                           ec.message());
-    }
-
-    LOG_DEBUG_PREFIX("boost asio receive_buffer_size {} => {} by specifying {}",
-                     old_recv_buf_size,
-                     recv_buf_size_opt.value(),
-                     kNewRecvBufSize);
+    set_option<boost::asio::socket_base::receive_buffer_size, int>("receive_buffer_size",
+                                                                   FLAGS_socket_recv_buffer_bytes);
 }
 
 void asio_rpc_session::set_no_delay()
 {
-    if (!_socket->is_open()) {
-        return;
-    }
-
-    boost::system::error_code ec;
-
-    boost::asio::ip::tcp::no_delay no_delay_opt;
-    _socket->get_option(no_delay_opt, ec);
-    if (ec) {
-        LOG_WARNING_PREFIX("asio socket get old no_delay failed: error = {}", ec.message());
-    }
-
-    const bool old_no_delay = no_delay_opt.value();
-
     // Nagle algorithm may cause an extra delay in some cases, because if
     // the data in a single write spans 2n packets, the last packet will be
     // withheld, waiting for the ACK for the previous packet. For more, please
@@ -177,23 +121,7 @@ void asio_rpc_session::set_no_delay()
     // Disabling the Nagle algorithm would cause these effects:
     //   * decrease delay time (positive)
     //   * decrease the qps (negative)
-    constexpr bool kNewNoDelay = true;
-    boost::asio::ip::tcp::no_delay new_no_delay_opt(kNewNoDelay);
-    _socket->set_option(new_no_delay_opt, ec);
-    if (ec) {
-        LOG_WARNING_PREFIX(
-            "asio socket set no_delay to {} failed: error = {}", kNewNoDelay, ec.message());
-    }
-
-    _socket->get_option(no_delay_opt, ec);
-    if (ec) {
-        LOG_WARNING_PREFIX("asio socket get new no_delay failed: error = {}", ec.message());
-    }
-
-    LOG_DEBUG_PREFIX("boost asio no_delay {} => {} by specifying {}",
-                     old_no_delay,
-                     no_delay_opt.value(),
-                     kNewNoDelay);
+    set_option<boost::asio::ip::tcp::no_delay, bool>("no_delay", true);
 }
 
 void asio_rpc_session::do_read(int read_next)
