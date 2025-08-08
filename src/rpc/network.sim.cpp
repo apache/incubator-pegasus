@@ -68,8 +68,11 @@ sim_client_session::sim_client_session(sim_network_provider &net,
 
 void sim_client_session::connect()
 {
-    if (set_connecting())
-        set_connected();
+    if (!mark_connecting()) {
+        return;
+    }
+
+    mark_connected();
 }
 
 static message_ex *virtual_send_message(message_ex *msg)
