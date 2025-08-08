@@ -77,7 +77,7 @@ private:
     void set_no_delay();
 
     template <typename TOption, typename TValue>
-    void set_option(const std::string &opt_name, TValue new_val)
+    void set_option(const std::string &opt_name, const TValue new_val)
     {
         if (!_socket->is_open()) {
             return;

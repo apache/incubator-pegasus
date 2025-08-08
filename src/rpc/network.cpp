@@ -710,6 +710,7 @@ void connection_oriented_network::inject_drop_message(message_ex *msg, bool is_s
         return;
     }
 
+    CHECK(iter->second, "connection pool must be non-null");
     iter->second->close();
 }
 

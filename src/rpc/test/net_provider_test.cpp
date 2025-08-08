@@ -77,10 +77,14 @@ DEFINE_TASK_CODE_RPC(RPC_TEST_NETPROVIDER, TASK_PRIORITY_COMMON, THREAD_POOL_TES
 
 void rpc_server_response(dsn::message_ex *request)
 {
-    std::string str_command;
-    ::dsn::unmarshall(request, str_command);
+    std::string content;
+    ::dsn::unmarshall(request, content);
+
     dsn::message_ex *response = request->create_response();
-    ::dsn::marshall(response, str_command);
+
+    // Just use the request content as the response content.
+    ::dsn::marshall(response, content);
+
     dsn_rpc_reply(response);
 }
 
@@ -290,6 +294,9 @@ public:
 
     void send(uint64_t signature) override
     {
+        // To ensure that the number of connections in the pool can reach the upper limit
+        // (namely `FLAGS_conn_pool_max_size`), the send() function does nothing, as if
+        // the message sending has never completed.
         LOG_INFO("queued message count is {}", queued_message_count());
     }
 
@@ -300,6 +307,7 @@ public:
         ASSERT_EQ(SS_DISCONNECTED, _connect_state);
 
         if (--(*_session_count) == 0) {
+            // All connections in the pool have been called with on_failure().
             _on_closed->notify();
         }
     }
@@ -338,10 +346,14 @@ public:
         for (uint32_t i = 0; i < pool_size; ++i) {
             mock_request_for_conn();
             ASSERT_EQ(1, _clients.size());
+
+            // The number of connections in the pool gradually increases until it reaches
+            // the upper limit.
             ASSERT_EQ(i + 1, _clients.begin()->second->size());
         }
 
         for (const auto &[session, _] : _clients.begin()->second->_sessions) {
+            // For each session in the pool, there is only one message sending on the fly.
             ASSERT_EQ(1, session->queued_message_count());
         }
 
@@ -349,10 +361,14 @@ public:
             for (uint32_t j = 0; j < pool_size; ++j) {
                 mock_request_for_conn();
                 ASSERT_EQ(1, _clients.size());
+
+                // The number of connections in the pool will never exceed the upper limit.
                 ASSERT_EQ(pool_size, _clients.begin()->second->size());
             }
 
             for (const auto &[session, _] : _clients.begin()->second->_sessions) {
+                // The total number of messages sending on the fly is i + 1 plus the one in
+                // the first round.
                 ASSERT_EQ(i + 2, session->queued_message_count());
             }
         }
@@ -360,14 +376,20 @@ public:
         ASSERT_EQ(1, _clients.size());
         ASSERT_EQ(pool_size, _clients.begin()->second->size());
 
+        // Close all connections in the pool.
         _session_count = static_cast<int>(pool_size);
         _clients.begin()->second->close();
 
+        // Wait until all connections in the pool have been called with on_failure().
         _on_closed.wait();
+
+        // After all connections in the pool have been called with on_failure(), the single
+        // pool will become empty thereby clearing `_clients`.
         ASSERT_TRUE(_clients.empty());
     }
 
 private:
+    // Mock a reques message, and send it through the mocked asio network.
     void mock_request_for_conn()
     {
         message_ex *request = message_ex::create_request(RPC_TEST_NETPROVIDER, 0, 0);
@@ -423,13 +445,21 @@ public:
             send_request(content);
 
             ASSERT_EQ(1, _clients.size());
+
+            // If some connections send messages faster, the number of connections in the
+            // pool may not necessarily reach the upper limit.
             ASSERT_GE(pool_size, _clients.begin()->second->size());
             LOG_INFO("pool size is {}", _clients.begin()->second->size());
         }
 
+        // Wait until all requests have been responded to.
         _on_completed.wait();
 
+        // All requests have been responded to.
         ASSERT_EQ(0, _message_count);
+
+        // The content of the sent request message and the received response message must
+        // be exactly the same.
         ASSERT_EQ(expected_messages, _actual_messages);
     }
 
@@ -454,6 +484,7 @@ private:
                 }
 
                 if (--_message_count == 0) {
+                    // All requests have been responded to.
                     _on_completed.notify();
                 }
             },
