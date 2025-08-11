@@ -86,9 +86,9 @@ protected:
 
 private:
     blob _blob;
-    int _size;
-    const char *_ptr;
-    int _remaining_size;
+    int _size{0};
+    const char *_ptr{nullptr};
+    int _remaining_size{0};
 
     FRIEND_TEST(binary_reader_test, inner_read);
 };

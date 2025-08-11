@@ -26,13 +26,17 @@
 
 #include "network.h"
 
-#include <errno.h>
 #include <unistd.h>
+#include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <list>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
+#include "gutil/map_util.h"
+#include "fmt/core.h"
 #include "message_parser_manager.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_engine.h"
@@ -41,6 +45,7 @@
 #include "task/task_code.h"
 #include "utils/blob.h"
 #include "utils/customizable_id.h"
+#include "utils/defer.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -49,10 +54,13 @@
 #include "utils/strings.h"
 #include "utils/threadpool_code.h"
 
-METRIC_DEFINE_gauge_int64(server,
+METRIC_DEFINE_entity(connection);
+
+METRIC_DEFINE_gauge_int64(connection,
                           network_client_sessions,
                           dsn::metric_unit::kSessions,
-                          "The number of sessions from client side");
+                          "The number of sessions from client side for each remote server "
+                          "address (i.e. <ip>:<port>)");
 
 METRIC_DEFINE_gauge_int64(server,
                           network_server_sessions,
@@ -63,6 +71,14 @@ DSN_DEFINE_uint32(network,
                   conn_threshold_per_ip,
                   0,
                   "The maximum connection count to each server per IP address, 0 means no limit");
+
+DSN_DEFINE_uint32(network,
+                  conn_pool_max_size,
+                  4,
+                  "The maximum number of client connections allowed for a pool to the same "
+                  "remote address (i.e. <ip>:<port>)");
+DSN_DEFINE_validator(conn_pool_max_size, [](uint32_t value) -> bool { return value > 0; });
+
 DSN_DEFINE_string(network, unknown_message_header_format, "", "format for unknown message headers");
 DSN_DEFINE_string(network,
                   explicit_host_address,
@@ -76,6 +92,34 @@ DSN_DEFINE_string(network,
                   "if empty, means using a site local address");
 
 namespace dsn {
+
+namespace {
+
+metric_entity_ptr instantiate_connection_metric_entity(const std::string &remote_addr)
+{
+    auto entity_id = fmt::format("connection@{}", remote_addr);
+
+    return METRIC_ENTITY_connection.instantiate(entity_id, {{"remote_addr", remote_addr}});
+}
+
+} // anonymous namespace
+
+connection_metrics::connection_metrics(const std::string &remote_addr)
+    : _remote_addr(remote_addr),
+      _connection_metric_entity(instantiate_connection_metric_entity(remote_addr)),
+      METRIC_VAR_INIT_connection(network_client_sessions)
+{
+}
+
+const metric_entity_ptr &connection_metrics::connection_metric_entity() const
+{
+    CHECK_NOTNULL(_connection_metric_entity,
+                  "connection metric entity (remote_addr={}) should has been instantiated: "
+                  "uninitialized entity cannot be used to instantiate metric",
+                  _remote_addr);
+    return _connection_metric_entity;
+}
+
 /*static*/ join_point<void, rpc_session *>
     rpc_session::on_rpc_session_connected("rpc.session.connected");
 /*static*/ join_point<void, rpc_session *>
@@ -92,31 +136,34 @@ rpc_session::~rpc_session()
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        CHECK_EQ_MSG(0, _sending_msgs.size(), "sending queue is not cleared yet");
-        CHECK_EQ_MSG(0, _message_count, "sending queue is not cleared yet");
+        CHECK_EQ_PREFIX_MSG(0, _sending_msgs.size(), "sending messages have not been cleared yet");
+        CHECK_EQ_PREFIX_MSG(0, _batched_msg_count, "batched messages have not been cleared yet");
+        CHECK_EQ_PREFIX_MSG(
+            0, _queued_msg_count.load(), "there should not be any queued message now");
     }
 }
 
-bool rpc_session::set_connecting()
+bool rpc_session::mark_connecting()
 {
-    CHECK(is_client(), "must be client session");
+    CHECK_PREFIX_MSG(is_client(), "must be client session");
 
     utils::auto_lock<utils::ex_lock_nr> l(_lock);
-    if (_connect_state == SS_DISCONNECTED) {
-        _connect_state = SS_CONNECTING;
-        return true;
-    } else {
+
+    if (_connect_state != SS_DISCONNECTED) {
         return false;
     }
+
+    _connect_state = SS_CONNECTING;
+    return true;
 }
 
-void rpc_session::set_connected()
+void rpc_session::mark_connected()
 {
-    CHECK(is_client(), "must be client session");
+    CHECK_PREFIX_MSG(is_client(), "must be client session");
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        CHECK_EQ(_connect_state, SS_CONNECTING);
+        CHECK_EQ_PREFIX(_connect_state, SS_CONNECTING);
         _connect_state = SS_CONNECTED;
     }
 
@@ -126,15 +173,15 @@ void rpc_session::set_connected()
     on_rpc_session_connected.execute(this);
 }
 
-bool rpc_session::set_disconnected()
+bool rpc_session::mark_disconnected()
 {
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        if (_connect_state != SS_DISCONNECTED) {
-            _connect_state = SS_DISCONNECTED;
-        } else {
+        if (_connect_state == SS_DISCONNECTED) {
             return false;
         }
+
+        _connect_state = SS_DISCONNECTED;
     }
 
     on_rpc_session_disconnected.execute(this);
@@ -144,7 +191,7 @@ bool rpc_session::set_disconnected()
 void rpc_session::clear_send_queue(bool resend_msgs)
 {
     //
-    // - in concurrent case, resending _sending_msgs and _messages
+    // - in concurrent case, resending _sending_msgs and _batched_msgs
     //   may not maintain the original sending order
     // - can optimize by batch sending instead of sending one by one
     //
@@ -158,6 +205,7 @@ void rpc_session::clear_send_queue(bool resend_msgs)
     {
         // protect _sending_msgs and _sending_buffers in lock
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
+        _queued_msg_count -= static_cast<int>(_sending_msgs.size());
         _sending_msgs.swap(swapped_sending_msgs);
         _sending_buffers.clear();
     }
@@ -179,18 +227,20 @@ void rpc_session::clear_send_queue(bool resend_msgs)
     }
 
     while (true) {
-        dlink *msg;
+        dlink *msg{nullptr};
         {
             utils::auto_lock<utils::ex_lock_nr> l(_lock);
-            msg = _messages.next();
-            if (msg == &_messages)
+            msg = _batched_msgs.next();
+            if (msg == &_batched_msgs) {
                 break;
+            }
 
             msg->remove();
-            --_message_count;
+            --_batched_msg_count;
+            --_queued_msg_count;
         }
 
-        auto rmsg = CONTAINING_RECORD(msg, message_ex, dl);
+        auto *rmsg = CONTAINING_RECORD(msg, message_ex, dl); // NOLINT
         rmsg->io_session = nullptr;
 
         if (resend_msgs) {
@@ -210,24 +260,27 @@ void rpc_session::clear_send_queue(bool resend_msgs)
 
 inline bool rpc_session::unlink_message_for_send()
 {
-    auto n = _messages.next();
+    auto *n = _batched_msgs.next();
     int bcount = 0;
 
-    DCHECK_EQ(0, _sending_buffers.size());
-    DCHECK_EQ(0, _sending_msgs.size());
+    DCHECK_EQ_PREFIX(0, _sending_buffers.size());
+    DCHECK_EQ_PREFIX(0, _sending_msgs.size());
 
-    while (n != &_messages) {
-        auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
-        auto lcount = _parser->get_buffer_count_on_send(lmsg);
+    while (n != &_batched_msgs) {
+        auto *lmsg = CONTAINING_RECORD(n, message_ex, dl); // NOLINT
+        const auto lcount = _parser->get_buffer_count_on_send(lmsg);
         if (bcount > 0 && bcount + lcount > _max_buffer_block_count_per_send) {
             break;
         }
 
         _sending_buffers.resize(bcount + lcount);
-        auto rcount = _parser->get_buffers_on_send(lmsg, &_sending_buffers[bcount]);
-        CHECK_GE(lcount, rcount);
-        if (lcount != rcount)
+        const auto rcount = _parser->get_buffers_on_send(lmsg, &_sending_buffers[bcount]);
+        CHECK_GE_PREFIX(lcount, rcount);
+
+        if (lcount != rcount) {
             _sending_buffers.resize(bcount + rcount);
+        }
+
         bcount += rcount;
         _sending_msgs.push_back(lmsg);
 
@@ -236,52 +289,54 @@ inline bool rpc_session::unlink_message_for_send()
     }
 
     // added in send_message
-    _message_count -= (int)_sending_msgs.size();
-    return _sending_msgs.size() > 0;
+    _batched_msg_count -= static_cast<int>(_sending_msgs.size());
+    return !_sending_msgs.empty();
 }
 
 DEFINE_TASK_CODE(LPC_DELAY_RPC_REQUEST_RATE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 void rpc_session::start_read_next(int read_next)
 {
-    // server only
-    if (!is_client()) {
-        int delay_ms = _delay_server_receive_ms.exchange(0);
-
-        // delayed read
-        if (delay_ms > 0) {
-            this->add_ref();
-            dsn::task_ptr delay_task(new raw_task(LPC_DELAY_RPC_REQUEST_RATE, [this]() {
-                start_read_next();
-                this->release_ref();
-            }));
-            delay_task->enqueue(std::chrono::milliseconds(delay_ms));
-        } else {
-            do_read(read_next);
-        }
-    } else {
+    if (is_client()) {
         do_read(read_next);
+        return;
     }
+
+    const int delay_ms = _delay_server_receive_ms.exchange(0);
+    if (delay_ms <= 0) {
+        do_read(read_next);
+        return;
+    }
+
+    // delayed read
+    this->add_ref();
+    dsn::task_ptr delay_task(new raw_task(LPC_DELAY_RPC_REQUEST_RATE, [this]() {
+        start_read_next();
+        this->release_ref();
+    }));
+    delay_task->enqueue(std::chrono::milliseconds(delay_ms));
 }
 
 int rpc_session::prepare_parser()
 {
-    if (_reader._buffer_occupied < sizeof(uint32_t))
-        return sizeof(uint32_t) - _reader._buffer_occupied;
+    if (_reader._buffer_occupied < sizeof(uint32_t)) {
+        return static_cast<int>(sizeof(uint32_t) - _reader._buffer_occupied);
+    }
 
     auto hdr_format = message_parser::get_header_type(_reader._buffer.data());
     if (hdr_format == NET_HDR_INVALID) {
         hdr_format = _net.unknown_msg_hdr_format();
 
         if (hdr_format == NET_HDR_INVALID) {
-            LOG_ERROR("invalid header type, remote_client = {}, header_type = '{}'",
-                      _remote_addr,
-                      message_parser::get_debug_string(_reader._buffer.data()));
+            LOG_ERROR_PREFIX("invalid header type, remote_client = {}, header_type = '{}'",
+                             _remote_addr,
+                             message_parser::get_debug_string(_reader._buffer.data()));
             return -1;
         }
     }
+
     _parser = _net.new_message_parser(hdr_format);
-    LOG_DEBUG(
+    LOG_DEBUG_PREFIX(
         "message parser created, remote_client = {}, header_format = {}", _remote_addr, hdr_format);
 
     return 0;
@@ -298,22 +353,29 @@ void rpc_session::send_message(message_ex *msg)
         return;
     }
 
-    CHECK_NOTNULL(_parser, "parser should not be null when send");
+    CHECK_NOTNULL_PREFIX_MSG(_parser, "parser should not be null when send");
     _parser->prepare_on_send(msg);
 
-    uint64_t sig;
+    uint64_t sig{0};
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        msg->dl.insert_before(&_messages);
-        ++_message_count;
 
-        if ((SS_CONNECTED == _connect_state) && !_is_sending_next) {
-            _is_sending_next = true;
-            sig = _message_sent + 1;
-            unlink_message_for_send();
-        } else {
+        // Cache the message firstly, to be sent in batch later.
+        msg->dl.insert_before(&_batched_msgs);
+        ++_batched_msg_count;
+        ++_queued_msg_count;
+
+        // Messages cannot be sent until following conditions are met:
+        // 1. the connection should be established successfully, since connecting to remote
+        // is asynchronous, and
+        // 2. there is not another batch being sent.
+        if ((SS_CONNECTED != _connect_state) || _is_sending_next) {
             return;
         }
+
+        _is_sending_next = true;
+        sig = _message_sent + 1;
+        unlink_message_for_send();
     }
 
     this->send(sig);
@@ -326,11 +388,14 @@ bool rpc_session::cancel(message_ex *request)
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        if (request->dl.is_alone())
+
+        if (request->dl.is_alone()) {
             return false;
+        }
 
         request->dl.remove();
-        --_message_count;
+        --_batched_msg_count;
+        --_queued_msg_count;
     }
 
     // added in rpc_engine::reply (for server) or rpc_session::send_message (for client)
@@ -345,14 +410,15 @@ void rpc_session::on_send_completed(uint64_t signature)
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (signature != 0) {
-            CHECK(_is_sending_next && signature == _message_sent + 1, "sent msg must be sending");
+            CHECK_PREFIX_MSG(_is_sending_next && signature == _message_sent + 1,
+                             "sent msg must be sending");
             _is_sending_next = false;
 
             // the _sending_msgs may have been cleared when reading of the rpc_session is failed.
-            if (_sending_msgs.size() == 0) {
-                CHECK_EQ_MSG(_connect_state,
-                             SS_DISCONNECTED,
-                             "assume sending queue is cleared due to session closed");
+            if (_sending_msgs.empty()) {
+                CHECK_EQ_PREFIX_MSG(_connect_state,
+                                    SS_DISCONNECTED,
+                                    "assume sending queue is cleared due to session closed");
                 return;
             }
 
@@ -361,6 +427,8 @@ void rpc_session::on_send_completed(uint64_t signature)
                 msg->release_ref();
                 _message_sent++;
             }
+
+            _queued_msg_count -= static_cast<int>(_sending_msgs.size());
             _sending_msgs.clear();
             _sending_buffers.clear();
         }
@@ -374,16 +442,17 @@ void rpc_session::on_send_completed(uint64_t signature)
     }
 
     // for next send messages
-    if (sig != 0)
+    if (sig != 0) {
         this->send(sig);
+    }
 }
 
 rpc_session::rpc_session(connection_oriented_network &net,
-                         ::dsn::rpc_address remote_addr,
+                         rpc_address remote_addr,
                          message_parser_ptr &parser,
                          bool is_client)
     : _connect_state(is_client ? SS_DISCONNECTED : SS_CONNECTED),
-      _message_count(0),
+      _batched_msg_count(0),
       _is_sending_next(false),
       _message_sent(0),
       _net(net),
@@ -395,10 +464,12 @@ rpc_session::rpc_session(connection_oriented_network &net,
       _reader(net.message_buffer_block_size()),
       _parser(parser),
       _is_client(is_client),
+      _log_prefix(fmt::format(
+          "[{}][remote@{}]", is_client ? "client session" : "server session", remote_addr)),
       _matcher(_net.engine()->matcher()),
       _delay_server_receive_ms(0)
 {
-    LOG_WARNING_IF(!_remote_host_port, "'{}' can not be reverse resolved", _remote_addr);
+    LOG_WARNING_IF_PREFIX(!_remote_host_port, "'{}' can not be reverse resolved", _remote_addr);
     if (!is_client) {
         on_rpc_session_connected.execute(this);
     }
@@ -406,25 +477,24 @@ rpc_session::rpc_session(connection_oriented_network &net,
 
 bool rpc_session::on_disconnected(bool is_write)
 {
-    bool ret;
-    if (set_disconnected()) {
-        rpc_session_ptr sp = this;
-        if (is_client()) {
-            _net.on_client_session_disconnected(sp);
-        } else {
-            _net.on_server_session_disconnected(sp);
+    const auto cleanup = defer([is_write, this]() {
+        if (is_write) {
+            clear_send_queue(false);
         }
+    });
 
-        ret = true;
+    if (!mark_disconnected()) {
+        return false;
+    }
+
+    const rpc_session_ptr session(this);
+    if (is_client()) {
+        _net.on_client_session_disconnected(session);
     } else {
-        ret = false;
+        _net.on_server_session_disconnected(session);
     }
 
-    if (is_write) {
-        clear_send_queue(false);
-    }
-
-    return ret;
+    return true;
 }
 
 void rpc_session::on_failure(bool is_write)
@@ -434,9 +504,9 @@ void rpc_session::on_failure(bool is_write)
         // The under layer socket may be used by async_* interfaces concurrently, it's not thread
         // safe to invalidate the '_socket', it should be invalidated when the session is
         // destroyed.
-        LOG_WARNING("disconnect to remote {}, the socket will be lazily closed when the session "
-                    "destroyed",
-                    _remote_addr);
+        LOG_WARNING_PREFIX("disconnect to remote {}, the socket will be lazily closed when "
+                           "the session destroyed",
+                           _remote_addr);
     }
 }
 
@@ -471,13 +541,14 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
         // - the remote address is not listened, which means the remote port is not occupied
         // - operating system chooses the remote port as client's ephemeral port
         if (is_client() && msg->header->from_address == _net.engine()->primary_address()) {
-            LOG_ERROR("self connection detected, address = {}", msg->header->from_address);
-            CHECK_EQ_MSG(msg->get_count(), 0, "message should not be referenced by anybody so far");
+            LOG_ERROR_PREFIX("self connection detected, address = {}", msg->header->from_address);
+            CHECK_EQ_PREFIX_MSG(
+                msg->get_count(), 0, "message should not be referenced by anybody so far");
             delete msg;
             return false;
         }
 
-        DCHECK(!is_client(), "only rpc server session can recv rpc requests");
+        DCHECK_PREFIX_MSG(!is_client(), "only rpc server session can recv rpc requests");
         _net.on_recv_request(msg, delay_ms);
     }
 
@@ -499,7 +570,7 @@ bool rpc_session::try_pend_message(message_ex *msg)
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (!negotiation_succeed) {
             msg->add_ref();
-            _pending_messages.push_back(msg);
+            _pending_msgs.push_back(msg);
             return true;
         }
     }
@@ -509,10 +580,10 @@ bool rpc_session::try_pend_message(message_ex *msg)
 void rpc_session::clear_pending_messages()
 {
     utils::auto_lock<utils::ex_lock_nr> l(_lock);
-    for (auto msg : _pending_messages) {
+    for (auto *msg : _pending_msgs) {
         msg->release_ref();
     }
-    _pending_messages.clear();
+    _pending_msgs.clear();
 }
 
 void rpc_session::set_negotiation_succeed()
@@ -522,7 +593,7 @@ void rpc_session::set_negotiation_succeed()
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         negotiation_succeed = true;
 
-        _pending_messages.swap(swapped_pending_msgs);
+        _pending_msgs.swap(swapped_pending_msgs);
     }
 
     // resend the pending messages
@@ -614,236 +685,333 @@ uint32_t network::get_local_ipv4()
 }
 
 connection_oriented_network::connection_oriented_network(rpc_engine *srv, network *inner_provider)
-    : network(srv, inner_provider),
-      METRIC_VAR_INIT_server(network_client_sessions),
-      METRIC_VAR_INIT_server(network_server_sessions)
+    : network(srv, inner_provider), METRIC_VAR_INIT_server(network_server_sessions)
 {
 }
 
 void connection_oriented_network::inject_drop_message(message_ex *msg, bool is_send)
 {
-    rpc_session_ptr s = msg->io_session;
-    if (s == nullptr) {
-        // - if io_session == nulltr, there must be is_send == true;
-        // - but if is_send == true, there may be is_session != nullptr, when it is a
-        //   normal (not forwarding) reply message from server to client, in which case
-        //   the io_session has also been set.
-        CHECK(is_send, "received message should always has io_session set");
-        utils::auto_read_lock l(_clients_lock);
-        auto it = _clients.find(msg->to_address);
-        if (it != _clients.end()) {
-            s = it->second;
-        }
+    const rpc_session_ptr session(msg->io_session);
+    if (session != nullptr) {
+        session->close();
+        return;
     }
 
-    if (s != nullptr) {
-        s->close();
+    // - if io_session == nulltr, there must be is_send == true;
+    // - but if is_send == true, there may be is_session != nullptr, when it is a
+    //   normal (not forwarding) reply message from server to client, in which case
+    //   the io_session has also been set.
+    CHECK(is_send, "received message should always has io_session set");
+
+    utils::auto_read_lock l(_clients_lock);
+
+    const auto iter = std::as_const(_clients).find(msg->to_address);
+    if (iter == _clients.end()) {
+        return;
     }
+
+    CHECK(iter->second, "connection pool must be non-null");
+    iter->second->close();
 }
 
 void connection_oriented_network::send_message(message_ex *request)
 {
-    rpc_session_ptr client = nullptr;
-    auto &to = request->to_address;
+    rpc_session_pool_ptr client_pool;
+    const auto server_addr = request->to_address;
 
-    // TODO: thread-local client ptr cache
+    // TODO(wangdan): thread-local client ptr cache
     {
         utils::auto_read_lock l(_clients_lock);
-        auto it = _clients.find(to);
-        if (it != _clients.end()) {
-            client = it->second;
+        const auto iter = std::as_const(_clients).find(server_addr);
+        if (iter != _clients.end()) {
+            client_pool = iter->second;
         }
     }
 
-    int ip_count = 0;
-    bool new_client = false;
-    if (nullptr == client.get()) {
+    if (!client_pool) {
         utils::auto_write_lock l(_clients_lock);
-        auto it = _clients.find(to);
-        if (it != _clients.end()) {
-            client = it->second;
+        const auto iter = std::as_const(_clients).find(server_addr);
+        if (iter != _clients.end()) {
+            client_pool = iter->second;
         } else {
-            client = create_client_session(to);
-            _clients.insert(client_sessions::value_type(to, client));
-            new_client = true;
+            client_pool = rpc_session_pool::create(this, server_addr);
+            _clients.try_emplace(server_addr, client_pool);
         }
-        ip_count = (int)_clients.size();
     }
 
-    // init connection if necessary
-    if (new_client) {
-        LOG_INFO("client session created, remote_server = {}, current_count = {}",
-                 client->remote_address(),
-                 ip_count);
-        METRIC_VAR_SET(network_client_sessions, ip_count);
-        client->connect();
-    }
-
-    // rpc call
-    client->send_message(request);
+    client_pool->get_rpc_session()->send_message(request);
 }
 
-rpc_session_ptr connection_oriented_network::get_server_session(::dsn::rpc_address ep)
+rpc_session_ptr connection_oriented_network::get_server_session(rpc_address client_addr)
 {
     utils::auto_read_lock l(_servers_lock);
-    auto it = _servers.find(ep);
-    return it != _servers.end() ? it->second : nullptr;
+    return gutil::FindWithDefault(_servers, client_addr);
 }
 
-void connection_oriented_network::on_server_session_accepted(rpc_session_ptr &s)
+void connection_oriented_network::add_server_session(const rpc_session_ptr &session)
 {
-    int ip_count = 0;
-    int ip_conn_count = 1;
+    const auto [iter, inserted] = _servers.try_emplace(session->remote_address(), session);
+    if (inserted) {
+        return;
+    }
+
+    iter->second = session;
+    LOG_WARNING("server session already exists, remote_client = {}, preempted",
+                session->remote_address());
+}
+
+uint32_t connection_oriented_network::add_server_conn_count(const rpc_session_ptr &session)
+{
+    const auto [iter, inserted] = _ip_conn_counts.try_emplace(session->remote_address().ip(), 1);
+    if (inserted) {
+        return 1;
+    }
+
+    return ++iter->second;
+}
+
+void connection_oriented_network::on_server_session_accepted(const rpc_session_ptr &session)
+{
+    uint32_t ip_count{0};
+    uint32_t ip_conn_count{0};
+
     {
         utils::auto_write_lock l(_servers_lock);
 
-        auto pr = _servers.insert(server_sessions::value_type(s->remote_address(), s));
-        if (pr.second) {
-            // nothing to do
-        } else {
-            pr.first->second = s;
-            LOG_WARNING("server session already exists, remote_client = {}, preempted",
-                        s->remote_address());
-        }
-        ip_count = (int)_servers.size();
+        add_server_session(session);
+        ip_count = static_cast<uint32_t>(_servers.size());
 
-        auto pr2 =
-            _ip_conn_count.insert(ip_connection_count::value_type(s->remote_address().ip(), 1));
-        if (!pr2.second) {
-            ip_conn_count = ++pr2.first->second;
-        }
+        ip_conn_count = add_server_conn_count(session);
     }
 
     LOG_INFO("server session accepted, remote_client = {}, current_count = {}",
-             s->remote_address(),
+             session->remote_address(),
              ip_count);
 
     LOG_INFO("ip session {}, remote_client = {}, current_count = {}",
              ip_conn_count == 1 ? "inserted" : "increased",
-             s->remote_address(),
+             session->remote_address(),
              ip_conn_count);
 
     METRIC_VAR_SET(network_server_sessions, ip_count);
 }
 
-void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr &s)
+bool connection_oriented_network::remove_server_session(const rpc_session_ptr &session)
 {
+    const auto iter = std::as_const(_servers).find(session->remote_address());
+    if (iter == _servers.end() || iter->second.get() != session.get()) {
+        return false;
+    }
+
+    _servers.erase(iter);
+    return true;
+}
+
+uint32_t connection_oriented_network::remove_server_conn_count(const rpc_session_ptr &session)
+{
+    const auto iter = _ip_conn_counts.find(session->remote_address().ip());
+    if (iter == _ip_conn_counts.end()) {
+        return 0;
+    }
+
+    if (iter->second <= 1) {
+        _ip_conn_counts.erase(iter);
+        return 0;
+    }
+
+    return --iter->second;
+}
+
+void connection_oriented_network::on_server_session_disconnected(const rpc_session_ptr &session)
+{
+    bool session_removed{false};
+
     // how many unique client(the same ip:port is considered to be a unique client)
-    int ip_count = 0;
+    uint32_t ip_count{0};
+
     // one unique client may remain more than one connection on the server, which
     // is an unexpected behavior of client, we should record it in logs.
-    int ip_conn_count = 0;
+    uint32_t ip_conn_count{0};
 
-    bool session_removed = false;
     {
         utils::auto_write_lock l(_servers_lock);
-        auto it = _servers.find(s->remote_address());
-        if (it != _servers.end() && it->second.get() == s.get()) {
-            _servers.erase(it);
-            session_removed = true;
-        }
-        ip_count = (int)_servers.size();
 
-        auto it2 = _ip_conn_count.find(s->remote_address().ip());
-        if (it2 != _ip_conn_count.end()) {
-            if (it2->second > 1) {
-                it2->second -= 1;
-                ip_conn_count = it2->second;
-            } else {
-                _ip_conn_count.erase(it2);
-            }
-        }
+        session_removed = remove_server_session(session);
+        ip_count = static_cast<uint32_t>(_servers.size());
+
+        ip_conn_count = remove_server_conn_count(session);
     }
 
     if (session_removed) {
         LOG_INFO("session {} disconnected, the total client sessions count remains {}",
-                 s->remote_address(),
+                 session->remote_address(),
                  ip_count);
         METRIC_VAR_SET(network_server_sessions, ip_count);
     }
 
     if (ip_conn_count == 0) {
         // TODO(wutao1): print ip only
-        LOG_INFO("client ip {} has no more session to this server", s->remote_address());
+        LOG_INFO("client ip {} has no more session to this server", session->remote_address());
     } else {
         LOG_INFO("client ip {} has still {} of sessions to this server",
-                 s->remote_address(),
+                 session->remote_address(),
                  ip_conn_count);
     }
 }
 
-bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_address ep)
+bool connection_oriented_network::check_if_conn_threshold_exceeded(rpc_address client_addr)
 {
     if (FLAGS_conn_threshold_per_ip <= 0) {
         LOG_DEBUG("new client from {} is connecting to server {}, no connection threshold",
-                  ep.ipv4_str(),
+                  client_addr.ipv4_str(),
                   address());
         return false;
     }
 
-    bool exceeded = false;
-    int ip_conn_count = 0; // the amount of connections from this ip address.
+    uint32_t ip_conn_count{0}; // the amount of connections from this ip address.
     {
         utils::auto_read_lock l(_servers_lock);
-        auto it = _ip_conn_count.find(ep.ip());
-        if (it != _ip_conn_count.end()) {
-            ip_conn_count = it->second;
-        }
-    }
-    if (ip_conn_count >= FLAGS_conn_threshold_per_ip) {
-        exceeded = true;
+        ip_conn_count = gutil::FindWithDefault(_ip_conn_counts, client_addr.ip());
     }
 
     LOG_DEBUG("new client from {} is connecting to server {}, existing connection count = {}, "
               "threshold = {}",
-              ep.ipv4_str(),
+              client_addr.ipv4_str(),
               address(),
               ip_conn_count,
               FLAGS_conn_threshold_per_ip);
 
-    return exceeded;
+    return ip_conn_count >= FLAGS_conn_threshold_per_ip;
 }
 
-void connection_oriented_network::on_client_session_connected(rpc_session_ptr &s)
+void connection_oriented_network::on_client_session_connected(const rpc_session_ptr &session)
 {
-    int ip_count = 0;
-    bool r = false;
-    {
-        utils::auto_read_lock l(_clients_lock);
-        auto it = _clients.find(s->remote_address());
-        if (it != _clients.end() && it->second.get() == s.get()) {
-            r = true;
-        }
-        ip_count = (int)_clients.size();
+    utils::auto_read_lock l(_clients_lock);
+    const auto iter = std::as_const(_clients).find(session->remote_address());
+    if (iter == _clients.end()) {
+        return;
     }
 
-    if (r) {
-        LOG_INFO("client session connected, remote_server = {}, current_count = {}",
-                 s->remote_address(),
-                 ip_count);
-        METRIC_VAR_SET(network_client_sessions, ip_count);
+    iter->second->on_connected(session);
+}
+
+void connection_oriented_network::on_client_session_disconnected(const rpc_session_ptr &session)
+{
+    utils::auto_write_lock l(_clients_lock);
+
+    const auto iter = _clients.find(session->remote_address());
+    if (iter == _clients.end()) {
+        return;
+    }
+
+    const rpc_session_pool_ptr pool(iter->second);
+    pool->on_disconnected(session, [iter, this]() { _clients.erase(iter); });
+}
+
+rpc_session_pool::rpc_session_pool(connection_oriented_network *net, rpc_address server_addr)
+    : _net(net), _server_addr(server_addr), _conn_metrics(server_addr.to_string())
+{
+}
+
+rpc_session_ptr rpc_session_pool::select_rpc_session() const
+{
+    CHECK_GT(_sessions.size(), 0);
+
+    return std::min_element(_sessions.begin(),
+                            _sessions.end(),
+                            [](const auto &lhs, const auto &rhs) {
+                                return lhs.first->queued_message_count() <
+                                       rhs.first->queued_message_count();
+                            })
+        ->second;
+}
+
+rpc_session_ptr rpc_session_pool::create_rpc_session()
+{
+    const auto session = _net->create_client_session(_server_addr);
+
+    _sessions.try_emplace(session.get(), session);
+
+    LOG_INFO("[pool] client session created: remote = {}, count = {}",
+             session->remote_address(),
+             _sessions.size());
+    METRIC_SET(_conn_metrics, network_client_sessions, _sessions.size());
+
+    return session;
+}
+
+rpc_session_ptr rpc_session_pool::get_rpc_session()
+{
+    {
+        utils::auto_read_lock l(_lock);
+        if (_sessions.size() >= FLAGS_conn_pool_max_size) {
+            return select_rpc_session();
+        }
+    }
+
+    rpc_session_ptr session;
+    {
+        utils::auto_write_lock l(_lock);
+        if (_sessions.size() >= FLAGS_conn_pool_max_size) {
+            return select_rpc_session();
+        }
+
+        session = create_rpc_session();
+    }
+
+    // Don't place session->connect() under the protection of `_lock`. This is because some
+    // implementations of rpc_session (such as sim_client_session) are not asynchronous - after
+    // the connection is established, they may immediately invoke mark_connected() within the
+    // same thread (which eventually calls rpc_session_pool::on_connected()), leading to deadlock.
+    session->connect();
+
+    return session;
+}
+
+void rpc_session_pool::on_connected(const rpc_session_ptr &session) const
+{
+    utils::auto_read_lock l(_lock);
+
+    const auto iter = std::as_const(_sessions).find(session.get());
+    if (iter == _sessions.end()) {
+        return;
+    }
+
+    // No need to update metric since no new session was added.
+    LOG_INFO("[pool] client session connected: local = {}, remote = {}, count = {}",
+             session->local_address(),
+             _server_addr,
+             _sessions.size());
+}
+
+void rpc_session_pool::on_disconnected(const rpc_session_ptr &session,
+                                       std::function<void()> &&on_empty)
+{
+    utils::auto_write_lock l(_lock);
+
+    const auto iter = std::as_const(_sessions).find(session.get());
+    if (iter == _sessions.end()) {
+        return;
+    }
+
+    _sessions.erase(iter);
+
+    LOG_INFO("[pool] client session disconnected: local = {}, remote = {}, count = {}",
+             session->local_address(),
+             _server_addr,
+             _sessions.size());
+    METRIC_SET(_conn_metrics, network_client_sessions, _sessions.size());
+
+    if (_sessions.empty()) {
+        on_empty();
     }
 }
 
-void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr &s)
+void rpc_session_pool::close() const
 {
-    int ip_count = 0;
-    bool r = false;
-    {
-        utils::auto_write_lock l(_clients_lock);
-        auto it = _clients.find(s->remote_address());
-        if (it != _clients.end() && it->second.get() == s.get()) {
-            _clients.erase(it);
-            r = true;
-        }
-        ip_count = (int)_clients.size();
-    }
-
-    if (r) {
-        LOG_INFO("client session disconnected, remote_server = {}, current_count = {}",
-                 s->remote_address(),
-                 ip_count);
-        METRIC_VAR_SET(network_client_sessions, ip_count);
+    utils::auto_read_lock l(_lock);
+    for (const auto &[session, _] : _sessions) {
+        session->close();
     }
 }
 

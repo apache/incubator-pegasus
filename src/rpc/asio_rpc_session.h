@@ -26,16 +26,20 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
+#include <string>
 
+#include "boost/asio/basic_stream_socket.hpp"
 #include "boost/asio/ip/tcp.hpp"
+#include "boost/system/detail/error_code.hpp"
 #include "rpc/message_parser.h"
 #include "rpc/network.h"
+#include "rpc/rpc_address.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 class message_ex;
-class rpc_address;
 
 namespace tools {
 class asio_network_provider;
@@ -46,12 +50,14 @@ class asio_rpc_session : public rpc_session
 {
 public:
     asio_rpc_session(asio_network_provider &net,
-                     ::dsn::rpc_address remote_addr,
+                     rpc_address remote_addr,
                      std::shared_ptr<boost::asio::ip::tcp::socket> &socket,
                      message_parser_ptr &parser,
                      bool is_client);
 
     ~asio_rpc_session() override;
+
+    rpc_address local_address() const override { return _local_addr; }
 
     void send(uint64_t signature) override;
 
@@ -64,14 +70,79 @@ public:
     void connect() override;
 
 private:
-    void do_read(int read_next) override;
     void set_options();
+
+    void set_send_buf_size();
+    void set_recv_buf_size();
+    void set_no_delay();
+
+    template <typename TOption, typename TValue>
+    void set_option(const std::string &opt_name, const TValue new_val)
+    {
+        if (!_socket->is_open()) {
+            return;
+        }
+
+        boost::system::error_code ec;
+
+        TOption opt;
+        _socket->get_option(opt, ec);
+        if (ec) {
+            LOG_WARNING_PREFIX(
+                "[boost asio socket] get old {} failed: error = {}", opt_name, ec.message());
+        }
+
+        const TValue old_val = opt.value();
+        if (old_val == new_val) {
+            LOG_DEBUG_PREFIX("[boost asio socket] no need to set {} since it has already been {}",
+                             opt_name,
+                             old_val);
+            return;
+        }
+
+        TOption new_opt(new_val);
+        _socket->set_option(new_opt, ec);
+        if (ec) {
+            LOG_WARNING_PREFIX("[boost asio socket] set {} to {} failed: error = {}",
+                               opt_name,
+                               new_val,
+                               ec.message());
+        }
+
+        _socket->get_option(opt, ec);
+        if (ec) {
+            LOG_WARNING_PREFIX(
+                "[boost asio socket] get new {} failed: error = {}", opt_name, ec.message());
+        }
+
+        // According to https://man7.org/linux/man-pages/man7/tcp.7.html, the maximum sizes
+        // for socket buffers declared via the SO_SNDBUF and SO_RCVBUF mechanisms are limited
+        // by the values in the /proc/sys/net/core/wmem_max and /proc/sys/net/core/rmem_max
+        // files. Therefore, the final buffer size may be less than what you've expected,
+        // even less than the original value.
+        //
+        // For example, suppose the original value of send and receive buffer size are 1313280
+        // and 530744. Given both values are 212992 in the /proc/sys/net/core/wmem_max and
+        // /proc/sys/net/core/rmem_max files. After both send and receive buffer size are set
+        // to 16MB, their final values will be 212992, which are even less than their original
+        // values each.
+        LOG_DEBUG_PREFIX("[boost asio socket] set {} {} => {} by specifying {}",
+                         opt_name,
+                         old_val,
+                         opt.value(),
+                         new_val);
+    }
+
+    void do_read(int read_next) override;
+
     void on_message_read(message_ex *msg)
     {
         if (!on_recv_message(msg, 0)) {
             on_failure(false);
         }
     }
+
+    rpc_address _local_addr;
 
     std::shared_ptr<boost::asio::ip::tcp::socket> _socket;
 };

@@ -47,7 +47,7 @@ class sim_client_session : public rpc_session
 {
 public:
     sim_client_session(sim_network_provider &net,
-                       ::dsn::rpc_address remote_addr,
+                       rpc_address remote_addr,
                        message_parser_ptr &parser);
 
     void connect() override;
@@ -65,7 +65,7 @@ class sim_server_session : public rpc_session
 {
 public:
     sim_server_session(sim_network_provider &net,
-                       ::dsn::rpc_address remote_addr,
+                       rpc_address remote_addr,
                        rpc_session_ptr &client,
                        message_parser_ptr &parser);
 
@@ -87,30 +87,29 @@ class sim_network_provider : public connection_oriented_network
 {
 public:
     sim_network_provider(rpc_engine *rpc, network *inner_provider);
-    ~sim_network_provider(void) {}
+    ~sim_network_provider() override = default;
 
-    virtual error_code start(rpc_channel channel, int port, bool client_only);
+    error_code start(rpc_channel channel, int port, bool client_only) override;
 
-    const ::dsn::rpc_address &address() const override { return _address; }
+    const rpc_address &address() const override { return _address; }
     const ::dsn::host_port &host_port() const override { return _hp; }
 
-    virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr)
+    rpc_session_ptr create_client_session(rpc_address server_addr) override
     {
         message_parser_ptr parser(new_message_parser(_client_hdr_format));
-        return rpc_session_ptr(new sim_client_session(*this, server_addr, parser));
+        return {new sim_client_session(*this, server_addr, parser)};
     }
 
-    virtual rpc_session_ptr create_server_session(::dsn::rpc_address client_addr,
-                                                  rpc_session_ptr client_session)
+    rpc_session_ptr create_server_session(rpc_address client_addr, rpc_session_ptr client_session)
     {
         message_parser_ptr parser(new_message_parser(_client_hdr_format));
-        return rpc_session_ptr(new sim_server_session(*this, client_addr, client_session, parser));
+        return {new sim_server_session(*this, client_addr, client_session, parser)};
     }
 
     uint32_t net_delay_milliseconds() const;
 
 private:
-    ::dsn::rpc_address _address;
+    rpc_address _address;
     ::dsn::host_port _hp;
 };
 
