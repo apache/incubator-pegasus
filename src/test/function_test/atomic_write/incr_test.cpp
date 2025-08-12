@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <cstdint>
 #include <limits>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -33,14 +34,49 @@ class IncrTest : public AtomicWriteTest
 {
 protected:
     IncrTest() : AtomicWriteTest("incr_test") {}
+    ~IncrTest() override = default;
 
+    void TearDown() override {
+        for (const auto &hash_key: _hash_keys) {
+        del(hash_key);
+        }
+
+        AtomicWriteTest::TearDown();
+    }
+
+    void test_incr_on_del(const std::string &hash_key, int64_t increment)
+    {
+        del(hash_key);
+
+        _hash_keys.insert(hash_key);
+        test_incr(hash_key, increment, increment);
+    }
+
+    template <typename TValue, typename... Args>
+    void test_incr_on_set(const std::string &hash_key, const TValue &base_value, int64_t increment, int64_t expected_new_int, Args &&...args)
+    {
+        set(hash_key, base_value);
+
+        _hash_keys.insert(hash_key);
+        test_incr(hash_key, increment, expected_new_int, std::forward<Args>(args)...);
+    }
+
+private:
     void del(const std::string &hash_key)
     {
         ASSERT_EQ(PERR_OK, _client->del(hash_key, kSortKey));
         ASSERT_EQ(PERR_NOT_FOUND, _client->exist(hash_key, kSortKey));
     }
 
-    void test_incr(const std::string &hash_key, int64_t increment, int64_t expected_new_int)
+    template <typename TValue>
+    void set(const std::string &hash_key, const TValue &value)
+    {
+        ASSERT_EQ(PERR_OK, _client->set(hash_key, kSortKey, fmt::format("{}", value)));
+        ASSERT_EQ(PERR_OK, _client->exist(hash_key, kSortKey));
+    }
+
+    template <typename... Args>
+    void test_incr(const std::string &hash_key, int64_t increment, int64_t expected_new_int, Args &&...args)
     {
         int64_t actual_new_int{0};
         ASSERT_EQ(PERR_OK, _client->incr(hash_key, kSortKey, increment, actual_new_int));
@@ -50,72 +86,54 @@ protected:
         ASSERT_EQ(PERR_OK, _client->get(hash_key, kSortKey, actual_new_str));
         ASSERT_EQ(fmt::format("{}", expected_new_int), actual_new_str);
 
-        del(hash_key);
+        test_incr(std::forward<Args>(args)...);
     }
 
+    void test_incr() {}
+
     static const std::string kSortKey;
+
+    std::set<std::string> _hash_keys;
 };
 
 const std::string IncrTest::kSortKey("sort_key");
 
 TEST_P(IncrTest, IncrOnNonExistingKey)
 {
-    del("incr_on_non_existing_key");
-
-    test_incr("incr_on_non_existing_key", 100, 100);
+    test_incr_on_del("incr_on_non_existing_key", 100);
 }
 
-TEST_P(IncrTest, empty_key)
+TEST_P(IncrTest, IncrOnEmptyValue)
 {
-    ASSERT_EQ(PERR_OK, _client->set("incr_test_empty_key", "", ""));
-
-    int64_t new_value_int;
-    ASSERT_EQ(PERR_OK, _client->incr("incr_test_empty_key", "", 100, new_value_int));
-    ASSERT_EQ(100, new_value_int);
-
-    std::string new_value_str;
-    ASSERT_EQ(PERR_OK, _client->get("incr_test_empty_key", "", new_value_str));
-    ASSERT_EQ("100", new_value_str);
-
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_empty_key", ""));
+    test_incr_on_set("incr_on_empty_value", "", 100, 100);
 }
 
-TEST_P(IncrTest, negative_value)
+TEST_P(IncrTest, IncrOnZeroValue)
 {
-    ASSERT_EQ(PERR_OK, _client->set("incr_test_negative_value", "", "-100"));
-
-    int64_t new_value_int;
-    ASSERT_EQ(PERR_OK, _client->incr("incr_test_negative_value", "", -1, new_value_int));
-    ASSERT_EQ(-101, new_value_int);
-
-    std::string new_value_str;
-    ASSERT_EQ(PERR_OK, _client->get("incr_test_negative_value", "", new_value_str));
-    ASSERT_EQ("-101", new_value_str);
-
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_negative_value", ""));
+    test_incr_on_set("incr_on_zero_value", 0, 1, 1);
 }
 
-TEST_P(IncrTest, increase_zero)
+TEST_P(IncrTest, IncrOnPositiveValue)
 {
-    ASSERT_EQ(PERR_OK, _client->set("incr_test_increase_zero", "", "100"));
-
-    int64_t new_value_int;
-    ASSERT_EQ(PERR_OK, _client->incr("incr_test_increase_zero", "", 0, new_value_int));
-    ASSERT_EQ(100, new_value_int);
-
-    std::string new_value_str;
-    ASSERT_EQ(PERR_OK, _client->get("incr_test_increase_zero", "", new_value_str));
-    ASSERT_EQ("100", new_value_str);
-
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_increase_zero", ""));
+    test_incr_on_set("incr_on_positive_value", 100, 1, 101);
 }
 
-TEST_P(IncrTest, multiple_increment)
+TEST_P(IncrTest, IncrOnNegativeValue)
 {
-    ASSERT_EQ(PERR_OK, _client->set("incr_test_multiple_increment", "", "100"));
+    test_incr_on_set("incr_on_negative_value", -100, -1, -101);
+}
+
+TEST_P(IncrTest, IncrByZero)
+{
+    test_incr_on_set("incr_by_zero", 100, 0, 100);
+}
+
+TEST_P(IncrTest, IncrMultiTimes)
+{
+    test_incr_on_set("incr_multi_times", 100);
 
     int64_t new_value_int;
-    ASSERT_EQ(PERR_OK, _client->incr("incr_test_multiple_increment", "", 1, new_value_int));
+    (PERR_OK, _client->incr("incr_test_multiple_increment", "", 1, new_value_int));
     ASSERT_EQ(101, new_value_int);
 
     std::string new_value_str;
