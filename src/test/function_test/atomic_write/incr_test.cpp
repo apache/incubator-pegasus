@@ -35,7 +35,6 @@ class IncrTest : public AtomicWriteTest
 {
 protected:
     IncrTest() : AtomicWriteTest("incr_test") {}
-    ~IncrTest() override = default;
 
     void test_incr_on_del(const std::string &hash_key, int64_t increment)
     {
@@ -46,18 +45,39 @@ protected:
         test_incr(hash_key, increment, increment);
     }
 
-    template <typename TValue, typename... Args>
+    template <typename TBaseValue, typename... Args>
     void test_incr_on_set(const std::string &hash_key,
-                          const TValue &base_value,
+                          const TBaseValue &base_value,
                           int64_t increment,
-                          int64_t expected_new_int,
+                          int64_t expected_new_value,
                           Args &&...args)
     {
         set(hash_key, base_value);
 
         const auto cleanup = dsn::defer([this, &hash_key]() { del(hash_key); });
 
-        test_incr(hash_key, increment, expected_new_int, std::forward<Args>(args)...);
+        test_incr(hash_key, increment, expected_new_value, std::forward<Args>(args)...);
+    }
+
+    template <typename TBaseValue, typename TReadValue>
+    void test_incr_detail_on_set(const std::string &hash_key,
+                                 const TBaseValue &base_value,
+                                 int64_t increment,
+                                 int expected_incr_err,
+                                 int64_t expected_resp_value,
+                                 int expected_read_err,
+                                 const TReadValue &expected_read_value)
+    {
+        set(hash_key, base_value);
+
+        const auto cleanup = dsn::defer([this, &hash_key]() { del(hash_key); });
+
+        test_incr_detail(hash_key,
+                         increment,
+                         expected_incr_err,
+                         expected_resp_value,
+                         expected_read_err,
+                         expected_read_value);
     }
 
 private:
@@ -77,21 +97,34 @@ private:
     template <typename... Args>
     void test_incr(const std::string &hash_key,
                    int64_t increment,
-                   int64_t expected_new_int,
+                   int64_t expected_new_value,
                    Args &&...args)
     {
-        int64_t actual_new_int{0};
-        ASSERT_EQ(PERR_OK, _client->incr(hash_key, kSortKey, increment, actual_new_int));
-        ASSERT_EQ(expected_new_int, actual_new_int);
-
-        std::string actual_new_str;
-        ASSERT_EQ(PERR_OK, _client->get(hash_key, kSortKey, actual_new_str));
-        ASSERT_EQ(fmt::format("{}", expected_new_int), actual_new_str);
+        test_incr_detail(
+            hash_key, increment, PERR_OK, expected_new_value, PERR_OK, expected_new_value);
 
         test_incr(hash_key, std::forward<Args>(args)...);
     }
 
     void test_incr(const std::string &hash_key) {}
+
+    template <typename TReadValue>
+    void test_incr_detail(const std::string &hash_key,
+                          int64_t increment,
+                          int expected_incr_err,
+                          int64_t expected_resp_value,
+                          int expected_read_err,
+                          const TReadValue &expected_read_value)
+    {
+        int64_t actual_new_value{0};
+        ASSERT_EQ(expected_incr_err,
+                  _client->incr(hash_key, kSortKey, increment, actual_new_value));
+        ASSERT_EQ(expected_resp_value, actual_new_value);
+
+        std::string actual_new_str;
+        ASSERT_EQ(expected_read_err, _client->get(hash_key, kSortKey, actual_new_str));
+        ASSERT_EQ(fmt::format("{}", expected_read_value), actual_new_str);
+    }
 
     static const std::string kSortKey;
 };
@@ -112,72 +145,43 @@ TEST_P(IncrTest, ByZero) { test_incr_on_set("incr_by_zero", 100, 0, 100); }
 
 TEST_P(IncrTest, MultiTimes) { test_incr_on_set("incr_multi_times", 100, 1, 101, 2, 103); }
 
-TEST_P(IncrTest, invalid_old_data)
+TEST_P(IncrTest, OnInvalidValue)
 {
-    ASSERT_EQ(PERR_OK, _client->set("incr_test_invalid_old_data", "", "aaa"));
-
-    int64_t new_value_int;
-    ASSERT_EQ(PERR_INVALID_ARGUMENT,
-              _client->incr("incr_test_invalid_old_data", "", 1, new_value_int));
-    ASSERT_EQ(0, new_value_int);
-
-    std::string new_value_str;
-    ASSERT_EQ(PERR_OK, _client->get("incr_test_invalid_old_data", "", new_value_str));
-    ASSERT_EQ("aaa", new_value_str);
-
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_invalid_old_data", ""));
+    test_incr_detail_on_set(
+        "incr_on_invalid_value", "aaa", 1, PERR_INVALID_ARGUMENT, 0, PERR_OK, "aaa");
 }
 
-TEST_P(IncrTest, out_of_range_old_data)
+TEST_P(IncrTest, OnTooLargeValue)
 {
-    ASSERT_EQ(PERR_OK,
-              _client->set(
-                  "incr_test_out_of_range_old_data", "", "10000000000000000000000000000000000000"));
-
-    int64_t new_value_int;
-    ASSERT_EQ(PERR_INVALID_ARGUMENT,
-              _client->incr("incr_test_out_of_range_old_data", "", 1, new_value_int));
-    ASSERT_EQ(0, new_value_int);
-
-    std::string new_value_str;
-    ASSERT_EQ(PERR_OK, _client->get("incr_test_out_of_range_old_data", "", new_value_str));
-    ASSERT_EQ("10000000000000000000000000000000000000", new_value_str);
-
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_out_of_range_old_data", ""));
+    test_incr_detail_on_set("incr_on_too_large_value",
+                            "10000000000000000000000000000000000000",
+                            1,
+                            PERR_INVALID_ARGUMENT,
+                            0,
+                            PERR_OK,
+                            "10000000000000000000000000000000000000");
 }
 
 TEST_P(IncrTest, Overflow)
 {
-    ASSERT_EQ(PERR_OK, _client->set("incr_test_overflow", "", "1"));
-
-    int64_t new_value_int;
-    ASSERT_EQ(PERR_INVALID_ARGUMENT,
-              _client->incr(
-                  "incr_test_overflow", "", std::numeric_limits<int64_t>::max(), new_value_int));
-    ASSERT_EQ(1, new_value_int);
-
-    std::string new_value_str;
-    ASSERT_EQ(PERR_OK, _client->get("incr_test_overflow", "", new_value_str));
-    ASSERT_EQ("1", new_value_str);
-
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_overflow", ""));
+    test_incr_detail_on_set("incr_overflow",
+                            1,
+                            std::numeric_limits<int64_t>::max(),
+                            PERR_INVALID_ARGUMENT,
+                            1,
+                            PERR_OK,
+                            1);
 }
 
 TEST_P(IncrTest, Underflow)
 {
-    ASSERT_EQ(PERR_OK, _client->set("incr_test_underflow", "", "-1"));
-
-    int64_t new_value_int;
-    ASSERT_EQ(PERR_INVALID_ARGUMENT,
-              _client->incr(
-                  "incr_test_underflow", "", std::numeric_limits<int64_t>::min(), new_value_int));
-    ASSERT_EQ(-1, new_value_int);
-
-    std::string new_value_str;
-    ASSERT_EQ(PERR_OK, _client->get("incr_test_underflow", "", new_value_str));
-    ASSERT_EQ("-1", new_value_str);
-
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_underflow", ""));
+    test_incr_detail_on_set("incr_underflow",
+                            -1,
+                            std::numeric_limits<int64_t>::min(),
+                            PERR_INVALID_ARGUMENT,
+                            -1,
+                            PERR_OK,
+                            -1);
 }
 
 TEST_P(IncrTest, PreserveTtl)
