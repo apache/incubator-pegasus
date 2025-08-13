@@ -22,6 +22,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -400,6 +401,9 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, partiti
 }
 
 func (n *nodeSession) writeRequest(r *PegasusRpcCall) error {
+	pm := metrics.GetPrometheusMetrics()
+	pm.ObserveSummary(fmt.Sprintf("rpc_message_size_bytes_%s", r.Name), float64(len(r.RawReq)))
+
 	return n.conn.Write(r.RawReq)
 }
 

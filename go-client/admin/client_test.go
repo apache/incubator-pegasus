@@ -21,6 +21,7 @@ package admin
 
 import (
 	"context"
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"strings"
 	"testing"
 	"time"
@@ -110,7 +111,7 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	}
 
 	// ensures the created table must be available for read and write
-	rwClient := pegasus.NewClient(pegasus.Config{
+	rwClient := pegasus.NewClient(config.Config{
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	})
 	defer func() {

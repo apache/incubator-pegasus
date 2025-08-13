@@ -22,6 +22,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"strings"
 	"time"
 
@@ -35,7 +36,7 @@ import (
 // Pegasus cluster is going well, whether the go-client gets work in expected time.
 
 func main() {
-	client := pegasus.NewClient(pegasus.Config{MetaServers: []string{"172.21.0.11:35601"}})
+	client := pegasus.NewClient(config.Config{MetaServers: []string{"172.21.0.11:35601"}})
 	defer client.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

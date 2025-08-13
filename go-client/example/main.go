@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"io/ioutil"
 	"path/filepath"
 	"time"
@@ -48,7 +49,7 @@ func main() {
 	}))
 	logger := pegalog.GetLogger()
 
-	cfg := &pegasus.Config{}
+	cfg := &config.Config{}
 	json.Unmarshal(rawCfg, cfg)
 	c := pegasus.NewClient(*cfg)
 

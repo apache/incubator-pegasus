@@ -22,6 +22,7 @@ package pegasus
 import (
 	"context"
 	"fmt"
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"sync"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ import (
 func TestPegasusClient_OpenTable(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
+	cfg := config.Config{
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	}
 
@@ -64,7 +65,7 @@ func TestPegasusClient_OpenTableTimeout(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// make sure the port 8801 is not opened on your computer.
-	cfg := Config{
+	cfg := config.Config{
 		MetaServers: []string{"0.0.0.0:8801"},
 	}
 
@@ -85,7 +86,7 @@ func TestPegasusClient_OpenTableTimeout(t *testing.T) {
 func TestPegasusClient_ConcurrentOpenSameTable(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
+	cfg := config.Config{
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	}
 	client := NewClient(cfg)
@@ -120,7 +121,7 @@ func TestPegasusClient_ConcurrentOpenSameTable(t *testing.T) {
 func TestPegasusClient_ConcurrentMetaQueries(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	cfg := Config{
+	cfg := config.Config{
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	}
 	client := NewClient(cfg)
@@ -143,19 +144,19 @@ func TestPegasusClient_ConcurrentMetaQueries(t *testing.T) {
 }
 
 func TestPegasusClient_New(t *testing.T) {
-	c, err := newClientWithError(Config{
+	c, err := newClientWithError(config.Config{
 		MetaServers: []string{"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"},
 	})
 	assert.Nil(t, err)
 	_ = c.Close()
 
-	c, err = newClientWithError(Config{
+	c, err = newClientWithError(config.Config{
 		MetaServers: []string{"127abc"},
 	})
 	assert.NotNil(t, err)
 	assert.Nil(t, c)
 
-	_, err = newClientWithError(Config{
+	_, err = newClientWithError(config.Config{
 		MetaServers: []string{},
 	})
 	assert.NotNil(t, err)

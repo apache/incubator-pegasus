@@ -25,7 +25,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -715,8 +717,28 @@ func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKe
 }
 
 func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []byte, req op.Request, optype OpType) (interface{}, error) {
+	start := time.Now()
+	var errResult error
+	defer func() {
+		pm := metrics.GetPrometheusMetrics()
+		status := "success"
+		if errResult != nil {
+			if ctx.Err() == context.DeadlineExceeded {
+				status = "timeout"
+			} else {
+				status = "fail"
+			}
+		}
+
+		firstMetaIP := strings.ReplaceAll(p.meta.GetMetaIPAddrs()[0], ".", "_")
+		pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_qps_%s", p.tableName, optype.String(), status, firstMetaIP), 1)
+		elapsed := time.Since(start).Milliseconds()
+		pm.ObserveSummary(fmt.Sprintf("pegasus_client_%s_%s_%s_latency_%s", p.tableName, optype.String(), status, firstMetaIP), float64(elapsed))
+	}()
+
 	// validate arguments
 	if err := req.Validate(); err != nil {
+		errResult = err
 		return 0, WrapError(err, optype)
 	}
 	partitionHash := crc64Hash(hashKey)
@@ -726,6 +748,7 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 		confUpdated, retry, err = p.handleReplicaError(err, part)
 		return
 	})
+	errResult = err
 	return res, p.wrapPartitionError(err, gpid, part, optype)
 }
 

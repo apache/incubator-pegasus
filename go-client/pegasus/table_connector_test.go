@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"math"
 	"sort"
 	"sync"
@@ -87,7 +88,7 @@ func testSingleKeyOperations(t *testing.T, tb TableConnector, hashKey []byte, so
 	assert.Nil(t, tb.Del(context.Background(), hashKey, sortKey))
 }
 
-var testingCfg = Config{
+var testingCfg = config.Config{
 	MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 }
 

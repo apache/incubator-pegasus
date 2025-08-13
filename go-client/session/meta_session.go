@@ -120,6 +120,10 @@ func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*repli
 	return nil, err
 }
 
+func (m *MetaManager) GetMetaIPAddrs() []string {
+	return m.metaIPAddrs
+}
+
 func (m *MetaManager) getCurrentLeader() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

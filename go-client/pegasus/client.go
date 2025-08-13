@@ -21,6 +21,12 @@ package pegasus
 
 import (
 	"context"
+	"fmt"
+	"github.com/apache/incubator-pegasus/go-client/config"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
 	"sync"
 
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
@@ -50,7 +56,7 @@ type pegasusClient struct {
 
 // NewClient creates a new instance of pegasus client.
 // It panics if the configured addresses are illegal.
-func NewClient(cfg Config) Client {
+func NewClient(cfg config.Config) Client {
 	c, err := newClientWithError(cfg)
 	if err != nil {
 		pegalog.GetLogger().Fatal(err)
@@ -59,11 +65,33 @@ func NewClient(cfg Config) Client {
 	return c
 }
 
-func newClientWithError(cfg Config) (Client, error) {
+func newClientWithError(cfg config.Config) (Client, error) {
 	var err error
 	cfg.MetaServers, err = session.ResolveMetaAddr(cfg.MetaServers)
 	if err != nil {
 		return nil, err
+	}
+
+	if cfg.EnablePrometheus || cfg.EnableFalcon {
+		metrics.InitMetrics(prometheus.DefaultRegisterer, cfg)
+		if cfg.EnablePrometheus {
+			port := 9090
+			if cfg.PrometheusPort > 0 {
+				port = cfg.PrometheusPort
+			}
+
+			go func() {
+				http.Handle("/metrics", promhttp.Handler())
+				addr := fmt.Sprintf(":%d", port)
+				pegalog.GetLogger().Print("Starting Prometheus metrics server on", addr)
+				if err := http.ListenAndServe(addr, nil); err != nil {
+					pegalog.GetLogger().Fatal("Failed to start Prometheus metrics server:", err)
+				}
+			}()
+		}
+		if cfg.EnableFalcon {
+			go metrics.GetFalconReporter(cfg.FalconServer, cfg.FalconInterval).Start()
+		}
 	}
 
 	c := &pegasusClient{
