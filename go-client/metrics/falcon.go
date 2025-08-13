@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_model/go"
 )

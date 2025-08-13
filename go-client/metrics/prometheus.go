@@ -2,12 +2,13 @@ package metrics
 
 import (
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/config"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/apache/incubator-pegasus/go-client/config"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"

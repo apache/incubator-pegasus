@@ -23,11 +23,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/config"
 	"io/ioutil"
 	"path/filepath"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 )

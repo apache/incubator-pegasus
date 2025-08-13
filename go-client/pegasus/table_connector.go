@@ -25,7 +25,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"math"
 	"strings"
 	"sync"
@@ -34,6 +33,7 @@ import (
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/idl/rrdb"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/pegasus/op"
 	"github.com/apache/incubator-pegasus/go-client/session"
@@ -573,7 +573,8 @@ func (p *pegasusTableConnector) Exist(ctx context.Context, hashKey []byte, sortK
 }
 
 func (p *pegasusTableConnector) GetScanner(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte,
-	options *ScannerOptions) (Scanner, error) {
+	options *ScannerOptions,
+) (Scanner, error) {
 	scanner, err := func() (Scanner, error) {
 		if err := validateHashKey(hashKey); err != nil {
 			return nil, err
@@ -620,7 +621,8 @@ func (p *pegasusTableConnector) GetScanner(ctx context.Context, hashKey []byte, 
 }
 
 func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSplitCount int,
-	options *ScannerOptions) ([]Scanner, error) {
+	options *ScannerOptions,
+) ([]Scanner, error) {
 	scanners, err := func() ([]Scanner, error) {
 		if maxSplitCount <= 0 {
 			return nil, fmt.Errorf("invalid maxSplitCount: %d", maxSplitCount)
@@ -665,8 +667,8 @@ func (p *pegasusTableConnector) GetUnorderedScanners(ctx context.Context, maxSpl
 }
 
 func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte, checkSortKey []byte, checkType CheckType,
-	checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions) (*CheckAndSetResult, error) {
-
+	checkOperand []byte, setSortKey []byte, setValue []byte, options *CheckAndSetOptions,
+) (*CheckAndSetResult, error) {
 	if options == nil {
 		options = &CheckAndSetOptions{}
 	}

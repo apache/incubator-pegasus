@@ -36,9 +36,9 @@ package main
 import (
 	"context"
 	"encoding/binary"
-	"github.com/apache/incubator-pegasus/go-client/config"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 )

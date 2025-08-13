@@ -21,11 +21,11 @@ package admin
 
 import (
 	"context"
-	"github.com/apache/incubator-pegasus/go-client/config"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"

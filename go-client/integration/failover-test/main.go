@@ -22,10 +22,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/config"
 	"strings"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 )

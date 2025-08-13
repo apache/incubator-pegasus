@@ -1,10 +1,11 @@
 package metrics
 
 import (
-	"github.com/apache/incubator-pegasus/go-client/config"
-	"github.com/prometheus/client_golang/prometheus"
 	"sync"
 	"testing"
+
+	"github.com/apache/incubator-pegasus/go-client/config"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // mockConfig is a helper to create a mock config for testing.

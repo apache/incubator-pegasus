@@ -2,13 +2,13 @@ package metrics
 
 import (
 	"encoding/json"
-	"github.com/apache/incubator-pegasus/go-client/config"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"

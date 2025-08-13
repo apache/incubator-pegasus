@@ -22,11 +22,11 @@ package pegasus
 import (
 	"context"
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/config"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 )

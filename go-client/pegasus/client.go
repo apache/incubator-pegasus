@@ -22,15 +22,15 @@ package pegasus
 import (
 	"context"
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/config"
-	"github.com/apache/incubator-pegasus/go-client/metrics"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"sync"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/session"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Client manages the client sessions to the pegasus cluster specified by `Config`.

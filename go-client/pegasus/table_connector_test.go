@@ -24,13 +24,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/config"
 	"math"
 	"sort"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
@@ -742,7 +742,6 @@ func testDelRangeOperations(t *testing.T, tb TableConnector) {
 	count, err = tb.SortKeyCount(context.Background(), hashKey)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(0), count)
-
 }
 
 func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
@@ -933,9 +932,11 @@ func TestPegasusTableConnector_BatchGet(t *testing.T) {
 	err = tb.Set(context.Background(), []byte("h3"), []byte("s3"), []byte("v3"))
 	assert.Nil(t, err)
 
-	keys := []CompositeKey{{HashKey: []byte("h1"), SortKey: []byte("s1")},
+	keys := []CompositeKey{
+		{HashKey: []byte("h1"), SortKey: []byte("s1")},
 		{HashKey: []byte("h2"), SortKey: []byte("s2")},
-		{HashKey: []byte("h3"), SortKey: []byte("s3")}}
+		{HashKey: []byte("h3"), SortKey: []byte("s3")},
+	}
 	values, err := tb.BatchGet(context.Background(), keys)
 	assert.Nil(t, err)
 	assert.Equal(t, values, [][]byte{[]byte("v1"), []byte("v2"), []byte("v3")})

@@ -22,13 +22,13 @@ package session
 import (
 	"context"
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"math"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/rpc"
 	"gopkg.in/tomb.v2"
@@ -227,7 +227,7 @@ func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
 // single-routine worker used for sending requests.
 // Any error occurred will end up this goroutine as well as the connection.
 func (n *nodeSession) loopForRequest() error { // no error returned actually
-	//add ticker to trigger loop return
+	// add ticker to trigger loop return
 	// since if correlative loopForResponse returned because of IsNetworkClosed(EOF),
 	// this loop will not receive any signal and runs forever
 	ticker := time.NewTicker(1 * time.Millisecond)
@@ -265,7 +265,7 @@ func (n *nodeSession) loopForRequest() error { // no error returned actually
 // hasRecentUnresponsiveWrite returns if session is active in sending tcp request but gets no response.
 func (n *nodeSession) hasRecentUnresponsiveWrite() bool {
 	// 10s is usually the max limit that the server promises to respond.
-	var unresponsiveThreshold = int64(math.Max(float64(rpc.ConnReadTimeout.Nanoseconds()/2), float64(time.Second.Nanoseconds()*10)))
+	unresponsiveThreshold := int64(math.Max(float64(rpc.ConnReadTimeout.Nanoseconds()/2), float64(time.Second.Nanoseconds()*10)))
 	return time.Now().UnixNano()-atomic.LoadInt64(&n.lastWriteTime) < unresponsiveThreshold
 }
 
@@ -344,7 +344,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		}
 
 		if !ready {
-			//return error directly so that it can be recognized in `handleReplicaError`
+			// return error directly so that it can be recognized in `handleReplicaError`
 			n.logger.Printf("session %s is unable to connect (used %dms), the context error: %s", n, time.Since(dialStart)/time.Millisecond, ctx.Err())
 			return ctx.Err()
 		}
