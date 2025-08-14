@@ -17,9 +17,15 @@
  * under the License.
  */
 
-package pegasus
+package config
 
 // Config is the configuration of pegasus client.
 type Config struct {
-	MetaServers []string `json:"meta_servers"`
+	MetaServers      []string          `json:"meta_servers"`
+	PerfCounterTags  map[string]string `json:"perf_counter_tags"`
+	EnableFalcon     bool              `json:"enable_falcon"`
+	EnablePrometheus bool              `json:"enable_prometheus"`
+	FalconServer     string            `json:"falcon_server"`
+	FalconInterval   int               `json:"falcon_interval_secs"`
+	PrometheusPort   int               `json:"prometheus_port"`
 }
