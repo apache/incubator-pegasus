@@ -19,15 +19,14 @@
 #include <unistd.h>
 #include <cstdint>
 #include <limits>
-#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "atomic_write_test.h"
 #include "gtest/gtest.h"
 #include "include/pegasus/client.h"
 #include "pegasus/error.h"
-#include "utils/defer.h"
 
 namespace pegasus {
 
@@ -36,43 +35,42 @@ class IncrTest : public AtomicWriteTest
 protected:
     IncrTest() : AtomicWriteTest("incr_test") {}
 
-    void test_incr_on_del(const std::string &hash_key, int64_t increment)
+    void TearDown() override
     {
-        del(hash_key);
+        del();
+        AtomicWriteTest::TearDown();
+    }
 
-        const auto cleanup = dsn::defer([this, &hash_key]() { del(hash_key); });
+    void test_incr_on_del(int64_t increment)
+    {
+        del();
 
-        test_incr(hash_key, increment, increment);
+        test_incr(5000, 0, increment, increment);
     }
 
     template <typename TBaseValue, typename... Args>
-    void test_incr_on_set(const std::string &hash_key,
-                          const TBaseValue &base_value,
+    void test_incr_on_set(const TBaseValue &base_value,
                           int64_t increment,
                           int64_t expected_new_value,
                           Args &&...args)
     {
-        set(hash_key, base_value);
+        set(base_value);
 
-        const auto cleanup = dsn::defer([this, &hash_key]() { del(hash_key); });
-
-        test_incr(hash_key, increment, expected_new_value, std::forward<Args>(args)...);
+        test_incr(5000, 0, increment, expected_new_value, std::forward<Args>(args)...);
     }
 
     template <typename TBaseValue, typename TReadValue>
-    void test_incr_detail_on_set(const std::string &hash_key,
-                                 const TBaseValue &base_value,
+    void test_incr_detail_on_set(const TBaseValue &base_value,
                                  int64_t increment,
                                  int expected_incr_err,
                                  int64_t expected_resp_value,
                                  int expected_read_err,
                                  const TReadValue &expected_read_value)
     {
-        set(hash_key, base_value);
+        set(base_value);
 
-        const auto cleanup = dsn::defer([this, &hash_key]() { del(hash_key); });
-
-        test_incr_detail(hash_key,
+        test_incr_detail(5000,
+                         0,
                          increment,
                          expected_incr_err,
                          expected_resp_value,
@@ -80,36 +78,72 @@ protected:
                          expected_read_value);
     }
 
-private:
-    void del(const std::string &hash_key)
-    {
-        ASSERT_EQ(PERR_OK, _client->del(hash_key, kSortKey));
-        ASSERT_EQ(PERR_NOT_FOUND, _client->exist(hash_key, kSortKey));
-    }
-
-    template <typename TValue>
-    void set(const std::string &hash_key, const TValue &value)
-    {
-        ASSERT_EQ(PERR_OK, _client->set(hash_key, kSortKey, fmt::format("{}", value)));
-        ASSERT_EQ(PERR_OK, _client->exist(hash_key, kSortKey));
-    }
-
     template <typename... Args>
-    void test_incr(const std::string &hash_key,
+    void test_incr(int timeout_milliseconds,
+                   int ttl_seconds,
                    int64_t increment,
                    int64_t expected_new_value,
                    Args &&...args)
     {
-        test_incr_detail(
-            hash_key, increment, PERR_OK, expected_new_value, PERR_OK, expected_new_value);
+        test_incr_detail(timeout_milliseconds,
+                         ttl_seconds,
+                         increment,
+                         PERR_OK,
+                         expected_new_value,
+                         PERR_OK,
+                         expected_new_value);
 
-        test_incr(hash_key, std::forward<Args>(args)...);
+        test_incr(timeout_milliseconds, ttl_seconds, std::forward<Args>(args)...);
     }
 
-    void test_incr(const std::string &hash_key) {}
+    template <typename TValue>
+    void set_with_ttl(const TValue &value, int timeout_milliseconds, int ttl_seconds)
+    {
+        ASSERT_EQ(
+            PERR_OK,
+            _client->set(
+                _hash_key, kSortKey, fmt::format("{}", value), timeout_milliseconds, ttl_seconds));
+        ASSERT_EQ(PERR_OK, _client->exist(_hash_key, kSortKey));
+    }
+
+    void get_ttl(int &ttl_seconds)
+    {
+        ASSERT_EQ(PERR_OK, _client->ttl(_hash_key, kSortKey, ttl_seconds));
+    }
+
+    void should_no_ttl()
+    {
+        int ttl_seconds{0};
+        get_ttl(ttl_seconds);
+        ASSERT_EQ(-1, ttl_seconds);
+    }
+
+    void should_not_found()
+    {
+        std::string value;
+        ASSERT_EQ(PERR_NOT_FOUND, _client->get(_hash_key, kSortKey, value));
+    }
+
+private:
+    void del()
+    {
+        ASSERT_EQ(PERR_OK, _client->del(_hash_key, kSortKey));
+        ASSERT_EQ(PERR_NOT_FOUND, _client->exist(_hash_key, kSortKey));
+    }
+
+    template <typename TValue>
+    void set(const TValue &value)
+    {
+        // Disable TTL with 0.
+        set_with_ttl(value, 5000, 0);
+    }
+
+    // The end of recursion.
+    void test_incr(int timeout_milliseconds, int ttl_seconds) {}
 
     template <typename TReadValue>
-    void test_incr_detail(const std::string &hash_key,
+    void test_incr_detail(int timeout_milliseconds,
+                          int ttl_seconds,
                           int64_t increment,
                           int expected_incr_err,
                           int64_t expected_resp_value,
@@ -118,11 +152,16 @@ private:
     {
         int64_t actual_new_value{0};
         ASSERT_EQ(expected_incr_err,
-                  _client->incr(hash_key, kSortKey, increment, actual_new_value));
+                  _client->incr(_hash_key,
+                                kSortKey,
+                                increment,
+                                actual_new_value,
+                                timeout_milliseconds,
+                                ttl_seconds));
         ASSERT_EQ(expected_resp_value, actual_new_value);
 
         std::string actual_new_str;
-        ASSERT_EQ(expected_read_err, _client->get(hash_key, kSortKey, actual_new_str));
+        ASSERT_EQ(expected_read_err, _client->get(_hash_key, kSortKey, actual_new_str));
         ASSERT_EQ(fmt::format("{}", expected_read_value), actual_new_str);
     }
 
@@ -131,30 +170,28 @@ private:
 
 const std::string IncrTest::kSortKey("sort_key");
 
-TEST_P(IncrTest, OnNonExistingKey) { test_incr_on_del("incr_on_non_existing_key", 100); }
+TEST_P(IncrTest, OnNonExistingKey) { test_incr_on_del(100); }
 
-TEST_P(IncrTest, OnEmptyValue) { test_incr_on_set("incr_on_empty_value", "", 100, 100); }
+TEST_P(IncrTest, OnEmptyValue) { test_incr_on_set("", 100, 100); }
 
-TEST_P(IncrTest, OnZeroValue) { test_incr_on_set("incr_on_zero_value", 0, 1, 1); }
+TEST_P(IncrTest, OnZeroValue) { test_incr_on_set(0, 1, 1); }
 
-TEST_P(IncrTest, OnPositiveValue) { test_incr_on_set("incr_on_positive_value", 100, 1, 101); }
+TEST_P(IncrTest, OnPositiveValue) { test_incr_on_set(100, 1, 101); }
 
-TEST_P(IncrTest, OnNegativeValue) { test_incr_on_set("incr_on_negative_value", -100, -1, -101); }
+TEST_P(IncrTest, OnNegativeValue) { test_incr_on_set(-100, -1, -101); }
 
-TEST_P(IncrTest, ByZero) { test_incr_on_set("incr_by_zero", 100, 0, 100); }
+TEST_P(IncrTest, ByZero) { test_incr_on_set(100, 0, 100); }
 
-TEST_P(IncrTest, MultiTimes) { test_incr_on_set("incr_multi_times", 100, 1, 101, 2, 103); }
+TEST_P(IncrTest, MultiTimes) { test_incr_on_set(100, 1, 101, 2, 103); }
 
 TEST_P(IncrTest, OnInvalidValue)
 {
-    test_incr_detail_on_set(
-        "incr_on_invalid_value", "aaa", 1, PERR_INVALID_ARGUMENT, 0, PERR_OK, "aaa");
+    test_incr_detail_on_set("aaa", 1, PERR_INVALID_ARGUMENT, 0, PERR_OK, "aaa");
 }
 
 TEST_P(IncrTest, OnTooLargeValue)
 {
-    test_incr_detail_on_set("incr_on_too_large_value",
-                            "10000000000000000000000000000000000000",
+    test_incr_detail_on_set("10000000000000000000000000000000000000",
                             1,
                             PERR_INVALID_ARGUMENT,
                             0,
@@ -164,47 +201,76 @@ TEST_P(IncrTest, OnTooLargeValue)
 
 TEST_P(IncrTest, Overflow)
 {
-    test_incr_detail_on_set("incr_overflow",
-                            1,
-                            std::numeric_limits<int64_t>::max(),
-                            PERR_INVALID_ARGUMENT,
-                            1,
-                            PERR_OK,
-                            1);
+    test_incr_detail_on_set(
+        1, std::numeric_limits<int64_t>::max(), PERR_INVALID_ARGUMENT, 1, PERR_OK, 1);
 }
 
 TEST_P(IncrTest, Underflow)
 {
-    test_incr_detail_on_set("incr_underflow",
-                            -1,
-                            std::numeric_limits<int64_t>::min(),
-                            PERR_INVALID_ARGUMENT,
-                            -1,
-                            PERR_OK,
-                            -1);
+    test_incr_detail_on_set(
+        -1, std::numeric_limits<int64_t>::min(), PERR_INVALID_ARGUMENT, -1, PERR_OK, -1);
 }
 
-TEST_P(IncrTest, PreserveTtl)
+TEST_P(IncrTest, WithZeroTTL)
 {
-    ASSERT_EQ(PERR_OK, _client->set("incr_test_preserve_ttl", "", "100", 5000, 3));
+    // Set record with TTL 3 seconds.
+    set_with_ttl(100, 5000, 5);
 
-    int64_t new_value_int;
-    ASSERT_EQ(PERR_OK, _client->incr("incr_test_preserve_ttl", "", 1, new_value_int));
-    ASSERT_EQ(101, new_value_int);
+    for (int i = 0; i < 3; ++i) {
+        test_incr(5000, 0, 1, 101 + i);
 
-    int ttl_seconds;
-    ASSERT_EQ(PERR_OK, _client->ttl("incr_test_preserve_ttl", "", ttl_seconds));
-    ASSERT_GE(3, ttl_seconds);
+        int ttl_seconds{0};
+        get_ttl(ttl_seconds);
+        ASSERT_GE(5, ttl_seconds);
+        ASSERT_LT(0, ttl_seconds);
+    }
 
-    sleep(4);
+    // Sleep long enough so that the record expires due to exceeding the TTL.
+    sleep(6);
 
-    std::string new_value_str;
-    ASSERT_EQ(PERR_NOT_FOUND, _client->get("incr_test_preserve_ttl", "", new_value_str));
+    // Should not be found since the record has expired.
+    should_not_found();
 
-    ASSERT_EQ(PERR_OK, _client->del("incr_test_preserve_ttl", ""));
+    test_incr(5000, 0, 1, 1);
+    should_no_ttl();
 }
 
-TEST_P(IncrTest, ResetTtl)
+TEST_P(IncrTest, WithPositiveTTL)
+{
+    set_with_ttl(100, 5000, 5);
+
+    int ttl_seconds{0};
+
+    get_ttl(ttl_seconds);
+    ASSERT_GE(5, ttl_seconds);
+    ASSERT_LT(0, ttl_seconds);
+
+    test_incr(5000, 15, 1, 101);
+
+    get_ttl(ttl_seconds);
+    ASSERT_GE(15, ttl_seconds);
+    ASSERT_LT(10, ttl_seconds);
+
+    test_incr(5000, 25, 1, 102);
+
+    get_ttl(ttl_seconds);
+    ASSERT_GE(25, ttl_seconds);
+    ASSERT_LT(20, ttl_seconds);
+
+    // Preserve
+    test_incr(5000, 0, 1, 103);
+
+    get_ttl(ttl_seconds);
+    ASSERT_GE(25, ttl_seconds);
+    ASSERT_LT(20, ttl_seconds);
+}
+
+/* TEST_P(IncrTest, WithInvalidTTL)
+{
+PERR_INVALID_ARGUMENT
+} */
+
+TEST_P(IncrTest, ResetTTL)
 {
     /// reset after old value ttl timeout
     ASSERT_EQ(PERR_OK, _client->set("incr_test_reset_ttl", "", "100", 5000, 3));

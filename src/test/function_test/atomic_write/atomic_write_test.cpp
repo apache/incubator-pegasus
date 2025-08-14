@@ -62,6 +62,9 @@ void AtomicWriteTest::SetUp()
 
     _client = pegasus_client_factory::get_client(kClusterName.c_str(), _table_name.c_str());
     ASSERT_TRUE(_client != nullptr);
+
+    const auto *test_info = testing::UnitTest::GetInstance()->current_test_info();
+    _hash_key = fmt::format("{}.{}", test_info->test_suite_name(), test_info->name());
 }
 
 void AtomicWriteTest::TearDown() { ASSERT_EQ(dsn::ERR_OK, _ddl_client->drop_app(_table_name, 0)); }

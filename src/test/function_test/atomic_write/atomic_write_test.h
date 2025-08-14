@@ -61,6 +61,8 @@ protected:
 
     pegasus_client *_client{nullptr};
 
+    std::string _hash_key;
+
 private:
     DISALLOW_COPY_AND_ASSIGN(AtomicWriteTest);
     DISALLOW_MOVE_AND_ASSIGN(AtomicWriteTest);
