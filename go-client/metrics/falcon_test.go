@@ -102,7 +102,7 @@ func validateSummaryMetrics(t *testing.T, allReports [][]FalconMetric) {
 				p999 = m.Value
 			}
 		}
-		// Allow 0.1% error margin for Prometheus summary approximation
+		// Allow minor error margin for Prometheus summary approximation
 		assert.InDelta(t, expected[i].p99, p99, float64((i+1)*10), "p99 mismatch in report %d", i+1)
 		assert.InDelta(t, expected[i].p999, p999, float64((i+1)*10), "p999 mismatch in report %d", i+1)
 	}

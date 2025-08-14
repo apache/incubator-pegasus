@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -43,6 +44,12 @@ var (
 func GetFalconReporter(endpoint string, interval int) *FalconReporter {
 	falconOnce.Do(func() {
 		if gatherer, ok := initRegistry.(prometheus.Gatherer); ok {
+			u, err := url.Parse(endpoint)
+			if err != nil {
+				pegalog.GetLogger().Fatal("Failed to parse Falcon endpoint: %v", err)
+			}
+			u.Path = "/v1/push"
+			endpoint = u.String()
 			singletonFalconReporter = &FalconReporter{
 				FalconServer:    endpoint,
 				ReportInterval:  time.Duration(interval) * time.Second,
@@ -135,7 +142,17 @@ func (r *FalconReporter) reportOnce() error {
 		return err
 	}
 
-	resp, err := http.Post(r.FalconServer, "application/json", bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", r.FalconServer, bytes.NewBuffer(payload))
+	if err != nil {
+		r.logger.Printf("Failed to create request: %v", err)
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Connection", "keep-alive")
+	req.ContentLength = int64(len(payload))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		r.logger.Printf("Failed to post metrics to Falcon: %v", err)
 		return err

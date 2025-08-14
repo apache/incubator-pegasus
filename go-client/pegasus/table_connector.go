@@ -234,10 +234,11 @@ type pegasusTableConnector struct {
 
 	logger pegalog.Logger
 
-	tableName string
-	appID     int32
-	parts     []*replicaNode
-	mu        sync.RWMutex
+	tableName         string
+	appID             int32
+	parts             []*replicaNode
+	enablePerfCounter bool
+	mu                sync.RWMutex
 
 	confUpdateCh chan bool
 	tom          tomb.Tomb
@@ -250,13 +251,14 @@ type replicaNode struct {
 
 // ConnectTable queries for the configuration of the given table, and set up connection to
 // the replicas which the table locates on.
-func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager) (TableConnector, error) {
+func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager, enablePerfCounter bool) (TableConnector, error) {
 	p := &pegasusTableConnector{
-		tableName:    tableName,
-		meta:         meta,
-		replica:      replica,
-		confUpdateCh: make(chan bool, 1),
-		logger:       pegalog.GetLogger(),
+		tableName:         tableName,
+		meta:              meta,
+		replica:           replica,
+		enablePerfCounter: enablePerfCounter,
+		confUpdateCh:      make(chan bool, 1),
+		logger:            pegalog.GetLogger(),
 	}
 
 	// if the session became unresponsive, TableConnector auto-triggers
@@ -719,22 +721,24 @@ func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKe
 func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []byte, req op.Request, optype OpType) (interface{}, error) {
 	start := time.Now()
 	var errResult error
-	defer func() {
-		pm := metrics.GetPrometheusMetrics()
-		status := "success"
-		if errResult != nil {
-			if ctx.Err() == context.DeadlineExceeded {
-				status = "timeout"
-			} else {
-				status = "fail"
+	if p.enablePerfCounter {
+		defer func() {
+			pm := metrics.GetPrometheusMetrics()
+			status := "success"
+			if errResult != nil {
+				if ctx.Err() == context.DeadlineExceeded {
+					status = "timeout"
+				} else {
+					status = "fail"
+				}
 			}
-		}
 
-		firstMetaIP := strings.ReplaceAll(p.meta.GetMetaIPAddrs()[0], ".", "_")
-		pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_qps_%s", p.tableName, optype.String(), status, firstMetaIP), 1)
-		elapsed := time.Since(start).Milliseconds()
-		pm.ObserveSummary(fmt.Sprintf("pegasus_client_%s_%s_%s_latency_%s", p.tableName, optype.String(), status, firstMetaIP), float64(elapsed))
-	}()
+			firstMetaIP := strings.ReplaceAll(p.meta.GetMetaIPAddrs()[0], ".", "_")
+			pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_qps_%s", p.tableName, optype.String(), status, firstMetaIP), 1)
+			elapsed := time.Since(start).Nanoseconds()
+			pm.ObserveSummary(fmt.Sprintf("pegasus_client_%s_%s_%s_latency_%s", p.tableName, optype.String(), status, firstMetaIP), float64(elapsed))
+		}()
+	}
 
 	// validate arguments
 	if err := req.Validate(); err != nil {

@@ -21,8 +21,6 @@ package pegasus
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"sync"
 
 	"github.com/apache/incubator-pegasus/go-client/config"
@@ -30,7 +28,6 @@ import (
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/session"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Client manages the client sessions to the pegasus cluster specified by `Config`.
@@ -50,8 +47,9 @@ type pegasusClient struct {
 	// protect the access of tables
 	mu sync.RWMutex
 
-	metaMgr    *session.MetaManager
-	replicaMgr *session.ReplicaManager
+	metaMgr           *session.MetaManager
+	replicaMgr        *session.ReplicaManager
+	enablePerfCounter bool
 }
 
 // NewClient creates a new instance of pegasus client.
@@ -74,30 +72,16 @@ func newClientWithError(cfg config.Config) (Client, error) {
 
 	if cfg.EnablePrometheus || cfg.EnableFalcon {
 		metrics.InitMetrics(prometheus.DefaultRegisterer, cfg)
-		if cfg.EnablePrometheus {
-			port := 9090
-			if cfg.PrometheusPort > 0 {
-				port = cfg.PrometheusPort
-			}
-
-			go func() {
-				http.Handle("/metrics", promhttp.Handler())
-				addr := fmt.Sprintf(":%d", port)
-				pegalog.GetLogger().Print("Starting Prometheus metrics server on", addr)
-				if err := http.ListenAndServe(addr, nil); err != nil {
-					pegalog.GetLogger().Fatal("Failed to start Prometheus metrics server:", err)
-				}
-			}()
-		}
 		if cfg.EnableFalcon {
 			go metrics.GetFalconReporter(cfg.FalconServer, cfg.FalconInterval).Start()
 		}
 	}
 
 	c := &pegasusClient{
-		tables:     make(map[string]TableConnector),
-		metaMgr:    session.NewMetaManager(cfg.MetaServers, session.NewNodeSession),
-		replicaMgr: session.NewReplicaManager(session.NewNodeSession),
+		tables:            make(map[string]TableConnector),
+		metaMgr:           session.NewMetaManager(cfg.MetaServers, session.NewNodeSession),
+		replicaMgr:        session.NewReplicaManagerWithPerfCounter(session.NewNodeSession, cfg.EnablePrometheus || cfg.EnableFalcon),
+		enablePerfCounter: cfg.EnablePrometheus || cfg.EnableFalcon,
 	}
 	return c, nil
 }
@@ -129,7 +113,7 @@ func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableC
 		}
 
 		var tb TableConnector
-		tb, err := ConnectTable(ctx, tableName, p.metaMgr, p.replicaMgr)
+		tb, err := ConnectTable(ctx, tableName, p.metaMgr, p.replicaMgr, p.enablePerfCounter)
 		if err != nil {
 			return nil, err
 		}

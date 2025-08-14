@@ -77,7 +77,7 @@ func NewMetaManager(addrs []string, creator NodeSessionCreator) *MetaManager {
 	metaIPAddrs := make([]string, len(addrs))
 	for i, addr := range addrs {
 		metas[i] = &metaSession{
-			NodeSession: creator(addr, NodeTypeMeta),
+			NodeSession: creator(addr, NodeTypeMeta, false),
 			logger:      pegalog.GetLogger(),
 		}
 		metaIPAddrs[i] = addr

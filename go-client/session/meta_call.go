@@ -141,7 +141,7 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 			c.lock.Lock()
 			c.metaIPAddrs = append(c.metaIPAddrs, addr)
 			c.metas = append(c.metas, &metaSession{
-				NodeSession: newNodeSession(addr, NodeTypeMeta),
+				NodeSession: newNodeSession(addr, NodeTypeMeta, false),
 				logger:      pegalog.GetLogger(),
 			})
 			curLeader = len(c.metas) - 1

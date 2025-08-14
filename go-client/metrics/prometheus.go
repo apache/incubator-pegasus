@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -9,9 +10,10 @@ import (
 	"time"
 
 	"github.com/apache/incubator-pegasus/go-client/config"
-
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // PrometheusMetrics is the metrics implementation for Prometheus.
@@ -32,6 +34,22 @@ var (
 func InitMetrics(registry prometheus.Registerer, cfg config.Config) {
 	initRegistry = registry
 	perfCounterMap = cfg.PerfCounterTags
+	if cfg.EnablePrometheus {
+		once.Do(func() {
+			port := 9090
+			if cfg.PrometheusPort > 0 {
+				port = cfg.PrometheusPort
+			}
+			go func() {
+				http.Handle("/metrics", promhttp.Handler())
+				addr := fmt.Sprintf(":%d", port)
+				pegalog.GetLogger().Print("Starting Prometheus metrics server on", addr)
+				if err := http.ListenAndServe(addr, nil); err != nil {
+					pegalog.GetLogger().Fatal("Failed to start Prometheus metrics server:", err)
+				}
+			}()
+		})
+	}
 }
 
 // GetPrometheusMetrics get singleton PrometheusMetrics
