@@ -68,6 +68,8 @@ jobs:
       # build and install thrift-compiler 0.13.0 manually.
       - name: Install thrift
         run: |
+          apt-get update
+          apt-get install python3-dev -y
           export THRIFT_VERSION=0.13.0
           wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/v${THRIFT_VERSION}.tar.gz
           tar -xzf v${THRIFT_VERSION}.tar.gz
