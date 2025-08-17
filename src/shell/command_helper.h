@@ -1697,7 +1697,9 @@ inline std::unique_ptr<aggregate_stats_calcs> create_table_aggregate_stats_calcs
               row.app_id);
 
         for (const auto &pc : iter->second) {
-            if (pc.hp_primary != node) {
+            dsn::host_port primary;
+            GET_HOST_PORT(pc, primary, primary);
+            if (primary != node) {
                 // Ignore once the replica of the metrics is not the primary of the partition.
                 continue;
             }
@@ -1728,7 +1730,9 @@ create_partition_aggregate_stats_calcs(const int32_t table_id,
     partition_stat_map increases;
     partition_stat_map rates;
     for (size_t i = 0; i < rows.size(); ++i) {
-        if (pcs[i].hp_primary != node) {
+        dsn::host_port primary;
+        GET_HOST_PORT(pcs[i], primary, primary);
+        if (primary != node) {
             // Ignore once the replica of the metrics is not the primary of the partition.
             continue;
         }
@@ -1984,12 +1988,15 @@ inline bool get_app_partition_stat(shell_context *sc,
                     m.name, app_id_x, partition_index_x, counter_name)) {
                 // only primary partition will be counted
                 const auto find = pcs_by_appid.find(app_id_x);
-                if (find != pcs_by_appid.end() &&
-                    find->second[partition_index_x].hp_primary == nodes[i].hp) {
-                    row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
-                    row.row_name = std::to_string(partition_index_x);
-                    row.app_id = app_id_x;
-                    update_app_pegasus_perf_counter(row, counter_name, m.value);
+                if (find != pcs_by_appid.end()) {
+                    dsn::host_port primary;
+                    GET_HOST_PORT(find->second[partition_index_x], primary, primary);
+                    if (primary == nodes[i].hp) {
+                        row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
+                        row.row_name = std::to_string(partition_index_x);
+                        row.app_id = app_id_x;
+                        update_app_pegasus_perf_counter(row, counter_name, m.value);
+                    }
                 }
             } else if (parse_app_perf_counter_name(m.name, app_name, counter_name)) {
                 // if the app_name from perf-counter isn't existed(maybe the app was dropped), it
@@ -2238,7 +2245,9 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
             if (find == pcs_by_appid.end()) // app id not found
                 continue;
             auto &pc = find->second[partition_index_x];
-            if (pc.hp_primary != nodes[i].hp) // not primary replica
+            dsn::host_port primary;
+            GET_HOST_PORT(pc, primary, primary);
+            if (primary != nodes[i].hp) // not primary replica
                 continue;
             if (pc.partition_flags != 0) // already calculated
                 continue;

@@ -550,13 +550,17 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
             }
 
             for (const auto &pc : pcs) {
-                if (pc.hp_primary) {
-                    auto find = tmp_map.find(pc.hp_primary);
+                dsn::host_port primary;
+                GET_HOST_PORT(pc, primary, primary);
+                if (primary) {
+                    auto find = tmp_map.find(primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (const auto &secondary : pc.hp_secondaries) {
+                std::vector<dsn::host_port> secondaries;
+                GET_HOST_PORTS(pc, secondaries, secondaries);
+                for (const auto &secondary : secondaries) {
                     auto find = tmp_map.find(secondary);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;

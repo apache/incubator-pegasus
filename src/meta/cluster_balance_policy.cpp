@@ -227,12 +227,17 @@ bool cluster_balance_policy::get_app_migration_info(std::shared_ptr<app_state> a
     info.partitions.reserve(app->pcs.size());
     for (const auto &pc : app->pcs) {
         std::map<host_port, partition_status::type> pstatus_map;
-        pstatus_map[pc.hp_primary] = partition_status::PS_PRIMARY;
-        if (pc.hp_secondaries.size() != pc.max_replica_count - 1) {
+        host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
+        pstatus_map[primary] = partition_status::PS_PRIMARY;
+
+        std::vector<host_port> secondaries;
+        GET_HOST_PORTS(pc, secondaries, secondaries);
+        if (secondaries.size() != pc.max_replica_count - 1) {
             // partition is unhealthy
             return false;
         }
-        for (const auto &secondary : pc.hp_secondaries) {
+        for (const auto &secondary : secondaries) {
             pstatus_map[secondary] = partition_status::PS_SECONDARY;
         }
         info.partitions.push_back(std::move(pstatus_map));

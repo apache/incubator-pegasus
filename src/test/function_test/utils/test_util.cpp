@@ -166,8 +166,12 @@ void test_util::wait_table_healthy(const std::string &table_name) const
             std::vector<dsn::partition_configuration> pcs;
             ASSERT_EQ(dsn::ERR_OK, ddl_client_->list_app(table_name, table_id, pcount, pcs));
             for (const auto &pc : pcs) {
-                ASSERT_TRUE(pc.primary);
-                ASSERT_EQ(1 + pc.secondaries.size(), pc.max_replica_count);
+                dsn::host_port primary;
+                GET_HOST_PORT(pc, primary, primary);
+                ASSERT_TRUE(primary);
+                std::vector<dsn::host_port> secondaries;
+                GET_HOST_PORTS(pc, secondaries, secondaries);
+                ASSERT_EQ(1 + secondaries.size(), pc.max_replica_count);
             }
         },
         180);

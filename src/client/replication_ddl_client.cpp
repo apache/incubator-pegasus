@@ -168,9 +168,19 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
         int ready_count = 0;
         for (int i = 0; i < partition_count; i++) {
             const auto &pc = query_resp.partitions[i];
-            if (pc.hp_primary && (pc.hp_secondaries.size() + 1 >= max_replica_count)) {
-                ready_count++;
+            host_port primary;
+            GET_HOST_PORT(pc, primary, primary);
+            if (!primary) {
+                continue;
             }
+
+            std::vector<host_port> secondaries;
+            GET_HOST_PORTS(pc, secondaries, secondaries);
+            if (secondaries.size() + 1 < max_replica_count) {
+                continue;
+            }
+
+            ready_count++;
         }
         if (ready_count == partition_count) {
             std::cout << app_name << " is ready now: (" << ready_count << "/" << partition_count
@@ -429,11 +439,16 @@ error_s replication_ddl_client::list_apps(bool detailed,
             int read_unhealthy = 0;
             for (const auto &pc : pcs) {
                 int replica_count = 0;
-                if (pc.hp_primary) {
+                host_port primary;
+                GET_HOST_PORT(pc, primary, primary);
+                if (primary) {
                     replica_count++;
                 }
-                replica_count += pc.hp_secondaries.size();
-                if (pc.hp_primary) {
+
+                std::vector<host_port> secondaries;
+                GET_HOST_PORTS(pc, secondaries, secondaries);
+                replica_count += secondaries.size();
+                if (primary) {
                     if (replica_count >= pc.max_replica_count) {
                         fully_healthy++;
                     } else if (replica_count < 2) {
@@ -674,14 +689,18 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
         int read_unhealthy = 0;
         for (const auto &pc : pcs) {
             int replica_count = 0;
-            if (pc.hp_primary) {
+            host_port primary;
+            GET_HOST_PORT(pc, primary, primary);
+            if (primary) {
                 replica_count++;
-                node_stat[pc.hp_primary].first++;
+                node_stat[primary].first++;
                 total_prim_count++;
             }
-            replica_count += pc.hp_secondaries.size();
-            total_sec_count += pc.hp_secondaries.size();
-            if (pc.hp_primary) {
+            std::vector<host_port> secondaries;
+            GET_HOST_PORTS(pc, secondaries, secondaries);
+            replica_count += secondaries.size();
+            total_sec_count += secondaries.size();
+            if (primary) {
                 if (replica_count >= pc.max_replica_count) {
                     fully_healthy++;
                 } else if (replica_count < 2) {
@@ -691,14 +710,14 @@ dsn::error_code replication_ddl_client::list_app(const std::string &app_name,
                 write_unhealthy++;
                 read_unhealthy++;
             }
-            for (const auto &secondary : pc.hp_secondaries) {
+            for (const auto &secondary : secondaries) {
                 node_stat[secondary].second++;
             }
             tp_details.add_row(pc.pid.get_partition_index());
             tp_details.append_data(pc.ballot);
             tp_details.append_data(fmt::format("{}/{}", replica_count, pc.max_replica_count));
-            tp_details.append_data(pc.hp_primary ? pc.hp_primary.to_string() : "-");
-            tp_details.append_data(fmt::format("[{}]", fmt::join(pc.hp_secondaries, ",")));
+            tp_details.append_data(primary ? primary.to_string() : "-");
+            tp_details.append_data(fmt::format("[{}]", fmt::join(secondaries, ",")));
         }
         mtp.add(std::move(tp_details));
 
