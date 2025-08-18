@@ -173,11 +173,16 @@ func (r *FalconReporter) reportOnce() error {
 
 func genFalconMetric(metricName string, m *io_prometheus_client.Metric, value float64, timestamp int64, step int, counterType string) FalconMetric {
 	tags := make([]string, 0, len(m.Label))
+	var endpoint string
 	for _, label := range m.Label {
+		if *label.Name == "endpoint" {
+			endpoint = *label.Value
+			continue
+		}
 		tags = append(tags, fmt.Sprintf("%s=%s", *label.Name, *label.Value))
 	}
 	return FalconMetric{
-		Endpoint:    GetLocalHostName(),
+		Endpoint:    endpoint,
 		Metric:      metricName,
 		Timestamp:   timestamp,
 		Step:        step,
