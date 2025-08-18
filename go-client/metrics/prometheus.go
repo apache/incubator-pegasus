@@ -25,17 +25,18 @@ type PrometheusMetrics struct {
 }
 
 var (
-	singletonMetrics *PrometheusMetrics
-	once             sync.Once
-	perfCounterMap   map[string]string
-	initRegistry     prometheus.Registerer
+	singletonMetrics          *PrometheusMetrics
+	initPrometheusMetricsOnce sync.Once
+	startServerOnce           sync.Once
+	perfCounterMap            map[string]string
+	initRegistry              prometheus.Registerer
 )
 
 func InitMetrics(registry prometheus.Registerer, cfg config.Config) {
 	initRegistry = registry
 	perfCounterMap = cfg.PerfCounterTags
 	if cfg.EnablePrometheus {
-		once.Do(func() {
+		startServerOnce.Do(func() {
 			port := 9090
 			if cfg.PrometheusPort > 0 {
 				port = cfg.PrometheusPort
@@ -54,7 +55,7 @@ func InitMetrics(registry prometheus.Registerer, cfg config.Config) {
 
 // GetPrometheusMetrics get singleton PrometheusMetrics
 func GetPrometheusMetrics() *PrometheusMetrics {
-	once.Do(func() {
+	initPrometheusMetricsOnce.Do(func() {
 		if initRegistry == nil {
 			initRegistry = prometheus.DefaultRegisterer
 		}
