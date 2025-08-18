@@ -204,6 +204,12 @@ func getMetricUniqueKey(name string, m *io_prometheus_client.Metric) interface{}
 	return key.String()
 }
 
+// convertPromNameToFalcon converts Prometheus metric names to Falcon metric names.
+// Falcon's counter naming format typically uses dots (.) to separate components,
+// while Prometheus does not support dots and uses underscores (_) instead.
+// The promName may contain a table name, and any underscores in the table name
+// will also be converted to dots here. Although this may not look ideal,
+// it will not affect the functionality.
 func convertPromNameToFalcon(promName string) string {
 	return strings.ReplaceAll(promName, "_", ".")
 }
