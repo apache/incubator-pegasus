@@ -726,13 +726,18 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 			pm := metrics.GetPrometheusMetrics()
 			status := "success"
 			if errResult != nil {
-				if ctx.Err() == context.DeadlineExceeded {
+				if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 					status = "timeout"
 				} else {
 					status = "fail"
 				}
 			}
 
+			// The metaIP is added to the metric name because some users may use multiple client instances
+			// within a single process to access tables with the same name in different availability zones.
+			// Including the metaIP helps to distinguish monitoring metrics for tables with the same name.
+			// The reason for not putting metaIP into labels (Prometheus) or tags (Falcon) is that labels/tags
+			// are designed to be unique and constant for a single process.
 			firstMetaIP := strings.ReplaceAll(p.meta.GetMetaIPAddrs()[0], ".", "_")
 			pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_qps_%s", p.tableName, optype.String(), status, firstMetaIP), 1)
 			elapsed := time.Since(start).Nanoseconds()
