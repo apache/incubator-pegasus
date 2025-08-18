@@ -74,10 +74,10 @@ func validateCounterMetrics(t *testing.T, allReports [][]FalconMetric) {
 	}
 
 	require.Len(t, counterReports, 3)
-	// Counter deltas should be 100, 200, 300 (each added once per report)
-	assert.Equal(t, float64(100), counterReports[0].Value, "1st counter delta mismatch")
-	assert.Equal(t, float64(200), counterReports[1].Value, "2nd counter delta mismatch")
-	assert.Equal(t, float64(300), counterReports[2].Value, "3rd counter delta mismatch")
+	// Counter deltas should be 10, 20, 30 (each added once per report, 10s interval)
+	assert.Equal(t, float64(10), counterReports[0].Value, "1st counter delta mismatch")
+	assert.Equal(t, float64(20), counterReports[1].Value, "2nd counter delta mismatch")
+	assert.Equal(t, float64(30), counterReports[2].Value, "3rd counter delta mismatch")
 }
 
 func validateSummaryMetrics(t *testing.T, allReports [][]FalconMetric) {

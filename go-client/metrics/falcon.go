@@ -94,6 +94,7 @@ func (r *FalconReporter) reportOnce() error {
 			key := getMetricUniqueKey(mf.GetName(), m)
 			switch mf.GetType() {
 			case io_prometheus_client.MetricType_COUNTER:
+				// For now, counter metric is only used for QPS calculation
 				currentValue := m.GetCounter().GetValue()
 				lastValue, loaded := r.lastCounterData[key]
 				var delta float64
@@ -103,7 +104,9 @@ func (r *FalconReporter) reportOnce() error {
 					delta = currentValue
 				}
 				r.lastCounterData[key] = currentValue
-				falconMetric := genFalconMetric(metricName, m, delta, timestamp, step, "GAUGE")
+				qps := delta / float64(step)
+				falconName := strings.ReplaceAll(metricName, "total", "qps")
+				falconMetric := genFalconMetric(falconName, m, qps, timestamp, step, "GAUGE")
 				falconMetrics = append(falconMetrics, falconMetric)
 
 			case io_prometheus_client.MetricType_SUMMARY:

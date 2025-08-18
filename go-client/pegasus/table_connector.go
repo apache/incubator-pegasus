@@ -739,7 +739,7 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 			// The reason for not putting metaIP into labels (Prometheus) or tags (Falcon) is that labels/tags
 			// are designed to be unique and constant for a single process.
 			firstMetaIP := strings.ReplaceAll(p.meta.GetMetaIPAddrs()[0], ".", "_")
-			pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_qps_%s", p.tableName, optype.String(), status, firstMetaIP), 1)
+			pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_total_%s", p.tableName, optype.String(), status, firstMetaIP), 1)
 			elapsed := time.Since(start).Nanoseconds()
 			pm.ObserveSummary(fmt.Sprintf("pegasus_client_%s_%s_%s_latency_%s", p.tableName, optype.String(), status, firstMetaIP), float64(elapsed))
 		}()
