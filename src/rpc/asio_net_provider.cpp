@@ -127,6 +127,9 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
         return ERR_SERVICE_ALREADY_RUNNING;
     }
 
+    // The start() function is designed to support multiple invocations (see what have been
+    // done in AsioNetProvider for NetProviderTest), so it is necessary to ensure that `_workers`
+    // does not exceed the limit defined by io_service_worker_count.
     for (auto i = _workers.size(); _workers.size() < FLAGS_io_service_worker_count; ++i) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
@@ -469,6 +472,9 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
     _hp = ::dsn::host_port::from_address(_address);
     LOG_WARNING_IF(!_hp, "'{}' can not be reverse resolved", _address);
 
+    // The start() function is designed to support multiple invocations (see what have been
+    // done in AsioUdpProvider for NetProviderTest), so it is necessary to ensure that `_workers`
+    // does not exceed the limit defined by io_service_worker_count.
     for (auto i = _workers.size(); _workers.size() < FLAGS_io_service_worker_count; ++i) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
