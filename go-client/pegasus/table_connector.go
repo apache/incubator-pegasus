@@ -723,6 +723,7 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 	var errResult error
 	if p.enablePerfCounter {
 		defer func() {
+			elapsed := time.Since(start).Nanoseconds()
 			pm := metrics.GetPrometheusMetrics()
 			status := "success"
 			if errResult != nil {
@@ -740,7 +741,6 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 			// are designed to be unique and constant for a single process.
 			firstMetaIP := strings.ReplaceAll(p.meta.GetMetaIPAddrs()[0], ".", "_")
 			pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_total_%s", p.tableName, optype.String(), status, firstMetaIP), 1)
-			elapsed := time.Since(start).Nanoseconds()
 			pm.ObserveSummary(fmt.Sprintf("pegasus_client_%s_%s_%s_latency_%s", p.tableName, optype.String(), status, firstMetaIP), float64(elapsed))
 		}()
 	}
