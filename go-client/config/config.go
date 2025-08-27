@@ -29,3 +29,58 @@ type Config struct {
 	FalconInterval   int               `json:"falcon_interval_secs"`
 	PrometheusPort   int               `json:"prometheus_port"`
 }
+
+type Option func(*Config)
+
+func NewConfig(metaServers []string, opts ...Option) *Config {
+	cfg := &Config{
+		MetaServers:      metaServers,
+		PerfCounterTags:  make(map[string]string),
+		EnableFalcon:     false,
+		EnablePrometheus: false,
+		FalconServer:     "",
+		FalconInterval:   10,
+		PrometheusPort:   9090,
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return cfg
+}
+
+func WithPerfCounterTags(tags map[string]string) Option {
+	return func(c *Config) {
+		c.PerfCounterTags = tags
+	}
+}
+
+func WithEnableFalcon(enable bool) Option {
+	return func(c *Config) {
+		c.EnableFalcon = enable
+	}
+}
+
+func WithEnablePrometheus(enable bool) Option {
+	return func(c *Config) {
+		c.EnablePrometheus = enable
+	}
+}
+
+func WithFalconServer(server string) Option {
+	return func(c *Config) {
+		c.FalconServer = server
+	}
+}
+
+func WithFalconInterval(interval int) Option {
+	return func(c *Config) {
+		c.FalconInterval = interval
+	}
+}
+
+func WithPrometheusPort(port int) Option {
+	return func(c *Config) {
+		c.PrometheusPort = port
+	}
+}
