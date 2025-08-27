@@ -333,6 +333,9 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 #define DCHECK CHECK
 #define DCHECK_NOTNULL CHECK_NOTNULL
 
+#define DCHECK_PREFIX_MSG CHECK_PREFIX_MSG
+#define DCHECK_PREFIX CHECK_PREFIX
+
 #define DCHECK_NE_MSG CHECK_NE_MSG
 #define DCHECK_EQ_MSG CHECK_EQ_MSG
 #define DCHECK_GE_MSG CHECK_GE_MSG
@@ -356,6 +359,9 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 #else
 #define DCHECK(x, ...)
 #define DCHECK_NOTNULL(p, ...)
+
+#define DCHECK_PREFIX_MSG(x, ...)
+#define DCHECK_PREFIX(x)
 
 #define DCHECK_NE_MSG(var1, var2, ...)
 #define DCHECK_EQ_MSG(var1, var2, ...)

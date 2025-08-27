@@ -78,18 +78,18 @@ public:
 
     ~asio_network_provider() override;
 
-    virtual error_code start(rpc_channel channel, int port, bool client_only) override;
+    error_code start(rpc_channel channel, int port, bool client_only) override;
     const ::dsn::rpc_address &address() const override { return _address; }
     const ::dsn::host_port &host_port() const override { return _hp; }
-    virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override;
+    rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) override;
 
-private:
-    void do_accept();
+protected:
     boost::asio::io_service &get_io_service();
 
 private:
+    void do_accept();
+
     friend class asio_rpc_session;
-    friend class asio_network_provider_test;
 
     std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor;
     std::vector<std::unique_ptr<boost::asio::io_service>> _io_services;

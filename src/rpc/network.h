@@ -27,9 +27,13 @@
 #pragma once
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "rpc/message_parser.h"
@@ -43,9 +47,29 @@
 #include "utils/join_point.h"
 #include "utils/link.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
+
+class connection_metrics
+{
+public:
+    explicit connection_metrics(const std::string &remote_addr);
+    ~connection_metrics() = default;
+
+    [[nodiscard]] const metric_entity_ptr &connection_metric_entity() const;
+
+    METRIC_DEFINE_SET(network_client_sessions, int64_t)
+
+private:
+    const std::string _remote_addr;
+    const metric_entity_ptr _connection_metric_entity;
+    METRIC_VAR_DECLARE_gauge_int64(network_client_sessions);
+
+    DISALLOW_COPY_AND_ASSIGN(connection_metrics);
+    DISALLOW_MOVE_AND_ASSIGN(connection_metrics);
+};
 
 class rpc_engine;
 class service_node;
@@ -81,7 +105,7 @@ public:
     //                  all downcalls should be redirected to the inner provider in the end
     //
     network(rpc_engine *srv, network *inner_provider);
-    virtual ~network() {}
+    virtual ~network() = default;
 
     //
     // when client_only is true, port is faked (equal to app id for tracing purpose)
@@ -91,8 +115,8 @@ public:
     //
     // the named address
     //
-    virtual const ::dsn::rpc_address &address() const = 0;
-    virtual const ::dsn::host_port &host_port() const = 0;
+    [[nodiscard]] virtual const rpc_address &address() const = 0;
+    [[nodiscard]] virtual const ::dsn::host_port &host_port() const = 0;
 
     //
     // this is where the upper rpc engine calls down for a RPC call
@@ -152,6 +176,10 @@ private:
     void reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size);
 };
 
+class rpc_session_pool;
+
+using rpc_session_pool_ptr = std::shared_ptr<rpc_session_pool>;
+
 /*!
   an incomplete network implementation for connection oriented network, e.g., TCP
 */
@@ -159,42 +187,51 @@ class connection_oriented_network : public network
 {
 public:
     connection_oriented_network(rpc_engine *srv, network *inner_provider);
-    virtual ~connection_oriented_network() {}
+    ~connection_oriented_network() override = default;
 
     // server session management
-    rpc_session_ptr get_server_session(::dsn::rpc_address ep);
-    void on_server_session_accepted(rpc_session_ptr &s);
-    void on_server_session_disconnected(rpc_session_ptr &s);
+    rpc_session_ptr get_server_session(rpc_address client_addr);
+    void on_server_session_accepted(const rpc_session_ptr &session);
+    void on_server_session_disconnected(const rpc_session_ptr &session);
 
     // Checks if IP of the incoming session has too much connections.
     // Related config: [network] conn_threshold_per_ip. No limit if the value is 0.
-    bool check_if_conn_threshold_exceeded(::dsn::rpc_address ep);
+    bool check_if_conn_threshold_exceeded(rpc_address client_addr);
 
     // client session management
-    void on_client_session_connected(rpc_session_ptr &s);
-    void on_client_session_disconnected(rpc_session_ptr &s);
+    void on_client_session_connected(const rpc_session_ptr &session);
+    void on_client_session_disconnected(const rpc_session_ptr &session);
 
     // called upon RPC call, rpc client session is created on demand
-    virtual void send_message(message_ex *request) override;
+    void send_message(message_ex *request) override;
 
     // called by rpc engine
-    virtual void inject_drop_message(message_ex *msg, bool is_send) override;
+    void inject_drop_message(message_ex *msg, bool is_send) override;
 
     // to be defined
-    virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;
+    virtual rpc_session_ptr create_client_session(rpc_address server_addr) = 0;
 
 protected:
-    typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> client_sessions;
-    client_sessions _clients; // to_address => rpc_session
-    utils::rw_lock_nr _clients_lock;
+    using client_session_map = std::unordered_map<rpc_address, rpc_session_pool_ptr>;
+    client_session_map _clients; // to_address => rpc_session_pool
 
-    typedef std::unordered_map<::dsn::rpc_address, rpc_session_ptr> server_sessions;
-    server_sessions _servers; // from_address => rpc_session
-    typedef std::unordered_map<uint32_t, uint32_t> ip_connection_count;
-    ip_connection_count _ip_conn_count; // from_ip => connection count
-    utils::rw_lock_nr _servers_lock;
+    mutable utils::rw_lock_nr _clients_lock;
 
-    METRIC_VAR_DECLARE_gauge_int64(network_client_sessions);
+    using server_session_map = std::unordered_map<rpc_address, rpc_session_ptr>;
+    server_session_map _servers; // from_address => rpc_session
+
+    using ip_conn_count_map = std::unordered_map<uint32_t, uint32_t>;
+    ip_conn_count_map _ip_conn_counts; // from_ip => connection count
+
+    mutable utils::rw_lock_nr _servers_lock;
+
+private:
+    void add_server_session(const rpc_session_ptr &session);
+    uint32_t add_server_conn_count(const rpc_session_ptr &session);
+
+    bool remove_server_session(const rpc_session_ptr &session);
+    uint32_t remove_server_conn_count(const rpc_session_ptr &session);
+
     METRIC_VAR_DECLARE_gauge_int64(network_server_sessions);
 };
 
@@ -204,7 +241,6 @@ protected:
 class rpc_client_matcher;
 
 class rpc_session : public ref_counter
-
 {
 public:
     /*!
@@ -216,12 +252,12 @@ public:
     static join_point<bool, message_ex *> on_rpc_recv_message;
     static join_point<bool, message_ex *> on_rpc_send_message;
     /*@}*/
-public:
+
     rpc_session(connection_oriented_network &net,
-                ::dsn::rpc_address remote_addr,
+                rpc_address remote_addr,
                 message_parser_ptr &parser,
                 bool is_client);
-    virtual ~rpc_session();
+    ~rpc_session() override;
 
     virtual void connect() = 0;
     virtual void close() = 0;
@@ -229,10 +265,17 @@ public:
     // Whether this session is launched on client side.
     bool is_client() const { return _is_client; }
 
-    dsn::rpc_address remote_address() const { return _remote_addr; }
-    dsn::host_port remote_host_port() const { return _remote_host_port; }
+    const char *log_prefix() const { return _log_prefix.c_str(); }
+
+    rpc_address remote_address() const { return _remote_addr; }
+    host_port remote_host_port() const { return _remote_host_port; }
     connection_oriented_network &net() const { return _net; }
     message_parser_ptr parser() const { return _parser; }
+
+    // Normally, a session has both a local and a remote address. However, considering that
+    // some implementations (such as `sim_client_session`) may not have a local address, we
+    // implement this as a virtual function and return an invalid address by default.
+    virtual rpc_address local_address() const { return {}; }
 
     ///
     /// rpc_session's interface for sending and receiving
@@ -255,7 +298,6 @@ public:
     void set_client_username(const std::string &user_name);
     const std::string &get_client_username() const;
 
-public:
     ///
     /// for subclass to implement receiving message
     ///
@@ -278,6 +320,8 @@ public:
     void on_send_completed(uint64_t signature);
     virtual void on_failure(bool is_write);
 
+    [[nodiscard]] int queued_message_count() const { return _queued_msg_count; }
+
 protected:
     ///
     /// fields related to sending messages
@@ -294,18 +338,18 @@ protected:
     volatile session_state _connect_state;
 
     bool negotiation_succeed = false;
-    // when the negotiation of a session isn't succeed,
-    // all messages are queued in _pending_messages.
-    // after connected, all of them are moved to "_messages"
-    std::vector<message_ex *> _pending_messages;
 
-    // messages are sent in batch, firstly all messages are linked together
-    // in a doubly-linked list "_messages".
-    // if no messages are on-the-flying, a batch of messages are fetch from the "_messages"
-    // and put them to _sending_msgs; meanwhile, buffers of these messages are put
-    // in _sending_buffers
-    dlink _messages;
-    int _message_count; // count of _messages
+    // When a session has not succeeded in negotiating, all messages are cached in
+    // `_pending_msgs`. Once succeeded, all of them would be moved to "_batched_msgs".
+    std::vector<message_ex *> _pending_msgs;
+
+    // Messages are sent in batch, firstly all of them are linked together in a doubly-linked
+    // list "_batched_msgs".
+    //
+    // If no message are on-the-flying, a batch of messages are moved from `_batched_msgs`
+    // to `_sending_msgs`, while the buffers of them are put into `_sending_buffers`.
+    dlink _batched_msgs;
+    int _batched_msg_count; // Count of `_batched_msgs`.
 
     bool _is_sending_next;
 
@@ -315,28 +359,33 @@ protected:
     uint64_t _message_sent;
     // ]
 
+    // The total number of messages queued in `_batched_msgs` and `_sending_msgs`.
+    std::atomic_int _queued_msg_count{0};
+
     ///
     /// change status and check status
     ///
     // return true when it is permitted
-    bool set_connecting();
+    bool mark_connecting();
+    void mark_connected();
     // return true when it is permitted
-    bool set_disconnected();
-    void set_connected();
+    bool mark_disconnected();
 
     void clear_send_queue(bool resend_msgs);
     bool on_disconnected(bool is_write);
 
     // constant info
     connection_oriented_network &_net;
-    dsn::rpc_address _remote_addr;
-    dsn::host_port _remote_host_port;
+    const rpc_address _remote_addr;
+    const host_port _remote_host_port;
     int _max_buffer_block_count_per_send;
     message_reader _reader;
     message_parser_ptr _parser;
 
 private:
     const bool _is_client;
+    const std::string _log_prefix;
+
     rpc_client_matcher *_matcher;
 
     std::atomic_int _delay_server_receive_ms;
@@ -344,6 +393,9 @@ private:
     // _client_username is only valid if it is a server rpc_session.
     // it represents the name of the corresponding client
     std::string _client_username;
+
+    DISALLOW_COPY_AND_ASSIGN(rpc_session);
+    DISALLOW_MOVE_AND_ASSIGN(rpc_session);
 };
 
 // --------- inline implementation --------------
@@ -357,6 +409,83 @@ inline bool rpc_session::delay_recv(int delay_ms)
     }
     return exchanged;
 }
+
+// `rpc_session_pool` creates and maintains a client-side connection pool for a remote server
+// identified by its ip:port address. The maximum size of each pool is configurable, and each
+// session in the pool corresponds to a separate socket connection. The connection pool helps
+// improve the client's ability to utilize network bandwidth, especially in scenarios with
+// high network latency.
+class rpc_session_pool
+{
+public:
+    // The create function used to instantiate `rpc_session_pool`.
+    template <typename... Args>
+    static auto create(Args &&...args)
+    {
+        struct enable_make_shared : public rpc_session_pool
+        {
+            explicit enable_make_shared(Args &&...args)
+                : rpc_session_pool(std::forward<Args>(args)...)
+            {
+            }
+        };
+        return std::static_pointer_cast<rpc_session_pool>(
+            std::make_shared<enable_make_shared>(std::forward<Args>(args)...));
+    }
+
+    virtual ~rpc_session_pool() = default;
+
+    [[nodiscard]] size_t size() const
+    {
+        utils::auto_read_lock l(_lock);
+        return _sessions.size();
+    }
+
+    // Select a session from the pool to send a message to the remote server. The returned
+    // session may either reuse an existing one from the pool or be newly created (the user
+    // does not need to care), and the session is already connected and ready to use.
+    [[nodiscard]] rpc_session_ptr get_rpc_session();
+
+    // Called after the connection for `session` is established.
+    void on_connected(const rpc_session_ptr &session) const;
+
+    // Called after `session` is disconnected.
+    void on_disconnected(const rpc_session_ptr &session, std::function<void()> &&on_empty);
+
+    // Close each session in the pool.
+    void close() const;
+
+private:
+    rpc_session_pool(connection_oriented_network *net, rpc_address server_addr);
+
+    // Choose an existing session from the pool which has the least queued messages to be
+    // processed.
+    [[nodiscard]] rpc_session_ptr select_rpc_session() const;
+
+    // Create a new session and insert it into the pool. This new session will be left
+    // unconnected.
+    [[nodiscard]] rpc_session_ptr create_rpc_session();
+
+    friend class mock_pool_conn_network;
+
+    // The connection-oriented network from which the sessions in the pool are created.
+    connection_oriented_network *_net;
+
+    // The remote server address identified by ip:port.
+    const rpc_address _server_addr;
+
+    // The map that maintains each session in the pool.
+    //
+    // TODO(wangdan): consider using concurrent hash map to improve performance.
+    using rpc_session_map = std::unordered_map<rpc_session *, rpc_session_ptr>;
+    rpc_session_map _sessions;
+    mutable utils::rw_lock_nr _lock;
+
+    connection_metrics _conn_metrics;
+
+    DISALLOW_COPY_AND_ASSIGN(rpc_session_pool);
+    DISALLOW_MOVE_AND_ASSIGN(rpc_session_pool);
+};
 
 /*@}*/
 } // namespace dsn
