@@ -60,16 +60,16 @@ func GetPrometheusMetrics() *PrometheusMetrics {
 			initRegistry = prometheus.DefaultRegisterer
 		}
 
-		constLabels := prometheus.Labels{}
+		labels := prometheus.Labels{}
 		for k, v := range constLabels {
-			constLabels[k] = v
+			labels[k] = v
 		}
 		endpoint := GetLocalHostName()
-		constLabels["endpoint"] = endpoint
+		labels["endpoint"] = endpoint
 
 		singletonMetrics = &PrometheusMetrics{
 			registry:    initRegistry,
-			constLabels: constLabels,
+			constLabels: labels,
 			counterMap:  sync.Map{},
 			summaryMap:  sync.Map{},
 		}
