@@ -37,32 +37,40 @@ AtomicWriteTest::AtomicWriteTest(std::string table_name_prefix)
 
 void AtomicWriteTest::SetUpTestSuite()
 {
+    // Initialize client lib.
     ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
 }
 
 void AtomicWriteTest::SetUp()
 {
+    // Read meta server list from config file.
     ASSERT_TRUE(dsn::replication::replica_helper::load_servers_from_config(
         dsn::PEGASUS_CLUSTER_SECTION_NAME, kClusterName, _meta_list));
     ASSERT_FALSE(_meta_list.empty());
 
+    // Initialize the DDL client to the meta server.
     _ddl_client = std::make_unique<dsn::replication::replication_ddl_client>(_meta_list);
     ASSERT_TRUE(_ddl_client);
 
     _ddl_client->set_max_wait_app_ready_secs(120);
     _ddl_client->set_meta_servers_leader();
 
+    // Generate the table name.
     const auto &test_case = GetParam();
     _table_name = fmt::format(
         "{}{}_idempotent", _table_name_prefix, test_case.atomic_idempotent ? "" : "_non");
 
+    // Create the table with the name. Specify whether the table makes each atomic write
+    // idempotent.
     ASSERT_EQ(dsn::ERR_OK,
               _ddl_client->create_app(
                   _table_name, "pegasus", 8, 3, {}, false, false, test_case.atomic_idempotent));
 
+    // Get a client instance for the given cluster and table name.
     _client = pegasus_client_factory::get_client(kClusterName.c_str(), _table_name.c_str());
     ASSERT_TRUE(_client != nullptr);
 
+    // Generate the hash key.
     const auto *test_info = testing::UnitTest::GetInstance()->current_test_info();
     _hash_key = fmt::format("{}.{}", test_info->test_suite_name(), test_info->name());
 }

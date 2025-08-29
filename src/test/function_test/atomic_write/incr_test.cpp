@@ -38,11 +38,13 @@ protected:
     void TearDown() override
     {
         del();
+
+        // Call base fixture.
         AtomicWriteTest::TearDown();
     }
 
-    void test_incr_on_del(int64_t increment) { test_incr_on_del(0, increment); }
-
+    // Perform `remove` operation on the key to ensure that it does not exist in the table
+    // before running `incr` tests on it with `increment` and specified `ttl_seconds`.
     void test_incr_on_del(int ttl_seconds, int64_t increment)
     {
         del();
@@ -50,6 +52,14 @@ protected:
         test_incr(ttl_seconds, increment, increment);
     }
 
+    // The same sa the above, except that `ttl_seconds` is set to 0.
+    void test_incr_on_del(int64_t increment) { test_incr_on_del(0, increment); }
+
+    // Perform `put` operation on the key to ensure that it has the specified `base_value`
+    // in the table before running `incr` tests on it. The expected new value associated
+    // with the key is `expected_new_value` after the `incr` operation is performed with
+    // `increment`. The variadic parameters are <increment, expected_new_value> pairs, to
+    // support tests for multiple `incr` operations.
     template <typename TBaseValue, typename... Args>
     void test_incr_on_set(const TBaseValue &base_value,
                           int64_t increment,
@@ -61,28 +71,18 @@ protected:
         test_incr(0, increment, expected_new_value, std::forward<Args>(args)...);
     }
 
-    template <typename TBaseValue, typename TReadValue>
-    void test_incr_detail_on_set(const TBaseValue &base_value,
-                                 int64_t increment,
-                                 int expected_incr_err,
-                                 int64_t expected_resp_value,
-                                 int expected_read_err,
-                                 const TReadValue &expected_read_value)
-    {
-        test_incr_detail_on_set(base_value,
-                                0,
-                                increment,
-                                expected_incr_err,
-                                expected_resp_value,
-                                expected_read_err,
-                                expected_read_value);
-    }
-
+    // In comparison with `test_incr_on_set()`, `test_incr_detail_on_set()` will test and
+    // check more details:
+    // - `ttl_seconds` is user-provided;
+    // - the expected error code and new value in response are `expected_resp_err` and
+    // `expected_resp_value`;
+    // - the expected error code and new value read by `get()` are `expected_read_err`
+    // and `expected_read_value`.
     template <typename TBaseValue, typename TReadValue>
     void test_incr_detail_on_set(const TBaseValue &base_value,
                                  int ttl_seconds,
                                  int64_t increment,
-                                 int expected_incr_err,
+                                 int expected_resp_err,
                                  int64_t expected_resp_value,
                                  int expected_read_err,
                                  const TReadValue &expected_read_value)
@@ -92,12 +92,34 @@ protected:
         test_incr_detail(5000,
                          ttl_seconds,
                          increment,
-                         expected_incr_err,
+                         expected_resp_err,
                          expected_resp_value,
                          expected_read_err,
                          expected_read_value);
     }
 
+    // The same as the above, except that `ttl_seconds` is set to 0.
+    template <typename TBaseValue, typename TReadValue>
+    void test_incr_detail_on_set(const TBaseValue &base_value,
+                                 int64_t increment,
+                                 int expected_resp_err,
+                                 int64_t expected_resp_value,
+                                 int expected_read_err,
+                                 const TReadValue &expected_read_value)
+    {
+        test_incr_detail_on_set(base_value,
+                                0,
+                                increment,
+                                expected_resp_err,
+                                expected_resp_value,
+                                expected_read_err,
+                                expected_read_value);
+    }
+
+    // Run `incr` tests with specified `ttl_seconds`. The expected new value associated
+    // with the key is `expected_new_value` after the `incr` operation is performed with
+    // `increment`. The variadic parameters are <increment, expected_new_value> pairs, to
+    // support tests for multiple `incr` operations.
     template <typename... Args>
     void test_incr(int ttl_seconds, int64_t increment, int64_t expected_new_value, Args &&...args)
     {
@@ -105,11 +127,6 @@ protected:
             5000, ttl_seconds, increment, PERR_OK, expected_new_value, PERR_OK, expected_new_value);
 
         test_incr(ttl_seconds, std::forward<Args>(args)...);
-    }
-
-    void get_ttl(int &ttl_seconds)
-    {
-        ASSERT_EQ(PERR_OK, _client->ttl(_hash_key, kSortKey, ttl_seconds));
     }
 
     // Due to factors such as the cost of execution itself, possible timeouts and potential
@@ -126,6 +143,7 @@ protected:
         ASSERT_LE(expected_max_ttl_seconds - 3, actual_ttl_seconds);
     }
 
+    // Assert that the record has no TLL.
     void should_no_ttl()
     {
         int ttl_seconds{0};
@@ -133,6 +151,7 @@ protected:
         ASSERT_EQ(-1, ttl_seconds);
     }
 
+    // Assert that the key does not exist.
     void should_not_found()
     {
         std::string value;
@@ -156,20 +175,27 @@ private:
         ASSERT_EQ(fmt::format("{}", value), read_value);
     }
 
-    // The end of recursion.
+    void get_ttl(int &ttl_seconds)
+    {
+        ASSERT_EQ(PERR_OK, _client->ttl(_hash_key, kSortKey, ttl_seconds));
+    }
+
+    // The end of recursion for `test_incr()`.
     void test_incr(int ttl_seconds) {}
 
+    // See `test_incr_detail_on_set()`.
     template <typename TReadValue>
     void test_incr_detail(int timeout_milliseconds,
                           int ttl_seconds,
                           int64_t increment,
-                          int expected_incr_err,
+                          int expected_resp_err,
                           int64_t expected_resp_value,
                           int expected_read_err,
                           const TReadValue &expected_read_value)
     {
+        // Perform `incr` operation and check the result.
         int64_t actual_new_value{0};
-        ASSERT_EQ(expected_incr_err,
+        ASSERT_EQ(expected_resp_err,
                   _client->incr(_hash_key,
                                 kSortKey,
                                 increment,
@@ -178,6 +204,7 @@ private:
                                 ttl_seconds));
         ASSERT_EQ(expected_resp_value, actual_new_value);
 
+        // Read and check current value from table.
         std::string actual_new_str;
         ASSERT_EQ(expected_read_err, _client->get(_hash_key, kSortKey, actual_new_str));
         if (expected_read_err != PERR_OK) {
@@ -202,10 +229,6 @@ TEST_P(IncrTest, OnPositiveValue) { test_incr_on_set(100, 1, 101); }
 
 TEST_P(IncrTest, OnNegativeValue) { test_incr_on_set(-100, -1, -101); }
 
-TEST_P(IncrTest, ByZero) { test_incr_on_set(100, 0, 100); }
-
-TEST_P(IncrTest, MultiTimes) { test_incr_on_set(100, 1, 101, 2, 103); }
-
 TEST_P(IncrTest, OnInvalidValue)
 {
     // New value in response will be kept as 0 by default while base value is invalid.
@@ -222,6 +245,10 @@ TEST_P(IncrTest, OnTooLargeValue)
                             PERR_OK,
                             "10000000000000000000000000000000000000");
 }
+
+TEST_P(IncrTest, ByZero) { test_incr_on_set(100, 0, 100); }
+
+TEST_P(IncrTest, ByMultipleTimes) { test_incr_on_set(100, 1, 101, 2, 103, 3, 106); }
 
 TEST_P(IncrTest, Overflow)
 {

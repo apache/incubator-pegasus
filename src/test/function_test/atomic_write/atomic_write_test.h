@@ -36,6 +36,7 @@ struct atomic_write_case
     bool atomic_idempotent;
 };
 
+// The base fixture for each type of atomic write.
 class AtomicWriteTest : public testing::TestWithParam<atomic_write_case>
 {
 public:
@@ -68,6 +69,7 @@ private:
     DISALLOW_MOVE_AND_ASSIGN(AtomicWriteTest);
 };
 
+// Generate both idempotent and non-idempotent cases for atomic writes.
 std::vector<atomic_write_case> generate_atomic_write_cases();
 
 } // namespace pegasus
