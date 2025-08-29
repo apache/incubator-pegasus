@@ -18,23 +18,23 @@ import (
 
 // PrometheusMetrics is the metrics implementation for Prometheus.
 type PrometheusMetrics struct {
-	tags       map[string]string
-	registry   prometheus.Registerer
-	counterMap sync.Map
-	summaryMap sync.Map
+	registry    prometheus.Registerer
+	counterMap  sync.Map
+	summaryMap  sync.Map
+	constLabels prometheus.Labels
 }
 
 var (
 	singletonMetrics          *PrometheusMetrics
 	initPrometheusMetricsOnce sync.Once
 	startServerOnce           sync.Once
-	perfCounterMap            map[string]string
+	constLabels               map[string]string
 	initRegistry              prometheus.Registerer
 )
 
 func InitMetrics(registry prometheus.Registerer, cfg config.Config) {
 	initRegistry = registry
-	perfCounterMap = cfg.PerfCounterTags
+	constLabels = cfg.PrometheusConstLabels
 	if cfg.EnablePrometheus {
 		startServerOnce.Do(func() {
 			port := 9090
@@ -60,86 +60,104 @@ func GetPrometheusMetrics() *PrometheusMetrics {
 			initRegistry = prometheus.DefaultRegisterer
 		}
 
-		tags := make(map[string]string)
-
-		for k, v := range perfCounterMap {
-			tags[k] = v
+		constLabels := prometheus.Labels{}
+		for k, v := range constLabels {
+			constLabels[k] = v
 		}
 		endpoint := GetLocalHostName()
-		tags["endpoint"] = endpoint
+		constLabels["endpoint"] = endpoint
 
 		singletonMetrics = &PrometheusMetrics{
-			registry:   initRegistry,
-			tags:       tags,
-			counterMap: sync.Map{},
-			summaryMap: sync.Map{},
+			registry:    initRegistry,
+			constLabels: constLabels,
+			counterMap:  sync.Map{},
+			summaryMap:  sync.Map{},
 		}
 	})
 	return singletonMetrics
 }
 
-func (pm *PrometheusMetrics) MarkMeter(counterName string, count int64) {
-	key := fmt.Sprintf("%s-%s", counterName, tagsToString(pm.tags))
+func (pm *PrometheusMetrics) MarkMeter(counterName string, count int64, extraLabels map[string]string) {
+	var varLabelKeys []string
+	if extraLabels != nil {
+		for k := range extraLabels {
+			varLabelKeys = append(varLabelKeys, k)
+		}
+	}
+	sort.Strings(varLabelKeys)
+	key := fmt.Sprintf("%s-%s-%s", counterName, mapToString(pm.constLabels), strings.Join(varLabelKeys, ","))
 
-	type onceCounter struct {
-		once    sync.Once
-		counter prometheus.Counter
+	type onceCounterVec struct {
+		once sync.Once
+		vec  *prometheus.CounterVec
 	}
 
-	val, _ := pm.counterMap.LoadOrStore(key, &onceCounter{})
-	wrapper := val.(*onceCounter)
+	val, _ := pm.counterMap.LoadOrStore(key, &onceCounterVec{})
+	wrapper := val.(*onceCounterVec)
 
 	wrapper.once.Do(func() {
-		labels := prometheus.Labels{}
-		for k, v := range pm.tags {
-			labels[k] = v
-		}
-
-		counter := promauto.With(pm.registry).NewCounter(prometheus.CounterOpts{
-			Name:        counterName,
-			Help:        fmt.Sprintf("Counter for %s", counterName),
-			ConstLabels: labels,
-		})
-
-		wrapper.counter = counter
+		wrapper.vec = promauto.With(pm.registry).NewCounterVec(
+			prometheus.CounterOpts{
+				Name:        counterName,
+				Help:        fmt.Sprintf("Counter for %s", counterName),
+				ConstLabels: pm.constLabels,
+			},
+			varLabelKeys,
+		)
 	})
 
-	wrapper.counter.Add(float64(count))
+	counter, err := wrapper.vec.GetMetricWith(extraLabels)
+	if err != nil {
+		pegalog.GetLogger().Fatalf("Failed to get metric with extra labels %v: %v, counter name: %v", extraLabels, err, counterName)
+		return
+	}
+	counter.Add(float64(count))
 }
 
-func (pm *PrometheusMetrics) ObserveSummary(summaryName string, value float64) {
-	key := fmt.Sprintf("%s-%s", summaryName, tagsToString(pm.tags))
+func (pm *PrometheusMetrics) ObserveSummary(summaryName string, value float64, extraLabels map[string]string) {
+	var varLabelKeys []string
+	if extraLabels != nil {
+		for k := range extraLabels {
+			varLabelKeys = append(varLabelKeys, k)
+		}
+	}
+	sort.Strings(varLabelKeys)
+
+	key := fmt.Sprintf("%s-%s-%s", summaryName, mapToString(pm.constLabels), strings.Join(varLabelKeys, ","))
 
 	type onceSummary struct {
-		once    sync.Once
-		summary prometheus.Summary
+		once       sync.Once
+		summaryVec *prometheus.SummaryVec
 	}
 
 	val, _ := pm.summaryMap.LoadOrStore(key, &onceSummary{})
 	wrapper := val.(*onceSummary)
 
 	wrapper.once.Do(func() {
-		labels := prometheus.Labels{}
-		for k, v := range pm.tags {
-			labels[k] = v
-		}
+		summaryVec := promauto.With(pm.registry).NewSummaryVec(
+			prometheus.SummaryOpts{
+				Name:        summaryName,
+				Help:        fmt.Sprintf("Summary for %s", summaryName),
+				ConstLabels: pm.constLabels, // 使用常量标签
+				Objectives:  map[float64]float64{0.99: 0.001, 0.999: 0.0001},
+				MaxAge:      5 * time.Minute,
+				AgeBuckets:  5,
+			},
+			varLabelKeys,
+		)
 
-		summary := promauto.With(pm.registry).NewSummary(prometheus.SummaryOpts{
-			Name:        summaryName,
-			Help:        fmt.Sprintf("Summary for %s", summaryName),
-			ConstLabels: labels,
-			Objectives:  map[float64]float64{0.99: 0.001, 0.999: 0.0001},
-			MaxAge:      5 * time.Minute,
-			AgeBuckets:  5,
-		})
-
-		wrapper.summary = summary
+		wrapper.summaryVec = summaryVec
 	})
 
-	wrapper.summary.Observe(value)
+	summary, err := wrapper.summaryVec.GetMetricWith(extraLabels)
+	if err != nil {
+		pegalog.GetLogger().Fatalf("Failed to get metric with extra labels %v: %v, summary name: %v", extraLabels, err, summaryName)
+		return
+	}
+	summary.Observe(value)
 }
 
-func tagsToString(tags map[string]string) string {
+func mapToString(tags map[string]string) string {
 	var keys []string
 	for k := range tags {
 		keys = append(keys, k)

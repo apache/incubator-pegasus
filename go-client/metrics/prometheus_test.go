@@ -9,15 +9,15 @@ import (
 )
 
 // mockConfig is a helper to create a mock config for testing.
-func mockConfig(tags map[string]string) config.Config {
+func mockConfig(labels map[string]string) config.Config {
 	return config.Config{
-		PerfCounterTags: tags,
+		PrometheusConstLabels: labels,
 	}
 }
 
 func TestGetPrometheusMetrics_Singleton(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	cfg := mockConfig(map[string]string{"test": "tag"})
+	cfg := mockConfig(map[string]string{"test": "label"})
 	InitMetrics(reg, cfg)
 
 	m1 := GetPrometheusMetrics()
@@ -30,7 +30,7 @@ func TestGetPrometheusMetrics_Singleton(t *testing.T) {
 
 func TestMarkMeter_Concurrent(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	cfg := mockConfig(map[string]string{"test": "tag"})
+	cfg := mockConfig(map[string]string{"test": "label"})
 	InitMetrics(reg, cfg)
 
 	pm := GetPrometheusMetrics()
@@ -43,7 +43,8 @@ func TestMarkMeter_Concurrent(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		go func() {
 			defer wg.Done()
-			pm.MarkMeter(counterName, 1)
+			pm.MarkMeter(counterName, 1, map[string]string{"test": "label1"})
+			pm.MarkMeter(counterName, 1, map[string]string{"test": "label2"})
 		}()
 	}
 
@@ -59,15 +60,15 @@ func TestMarkMeter_Concurrent(t *testing.T) {
 		for _, m := range mf.GetMetric() {
 			counterValue += m.GetCounter().GetValue()
 		}
-		if counterValue != float64(goroutines) {
-			t.Errorf("Expected counter value %d, got %f", goroutines, counterValue)
+		if counterValue != float64(goroutines*2) {
+			t.Errorf("Expected counter value %d, got %f", goroutines*2, counterValue)
 		}
 	}
 }
 
 func TestObserveSummary_Concurrent(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	cfg := mockConfig(map[string]string{"test": "tag"})
+	cfg := mockConfig(map[string]string{"test": "label"})
 	InitMetrics(reg, cfg)
 
 	pm := GetPrometheusMetrics()
@@ -80,7 +81,8 @@ func TestObserveSummary_Concurrent(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		go func(val float64) {
 			defer wg.Done()
-			pm.ObserveSummary(summaryName, val)
+			pm.ObserveSummary(summaryName, val, map[string]string{"test": "label1"})
+			pm.ObserveSummary(summaryName, val, map[string]string{"test": "label2"})
 		}(float64(i))
 	}
 
@@ -96,8 +98,8 @@ func TestObserveSummary_Concurrent(t *testing.T) {
 		for _, m := range mf.GetMetric() {
 			summaryValue += m.GetSummary().GetSampleSum()
 		}
-		if summaryValue != float64(goroutines*(goroutines-1)/2) {
-			t.Errorf("Expected summary value %d, got %f", goroutines*(goroutines-1)/2, summaryValue)
+		if summaryValue != float64(goroutines*(goroutines-1)) {
+			t.Errorf("Expected summary value %f, got %f", float64(goroutines*(goroutines-1)), summaryValue)
 		}
 	}
 }

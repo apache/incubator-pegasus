@@ -21,26 +21,20 @@ package config
 
 // Config is the configuration of pegasus client.
 type Config struct {
-	MetaServers      []string          `json:"meta_servers"`
-	PerfCounterTags  map[string]string `json:"perf_counter_tags"`
-	EnableFalcon     bool              `json:"enable_falcon"`
-	EnablePrometheus bool              `json:"enable_prometheus"`
-	FalconServer     string            `json:"falcon_server"`
-	FalconInterval   int               `json:"falcon_interval_secs"`
-	PrometheusPort   int               `json:"prometheus_port"`
+	MetaServers           []string          `json:"meta_servers"`
+	PrometheusConstLabels map[string]string `json:"prometheus_const_labels"`
+	EnablePrometheus      bool              `json:"enable_prometheus"`
+	PrometheusPort        int               `json:"prometheus_port"`
 }
 
 type Option func(*Config)
 
 func NewConfig(metaServers []string, opts ...Option) *Config {
 	cfg := &Config{
-		MetaServers:      metaServers,
-		PerfCounterTags:  make(map[string]string),
-		EnableFalcon:     false,
-		EnablePrometheus: false,
-		FalconServer:     "",
-		FalconInterval:   10,
-		PrometheusPort:   9090,
+		MetaServers:           metaServers,
+		PrometheusConstLabels: make(map[string]string),
+		EnablePrometheus:      false,
+		PrometheusPort:        9090,
 	}
 
 	for _, opt := range opts {
@@ -51,31 +45,13 @@ func NewConfig(metaServers []string, opts ...Option) *Config {
 
 func WithPerfCounterTags(tags map[string]string) Option {
 	return func(c *Config) {
-		c.PerfCounterTags = tags
-	}
-}
-
-func WithEnableFalcon(enable bool) Option {
-	return func(c *Config) {
-		c.EnableFalcon = enable
+		c.PrometheusConstLabels = tags
 	}
 }
 
 func WithEnablePrometheus(enable bool) Option {
 	return func(c *Config) {
 		c.EnablePrometheus = enable
-	}
-}
-
-func WithFalconServer(server string) Option {
-	return func(c *Config) {
-		c.FalconServer = server
-	}
-}
-
-func WithFalconInterval(interval int) Option {
-	return func(c *Config) {
-		c.FalconInterval = interval
 	}
 }
 

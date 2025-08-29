@@ -4,13 +4,10 @@
     "127.0.0.1:34602",
     "127.0.0.1:34603"
   ],
-  "perf_counter_tags": {
+  "prometheus_const_labels": {
     "k1": "v1",
     "k2": "v2"
   },
-  "enable_falcon": false,
   "enable_prometheus": false,
-  "prometheus_port": 9090,
-  "falcon_server": "127.0.0.1:1988",
-  "falcon_interval_secs": 10
+  "prometheus_port": 9090
 }

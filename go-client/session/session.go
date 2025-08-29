@@ -48,6 +48,9 @@ const (
 
 	// LatencyTracingThreshold means RPC's latency higher than the threshold (1000ms) will be traced
 	LatencyTracingThreshold = time.Millisecond * 1000
+
+	// DisableMetrics controls whether to collect RPC message size metrics.
+	DisableMetrics = false
 )
 
 // NodeSession represents the network session to a node
@@ -97,7 +100,7 @@ type nodeSession struct {
 	unresponsiveHandler UnresponsiveHandler
 	lastWriteTime       int64
 
-	enablePerfCounter bool
+	enableMetrics bool
 }
 
 // withUnresponsiveHandler enables the session to handle the event when a network connection becomes unresponsive.
@@ -114,17 +117,17 @@ type requestListener struct {
 	call *PegasusRpcCall
 }
 
-func newNodeSessionAddr(addr string, ntype NodeType, enablePerfCounter bool) *nodeSession {
+func newNodeSessionAddr(addr string, ntype NodeType, enableMetrics bool) *nodeSession {
 	return &nodeSession{
-		logger:            pegalog.GetLogger(),
-		ntype:             ntype,
-		seqId:             0,
-		codec:             NewPegasusCodec(),
-		pendingResp:       make(map[int32]*requestListener),
-		reqc:              make(chan *requestListener),
-		addr:              addr,
-		tom:               &tomb.Tomb{},
-		enablePerfCounter: enablePerfCounter,
+		logger:        pegalog.GetLogger(),
+		ntype:         ntype,
+		seqId:         0,
+		codec:         NewPegasusCodec(),
+		pendingResp:   make(map[int32]*requestListener),
+		reqc:          make(chan *requestListener),
+		addr:          addr,
+		tom:           &tomb.Tomb{},
+		enableMetrics: enableMetrics,
 
 		//
 		redialc: make(chan bool, 1),
@@ -134,14 +137,14 @@ func newNodeSessionAddr(addr string, ntype NodeType, enablePerfCounter bool) *no
 // NewNodeSession always returns a non-nil value even when the
 // connection attempt failed.
 // Each nodeSession corresponds to an RpcConn.
-func NewNodeSession(addr string, ntype NodeType, enablePerfCounter bool) NodeSession {
-	return newNodeSession(addr, ntype, enablePerfCounter)
+func NewNodeSession(addr string, ntype NodeType, enableMetrics bool) NodeSession {
+	return newNodeSession(addr, ntype, enableMetrics)
 }
 
-func newNodeSession(addr string, ntype NodeType, enablePerfCounter bool) *nodeSession {
+func newNodeSession(addr string, ntype NodeType, enableMetrics bool) *nodeSession {
 	logger := pegalog.GetLogger()
 
-	n := newNodeSessionAddr(addr, ntype, enablePerfCounter)
+	n := newNodeSessionAddr(addr, ntype, enableMetrics)
 	logger.Printf("create session with %s", n)
 
 	n.conn = rpc.NewRpcConn(addr)
@@ -404,9 +407,9 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, partiti
 }
 
 func (n *nodeSession) writeRequest(r *PegasusRpcCall) error {
-	if n.enablePerfCounter {
+	if n.enableMetrics {
 		pm := metrics.GetPrometheusMetrics()
-		pm.ObserveSummary(fmt.Sprintf("rpc_message_size_bytes_%s", r.Name), float64(len(r.RawReq)))
+		pm.ObserveSummary(fmt.Sprintf("rpc_message_size_bytes_%s", r.Name), float64(len(r.RawReq)), map[string]string{})
 	}
 
 	return n.conn.Write(r.RawReq)

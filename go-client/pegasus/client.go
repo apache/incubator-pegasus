@@ -47,9 +47,9 @@ type pegasusClient struct {
 	// protect the access of tables
 	mu sync.RWMutex
 
-	metaMgr           *session.MetaManager
-	replicaMgr        *session.ReplicaManager
-	enablePerfCounter bool
+	metaMgr       *session.MetaManager
+	replicaMgr    *session.ReplicaManager
+	enableMetrics bool
 }
 
 // NewClient creates a new instance of pegasus client.
@@ -70,18 +70,15 @@ func newClientWithError(cfg config.Config) (Client, error) {
 		return nil, err
 	}
 
-	if cfg.EnablePrometheus || cfg.EnableFalcon {
+	if cfg.EnablePrometheus {
 		metrics.InitMetrics(prometheus.DefaultRegisterer, cfg)
-		if cfg.EnableFalcon {
-			go metrics.GetFalconReporter(cfg.FalconServer, cfg.FalconInterval).Start()
-		}
 	}
 
 	c := &pegasusClient{
-		tables:            make(map[string]TableConnector),
-		metaMgr:           session.NewMetaManager(cfg.MetaServers, session.NewNodeSession),
-		replicaMgr:        session.NewReplicaManagerWithPerfCounter(session.NewNodeSession, cfg.EnablePrometheus || cfg.EnableFalcon),
-		enablePerfCounter: cfg.EnablePrometheus || cfg.EnableFalcon,
+		tables:        make(map[string]TableConnector),
+		metaMgr:       session.NewMetaManager(cfg.MetaServers, session.NewNodeSession),
+		replicaMgr:    session.NewReplicaManagerWithMetrics(session.NewNodeSession, cfg.EnablePrometheus),
+		enableMetrics: cfg.EnablePrometheus,
 	}
 	return c, nil
 }
@@ -113,7 +110,7 @@ func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableC
 		}
 
 		var tb TableConnector
-		tb, err := ConnectTable(ctx, tableName, p.metaMgr, p.replicaMgr, p.enablePerfCounter)
+		tb, err := ConnectTable(ctx, tableName, p.metaMgr, p.replicaMgr, p.enableMetrics)
 		if err != nil {
 			return nil, err
 		}

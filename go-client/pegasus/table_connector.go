@@ -234,11 +234,11 @@ type pegasusTableConnector struct {
 
 	logger pegalog.Logger
 
-	tableName         string
-	appID             int32
-	parts             []*replicaNode
-	enablePerfCounter bool
-	mu                sync.RWMutex
+	tableName     string
+	appID         int32
+	parts         []*replicaNode
+	enableMetrics bool
+	mu            sync.RWMutex
 
 	confUpdateCh chan bool
 	tom          tomb.Tomb
@@ -251,14 +251,14 @@ type replicaNode struct {
 
 // ConnectTable queries for the configuration of the given table, and set up connection to
 // the replicas which the table locates on.
-func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager, enablePerfCounter bool) (TableConnector, error) {
+func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager, enableMetrics bool) (TableConnector, error) {
 	p := &pegasusTableConnector{
-		tableName:         tableName,
-		meta:              meta,
-		replica:           replica,
-		enablePerfCounter: enablePerfCounter,
-		confUpdateCh:      make(chan bool, 1),
-		logger:            pegalog.GetLogger(),
+		tableName:     tableName,
+		meta:          meta,
+		replica:       replica,
+		enableMetrics: enableMetrics,
+		confUpdateCh:  make(chan bool, 1),
+		logger:        pegalog.GetLogger(),
 	}
 
 	// if the session became unresponsive, TableConnector auto-triggers
@@ -721,7 +721,7 @@ func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKe
 func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []byte, req op.Request, optype OpType) (interface{}, error) {
 	start := time.Now()
 	var errResult error
-	if p.enablePerfCounter {
+	if p.enableMetrics {
 		defer func() {
 			elapsed := time.Since(start).Nanoseconds()
 			pm := metrics.GetPrometheusMetrics()
@@ -733,15 +733,9 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 					status = "fail"
 				}
 			}
-
-			// The metaIP is added to the metric name because some users may use multiple client instances
-			// within a single process to access tables with the same name in different availability zones.
-			// Including the metaIP helps to distinguish monitoring metrics for tables with the same name.
-			// The reason for not putting metaIP into labels (Prometheus) or tags (Falcon) is that labels/tags
-			// are designed to be unique and constant for a single process.
-			firstMetaIP := strings.ReplaceAll(p.meta.GetMetaIPAddrs()[0], ".", "_")
-			pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_total_%s", p.tableName, optype.String(), status, firstMetaIP), 1)
-			pm.ObserveSummary(fmt.Sprintf("pegasus_client_%s_%s_%s_latency_%s", p.tableName, optype.String(), status, firstMetaIP), float64(elapsed))
+			meta := strings.Join(p.meta.GetMetaIPAddrs(), ",")
+			pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_total", p.tableName, optype.String(), status), 1, map[string]string{"meta": meta})
+			pm.ObserveSummary(fmt.Sprintf("pegasus_client_%s_%s_%s_latency", p.tableName, optype.String(), status), float64(elapsed), map[string]string{"meta": meta})
 		}()
 	}
 
