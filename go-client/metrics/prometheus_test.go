@@ -49,7 +49,7 @@ func TestGetPrometheusMetrics_Singleton(t *testing.T) {
 
 func TestMarkMeter_Concurrent(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	cfg := mockConfig(map[string]string{"test": "label"})
+	cfg := mockConfig(map[string]string{"const_label": "label"})
 	InitMetrics(reg, cfg)
 
 	pm := GetPrometheusMetrics()
@@ -62,8 +62,8 @@ func TestMarkMeter_Concurrent(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		go func() {
 			defer wg.Done()
-			pm.MarkMeter(counterName, 1, map[string]string{"test": "label1"})
-			pm.MarkMeter(counterName, 1, map[string]string{"test": "label2"})
+			pm.MarkMeter(counterName, 1, map[string]string{"variable_label": "label1"})
+			pm.MarkMeter(counterName, 1, map[string]string{"variable_label": "label2"})
 		}()
 	}
 
@@ -87,7 +87,7 @@ func TestMarkMeter_Concurrent(t *testing.T) {
 
 func TestObserveSummary_Concurrent(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	cfg := mockConfig(map[string]string{"test": "label"})
+	cfg := mockConfig(map[string]string{"const_label": "label"})
 	InitMetrics(reg, cfg)
 
 	pm := GetPrometheusMetrics()
@@ -100,8 +100,8 @@ func TestObserveSummary_Concurrent(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		go func(val float64) {
 			defer wg.Done()
-			pm.ObserveSummary(summaryName, val, map[string]string{"test": "label1"})
-			pm.ObserveSummary(summaryName, val, map[string]string{"test": "label2"})
+			pm.ObserveSummary(summaryName, val, map[string]string{"variable_label": "label1"})
+			pm.ObserveSummary(summaryName, val, map[string]string{"variable_label": "label2"})
 		}(float64(i))
 	}
 
