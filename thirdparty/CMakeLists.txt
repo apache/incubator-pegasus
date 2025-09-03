@@ -226,9 +226,9 @@ else ()
 endif ()
 
 ExternalProject_Add(zookeeper
-        URL ${OSS_URL_PREFIX}/apache-zookeeper-3.7.0.tar.gz
-        http://downloads.apache.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0.tar.gz
-        URL_MD5 44c2a33e01931aed94ef7f3d39d0963e
+        URL ${OSS_URL_PREFIX}/apache-zookeeper-3.9.4.tar.gz
+        https://downloads.apache.org/zookeeper/zookeeper-3.9.4/apache-zookeeper-3.9.4.tar.gz
+        URL_MD5 f3bc1e774792e3dc4f979be410b61d97
         PATCH_COMMAND ""
         COMMAND cd zookeeper-jute && mvn compile && cd ../zookeeper-client/zookeeper-client-c && cmake -DCMAKE_BUILD_TYPE=release -DWANT_CPPUNIT=OFF -DWITH_OPENSSL=OFF -DWITH_CYRUS_SASL=${ZOOKEEPER_WITH_CYRUS_SASL} -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         COMMAND cd zookeeper-client/zookeeper-client-c && make -j${PARALLEL}
