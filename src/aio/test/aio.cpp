@@ -27,9 +27,9 @@
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
-#include <string.h>
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <list>
 #include <memory>
 #include <random>
