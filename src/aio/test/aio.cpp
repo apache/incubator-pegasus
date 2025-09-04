@@ -109,11 +109,11 @@ TEST_P(aio_test, basic)
             pegasus::stop_watch sw;
             uint64_t offset = 0;
             std::list<aio_task_ptr> tasks;
-            for (int i = 0; i < kTotalBufferCount; i++) {
-                char read_buffer[kUnitBufferLength + 1];
-                read_buffer[kUnitBufferLength] = 0;
+            for (int i = 0; i < kTotalBufferCount; ++i) {
+                auto read_buffer = std::make_unique<char[]>(kUnitBufferLength + 1);
+                read_buffer[kUnitBufferLength] = '\0';
                 auto t = ::dsn::file::read(rfile,
-                                           read_buffer,
+                                           read_buffer.get(),
                                            kUnitBufferLength,
                                            offset,
                                            LPC_AIO_TEST,
@@ -123,7 +123,7 @@ TEST_P(aio_test, basic)
 
                 t->wait();
                 ASSERT_EQ(kUnitBufferLength, t->get_transferred_size());
-                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffer);
+                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffer.get());
             }
             sw.stop_and_output(fmt::format("sequential read"));
         }
@@ -133,11 +133,12 @@ TEST_P(aio_test, basic)
             pegasus::stop_watch sw;
             uint64_t offset = 0;
             std::list<aio_task_ptr> tasks;
-            char read_buffers[kTotalBufferCount][kUnitBufferLength + 1];
-            for (int i = 0; i < kTotalBufferCount; i++) {
-                read_buffers[i][kUnitBufferLength] = 0;
+            std::vector<std::unique_ptr<char[]>> read_buffers(kTotalBufferCount);
+            for (int i = 0; i < kTotalBufferCount; ++i) {
+                read_buffers[i] = std::make_unique<char[]>(kUnitBufferLength + 1);
+                read_buffers[i][kUnitBufferLength] = '\0';
                 auto t = ::dsn::file::read(rfile,
-                                           read_buffers[i],
+                                           read_buffers[i].get(),
                                            kUnitBufferLength,
                                            offset,
                                            LPC_AIO_TEST,
