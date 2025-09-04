@@ -114,7 +114,7 @@ TEST_P(aio_test, basic)
                 read_buffer[kUnitBufferLength] = '\0';
                 auto t = ::dsn::file::read(rfile,
                                            read_buffer.get(),
-                                           kUnitBufferLength,
+                                           static_cast<int>(kUnitBufferLength),
                                            offset,
                                            LPC_AIO_TEST,
                                            nullptr,
@@ -139,7 +139,7 @@ TEST_P(aio_test, basic)
                 read_buffers[i][kUnitBufferLength] = '\0';
                 auto t = ::dsn::file::read(rfile,
                                            read_buffers[i].get(),
-                                           kUnitBufferLength,
+                                           static_cast<int>(kUnitBufferLength),
                                            offset,
                                            LPC_AIO_TEST,
                                            nullptr,
@@ -152,7 +152,7 @@ TEST_P(aio_test, basic)
                 ASSERT_EQ(kUnitBufferLength, t->get_transferred_size());
             }
             for (int i = 0; i < kTotalBufferCount; i++) {
-                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffers[i]);
+                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffers[i].get());
             }
             sw.stop_and_output(fmt::format("concurrent read"));
         }
