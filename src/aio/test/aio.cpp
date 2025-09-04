@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <string.h>
@@ -38,8 +39,8 @@
 #include "aio/aio_task.h"
 #include "aio/file_io.h"
 #include "gtest/gtest.h"
-#include "task/task_code.h"
 #include "runtime/tool_api.h"
+#include "task/task_code.h"
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/env.h"

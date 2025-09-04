@@ -83,16 +83,16 @@ public:
                  * rpc_holders, which created in on_batched_write_requests. So we don't need to
                  * release them here
                  **/
-                dsn::message_ex *writes[total_rpc_cnt];
-                for (uint32_t i = 0; i < put_rpc_cnt; i++) {
+                auto writes = std::make_unique<dsn::message_ex *[]>(total_rpc_cnt);
+                for (uint32_t i = 0; i < put_rpc_cnt; ++i) {
                     writes[i] = pegasus::create_put_request(req);
                 }
-                for (uint32_t i = put_rpc_cnt; i < total_rpc_cnt; i++) {
+                for (uint32_t i = put_rpc_cnt; i < total_rpc_cnt; ++i) {
                     writes[i] = pegasus::create_remove_request(key);
                 }
 
                 const int err = _server_write->on_batched_write_requests(
-                    writes, total_rpc_cnt, decree, 0, nullptr);
+                    writes.get(), total_rpc_cnt, decree, 0, nullptr);
                 switch (err) {
                 case FAIL_DB_WRITE_BATCH_PUT:
                 case FAIL_DB_WRITE_BATCH_DELETE:
