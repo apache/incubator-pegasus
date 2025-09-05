@@ -135,6 +135,7 @@ jobs:
       fail-fast: false
       matrix:
         test_module:
+          - atomic_write_test
           - backup_restore_test
           - base_api_test
           - base_test
@@ -220,6 +221,7 @@ jobs:
       fail-fast: false
       matrix:
         test_module:
+          - atomic_write_test
           - backup_restore_test
           - base_api_test
           - base_test
@@ -310,6 +312,7 @@ jobs:
 #      fail-fast: false
 #      matrix:
 #        test_module:
+#          - atomic_write_test
 #          - backup_restore_test
 #          - base_api_test
 #          - base_test
