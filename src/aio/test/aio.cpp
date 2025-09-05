@@ -24,11 +24,12 @@
  * THE SOFTWARE.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
-#include <string.h>
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <list>
 #include <memory>
 #include <random>
@@ -38,8 +39,8 @@
 #include "aio/aio_task.h"
 #include "aio/file_io.h"
 #include "gtest/gtest.h"
-#include "task/task_code.h"
 #include "runtime/tool_api.h"
+#include "task/task_code.h"
 #include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/env.h"
@@ -109,12 +110,12 @@ TEST_P(aio_test, basic)
             pegasus::stop_watch sw;
             uint64_t offset = 0;
             std::list<aio_task_ptr> tasks;
-            for (int i = 0; i < kTotalBufferCount; i++) {
-                char read_buffer[kUnitBufferLength + 1];
-                read_buffer[kUnitBufferLength] = 0;
+            for (int i = 0; i < kTotalBufferCount; ++i) {
+                auto read_buffer = std::make_unique<char[]>(kUnitBufferLength + 1);
+                read_buffer[kUnitBufferLength] = '\0';
                 auto t = ::dsn::file::read(rfile,
-                                           read_buffer,
-                                           kUnitBufferLength,
+                                           read_buffer.get(),
+                                           static_cast<int>(kUnitBufferLength),
                                            offset,
                                            LPC_AIO_TEST,
                                            nullptr,
@@ -123,7 +124,7 @@ TEST_P(aio_test, basic)
 
                 t->wait();
                 ASSERT_EQ(kUnitBufferLength, t->get_transferred_size());
-                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffer);
+                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffer.get());
             }
             sw.stop_and_output(fmt::format("sequential read"));
         }
@@ -133,12 +134,13 @@ TEST_P(aio_test, basic)
             pegasus::stop_watch sw;
             uint64_t offset = 0;
             std::list<aio_task_ptr> tasks;
-            char read_buffers[kTotalBufferCount][kUnitBufferLength + 1];
-            for (int i = 0; i < kTotalBufferCount; i++) {
-                read_buffers[i][kUnitBufferLength] = 0;
+            std::vector<std::unique_ptr<char[]>> read_buffers(kTotalBufferCount);
+            for (int i = 0; i < kTotalBufferCount; ++i) {
+                read_buffers[i] = std::make_unique<char[]>(kUnitBufferLength + 1);
+                read_buffers[i][kUnitBufferLength] = '\0';
                 auto t = ::dsn::file::read(rfile,
-                                           read_buffers[i],
-                                           kUnitBufferLength,
+                                           read_buffers[i].get(),
+                                           static_cast<int>(kUnitBufferLength),
                                            offset,
                                            LPC_AIO_TEST,
                                            nullptr,
@@ -151,7 +153,7 @@ TEST_P(aio_test, basic)
                 ASSERT_EQ(kUnitBufferLength, t->get_transferred_size());
             }
             for (int i = 0; i < kTotalBufferCount; i++) {
-                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffers[i]);
+                ASSERT_STREQ(kUnitBuffer.c_str(), read_buffers[i].get());
             }
             sw.stop_and_output(fmt::format("concurrent read"));
         }
