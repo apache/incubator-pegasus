@@ -1,0 +1,62 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package config
+
+// Config is the configuration of pegasus client.
+type Config struct {
+	MetaServers           []string          `json:"meta_servers"`
+	PrometheusConstLabels map[string]string `json:"prometheus_const_labels"`
+	EnablePrometheus      bool              `json:"enable_prometheus"`
+	PrometheusPort        int               `json:"prometheus_port"`
+}
+
+type Option func(*Config)
+
+func NewConfig(metaServers []string, opts ...Option) *Config {
+	cfg := &Config{
+		MetaServers:           metaServers,
+		PrometheusConstLabels: make(map[string]string),
+		EnablePrometheus:      false,
+		PrometheusPort:        9090,
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return cfg
+}
+
+func WithPerfCounterTags(tags map[string]string) Option {
+	return func(c *Config) {
+		c.PrometheusConstLabels = tags
+	}
+}
+
+func WithEnablePrometheus(enable bool) Option {
+	return func(c *Config) {
+		c.EnablePrometheus = enable
+	}
+}
+
+func WithPrometheusPort(port int) Option {
+	return func(c *Config) {
+		c.PrometheusPort = port
+	}
+}

@@ -188,6 +188,8 @@ type ReplicaManager struct {
 	creator NodeSessionCreator
 
 	unresponsiveHandler UnresponsiveHandler
+
+	enableMetrics bool
 }
 
 // UnresponsiveHandler is a callback executed when the session is in unresponsive state.
@@ -205,7 +207,7 @@ func (rm *ReplicaManager) GetReplica(addr string) *ReplicaSession {
 
 	if _, ok := rm.replicas[addr]; !ok {
 		r := &ReplicaSession{
-			NodeSession: rm.creator(addr, NodeTypeReplica),
+			NodeSession: rm.creator(addr, NodeTypeReplica, rm.enableMetrics),
 		}
 		withUnresponsiveHandler(r.NodeSession, rm.unresponsiveHandler)
 		rm.replicas[addr] = r
@@ -214,9 +216,14 @@ func (rm *ReplicaManager) GetReplica(addr string) *ReplicaSession {
 }
 
 func NewReplicaManager(creator NodeSessionCreator) *ReplicaManager {
+	return NewReplicaManagerWithMetrics(creator, DisableMetrics)
+}
+
+func NewReplicaManagerWithMetrics(creator NodeSessionCreator, enableMetrics bool) *ReplicaManager {
 	return &ReplicaManager{
-		replicas: make(map[string]*ReplicaSession),
-		creator:  creator,
+		replicas:      make(map[string]*ReplicaSession),
+		creator:       creator,
+		enableMetrics: enableMetrics,
 	}
 }
 

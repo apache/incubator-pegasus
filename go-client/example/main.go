@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 )
@@ -48,7 +49,7 @@ func main() {
 	}))
 	logger := pegalog.GetLogger()
 
-	cfg := &pegasus.Config{}
+	cfg := &config.Config{}
 	json.Unmarshal(rawCfg, cfg)
 	c := pegasus.NewClient(*cfg)
 
