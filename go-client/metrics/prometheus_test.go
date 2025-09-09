@@ -62,8 +62,16 @@ func TestMarkMeter_Concurrent(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		go func() {
 			defer wg.Done()
-			pm.MarkMeter(counterName, 1, map[string]string{"variable_label": "label1"})
-			pm.MarkMeter(counterName, 1, map[string]string{"variable_label": "label2"})
+			counter1, err := pm.GetOrCreateCounter(counterName, map[string]string{"variable_label": "label1"})
+			if err != nil {
+				t.Errorf("Failed to get or create counter: %v", err)
+			}
+			counter2, err := pm.GetOrCreateCounter(counterName, map[string]string{"variable_label": "label2"})
+			if err != nil {
+				t.Errorf("Failed to get or create counter: %v", err)
+			}
+			pm.MarkMeter(counter1, 1)
+			pm.MarkMeter(counter2, 1)
 		}()
 	}
 
@@ -100,8 +108,16 @@ func TestObserveSummary_Concurrent(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		go func(val float64) {
 			defer wg.Done()
-			pm.ObserveSummary(summaryName, val, map[string]string{"variable_label": "label1"})
-			pm.ObserveSummary(summaryName, val, map[string]string{"variable_label": "label2"})
+			summary1, err := pm.GetOrCreateSummary(summaryName, map[string]string{"variable_label": "label1"})
+			if err != nil {
+				t.Errorf("Failed to get or create summary: %v", err)
+			}
+			summary2, err := pm.GetOrCreateSummary(summaryName, map[string]string{"variable_label": "label2"})
+			if err != nil {
+				t.Errorf("Failed to get or create summary: %v", err)
+			}
+			pm.ObserveSummary(summary1, val)
+			pm.ObserveSummary(summary2, val)
 		}(float64(i))
 	}
 

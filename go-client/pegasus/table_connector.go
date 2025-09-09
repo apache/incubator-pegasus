@@ -733,9 +733,24 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 					status = "fail"
 				}
 			}
-			meta := strings.Join(p.meta.GetMetaIPAddrs(), ",")
-			pm.MarkMeter(fmt.Sprintf("pegasus_client_%s_%s_%s_total", p.tableName, optype.String(), status), 1, map[string]string{"meta": meta})
-			pm.ObserveSummary(fmt.Sprintf("pegasus_client_%s_%s_%s_latency", p.tableName, optype.String(), status), float64(elapsed), map[string]string{"meta": meta})
+			labels := map[string]string{
+				"table":  p.tableName,
+				"op":     optype.String(),
+				"status": status,
+				"meta":   strings.Join(p.meta.GetMetaIPAddrs(), ","),
+			}
+			counter, err := pm.GetOrCreateCounter("pegasus_client_operations_total", labels)
+			if err != nil {
+				p.logger.Printf("Failed to get counter: %v", err)
+			} else {
+				pm.MarkMeter(counter, 1)
+			}
+			summary, err := pm.GetOrCreateSummary("pegasus_client_operations_latency", labels)
+			if err != nil {
+				p.logger.Printf("Failed to get summary: %v", err)
+			} else {
+				pm.ObserveSummary(summary, float64(elapsed))
+			}
 		}()
 	}
 

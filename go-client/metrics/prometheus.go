@@ -96,7 +96,7 @@ func GetPrometheusMetrics() *PrometheusMetrics {
 	return singletonMetrics
 }
 
-func (pm *PrometheusMetrics) MarkMeter(counterName string, count int64, extraLabels map[string]string) {
+func (pm *PrometheusMetrics) GetOrCreateCounter(counterName string, extraLabels map[string]string) (prometheus.Counter, error) {
 	var varLabelKeys []string
 	if extraLabels != nil {
 		for k := range extraLabels {
@@ -118,22 +118,21 @@ func (pm *PrometheusMetrics) MarkMeter(counterName string, count int64, extraLab
 		wrapper.vec = promauto.With(pm.registry).NewCounterVec(
 			prometheus.CounterOpts{
 				Name:        counterName,
-				Help:        fmt.Sprintf("Counter for %s", counterName),
+				Help:        fmt.Sprintf("Total count of Pegasus client operations. Labels: op(operation type), status(result: success/fail/timeout), table(target table name), meta(meta server address)"),
 				ConstLabels: pm.constLabels,
 			},
 			varLabelKeys,
 		)
 	})
 
-	counter, err := wrapper.vec.GetMetricWith(extraLabels)
-	if err != nil {
-		pegalog.GetLogger().Fatalf("Failed to get metric with extra labels %v: %v, counter name: %v", extraLabels, err, counterName)
-		return
-	}
+	return wrapper.vec.GetMetricWith(extraLabels)
+}
+
+func (pm *PrometheusMetrics) MarkMeter(counter prometheus.Counter, count int64) {
 	counter.Add(float64(count))
 }
 
-func (pm *PrometheusMetrics) ObserveSummary(summaryName string, value float64, extraLabels map[string]string) {
+func (pm *PrometheusMetrics) GetOrCreateSummary(summaryName string, extraLabels map[string]string) (prometheus.Observer, error) {
 	var varLabelKeys []string
 	if extraLabels != nil {
 		for k := range extraLabels {
@@ -156,8 +155,8 @@ func (pm *PrometheusMetrics) ObserveSummary(summaryName string, value float64, e
 		summaryVec := promauto.With(pm.registry).NewSummaryVec(
 			prometheus.SummaryOpts{
 				Name:        summaryName,
-				Help:        fmt.Sprintf("Summary for %s", summaryName),
-				ConstLabels: pm.constLabels, // 使用常量标签
+				Help:        fmt.Sprintf("Summary of Pegasus client operation latency. Labels: op(operation type), status(result: success/fail/timeout), table(target table name), meta(meta server address)"),
+				ConstLabels: pm.constLabels,
 				Objectives:  map[float64]float64{0.99: 0.001, 0.999: 0.0001},
 				MaxAge:      5 * time.Minute,
 				AgeBuckets:  5,
@@ -168,12 +167,11 @@ func (pm *PrometheusMetrics) ObserveSummary(summaryName string, value float64, e
 		wrapper.summaryVec = summaryVec
 	})
 
-	summary, err := wrapper.summaryVec.GetMetricWith(extraLabels)
-	if err != nil {
-		pegalog.GetLogger().Fatalf("Failed to get metric with extra labels %v: %v, summary name: %v", extraLabels, err, summaryName)
-		return
-	}
-	summary.Observe(value)
+	return wrapper.summaryVec.GetMetricWith(extraLabels)
+}
+
+func (pm *PrometheusMetrics) ObserveSummary(observer prometheus.Observer, value float64) {
+	observer.Observe(value)
 }
 
 func mapToString(tags map[string]string) string {
