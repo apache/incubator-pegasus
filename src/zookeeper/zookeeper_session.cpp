@@ -24,6 +24,9 @@
  * THE SOFTWARE.
  */
 
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
+#include <openssl/evp.h>
 #include <sasl/sasl.h>
 #include <zookeeper/zookeeper.h>
 #include <algorithm>
@@ -209,9 +212,7 @@ zookeeper_session::zookeeper_session(const service_app_info &node) : _handle(nul
 namespace {
 
 int decode_base64(
-const char *content, size_t content_len,
-                                char *buf, size_t buf_len,
-                                size_t *passwd_len)
+    const char *content, size_t content_len, char *buf, size_t buf_len, size_t *passwd_len)
 {
     if (content_len == 0) {
         return SASL_BADPARAM;
@@ -231,9 +232,7 @@ const char *content, size_t content_len,
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
 
     bio = BIO_push(b64, bio);
-    const auto cleanup = dsn::defer([bio]() {
-    BIO_free_all(bio);
-            });
+    const auto cleanup = dsn::defer([bio]() { BIO_free_all(bio); });
 
     const int read_len = BIO_read(bio, buf, buf_len);
     if (read_len <= 0) {
@@ -245,9 +244,13 @@ const char *content, size_t content_len,
     return SASL_OK;
 }
 
-int zookeeper_password_decoder(const char *content, size_t content_len,
-                                void *context, char *buf, size_t buf_len,
-                                size_t *passwd_len) {
+int zookeeper_password_decoder(const char *content,
+                               size_t content_len,
+                               void *context,
+                               char *buf,
+                               size_t buf_len,
+                               size_t *passwd_len)
+{
     if (dsn::utils::iequals(FLAGS_sasl_password_encryption_scheme, "base64")) {
         return decode_base64(content, content_len, buf, buf_len, passwd_len);
     }
@@ -258,8 +261,7 @@ int zookeeper_password_decoder(const char *content, size_t content_len,
 zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
 {
     if (dsn::utils::is_empty(FLAGS_sasl_mechanisms_type)) {
-        return zookeeper_init(
-            FLAGS_hosts_list, watcher, FLAGS_timeout_ms, nullptr, context, 0);
+        return zookeeper_init(FLAGS_hosts_list, watcher, FLAGS_timeout_ms, nullptr, context, 0);
     }
 
     const int err = sasl_client_init(nullptr);
@@ -287,26 +289,23 @@ zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
         host = "zk-sasl-md5";
     }
 
-    zoo_sasl_password_t passwd = {FLAGS_sasl_password_file, nullptr,
-        dsn::utils::is_empty(FLAGS_sasl_password_encryption_scheme) ? nullptr : zookeeper_password_decoder};
+    zoo_sasl_password_t passwd = {FLAGS_sasl_password_file,
+                                  nullptr,
+                                  dsn::utils::is_empty(FLAGS_sasl_password_encryption_scheme)
+                                      ? nullptr
+                                      : zookeeper_password_decoder};
 
     zoo_sasl_params_t sasl_params = {0};
     sasl_params.service = FLAGS_sasl_service_name;
     sasl_params.host = host;
     sasl_params.mechlist = FLAGS_sasl_mechanisms_type;
-    sasl_params.callbacks = zoo_sasl_make_password_callbacks(
-        FLAGS_sasl_user_name, FLAGS_sasl_realm, &passwd);
+    sasl_params.callbacks =
+        zoo_sasl_make_password_callbacks(FLAGS_sasl_user_name, FLAGS_sasl_realm, &passwd);
 
-    return zookeeper_init_sasl(FLAGS_hosts_list,
-                                  watcher,
-                                  FLAGS_timeout_ms,
-                                  nullptr,
-                                  context,
-                                  0,
-                                  nullptr,
-                                  &sasl_params);
+    return zookeeper_init_sasl(
+        FLAGS_hosts_list, watcher, FLAGS_timeout_ms, nullptr, context, 0, nullptr, &sasl_params);
 }
-  
+
 } // anonymous namespace
 
 int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
@@ -316,8 +315,7 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
     if (_handle == nullptr) {
         errno = 0;
         _handle = create_zookeeper_handle(global_watcher, this);
-        CHECK_NOTNULL(_handle, "zookeeper session init failed: {}", 
-                     utils::safe_strerror(errno));
+        CHECK_NOTNULL(_handle, "zookeeper session init failed: {}", utils::safe_strerror(errno));
     }
 
     _watchers.push_back(watcher_object());
