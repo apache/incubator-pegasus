@@ -25,8 +25,8 @@
  */
 
 #include <openssl/bio.h>
-#include <openssl/buffer.h>
 #include <openssl/evp.h>
+#include <openssl/types.h>
 #include <sasl/sasl.h>
 #include <zookeeper/zookeeper.h>
 #include <algorithm>
@@ -202,10 +202,7 @@ const char *zookeeper_session::string_zoo_state(int zoo_state)
     return "invalid_state";
 }
 
-zookeeper_session::~zookeeper_session() {}
-
-zookeeper_session::zookeeper_session(const service_app_info &node)
-    : _srv_node(node), _handle(nullptr)
+zookeeper_session::zookeeper_session(const service_app_info &info) : _info(info), _handle(nullptr)
 {
 }
 
@@ -444,7 +441,7 @@ void zookeeper_session::init_non_dsn_thread()
 {
     static __thread int dsn_context_init = 0;
     if (dsn_context_init == 0) {
-        dsn_mimic_app(_srv_node.role_name.c_str(), _srv_node.index);
+        dsn_mimic_app(_info.role_name.c_str(), _info.index);
         dsn_context_init = 1;
     }
 }
