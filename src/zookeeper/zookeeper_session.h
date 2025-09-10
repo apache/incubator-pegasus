@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <string.h>
 #include <zookeeper/zookeeper.h>
+#include <cstdint>
+#include <cstring>
 #include <functional>
 #include <list>
 #include <memory>
@@ -41,8 +41,7 @@
 
 struct String_vector;
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 // A C++ wrapper of zookeeper c async APIs.
 class zookeeper_session
@@ -164,7 +163,6 @@ public:
     static const char *string_zoo_event(int zoo_event);
     static const char *string_zoo_state(int zoo_state);
 
-public:
     typedef std::function<void(int)> state_callback;
     zookeeper_session(const service_app_info &info);
     ~zookeeper_session();
@@ -197,7 +195,7 @@ private:
     global_strings_completion(int rc, const struct String_vector *strings, const void *data);
     static void global_void_completion(int rc, const void *data);
 };
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::dist::zookeeper_session);
