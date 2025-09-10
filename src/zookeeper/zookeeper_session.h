@@ -37,6 +37,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/fmt_utils.h"
+#include "utils/ports.h"
 #include "utils/synchronize.h"
 
 struct String_vector;
@@ -163,9 +164,10 @@ public:
     static const char *string_zoo_event(int zoo_event);
     static const char *string_zoo_state(int zoo_state);
 
-    typedef std::function<void(int)> state_callback;
-    zookeeper_session(const service_app_info &info);
-    ~zookeeper_session();
+    using state_callback = std::function<void(int)>;
+
+    explicit zookeeper_session(const service_app_info &info);
+    ~zookeeper_session() = default;
     int attach(void *callback_owner, const state_callback &cb);
     void detach(void *callback_owner);
 
@@ -175,6 +177,7 @@ public:
 
 private:
     utils::rw_lock_nr _watcher_lock;
+
     struct watcher_object
     {
         std::string watcher_path;
@@ -182,7 +185,8 @@ private:
         state_callback watcher_callback;
     };
     std::list<watcher_object> _watchers;
-    service_app_info _srv_node;
+
+    service_app_info _info;
     zhandle_t *_handle;
 
     void dispatch_event(int type, int zstate, const char *path);
@@ -194,6 +198,9 @@ private:
     static void
     global_strings_completion(int rc, const struct String_vector *strings, const void *data);
     static void global_void_completion(int rc, const void *data);
+
+    DISALLOW_COPY_AND_ASSIGN(zookeeper_session);
+    DISALLOW_MOVE_AND_ASSIGN(zookeeper_session);
 };
 
 } // namespace dsn::dist
