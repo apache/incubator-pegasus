@@ -204,9 +204,9 @@ const char *zookeeper_session::string_zoo_state(int zoo_state)
 
 zookeeper_session::~zookeeper_session() {}
 
-zookeeper_session::zookeeper_session(const service_app_info &node) : _handle(nullptr)
+zookeeper_session::zookeeper_session(const service_app_info &node)
+    : _srv_node(node), _handle(nullptr)
 {
-    _srv_node = node;
 }
 
 namespace {
@@ -218,7 +218,7 @@ int decode_base64(
         return SASL_BADPARAM;
     }
 
-    BIO *bio = BIO_new_mem_buf(content, content_len);
+    BIO *bio = BIO_new_mem_buf(content, static_cast<int>(content_len));
     if (bio == nullptr) {
         return SASL_FAIL;
     }
@@ -234,7 +234,7 @@ int decode_base64(
     bio = BIO_push(b64, bio);
     const auto cleanup = dsn::defer([bio]() { BIO_free_all(bio); });
 
-    const int read_len = BIO_read(bio, buf, buf_len);
+    const int read_len = BIO_read(bio, buf, static_cast<int>(buf_len));
     if (read_len <= 0) {
         return SASL_FAIL;
     }
@@ -295,7 +295,7 @@ zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
                                       ? nullptr
                                       : zookeeper_password_decoder};
 
-    zoo_sasl_params_t sasl_params = {0};
+    zoo_sasl_params_t sasl_params = {};
     sasl_params.service = FLAGS_sasl_service_name;
     sasl_params.host = host;
     sasl_params.mechlist = FLAGS_sasl_mechanisms_type;
@@ -318,7 +318,7 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
         CHECK_NOTNULL(_handle, "zookeeper session init failed: {}", utils::safe_strerror(errno));
     }
 
-    _watchers.push_back(watcher_object());
+    _watchers.emplace_back();
     _watchers.back().watcher_path = "";
     _watchers.back().callback_owner = callback_owner;
     _watchers.back().watcher_callback = cb;
