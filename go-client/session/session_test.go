@@ -39,7 +39,7 @@ import (
 )
 
 func newFakeNodeSession(reader io.Reader, writer io.Writer) *nodeSession {
-	n := newNodeSessionAddr("", NodeTypeMeta)
+	n := newNodeSessionAddr("", NodeTypeMeta, DisableMetrics)
 	n.conn = rpc.NewFakeRpcConn(reader, writer)
 	n.codec = &MockCodec{}
 	return n
@@ -47,7 +47,7 @@ func newFakeNodeSession(reader io.Reader, writer io.Writer) *nodeSession {
 
 func newMetaSession(addr string) *metaSession {
 	return &metaSession{
-		NodeSession: newNodeSession(addr, NodeTypeMeta),
+		NodeSession: newNodeSession(addr, NodeTypeMeta, DisableMetrics),
 		logger:      pegalog.GetLogger(),
 	}
 }
@@ -93,7 +93,7 @@ func TestNodeSession_LoopForDialingSuccess(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	addr := "www.baidu.com:80"
-	n := newNodeSessionAddr(addr, "meta")
+	n := newNodeSessionAddr(addr, "meta", DisableMetrics)
 	n.conn = rpc.NewRpcConn(addr)
 
 	n.tom.Go(n.loopForDialing)
@@ -116,7 +116,7 @@ func TestNodeSession_LoopForDialingCancelled(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	addr := "www.baidu.com:12321"
-	n := newNodeSessionAddr(addr, "meta")
+	n := newNodeSessionAddr(addr, "meta", DisableMetrics)
 	n.conn = rpc.NewRpcConn(addr)
 
 	n.tom.Go(n.loopForDialing)
@@ -169,7 +169,7 @@ func TestNodeSession_WaitUntilSessionReady(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	func() {
-		n := newNodeSession("www.baidu.com:12321", "meta")
+		n := newNodeSession("www.baidu.com:12321", "meta", DisableMetrics)
 		defer n.Close()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
@@ -181,7 +181,7 @@ func TestNodeSession_WaitUntilSessionReady(t *testing.T) {
 	}()
 
 	func() {
-		n := newNodeSession("0.0.0.0:8800", "meta")
+		n := newNodeSession("0.0.0.0:8800", "meta", DisableMetrics)
 		defer n.Close()
 
 		err := n.waitUntilSessionReady(context.Background())
@@ -195,7 +195,7 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta)
+	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta, DisableMetrics)
 	defer n.Close()
 
 	var expected []byte
@@ -237,7 +237,7 @@ func TestNodeSession_ConcurrentCallToEcho(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta)
+	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta, DisableMetrics)
 
 	mockCodec := &MockCodec{}
 	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
@@ -320,7 +320,7 @@ func TestNodeSession_RestartConnection(t *testing.T) {
 func TestNodeSession_ReceiveErrorCode(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta)
+	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta, DisableMetrics)
 	defer n.Close()
 
 	arg := rrdb.NewMetaQueryCfgArgs()
@@ -353,7 +353,7 @@ func TestNodeSession_Redial(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	addr := "0.0.0.0:8800"
-	n := newNodeSessionAddr(addr, "meta")
+	n := newNodeSessionAddr(addr, "meta", DisableMetrics)
 	n.conn = rpc.NewRpcConn(addr)
 	defer n.Close()
 
