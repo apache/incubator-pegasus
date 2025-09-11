@@ -47,7 +47,7 @@ func newFakeNodeSession(reader io.Reader, writer io.Writer) *nodeSession {
 
 func newMetaSession(addr string) *metaSession {
 	return &metaSession{
-		NodeSession: newNodeSessionAddr(addr, NodeTypeMeta, DisableMetrics),
+		NodeSession: newNodeSession(addr, NodeTypeMeta, DisableMetrics),
 		logger:      pegalog.GetLogger(),
 	}
 }
@@ -169,7 +169,7 @@ func TestNodeSession_WaitUntilSessionReady(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	func() {
-		n := newNodeSessionAddr("www.baidu.com:12321", "meta", DisableMetrics)
+		n := newNodeSession("www.baidu.com:12321", "meta", DisableMetrics)
 		defer n.Close()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
@@ -181,7 +181,7 @@ func TestNodeSession_WaitUntilSessionReady(t *testing.T) {
 	}()
 
 	func() {
-		n := newNodeSessionAddr("0.0.0.0:8800", "meta", DisableMetrics)
+		n := newNodeSession("0.0.0.0:8800", "meta", DisableMetrics)
 		defer n.Close()
 
 		err := n.waitUntilSessionReady(context.Background())
@@ -195,7 +195,7 @@ func TestNodeSession_CallToEcho(t *testing.T) {
 	defer leaktest.Check(t)()
 
 	// start echo server first
-	n := newNodeSessionAddr("0.0.0.0:8800", NodeTypeMeta, DisableMetrics)
+	n := newNodeSession("0.0.0.0:8800", NodeTypeMeta, DisableMetrics)
 	defer n.Close()
 
 	var expected []byte
