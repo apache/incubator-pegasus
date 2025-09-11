@@ -283,15 +283,16 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	return nil
 }
 
-func isPartitionValid(oldCount int, respCount int) bool {
-	return oldCount == 0 || oldCount == respCount || oldCount*2 == respCount || oldCount == respCount*2
+func isPartitionValid(respCount int) bool {
+	// Check if respCount is greater than or equal to 4 and is a power of 2
+	return respCount >= 4 && (respCount&(respCount-1)) == 0
 }
 
 func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfgResponse) error {
 	if resp.Err.Errno != base.ERR_OK.String() {
 		return errors.New(resp.Err.Errno)
 	}
-	if resp.PartitionCount == 0 || len(resp.Partitions) != int(resp.PartitionCount) || !isPartitionValid(len(p.parts), int(resp.PartitionCount)) {
+	if resp.PartitionCount == 0 || len(resp.Partitions) != int(resp.PartitionCount) || !isPartitionValid(int(resp.PartitionCount)) {
 		return fmt.Errorf("invalid table configuration: response [%v]", resp)
 	}
 
