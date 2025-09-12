@@ -16,8 +16,11 @@
 // under the License.
 
 #include <zookeeper/zookeeper.h>
+#include <functional>
 
+#include "gtest/gtest.h"
 #include "runtime/service_app.h"
+#include "utils/blob.h"
 #include "utils/flags.h"
 #include "zookeeper_session_test_base.h"
 

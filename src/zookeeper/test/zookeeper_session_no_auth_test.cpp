@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <memory>
+
 #include "gtest/gtest.h"
 #include "zookeeper_session_no_auth_test.h"
 #include "zookeeper_session_test.h"

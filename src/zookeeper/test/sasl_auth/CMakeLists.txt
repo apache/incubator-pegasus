@@ -37,9 +37,6 @@ set(MY_PROJ_LIBS
         hashtable
         gtest
         sasl2
-        gssapi_krb5
-        krb5
-        test_utils
         rocksdb
         lz4
         zstd
@@ -47,6 +44,10 @@ set(MY_PROJ_LIBS
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
-#set(MY_BINPLACES "config.ini" "run.sh")
+set(MY_BINPLACES
+        #"${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
+        "${CMAKE_CURRENT_SOURCE_DIR}/config-test.ini"
+        "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
+        "${CMAKE_CURRENT_SOURCE_DIR}/sasl_auth.password")
 
 dsn_add_test()

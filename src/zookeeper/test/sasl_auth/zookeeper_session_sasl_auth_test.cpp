@@ -15,11 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <memory>
+
 #include "gtest/gtest.h"
+#include "utils/flags.h"
 #include "zookeeper_session_sasl_auth_test.h"
 #include "zookeeper_session_test.h"
 
+DSN_DECLARE_string(sasl_mechanisms_type);
+DSN_DECLARE_string(sasl_user_name);
+DSN_DECLARE_string(sasl_password_file);
+DSN_DECLARE_string(sasl_password_encryption_scheme);
+
 namespace dsn::dist {
+
+ZookeeperSessionSASLAuthTest::ZookeeperSessionSASLAuthTest()
+{
+    FLAGS_sasl_mechanisms_type = "DIGEST-MD5";
+    FLAGS_sasl_user_name = "myuser";
+    FLAGS_sasl_password_file = "sasl_auth.password";
+    FLAGS_sasl_password_encryption_scheme = "base64";
+}
 
 using ZookeeperSessionSASLAuthTestImpl = ::testing::Types<ZookeeperSessionSASLAuthTest>;
 INSTANTIATE_TYPED_TEST_SUITE_P(ZookeeperSASLAuthTest,
