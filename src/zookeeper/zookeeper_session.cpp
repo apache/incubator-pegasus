@@ -202,7 +202,8 @@ const char *zookeeper_session::string_zoo_state(int zoo_state)
     return "invalid_state";
 }
 
-zookeeper_session::zookeeper_session(const service_app_info &info) : _info(info), _handle(nullptr)
+zookeeper_session::zookeeper_session(service_app_info info)
+    : _info(std::move(info)), _handle(nullptr)
 {
 }
 
