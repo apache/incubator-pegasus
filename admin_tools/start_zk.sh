@@ -23,6 +23,7 @@ CWD=$(cd $(dirname $0) && pwd)
 # Options:
 #    INSTALL_DIR    <dir>
 #    PORT           <port>
+#    SASL_AUTH      YES|NO
 
 if [ -z "$INSTALL_DIR" ]
 then
@@ -34,6 +35,11 @@ if [ -z "$PORT" ]
 then
     echo "ERROR: no PORT specified"
     exit 1
+fi
+
+if [ -z "$SASL_AUTH" ]
+then
+    SASL_AUTH=NO
 fi
 
 if ! mkdir -p "$INSTALL_DIR";
@@ -54,7 +60,23 @@ fi
 
 ZOOKEEPER_PORT=$PORT
 
-cp $ZOOKEEPER_HOME/conf/zoo_sample.cfg $ZOOKEEPER_HOME/conf/zoo.cfg
+if [ "$SASL_AUTH" == "YES" ]; then
+    {
+        echo "Server {"
+        echo "    org.apache.zookeeper.server.auth.DigestLoginModule required"
+        echo "    user_myuser=\"mypassword\";"
+        echo "};"
+    } >> $ZOOKEEPER_HOME/conf/jaas.conf
+
+    PROPERTIES=(
+        "-Dzookeeper.sessionRequireClientSASLAuth=true"
+        "-Dzookeeper.authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider"
+        "-Djava.security.auth.login.config=$ZOOKEEPER_HOME/conf/jaas.conf"
+    )
+    export JVMFLAGS="${JVMFLAGS} ${PROPERTIES[@]}"
+fi
+
+cp -a $ZOOKEEPER_HOME/conf/zoo_sample.cfg $ZOOKEEPER_HOME/conf/zoo.cfg
 sed -i "s@dataDir=/tmp/zookeeper@dataDir=$ZOOKEEPER_HOME/data@" $ZOOKEEPER_HOME/conf/zoo.cfg
 sed -i "s@clientPort=2181@clientPort=$ZOOKEEPER_PORT@" $ZOOKEEPER_HOME/conf/zoo.cfg
 echo "admin.enableServer=false" >> $ZOOKEEPER_HOME/conf/zoo.cfg

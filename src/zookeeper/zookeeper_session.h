@@ -166,7 +166,7 @@ public:
 
     using state_callback = std::function<void(int)>;
 
-    explicit zookeeper_session(const service_app_info &info);
+    explicit zookeeper_session(service_app_info info);
     ~zookeeper_session() = default;
     int attach(void *callback_owner, const state_callback &cb);
     void detach(void *callback_owner);
