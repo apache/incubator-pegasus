@@ -66,7 +66,7 @@ if [ "$SASL_AUTH" == "YES" ]; then
         echo "    org.apache.zookeeper.server.auth.DigestLoginModule required"
         echo "    user_myuser=\"mypassword\";"
         echo "};"
-    } >> $ZOOKEEPER_HOME/conf/jaas.conf
+    } > $ZOOKEEPER_HOME/conf/jaas.conf
 
     PROPERTIES=(
         "-Dzookeeper.sessionRequireClientSASLAuth=true"

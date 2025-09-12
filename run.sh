@@ -440,7 +440,7 @@ function run_test()
       recovery_test
       restore_test
       throttle_test
-      #zookeeper_sasl_auth_test
+      zookeeper_sasl_auth_test
     )
     local onebox_opts=""
     local test_opts=""

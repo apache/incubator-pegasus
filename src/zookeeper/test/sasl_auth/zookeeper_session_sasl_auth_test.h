@@ -21,6 +21,8 @@ namespace dsn::dist {
 
 class ZookeeperSessionSASLAuthTest : public ZookeeperSessionTestBase
 {
+protected:
+    ZookeeperSessionSASLAuthTest();
 };
 
 } // namespace dsn::dist

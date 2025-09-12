@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 #include <atomic>
 #include <memory>
+#include <string>
 
 #include "utils/ports.h"
 #include "utils/synchronize.h"
