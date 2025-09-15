@@ -16,8 +16,9 @@
 // under the License.
 
 #include <zookeeper/zookeeper.h>
-#include <functional>
+#include <utility>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "runtime/service_app.h"
 #include "utils/blob.h"
@@ -52,59 +53,153 @@ void ZookeeperSessionTestBase::SetUp()
 
 void ZookeeperSessionTestBase::TearDown() { _session->detach(this); }
 
-void ZookeeperSessionTestBase::test_create_node(const std::string &path,
-                                                const std::string &data,
-                                                int expected_zerr)
+void ZookeeperSessionTestBase::operate_node(
+    const std::string &path,
+    zookeeper_session::ZOO_OPERATION op_type,
+    const std::string &data,
+    std::function<void(zookeeper_session::zoo_opcontext *)> &&callback,
+    int &actual_zerr)
 {
-    int actual_zerr{0};
     utils::notify_event on_completed;
 
     auto *op = zookeeper_session::create_context();
-    op->_optype = zookeeper_session::ZOO_CREATE;
+    op->_optype = op_type;
     op->_input._path = path;
     op->_input._value = blob::create_from_bytes(std::string(data));
-    op->_callback_function = [&actual_zerr,
-                              &on_completed](zookeeper_session::zoo_opcontext *op) mutable {
-        actual_zerr = op->_output.error;
-
-        on_completed.notify();
-    };
-
-    _session->visit(op);
-    on_completed.wait();
-
-    ASSERT_EQ(expected_zerr, actual_zerr) << "the actual zoo error is: " << zerror(actual_zerr);
-}
-
-void ZookeeperSessionTestBase::test_get_data(const std::string &path,
-                                             int expected_zerr,
-                                             const std::string &expected_data)
-{
-    int actual_zerr{0};
-    std::string actual_data;
-    utils::notify_event on_completed;
-
-    auto *op = zookeeper_session::create_context();
-    op->_optype = zookeeper_session::ZOO_GET;
-    op->_input._path = path;
-    op->_input._value = blob::create_from_bytes(std::string(actual_data));
     op->_callback_function =
-        [&actual_zerr, &actual_data, &on_completed](zookeeper_session::zoo_opcontext *op) mutable {
+        [&actual_zerr, &callback, &on_completed](zookeeper_session::zoo_opcontext *op) mutable {
             actual_zerr = op->_output.error;
-            actual_data.assign(op->_output.get_op.value, op->_output.get_op.value_length);
+
+            if (callback) {
+                callback(op);
+            }
 
             on_completed.notify();
         };
 
     _session->visit(op);
     on_completed.wait();
+}
 
-    ASSERT_EQ(expected_zerr, actual_zerr) << "the actual zoo error is: " << zerror(actual_zerr);
+void ZookeeperSessionTestBase::operate_node(const std::string &path,
+                                            zookeeper_session::ZOO_OPERATION op_type,
+                                            int &actual_zerr)
+{
+    operate_node(path, op_type, "", nullptr, actual_zerr);
+}
+
+void ZookeeperSessionTestBase::test_operate_node(
+    const std::string &path,
+    zookeeper_session::ZOO_OPERATION op_type,
+    const std::string &data,
+    std::function<void(zookeeper_session::zoo_opcontext *)> &&callback,
+    int expected_zerr)
+{
+    int actual_zerr{0};
+    operate_node(path, op_type, data, std::move(callback), actual_zerr);
+
+    ASSERT_EQ(expected_zerr, actual_zerr)
+        << "expected_zerr = \"" << zerror(expected_zerr) << "\", actual_zerr = \""
+        << zerror(actual_zerr) << "\", path = " << path << ", op_type = " << op_type
+        << ", data = \"" << data << "\"";
+}
+
+void ZookeeperSessionTestBase::test_operate_node(const std::string &path,
+                                                 zookeeper_session::ZOO_OPERATION op_type,
+                                                 const std::string &data,
+                                                 int expected_zerr)
+{
+    test_operate_node(path, op_type, data, nullptr, expected_zerr);
+}
+
+void ZookeeperSessionTestBase::test_operate_node(
+    const std::string &path,
+    zookeeper_session::ZOO_OPERATION op_type,
+    std::function<void(zookeeper_session::zoo_opcontext *)> &&callback,
+    int expected_zerr)
+{
+    test_operate_node(path, op_type, "", std::move(callback), expected_zerr);
+}
+
+void ZookeeperSessionTestBase::test_operate_node(const std::string &path,
+                                                 zookeeper_session::ZOO_OPERATION op_type,
+                                                 int expected_zerr)
+{
+    test_operate_node(path, op_type, "", expected_zerr);
+}
+
+void ZookeeperSessionTestBase::test_create_node(const std::string &path,
+                                                const std::string &data,
+                                                int expected_zerr)
+{
+    test_operate_node(path, zookeeper_session::ZOO_CREATE, data, expected_zerr);
+}
+
+void ZookeeperSessionTestBase::test_delete_node(const std::string &path, int expected_zerr)
+{
+    test_operate_node(path, zookeeper_session::ZOO_DELETE, expected_zerr);
+}
+
+void ZookeeperSessionTestBase::test_delete_node(const std::string &path)
+{
+    using ::testing::AnyOf;
+    using ::testing::Eq;
+
+    int actual_zerr{0};
+    operate_node(path, zookeeper_session::ZOO_DELETE, actual_zerr);
+    ASSERT_THAT(actual_zerr, AnyOf(Eq(ZOK), Eq(ZNONODE)))
+        << "expected_zerr = \"" << zerror(ZOK) << "\" or \"" << zerror(ZNONODE)
+        << "\", actual_zerr = \"" << zerror(actual_zerr) << "\", path = " << path
+        << ", op_type = " << zookeeper_session::ZOO_DELETE;
+}
+
+void ZookeeperSessionTestBase::test_set_data(const std::string &path,
+                                             const std::string &data,
+                                             int expected_zerr)
+{
+    test_operate_node(path, zookeeper_session::ZOO_SET, data, expected_zerr);
+}
+
+void ZookeeperSessionTestBase::test_get_data(const std::string &path,
+                                             int expected_zerr,
+                                             const std::string &expected_data)
+{
+    std::string actual_data;
+    test_operate_node(
+        path,
+        zookeeper_session::ZOO_GET,
+        [&actual_data](zookeeper_session::zoo_opcontext *op) mutable {
+            actual_data.assign(op->_output.get_op.value, op->_output.get_op.value_length);
+        },
+        expected_zerr);
+
     if (expected_zerr != ZOK) {
         return;
     }
 
     ASSERT_EQ(expected_data, actual_data);
+}
+
+void ZookeeperSessionTestBase::test_get_data(const std::string &path, int expected_zerr)
+{
+    test_get_data(path, expected_zerr, "");
+}
+
+void ZookeeperSessionTestBase::test_exists_node(const std::string &path, int expected_zerr)
+{
+    test_operate_node(path, zookeeper_session::ZOO_EXISTS, expected_zerr);
+}
+
+void ZookeeperSessionTestBase::test_no_node(const std::string &path)
+{
+    test_exists_node(path, ZNONODE);
+    test_get_data(path, ZNONODE);
+}
+
+void ZookeeperSessionTestBase::test_has_data(const std::string &path, const std::string &data)
+{
+    test_exists_node(path, ZOK);
+    test_get_data(path, ZOK, data);
 }
 
 } // namespace dsn::dist

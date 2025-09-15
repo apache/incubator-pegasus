@@ -29,29 +29,25 @@ std::atomic_int g_test_result{0};
 class test_client : public dsn::service_app
 {
 public:
-    test_client(const dsn::service_app_info *info) : dsn::service_app(info) {}
+    explicit test_client(const dsn::service_app_info *info) : dsn::service_app(info) {}
 
     dsn::error_code start(const std::vector<std::string> &args) override
     {
-        int argc = args.size();
-        char *argv[20];
+        int argc = static_cast<int>(args.size());
+        std::vector<char *> argv;
         for (int i = 0; i < argc; ++i) {
-            argv[i] = const_cast<char *>(args[i].c_str());
+            argv.push_back(const_cast<char *>(args[i].c_str()));
         }
 
-        std::cout << "start test_client" << std::endl;
-        testing::InitGoogleTest(&argc, argv);
+        testing::InitGoogleTest(&argc, argv.data());
         g_test_result = RUN_ALL_TESTS();
+
         g_on_completed.notify();
 
         return ::dsn::ERR_OK;
     }
 
-    dsn::error_code stop(bool cleanup = false) override { return dsn::ERR_OK; }
-
-private:
-    dsn::utils::notify_event *_on_completed;
-    std::atomic_int *_test_result;
+    dsn::error_code stop(bool cleanup = false) override { return dsn::ERR_OK; } // NOLINT
 };
 
 GTEST_API_ int main(int argc, char **argv)

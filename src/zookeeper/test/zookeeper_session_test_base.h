@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -40,10 +41,54 @@ protected:
 
     void test_create_node(const std::string &path, const std::string &data, int expected_zerr);
 
+    void test_delete_node(const std::string &path, int expected_zerr);
+
+    void test_delete_node(const std::string &path);
+
+    void test_set_data(const std::string &path, const std::string &data, int expected_zerr);
+
     void
     test_get_data(const std::string &path, int expected_zerr, const std::string &expected_data);
 
+    void test_get_data(const std::string &path, int expected_zerr);
+
+    void test_exists_node(const std::string &path, int expected_zerr);
+
+    void test_no_node(const std::string &path);
+
+    void test_has_data(const std::string &path, const std::string &data);
+
 private:
+    void operate_node(const std::string &path,
+                      zookeeper_session::ZOO_OPERATION op_type,
+                      const std::string &data,
+                      std::function<void(zookeeper_session::zoo_opcontext *)> &&callback,
+                      int &actual_zerr);
+
+    void operate_node(const std::string &path,
+                      zookeeper_session::ZOO_OPERATION op_type,
+                      int &actual_zerr);
+
+    void test_operate_node(const std::string &path,
+                           zookeeper_session::ZOO_OPERATION op_type,
+                           const std::string &data,
+                           std::function<void(zookeeper_session::zoo_opcontext *)> &&callback,
+                           int expected_zerr);
+
+    void test_operate_node(const std::string &path,
+                           zookeeper_session::ZOO_OPERATION op_type,
+                           const std::string &data,
+                           int expected_zerr);
+
+    void test_operate_node(const std::string &path,
+                           zookeeper_session::ZOO_OPERATION op_type,
+                           std::function<void(zookeeper_session::zoo_opcontext *)> &&callback,
+                           int expected_zerr);
+
+    void test_operate_node(const std::string &path,
+                           zookeeper_session::ZOO_OPERATION op_type,
+                           int expected_zerr);
+
     std::unique_ptr<zookeeper_session> _session;
     std::atomic_int _zoo_state{0};
     std::atomic_bool _first_call{true};
