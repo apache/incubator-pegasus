@@ -433,6 +433,7 @@ ExternalProject_Add(lz4
         CONFIGURE_COMMAND cmake build/cmake
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DLZ4_POSITION_INDEPENDENT_LIB=ON
         -DCMAKE_BUILD_TYPE=Release
         -DLZ4_BUILD_CLI=OFF
