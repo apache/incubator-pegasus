@@ -43,6 +43,20 @@ index 04cf060..a4fc0e3 100644
                        <arg line="${native_cmake_args}"/>
                      </exec>
                      <exec executable="msbuild" dir="${project.build.directory}/native"
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt
+index 24ec297..e158d7b 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt
+@@ -16,7 +16,8 @@
+ # limitations under the License.
+ #
+ 
+-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
++cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
++project(hadoop-hdfs-native-client)
+ 
+ enable_testing()
+ 
 diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/CMakeLists.txt b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/CMakeLists.txt
 index c1ba3ad..44b18e6 100644
 --- a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/CMakeLists.txt
