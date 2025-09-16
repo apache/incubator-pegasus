@@ -242,14 +242,12 @@ ExternalProject_Add(zookeeper
 )
 
 ExternalProject_Add(libevent
-        URL ${OSS_URL_PREFIX}/libevent-2.1.12-stable.tar.gz
-        #https://github.com/libevent/libevent/archive/release-2.1.8-stable.tar.gz
-        https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/libevent-2.1.12-stable.tar.gz
-        #URL_MD5 80f8652e4b08d2ec86a5f5eb46b74510
-        URL_MD5 b5333f021f880fe76490d8a799cd79f4
-        #PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_libevent_for_macos.patch
-        PATCH_COMMAND ""
+        URL ${OSS_URL_PREFIX}/libevent-release-2.1.8-stable.tar.gz
+        https://github.com/libevent/libevent/archive/release-2.1.8-stable.tar.gz
+        URL_MD5 80f8652e4b08d2ec86a5f5eb46b74510
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_libevent_for_macos.patch
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DEVENT__DISABLE_DEBUG_MODE=On
         -DEVENT__DISABLE_BENCHMARK=On
         -DEVENT__DISABLE_TESTS=On
