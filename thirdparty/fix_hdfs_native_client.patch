@@ -30,3 +30,16 @@ index 24ec297aa27b..e77c38435bba 100644
 
  if(REQUIRE_LIBWEBHDFS)
      add_subdirectory(contrib/libwebhdfs)
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/pom.xml b/hadoop-hdfs-project/hadoop-hdfs-native-client/pom.xml
+index 04cf060..a4fc0e3 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/pom.xml
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/pom.xml
+@@ -147,7 +147,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
+                     <mkdir dir="${project.build.directory}/native"/>
+                     <exec executable="cmake" dir="${project.build.directory}/native"
+                           failonerror="true">
+-                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DHADOOP_BUILD=1 -DREQUIRE_FUSE=${require.fuse} -DREQUIRE_VALGRIND=${require.valgrind} -A '${env.PLATFORM}'"/>
++                      <arg line="${basedir}/src/ -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DHADOOP_BUILD=1 -DREQUIRE_FUSE=${require.fuse} -DREQUIRE_VALGRIND=${require.valgrind} -A '${env.PLATFORM}'"/>
+                       <arg line="${native_cmake_args}"/>
+                     </exec>
+                     <exec executable="msbuild" dir="${project.build.directory}/native"

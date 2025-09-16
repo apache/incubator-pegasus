@@ -159,7 +159,6 @@ ExternalProject_Add(hadoop
         URL https://mirrors.aliyun.com/apache/hadoop/common/hadoop-3.3.6/hadoop-3.3.6-src.tar.gz
         URL_MD5 285c07d8ad2c837c8ee04a4fa49c73cd
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_hdfs_native_client.patch
-        CMAKE_ARGS -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         COMMAND cd ${HDFS_CLIENT_DIR} && mvn package -Pdist,native -DskipTests -Dmaven.javadoc.skip=true -Dtar
         COMMAND cd ${HDFS_CLIENT_DIR} && cp -R target/hadoop-hdfs-native-client-3.3.6/include/. ${TP_OUTPUT}/include/hdfs && cp -R target/hadoop-hdfs-native-client-3.3.6/lib/native/. ${TP_OUTPUT}/lib
         CONFIGURE_COMMAND ""
