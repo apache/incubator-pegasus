@@ -188,6 +188,7 @@ ExternalProject_Add(thrift
         URL_MD5 88d667a8ae870d5adeca8cb7d6795442
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_thrift_build_and_link_errors.patch
         CMAKE_ARGS -DCMAKE_BUILD_TYPE=release
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DWITH_JAVA=OFF
         -DWITH_PYTHON=OFF
         -DWITH_C_GLIB=OFF
