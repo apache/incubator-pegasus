@@ -28,7 +28,7 @@
 dsn::utils::notify_event g_on_completed;
 std::atomic_int g_test_result{0};
 
-// Mock a service_app which is required by ZookeeperSessionTestBase.
+// Mock a service_app which is required by ZookeeperSessionConnector.
 class test_client : public dsn::service_app
 {
 public:

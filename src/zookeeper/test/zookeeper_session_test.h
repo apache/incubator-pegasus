@@ -39,22 +39,38 @@ protected:
                               const std::string &sub_path,
                               const std::string &data)
     {
-        // "this" pointer should be kept here since it is required to delay name lookup while
-        // accessing members of the base class that depends on the template parameters.
+        // The "this" pointer should be kept here since it is required to delay name lookup
+        // while accessing members of the base class that depends on the template parameters.
+        
+        // Delete the node if any in case previous tests failed.
+        this->test_delete_node(path);
+
+        // Ensure currently the node does not exist.
         this->test_no_node(path);
 
+        // Updating the node will fail since it has not been created.
         this->test_set_data(path, data, ZNONODE);
 
+        // The node has not been created, thus its sub nodes cannot be created.
         this->test_create_node(sub_path, data, ZNONODE);
 
+        // Create the node with some data.
         this->test_create_node(path, data, ZOK);
         this->test_has_data(path, data);
 
+        // Creating the node repeatedly will fail.
         this->test_create_node(path, data, ZNODEEXISTS);
 
+        // Updating the node with another data will succeed since it has been existing.
+        const auto another_data = fmt::format("another_{}", data);
+        this->test_set_data(path, another_data, ZOK);
+        this->test_has_data(path, another_data);
+
+        // Delete the node.
         this->test_delete_node(path, ZOK);
         this->test_no_node(path);
 
+        // Deleting the node repeatedly will fail.
         this->test_delete_node(path, ZNONODE);
     }
 
@@ -67,18 +83,22 @@ TYPED_TEST_SUITE_P(ZookeeperSessionTest);
 
 TYPED_TEST_P(ZookeeperSessionTest, OperateNode)
 {
+    // The node with single-level path.
     static const std::string kPath("/ZookeeperSessionTest");
+
+    // The node with two-level path.
     static const std::string kSubPath(fmt::format("{}/OperateNode", kPath));
+
     static const std::string kData("hello");
 
-    this->test_delete_node(kSubPath);
-    this->test_delete_node(kPath);
-
+    // Test the node whose path is single-level.
     this->test_node_operations(kPath, kSubPath, kData);
 
+    // Create the node again since next we will test its sub node.
     this->test_create_node(kPath, kData, ZOK);
     this->test_has_data(kPath, kData);
 
+    // Test the sub node whose path is two-level.
     this->test_node_operations(kSubPath, fmt::format("{}/SubNode", kSubPath), "world");
 }
 

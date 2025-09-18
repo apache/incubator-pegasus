@@ -299,7 +299,8 @@ zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
         host = FLAGS_sasl_service_fqdn;
     }
 
-    // DIGEST-MD5 requires '--server-fqdn zk-sasl-md5' for historical reasons on zk c client
+    // DIGEST-MD5 requires '--server-fqdn zk-sasl-md5' for historical reasons on ZooKeeper
+    // C client.
     if (dsn::utils::equals(FLAGS_sasl_mechanisms_type, "DIGEST-MD5")) {
         host = "zk-sasl-md5";
     }
@@ -327,6 +328,8 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
     utils::auto_write_lock l(_watcher_lock);
 
     if (_handle == nullptr) {
+        // zookeeper_init* functions will set `errno` while initialization failed due to some
+        // error.
         errno = 0;
         _handle = create_zookeeper_handle(global_watcher, this);
         CHECK_NOTNULL(_handle, "zookeeper session init failed: {}", utils::safe_strerror(errno));
