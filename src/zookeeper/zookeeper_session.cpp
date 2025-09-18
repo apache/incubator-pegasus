@@ -305,6 +305,7 @@ zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
         host = "zk-sasl-md5";
     }
 
+    // Only encrypted passwords need their decoders.
     zoo_sasl_password_t passwd = {FLAGS_sasl_password_file,
                                   nullptr,
                                   is_password_file_plaintext() ? nullptr

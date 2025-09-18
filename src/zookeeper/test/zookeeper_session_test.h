@@ -26,6 +26,13 @@
 
 namespace dsn::dist {
 
+// Test fixure that provides cases for zookeeper_session. The initialization processes
+// of the BaseFixtures it derives from may vary, which is also the reason why we use
+// a fixture class template and define a type-parameterized test suite.
+//
+// Any test that depends on the ZooKeeper server that starts with SASL auth should be put
+// into `zookeeper_sasl_auth_test`, which will start ZooKeeper server with configurations
+// that enable SASL auth.
 template <typename BaseFixture>
 class ZookeeperSessionTest : public BaseFixture
 {
