@@ -41,7 +41,7 @@ protected:
     {
         // The "this" pointer should be kept here since it is required to delay name lookup
         // while accessing members of the base class that depends on the template parameters.
-        
+
         // Delete the node if any in case previous tests failed.
         this->test_delete_node(path);
 
