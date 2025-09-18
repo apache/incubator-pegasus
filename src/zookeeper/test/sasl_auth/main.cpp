@@ -17,7 +17,6 @@
 
 #include <gtest/gtest.h>
 #include <atomic>
-#include <memory>
 #include <string>
 #include <vector>
 

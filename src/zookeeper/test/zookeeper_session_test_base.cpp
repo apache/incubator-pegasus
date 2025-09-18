@@ -16,6 +16,8 @@
 // under the License.
 
 #include <zookeeper/zookeeper.h>
+#include <atomic>
+#include <iostream>
 #include <utility>
 
 #include "gmock/gmock.h"
@@ -23,6 +25,7 @@
 #include "runtime/service_app.h"
 #include "utils/blob.h"
 #include "utils/flags.h"
+#include "utils/synchronize.h"
 #include "zookeeper_session_test_base.h"
 
 DSN_DECLARE_int32(timeout_ms);
@@ -42,7 +45,7 @@ void ZookeeperSessionConnector::test_connect(int expected_zoo_state)
     const int zoo_state = _session->attach(
         this,
         [expected_zoo_state, &actual_zoo_state, &first_call, &on_attached](int zoo_state) mutable {
-            std::cout << "zoo_state is " << zoo_state << std::endl;
+            std::cout << "[on_zoo_session_event] zoo_state = " << zoo_state << std::endl;
 
             actual_zoo_state = zoo_state;
 
@@ -58,11 +61,10 @@ void ZookeeperSessionConnector::test_connect(int expected_zoo_state)
     if (zoo_state != expected_zoo_state) {
         on_attached.wait_for(FLAGS_timeout_ms);
 
-        std::cout << "session_state is " << _session->session_state() << std::endl;
-
         if (actual_zoo_state != 0) {
             ASSERT_EQ(expected_zoo_state, actual_zoo_state);
         }
+
         ASSERT_EQ(expected_zoo_state, _session->session_state());
     }
 }

@@ -37,6 +37,7 @@
 #include "rpc/rpc_address.h"
 #include "runtime/app_model.h"
 #include "utils/defer.h"
+#include "utils/enum_helper.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

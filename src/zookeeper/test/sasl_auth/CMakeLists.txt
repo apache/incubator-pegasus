@@ -36,18 +36,12 @@ set(MY_PROJ_LIBS
         zookeeper
         hashtable
         gtest
-        sasl2
-        rocksdb
-        lz4
-        zstd
-        snappy)
+        sasl2)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 
 set(MY_BINPLACES
-        #"${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/config-test.ini"
-        "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
-        "${CMAKE_CURRENT_SOURCE_DIR}/sasl_auth.password")
+        "${CMAKE_CURRENT_SOURCE_DIR}/run.sh")
 
 dsn_add_test()

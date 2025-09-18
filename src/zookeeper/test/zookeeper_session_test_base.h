@@ -16,13 +16,11 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <atomic>
 #include <functional>
 #include <memory>
 #include <string>
 
 #include "utils/ports.h"
-#include "utils/synchronize.h"
 #include "zookeeper/zookeeper_session.h"
 
 namespace dsn::dist {
@@ -40,6 +38,9 @@ protected:
     void test_connect(int expected_zoo_state);
 
     std::unique_ptr<zookeeper_session> _session;
+
+    DISALLOW_COPY_AND_ASSIGN(ZookeeperSessionConnector);
+    DISALLOW_MOVE_AND_ASSIGN(ZookeeperSessionConnector);
 };
 
 class ZookeeperSessionTestBase : public ZookeeperSessionConnector
