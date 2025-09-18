@@ -15,11 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <zookeeper/zookeeper.h>
+#include <cstdio>
 #include <memory>
 
 #include "gtest/gtest.h"
 #include "utils/flags.h"
-#include "zookeeper_session_sasl_auth_test.h"
+#include "zookeeper/test/zookeeper_session_test_base.h"
 #include "zookeeper_session_test.h"
 
 DSN_DECLARE_string(sasl_mechanisms_type);
@@ -29,12 +31,86 @@ DSN_DECLARE_string(sasl_password_encryption_scheme);
 
 namespace dsn::dist {
 
-ZookeeperSessionSASLAuthTest::ZookeeperSessionSASLAuthTest()
+namespace {
+
+const std::string kPlaintextPassword("mypassword");
+const std::string kBase64Password("bXlwYXNzd29yZA==");
+
+void write_password(const std::string &password)
+{
+    FILE *f = fopen("sasl_auth.password", "w");
+    ASSERT_NE(nullptr, f);
+    ASSERT_EQ(password.size(), fwrite(password.c_str(), 1, password.size(), f));
+    ASSERT_EQ(0, fclose(f));
+    f = nullptr;
+}
+
+void config_sasl(const char *encryption_scheme)
 {
     FLAGS_sasl_mechanisms_type = "DIGEST-MD5";
     FLAGS_sasl_user_name = "myuser";
     FLAGS_sasl_password_file = "sasl_auth.password";
-    FLAGS_sasl_password_encryption_scheme = "base64";
+    FLAGS_sasl_password_encryption_scheme = encryption_scheme;
+}
+
+} // anonymous namespace
+
+class ZookeeperSessionSASLConnectTest : public ZookeeperSessionConnector
+{
+};
+
+TEST_F(ZookeeperSessionSASLConnectTest, CorrectPlaintextPasswordByEmptyScheme)
+{
+    config_sasl("");
+    write_password(kPlaintextPassword);
+    test_connect(ZOO_CONNECTED_STATE);
+}
+
+TEST_F(ZookeeperSessionSASLConnectTest, CorrectPlaintextPasswordBySpecifiedScheme)
+{
+    config_sasl("plaintext");
+    write_password(kPlaintextPassword);
+    test_connect(ZOO_CONNECTED_STATE);
+}
+
+TEST_F(ZookeeperSessionSASLConnectTest, CorrectBase64Password)
+{
+    config_sasl("base64");
+    write_password(kBase64Password);
+    test_connect(ZOO_CONNECTED_STATE);
+}
+
+TEST_F(ZookeeperSessionSASLConnectTest, WrongPlaintextPasswordByEmptyScheme)
+{
+    config_sasl("");
+    write_password("password");
+    test_connect(ZOO_AUTH_FAILED_STATE);
+}
+
+TEST_F(ZookeeperSessionSASLConnectTest, WrongPlaintextPasswordBySpecifiedScheme)
+{
+    config_sasl("plaintext");
+    write_password("password");
+    test_connect(ZOO_AUTH_FAILED_STATE);
+}
+
+TEST_F(ZookeeperSessionSASLConnectTest, WrongBase64Password)
+{
+    config_sasl("base64");
+    write_password("cGFzc3dvcmQ="); // base64 for "password".
+    test_connect(ZOO_AUTH_FAILED_STATE);
+}
+
+class ZookeeperSessionSASLAuthTest : public ZookeeperSessionTestBase
+{
+protected:
+    ZookeeperSessionSASLAuthTest();
+};
+
+ZookeeperSessionSASLAuthTest::ZookeeperSessionSASLAuthTest()
+{
+    write_password(kBase64Password);
+    config_sasl("base64");
 }
 
 using ZookeeperSessionSASLAuthTestImpl = ::testing::Types<ZookeeperSessionSASLAuthTest>;

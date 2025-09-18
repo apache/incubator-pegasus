@@ -18,10 +18,14 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "zookeeper_session_no_auth_test.h"
 #include "zookeeper_session_test.h"
+#include "zookeeper_session_test_base.h"
 
 namespace dsn::dist {
+
+class ZookeeperSessionNoAuthTest : public ZookeeperSessionTestBase
+{
+};
 
 using ZookeeperSessionNoAuthTestImpl = ::testing::Types<ZookeeperSessionNoAuthTest>;
 INSTANTIATE_TYPED_TEST_SUITE_P(ZookeeperNoAuthTest,

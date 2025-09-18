@@ -27,7 +27,22 @@
 
 namespace dsn::dist {
 
-class ZookeeperSessionTestBase : public testing::Test
+class ZookeeperSessionConnector : public testing::Test
+{
+public:
+    ~ZookeeperSessionConnector() override = default;
+
+protected:
+    ZookeeperSessionConnector() = default;
+
+    void TearDown() override;
+
+    void test_connect(int expected_zoo_state);
+
+    std::unique_ptr<zookeeper_session> _session;
+};
+
+class ZookeeperSessionTestBase : public ZookeeperSessionConnector
 {
 public:
     ~ZookeeperSessionTestBase() override = default;
@@ -88,11 +103,6 @@ private:
     void test_operate_node(const std::string &path,
                            zookeeper_session::ZOO_OPERATION op_type,
                            int expected_zerr);
-
-    std::unique_ptr<zookeeper_session> _session;
-    std::atomic_int _zoo_state{0};
-    std::atomic_bool _first_call{true};
-    utils::notify_event _on_attached;
 
     DISALLOW_COPY_AND_ASSIGN(ZookeeperSessionTestBase);
     DISALLOW_MOVE_AND_ASSIGN(ZookeeperSessionTestBase);

@@ -17,6 +17,9 @@
 
 #include <gtest/gtest.h>
 #include <atomic>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "runtime/app_model.h"
 #include "runtime/service_app.h"
@@ -26,6 +29,7 @@
 dsn::utils::notify_event g_on_completed;
 std::atomic_int g_test_result{0};
 
+// Mock a service_app which is required by ZookeeperSessionTestBase.
 class test_client : public dsn::service_app
 {
 public:
@@ -33,13 +37,6 @@ public:
 
     dsn::error_code start(const std::vector<std::string> &args) override
     {
-        int argc = static_cast<int>(args.size());
-        std::vector<char *> argv;
-        for (int i = 0; i < argc; ++i) {
-            argv.push_back(const_cast<char *>(args[i].c_str()));
-        }
-
-        testing::InitGoogleTest(&argc, argv.data());
         g_test_result = RUN_ALL_TESTS();
 
         g_on_completed.notify();

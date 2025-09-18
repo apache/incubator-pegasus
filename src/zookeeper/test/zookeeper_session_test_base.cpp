@@ -29,29 +29,47 @@ DSN_DECLARE_int32(timeout_ms);
 
 namespace dsn::dist {
 
-void ZookeeperSessionTestBase::SetUp()
+void ZookeeperSessionConnector::TearDown() { _session->detach(this); }
+
+void ZookeeperSessionConnector::test_connect(int expected_zoo_state)
 {
     _session = std::make_unique<zookeeper_session>(service_app::current_service_app_info());
-    _zoo_state = _session->attach(this, [this](int zoo_state) {
-        _zoo_state = zoo_state;
 
-        if (_first_call && zoo_state == ZOO_CONNECTED_STATE) {
-            _first_call = false;
-            _on_attached.notify();
-            return;
-        }
-    });
+    std::atomic_int actual_zoo_state{0};
+    std::atomic_bool first_call{true};
+    utils::notify_event on_attached;
+
+    const int zoo_state = _session->attach(
+        this,
+        [expected_zoo_state, &actual_zoo_state, &first_call, &on_attached](int zoo_state) mutable {
+            std::cout << "zoo_state is " << zoo_state << std::endl;
+
+            actual_zoo_state = zoo_state;
+
+            if (first_call && zoo_state == expected_zoo_state) {
+                first_call = false;
+                on_attached.notify();
+                return;
+            }
+        });
 
     ASSERT_TRUE(_session);
 
-    if (_zoo_state != ZOO_CONNECTED_STATE) {
-        _on_attached.wait_for(FLAGS_timeout_ms);
+    if (zoo_state != expected_zoo_state) {
+        on_attached.wait_for(FLAGS_timeout_ms);
 
-        ASSERT_EQ(ZOO_CONNECTED_STATE, _zoo_state);
+        std::cout << "session_state is " << _session->session_state() << std::endl;
+
+        if (actual_zoo_state != 0) {
+            ASSERT_EQ(expected_zoo_state, actual_zoo_state);
+        }
+        ASSERT_EQ(expected_zoo_state, _session->session_state());
     }
 }
 
-void ZookeeperSessionTestBase::TearDown() { _session->detach(this); }
+void ZookeeperSessionTestBase::SetUp() { test_connect(ZOO_CONNECTED_STATE); }
+
+void ZookeeperSessionTestBase::TearDown() { ZookeeperSessionConnector::TearDown(); }
 
 void ZookeeperSessionTestBase::operate_node(
     const std::string &path,

@@ -46,6 +46,13 @@
 #include "zookeeper/zookeeper.jute.h"
 #include "zookeeper_session.h"
 
+ENUM_BEGIN(ZooLogLevel, static_cast<ZooLogLevel>(0))
+ENUM_REG(ZOO_LOG_LEVEL_ERROR)
+ENUM_REG(ZOO_LOG_LEVEL_WARN)
+ENUM_REG(ZOO_LOG_LEVEL_INFO)
+ENUM_REG(ZOO_LOG_LEVEL_DEBUG)
+ENUM_END(ZooLogLevel)
+
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
 DSN_DEFINE_string(security,
                   zookeeper_kerberos_service_name,
@@ -61,7 +68,8 @@ DSN_DEFINE_int32(zookeeper,
                  timeout_ms,
                  30000,
                  "The timeout of accessing ZooKeeper, in milliseconds");
-DSN_DEFINE_string(zookeeper, hosts_list, "", "Zookeeper hosts list");
+DSN_DEFINE_string(zookeeper, zoo_log_level, "ZOO_LOG_LEVEL_INFO", "ZooKeeper log level");
+DSN_DEFINE_string(zookeeper, hosts_list, "", "ZooKeeper hosts list");
 DSN_DEFINE_string(zookeeper, sasl_service_name, "zookeeper", "");
 DSN_DEFINE_string(zookeeper,
                   sasl_service_fqdn,
@@ -80,8 +88,8 @@ DSN_DEFINE_string(zookeeper,
 DSN_DEFINE_string(zookeeper,
                   sasl_password_encryption_scheme,
                   "",
-                  "If non-empty, Specify the scheme in which the password is encrypted; "
-                  "otherwise, the password is unencrypted");
+                  "If non-empty, specify the scheme in which the password is encrypted; "
+                  "otherwise, the password is unencrypted plaintext");
 DSN_DEFINE_group_validator(enable_zookeeper_kerberos, [](std::string &message) -> bool {
     if (FLAGS_enable_zookeeper_kerberos &&
         !dsn::utils::equals(FLAGS_sasl_mechanisms_type, "GSSAPI")) {
@@ -256,8 +264,16 @@ int zookeeper_password_decoder(const char *content,
     return SASL_BADPARAM;
 }
 
+bool is_password_file_plaintext()
+{
+    return dsn::utils::is_empty(FLAGS_sasl_password_encryption_scheme) ||
+           dsn::utils::iequals(FLAGS_sasl_password_encryption_scheme, "plaintext");
+}
+
 zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
 {
+    zoo_set_debug_level(enum_from_string(FLAGS_zoo_log_level, static_cast<ZooLogLevel>(0)));
+
     if (dsn::utils::is_empty(FLAGS_sasl_mechanisms_type)) {
         return zookeeper_init(FLAGS_hosts_list, watcher, FLAGS_timeout_ms, nullptr, context, 0);
     }
@@ -289,9 +305,8 @@ zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
 
     zoo_sasl_password_t passwd = {FLAGS_sasl_password_file,
                                   nullptr,
-                                  dsn::utils::is_empty(FLAGS_sasl_password_encryption_scheme)
-                                      ? nullptr
-                                      : zookeeper_password_decoder};
+                                  is_password_file_plaintext() ? nullptr
+                                                               : zookeeper_password_decoder};
 
     zoo_sasl_params_t sasl_params = {};
     sasl_params.service = FLAGS_sasl_service_name;
