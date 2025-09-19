@@ -402,6 +402,7 @@ function run_test()
     local clear_flags="1"
     local enable_gcov="no"
     local all_tests=(
+      atomic_write_test
       backup_restore_test
       base_api_test
       base_test
@@ -495,6 +496,7 @@ function run_test()
         echo "====================== run $module =========================="
         # The tests which need start onebox.
         local need_onebox_tests=(
+          atomic_write_test
           backup_restore_test
           base_api_test
           bulk_load_test
@@ -542,14 +544,15 @@ function run_test()
         # Run server test.
         pushd ${BUILD_LATEST_DIR}/bin/${module}
         local function_tests=(
-	      backup_restore_test
-	      recovery_test
-	      restore_test
-	      base_api_test
-	      throttle_test
-	      bulk_load_test
-	      detect_hotspot_test
-	      partition_split_test
+          atomic_write_test
+          backup_restore_test
+          base_api_test
+          bulk_load_test
+          detect_hotspot_test
+          partition_split_test
+          recovery_test
+          restore_test
+          throttle_test
         )
         # function_tests need client used meta_server_list to connect
         if [[ "${function_tests[@]}"  =~ "${module}" ]]; then
