@@ -275,6 +275,7 @@ zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
 {
     zoo_set_debug_level(enum_from_string(FLAGS_zoo_log_level, static_cast<ZooLogLevel>(0)));
 
+    // SASL auth is enabled iff FLAGS_sasl_mechanisms_type is non-empty.
     if (dsn::utils::is_empty(FLAGS_sasl_mechanisms_type)) {
         return zookeeper_init(FLAGS_hosts_list, watcher, FLAGS_timeout_ms, nullptr, context, 0);
     }
@@ -285,11 +286,11 @@ zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
                  "Unable to initialize SASL library {}",
                  sasl_errstring(err, nullptr, nullptr));
 
-    if (!dsn::utils::is_empty(FLAGS_sasl_password_file)) {
-        CHECK(utils::filesystem::file_exists(FLAGS_sasl_password_file),
-              "sasl_password_file {} not exist!",
-              FLAGS_sasl_password_file);
-    }
+    CHECK(!dsn::utils::is_empty(FLAGS_sasl_password_file),
+          "sasl_password_file must be specified once SASL auth is enabled");
+    CHECK(utils::filesystem::file_exists(FLAGS_sasl_password_file),
+          "sasl_password_file {} not exist!",
+          FLAGS_sasl_password_file);
 
     const char *host = "";
     if (!dsn::utils::is_empty(FLAGS_sasl_service_fqdn)) {

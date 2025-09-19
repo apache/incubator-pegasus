@@ -38,6 +38,7 @@ public:
     {
         g_test_result = RUN_ALL_TESTS();
 
+        // All tests have been finished.
         g_on_completed.notify();
 
         return ::dsn::ERR_OK;
@@ -55,6 +56,7 @@ GTEST_API_ int main(int argc, char **argv)
 
     dsn_run_config("config-test.ini", false);
 
+    // Wait until all tests are finished.
     g_on_completed.wait();
 
 #ifndef ENABLE_GCOV

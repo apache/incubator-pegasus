@@ -36,7 +36,11 @@ set(MY_PROJ_LIBS
         zookeeper
         hashtable
         gtest
-        sasl2)
+        sasl2
+        rocksdb
+        lz4
+        zstd
+        snappy)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem)
 

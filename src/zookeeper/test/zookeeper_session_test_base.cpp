@@ -61,6 +61,7 @@ void ZookeeperSessionConnector::test_connect(int expected_zoo_state)
     if (zoo_state != expected_zoo_state) {
         on_attached.wait_for(FLAGS_timeout_ms);
 
+        // Callback for attach() may not be called while the state is changed.
         if (actual_zoo_state != 0) {
             ASSERT_EQ(expected_zoo_state, actual_zoo_state);
         }

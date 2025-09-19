@@ -93,9 +93,10 @@ TYPED_TEST_P(ZookeeperSessionTest, OperateNode)
     // The node with single-level path.
     static const std::string kPath("/ZookeeperSessionTest");
 
-    // The node with two-level path.
+    // The sub node with two-level path.
     static const std::string kSubPath(fmt::format("{}/OperateNode", kPath));
 
+    // The data of the node.
     static const std::string kData("hello");
 
     // Test the node whose path is single-level.

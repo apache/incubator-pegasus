@@ -25,6 +25,7 @@
 
 namespace dsn::dist {
 
+// Test connecting to the ZooKeeper server.
 class ZookeeperSessionConnector : public testing::Test
 {
 public:
