@@ -132,7 +132,7 @@ function wait_manual_compact()
     total_replica_count=$3
 
     query_cmd="remote_command -t replica-server replica.query-compact ${app_id}"
-    earliest_finish_time_ms=$(date -d @${trigger_time} +"%Y-%m-%d %H:%M:%S.000")
+    earliest_finish_time_ms=$(date -d @${trigger_time} +"%Y-%m-%d %H:%M:%S")
     echo "Checking once compact progress since [$trigger_time] [$earliest_finish_time_ms]..."
 
     slept=0
