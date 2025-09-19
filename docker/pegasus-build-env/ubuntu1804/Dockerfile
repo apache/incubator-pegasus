@@ -48,6 +48,7 @@ RUN apt-get update -y; \
                        bison \
                        libkrb5-dev \
                        libsasl2-dev \
+                       libsasl2-modules \
                        maven \
                        flex \
                        python3-setuptools; \
