@@ -806,8 +806,10 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 			return false, false, nil
 
 		case base.ERR_TIMEOUT:
-		case context.DeadlineExceeded:
+		case base.ERR_SESSION_RESET:
+			// connection with the server failed
 			confUpdate = true
+		case context.DeadlineExceeded:
 		case context.Canceled:
 			// timeout will not trigger a configuration update
 
