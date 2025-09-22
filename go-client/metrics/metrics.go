@@ -77,6 +77,7 @@ func RegisterPromSummary(summaryName string, extraLabels []string) *Summary {
 		},
 		extraLabels,
 	)
+	prometheus.MustRegister(summaryVec)
 
 	return &Summary{
 		summary: summaryVec,
