@@ -44,10 +44,10 @@ var (
 )
 
 func InitMetrics(cfg config.Config) {
-	constLabels = cfg.PrometheusConstLabels
-	constLabels["endpoint"] = GetLocalHostName()
-
 	once.Do(func() {
+		constLabels = cfg.PrometheusConstLabels
+		constLabels["endpoint"] = GetLocalHostName()
+
 		port := 9090
 		if cfg.PrometheusPort > 0 {
 			port = cfg.PrometheusPort
