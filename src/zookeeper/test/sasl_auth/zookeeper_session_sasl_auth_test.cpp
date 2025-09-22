@@ -45,7 +45,6 @@ void write_password(const std::string &password)
     ASSERT_NE(nullptr, f);
     ASSERT_EQ(password.size(), fwrite(password.c_str(), 1, password.size(), f));
     ASSERT_EQ(0, fclose(f));
-    f = nullptr;
 }
 
 // Configure SASL auth with specified `encryption_scheme`.

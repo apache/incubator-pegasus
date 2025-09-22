@@ -16,6 +16,7 @@
 // under the License.
 
 #include <zookeeper/zookeeper.h>
+#include <algorithm>
 #include <atomic>
 #include <iostream>
 #include <utility>
@@ -24,6 +25,7 @@
 #include "gtest/gtest.h"
 #include "runtime/service_app.h"
 #include "utils/blob.h"
+#include "utils/defer.h"
 #include "utils/flags.h"
 #include "utils/synchronize.h"
 #include "zookeeper_session_test_base.h"
@@ -79,7 +81,7 @@ void ZookeeperSessionTestBase::operate_node(
     zookeeper_session::ZOO_OPERATION op_type,
     const std::string &data,
     std::function<void(zookeeper_session::zoo_opcontext *)> &&callback,
-    int &actual_zerr)
+    int &zerr)
 {
     utils::notify_event on_completed;
 
@@ -88,8 +90,8 @@ void ZookeeperSessionTestBase::operate_node(
     op->_input._path = path;
     op->_input._value = blob::create_from_bytes(std::string(data));
     op->_callback_function =
-        [&actual_zerr, &callback, &on_completed](zookeeper_session::zoo_opcontext *op) mutable {
-            actual_zerr = op->_output.error;
+        [&zerr, &callback, &on_completed](zookeeper_session::zoo_opcontext *op) mutable {
+            zerr = op->_output.error;
 
             if (callback) {
                 callback(op);
@@ -104,9 +106,9 @@ void ZookeeperSessionTestBase::operate_node(
 
 void ZookeeperSessionTestBase::operate_node(const std::string &path,
                                             zookeeper_session::ZOO_OPERATION op_type,
-                                            int &actual_zerr)
+                                            int &zerr)
 {
-    operate_node(path, op_type, "", nullptr, actual_zerr);
+    operate_node(path, op_type, "", nullptr, zerr);
 }
 
 void ZookeeperSessionTestBase::test_operate_node(
@@ -211,10 +213,61 @@ void ZookeeperSessionTestBase::test_exists_node(const std::string &path, int exp
     test_operate_node(path, zookeeper_session::ZOO_EXISTS, expected_zerr);
 }
 
+void ZookeeperSessionTestBase::get_sub_nodes(const std::string &path,
+                                             int &zerr,
+                                             std::vector<std::string> &sub_nodes)
+{
+    utils::notify_event on_completed;
+
+    auto *op = zookeeper_session::create_context();
+    op->_optype = zookeeper_session::ZOO_GETCHILDREN;
+    op->_input._path = path;
+    op->_callback_function =
+        [&zerr, &sub_nodes, &on_completed](zookeeper_session::zoo_opcontext *op) mutable {
+            zerr = op->_output.error;
+
+            const auto notifier = defer([&on_completed]() { on_completed.notify(); });
+
+            if (zerr != ZOK) {
+                return;
+            }
+
+            const String_vector *strings = op->_output.getchildren_op.strings;
+
+            sub_nodes.clear();
+            sub_nodes.reserve(strings->count);
+            std::transform(strings->data,
+                           strings->data + strings->count,
+                           std::back_inserter(sub_nodes),
+                           [](const char *str) { return std::string(str); });
+        };
+
+    _session->visit(op);
+    on_completed.wait();
+}
+
+void ZookeeperSessionTestBase::test_get_sub_nodes(const std::string &path,
+                                                  int expected_zerr,
+                                                  std::vector<std::string> &&expected_sub_nodes)
+{
+    int actual_zerr{0};
+    std::vector<std::string> actual_sub_nodes;
+    get_sub_nodes(path, actual_zerr, actual_sub_nodes);
+
+    ASSERT_EQ(expected_zerr, actual_zerr)
+        << "expected_zerr = \"" << zerror(expected_zerr) << "\", actual_zerr = \""
+        << zerror(actual_zerr) << "\", path = " << path;
+
+    std::sort(expected_sub_nodes.begin(), expected_sub_nodes.end());
+    std::sort(actual_sub_nodes.begin(), actual_sub_nodes.end());
+    ASSERT_EQ(expected_sub_nodes, actual_sub_nodes);
+}
+
 void ZookeeperSessionTestBase::test_no_node(const std::string &path)
 {
     test_exists_node(path, ZNONODE);
     test_get_data(path, ZNONODE);
+    test_get_sub_nodes(path, ZNONODE, std::vector<std::string>());
 }
 
 void ZookeeperSessionTestBase::test_has_data(const std::string &path, const std::string &data)

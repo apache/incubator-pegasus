@@ -47,7 +47,8 @@
 #include "zookeeper/zookeeper.jute.h"
 #include "zookeeper_session.h"
 
-ENUM_BEGIN(ZooLogLevel, static_cast<ZooLogLevel>(0))
+#define INVALID_ZOO_LOG_LEVEL static_cast<ZooLogLevel>(0)
+ENUM_BEGIN(ZooLogLevel, INVALID_ZOO_LOG_LEVEL)
 ENUM_REG(ZOO_LOG_LEVEL_ERROR)
 ENUM_REG(ZOO_LOG_LEVEL_WARN)
 ENUM_REG(ZOO_LOG_LEVEL_INFO)
@@ -273,7 +274,9 @@ bool is_password_file_plaintext()
 
 zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
 {
-    zoo_set_debug_level(enum_from_string(FLAGS_zoo_log_level, static_cast<ZooLogLevel>(0)));
+    const auto zoo_log_level = enum_from_string(FLAGS_zoo_log_level, INVALID_ZOO_LOG_LEVEL);
+    CHECK(zoo_log_level != INVALID_ZOO_LOG_LEVEL, "Invalid zoo log level: {}", FLAGS_zoo_log_level);
+    zoo_set_debug_level(zoo_log_level);
 
     // SASL auth is enabled iff FLAGS_sasl_mechanisms_type is non-empty.
     if (dsn::utils::is_empty(FLAGS_sasl_mechanisms_type)) {
@@ -287,7 +290,7 @@ zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
                  sasl_errstring(err, nullptr, nullptr));
 
     CHECK(!dsn::utils::is_empty(FLAGS_sasl_password_file),
-          "sasl_password_file must be specified once SASL auth is enabled");
+          "sasl_password_file must be specified when SASL auth is enabled");
     CHECK(utils::filesystem::file_exists(FLAGS_sasl_password_file),
           "sasl_password_file {} not exist!",
           FLAGS_sasl_password_file);

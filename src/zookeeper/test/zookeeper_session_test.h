@@ -20,6 +20,8 @@
 #include <zookeeper/zookeeper.h>
 #include <atomic>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include "runtime/service_app.h"
 #include "utils/ports.h"
@@ -81,6 +83,27 @@ protected:
         this->test_delete_node(path, ZNONODE);
     }
 
+    void delete_nodes(const std::string &path, const std::vector<std::string> &sub_nodes)
+    {
+        for (const auto &sub_node : sub_nodes) {
+            this->test_delete_node(fmt::format("{}/{}", path, sub_node));
+        }
+        this->test_delete_node(path);
+    }
+
+    void test_sub_nodes(const std::string &path,
+                        const std::string &new_sub_node,
+                        std::vector<std::string> &&expected_sub_nodes)
+    {
+        const auto new_sub_path = fmt::format("{}/{}", path, new_sub_node);
+
+        // Create the new sub node.
+        this->test_create_node(new_sub_path, new_sub_node, ZOK);
+        this->test_has_data(new_sub_path, new_sub_node);
+
+        this->test_get_sub_nodes(path, ZOK, std::move(expected_sub_nodes));
+    }
+
 private:
     DISALLOW_COPY_AND_ASSIGN(ZookeeperSessionTest);
     DISALLOW_MOVE_AND_ASSIGN(ZookeeperSessionTest);
@@ -107,9 +130,44 @@ TYPED_TEST_P(ZookeeperSessionTest, OperateNode)
     this->test_has_data(kPath, kData);
 
     // Test the sub node whose path is two-level.
-    this->test_node_operations(kSubPath, fmt::format("{}/SubNode", kSubPath), "world");
+    this->test_node_operations(kSubPath, fmt::format("{}/ThirdLevelNode", kSubPath), "world");
 }
 
-REGISTER_TYPED_TEST_SUITE_P(ZookeeperSessionTest, OperateNode);
+TYPED_TEST_P(ZookeeperSessionTest, GetSubNodes)
+{
+    // The node with single-level path.
+    static const std::string kPath("/ZookeeperSessionTest");
+
+    // The data of the node.
+    static const std::string kData("hello");
+
+    // The sub nodes.
+    static const std::vector<std::string> kSubNodes{
+        "SubNode0",
+        "SubNode1",
+        "SubNode2",
+    };
+
+    // Delete the nodes if any in case previous tests failed.
+    this->delete_nodes(kPath, kSubNodes);
+    this->test_no_node(kPath);
+
+    // Create the node.
+    this->test_create_node(kPath, kData, ZOK);
+    this->test_has_data(kPath, kData);
+
+    for (size_t i = 0; i < kSubNodes.size(); ++i) {
+        // Create the sub node one by one.
+        this->test_sub_nodes(
+            kPath,
+            kSubNodes[i],
+            std::vector<std::string>(kSubNodes.begin(), kSubNodes.begin() + i + 1));
+    }
+
+    this->delete_nodes(kPath, kSubNodes);
+    this->test_no_node(kPath);
+}
+
+REGISTER_TYPED_TEST_SUITE_P(ZookeeperSessionTest, OperateNode, GetSubNodes);
 
 } // namespace dsn::dist
