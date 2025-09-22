@@ -27,7 +27,6 @@ import (
 	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/session"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Client manages the client sessions to the pegasus cluster specified by `Config`.
@@ -71,7 +70,7 @@ func newClientWithError(cfg config.Config) (Client, error) {
 	}
 
 	if cfg.EnablePrometheus {
-		metrics.InitMetrics(prometheus.DefaultRegisterer, cfg)
+		metrics.InitMetrics(cfg)
 	}
 
 	c := &pegasusClient{

@@ -719,12 +719,10 @@ func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKe
 }
 
 func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []byte, req op.Request, optype OpType) (interface{}, error) {
-	start := time.Now()
 	var errResult error
 	if p.enableMetrics {
+		start := time.Now()
 		defer func() {
-			elapsed := time.Since(start).Nanoseconds()
-			pm := metrics.GetPrometheusMetrics()
 			status := "success"
 			if errResult != nil {
 				if errors.Is(ctx.Err(), context.DeadlineExceeded) {
@@ -733,24 +731,14 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 					status = "fail"
 				}
 			}
-			labels := map[string]string{
-				"table":  p.tableName,
-				"op":     optype.String(),
-				"status": status,
-				"meta":   strings.Join(p.meta.GetMetaIPAddrs(), ","),
+			labels := []string{
+				p.tableName,
+				optype.String(),
+				status,
+				strings.Join(p.meta.GetMetaIPAddrs(), ","),
 			}
-			counter, err := pm.GetOrCreateCounter("pegasus_client_operations_total", labels)
-			if err != nil {
-				p.logger.Printf("Failed to get counter: %v", err)
-			} else {
-				pm.MarkMeter(counter, 1)
-			}
-			summary, err := pm.GetOrCreateSummary("pegasus_client_operations_latency", labels)
-			if err != nil {
-				p.logger.Printf("Failed to get summary: %v", err)
-			} else {
-				pm.ObserveSummary(summary, float64(elapsed))
-			}
+			elapsed := time.Since(start).Nanoseconds()
+			metrics.PegasusClientOperationsSummary.Observe(labels, float64(elapsed))
 		}()
 	}
 

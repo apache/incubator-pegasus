@@ -408,13 +408,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, partiti
 
 func (n *nodeSession) writeRequest(r *PegasusRpcCall) error {
 	if n.enableMetrics {
-		pm := metrics.GetPrometheusMetrics()
-		summary, err := pm.GetOrCreateSummary("pegasus_client_rpc_message_size_bytes", map[string]string{"rpc": r.Name})
-		if err != nil {
-			n.logger.Printf("Failed to get summary: %v", err)
-		} else {
-			pm.ObserveSummary(summary, float64(len(r.RawReq)))
-		}
+		metrics.PegasusClientRpcSizeSummary.Observe([]string{r.Name}, float64(len(r.RawReq)))
 	}
 
 	return n.conn.Write(r.RawReq)
