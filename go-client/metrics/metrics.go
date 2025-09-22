@@ -21,15 +21,15 @@ package metrics
 
 import (
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/config"
-	"github.com/apache/incubator-pegasus/go-client/pegalog"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Summary struct {
