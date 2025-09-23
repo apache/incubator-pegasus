@@ -29,6 +29,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_set>
 #include <utility>
@@ -49,12 +50,92 @@
 
 namespace dsn::utils {
 
+struct last_component_case
+{
+    const char *str;
+    const char *splitters;
+    std::string_view expected_result;
+};
+
+class LastComponentTest : public testing::TestWithParam<last_component_case>
+{
+protected:
+    template <typename TStr>
+    void test_get_last_component()
+    {
+        const auto &test_case = GetParam();
+
+        TStr str(test_case.str);
+        const auto actual_result = get_last_component(str, test_case.splitters);
+        EXPECT_EQ(test_case.expected_result, actual_result);
+    }
+};
+
+TEST_P(LastComponentTest, CString)
+{
+    test_get_last_component<const char *>();
+}
+
+TEST_P(LastComponentTest, String)
+{
+    test_get_last_component<std::string>();
+}
+
+TEST_P(LastComponentTest, StringView)
+{
+    test_get_last_component<std::string_view>();
+}
+
+const std::vector<last_component_case> last_component_tests= {
+    // Empty string.
+    {"", "", ""},
+    {"", "/", ""},
+    {"/", "", "/"},
+
+    // The only character is a splitter.
+    {"/", "/", ""},
+    {"/", "\\/", ""},
+
+    // The only character is not a splitter.
+    {"a", "/", "a"},
+    {"a", "\\/", "a"},
+    {"/", "\\", "/"},
+
+    // There is not any splitter in multiple characters.
+    {"aa", "/", "aa"},
+    {"ab", "/", "ab"},
+    {"abc", "/", "abc"},
+    {"abc", "\\/", "abc"},
+
+    // There is only one splitter in multiple characters.
+    {"a/", "/", ""},
+    {"/a", "/", "a"},
+    {"aa/", "/", ""},
+    {"a/a", "/", "a"},
+    {"/aa", "/", "aa"},
+    {"ab/", "/", ""},
+    {"a/b", "/", "b"},
+    {"/ab", "/", "ab"},
+    {"abc/", "/", ""},
+    {"ab/c", "/", "c"},
+    {"a/bc", "/", "bc"},
+    {"/abc", "/", "abc"},
+    {"abc\\", "\\/", ""},
+    {"ab\\c", "\\/", "c"},
+    {"a\\bc", "\\/", "bc"},
+    {"\\abc", "\\/", "abc"},
+
+    // There are adjacent splitters in multiple characters.
+    
+    // There are multiple splitters in multiple characters.
+    
+};
+
+INSTANTIATE_TEST_SUITE_P(StringTest, LastComponentTest, testing::ValuesIn(last_component_tests));
+
 TEST(core, get_last_component)
 {
-    ASSERT_EQ("a", get_last_component("a", "/"));
-    ASSERT_EQ("b", get_last_component("a/b", "/"));
     ASSERT_EQ("b", get_last_component("a//b", "/"));
-    ASSERT_EQ("", get_last_component("a/", "/"));
     ASSERT_EQ("c", get_last_component("a/b_c", "/_"));
 }
 

@@ -2249,8 +2249,8 @@ replica *replica_stub::new_replica(gpid gpid,
 
 /*static*/ std::string replica_stub::get_replica_dir_name(const std::string &dir)
 {
-    static const char splitters[] = {'\\', '/', 0};
-    return utils::get_last_component(dir, splitters);
+    constexpr std::string_view kSplitters("\\/");
+    return utils::get_last_component(dir, kSplitters);
 }
 
 /* static */ bool

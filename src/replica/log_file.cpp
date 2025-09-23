@@ -57,11 +57,14 @@ namespace replication {
 log_file::~log_file() { close(); }
 /*static */ log_file_ptr log_file::open_read(const char *path, /*out*/ error_code &err)
 {
-    char splitters[] = {'\\', '/', 0};
-    std::string name = utils::get_last_component(std::string(path), splitters);
+    constexpr std::string_view kSplitters("\\/");
+    const auto name = utils::get_last_component(path, kSplitters);
 
     // log.index.start_offset
-    if (name.length() < strlen("log.") || name.substr(0, strlen("log.")) != std::string("log.")) {
+    constexpr std::string_view kLogPrefix("log.");
+
+    // Up to C++20, consider using starts_with() instead.
+    if (name.compare(0, kLogPrefix.size(), kLogPrefix) != 0) {
         err = ERR_INVALID_PARAMETERS;
         LOG_WARNING("invalid log path {}", path);
         return nullptr;
