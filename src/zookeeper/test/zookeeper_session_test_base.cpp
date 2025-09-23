@@ -16,9 +16,11 @@
 // under the License.
 
 #include <zookeeper/zookeeper.h>
+#include <zookeeper/zookeeper.jute.h>
 #include <algorithm>
 #include <atomic>
 #include <iostream>
+#include <iterator>
 #include <utility>
 
 #include "gmock/gmock.h"

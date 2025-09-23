@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 #include <zookeeper/zookeeper.h>
 #include <atomic>
+#include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -161,7 +162,7 @@ TYPED_TEST_P(ZookeeperSessionTest, GetSubNodes)
         this->test_sub_nodes(
             kPath,
             kSubNodes[i],
-            std::vector<std::string>(kSubNodes.begin(), kSubNodes.begin() + i + 1));
+            std::vector<std::string>(kSubNodes.begin(), std::next(kSubNodes.begin(), i + 1)));
     }
 
     this->delete_nodes(kPath, kSubNodes);
