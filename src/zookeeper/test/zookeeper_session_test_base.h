@@ -38,7 +38,8 @@ protected:
 
     void TearDown() override;
 
-    // Connect to ZooKeeper and test the state is `expected_zoo_state` after connected.
+    // Connect to ZooKeeper and test. After connected, `expected_zoo_state` is the expected
+    // state.
     void test_connect(int expected_zoo_state);
 
     std::unique_ptr<zookeeper_session> _session;

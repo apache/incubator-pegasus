@@ -103,6 +103,7 @@ protected:
         this->test_create_node(new_sub_path, new_sub_node, ZOK);
         this->test_has_data(new_sub_path, new_sub_node);
 
+        // Check whether all fetched sub nodes are expected.
         this->test_get_sub_nodes(path, ZOK, std::move(expected_sub_nodes));
     }
 
@@ -150,7 +151,7 @@ TYPED_TEST_P(ZookeeperSessionTest, GetSubNodes)
         "SubNode2",
     };
 
-    // Delete the nodes if any in case previous tests failed.
+    // Delete all of the nodes if any in case previous tests failed.
     this->delete_nodes(kPath, kSubNodes);
     this->test_no_node(kPath);
 
@@ -167,6 +168,7 @@ TYPED_TEST_P(ZookeeperSessionTest, GetSubNodes)
                                  std::next(kSubNodes.begin(), static_cast<std::ptrdiff_t>(i + 1))));
     }
 
+    // Clear all of the nodes.
     this->delete_nodes(kPath, kSubNodes);
     this->test_no_node(kPath);
 }
