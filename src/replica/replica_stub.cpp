@@ -2253,7 +2253,7 @@ replica *replica_stub::new_replica(gpid gpid,
     return utils::get_last_component(dir, kSplitters);
 }
 
-/* static */ bool
+/*static*/ bool
 replica_stub::parse_replica_dir_name(std::string_view dir_name, gpid &pid, std::string &app_type)
 {
     std::vector<uint32_t> ids(2, 0);

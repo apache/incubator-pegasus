@@ -209,10 +209,12 @@ public:
     const disk_file *file_handle() const { return _handle; }
 
 private:
+    static error_code parse_log_file_name(const char *path, int &index, int64_t &start_offset);
+
     // make private, user should create log_file through open_read() or open_write()
     log_file(const char *path, disk_file *handle, int index, int64_t start_offset, bool is_read);
 
-private:
+    friend class ParseLogFileNameTest;
     friend class mock_log_file;
 
     uint32_t _crc32;

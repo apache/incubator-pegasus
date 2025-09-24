@@ -71,11 +71,14 @@ protected:
     }
 };
 
-TEST_P(GetLastComponentTest, CString) { test_get_last_component<const char *>(); }
+TEST_P(GetLastComponentTest, GetLastComponentCString) { test_get_last_component<const char *>(); }
 
-TEST_P(GetLastComponentTest, String) { test_get_last_component<std::string>(); }
+TEST_P(GetLastComponentTest, GetLastComponentString) { test_get_last_component<std::string>(); }
 
-TEST_P(GetLastComponentTest, StringView) { test_get_last_component<std::string_view>(); }
+TEST_P(GetLastComponentTest, GetLastComponentStringView)
+{
+    test_get_last_component<std::string_view>();
+}
 
 const std::vector<get_last_component_case> get_last_component_tests = {
     // Empty string.

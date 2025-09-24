@@ -33,6 +33,67 @@
 namespace dsn {
 namespace replication {
 
+struct parse_log_file_name_case
+{
+    const char *path;
+    error_code expected_err;
+    bool coredump;
+    int expected_index;
+    int64_t expected_start_offset;
+};
+
+class ParseLogFileNameTest : public testing::TestWithParam<parse_log_file_name_case>
+{
+public:
+    static void test_parse_log_file_name()
+    {
+        const auto &test_case = GetParam();
+
+        int actual_index{0};
+        int64_t actual_start_offset{0};
+        if (test_case.coredump) {
+            ASSERT_DEATH(
+                {
+                    (void)log_file::parse_log_file_name(
+                        test_case.path, actual_index, actual_start_offset);
+                },
+                "should coredump");
+            return;
+        }
+
+        ASSERT_EQ(test_case.expected_err,
+                  log_file::parse_log_file_name(test_case.path, actual_index, actual_start_offset));
+        if (test_case.expected_err != ERR_OK) {
+            return;
+        }
+
+        EXPECT_EQ(test_case.expected_index, actual_index);
+        EXPECT_EQ(test_case.expected_start_offset, actual_start_offset);
+    }
+};
+
+TEST_P(ParseLogFileNameTest, ParseLogFileName) { test_parse_log_file_name(); }
+
+const std::vector<parse_log_file_name_case> parse_log_file_name_tests{
+    // Empty file name.
+    {"", ERR_INVALID_PARAMETERS, false, 0, 0},
+
+    // Invalid prefix.
+    {".", ERR_INVALID_PARAMETERS, false, 0, 0},
+    {"g", ERR_INVALID_PARAMETERS, false, 0, 0},
+    {".g", ERR_INVALID_PARAMETERS, false, 0, 0},
+    {".gol", ERR_INVALID_PARAMETERS, false, 0, 0},
+    {"lo", ERR_INVALID_PARAMETERS, false, 0, 0},
+    {"log", ERR_INVALID_PARAMETERS, false, 0, 0},
+    {"log_", ERR_INVALID_PARAMETERS, false, 0, 0},
+    {"logs.", ERR_INVALID_PARAMETERS, false, 0, 0},
+
+};
+
+INSTANTIATE_TEST_SUITE_P(LogFileTest,
+                         ParseLogFileNameTest,
+                         testing::ValuesIn(parse_log_file_name_tests));
+
 class log_file_test : public replica_test_base
 {
 public:

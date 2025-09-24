@@ -26,10 +26,11 @@
 
 #include "log_file.h"
 
+#include <fmt/core.h>
 #include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -46,6 +47,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
 #include "utils/ports.h"
+#include "utils/string_conv.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -70,9 +72,8 @@ log_file::~log_file() { close(); }
 
 #define CHECK_LOG_FILE_NAME(expr, path) VALIDATE_LOG_FILE_NAME(CHECK, expr, path)
 
-namespace {
-
-dsn::error_code parse_log_file_name(const char *path, int &index, int64_t &start_offset)
+/*static*/ error_code
+log_file::parse_log_file_name(const char *path, int &index, int64_t &start_offset)
 {
     constexpr std::string_view kSplitters("\\/");
     const auto file_name = dsn::utils::get_last_component(path, kSplitters);
@@ -81,26 +82,22 @@ dsn::error_code parse_log_file_name(const char *path, int &index, int64_t &start
     constexpr std::string_view kLogPrefix("log.");
 
     // TODO(wangdan): from C++20, consider using std::string_view::starts_with() instead.
-    RETURN_IF_LOG_FILE_NAME_INVALID(file_name.compare(0, kLogPrefix.size(), kLogPrefix) == 0, path);
+    RETURN_IF_LOG_FILE_NAME_INVALID(file_name.rfind(kLogPrefix, 0) == 0, path);
 
-    const auto dot1 = file_name.find_first_of('.');
-    CHECK_LOG_FILE_NAME(dot1 != std::string::npos, path);
+    const auto begin = kLogPrefix.size();
+    const auto end = file_name.find_first_of('.', begin);
+    RETURN_IF_LOG_FILE_NAME_INVALID(end != std::string::npos, path);
 
-    const auto dot2 = file_name.find_first_of('.', dot1 + 1);
-    RETURN_IF_LOG_FILE_NAME_INVALID(dot2 != std::string::npos, path);
-
-    const auto index_str = file_name.substr(dot1 + 1, dot2 - dot1 - 1);
-    const auto start_offset_str = file_name.substr(dot2 + 1);
+    const auto index_str = file_name.substr(begin, end - begin);
+    const auto start_offset_str = file_name.substr(end + 1);
     RETURN_IF_LOG_FILE_NAME_INVALID(!index_str.empty() && !start_offset_str.empty(), path);
     RETURN_IF_LOG_FILE_NAME_INVALID(dsn::buf2numeric(index_str, index), path);
     RETURN_IF_LOG_FILE_NAME_INVALID(dsn::buf2numeric(start_offset_str, start_offset), path);
 
-    return dsn::ERR_OK;
+    return ERR_OK;
 }
 
-} // anonymous namespace
-
-/*static */ log_file_ptr log_file::open_read(const char *path, /*out*/ error_code &err)
+/*static*/ log_file_ptr log_file::open_read(const char *path, /*out*/ error_code &err)
 {
     int index{0};
     int64_t start_offset{0};

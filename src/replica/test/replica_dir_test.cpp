@@ -16,6 +16,7 @@
 // under the License.
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "common/gpid.h"
@@ -44,11 +45,17 @@ public:
     }
 };
 
-TEST_P(GetReplicaDirNameTest, CString) { test_get_replica_dir_name<const char *>(); }
+TEST_P(GetReplicaDirNameTest, GetReplicaDirNameCString)
+{
+    test_get_replica_dir_name<const char *>();
+}
 
-TEST_P(GetReplicaDirNameTest, String) { test_get_replica_dir_name<std::string>(); }
+TEST_P(GetReplicaDirNameTest, GetReplicaDirNameString) { test_get_replica_dir_name<std::string>(); }
 
-TEST_P(GetReplicaDirNameTest, StringView) { test_get_replica_dir_name<std::string_view>(); }
+TEST_P(GetReplicaDirNameTest, GetReplicaDirNameStringView)
+{
+    test_get_replica_dir_name<std::string_view>();
+}
 
 const std::vector<get_replica_dir_name_case> get_replica_dir_name_tests{
     // Linux absolute path and non-empty dir name.
@@ -104,11 +111,20 @@ public:
     }
 };
 
-TEST_P(ParseReplicaDirNameTest, CString) { test_parse_replica_dir_name<const char *>(); }
+TEST_P(ParseReplicaDirNameTest, ParseReplicaDirNameCString)
+{
+    test_parse_replica_dir_name<const char *>();
+}
 
-TEST_P(ParseReplicaDirNameTest, String) { test_parse_replica_dir_name<std::string>(); }
+TEST_P(ParseReplicaDirNameTest, ParseReplicaDirNameString)
+{
+    test_parse_replica_dir_name<std::string>();
+}
 
-TEST_P(ParseReplicaDirNameTest, StringView) { test_parse_replica_dir_name<std::string_view>(); }
+TEST_P(ParseReplicaDirNameTest, ParseReplicaDirNameStringView)
+{
+    test_parse_replica_dir_name<std::string_view>();
+}
 
 const std::vector<parse_replica_dir_name_case> parse_replica_dir_name_tests{
     // Empty dir name.
