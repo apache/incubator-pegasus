@@ -55,93 +55,108 @@ class task_tracker;
 namespace replication {
 
 log_file::~log_file() { close(); }
-/*static */ log_file_ptr log_file::open_read(const char *path, /*out*/ error_code &err)
+
+#define LOG_FILE_NAME_VALIDATOR(expr, message, path)                                               \
+    LOG_AND_RETURN_NOT_TRUE(WARNING, expr, dsn::ERR_INVALID_PARAMETERS, message, path);
+
+#define VALIDATE_LOG_FILE_NAME(validator, expr, path)                                              \
+    validator(expr,                                                                                \
+              "invalid log file name (its format should be  "                                      \
+              "log.<index>.<start_offset>):path = {}",                                             \
+              path)
+
+#define RETURN_IF_LOG_FILE_NAME_INVALID(expr, path)                                                \
+    VALIDATE_LOG_FILE_NAME(LOG_FILE_NAME_VALIDATOR, expr, path)
+
+#define CHECK_LOG_FILE_NAME(expr, path) VALIDATE_LOG_FILE_NAME(CHECK, expr, path)
+
+#define RENAME_TO_REMOVED(path, ...)                                                               \
+    do {                                                                                           \
+        {                                                                                          \
+            const auto new_path = fmt::format("{}.removed", path);                                 \
+            LOG_ERROR(                                                                             \
+                "invalid log file header of file {}. Rename the file to {}", path, new_path);      \
+            dsn::utils::filesystem::rename_path(path, new_path);                                   \
+        }                                                                                          \
+        while (0)
+
+namespace {
+
+dsn::error_code parse_log_file_name(const char *path, int &index, int64_t &start_offset)
 {
     constexpr std::string_view kSplitters("\\/");
-    const auto name = utils::get_last_component(path, kSplitters);
+    const auto file_name = dsn::utils::get_last_component(path, kSplitters);
 
-    // log.index.start_offset
+    // The format of the log file name: log.<index>.<start_offset>
     constexpr std::string_view kLogPrefix("log.");
 
-    // Up to C++20, consider using starts_with() instead.
-    if (name.compare(0, kLogPrefix.size(), kLogPrefix) != 0) {
-        err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path {}", path);
-        return nullptr;
-    }
+    // TODO(wangdan): from C++20, consider using std::string_view::starts_with() instead.
+    RETURN_IF_LOG_FILE_NAME_INVALID(file_name.compare(0, kLogPrefix.size(), kLogPrefix) == 0, path);
 
-    auto pos = name.find_first_of('.');
-    CHECK(pos != std::string::npos, "invalid log_file, name = {}", name);
-    auto pos2 = name.find_first_of('.', pos + 1);
-    if (pos2 == std::string::npos) {
-        err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path {}", path);
-        return nullptr;
-    }
+    const auto dot1 = file_name.find_first_of('.');
+    CHECK_LOG_FILE_NAME(dot1 != std::string::npos, path);
 
-    /* so the log file format is log.index_str.start_offset_str */
-    std::string index_str = name.substr(pos + 1, pos2 - pos - 1);
-    std::string start_offset_str = name.substr(pos2 + 1);
-    if (index_str.empty() || start_offset_str.empty()) {
-        err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path {}", path);
-        return nullptr;
-    }
+    const auto dot2 = file_name.find_first_of('.', dot1 + 1);
+    RETURN_IF_LOG_FILE_NAME_INVALID(dot2 != std::string::npos, path);
 
-    char *p = nullptr;
-    int index = static_cast<int>(strtol(index_str.c_str(), &p, 10));
-    if (*p != 0) {
-        err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path {}", path);
-        return nullptr;
-    }
-    int64_t start_offset = static_cast<int64_t>(strtoll(start_offset_str.c_str(), &p, 10));
-    if (*p != 0) {
-        err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path {}", path);
-        return nullptr;
+    const auto index_str = file_name.substr(dot1 + 1, dot2 - dot1 - 1);
+    const auto start_offset_str = file_name.substr(dot2 + 1);
+    RETURN_IF_LOG_FILE_NAME_INVALID(!index_str.empty() && !start_offset_str.empty(), path);
+    RETURN_IF_LOG_FILE_NAME_INVALID(dsn::buf2numeric(index_str, index), path);
+    RETURN_IF_LOG_FILE_NAME_INVALID(dsn::buf2numeric(start_offset_str, start_offset), path);
+
+    return dsn::ERR_OK;
+}
+
+} // anonymous namespace
+
+/*static */ log_file_ptr log_file::open_read(const char *path, /*out*/ error_code &err)
+{
+    int index{0};
+    int64_t start_offset{0};
+    err = parse_log_file_name(path, index, start_offset);
+    if (err != ERR_OK) {
+        return {};
     }
 
     disk_file *hfile = file::open(path, file::FileOpenType::kReadOnly);
     if (!hfile) {
         err = ERR_FILE_OPERATION_FAILED;
         LOG_WARNING("open log file {} failed", path);
-        return nullptr;
+        return {};
     }
 
-    auto lf = new log_file(path, hfile, index, start_offset, true);
+    log_file_ptr lf(new log_file(path, hfile, index, start_offset, true));
     lf->reset_stream();
+
     blob hdr_blob;
     err = lf->read_next_log_block(hdr_blob);
     if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF ||
         err == ERR_FILE_OPERATION_FAILED) {
-        std::string removed = std::string(path) + ".removed";
-        LOG_ERROR("read first log entry of file {} failed, err = {}. Rename the file to {}",
+        const auto new_path = fmt::format("{}.removed", path);
+        LOG_ERROR("read first log entry of file {} failed, err = {}. "
+                  "Rename the file to {}",
                   path,
                   err,
-                  removed);
-        delete lf;
-        lf = nullptr;
+                  new_path);
 
         // rename file on failure
-        dsn::utils::filesystem::rename_path(path, removed);
+        dsn::utils::filesystem::rename_path(path, new_path);
 
-        return nullptr;
+        return {};
     }
 
     binary_reader reader(std::move(hdr_blob));
     lf->read_file_header(reader);
     if (!lf->is_right_header()) {
-        std::string removed = std::string(path) + ".removed";
-        LOG_ERROR("invalid log file header of file {}. Rename the file to {}", path, removed);
-        delete lf;
-        lf = nullptr;
+        const auto new_path = fmt::format("{}.removed", path);
+        LOG_ERROR("invalid log file header of file {}. Rename the file to {}", path, new_path);
 
         // rename file on failure
-        dsn::utils::filesystem::rename_path(path, removed);
+        dsn::utils::filesystem::rename_path(path, new_path);
 
         err = ERR_INVALID_DATA;
-        return nullptr;
+        return {};
     }
 
     err = ERR_OK;

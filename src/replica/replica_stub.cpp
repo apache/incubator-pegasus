@@ -2250,7 +2250,7 @@ replica *replica_stub::new_replica(gpid gpid,
 /*static*/ std::string replica_stub::get_replica_dir_name(const std::string &dir)
 {
     constexpr std::string_view kSplitters("\\/");
-    return utils::get_last_component(dir, kSplitters);
+    return std::string(utils::get_last_component(dir, kSplitters));
 }
 
 /* static */ bool

@@ -162,7 +162,7 @@ error_s pattern_match(const std::string &str,
 std::string_view get_last_component(std::string_view str, std::string_view splitters)
 {
     const auto pos = str.find_last_of(splitters);
-    return (pos == std::string_view::npos) ? str: str.substr(pos + 1);
+    return (pos == std::string_view::npos) ? str : str.substr(pos + 1);
 }
 
 namespace {

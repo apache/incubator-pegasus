@@ -314,8 +314,8 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     // TODO: the read ops from zookeeper might get the staled data, need to fix
     int ec = ZOK;
     zoo_input &input = ctx->_input;
-    const char *path = .c_str();
-    std::string path = input._path
+    const char *path = input._path.c_str();
+
     switch (ctx->_optype) {
     case ZOO_CREATE:
         ec = zoo_acreate(_handle,
