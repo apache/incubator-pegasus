@@ -90,6 +90,7 @@ const std::vector<last_component_case> last_component_tests= {
     // Empty string.
     {"", "", ""},
     {"", "/", ""},
+    {"", "\\/", ""},
     {"/", "", "/"},
 
     // The only character is a splitter.
@@ -103,41 +104,73 @@ const std::vector<last_component_case> last_component_tests= {
 
     // There is not any splitter in multiple characters.
     {"aa", "/", "aa"},
+    {"aa", "\\/", "aa"},
     {"ab", "/", "ab"},
+    {"ab", "\\/", "ab"},
     {"abc", "/", "abc"},
     {"abc", "\\/", "abc"},
 
     // There is only one splitter in multiple characters.
     {"a/", "/", ""},
     {"/a", "/", "a"},
+    {"a/", "\\/", ""},
+    {"/a", "\\/", "a"},
     {"aa/", "/", ""},
     {"a/a", "/", "a"},
     {"/aa", "/", "aa"},
+    {"aa/", "\\/", ""},
+    {"a/a", "\\/", "a"},
+    {"/aa", "\\/", "aa"},
     {"ab/", "/", ""},
     {"a/b", "/", "b"},
     {"/ab", "/", "ab"},
-    {"abc/", "/", ""},
-    {"ab/c", "/", "c"},
-    {"a/bc", "/", "bc"},
-    {"/abc", "/", "abc"},
+    {"abc/", "\\/", ""},
+    {"ab/c", "\\/", "c"},
+    {"a/bc", "\\/", "bc"},
+    {"/abc", "\\/", "abc"},
     {"abc\\", "\\/", ""},
     {"ab\\c", "\\/", "c"},
     {"a\\bc", "\\/", "bc"},
     {"\\abc", "\\/", "abc"},
 
     // There are adjacent splitters in multiple characters.
+    {"a//", "/", ""},
+    {"a/\\", "\\/", ""},
+    {"//a", "/", "a"},
+    {"\\/a", "\\/", "a"},
+    {"aa//", "/", ""},
+    {"aa\\/", "/\\", ""},
+    {"a//a", "/", "a"},
+    {"a/\\a", "/\\", "a"},
+    {"//aa", "/", "aa"},
+    {"\\/aa", "/\\", "aa"},
+    {"ab//", "/", ""},
+    {"ab/\\", "\\/", ""},
+    {"a//b", "/", "b"},
+    {"a\\/b", "\\/", "b"},
+    {"//ab", "/", "ab"},
+    {"/\\ab", "\\/", "ab"},
+    {"abc//", "/", ""},
+    {"abc\\/", "\\/", ""},
+    {"ab//c", "/", "c"},
+    {"ab/\\c", "\\/", "c"},
+    {"a//bc", "/", "bc"},
+    {"a\\/bc", "/\\", "bc"},
+    {"//abc", "/", "abc"},
+    {"\\/abc", "/\\", "abc"},
     
     // There are multiple splitters in multiple characters.
-    
+    {"\\a/", "/\\", ""},
+    {"a\\a/", "/\\", ""},
+    {"/aa\\", "/\\", ""},
+    {"a/b\\", "/\\", ""},
+    {"\\ab/", "/\\", ""},
+    {"a/b/c", "/", "c"},
+    {"a\\b/c", "/\\", "c"},
+    {"ab/cd\\efg", "/\\", "efg"},
 };
 
 INSTANTIATE_TEST_SUITE_P(StringTest, LastComponentTest, testing::ValuesIn(last_component_tests));
-
-TEST(core, get_last_component)
-{
-    ASSERT_EQ("b", get_last_component("a//b", "/"));
-    ASSERT_EQ("c", get_last_component("a/b_c", "/_"));
-}
 
 TEST(core, crc)
 {
