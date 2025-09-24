@@ -34,6 +34,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -394,11 +395,10 @@ private:
 
     // Get the replica dir name from a potentially longer path (`dir` could be an absolute
     // or relative path).
-    static std::string get_replica_dir_name(const std::string &dir);
+    static std::string_view get_replica_dir_name(std::string_view dir);
 
     // Parse app id, partition id and app type from the replica dir name.
-    static bool
-    parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type);
+    static bool parse_replica_dir_name(std::string_view dir_name, gpid &pid, std::string &app_type);
 
     // Load an existing replica which is located in `dn` with `replica_dir`. Usually each
     // different `dn` represents a unique disk. `replica_dir` is the absolute path of the

@@ -50,14 +50,14 @@
 
 namespace dsn::utils {
 
-struct last_component_case
+struct get_last_component_case
 {
     const char *str;
     const char *splitters;
     std::string_view expected_result;
 };
 
-class LastComponentTest : public testing::TestWithParam<last_component_case>
+class GetLastComponentTest : public testing::TestWithParam<get_last_component_case>
 {
 protected:
     template <typename TStr>
@@ -65,19 +65,19 @@ protected:
     {
         const auto &test_case = GetParam();
 
-        TStr str(test_case.str);
+        const TStr str(test_case.str);
         const auto actual_result = get_last_component(str, test_case.splitters);
         EXPECT_EQ(test_case.expected_result, actual_result);
     }
 };
 
-TEST_P(LastComponentTest, CString) { test_get_last_component<const char *>(); }
+TEST_P(GetLastComponentTest, CString) { test_get_last_component<const char *>(); }
 
-TEST_P(LastComponentTest, String) { test_get_last_component<std::string>(); }
+TEST_P(GetLastComponentTest, String) { test_get_last_component<std::string>(); }
 
-TEST_P(LastComponentTest, StringView) { test_get_last_component<std::string_view>(); }
+TEST_P(GetLastComponentTest, StringView) { test_get_last_component<std::string_view>(); }
 
-const std::vector<last_component_case> last_component_tests = {
+const std::vector<get_last_component_case> get_last_component_tests = {
     // Empty string.
     {"", "", ""},
     {"", "/", ""},
@@ -161,7 +161,9 @@ const std::vector<last_component_case> last_component_tests = {
     {"ab/cd\\efg", "/\\", "efg"},
 };
 
-INSTANTIATE_TEST_SUITE_P(StringTest, LastComponentTest, testing::ValuesIn(last_component_tests));
+INSTANTIATE_TEST_SUITE_P(StringTest,
+                         GetLastComponentTest,
+                         testing::ValuesIn(get_last_component_tests));
 
 TEST(core, crc)
 {

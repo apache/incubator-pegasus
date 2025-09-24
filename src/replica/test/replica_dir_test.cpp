@@ -26,22 +26,29 @@ namespace dsn::replication {
 
 struct get_replica_dir_name_case
 {
-    std::string path;
-    std::string expected_replica_dir_name;
+    const char *path;
+    std::string_view expected_replica_dir_name;
 };
 
 class GetReplicaDirNameTest : public testing::TestWithParam<get_replica_dir_name_case>
 {
 public:
+    template <typename TPath>
     static void test_get_replica_dir_name()
     {
         const auto &test_case = GetParam();
-        const auto &actual_replica_dir_name = replica_stub::get_replica_dir_name(test_case.path);
+
+        const TPath path(test_case.path);
+        const auto actual_replica_dir_name = replica_stub::get_replica_dir_name(path);
         EXPECT_EQ(test_case.expected_replica_dir_name, actual_replica_dir_name);
     }
 };
 
-TEST_P(GetReplicaDirNameTest, GetReplicaDirName) { test_get_replica_dir_name(); }
+TEST_P(GetReplicaDirNameTest, CString) { test_get_replica_dir_name<const char *>(); }
+
+TEST_P(GetReplicaDirNameTest, String) { test_get_replica_dir_name<std::string>(); }
+
+TEST_P(GetReplicaDirNameTest, StringView) { test_get_replica_dir_name<std::string_view>(); }
 
 const std::vector<get_replica_dir_name_case> get_replica_dir_name_tests{
     // Linux absolute path and non-empty dir name.
@@ -68,7 +75,7 @@ INSTANTIATE_TEST_SUITE_P(ReplicaDirTest,
 
 struct parse_replica_dir_name_case
 {
-    std::string replica_dir_name;
+    const char *replica_dir_name;
     bool ok;
     gpid expected_pid;
     std::string expected_app_type;
@@ -77,15 +84,17 @@ struct parse_replica_dir_name_case
 class ParseReplicaDirNameTest : public testing::TestWithParam<parse_replica_dir_name_case>
 {
 public:
+    template <typename TDirName>
     static void test_parse_replica_dir_name()
     {
         const auto &test_case = GetParam();
 
+        const TDirName replica_dir_name(test_case.replica_dir_name);
         gpid actual_pid;
         std::string actual_app_type;
-        ASSERT_EQ(test_case.ok,
-                  replica_stub::parse_replica_dir_name(
-                      test_case.replica_dir_name, actual_pid, actual_app_type));
+        ASSERT_EQ(
+            test_case.ok,
+            replica_stub::parse_replica_dir_name(replica_dir_name, actual_pid, actual_app_type));
         if (!test_case.ok) {
             return;
         }
@@ -95,7 +104,11 @@ public:
     }
 };
 
-TEST_P(ParseReplicaDirNameTest, ParseReplicaDirName) { test_parse_replica_dir_name(); }
+TEST_P(ParseReplicaDirNameTest, CString) { test_parse_replica_dir_name<const char *>(); }
+
+TEST_P(ParseReplicaDirNameTest, String) { test_parse_replica_dir_name<std::string>(); }
+
+TEST_P(ParseReplicaDirNameTest, StringView) { test_parse_replica_dir_name<std::string_view>(); }
 
 const std::vector<parse_replica_dir_name_case> parse_replica_dir_name_tests{
     // Empty dir name.
