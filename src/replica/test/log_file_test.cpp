@@ -30,14 +30,12 @@
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 struct parse_log_file_name_case
 {
     const char *path;
     error_code expected_err;
-    bool coredump;
     int expected_index;
     int64_t expected_start_offset;
 };
@@ -51,18 +49,9 @@ public:
 
         int actual_index{0};
         int64_t actual_start_offset{0};
-        if (test_case.coredump) {
-            ASSERT_DEATH(
-                {
-                    (void)log_file::parse_log_file_name(
-                        test_case.path, actual_index, actual_start_offset);
-                },
-                "should coredump");
-            return;
-        }
-
         ASSERT_EQ(test_case.expected_err,
                   log_file::parse_log_file_name(test_case.path, actual_index, actual_start_offset));
+
         if (test_case.expected_err != ERR_OK) {
             return;
         }
@@ -76,18 +65,72 @@ TEST_P(ParseLogFileNameTest, ParseLogFileName) { test_parse_log_file_name(); }
 
 const std::vector<parse_log_file_name_case> parse_log_file_name_tests{
     // Empty file name.
-    {"", ERR_INVALID_PARAMETERS, false, 0, 0},
+    {"", ERR_INVALID_PARAMETERS, 0, 0},
 
     // Invalid prefix.
-    {".", ERR_INVALID_PARAMETERS, false, 0, 0},
-    {"g", ERR_INVALID_PARAMETERS, false, 0, 0},
-    {".g", ERR_INVALID_PARAMETERS, false, 0, 0},
-    {".gol", ERR_INVALID_PARAMETERS, false, 0, 0},
-    {"lo", ERR_INVALID_PARAMETERS, false, 0, 0},
-    {"log", ERR_INVALID_PARAMETERS, false, 0, 0},
-    {"log_", ERR_INVALID_PARAMETERS, false, 0, 0},
-    {"logs.", ERR_INVALID_PARAMETERS, false, 0, 0},
+    {".", ERR_INVALID_PARAMETERS, 0, 0},
+    {"g", ERR_INVALID_PARAMETERS, 0, 0},
+    {".g", ERR_INVALID_PARAMETERS, 0, 0},
+    {".gol", ERR_INVALID_PARAMETERS, 0, 0},
+    {"lo", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_", ERR_INVALID_PARAMETERS, 0, 0},
+    {"logs.", ERR_INVALID_PARAMETERS, 0, 0},
 
+    // No field.
+    {"log.", ERR_INVALID_PARAMETERS, 0, 0},
+
+    // Only one field.
+    {"log.0", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_0", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.012", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_012", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.1", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_1", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.123", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_123", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log..0", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log..1", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log..123", ERR_INVALID_PARAMETERS, 0, 0},
+
+    // Empty two fields.
+    {"log._", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log..", ERR_INVALID_PARAMETERS, 0, 0},
+
+    // Invalid splitters.
+    {"log.0_0", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_0.0", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.0_1", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_0.1", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.1_0", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_1.0", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.1_1", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_1.1", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.123_456", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log_123.456", ERR_INVALID_PARAMETERS, 0, 0},
+
+    // Invalid characters.
+    {"log.123.abc", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.123.a12", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.123.1a2", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.123.12a", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.abc.123", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.a12.123", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.1a2.123", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.12a.123", ERR_INVALID_PARAMETERS, 0, 0},
+
+    // Too many fields.
+    {"log.123.456.789", ERR_INVALID_PARAMETERS, 0, 0},
+
+    // Numbers that overflow.
+    {"log.2147483648.123", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.123.9223372036854775808", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log.2147483648.9223372036854775808", ERR_INVALID_PARAMETERS, 0, 0},
+
+    // Valid fields.
+    {"log.123.456", ERR_OK, 123, 456},
+    {"log.2147483647.123", ERR_OK, 2147483647, 123},
+    {"log.123.9223372036854775807", ERR_OK, 123, 9223372036854775807},
 };
 
 INSTANTIATE_TEST_SUITE_P(LogFileTest,
@@ -160,5 +203,4 @@ TEST_P(log_file_test, commit_log_blocks)
     ASSERT_EQ(tsk->get_aio_context()->file_offset, appender->start_offset() - _start_offset);
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

@@ -27,7 +27,7 @@
 #include "log_file.h"
 
 #include <fmt/core.h>
-#include <inttypes.h>
+#include <cinttypes>
 #include <cstdio>
 #include <cstring>
 #include <string_view>
