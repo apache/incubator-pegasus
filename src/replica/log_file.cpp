@@ -61,24 +61,14 @@ log_file::~log_file() { close(); }
 
 #define VALIDATE_LOG_FILE_NAME(validator, expr, path)                                              \
     validator(expr,                                                                                \
-              "invalid log file name (its format should be  "                                      \
-              "log.<index>.<start_offset>):path = {}",                                             \
+              "invalid log file name (its format should be log.<index>.<start_offset>): "          \
+              "path = {}",                                                                         \
               path)
 
 #define RETURN_IF_LOG_FILE_NAME_INVALID(expr, path)                                                \
     VALIDATE_LOG_FILE_NAME(LOG_FILE_NAME_VALIDATOR, expr, path)
 
 #define CHECK_LOG_FILE_NAME(expr, path) VALIDATE_LOG_FILE_NAME(CHECK, expr, path)
-
-#define RENAME_TO_REMOVED(path, ...)                                                               \
-    do {                                                                                           \
-        {                                                                                          \
-            const auto new_path = fmt::format("{}.removed", path);                                 \
-            LOG_ERROR(                                                                             \
-                "invalid log file header of file {}. Rename the file to {}", path, new_path);      \
-            dsn::utils::filesystem::rename_path(path, new_path);                                   \
-        }                                                                                          \
-        while (0)
 
 namespace {
 
@@ -120,7 +110,7 @@ dsn::error_code parse_log_file_name(const char *path, int &index, int64_t &start
     }
 
     disk_file *hfile = file::open(path, file::FileOpenType::kReadOnly);
-    if (!hfile) {
+    if (hfile == nullptr) {
         err = ERR_FILE_OPERATION_FAILED;
         LOG_WARNING("open log file {} failed", path);
         return {};
