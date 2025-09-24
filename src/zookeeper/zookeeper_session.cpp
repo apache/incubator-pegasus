@@ -315,7 +315,6 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     int ec = ZOK;
     zoo_input &input = ctx->_input;
     const char *path = input._path.c_str();
-
     switch (ctx->_optype) {
     case ZOO_CREATE:
         ec = zoo_acreate(_handle,
