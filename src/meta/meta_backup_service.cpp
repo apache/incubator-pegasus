@@ -1129,7 +1129,7 @@ backup_service::backup_service(meta_service *meta_svc,
 void backup_service::start_create_policy_meta_root(dsn::task_ptr callback)
 {
     LOG_DEBUG("create policy meta root({}) on remote_storage", _policy_meta_root);
-    _meta_svc->get_remote_storage()->create_node(
+    _meta_svc->get_remote_storage()->create_empty_node(
         _policy_meta_root, LPC_DEFAULT_CALLBACK, [this, callback](dsn::error_code err) {
             if (err == dsn::ERR_OK || err == ERR_NODE_ALREADY_EXIST) {
                 LOG_INFO(
@@ -1438,7 +1438,8 @@ void backup_service::do_add_policy(dsn::message_ex *req,
                 CHECK(false, "we can't handle this when create backup policy, err({})", err);
             }
         },
-        value);
+        value,
+        nullptr);
 }
 
 void backup_service::do_update_policy_to_remote_storage(

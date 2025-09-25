@@ -530,7 +530,8 @@ error_code server_state::sync_apps_to_remote_storage()
         apps_path,
         LPC_META_CALLBACK,
         [&err](error_code ec) { err = ec; },
-        blob(lock_state, 0, strlen(lock_state)));
+        blob(lock_state, 0, strlen(lock_state)),
+        nullptr);
     t->wait();
 
     if (err != ERR_NODE_ALREADY_EXIST && err != ERR_OK) {
@@ -1105,7 +1106,7 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
     std::string app_partition_path = get_partition_path(*app, pidx);
     dsn::blob value = dsn::json::json_forwarder<partition_configuration>::encode(app->pcs[pidx]);
     _meta_svc->get_remote_storage()->create_node(
-        app_partition_path, LPC_META_STATE_HIGH, on_create_app_partition, value);
+        app_partition_path, LPC_META_STATE_HIGH, on_create_app_partition, value, nullptr);
 }
 
 void server_state::get_allowed_partitions(dsn::message_ex *msg,
@@ -1150,7 +1151,7 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
     std::string app_dir = get_app_path(*app);
     blob value = app->to_json(app_status::AS_AVAILABLE);
     _meta_svc->get_remote_storage()->create_node(
-        app_dir, LPC_META_STATE_HIGH, on_create_app_root, value);
+        app_dir, LPC_META_STATE_HIGH, on_create_app_root, value, nullptr);
 }
 
 void server_state::create_app(dsn::message_ex *msg)

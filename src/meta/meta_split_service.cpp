@@ -248,7 +248,8 @@ dsn::task_ptr meta_split_service::add_child_on_remote_storage(register_child_rpc
                       std::placeholders::_1,
                       rpc,
                       create_new),
-            value);
+            value,
+            nullptr);
     } else {
         return _meta_svc->get_remote_storage()->set_data(
             partition_path,

@@ -502,7 +502,7 @@ void ranger_resource_policy_manager::start_to_dump_and_sync_policies()
     LOG_DEBUG("Start to create Ranger policy meta root on remote storage.");
     dsn::task_ptr sync_task = dsn::tasking::create_task(
         LPC_USE_RANGER_ACCESS_CONTROL, &_tracker, [this]() { dump_and_sync_policies(); });
-    _meta_svc->get_remote_storage()->create_node(
+    _meta_svc->get_remote_storage()->create_empty_node(
         _ranger_policy_meta_root,
         LPC_USE_RANGER_ACCESS_CONTROL,
         [this, sync_task](dsn::error_code err) {

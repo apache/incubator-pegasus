@@ -237,8 +237,8 @@ error_code meta_service::remote_storage_initialize()
     std::string current = "";
     for (unsigned int i = 0; i != slices.size(); ++i) {
         current = utils::filesystem::concat_path_unix_style(current, slices[i]);
-        task_ptr tsk =
-            _storage->create_node(current, LPC_META_CALLBACK, [&err](error_code ec) { err = ec; });
+        task_ptr tsk = _storage->create_empty_node(
+            current, LPC_META_CALLBACK, [&err](error_code ec) { err = ec; });
         tsk->wait();
         if (err != ERR_OK && err != ERR_NODE_ALREADY_EXIST) {
             LOG_ERROR("create node failed, node_path = {}, err = {}", current, err);

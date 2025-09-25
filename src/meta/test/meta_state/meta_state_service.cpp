@@ -68,9 +68,11 @@ void provider_basic_test(const service_creator_func &service_creator,
     service->node_exist("", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)->wait();
     // recursive delete test
     {
-        service->create_node("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
+        service->create_empty_node("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)
+            ->wait();
         service->node_exist("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
-        service->create_node("/1/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
+        service->create_empty_node("/1/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)
+            ->wait();
         service->get_children("/1",
                               META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
                               [](error_code ec, const std::vector<std::string> &children) {
@@ -87,8 +89,10 @@ void provider_basic_test(const service_creator_func &service_creator,
     }
     // repeat create test
     {
-        service->create_node("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
-        service->create_node("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)->wait();
+        service->create_empty_node("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)
+            ->wait();
+        service->create_empty_node("/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)
+            ->wait();
     }
     // check replay
     {
@@ -104,8 +108,11 @@ void provider_basic_test(const service_creator_func &service_creator,
         dsn::binary_writer writer;
         writer.write(0xdeadbeef);
         service
-            ->create_node(
-                "/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok, writer.get_buffer())
+            ->create_node("/1",
+                          META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
+                          expect_ok,
+                          writer.get_buffer(),
+                          nullptr)
             ->wait();
         service
             ->get_data("/1",

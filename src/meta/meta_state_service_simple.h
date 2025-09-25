@@ -84,11 +84,11 @@ public:
                        const err_callback &cb_create_tree,
                        dsn::task_tracker *tracker = nullptr) override;
 
-    virtual task_ptr create_node(const std::string &node,
-                                 task_code cb_code,
-                                 const err_callback &cb_create,
-                                 const blob &value = blob(),
-                                 dsn::task_tracker *tracker = nullptr) override;
+    task_ptr create_node(const std::string &node,
+                         task_code cb_code,
+                         const err_callback &cb_create,
+                         const blob &value,
+                         dsn::task_tracker *tracker) override;
 
     virtual task_ptr delete_node(const std::string &node,
                                  bool recursively_delete,

@@ -660,7 +660,7 @@ void lock_struct::create_locknode()
     input._path = std::make_shared<std::string>(
         fmt::format("{}/{}", _lock_dir, distributed_lock_service_zookeeper::LOCK_NODE_PREFIX));
     input._value.assign(_myself._node_value.c_str(), 0, _myself._node_value.length());
-    input._flags = ZOO_EPHEMERAL | ZOO_SEQUENCE;
+    input._flags = ZOO_EPHEMERAL_SEQUENTIAL;
     op->_callback_function = result_wrapper;
     _dist_lock_service->session()->visit(op);
 }
