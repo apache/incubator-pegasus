@@ -108,7 +108,7 @@ function usage_build()
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
     echo "   --use_jemalloc        build with jemalloc"
-    echo "   --separate_servers    whether to build pegasus_collector， pegasus_meta_server and pegasus_replica_server binaries separately, otherwise a combined pegasus_server binary will be built"
+    echo "   --separate_servers    whether to build pegasus_collector, pegasus_meta_server and pegasus_replica_server binaries separately, otherwise a combined pegasus_server binary will be built"
     echo "   --sanitizer <type>    build with sanitizer to check potential problems,
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
@@ -898,7 +898,7 @@ function run_start_onebox()
             echo "Invalid --opts arguments!"
             exit 1
         fi
-        sed -i '/ ^ \s*'"${kv[0]}"'/c '"${kv[0]}"' = '"${kv[1]}" ${ROOT}/config-server.ini
+        sed -i '/^\s*'"${kv[0]}"'/c '"${kv[0]}"' = '"${kv[1]}" ${ROOT}/config-server.ini
     done
 
     echo "starting server"
@@ -1729,15 +1729,15 @@ function run_shell()
         fi
 
         if [ ! -z "$MINOS2_CONFIG_FILE" -a -f "$minos2_config_file" ]; then
-            meta_section_start=$(grep -n " ^ *meta:" $minos2_config_file | head -1 | cut -d":" -f 1)
-            meta_section_end=$(grep -n " ^ *replica:" $minos2_config_file | head -1 | cut -d":" -f 1)
+            meta_section_start=$(grep -n "^ *meta:" $minos2_config_file | head -1 | cut -d":" -f 1)
+            meta_section_end=$(grep -n "^ *replica:" $minos2_config_file | head -1 | cut -d":" -f 1)
             sed -n "${meta_section_start},${meta_section_end}p" $minos2_config_file > $meta_section
             if [ $? -ne 0 ]; then
                 echo "ERROR: write $minos2_config_file meta section to $meta_section failed"
                 exit 1
             else
-                base_port=$(grep " ^ *base *:" $meta_section | cut -d":" -f2)
-                hosts_list=$(grep " ^ *- *[0-9]*" $meta_section | grep -oh "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+                base_port=$(grep "^ *base *:" $meta_section | cut -d":" -f2)
+                hosts_list=$(grep "^ *- *[0-9]*" $meta_section | grep -oh "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
                 config_file=$minos2_config_file
             fi
         elif [ ! -z "$MINOS_CONFIG_FILE" -a -f "$minos_config_file" ]; then
@@ -1748,8 +1748,8 @@ function run_shell()
                 echo "ERROR: write $minos_config_file meta section to $meta_section failed"
                 exit 1
             else
-                base_port=$(grep " ^ *base_port *=" $meta_section | cut -d"=" -f2)
-                hosts_list=$(grep " ^ *host\.[0-9]*" $meta_section | grep -oh "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+                base_port=$(grep "^ *base_port *=" $meta_section | cut -d"=" -f2)
+                hosts_list=$(grep "^ *host\.[0-9]*" $meta_section | grep -oh "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
                 config_file=$minos_config_file
             fi
         else
