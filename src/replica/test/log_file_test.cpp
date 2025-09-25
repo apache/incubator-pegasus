@@ -15,7 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <stddef.h>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -93,9 +94,10 @@ const std::vector<parse_log_file_name_case> parse_log_file_name_tests{
     {"log..1", ERR_INVALID_PARAMETERS, 0, 0},
     {"log..123", ERR_INVALID_PARAMETERS, 0, 0},
 
-    // Empty two fields.
+    // Empty fields.
     {"log._", ERR_INVALID_PARAMETERS, 0, 0},
     {"log..", ERR_INVALID_PARAMETERS, 0, 0},
+    {"log...", ERR_INVALID_PARAMETERS, 0, 0},
 
     // Invalid splitters.
     {"log.0_0", ERR_INVALID_PARAMETERS, 0, 0},
