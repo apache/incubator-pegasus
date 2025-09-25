@@ -85,7 +85,7 @@ bool is_zookeeper_timeout(int zookeeper_error)
 #define ADD_REF_AND_DELAY_CALL(op, _this)                                                          \
     LOG_WARNING("operation {} on {} encounter error, retry later",                                 \
                 zookeeper_session::string_zoo_operation(op->_optype),                              \
-                op->_input._path);                                                                 \
+                *op->_input._path);                                                                 \
     zookeeper_session::add_ref(op);                                                                \
     tasking::enqueue(                                                                              \
         TASK_CODE_DLOCK,                                                                           \
@@ -283,17 +283,20 @@ void lock_struct::remove_duplicated_locknode(std::string &&znode_path)
         }
 
         EXECUTE(
-            std::bind(&lock_struct::after_remove_duplicated_locknode,
+            [_this]() {
+            lock_struct::after_remove_duplicated_locknode(
                       _this,
                       op->_output.error,
-                      std::shared_ptr<std::string>(new std::string(std::move(op->_input._path)))),
+                      op->_input._path
+                    );
+            },
             _this);
     };
 
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
     op->_optype = zookeeper_session::ZOO_DELETE;
     op->_callback_function = delete_callback_wrapper;
-    op->_input._path = std::move(znode_path);
+    op->_input._path = std::make_shared<std::string>(std::move(znode_path));
     _dist_lock_service->session()->visit(op);
 }
 
@@ -447,7 +450,7 @@ void lock_struct::get_lock_owner(bool watch_myself)
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
     op->_optype = zookeeper_session::ZOO_GET;
     op->_callback_function = after_get_owner_wrapper;
-    op->_input._path = _lock_dir + "/" + _owner._node_seq_name;
+    op->_input._path = std::make_shared<std::string>(fmt::format("{}/{}", _lock_dir, _owner._node_seq_name));
 
     op->_input._is_set_watch = 1;
     op->_input._owner = this;
@@ -573,7 +576,7 @@ void lock_struct::get_lockdir_nodes()
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
     op->_optype = zookeeper_session::ZOO_GETCHILDREN;
     op->_callback_function = result_wrapper;
-    op->_input._path = _lock_dir;
+    op->_input._path = std::make_shared<std::string>(_lock_dir);
     op->_input._is_set_watch = 0;
     _dist_lock_service->session()->visit(op);
 }
@@ -648,7 +651,7 @@ void lock_struct::create_locknode()
     };
 
     zookeeper_session::zoo_input &input = op->_input;
-    input._path = _lock_dir + "/" + distributed_lock_service_zookeeper::LOCK_NODE_PREFIX;
+    input._path = std::make_shared<std::stirng>("{}/{}", _lock_dir, distributed_lock_service_zookeeper::LOCK_NODE_PREFIX);
     input._value.assign(_myself._node_value.c_str(), 0, _myself._node_value.length());
     input._flags = ZOO_EPHEMERAL | ZOO_SEQUENCE;
     op->_callback_function = result_wrapper;
@@ -677,7 +680,7 @@ void lock_struct::after_create_lockdir(lock_struct_ptr _this, int ec)
     }
 
     if (ZINVALIDSTATE == ec) {
-        LOG_ERROR("create lock dir failed got session expire, _path({})", _this->_lock_dir);
+        LOG_ERROR("create lock dir {} failed got session expire", _this->_lock_dir);
         _this->_lock_dir.clear();
         _this->on_expire();
         return;
@@ -714,7 +717,7 @@ void lock_struct::try_lock(lock_struct_ptr _this,
         };
         zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
         op->_optype = zookeeper_session::ZOO_CREATE;
-        op->_input._path = _this->_lock_dir;
+        op->_input._path = std::make_shared<std::string>(_this->_lock_dir);
         op->_callback_function = result_wrapper;
         _this->_dist_lock_service->session()->visit(op);
         return;
@@ -788,7 +791,7 @@ void lock_struct::remove_my_locknode(std::string &&znode_path,
     lock_struct_ptr _this = this;
     auto result_wrapper =
         [_this, ignore_callback, remove_for_unlock](zookeeper_session::zoo_opcontext *op) {
-            LOG_INFO("delete node {}, result({})", op->_input._path, zerror(op->_output.error));
+            LOG_INFO("delete node {}, result({})", *op->_input._path, zerror(op->_output.error));
             if (is_zookeeper_timeout(op->_output.error)) {
                 ADD_REF_AND_DELAY_CALL(op, _this);
                 return;
@@ -804,7 +807,7 @@ void lock_struct::remove_my_locknode(std::string &&znode_path,
         };
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
     op->_optype = zookeeper_session::ZOO_DELETE;
-    op->_input._path = std::move(znode_path);
+    op->_input._path = std::make_shared<std::string>(std::move(znode_path));
     op->_callback_function = result_wrapper;
     _dist_lock_service->session()->visit(op);
 }

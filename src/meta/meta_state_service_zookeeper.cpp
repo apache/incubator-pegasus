@@ -199,7 +199,7 @@ meta_state_service_zookeeper::new_transaction_entries(unsigned int capacity)
                                        tsk,                                                        \
                                        std::placeholders::_1);                                     \
     op->_optype = op_type;                                                                         \
-    input->_path = node;
+    input->_path = std::make_shared<std::string>(node)
 
 task_ptr meta_state_service_zookeeper::create_node(const std::string &node,
                                                    task_code cb_code,

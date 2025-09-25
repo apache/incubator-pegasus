@@ -82,7 +82,7 @@ public:
 
     struct zoo_input
     {
-        std::string _path;
+        std::shared_ptr<std::string> _path;
 
         /* for create and set */
         blob _value;
@@ -180,7 +180,7 @@ private:
 
     struct watcher_object
     {
-        std::string watcher_path;
+        std::shared_ptr<std::string> watcher_path;
         void *callback_owner;
         state_callback watcher_callback;
     };
