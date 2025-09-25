@@ -67,6 +67,11 @@ bool is_zookeeper_timeout(int zookeeper_error)
     return zookeeper_error == ZCONNECTIONLOSS || zookeeper_error == ZOPERATIONTIMEOUT;
 }
 
+void enqueue(task_handler &&callback, lock_struct_ptr _this)
+{
+    tasking::enqueue(TASK_CODE_DLOCK, nullptr, std::move(callback), _this->hash());
+}
+
 } // anonymous namespace
 
 #define CHECK_CODE(code, allow_list, code_str)                                                     \
@@ -80,12 +85,10 @@ bool is_zookeeper_timeout(int zookeeper_error)
         CHECK_LT_MSG(i, allow_list.size(), "invalid code({})", code_str);                          \
     } while (0)
 
-#define EXECUTE(cb, _this) tasking::enqueue(TASK_CODE_DLOCK, nullptr, cb, _this->hash())
-
 #define ADD_REF_AND_DELAY_CALL(op, _this)                                                          \
     LOG_WARNING("operation {} on {} encounter error, retry later",                                 \
                 zookeeper_session::string_zoo_operation(op->_optype),                              \
-                *op->_input._path);                                                                 \
+                *op->_input._path);                                                                \
     zookeeper_session::add_ref(op);                                                                \
     tasking::enqueue(                                                                              \
         TASK_CODE_DLOCK,                                                                           \
@@ -282,13 +285,9 @@ void lock_struct::remove_duplicated_locknode(std::string &&znode_path)
             return;
         }
 
-        EXECUTE(
-            [_this]() {
-            lock_struct::after_remove_duplicated_locknode(
-                      _this,
-                      op->_output.error,
-                      op->_input._path
-                    );
+        enqueue(
+            [_this, err = op->_output.error, path = op->_input._path]() {
+                lock_struct::after_remove_duplicated_locknode(_this, err, path);
             },
             _this);
     };
@@ -408,11 +407,11 @@ void lock_struct::get_lock_owner(bool watch_myself)
         LOG_INFO("get watcher callback, event type({})",
                  zookeeper_session::string_zoo_event(event));
         if (watch_myself) {
-            EXECUTE(std::bind(&lock_struct::my_lock_removed, _this, event), _this);
+            enqueue([_this, event]() { lock_struct::my_lock_removed(_this, event); }, _this);
             return;
         }
 
-        EXECUTE(std::bind(&lock_struct::owner_change, _this, event), _this);
+        enqueue([_this, event]() { lock_struct::owner_change(_this, event); }, _this);
     };
 
     auto after_get_owner_wrapper = [_this, watch_myself](zookeeper_session::zoo_opcontext *op) {
@@ -438,19 +437,20 @@ void lock_struct::get_lock_owner(bool watch_myself)
         }
 
         if (output.error != ZOK) {
-            EXECUTE(std::bind(cb, output.error, nullptr), _this);
+            enqueue([cb, err = output.error]() { cb(err, nullptr); }, _this);
             return;
         }
 
         std::shared_ptr<std::string> buf(
             new std::string(output.get_op.value, output.get_op.value_length));
-        EXECUTE(std::bind(cb, ZOK, buf), _this);
+        enqueue([cb, buf]() { cb(ZOK, buf); }, _this);
     };
 
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
     op->_optype = zookeeper_session::ZOO_GET;
     op->_callback_function = after_get_owner_wrapper;
-    op->_input._path = std::make_shared<std::string>(fmt::format("{}/{}", _lock_dir, _owner._node_seq_name));
+    op->_input._path =
+        std::make_shared<std::string>(fmt::format("{}/{}", _lock_dir, _owner._node_seq_name));
 
     op->_input._is_set_watch = 1;
     op->_input._owner = this;
@@ -555,8 +555,10 @@ void lock_struct::get_lockdir_nodes()
         }
 
         if (op->_output.error != ZOK) {
-            EXECUTE(
-                std::bind(&lock_struct::after_get_lockdir_nodes, _this, op->_output.error, nullptr),
+            enqueue(
+                [_this, err = op->_output.error]() {
+                    lock_struct::after_get_lockdir_nodes(_this, err, nullptr);
+                },
                 _this);
             return;
         }
@@ -568,9 +570,10 @@ void lock_struct::get_lockdir_nodes()
             (*children)[i].assign(vec->data[i]);
         }
 
-        EXECUTE(
-            std::bind(&lock_struct::after_get_lockdir_nodes, _this, op->_output.error, children),
-            _this);
+        enqueue([_this,
+                 err = op->_output.error,
+                 children]() { lock_struct::after_get_lockdir_nodes(_this, err, children); },
+                _this);
     };
 
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
@@ -640,18 +643,21 @@ void lock_struct::create_locknode()
         }
 
         if (op->_output.error != ZOK) {
-            EXECUTE(
-                std::bind(&lock_struct::after_create_locknode, _this, op->_output.error, nullptr),
+            enqueue(
+                [_this, err = op->_output.error]() {
+                    lock_struct::after_create_locknode(_this, err, nullptr);
+                },
                 _this);
             return;
         }
 
         std::shared_ptr<std::string> path(new std::string(op->_output.create_op._created_path));
-        EXECUTE(std::bind(&lock_struct::after_create_locknode, _this, ZOK, path), _this);
+        enqueue([_this, path]() { lock_struct::after_create_locknode(_this, ZOK, path); }, _this);
     };
 
     zookeeper_session::zoo_input &input = op->_input;
-    input._path = std::make_shared<std::stirng>("{}/{}", _lock_dir, distributed_lock_service_zookeeper::LOCK_NODE_PREFIX);
+    input._path = std::make_shared<std::string>(
+        fmt::format("{}/{}", _lock_dir, distributed_lock_service_zookeeper::LOCK_NODE_PREFIX));
     input._value.assign(_myself._node_value.c_str(), 0, _myself._node_value.length());
     input._flags = ZOO_EPHEMERAL | ZOO_SEQUENCE;
     op->_callback_function = result_wrapper;
@@ -713,7 +719,9 @@ void lock_struct::try_lock(lock_struct_ptr _this,
                 return;
             }
 
-            EXECUTE(std::bind(&lock_struct::after_create_lockdir, _this, op->_output.error), _this);
+            enqueue([_this,
+                     err = op->_output.error]() { lock_struct::after_create_lockdir(_this, err); },
+                    _this);
         };
         zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
         op->_optype = zookeeper_session::ZOO_CREATE;
@@ -760,8 +768,8 @@ void lock_struct::after_remove_my_locknode(lock_struct_ptr _this, int ec, bool r
         dsn_ec = ERR_INVALID_STATE;
     } else {
         if (ZINVALIDSTATE == ec) {
-            _this->on_expire(); // when expire, only expire_callback is called, the unlock/cancel's
-                                // callback is ignored
+            _this->on_expire(); // when expire, only expire_callback is called, the
+                                // unlock/cancel's callback is ignored
             return;
         }
 
@@ -798,11 +806,11 @@ void lock_struct::remove_my_locknode(std::string &&znode_path,
             }
 
             if (!ignore_callback) {
-                EXECUTE(std::bind(&lock_struct::after_remove_my_locknode,
-                                  _this,
-                                  op->_output.error,
-                                  remove_for_unlock),
-                        _this);
+                enqueue(
+                    [_this, err = op->_output.error, remove_for_unlock]() {
+                        lock_struct::after_remove_my_locknode(_this, err, remove_for_unlock);
+                    },
+                    _this);
             }
         };
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();

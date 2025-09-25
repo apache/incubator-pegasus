@@ -368,7 +368,7 @@ void zookeeper_session::dispatch_event(int type, int zstate, const char *path)
             _watchers.begin(), _watchers.end(), [path, ret_code](const watcher_object &obj) {
                 if (*obj.watcher_path == path) {
                     obj.watcher_callback(ret_code);
-                    }
+                }
             });
     }
     {
@@ -420,14 +420,17 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     case ZOO_EXISTS:
         if (1 == input._is_set_watch)
             add_watch_object();
-        ec = zoo_aexists(
-            _handle, path->c_str(), input._is_set_watch, global_state_completion, (const void *)ctx);
+        ec = zoo_aexists(_handle,
+                         path->c_str(),
+                         input._is_set_watch,
+                         global_state_completion,
+                         (const void *)ctx);
         break;
     case ZOO_GET:
         if (1 == input._is_set_watch)
             add_watch_object();
-        ec =
-            zoo_aget(_handle, path->c_str(), input._is_set_watch, global_data_completion, (const void *)ctx);
+        ec = zoo_aget(
+            _handle, path->c_str(), input._is_set_watch, global_data_completion, (const void *)ctx);
         break;
     case ZOO_SET:
         ec = zoo_aset(_handle,
@@ -441,8 +444,11 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     case ZOO_GETCHILDREN:
         if (1 == input._is_set_watch)
             add_watch_object();
-        ec = zoo_aget_children(
-            _handle, path->c_str(), input._is_set_watch, global_strings_completion, (const void *)ctx);
+        ec = zoo_aget_children(_handle,
+                               path->c_str(),
+                               input._is_set_watch,
+                               global_strings_completion,
+                               (const void *)ctx);
         break;
     case ZOO_TRANSACTION:
         ec = zoo_amulti(_handle,
