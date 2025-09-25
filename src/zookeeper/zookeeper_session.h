@@ -84,18 +84,22 @@ public:
     {
         std::shared_ptr<std::string> _path;
 
-        /* for create and set */
+        // For create and set.
         blob _value;
-        /* for create */
-        int _flags;
-        /* for get/exists/get_children */
-        int _is_set_watch;
 
-        /* for watcher callback */
-        void *_owner;
+        // For create.
+        // According to [hicpp-signed-bitwise], bitwise operations shall not be performed
+        // on signed integer types. Thus _flags is declared as unsigned.
+        uint32_t _flags{0};
+
+        // For get/exists/get_children.
+        int _is_set_watch{0};
+
+        // For watcher callback.
+        void *_owner{nullptr};
         std::function<void(int)> _watcher_callback;
 
-        /* for multi-op transaction */
+        // For multi-op transaction.
         std::shared_ptr<zoo_atomic_packet> _pkt;
     };
 

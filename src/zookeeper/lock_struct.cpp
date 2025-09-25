@@ -31,13 +31,14 @@
 #include <memory>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "distributed_lock_service_zookeeper.h"
+#include "fmt/core.h"
 #include "lock_struct.h"
 #include "lock_types.h"
+#include "runtime/api_task.h"
 #include "task/async_calls.h"
 #include "task/task.h"
 #include "utils/blob.h"
