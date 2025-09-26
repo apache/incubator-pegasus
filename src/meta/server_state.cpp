@@ -740,8 +740,9 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
             nullptr)
         ->wait();
 
-    if (ERR_OBJECT_NOT_FOUND == err)
+    if (ERR_OBJECT_NOT_FOUND == err) {
         return err;
+    }
     CHECK_EQ_MSG(ERR_OK, err, "can't handle this error");
     CHECK(transaction_state == std::string(unlock_state) || transaction_state.empty(),
           "invalid transaction state({})",

@@ -61,7 +61,7 @@ void provider_basic_test(const service_creator_func &service_creator,
                          const service_deleter_func &service_deleter)
 {
     // environment
-    auto service = service_creator();
+    auto *service = service_creator();
 
     // bondary check
     service->node_exist("/", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok, nullptr)->wait();
@@ -200,9 +200,9 @@ void provider_basic_test(const service_creator_func &service_creator,
             ->submit_transaction(
                 entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err, nullptr)
             ->wait();
-        error_code err[4] = {ERR_OK, ERR_OK, ERR_INVALID_PARAMETERS, ERR_INCONSISTENT_STATE};
+        std::array errors = {ERR_OK, ERR_OK, ERR_INVALID_PARAMETERS, ERR_INCONSISTENT_STATE};
         for (unsigned int i = 0; i < 4; ++i) {
-            ASSERT_EQ(err[i], entries->get_result(i));
+            ASSERT_EQ(errors[i], entries->get_result(i));
         }
 
         // another invalid transaction
@@ -213,13 +213,13 @@ void provider_basic_test(const service_creator_func &service_creator,
         // although this is also invalid, but ignored due to previous one has stop the transaction
         entries->set_data("/5", writer.get_buffer());
 
-        err[2] = ERR_OBJECT_NOT_FOUND;
+        errors[2] = ERR_OBJECT_NOT_FOUND;
         service
             ->submit_transaction(
                 entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err, nullptr)
             ->wait();
         for (unsigned int i = 0; i < 4; ++i) {
-            ASSERT_EQ(err[i], entries->get_result(i));
+            ASSERT_EQ(errors.at(i), entries->get_result(i));
         }
     }
 
@@ -247,7 +247,7 @@ void provider_basic_test(const service_creator_func &service_creator,
                 [](error_code ec, const blob &value) {
                     CHECK_EQ(ERR_OK, ec);
                     binary_reader reader(value);
-                    int content_value;
+                    int content_value{0};
                     reader.read(content_value);
                     CHECK_EQ(0xdeadbeef, content_value);
                 },
