@@ -27,6 +27,7 @@
 #include "meta/meta_state_service.h"
 
 #include <boost/lexical_cast.hpp>
+#include <array>
 #include <chrono>
 #include <ostream>
 #include <thread>
@@ -201,8 +202,8 @@ void provider_basic_test(const service_creator_func &service_creator,
                 entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err, nullptr)
             ->wait();
         std::array errors = {ERR_OK, ERR_OK, ERR_INVALID_PARAMETERS, ERR_INCONSISTENT_STATE};
-        for (unsigned int i = 0; i < 4; ++i) {
-            ASSERT_EQ(errors[i], entries->get_result(i));
+        for (unsigned int i = 0; i < errors.size(); ++i) {
+            ASSERT_EQ(errors.at(i), entries->get_result(i));
         }
 
         // another invalid transaction
@@ -218,7 +219,7 @@ void provider_basic_test(const service_creator_func &service_creator,
             ->submit_transaction(
                 entries, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err, nullptr)
             ->wait();
-        for (unsigned int i = 0; i < 4; ++i) {
+        for (unsigned int i = 0; i < errors.size(); ++i) {
             ASSERT_EQ(errors.at(i), entries->get_result(i));
         }
     }
