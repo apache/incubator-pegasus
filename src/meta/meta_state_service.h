@@ -104,7 +104,7 @@ public:
     virtual task_ptr submit_transaction(const std::shared_ptr<transaction_entries> &entries,
                                         task_code cb_code,
                                         const err_callback &cb_transaction,
-                                        dsn::task_tracker *tracker = nullptr) = 0;
+                                        dsn::task_tracker *tracker) = 0;
 
     /*
      * create a dir node
@@ -139,7 +139,7 @@ public:
                                  bool recursively_delete,
                                  task_code cb_code,
                                  const err_callback &cb_delete,
-                                 dsn::task_tracker *tracker = nullptr) = 0;
+                                 dsn::task_tracker *tracker) = 0;
     /*
      * check if the node dir exists
      * node: the dir name with full path
@@ -149,7 +149,7 @@ public:
     virtual task_ptr node_exist(const std::string &node,
                                 task_code cb_code,
                                 const err_callback &cb_exist,
-                                dsn::task_tracker *tracker = nullptr) = 0;
+                                dsn::task_tracker *tracker) = 0;
     /*
      * get the data in node
      * node: dir name with full path
@@ -161,7 +161,7 @@ public:
     virtual task_ptr get_data(const std::string &node,
                               task_code cb_code,
                               const err_value_callback &cb_get_data,
-                              dsn::task_tracker *tracker = nullptr) = 0;
+                              dsn::task_tracker *tracker) = 0;
     /*
      * set the data of the node
      * node: dir name with full path
@@ -173,7 +173,7 @@ public:
                               const blob &value,
                               task_code cb_code,
                               const err_callback &cb_set_data,
-                              dsn::task_tracker *tracker = nullptr) = 0;
+                              dsn::task_tracker *tracker) = 0;
     /*
      * get all childrens of a node
      * node: dir name with full path
@@ -183,7 +183,7 @@ public:
     virtual task_ptr get_children(const std::string &node,
                                   task_code cb_code,
                                   const err_stringv_callback &cb_get_children,
-                                  dsn::task_tracker *tracker = nullptr) = 0;
+                                  dsn::task_tracker *tracker) = 0;
 };
 } // namespace dist
 } // namespace dsn

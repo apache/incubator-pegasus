@@ -541,7 +541,10 @@ void ranger_resource_policy_manager::dump_policies_to_remote_storage()
 {
     dsn::blob value = json::json_forwarder<all_resource_policies>::encode(_all_resource_policies);
     _meta_svc->get_remote_storage()->set_data(
-        _ranger_policy_meta_root, value, LPC_USE_RANGER_ACCESS_CONTROL, [this](dsn::error_code e) {
+        _ranger_policy_meta_root,
+        value,
+        LPC_USE_RANGER_ACCESS_CONTROL,
+        [this](dsn::error_code e) {
             if (e == dsn::ERR_OK) {
                 LOG_DEBUG("Dump Ranger policies to remote storage succeed.");
                 return;
@@ -555,7 +558,8 @@ void ranger_resource_policy_manager::dump_policies_to_remote_storage()
                 [this]() { dump_policies_to_remote_storage(); },
                 0,
                 kLoadRangerPolicyRetryDelayMs);
-        });
+        },
+        nullptr);
 }
 
 void ranger_resource_policy_manager::update_cached_policies()

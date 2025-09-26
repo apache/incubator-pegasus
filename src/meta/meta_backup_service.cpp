@@ -1450,7 +1450,10 @@ void backup_service::do_update_policy_to_remote_storage(
     std::string policy_path = get_policy_path(p.policy_name);
     blob value = json::json_forwarder<policy>::encode(p);
     _meta_svc->get_remote_storage()->set_data(
-        policy_path, value, LPC_DEFAULT_CALLBACK, [this, rpc, p, p_context_ptr](error_code err) {
+        policy_path,
+        value,
+        LPC_DEFAULT_CALLBACK,
+        [this, rpc, p, p_context_ptr](error_code err) {
             if (err == ERR_OK) {
                 configuration_modify_backup_policy_response resp;
                 resp.err = ERR_OK;
@@ -1474,7 +1477,8 @@ void backup_service::do_update_policy_to_remote_storage(
             } else {
                 CHECK(false, "we can't handle this when create backup policy, err({})", err);
             }
-        });
+        },
+        nullptr);
 }
 
 bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_name,

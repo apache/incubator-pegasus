@@ -234,9 +234,9 @@ error_code meta_service::remote_storage_initialize()
 
     std::vector<std::string> slices;
     utils::split_args(FLAGS_cluster_root, slices, '/');
-    std::string current = "";
-    for (unsigned int i = 0; i != slices.size(); ++i) {
-        current = utils::filesystem::concat_path_unix_style(current, slices[i]);
+    std::string current;
+    for (const auto &slice : slices) {
+        current = utils::filesystem::concat_path_unix_style(current, slice);
         task_ptr tsk = _storage->create_empty_node(
             current, LPC_META_CALLBACK, [&err](error_code ec) { err = ec; });
         tsk->wait();
@@ -245,7 +245,7 @@ error_code meta_service::remote_storage_initialize()
             return err;
         }
     }
-    _cluster_root = current.empty() ? "/" : current;
+    _cluster_root = current.empty() ? "/" : std::move(current);
 
     LOG_INFO("init meta_state_service succeed, cluster_root = {}", _cluster_root);
     return ERR_OK;

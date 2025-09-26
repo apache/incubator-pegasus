@@ -35,6 +35,7 @@
 
 #include "meta_state_service_zookeeper.h"
 #include "runtime/service_app.h"
+#include "utils/blob.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
