@@ -75,8 +75,7 @@ log_file::~log_file() { close(); }
 /*static*/ error_code
 log_file::parse_log_file_name(const char *path, int &index, int64_t &start_offset)
 {
-    constexpr std::string_view kSplitters("\\/");
-    const auto file_name = dsn::utils::get_last_component(path, kSplitters);
+    const auto file_name = dsn::utils::get_last_component(path, "\\/");
 
     // The format of the log file name: log.<index>.<start_offset>
     constexpr std::string_view kLogPrefix("log.");

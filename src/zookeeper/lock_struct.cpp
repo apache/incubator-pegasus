@@ -614,8 +614,7 @@ void lock_struct::after_create_locknode(lock_struct_ptr _this,
         return;
     }
 
-    constexpr std::string_view kSplitter("/");
-    _this->_myself._node_seq_name = utils::get_last_component(*path, kSplitter);
+    _this->_myself._node_seq_name = utils::get_last_component(*path, "/");
     _this->_myself._sequence_id = parse_seq_path(_this->_myself._node_seq_name);
     CHECK_NE_MSG(_this->_myself._sequence_id, -1, "invalid seq path created");
     LOG_INFO("create seq/ephe node in dir({}) ok, my_sequence_id({})",
