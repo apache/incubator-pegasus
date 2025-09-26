@@ -56,15 +56,15 @@ void AtomicWriteTest::SetUp()
     _ddl_client->set_meta_servers_leader();
 
     // Generate the table name.
-    const auto &test_case = GetParam();
-    _table_name = fmt::format(
-        "{}{}_idempotent", _table_name_prefix, test_case.atomic_idempotent ? "" : "_non");
+    const auto &atomic_idempotent = GetParam();
+    _table_name =
+        fmt::format("{}{}_idempotent", _table_name_prefix, atomic_idempotent ? "" : "_non");
 
     // Create the table with the name. Specify whether the table makes each atomic write
     // idempotent.
-    ASSERT_EQ(dsn::ERR_OK,
-              _ddl_client->create_app(
-                  _table_name, "pegasus", 8, 3, {}, false, false, test_case.atomic_idempotent));
+    ASSERT_EQ(
+        dsn::ERR_OK,
+        _ddl_client->create_app(_table_name, "pegasus", 8, 3, {}, false, false, atomic_idempotent));
 
     // Get a client instance for the given cluster and table name.
     _client = pegasus_client_factory::get_client(kClusterName.c_str(), _table_name.c_str());
@@ -76,13 +76,5 @@ void AtomicWriteTest::SetUp()
 }
 
 void AtomicWriteTest::TearDown() { ASSERT_EQ(dsn::ERR_OK, _ddl_client->drop_app(_table_name, 0)); }
-
-std::vector<atomic_write_case> generate_atomic_write_cases()
-{
-    return std::vector<atomic_write_case>({
-        {false},
-        {true},
-    });
-}
 
 } // namespace pegasus

@@ -31,13 +31,10 @@ namespace pegasus {
 
 class pegasus_client;
 
-struct atomic_write_case
-{
-    bool atomic_idempotent;
-};
-
-// The base fixture for each type of atomic write.
-class AtomicWriteTest : public testing::TestWithParam<atomic_write_case>
+// The base fixture for each type of atomic write. The bool-type parameter is
+// `atomic_idempotent`, used to generate both idempotent and non-idempotent
+// cases for atomic writes.
+class AtomicWriteTest : public testing::TestWithParam<bool>
 {
 public:
     ~AtomicWriteTest() override = default;
@@ -68,8 +65,5 @@ private:
     DISALLOW_COPY_AND_ASSIGN(AtomicWriteTest);
     DISALLOW_MOVE_AND_ASSIGN(AtomicWriteTest);
 };
-
-// Generate both idempotent and non-idempotent cases for atomic writes.
-std::vector<atomic_write_case> generate_atomic_write_cases();
 
 } // namespace pegasus

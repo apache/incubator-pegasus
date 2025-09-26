@@ -353,8 +353,6 @@ TEST_P(IncrTest, DisableTTL)
     should_no_ttl();
 }
 
-INSTANTIATE_TEST_SUITE_P(AtomicWriteTest,
-                         IncrTest,
-                         testing::ValuesIn(generate_atomic_write_cases()));
+INSTANTIATE_TEST_SUITE_P(AtomicWriteTest, IncrTest, testing::Bool());
 
 } // namespace pegasus
