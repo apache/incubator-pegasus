@@ -64,6 +64,7 @@ public:
     replica_ptr get_replica(const dsn::gpid &pid) const
     {
         replica_ptr rep = stub->get_replica(pid);
+        ASSERT_TRUE(rep);
         return rep;
     }
 
