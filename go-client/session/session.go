@@ -345,7 +345,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		if !ready {
 			//return error directly so that it can be recognized in `handleReplicaError`
 			n.logger.Printf("session %s is unable to connect (used %dms), the context error: %s", n, time.Since(dialStart)/time.Millisecond, ctx.Err())
-			return ctx.Err()
+			return base.ERR_SESSION_RESET
 		}
 	}
 	return nil
