@@ -21,7 +21,6 @@
 #include <limits>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "atomic_write_test.h"
 #include "gtest/gtest.h"
