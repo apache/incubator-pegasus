@@ -558,8 +558,7 @@ void when_update_replicas(config_type::type t, const std::function<void(bool)> &
         if (obj.__isset.hp_primary && obj.hp_primary) {                                            \
             maintain_drops(obj_copy.hp_##field, obj.hp_primary, type);                             \
         }                                                                                          \
-     } while (0)
-
+    } while (0)
 
 #define MAINTAIN_DROP_NODES(obj, field, type)                                                      \
     do {                                                                                           \
@@ -572,7 +571,7 @@ void when_update_replicas(config_type::type t, const std::function<void(bool)> &
                 maintain_drops(obj_copy.hp_##field, secondary, type);                              \
             }                                                                                      \
         }                                                                                          \
-     } while (0)
+    } while (0)
 
 template <typename T>
 void maintain_drops(/*inout*/ std::vector<T> &drops, const T &node, config_type::type t)
