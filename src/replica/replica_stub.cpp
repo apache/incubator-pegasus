@@ -2258,7 +2258,7 @@ replica_stub::parse_replica_dir_name(std::string_view dir_name, gpid &pid, std::
     std::vector<uint32_t> ids(2, 0);
     size_t begin = 0;
     for (auto &id : ids) {
-        size_t end = dir_name.find('.', begin);
+        const size_t end = dir_name.find('.', begin);
         if (end == std::string::npos) {
             return false;
         }
