@@ -120,13 +120,12 @@ log_file::parse_log_file_name(const char *path, int &index, int64_t &start_offse
     if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF ||
         err == ERR_FILE_OPERATION_FAILED) {
         const auto new_path = fmt::format("{}.removed", path);
-        LOG_ERROR("read first log entry of file {} failed, err = {}. "
-                  "Rename the file to {}",
+        LOG_ERROR("read first log entry of file {} failed, err = {}. Rename the file to {}",
                   path,
                   err,
                   new_path);
 
-        // rename file on failure
+        // Rename file on failure.
         dsn::utils::filesystem::rename_path(path, new_path);
 
         return {};
@@ -138,7 +137,7 @@ log_file::parse_log_file_name(const char *path, int &index, int64_t &start_offse
         const auto new_path = fmt::format("{}.removed", path);
         LOG_ERROR("invalid log file header of file {}. Rename the file to {}", path, new_path);
 
-        // rename file on failure
+        // Rename file on failure.
         dsn::utils::filesystem::rename_path(path, new_path);
 
         err = ERR_INVALID_DATA;
