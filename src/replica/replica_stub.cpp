@@ -2247,24 +2247,23 @@ replica *replica_stub::new_replica(gpid gpid,
     return new_replica(gpid, app, restore_if_necessary, is_duplication_follower, {});
 }
 
-/*static*/ std::string replica_stub::get_replica_dir_name(const std::string &dir)
+/*static*/ std::string_view replica_stub::get_replica_dir_name(std::string_view dir)
 {
-    static const char splitters[] = {'\\', '/', 0};
-    return utils::get_last_component(dir, splitters);
+    return utils::get_last_component(dir, "\\/");
 }
 
-/* static */ bool
-replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type)
+/*static*/ bool
+replica_stub::parse_replica_dir_name(std::string_view dir_name, gpid &pid, std::string &app_type)
 {
     std::vector<uint32_t> ids(2, 0);
     size_t begin = 0;
     for (auto &id : ids) {
-        size_t end = dir_name.find('.', begin);
+        const size_t end = dir_name.find('.', begin);
         if (end == std::string::npos) {
             return false;
         }
 
-        if (!buf2uint32(std::string_view(dir_name.data() + begin, end - begin), id)) {
+        if (!buf2uint32(dir_name.substr(begin, end - begin), id)) {
             return false;
         }
 
@@ -2278,9 +2277,7 @@ replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std
     pid.set_app_id(static_cast<int32_t>(ids[0]));
     pid.set_partition_index(static_cast<int32_t>(ids[1]));
 
-    // TODO(wangdan): the 3rd parameter `count` does not support default argument for CentOS 7
-    // (gcc 7.3.1). After CentOS 7 is deprecated, consider dropping std::string::npos.
-    app_type.assign(dir_name, begin, std::string::npos);
+    app_type = dir_name.substr(begin);
     return true;
 }
 

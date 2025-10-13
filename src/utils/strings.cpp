@@ -159,22 +159,10 @@ error_s pattern_match(const std::string &str,
     return error_s::ok();
 }
 
-std::string get_last_component(const std::string &input, const char splitters[])
+std::string_view get_last_component(std::string_view str, std::string_view splitters)
 {
-    int index = -1;
-    const char *s = splitters;
-
-    while (*s != 0) {
-        auto pos = input.find_last_of(*s);
-        if (pos != std::string::npos && (static_cast<int>(pos) > index))
-            index = static_cast<int>(pos);
-        s++;
-    }
-
-    if (index != -1)
-        return input.substr(index + 1);
-    else
-        return input;
+    const auto pos = str.find_last_of(splitters);
+    return (pos == std::string_view::npos) ? str : str.substr(pos + 1);
 }
 
 namespace {
