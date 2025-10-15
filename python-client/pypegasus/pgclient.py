@@ -21,6 +21,7 @@ from __future__ import with_statement
 import os
 import logging.config
 import six
+import yaml
 
 from thrift.Thrift import TMessageType, TApplicationException
 from twisted.internet import defer
@@ -43,8 +44,15 @@ try:
 except:
     fastbinary = None
 
+try:
+    with open(os.path.dirname(__file__)+"/logger.yaml", 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+        logging.config.dictConfig(config)
+        logging.getLogger("pgclient").info("Logging config loaded successfully.")
+except Exception as e:
+    print(f"Failed to load pgclient logging config: {e}")
+    logging.basicConfig(level=logging.INFO)
 
-logging.config.fileConfig(os.path.dirname(__file__)+"/logger.conf")
 logger = logging.getLogger("pgclient")
 
 DEFAULT_TIMEOUT = 2000               # ms
