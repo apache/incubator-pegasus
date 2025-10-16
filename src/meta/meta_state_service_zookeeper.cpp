@@ -35,6 +35,7 @@
 
 #include "meta_state_service_zookeeper.h"
 #include "runtime/service_app.h"
+#include "utils/blob.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
@@ -199,7 +200,7 @@ meta_state_service_zookeeper::new_transaction_entries(unsigned int capacity)
                                        tsk,                                                        \
                                        std::placeholders::_1);                                     \
     op->_optype = op_type;                                                                         \
-    input->_path = node;
+    input->_path = std::make_shared<std::string>(node)
 
 task_ptr meta_state_service_zookeeper::create_node(const std::string &node,
                                                    task_code cb_code,

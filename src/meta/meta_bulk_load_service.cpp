@@ -2098,7 +2098,9 @@ void bulk_load_service::check_app_bulk_load_states(std::shared_ptr<app_state> ap
 {
     std::string app_path = get_app_bulk_load_path(app->app_id);
     _meta_svc->get_remote_storage()->node_exist(
-        app_path, LPC_META_CALLBACK, [this, app_path, app, is_app_bulk_loading](error_code err) {
+        app_path,
+        LPC_META_CALLBACK,
+        [this, app_path, app, is_app_bulk_loading](error_code err) {
             if (err != ERR_OK && err != ERR_OBJECT_NOT_FOUND) {
                 LOG_WARNING("check app({}) bulk load dir({}) failed, error = {}, try later",
                             app->app_name,
@@ -2128,7 +2130,8 @@ void bulk_load_service::check_app_bulk_load_states(std::shared_ptr<app_state> ap
             // Normal cases:
             // err = ERR_OBJECT_NOT_FOUND, is_app_bulk_load = false: app is not executing bulk load
             // err = ERR_OK, is_app_bulk_load = true: app used to be executing bulk load
-        });
+        },
+        nullptr);
 }
 
 } // namespace replication

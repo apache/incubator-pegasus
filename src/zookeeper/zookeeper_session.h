@@ -82,20 +82,22 @@ public:
 
     struct zoo_input
     {
-        std::string _path;
+        std::shared_ptr<std::string> _path;
 
-        /* for create and set */
+        // For create and set.
         blob _value;
-        /* for create */
-        int _flags;
-        /* for get/exists/get_children */
-        int _is_set_watch;
 
-        /* for watcher callback */
-        void *_owner;
+        // For create.
+        int _flags{0};
+
+        // For get/exists/get_children.
+        int _is_set_watch{0};
+
+        // For watcher callback.
+        void *_owner{nullptr};
         std::function<void(int)> _watcher_callback;
 
-        /* for multi-op transaction */
+        // For multi-op transaction.
         std::shared_ptr<zoo_atomic_packet> _pkt;
     };
 
@@ -180,7 +182,7 @@ private:
 
     struct watcher_object
     {
-        std::string watcher_path;
+        std::shared_ptr<std::string> watcher_path;
         void *callback_owner;
         state_callback watcher_callback;
     };
