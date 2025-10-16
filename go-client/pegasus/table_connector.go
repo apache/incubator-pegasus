@@ -285,7 +285,7 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 
 func isPartitionValid(respCount int) bool {
 	// Check if respCount is greater than or equal to 4 and is a power of 2
-	return respCount >= 4 && (respCount&(respCount-1)) == 0
+	return respCount >= 2 && (respCount&(respCount-1)) == 0
 }
 
 func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfgResponse) error {
