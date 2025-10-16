@@ -21,6 +21,7 @@
 #include <atomic>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <utility>
 
 #include "gmock/gmock.h"
@@ -89,7 +90,7 @@ void ZookeeperSessionTestBase::operate_node(
 
     auto *op = zookeeper_session::create_context();
     op->_optype = op_type;
-    op->_input._path = path;
+    op->_input._path = std::make_shared<std::string>(path);
     op->_input._value = blob::create_from_bytes(std::string(data));
     op->_callback_function =
         [&zerr, &callback, &on_completed](zookeeper_session::zoo_opcontext *op) mutable {
@@ -223,7 +224,7 @@ void ZookeeperSessionTestBase::get_sub_nodes(const std::string &path,
 
     auto *op = zookeeper_session::create_context();
     op->_optype = zookeeper_session::ZOO_GETCHILDREN;
-    op->_input._path = path;
+    op->_input._path = std::make_shared<std::string>(path);
     op->_callback_function =
         [&zerr, &sub_nodes, &on_completed](zookeeper_session::zoo_opcontext *op) mutable {
             zerr = op->_output.error;
