@@ -63,7 +63,11 @@ class ScanOptions(object):
         self.start_inclusive = True
         self.stop_inclusive = False
         self.snapshot = None                   # for future use
-
+        self.sortkey_filter_type = filter_type.FT_NO_FILTER
+        self.sortkey_filter_pattern = ""
+        self.hashkey_filter_type = filter_type.FT_NO_FILTER
+        self.hashkey_filter_pattern = ""
+        
     def __repr__(self):
         lst = ['%s=%r' % (key, value)
                for key, value in self.__dict__.items()]
@@ -104,11 +108,15 @@ def restore_key(merge_key):
     
     return hash_key, sort_key
 
+# This is to ensure compatibility between different byte-like string representations, 
+# such as 'bytes' and 'str' in various Python versions.
+def bval(ch):
+    return ch if isinstance(ch, int) else ord(ch)
 
 def bytes_cmp(left, right):
     min_len = min(len(left), len(right))
     for i in range(min_len):
-        r = ord(left[i]) - ord(right[i])
+        r = bval(left[i]) - bval(right[i])
         if r != 0:
             return r
 

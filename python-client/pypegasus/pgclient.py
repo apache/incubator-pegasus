@@ -34,7 +34,7 @@ from pypegasus.operate.packet import *
 from pypegasus.replication.ttypes import query_cfg_request
 from pypegasus.rrdb import *
 from pypegasus.rrdb.ttypes import scan_request, get_scanner_request, update_request, key_value, multi_put_request, \
-    multi_get_request, multi_remove_request
+    multi_get_request, multi_remove_request, filter_type
 from pypegasus.transport.protocol import *
 from pypegasus.utils.tools import restore_key, get_ttl, bytes_cmp, ScanOptions
 
@@ -496,6 +496,10 @@ class PegasusScanner(object):
         request.stop_inclusive = self._scan_options.stop_inclusive
         request.batch_size = self._scan_options.batch_size
         request.need_check_hash = self._check_hash
+        request.sort_key_filter_type = self._scan_options.sortkey_filter_type 
+        request.sort_key_filter_pattern = blob(self._scan_options.sortkey_filter_pattern)
+        request.hash_key_filter_type = self._scan_options.hashkey_filter_type
+        request.hash_key_filter_pattern = blob(self._scan_options.hashkey_filter_pattern)
 
         op = RrdbGetScannerOperator(self._gpid, request, self._partition_hash)
         session = self._table.get_session(self._gpid)
@@ -597,6 +601,11 @@ class Pegasus(object):
         hash_key_len = len(hash_key)
         sort_key_len = len(sort_key)
 
+        if hash_key_len >= 0xFFFF:
+            raise ValueError("hash_key length must be less than 65535")
+        if sort_key_len >= 0xFFFF:
+            raise ValueError("sort_key length must be less than 65535")
+        
         if sort_key_len > 0:
             values = (hash_key_len, hash_key, sort_key)
             s = struct.Struct('>H'+str(hash_key_len)+'s'+str(sort_key_len)+'s')
@@ -611,24 +620,43 @@ class Pegasus(object):
 
     @classmethod
     def generate_next_bytes(cls, buff):
-        pos = len(buff) - 1
+        is_str = isinstance(buff, str)
+        is_ba = isinstance(buff, bytearray)
+
+        if is_str:
+            arr = bytearray(buff.encode('latin-1'))  
+        elif is_ba:
+            arr = buff  
+        else:
+            arr = bytearray(buff)
+        pos = len(arr) - 1
         found = False
         while pos >= 0:
-            if ord(buff[pos]) != 0xFF:
-                buff[pos] += 1
+            if arr[pos] != 0xFF:
+                arr[pos] += 1
                 found = True
                 break
-        if found:
-            return buff
+            pos -= 1  
+        if not found:
+            arr += b'\x00'
+        if is_str:
+            return arr.decode('latin-1')
+        elif is_ba:
+            return arr
         else:
-            return buff + chr(0)
+            return bytes(arr)
 
+    @classmethod
+    def generate_next_key(cls, hash_key, stop_sort_key):
+        key = cls.generate_key(hash_key, stop_sort_key)
+        return blob(cls.generate_next_bytes(key.raw()))
+            
     @classmethod
     def generate_stop_key(cls, hash_key, stop_sort_key):
         if stop_sort_key:
             return cls.generate_key(hash_key, stop_sort_key), True
         else:
-            return cls.generate_next_bytes(hash_key), False
+            return blob(cls.generate_next_bytes(hash_key)), False
 
     def __init__(self, meta_addrs=None, table_name='',
                  timeout=DEFAULT_TIMEOUT):
@@ -1004,6 +1032,20 @@ class Pegasus(object):
         stop_key, stop_inclusive = self.generate_stop_key(hash_key, stop_sort_key)
         if not stop_inclusive:
             scan_options.stop_inclusive = stop_inclusive
+
+        # limit key range by prefix filter
+        if scan_options.sortkey_filter_type == filter_type.FT_MATCH_PREFIX and \
+            len(scan_options.sortkey_filter_pattern) > 0:
+            prefix_start = self.generate_key(hash_key, scan_options.sortkey_filter_pattern)
+            if bytes_cmp(prefix_start.data, start_key.data) > 0:
+                start_key = prefix_start
+                scan_options.start_inclusive = True
+
+            prefix_stop = self.generate_next_key(hash_key, scan_options.sortkey_filter_pattern)
+            if bytes_cmp(prefix_stop.data, stop_key.data) <= 0:
+                stop_key = prefix_stop
+                scan_options.stop_inclusive = False
+
         gpid_list = []
         hash_list = []
         r = bytes_cmp(start_key.data, stop_key.data)
@@ -1033,10 +1075,6 @@ class Pegasus(object):
         size = count // split
         more = count % split
 
-        opt = ScanOptions()
-        opt.timeout_millis = scan_options.timeout_millis
-        opt.batch_size = scan_options.batch_size
-        opt.snapshot = scan_options.snapshot
         scanner_list = []
         for i in range(split):
             gpid_list = []
@@ -1048,6 +1086,6 @@ class Pegasus(object):
                     gpid_list.append(all_gpid_list[count])
                     hash_list.append(int(count))
 
-            scanner_list.append(PegasusScanner(self.table, gpid_list, opt, hash_list, True))
+            scanner_list.append(PegasusScanner(self.table, gpid_list, scan_options, hash_list, True))
 
         return scanner_list
