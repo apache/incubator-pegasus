@@ -44,10 +44,19 @@ class blob:
 
   def validate(self):
     return
+  
+  def raw(self):
+    if self._is_str:
+      return self.data.decode('UTF-8')
+    else:
+      return self.data
 
   def __init__(self, data=None):
     if isinstance(data,str):
+        self._is_str = True
         data = data.encode('UTF-8')
+    else:
+        self._is_str = False
     self.data = data
 
   def __hash__(self):
@@ -310,8 +319,8 @@ class rpc_address:
 class host_port_types(Enum):
     kHostTypeInvalid = 0
     kHostTypeIpv4 = 1
-    kHostTypeGroup = 2
-
+    kHostTypeIpv6 = 2
+    kHostTypeGroup = 3
 
 class host_port:
 
