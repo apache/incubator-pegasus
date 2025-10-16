@@ -355,18 +355,6 @@ func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, partitionCount, len(p.parts))
 	}
-
-	{
-		resp := replication.NewQueryCfgResponse()
-		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
-
-		resp.Partitions = make([]*replication.PartitionConfiguration, 2)
-		resp.PartitionCount = 2
-
-		err := p.handleQueryConfigResp(resp)
-		assert.NotNil(t, err)
-		assert.Equal(t, partitionCount, len(p.parts))
-	}
 }
 
 func TestPegasusTableConnector_QueryConfigRespWhileStartSplit(t *testing.T) {
@@ -444,6 +432,50 @@ func TestPegasusTableConnector_QueryConfigRespWhileCancelSplit(t *testing.T) {
 	err = ptb.handleQueryConfigResp(resp)
 	assert.Nil(t, err)
 	assert.Equal(t, partitionCount, len(ptb.parts))
+	ptb.Close()
+}
+
+func TestPegasusTableConnector_QueryConfigRespWhileTablePartitionResize(t *testing.T) {
+	// In certain scenarios, when dealing with partitions that consume excessive disk space,
+	// we may split a single partition into multiple ones (more than double the original number).
+	// To achieve this, we typically use an offline approach involving multiple splits,
+	// followed by reconstruction on another cluster. Meanwhile, we utilize metaproxy to ensure
+	// seamless traffic switching. As a result, significant changes in the partition count
+	// are possible (e.g., 8x or 1/8x the original count). Therefore, when updating the configuration,
+	// we do not require the new partition count to be related to the previous one.
+	// It only needs to be a valid number.
+
+	// Ensure loopForAutoUpdate will be closed.
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+	ptb, _ := tb.(*pegasusTableConnector)
+
+	partitionCount := len(ptb.parts)
+	resp := replication.NewQueryCfgResponse()
+	resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
+	resp.AppID = ptb.appID
+	resp.PartitionCount = int32(partitionCount * 8)
+	resp.Partitions = make([]*replication.PartitionConfiguration, partitionCount*8)
+	for i := 0; i < partitionCount*8; i++ {
+		if i < partitionCount {
+			resp.Partitions[i] = ptb.parts[i].pconf
+		} else {
+			conf := replication.NewPartitionConfiguration()
+			conf.Ballot = -1
+			conf.Pid = &base.Gpid{ptb.appID, int32(i)}
+			resp.Partitions[i] = conf
+		}
+	}
+
+	err = ptb.handleQueryConfigResp(resp)
+	assert.Nil(t, err)
+	assert.Equal(t, partitionCount*8, len(ptb.parts))
 	ptb.Close()
 }
 
