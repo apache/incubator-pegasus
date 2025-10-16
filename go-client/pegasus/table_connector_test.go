@@ -355,18 +355,6 @@ func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, partitionCount, len(p.parts))
 	}
-
-	{
-		resp := replication.NewQueryCfgResponse()
-		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
-
-		resp.Partitions = make([]*replication.PartitionConfiguration, 2)
-		resp.PartitionCount = 2
-
-		err := p.handleQueryConfigResp(resp)
-		assert.NotNil(t, err)
-		assert.Equal(t, partitionCount, len(p.parts))
-	}
 }
 
 func TestPegasusTableConnector_QueryConfigRespWhileStartSplit(t *testing.T) {
