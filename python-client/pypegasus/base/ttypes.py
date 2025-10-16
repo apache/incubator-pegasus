@@ -44,19 +44,10 @@ class blob:
 
   def validate(self):
     return
-  
-  def raw(self):
-    if self._is_str:
-      return self.data.decode('UTF-8')
-    else:
-      return self.data
 
   def __init__(self, data=None):
     if isinstance(data,str):
-        self._is_str = True
         data = data.encode('UTF-8')
-    else:
-        self._is_str = False
     self.data = data
 
   def __hash__(self):
