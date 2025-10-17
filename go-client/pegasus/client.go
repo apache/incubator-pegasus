@@ -23,6 +23,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/session"
 )
@@ -44,13 +46,14 @@ type pegasusClient struct {
 	// protect the access of tables
 	mu sync.RWMutex
 
-	metaMgr    *session.MetaManager
-	replicaMgr *session.ReplicaManager
+	metaMgr       *session.MetaManager
+	replicaMgr    *session.ReplicaManager
+	enableMetrics bool
 }
 
 // NewClient creates a new instance of pegasus client.
 // It panics if the configured addresses are illegal.
-func NewClient(cfg Config) Client {
+func NewClient(cfg config.Config) Client {
 	c, err := newClientWithError(cfg)
 	if err != nil {
 		pegalog.GetLogger().Fatal(err)
@@ -59,17 +62,22 @@ func NewClient(cfg Config) Client {
 	return c
 }
 
-func newClientWithError(cfg Config) (Client, error) {
+func newClientWithError(cfg config.Config) (Client, error) {
 	var err error
 	cfg.MetaServers, err = session.ResolveMetaAddr(cfg.MetaServers)
 	if err != nil {
 		return nil, err
 	}
 
+	if cfg.EnablePrometheus {
+		metrics.InitMetrics(cfg)
+	}
+
 	c := &pegasusClient{
-		tables:     make(map[string]TableConnector),
-		metaMgr:    session.NewMetaManager(cfg.MetaServers, session.NewNodeSession),
-		replicaMgr: session.NewReplicaManager(session.NewNodeSession),
+		tables:        make(map[string]TableConnector),
+		metaMgr:       session.NewMetaManager(cfg.MetaServers, session.NewNodeSession),
+		replicaMgr:    session.NewReplicaManagerWithMetrics(session.NewNodeSession, cfg.EnablePrometheus),
+		enableMetrics: cfg.EnablePrometheus,
 	}
 	return c, nil
 }
@@ -101,7 +109,7 @@ func (p *pegasusClient) OpenTable(ctx context.Context, tableName string) (TableC
 		}
 
 		var tb TableConnector
-		tb, err := ConnectTable(ctx, tableName, p.metaMgr, p.replicaMgr)
+		tb, err := ConnectTable(ctx, tableName, p.metaMgr, p.replicaMgr, p.enableMetrics)
 		if err != nil {
 			return nil, err
 		}
