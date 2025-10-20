@@ -75,7 +75,11 @@ class ClientOperator(object):
         self.response = None
 
     def prepare_thrift_header(self, body_length, timeout):
-        self.header.client_timeout = timeout
+        if timeout is None or timeout < 0:
+            client_timeout = 0
+        else:
+            client_timeout = timeout
+        self.header.client_timeout = client_timeout
         self.header.body_length = body_length
         self.header.thread_hash = tools.dsn_gpid_to_thread_hash(self.header.app_id, self.header.partition_index)
         return self.header.to_bytes()
