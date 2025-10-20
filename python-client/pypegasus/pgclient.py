@@ -620,6 +620,13 @@ class Pegasus(object):
 
     @classmethod
     def generate_next_bytes(cls, buff):
+        """
+        Increment the last non-0xFF byte in the buffer.
+        
+        If `buff` is a string, it is assumed to be encoded with 'latin-1' to ensure
+        a 1:1 mapping between characters and bytes. Unicode strings with characters
+        outside the 0-255 range will raise a UnicodeEncodeError.
+        """
         is_str = isinstance(buff, str)
         is_ba = isinstance(buff, bytearray)
 
@@ -1037,11 +1044,15 @@ class Pegasus(object):
         if scan_options.sortkey_filter_type == filter_type.FT_MATCH_PREFIX and \
             len(scan_options.sortkey_filter_pattern) > 0:
             prefix_start = self.generate_key(hash_key, scan_options.sortkey_filter_pattern)
+            # If the prefix start is after the current start_key, move the scan start to the prefix.
             if bytes_cmp(prefix_start.data, start_key.data) > 0:
                 start_key = prefix_start
                 scan_options.start_inclusive = True
 
             prefix_stop = self.generate_next_key(hash_key, scan_options.sortkey_filter_pattern)
+            # If the prefix stop is before or equal to the current stop_key, move the scan stop to the prefix stop.
+            # The prefix stop represents the next key after hash_key and sortkey_filter_pattern, 
+            # so stop_inclusive should be False.
             if bytes_cmp(prefix_stop.data, stop_key.data) <= 0:
                 stop_key = prefix_stop
                 scan_options.stop_inclusive = False
