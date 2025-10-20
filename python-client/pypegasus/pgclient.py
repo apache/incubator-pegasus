@@ -53,7 +53,6 @@ DEFAULT_TIMEOUT = 2000               # ms
 META_CHECK_INTERVAL = 2              # s
 MAX_TIMEOUT_THRESHOLD = 5            # times
 MAX_META_QUERY_THRESHOLD = 1         # times
-MAX_SOLVED_THRESHOLD = 1             # times
 
 class BaseSession(object):
 
@@ -250,7 +249,6 @@ class MetaSessionManager(SessionManager):
         self.addr_list = []
         self.host_ports = []
         self.query_times = 0
-        self.solved_times = 0
         
     # validate if the given string is a valid IP address     
     def is_valid_ip(self, address):
@@ -303,7 +301,7 @@ class MetaSessionManager(SessionManager):
                             ip_str = socket.inet_ntop(socket.AF_INET6, ip6_bytes)
                             ips.append(ip_str)
                         else:
-                            print(f"Invalid IPv6 bytes length: {len(ip6_bytes)}")
+                            logger.error('Invalid IPv6 bytes length: %s', len(ip6_bytes))
                     else:
                         ips.append(str(answer.payload.address))
             return ips
@@ -369,13 +367,12 @@ class MetaSessionManager(SessionManager):
                     new_addr_list.append((ip, port))
                 logger.info("resolved hostname %s to IP type:%s, addr:%s", host_port.host, host_port.type, ips)
             except Exception as e:
-                    logger.error("failed to resolve hostname %s: %s", host, e)
-                    continue
+                logger.error("failed to resolve hostname %s: %s", host, e)
+                continue
                 
         if not new_addr_list or new_addr_list == self.addr_list:
             returnValue(None)
-
-        self.solved_times = 0        
+     
         stale_sessions = []
         for rpc_addr in list(self.session_dict):
             ip, port = rpc_addr.to_ip_port()
@@ -410,11 +407,10 @@ class MetaSessionManager(SessionManager):
         # all meta server queries failed, maybe need to re-resolve hostname 
         # to get new IP addresses
         self.query_times += 1
-        logger.error('query partition info err(%s) table: %s, query_times: %d, err: %s',
-                    res.err.errno, self.name, self.query_times, res)
+        logger.error('query partition info err. table: %s, query_times: %d, err: %s',
+                    self.name, self.query_times, res)
         
-        if self.query_times >= MAX_META_QUERY_THRESHOLD and self.solved_times <= MAX_SOLVED_THRESHOLD:
-            self.solved_times += 1
+        if self.query_times >= MAX_META_QUERY_THRESHOLD:
             self.query_times = 0
             raise RuntimeError("all meta server queries failed, try to re-resolve hostname")  
 
@@ -802,7 +798,7 @@ class Pegasus(object):
                 d = self.meta_session_manager.add_meta_server(host_port)
                 deferreds.append(d)
             results = yield defer.DeferredList(deferreds, consumeErrors=True)
-            if not any(success for success, _ in results):
+            if not any(success for _, success in results):
                 raise Exception("all meta servers failed to initialize")
 
         dlist = self.meta_session_manager.query()
