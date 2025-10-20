@@ -45,13 +45,13 @@ except:
     fastbinary = None
 
 try:
-    with open(os.path.dirname(__file__)+"/logger.yaml", 'r', encoding='utf-8') as f:
+    with open(os.path.join(os.path.dirname(__file__), "logger.yaml"), 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
         logging.config.dictConfig(config)
-        logging.getLogger("pgclient").info("Logging config loaded successfully.")
+        logging.getLogger("pgclient").debug("Logging config loaded successfully.")
 except Exception as e:
-    print(f"Failed to load pgclient logging config: {e}")
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger("pgclient").warning("Failed to load pgclient logging config: %s", e)
 
 logger = logging.getLogger("pgclient")
 
