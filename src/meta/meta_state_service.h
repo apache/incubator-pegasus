@@ -120,7 +120,7 @@ public:
                                  const blob &value,
                                  dsn::task_tracker *tracker) = 0;
 
-    // The same as create_node(), except that the value is empty and the tracker is nullptr.
+    // The same as create_node(), except that `value` is empty and `tracker` is nullptr.
     task_ptr
     create_empty_node(const std::string &node, task_code cb_code, const err_callback &cb_create)
     {

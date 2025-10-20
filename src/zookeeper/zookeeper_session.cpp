@@ -402,7 +402,12 @@ void zookeeper_session::visit(zoo_opcontext *ctx)
     // TODO(clang-tidy): the read ops from zookeeper might get the staled data, need to fix
     int ec = ZOK;
     zoo_input &input = ctx->_input;
-    const auto path = input._path;
+
+    // A local variable is needed here to hold a reference to `_path` to prevent it from
+    // being freed in the thread executing the completion callback, which could otherwise
+    // lead to a dangling pointer issue.
+    const std::shared_ptr<std::string> path(input._path);
+
     switch (ctx->_optype) {
     case ZOO_CREATE:
         ec = zoo_acreate(_handle,
