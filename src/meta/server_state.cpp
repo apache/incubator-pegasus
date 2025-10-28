@@ -530,7 +530,8 @@ error_code server_state::sync_apps_to_remote_storage()
         apps_path,
         LPC_META_CALLBACK,
         [&err](error_code ec) { err = ec; },
-        blob(lock_state, 0, strlen(lock_state)));
+        blob(lock_state, 0, strlen(lock_state)),
+        nullptr);
     t->wait();
 
     if (err != ERR_NODE_ALREADY_EXIST && err != ERR_OK) {
@@ -581,10 +582,12 @@ error_code server_state::sync_apps_to_remote_storage()
     }
 
     tracker.wait_outstanding_tasks();
-    t = _meta_svc->get_remote_storage()->set_data(_apps_root,
-                                                  blob(unlock_state, 0, strlen(unlock_state)),
-                                                  LPC_META_STATE_HIGH,
-                                                  [&err](dsn::error_code e) { err = e; });
+    t = _meta_svc->get_remote_storage()->set_data(
+        _apps_root,
+        blob(unlock_state, 0, strlen(unlock_state)),
+        LPC_META_STATE_HIGH,
+        [&err](dsn::error_code e) { err = e; },
+        nullptr);
     t->wait();
     if (dsn::ERR_OK == err) {
         LOG_INFO("set {} to unlock state in remote storage", _apps_root);
@@ -725,18 +728,21 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
 
     std::string transaction_state;
     storage
-        ->get_data(_apps_root,
-                   LPC_META_CALLBACK,
-                   [&err, &transaction_state](error_code ec, const blob &value) {
-                       err = ec;
-                       if (ec == dsn::ERR_OK) {
-                           transaction_state.assign(value.data(), value.length());
-                       }
-                   })
+        ->get_data(
+            _apps_root,
+            LPC_META_CALLBACK,
+            [&err, &transaction_state](error_code ec, const blob &value) {
+                err = ec;
+                if (ec == dsn::ERR_OK) {
+                    transaction_state.assign(value.data(), value.length());
+                }
+            },
+            nullptr)
         ->wait();
 
-    if (ERR_OBJECT_NOT_FOUND == err)
+    if (ERR_OBJECT_NOT_FOUND == err) {
         return err;
+    }
     CHECK_EQ_MSG(ERR_OK, err, "can't handle this error");
     CHECK(transaction_state == std::string(unlock_state) || transaction_state.empty(),
           "invalid transaction state({})",
@@ -1105,7 +1111,7 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
     std::string app_partition_path = get_partition_path(*app, pidx);
     dsn::blob value = dsn::json::json_forwarder<partition_configuration>::encode(app->pcs[pidx]);
     _meta_svc->get_remote_storage()->create_node(
-        app_partition_path, LPC_META_STATE_HIGH, on_create_app_partition, value);
+        app_partition_path, LPC_META_STATE_HIGH, on_create_app_partition, value, nullptr);
 }
 
 void server_state::get_allowed_partitions(dsn::message_ex *msg,
@@ -1150,7 +1156,7 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
     std::string app_dir = get_app_path(*app);
     blob value = app->to_json(app_status::AS_AVAILABLE);
     _meta_svc->get_remote_storage()->create_node(
-        app_dir, LPC_META_STATE_HIGH, on_create_app_root, value);
+        app_dir, LPC_META_STATE_HIGH, on_create_app_root, value, nullptr);
 }
 
 void server_state::create_app(dsn::message_ex *msg)
@@ -1443,7 +1449,7 @@ void server_state::do_app_drop(std::shared_ptr<app_state> &app)
     blob json_app = app->to_json(app_status::AS_DROPPED);
     std::string app_path = get_app_path(*app);
     _meta_svc->get_remote_storage()->set_data(
-        app_path, json_app, LPC_META_STATE_HIGH, after_mark_app_dropped);
+        app_path, json_app, LPC_META_STATE_HIGH, after_mark_app_dropped, nullptr);
 }
 
 void server_state::drop_app(dsn::message_ex *msg)
@@ -1593,7 +1599,7 @@ void server_state::do_app_recall(std::shared_ptr<app_state> &app)
     std::string app_path = get_app_path(*app);
     blob value = app->to_json(app_status::AS_AVAILABLE);
     _meta_svc->get_remote_storage()->set_data(
-        app_path, value, LPC_META_STATE_HIGH, after_recall_app);
+        app_path, value, LPC_META_STATE_HIGH, after_recall_app, nullptr);
 }
 
 void server_state::recall_app(dsn::message_ex *msg)
@@ -2079,7 +2085,7 @@ void server_state::recall_partition(std::shared_ptr<app_state> &app, int pidx)
     blob json_partition = dsn::json::json_forwarder<partition_configuration>::encode(pc);
     std::string partition_path = get_partition_path(pc.pid);
     _meta_svc->get_remote_storage()->set_data(
-        partition_path, json_partition, LPC_META_STATE_HIGH, on_recall_partition);
+        partition_path, json_partition, LPC_META_STATE_HIGH, on_recall_partition, nullptr);
 }
 
 void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)

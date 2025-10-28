@@ -72,51 +72,52 @@ public:
     }
 
     // work_path = (argc > 0 ? argv[0] : current_app_data_dir)
-    virtual error_code initialize(const std::vector<std::string> &args) override;
-    virtual error_code finalize() override { return ERR_OK; }
+    error_code initialize(const std::vector<std::string> &args) override;
+    error_code finalize() override { return ERR_OK; }
 
-    virtual std::shared_ptr<meta_state_service::transaction_entries>
+    std::shared_ptr<meta_state_service::transaction_entries>
     new_transaction_entries(unsigned int capacity) override;
 
-    virtual task_ptr
+    task_ptr
     submit_transaction(const std::shared_ptr<meta_state_service::transaction_entries> &t_entries,
                        task_code cb_code,
                        const err_callback &cb_create_tree,
-                       dsn::task_tracker *tracker = nullptr) override;
+                       dsn::task_tracker *tracker) override;
 
-    virtual task_ptr create_node(const std::string &node,
-                                 task_code cb_code,
-                                 const err_callback &cb_create,
-                                 const blob &value = blob(),
-                                 dsn::task_tracker *tracker = nullptr) override;
+    task_ptr create_node(const std::string &node,
+                         task_code cb_code,
+                         const err_callback &cb_create,
+                         const blob &value,
+                         dsn::task_tracker *tracker) override;
 
-    virtual task_ptr delete_node(const std::string &node,
-                                 bool recursively_delete,
-                                 task_code cb_code,
-                                 const err_callback &cb_delete,
-                                 dsn::task_tracker *tracker = nullptr) override;
+    task_ptr delete_node(const std::string &node,
+                         bool recursively_delete,
+                         task_code cb_code,
+                         const err_callback &cb_delete,
+                         dsn::task_tracker *tracker) override;
 
-    virtual task_ptr node_exist(const std::string &node,
-                                task_code cb_code,
-                                const err_callback &cb_exist,
-                                dsn::task_tracker *tracker = nullptr) override;
+    task_ptr node_exist(const std::string &node,
+                        task_code cb_code,
+                        const err_callback &cb_exist,
+                        dsn::task_tracker *tracker) override;
 
-    virtual task_ptr get_data(const std::string &node,
-                              task_code cb_code,
-                              const err_value_callback &cb_get_data,
-                              dsn::task_tracker *tracker = nullptr) override;
+    task_ptr get_data(const std::string &node,
+                      task_code cb_code,
+                      const err_value_callback &cb_get_data,
+                      dsn::task_tracker *tracker) override;
 
-    virtual task_ptr set_data(const std::string &node,
-                              const blob &value,
-                              task_code cb_code,
-                              const err_callback &cb_set_data,
-                              dsn::task_tracker *tracker = nullptr) override;
+    task_ptr set_data(const std::string &node,
+                      const blob &value,
+                      task_code cb_code,
+                      const err_callback &cb_set_data,
+                      dsn::task_tracker *tracker) override;
 
-    virtual task_ptr get_children(const std::string &node,
-                                  task_code cb_code,
-                                  const err_stringv_callback &cb_get_children,
-                                  dsn::task_tracker *tracker = nullptr) override;
-    virtual ~meta_state_service_simple() override;
+    task_ptr get_children(const std::string &node,
+                          task_code cb_code,
+                          const err_stringv_callback &cb_get_children,
+                          dsn::task_tracker *tracker) override;
+
+    ~meta_state_service_simple() override;
 
 private:
     struct operation

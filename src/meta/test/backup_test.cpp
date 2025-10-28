@@ -254,7 +254,7 @@ protected:
         _service->_backup_handler->backup_option().request_backup_period_ms = 20_ms;
         _service->_backup_handler->backup_option().issue_backup_interval_ms = 1000_ms;
         _service->_storage
-            ->create_node(
+            ->create_empty_node(
                 policy_root, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
             ->wait();
         ASSERT_EQ(dsn::ERR_OK, ec);
@@ -274,7 +274,7 @@ protected:
         _mp.set_policy(_policy);
 
         _service->_storage
-            ->create_node(
+            ->create_empty_node(
                 policy_dir, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
             ->wait();
         ASSERT_EQ(dsn::ERR_OK, ec);

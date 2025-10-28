@@ -123,7 +123,7 @@ public:
         const std::string policy_root = "/test";
         dsn::error_code ec;
         _ms->_storage
-            ->create_node(
+            ->create_empty_node(
                 _policy_root, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
             ->wait();
         _mhs = std::make_unique<meta_http_service>(_ms.get());
