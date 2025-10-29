@@ -172,7 +172,8 @@ func (c *rpcBasedClient) CreateTable(tableName string, partitionCount int32, rep
 			AppType:        "pegasus",
 			IsStateful:     true,
 			Envs:           envs,
-		}}
+		},
+	}
 
 	var appID int32
 	var respErr error
