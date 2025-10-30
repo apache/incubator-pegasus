@@ -62,7 +62,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.11.11'
       # python-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
       # to generate code as well. The thrift-compiler version on ubuntu-22.04 is 0.16.0, so
       # build and install thrift-compiler 0.13.0 manually.
