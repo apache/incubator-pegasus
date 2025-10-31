@@ -99,7 +99,7 @@ class BaseSession(object):
         self._requests[seqid] = dr
 
         # ds(deferred send) will wait dr(deferred receive)
-        ds = defer.maybeDeferred(self.send_req, op, seqid)
+        ds = defer.maybeDeferred(self.send_req, op, seqid, timeout)
         ds.addCallbacks(
             callback=self.cb_send,
             callbackArgs=(seqid,),
@@ -108,13 +108,13 @@ class BaseSession(object):
         ds.addTimeout(timeout/1000.0, reactor, self.on_timeout)
         return ds
 
-    def send_req(self, op, seqid):
+    def send_req(self, op, seqid, timeout):
         oprot = self._oprot_factory.getProtocol(self._transport)
         oprot.trans.seek(ThriftHeader.HEADER_LENGTH)                    # skip header
         op.send_data(oprot, seqid)
         body_length = oprot.trans.tell() - ThriftHeader.HEADER_LENGTH
         oprot.trans.seek(0)                                             # back to header
-        oprot.trans.write(op.prepare_thrift_header(body_length))
+        oprot.trans.write(op.prepare_thrift_header(body_length, timeout))
         oprot.trans.flush()
 
     def recv_ACK(self, iprot, mtype, rseqid, errno, result_type, parser):
