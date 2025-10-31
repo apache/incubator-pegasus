@@ -1219,18 +1219,20 @@ void pegasus_client_impl::async_get_unordered_scanners(
         if (err == ERR_OK) {
             ::dsn::unmarshall(resp, response);
             if (response.err == ERR_OK) {
-                unsigned int count = response.partition_count;
+                auto count = response.partition_count;
                 int split = count < max_split_count ? count : max_split_count;
                 scanners.resize(split);
 
                 int size = count / split;
                 int more = count - size * split;
+                int partition_index = 0;
 
                 for (int i = 0; i < split; i++) {
-                    int s = size + (i < more);
+                    int s = size + static_cast<int>(i < more);
                     std::vector<uint64_t> hash(s);
-                    for (int j = 0; j < s; j++)
-                        hash[j] = --count;
+                    for (int j = 0; j < s; j++) {
+                        hash[j] = partition_index++;
+                    }
                     scanners[i] =
                         new pegasus_scanner_impl(_client, std::move(hash), options, true, true);
                 }
