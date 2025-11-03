@@ -41,3 +41,4 @@ loggers:
     level: INFO
     handlers: [pegasus_file_handler]
     propagate: false
+    
