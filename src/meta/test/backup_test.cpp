@@ -51,6 +51,7 @@
 #include "task/async_calls.h"
 #include "task/task.h"
 #include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
