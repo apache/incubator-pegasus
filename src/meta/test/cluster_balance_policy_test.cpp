@@ -127,7 +127,7 @@ TEST(cluster_balance_policy, get_app_migration_info)
 
     node_state ns;
     ns.set_hp(hp);
-    ns.put_partition(gpid(kAppid, 0), true);
+    ns.put_partition(gpid(kAppId, 0), true);
     node_mapper nodes;
     nodes[hp] = ns;
 
@@ -149,7 +149,7 @@ TEST(cluster_balance_policy, get_app_migration_info)
             policy.get_app_migration_info(app, nodes, balance_type::COPY_PRIMARY, migration_info);
         ASSERT_TRUE(res);
 
-        ASSERT_EQ(kAppid, migration_info.app_id);
+        ASSERT_EQ(kAppId, migration_info.app_id);
         ASSERT_EQ(kAppName, migration_info.app_name);
 
         ASSERT_EQ(1, migration_info.partitions.size());
