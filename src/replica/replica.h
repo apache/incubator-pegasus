@@ -34,6 +34,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include "common/json_helper.h"
@@ -47,6 +48,7 @@
 #include "prepare_list.h"
 #include "ranger/access_type.h"
 #include "replica/backup/cold_backup_context.h"
+#include "replica/idempotent_writer.h"
 #include "replica/replica_base.h"
 #include "replica_context.h"
 #include "rpc/rpc_message.h"
@@ -57,36 +59,34 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/thread_access_checker.h"
 #include "utils/throttling_controller.h"
 #include "utils/uniq_timestamp_us.h"
+#include "utils_types.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 class pegasus_server_test_base;
 class rocksdb_wrapper_test;
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server
 
 namespace dsn {
 class gpid;
 class host_port;
+class task_spec;
 
-namespace dist {
-
-namespace block_service {
+namespace dist::block_service {
 class block_filesystem;
-} // namespace block_service
-} // namespace dist
+} // namespace dist::block_service
 
 namespace security {
 class access_controller;
 } // namespace security
+
 namespace replication {
 
 class backup_request;
 class backup_response;
-
 class configuration_restore_request;
 class detect_hotkey_request;
 class detect_hotkey_response;
@@ -107,11 +107,12 @@ class replica_stub;
 class replication_app_base;
 class replication_options;
 struct dir_node;
-typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
+
+using cold_backup_context_ptr = dsn::ref_ptr<cold_backup_context>;
 
 namespace test {
 class test_checker;
-}
+} // namespace test
 
 #define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
     do {                                                                                           \
@@ -163,7 +164,7 @@ struct deny_client
 class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:
-    ~replica(void);
+    ~replica() override;
 
     // return true when the mutation is valid for the current replica
     bool replay_mutation(mutation_ptr &mu, bool is_private);
@@ -181,8 +182,8 @@ public:
     //
     //    requests from clients
     //
-    void on_client_write(message_ex *request, bool ignore_throttling = false);
-    void on_client_read(message_ex *request, bool ignore_throttling = false);
+    void on_client_write(message_ex *request, bool ignore_throttling);
+    void on_client_read(message_ex *request, bool ignore_throttling);
 
     //
     //    messages and tools from/for meta server
@@ -286,9 +287,23 @@ public:
     // - `callback`: the callback processor handling the error code of triggering checkpoint.
     void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree,
                                                    uint32_t delay_ms,
-                                                   trigger_checkpoint_callback callback = {});
+                                                   trigger_checkpoint_callback callback);
 
-    void on_query_last_checkpoint(learn_response &response);
+    // The same as the above except that `callback` is empty.
+    void async_trigger_manual_emergency_checkpoint(decree min_checkpoint_decree, uint32_t delay_ms);
+
+    // Get the last checkpoint info and put it into the response to reply to the dup follower.
+    //
+    // Parameters:
+    // - `checksum_type`: specify which algorithm the server (namely dup master) will use to
+    // calculate the checksum for each file. This parameter is used to implement resumable
+    // checkpoint download for duplication: the client (namely dup follower) receives the file
+    // sizes and checksums, then decides which files it should fetch from the server accordingly.
+    // CST_NONE means do not calculate file size and checksum.
+    // - `response`: the output parameter, used to respond to the dup follower.
+    void on_query_last_checkpoint(utils::checksum_type::type checksum_type,
+                                  learn_response &response);
+
     std::shared_ptr<replica_duplicator_manager> get_duplication_manager() const
     {
         return _duplication_mgr;
@@ -356,7 +371,36 @@ private:
     void response_client_read(dsn::message_ex *request, error_code error);
     void response_client_write(dsn::message_ex *request, error_code error);
     void execute_mutation(mutation_ptr &mu);
-    mutation_ptr new_mutation(decree decree);
+
+    // Create a new mutation with specified decree.
+    //
+    // Parameters:
+    // - d: invalid_decree, or the real decree assigned to this mutation.
+    //
+    // Return the newly created mutation.
+    mutation_ptr new_mutation(decree d);
+
+    // Create a new mutation with specified decree and a flag marking whether this is a
+    // blocking candidate (for a detailed explanation of blocking candidate, refer to the
+    // comments for the field mutation::is_blocking_candidate).
+    //
+    // Parameters:
+    // - d: invalid_decree, or the real decree assigned to this mutation.
+    // - is_blocking_candidate: true means creating a blocking candidate.
+    //
+    // Return the newly created mutation.
+    mutation_ptr new_mutation(decree d, bool is_blocking_candidate);
+
+    // Create a new mutation with specified decree and idempotent writer.
+    //
+    // Parameters:
+    // - d: invalid_decree, or the real decree assigned to this mutation.
+    // - idem_writer: the data structure that applies the idempotent requests to the storage
+    // engine and automatically responds to the atomic write request (i.e. incr, check_and_set
+    // or check_and_mutate).
+    //
+    // Return the newly created mutation.
+    mutation_ptr new_mutation(decree d, pegasus::idempotent_writer_ptr &&idem_writer);
 
     // initialization
     replica(replica_stub *stub,
@@ -371,17 +415,79 @@ private:
     decree get_replay_start_decree();
 
     /////////////////////////////////////////////////////////////////
-    // 2pc
-    // `pop_all_committed_mutations = true` will be used for ingestion empty write
-    // See more about it in `replica_bulk_loader.cpp`
-    void
-    init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations = false);
-    void send_prepare_message(const ::dsn::host_port &addr,
+    // 2PC
+
+    // Given the specification for a client request, decide whether to reject it as it is a
+    // non-idempotent request.
+    //
+    // Parameters:
+    // - spec: the specification for a client request, should not be null (otherwise the
+    // behaviour is undefined).
+    //
+    // Return true if deciding to reject this client request.
+    bool need_reject_non_idempotent(const task_spec *spec) const;
+
+    // Given the specification for a client request, decide whether to make it idempotent.
+    //
+    // Parameters:
+    // - spec: the specification for a client request, should not be null (otherwise the
+    // behaviour is undefined).
+    //
+    // Return true if deciding to make this client request idempotent.
+    bool need_make_idempotent(const task_spec *spec) const;
+
+    // Given a client request, decide whether to make it idempotent.
+    //
+    // Parameters:
+    // - request: the client request, could be null.
+    //
+    // Return true if deciding to make this client request idempotent.
+    bool need_make_idempotent(message_ex *request) const;
+
+    // Make the atomic write request (if any) in a mutation idempotent.
+    //
+    // Parameters:
+    // - mu: the mutation where the atomic write request will be translated into idempotent
+    // one. Should contain at least one client request. Once succeed in translating, `mu`
+    // will be reassigned with the new idempotent mutation as the output. Thus it is both an
+    // input and an output parameter.
+    //
+    // Return rocksdb::Status::kOk, or other code (rocksdb::Status::Code) if some error
+    // occurred while making write idempotent.
+    int make_idempotent(mutation_ptr &mu);
+
+    // Launch 2PC for the specified mutation: it will be broadcast to secondary replicas,
+    // appended to plog, and finally applied into storage engine.
+    //
+    // Parameters:
+    // - mu: the mutation pushed into the write pipeline.
+    // - reconciliation: true means the primary replica will be force to launch 2PC for each
+    // uncommitted request in its prepared list to make them committed regardless of whether
+    // there is a quorum to receive the prepare requests.
+    // - pop_all_committed_mutations: true means popping all committed mutations while preparing
+    // locally, used for ingestion in bulk loader with empty write. See `replica_bulk_loader.cpp`
+    // for details.
+    void init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations);
+
+    // The same as the above except that `pop_all_committed_mutations` is set false.
+    void init_prepare(mutation_ptr &mu, bool reconciliation)
+    {
+        init_prepare(mu, reconciliation, false);
+    }
+
+    // Reply to the client with the error if 2PC failed.
+    //
+    // Parameters:
+    // - mu: the mutation for which 2PC failed.
+    // - err: the error that caused the 2PC failure.
+    void reply_with_error(const mutation_ptr &mu, const error_code &err);
+
+    void send_prepare_message(const host_port &hp,
                               partition_status::type status,
                               const mutation_ptr &mu,
                               int timeout_milliseconds,
-                              bool pop_all_committed_mutations = false,
-                              int64_t learn_signature = invalid_signature);
+                              bool pop_all_committed_mutations,
+                              int64_t learn_signature);
     void on_append_log_completed(mutation_ptr &mu, error_code err, size_t size);
     void on_prepare_reply(std::pair<mutation_ptr, partition_status::type> pr,
                           error_code err,
@@ -446,12 +552,17 @@ private:
     void update_configuration_on_meta_server(config_type::type type,
                                              const host_port &node,
                                              partition_configuration &new_pc);
+
+    // Only called by primary replicas.
     void
     on_update_configuration_on_meta_server_reply(error_code err,
                                                  dsn::message_ex *request,
                                                  dsn::message_ex *response,
                                                  std::shared_ptr<configuration_update_request> req);
+
+    // Only called by primary replicas.
     void replay_prepare_list();
+
     bool is_same_ballot_status_change_allowed(partition_status::type olds,
                                               partition_status::type news);
 
@@ -575,11 +686,26 @@ private:
     // update envs to deny client request
     void update_deny_client(const std::map<std::string, std::string> &envs);
 
-    // store `info` into a file under `path` directory
-    // path = "" means using the default directory (`_dir`/.app_info)
-    error_code store_app_info(app_info &info, const std::string &path = "");
+    // Write the specified `info` into .app_info file under the specified `dir` directory.
+    error_code store_app_info(app_info &info, const std::string &dir);
+
+    // Write the specified `info` into .app_info file under `_dir` directory.
+    error_code store_app_info(app_info &info);
+
+    // Write `_app_info` into .app_info file under the specified `dir` directory.
+    error_code store_app_info(const std::string &dir);
+
+    // Write `_app_info` into .app_info file under `_dir` directory.
+    error_code store_app_info();
+
+    // Load `info` from .app_info file under the specified `dir` directory.
+    error_code load_app_info(const std::string &dir, app_info &info) const;
+
+    // Load `info` from .app_info file under `_dir` directory.
+    error_code load_app_info(app_info &info) const;
 
     void update_app_max_replica_count(int32_t max_replica_count);
+    void update_app_atomic_idempotent(bool atomic_idempotent);
     void update_app_name(const std::string &app_name);
 
     bool is_data_corrupted() const { return _data_corrupted; }
@@ -590,7 +716,17 @@ private:
     // Currently only used for unit test to get the count of backup requests.
     int64_t get_backup_request_count() const;
 
-private:
+    // Support self-defined `replication_app_base` at runtime which is only used for test.
+    template <typename TApp,
+              typename... Args,
+              typename = typename std::enable_if<
+                  std::is_base_of<replication_app_base,
+                                  typename std::remove_pointer<TApp>::type>::value>::type>
+    void create_app_for_test(Args &&...args)
+    {
+        _app = std::make_unique<TApp>(std::forward<Args>(args)...);
+    }
+
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_log_tool;
     friend class ::dsn::replication::mutation_queue;
@@ -767,7 +903,12 @@ private:
     bool _allow_ingest_behind{false};
     // Indicate where the storage engine data is corrupted and unrecoverable.
     bool _data_corrupted{false};
+
+    DISALLOW_COPY_AND_ASSIGN(replica);
+    DISALLOW_MOVE_AND_ASSIGN(replica);
 };
-typedef dsn::ref_ptr<replica> replica_ptr;
+
+using replica_ptr = dsn::ref_ptr<replica>;
+
 } // namespace replication
 } // namespace dsn

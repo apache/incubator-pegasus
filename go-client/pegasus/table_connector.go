@@ -26,12 +26,14 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/idl/rrdb"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/pegasus/op"
 	"github.com/apache/incubator-pegasus/go-client/session"
@@ -82,6 +84,25 @@ var DefaultMultiGetOptions = &MultiGetOptions{
 	MaxFetchCount: 100,
 	MaxFetchSize:  100000,
 	NoValue:       false,
+}
+
+// DelRangeOptions is the options for DelRange, defaults to DefaultDelRangeOptions.
+type DelRangeOptions struct {
+	nextSortKey    []byte
+	StartInclusive bool
+	StopInclusive  bool
+	SortKeyFilter  Filter
+}
+
+// DefaultDelRangeOptions defines the defaults of DelRangeOptions.
+var DefaultDelRangeOptions = &DelRangeOptions{
+	nextSortKey:    nil,
+	StartInclusive: true,
+	StopInclusive:  false,
+	SortKeyFilter: Filter{
+		Type:    FilterTypeNoFilter,
+		Pattern: nil,
+	},
 }
 
 // TableConnector is used to communicate with single Pegasus table.
@@ -143,6 +164,16 @@ type TableConnector interface {
 	// `sortKeys[i]` : CAN'T be nil but CAN be empty.
 	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error
 
+	// DelRange /DelRangeOpt deletes the multiple entries under `hashKey`, between range (`startSortKey`, `stopSortKey`),
+	// atomically in one operation.
+	// DelRange is identical to DelRangeOpt except that the former uses DefaultDelRangeOptions as `options`.
+	//
+	// startSortKey: nil or len(startSortKey) == 0 means to start from the first entry in the sorted key range.
+	// stopSortKey: nil or len(stopSortKey) == 0 means to stop at the last entry in the sorted key range.
+	// `hashKey` : CAN'T be nil or empty.
+	DelRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) error
+	DelRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *DelRangeOptions) error
+
 	// Returns ttl(time-to-live) in seconds: -1 if ttl is not set; -2 if entry doesn't exist.
 	// `hashKey` : CAN'T be nil or empty.
 	// `sortKey` : CAN'T be nil but CAN be empty.
@@ -203,10 +234,11 @@ type pegasusTableConnector struct {
 
 	logger pegalog.Logger
 
-	tableName string
-	appID     int32
-	parts     []*replicaNode
-	mu        sync.RWMutex
+	tableName     string
+	appID         int32
+	parts         []*replicaNode
+	enableMetrics bool
+	mu            sync.RWMutex
 
 	confUpdateCh chan bool
 	tom          tomb.Tomb
@@ -219,13 +251,14 @@ type replicaNode struct {
 
 // ConnectTable queries for the configuration of the given table, and set up connection to
 // the replicas which the table locates on.
-func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager) (TableConnector, error) {
+func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager, enableMetrics bool) (TableConnector, error) {
 	p := &pegasusTableConnector{
-		tableName:    tableName,
-		meta:         meta,
-		replica:      replica,
-		confUpdateCh: make(chan bool, 1),
-		logger:       pegalog.GetLogger(),
+		tableName:     tableName,
+		meta:          meta,
+		replica:       replica,
+		enableMetrics: enableMetrics,
+		confUpdateCh:  make(chan bool, 1),
+		logger:        pegalog.GetLogger(),
 	}
 
 	// if the session became unresponsive, TableConnector auto-triggers
@@ -254,15 +287,16 @@ func (p *pegasusTableConnector) updateConf(ctx context.Context) error {
 	return nil
 }
 
-func isPartitionValid(oldCount int, respCount int) bool {
-	return oldCount == 0 || oldCount == respCount || oldCount*2 == respCount || oldCount == respCount*2
+func isPartitionValid(respCount int) bool {
+	// Check if respCount is greater than or equal to 4 and is a power of 2
+	return respCount >= 2 && (respCount&(respCount-1)) == 0
 }
 
 func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfgResponse) error {
 	if resp.Err.Errno != base.ERR_OK.String() {
 		return errors.New(resp.Err.Errno)
 	}
-	if resp.PartitionCount == 0 || len(resp.Partitions) != int(resp.PartitionCount) || !isPartitionValid(len(p.parts), int(resp.PartitionCount)) {
+	if resp.PartitionCount == 0 || len(resp.Partitions) != int(resp.PartitionCount) || !isPartitionValid(int(resp.PartitionCount)) {
 		return fmt.Errorf("invalid table configuration: response [%v]", resp)
 	}
 
@@ -449,6 +483,81 @@ func (p *pegasusTableConnector) MultiDel(ctx context.Context, hashKey []byte, so
 	return err
 }
 
+func (p *pegasusTableConnector) DelRange(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte) error {
+	return p.DelRangeOpt(ctx, hashKey, startSortKey, stopSortKey, DefaultDelRangeOptions)
+}
+
+func (p *pegasusTableConnector) DelRangeOpt(ctx context.Context, hashKey []byte, startSortKey []byte, stopSortKey []byte, options *DelRangeOptions) error {
+	err := func() error {
+		scannerOptions := ScannerOptions{
+			BatchSize:      defaultScannerBatchSize,
+			StartInclusive: options.StartInclusive,
+			StopInclusive:  options.StopInclusive,
+			HashKeyFilter:  Filter{Type: FilterTypeNoFilter, Pattern: nil},
+			SortKeyFilter:  options.SortKeyFilter,
+			NoValue:        true,
+		}
+
+		if startSortKey != nil {
+			options.nextSortKey = make([]byte, len(startSortKey))
+			copy(options.nextSortKey, startSortKey)
+		} else {
+			options.nextSortKey = nil
+		}
+
+		scanner, err := p.GetScanner(context.Background(), hashKey, startSortKey, stopSortKey, &scannerOptions)
+		if err != nil {
+			switch {
+			case errors.Is(err, context.DeadlineExceeded):
+				return fmt.Errorf("Getting pegasusScanner takes too long time when delete hashKey: %s, startSortKey: %v, stopSortKey: %v", hashKey, startSortKey, stopSortKey)
+			default:
+				return err
+			}
+		}
+		defer scanner.Close()
+
+		var sortKeys [][]byte
+		index := 0
+		for {
+			completed, _, s, _, err := scanner.Next(ctx)
+			if err != nil {
+				return err
+			}
+			if completed {
+				break
+			}
+			sortKeys = append(sortKeys, s)
+			if len(sortKeys) >= scannerOptions.BatchSize {
+				options.nextSortKey = sortKeys[0]
+				if err := p.MultiDel(ctx, hashKey, sortKeys); err != nil {
+					switch {
+					case errors.Is(err, context.DeadlineExceeded):
+						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] timeout", hashKey, options.nextSortKey, index)
+					default:
+						return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] failed", hashKey, options.nextSortKey, index)
+					}
+				}
+				sortKeys = nil
+				index += scannerOptions.BatchSize
+			}
+		}
+
+		if len(sortKeys) > 0 {
+			if err := p.MultiDel(ctx, hashKey, sortKeys); err != nil {
+				switch {
+				case errors.Is(err, context.DeadlineExceeded):
+					return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] timeout", hashKey, sortKeys[0], index)
+				default:
+					return fmt.Errorf("DelRange of hashKey: %s from sortKey: %s[index: %d] failed", hashKey, sortKeys[0], index)
+				}
+			}
+			options.nextSortKey = nil
+		}
+		return nil
+	}()
+	return WrapError(err, OpDelRange)
+}
+
 // -2 means entry not found.
 func (p *pegasusTableConnector) TTL(ctx context.Context, hashKey []byte, sortKey []byte) (int, error) {
 	res, err := p.runPartitionOp(ctx, hashKey, &op.TTL{HashKey: hashKey, SortKey: sortKey}, OpTTL)
@@ -611,8 +720,32 @@ func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKe
 }
 
 func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []byte, req op.Request, optype OpType) (interface{}, error) {
+	var errResult error
+	if p.enableMetrics {
+		start := time.Now()
+		defer func() {
+			status := "success"
+			if errResult != nil {
+				if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+					status = "timeout"
+				} else {
+					status = "fail"
+				}
+			}
+			labels := []string{
+				p.tableName,
+				optype.String(),
+				status,
+				strings.Join(p.meta.GetMetaIPAddrs(), ","),
+			}
+			elapsed := time.Since(start).Nanoseconds()
+			metrics.PegasusClientOperationsSummary.Observe(labels, float64(elapsed))
+		}()
+	}
+
 	// validate arguments
 	if err := req.Validate(); err != nil {
+		errResult = err
 		return 0, WrapError(err, optype)
 	}
 	partitionHash := crc64Hash(hashKey)
@@ -622,6 +755,7 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 		confUpdated, retry, err = p.handleReplicaError(err, part)
 		return
 	})
+	errResult = err
 	return res, p.wrapPartitionError(err, gpid, part, optype)
 }
 

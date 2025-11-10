@@ -236,20 +236,22 @@ void task_worker::loop()
 
         q->decrease_count(batch_size);
 
-#ifndef NDEBUG
+#if defined(MOCK_TEST) || !defined(NDEBUG)
         int count = 0;
 #endif
+
         while (task != nullptr) {
             next = task->next;
             task->next = nullptr;
             task->exec_internal();
             task = next;
-#ifndef NDEBUG
-            count++;
+
+#if defined(MOCK_TEST) || !defined(NDEBUG)
+            ++count;
 #endif
         }
 
-#ifndef NDEBUG
+#if defined(MOCK_TEST) || !defined(NDEBUG)
         CHECK_EQ_MSG(count, batch_size, "returned task count and batch size do not match");
 #endif
 

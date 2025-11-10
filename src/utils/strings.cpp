@@ -159,22 +159,10 @@ error_s pattern_match(const std::string &str,
     return error_s::ok();
 }
 
-std::string get_last_component(const std::string &input, const char splitters[])
+std::string_view get_last_component(std::string_view str, std::string_view splitters)
 {
-    int index = -1;
-    const char *s = splitters;
-
-    while (*s != 0) {
-        auto pos = input.find_last_of(*s);
-        if (pos != std::string::npos && (static_cast<int>(pos) > index))
-            index = static_cast<int>(pos);
-        s++;
-    }
-
-    if (index != -1)
-        return input.substr(index + 1);
-    else
-        return input;
+    const auto pos = str.find_last_of(splitters);
+    return (pos == std::string_view::npos) ? str : str.substr(pos + 1);
 }
 
 namespace {
@@ -465,11 +453,12 @@ std::string string_md5(const char *buffer, unsigned length)
 
 std::string find_string_prefix(const std::string &input, char separator)
 {
-    auto current = input.find(separator);
-    if (current == 0 || current == std::string::npos) {
-        return std::string();
+    const auto pos = input.find(separator);
+    if (pos == 0 || pos == std::string::npos) {
+        return {};
     }
-    return input.substr(0, current);
+
+    return input.substr(0, pos);
 }
 
 bool has_space(const std::string &str)

@@ -80,6 +80,13 @@ public:
                                   const std::string &user_name,
                                   const std::string &database_name) const;
 
+protected:
+    // The cache of the global resources policies, it's a subset of '_all_resource_policies'.
+    resource_policies _global_policies_cache;
+
+    // The cache of the database resources policies, it's a subset of '_all_resource_policies'.
+    resource_policies _database_policies_cache;
+
 private:
     // Parse Ranger ACL policies from 'data' in JSON format into 'policies'.
     static void parse_policies_from_json(const rapidjson::Value &data,
@@ -106,14 +113,6 @@ private:
     // Sync policies to app_envs(REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES).
     dsn::error_code sync_policies_to_app_envs();
 
-protected:
-    // The cache of the global resources policies, it's a subset of '_all_resource_policies'.
-    resource_policies _global_policies_cache;
-
-    // The cache of the database resources policies, it's a subset of '_all_resource_policies'.
-    resource_policies _database_policies_cache;
-
-private:
     dsn::task_tracker _tracker;
 
     // The path where policies to be saved in remote storage.
@@ -149,5 +148,6 @@ std::string get_database_name_from_app_name(const std::string &app_name);
 // Try to get the table_name of 'app_name'.
 // Return 'app_name' if 'app_name' is not a valid Ranger rule table name.
 std::string get_table_name_from_app_name(const std::string &app_name);
+
 } // namespace ranger
 } // namespace dsn

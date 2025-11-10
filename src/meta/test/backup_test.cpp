@@ -51,6 +51,7 @@
 #include "task/async_calls.h"
 #include "task/task.h"
 #include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
@@ -58,6 +59,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/synchronize.h"
+#include "utils/test_macros.h"
 #include "utils/time_utils.h"
 #include "utils/zlocks.h"
 
@@ -242,7 +244,7 @@ protected:
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
 
         dsn::error_code ec = _service->remote_storage_initialize();
         ASSERT_EQ(ec, dsn::ERR_OK);
@@ -253,7 +255,7 @@ protected:
         _service->_backup_handler->backup_option().request_backup_period_ms = 20_ms;
         _service->_backup_handler->backup_option().issue_backup_interval_ms = 1000_ms;
         _service->_storage
-            ->create_node(
+            ->create_empty_node(
                 policy_root, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
             ->wait();
         ASSERT_EQ(dsn::ERR_OK, ec);
@@ -273,7 +275,7 @@ protected:
         _mp.set_policy(_policy);
 
         _service->_storage
-            ->create_node(
+            ->create_empty_node(
                 policy_dir, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
             ->wait();
         ASSERT_EQ(dsn::ERR_OK, ec);
@@ -598,6 +600,8 @@ TEST_F(policy_context_test, test_disable_backup_policy)
     // 'start_backup_app_meta_unlocked()' should not be called because policy is disabled
     _mp.continue_current_backup_unlocked();
     ASSERT_FALSE(_mp.notifier_start_backup_app_meta_unlocked().wait_for(5000));
+
+    _mp._tracker.cancel_outstanding_tasks();
 }
 
 TEST_F(policy_context_test, test_backup_failed)
@@ -752,7 +756,7 @@ protected:
 
     void SetUp() override
     {
-        meta_test_base::SetUp();
+        SET_UP_BASE(meta_test_base);
 
         meta_options &opt = _meta_svc->_meta_opts;
         FLAGS_cluster_root = "/meta_test";

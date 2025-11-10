@@ -26,6 +26,7 @@ build:
 	thrift -I ../idl -out idl --gen go:thrift_import='github.com/apache/thrift/lib/go/thrift',package_prefix='github.com/apache/incubator-pegasus/go-client/idl/' ../idl/replica_admin.thrift
 	thrift -I ../idl -out idl --gen go:thrift_import='github.com/apache/thrift/lib/go/thrift',package_prefix='github.com/apache/incubator-pegasus/go-client/idl/' ../idl/rrdb.thrift
 	thrift -I ../idl -out idl --gen go:thrift_import='github.com/apache/thrift/lib/go/thrift',package_prefix='github.com/apache/incubator-pegasus/go-client/idl/' ../idl/command.thrift
+	thrift -I ../idl -out idl --gen go:thrift_import='github.com/apache/thrift/lib/go/thrift',package_prefix='github.com/apache/incubator-pegasus/go-client/idl/' ../idl/utils.thrift
 	rm -Rf idl/admin/admin_client-remote
 	rm -Rf idl/cmd/remote_cmd_service-remote
 	rm -Rf idl/radmin/replica_client-remote

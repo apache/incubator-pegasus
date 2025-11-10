@@ -41,7 +41,6 @@
 #include "app_env_validator.h"
 #include "common/gpid.h"
 #include "common/manual_compact.h"
-#include "dsn.layer2_types.h"
 #include "gutil/map_util.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
@@ -52,10 +51,14 @@
 #include "utils/zlocks.h"
 
 namespace dsn {
+class app_info;
 class blob;
 class command_deregister;
 class host_port;
 class message_ex;
+class partition_configuration;
+class query_cfg_request;
+class query_cfg_response;
 
 namespace replication {
 class configuration_balancer_request;
@@ -68,6 +71,7 @@ class configuration_recovery_request;
 class configuration_recovery_response;
 class configuration_restore_request;
 class configuration_update_request;
+class ddd_partition_info;
 class query_app_info_response;
 class query_replica_info_response;
 
@@ -144,6 +148,8 @@ public:
 
     meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
 
+    // TODO(wangdan): some calls to get_app() function are not thread-safe and need to be
+    // fixed.
     std::shared_ptr<app_state> get_app(const std::string &app_name) const
     {
         return gutil::FindWithDefault(_exist_apps, app_name);
@@ -154,18 +160,36 @@ public:
         return gutil::FindWithDefault(_all_apps, app_id);
     }
 
+    error_code get_app_name(int32_t app_id, std::string &app_name) const;
+
     void query_configuration_by_index(const query_cfg_request &request,
                                       /*out*/ query_cfg_response &response);
-    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &pc);
+    bool query_configuration_by_gpid(const dsn::gpid &id,
+                                     /*out*/ partition_configuration &pc) const;
+
+    // This function is used for ACL checks. Given `ddd_partitions`, this function would
+    // select the partitions that pass the ACL checks (based on `msg`) and place them into
+    // `allowed_partitions`. `msg` should never be null.
+    void get_allowed_partitions(dsn::message_ex *msg,
+                                const std::vector<ddd_partition_info> &ddd_partitions,
+                                std::vector<ddd_partition_info> &allowed_partitions) const;
 
     // app options
     void create_app(dsn::message_ex *msg);
     void drop_app(dsn::message_ex *msg);
     void recall_app(dsn::message_ex *msg);
     void rename_app(configuration_rename_app_rpc rpc);
+
+    // List tables according to `request` into `response`, with non-null request `msg` from
+    // client used for ACL checks. Null `msg` means disabling ACL checks.
+    void list_apps(dsn::message_ex *msg,
+                   const configuration_list_apps_request &request,
+                   configuration_list_apps_response &response) const;
+
+    // The same as the above function, except that `msg` is set null to disable ACL checks.
     void list_apps(const configuration_list_apps_request &request,
-                   configuration_list_apps_response &response,
-                   dsn::message_ex *msg = nullptr) const;
+                   configuration_list_apps_response &response) const;
+
     void restore_app(dsn::message_ex *msg);
 
     // app env operations
@@ -199,6 +223,12 @@ public:
     void get_max_replica_count(configuration_get_max_replica_count_rpc rpc) const;
     void set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
     void recover_from_max_replica_count_env();
+
+    // Get `atomic_idempotent` of a table.
+    void get_atomic_idempotent(configuration_get_atomic_idempotent_rpc rpc) const;
+
+    // Set `atomic_idempotent` of a table.
+    void set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc);
 
     // return true if no need to do any actions
     bool check_all_partitions();
@@ -377,6 +407,14 @@ private:
                                        int32_t max_replica_count,
                                        dsn::task_tracker &tracker);
 
+    // Update `atomic_idempotent` of given table on remote storage.
+    //
+    // Parameters:
+    // - app: the given table.
+    // - rpc: RPC request/response to change `atomic_idempotent`.
+    void update_app_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
+                                                configuration_set_atomic_idempotent_rpc rpc);
+
     // Used for `on_start_manual_compaction`
     bool parse_compaction_envs(start_manual_compact_rpc rpc,
                                std::vector<std::string> &keys,
@@ -385,19 +423,6 @@ private:
                                                   const std::vector<std::string> &keys,
                                                   const std::vector<std::string> &values);
 
-    bool app_info_compatible_equal(const app_info &l, const app_info &r) const
-    {
-        if (l.status != r.status || l.app_type != r.app_type || l.app_name != r.app_name ||
-            l.app_id != r.app_id || l.partition_count != r.partition_count ||
-            l.is_stateful != r.is_stateful || l.max_replica_count != r.max_replica_count ||
-            l.expire_second != r.expire_second || l.create_second != r.create_second ||
-            l.drop_second != r.drop_second) {
-            return false;
-        }
-        return true;
-    }
-
-private:
     friend class bulk_load_service;
     friend class bulk_load_service_test;
     friend class meta_app_operation_test;

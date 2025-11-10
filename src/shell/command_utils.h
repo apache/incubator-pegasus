@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <set>
@@ -36,13 +37,14 @@ class host_port;
 
 struct shell_context;
 
-// Check if there is not any other positional argument except the command, which means only
-// parameters and flags are needed.
-inline dsn::error_s no_pos_arg(const argh::parser &cmd)
+// Check if there are exact n positional arguments except the command, where n >= 0.
+inline dsn::error_s exact_n_pos_arg(const argh::parser &cmd, size_t n)
 {
-    // 1 means there is not any other positional argument except the command.
-    if (cmd.size() > 1) {
-        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS, "there shouldn't be any positional argument");
+    // n + 1 means the exact n positional arguments plus the command.
+    if (cmd.size() != n + 1) {
+        return FMT_ERR(dsn::ERR_INVALID_PARAMETERS,
+                       "except the command, there should be exact {} positional argument",
+                       n);
     }
 
     return dsn::error_s::ok();
@@ -80,13 +82,16 @@ validate_cmd(const argh::parser &cmd,
     return dsn::error_s::ok();
 }
 
-// Check if the parameters and flags are in the given set while there is not any positional
-// argument.
+// Check if the parameters and flags are in the given set, and there are exact `num_pos_args`
+// positional arguments.
 inline dsn::error_s validate_cmd(const argh::parser &cmd,
                                  const std::set<std::string> &params,
-                                 const std::set<std::string> &flags)
+                                 const std::set<std::string> &flags,
+                                 size_t num_pos_args)
 {
-    return validate_cmd(cmd, params, flags, no_pos_arg);
+    return validate_cmd(cmd, params, flags, [num_pos_args](const argh::parser &cmd) {
+        return exact_n_pos_arg(cmd, num_pos_args);
+    });
 }
 
 bool validate_ip(shell_context *sc,

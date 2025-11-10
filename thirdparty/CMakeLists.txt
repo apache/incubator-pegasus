@@ -123,6 +123,7 @@ ExternalProject_Add(abseil
         URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
         https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
         URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_absl_build_on_macos_arm64.patch
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DABSL_FIND_GOOGLETEST=OFF
@@ -187,6 +188,7 @@ ExternalProject_Add(thrift
         URL_MD5 88d667a8ae870d5adeca8cb7d6795442
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_thrift_build_and_link_errors.patch
         CMAKE_ARGS -DCMAKE_BUILD_TYPE=release
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DWITH_JAVA=OFF
         -DWITH_PYTHON=OFF
         -DWITH_C_GLIB=OFF
@@ -225,9 +227,9 @@ else ()
 endif ()
 
 ExternalProject_Add(zookeeper
-        URL ${OSS_URL_PREFIX}/apache-zookeeper-3.7.0.tar.gz
-        http://downloads.apache.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0.tar.gz
-        URL_MD5 44c2a33e01931aed94ef7f3d39d0963e
+        URL ${OSS_URL_PREFIX}/apache-zookeeper-3.9.4.tar.gz
+        https://archive.apache.org/dist/zookeeper/zookeeper-3.9.4/apache-zookeeper-3.9.4.tar.gz
+        URL_MD5 f3bc1e774792e3dc4f979be410b61d97
         PATCH_COMMAND ""
         COMMAND cd zookeeper-jute && mvn compile && cd ../zookeeper-client/zookeeper-client-c && cmake -DCMAKE_BUILD_TYPE=release -DWANT_CPPUNIT=OFF -DWITH_OPENSSL=OFF -DWITH_CYRUS_SASL=${ZOOKEEPER_WITH_CYRUS_SASL} -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         COMMAND cd zookeeper-client/zookeeper-client-c && make -j${PARALLEL}
@@ -246,6 +248,7 @@ ExternalProject_Add(libevent
         URL_MD5 80f8652e4b08d2ec86a5f5eb46b74510
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_libevent_for_macos.patch
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DEVENT__DISABLE_DEBUG_MODE=On
         -DEVENT__DISABLE_BENCHMARK=On
         -DEVENT__DISABLE_TESTS=On
@@ -373,6 +376,7 @@ ExternalProject_Add(jemalloc
 set(SNAPPY_OPTIONS
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_BUILD_TYPE=Release
         -DBUILD_SHARED_LIBS=OFF
@@ -407,6 +411,7 @@ ExternalProject_Add(zstd
         CONFIGURE_COMMAND cmake build/cmake
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_BUILD_TYPE=Release
         -DZSTD_BUILD_PROGRAMS=OFF
@@ -429,6 +434,7 @@ ExternalProject_Add(lz4
         CONFIGURE_COMMAND cmake build/cmake
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DLZ4_POSITION_INDEPENDENT_LIB=ON
         -DCMAKE_BUILD_TYPE=Release
         -DLZ4_BUILD_CLI=OFF

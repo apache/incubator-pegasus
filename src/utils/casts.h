@@ -17,8 +17,9 @@
 
 #pragma once
 
-#include <cassert>
 #include <type_traits>
+
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 
@@ -36,10 +37,8 @@ inline To down_cast(From *from)
                                   typename std::remove_pointer<To>::type>::value,
                   "<To> class is not derived from <From> class");
 
-    // Use RTTI to do double-check, though in practice the unit tests are seldom built in debug
-    // mode. For example, the unit tests of github CI for both rDSN and Pegasus are built in
-    // release mode.
-    CHECK(from == NULL || dynamic_cast<To>(from) != NULL, "");
+    // Use RTTI to do double-check only in debug mode.
+    DCHECK(from == NULL || dynamic_cast<To>(from) != NULL, "");
 
     return static_cast<To>(from);
 }

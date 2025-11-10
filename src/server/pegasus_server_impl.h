@@ -45,6 +45,7 @@
 #include "pegasus_utils.h"
 #include "pegasus_value_schema.h"
 #include "range_read_limiter.h"
+#include "replica/idempotent_writer.h"
 #include "replica/replication_app_base.h"
 #include "task/task.h"
 #include "task/task_tracker.h"
@@ -147,7 +148,10 @@ public:
     //  - ERR_FILE_OPERATION_FAILED
     ::dsn::error_code stop(bool clear_state) override;
 
-    int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) override;
+    // See replication_app_base::make_idempotent() for details. Only called by primary replicas.
+    int make_idempotent(dsn::message_ex *request,
+                        std::vector<dsn::message_ex *> &new_requests,
+                        idempotent_writer_ptr &idem_writer) override;
 
     /// Each of the write request (specifically, the rpc that's configured as write, see
     /// option `rpc_request_is_write_operation` in rDSN `task_spec`) will first be
@@ -159,8 +163,8 @@ public:
     int on_batched_write_requests(int64_t decree,
                                   uint64_t timestamp,
                                   dsn::message_ex **requests,
-                                  int count,
-                                  dsn::message_ex *original_request) override;
+                                  uint32_t count,
+                                  idempotent_writer_ptr &&idem_writer) override;
 
     ::dsn::error_code prepare_get_checkpoint(dsn::blob &learn_req) override
     {
@@ -249,6 +253,7 @@ public:
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
+    friend class pegasus_server_test_base;
     friend class pegasus_server_impl_test;
     friend class hotkey_collector_test;
     FRIEND_TEST(pegasus_server_impl_test, default_data_version);
@@ -478,7 +483,6 @@ private:
     void
     log_expired_data(const char *op, const dsn::rpc_address &addr, const rocksdb::Slice &key) const;
 
-private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
 
@@ -564,6 +568,8 @@ private:
 
     // Server-level metrics for rocksdb.
     METRIC_VAR_DECLARE_gauge_int64(rdb_block_cache_mem_usage_bytes, static);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_wbm_total_mem_usage_bytes, static);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_wbm_mutable_mem_usage_bytes, static);
     METRIC_VAR_DECLARE_gauge_int64(rdb_write_rate_limiter_through_bytes_per_sec, static);
 
     // Replica-level metrics for rocksdb.

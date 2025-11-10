@@ -112,6 +112,12 @@ int rocksdb_wrapper::get(std::string_view raw_key, /*out*/ db_get_context *ctx)
     return s.code();
 }
 
+int rocksdb_wrapper::get(const dsn::blob &raw_key,
+                         /*out*/ db_get_context *ctx)
+{
+    return get(raw_key.to_string_view(), ctx);
+}
+
 int rocksdb_wrapper::write_batch_put(int64_t decree,
                                      std::string_view raw_key,
                                      std::string_view value,
@@ -176,6 +182,15 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
     return s.code();
 }
 
+int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
+                                         const dsn::blob &raw_key,
+                                         const dsn::blob &value,
+                                         int32_t expire_sec)
+{
+    return write_batch_put_ctx(
+        ctx, raw_key.to_string_view(), value.to_string_view(), static_cast<uint32_t>(expire_sec));
+}
+
 int rocksdb_wrapper::write(int64_t decree)
 {
     CHECK_GT(_write_batch->Count(), 0);
@@ -221,6 +236,11 @@ int rocksdb_wrapper::write_batch_delete(int64_t decree, std::string_view raw_key
                           utils::c_escape_sensitive_string(sort_key));
     }
     return s.code();
+}
+
+int rocksdb_wrapper::write_batch_delete(int64_t decree, const dsn::blob &raw_key)
+{
+    return write_batch_delete(decree, raw_key.to_string_view());
 }
 
 void rocksdb_wrapper::clear_up_write_batch() { _write_batch->Clear(); }

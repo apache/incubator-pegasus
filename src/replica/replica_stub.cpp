@@ -1090,7 +1090,7 @@ void replica_stub::on_client_write(gpid id, dsn::message_ex *request)
     }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
-        rep->on_client_write(request);
+        rep->on_client_write(request, false);
     } else {
         response_client(id, false, request, partition_status::PS_INVALID, ERR_OBJECT_NOT_FOUND);
     }
@@ -1112,7 +1112,7 @@ void replica_stub::on_client_read(gpid id, dsn::message_ex *request)
     }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
-        rep->on_client_read(request);
+        rep->on_client_read(request, false);
     } else {
         response_client(id, true, request, partition_status::PS_INVALID, ERR_OBJECT_NOT_FOUND);
     }
@@ -1211,11 +1211,12 @@ void replica_stub::on_query_last_checkpoint(query_last_checkpoint_info_rpc rpc)
     learn_response &response = rpc.response();
 
     replica_ptr rep = get_replica(request.pid);
-    if (rep != nullptr) {
-        rep->on_query_last_checkpoint(response);
-    } else {
+    if (dsn_unlikely(rep == nullptr)) {
         response.err = ERR_OBJECT_NOT_FOUND;
+        return;
     }
+
+    rep->on_query_last_checkpoint(request.checksum_type, response);
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
@@ -1699,7 +1700,9 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_,
                                 req.__isset.meta_split_status ? req.meta_split_status
                                                               : split_status::NOT_SPLIT);
     } else {
-        if (req.config.hp_primary == _primary_host_port) {
+        host_port primary;
+        GET_HOST_PORT(req.config, primary, primary);
+        if (primary == _primary_host_port) {
             LOG_INFO("{}@{}: replica not exists on replica server, which is primary, remove it "
                      "from meta server",
                      req.config.pid,
@@ -1750,10 +1753,12 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
     SET_IP_AND_HOST_PORT(*request, node, primary_address(), _primary_host_port);
     request->type = config_type::CT_DOWNGRADE_TO_INACTIVE;
 
-    if (_primary_host_port == pc.hp_primary) {
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    if (_primary_host_port == primary) {
         RESET_IP_AND_HOST_PORT(request->config, primary);
-    } else if (replica_helper::remove_node(primary_address(), request->config.secondaries) &&
-               replica_helper::remove_node(_primary_host_port, request->config.hp_secondaries)) {
+    } else if (REMOVE_IP_AND_HOST_PORT(
+                   primary_address(), _primary_host_port, request->config, secondaries)) {
     } else {
         return;
     }
@@ -2242,24 +2247,23 @@ replica *replica_stub::new_replica(gpid gpid,
     return new_replica(gpid, app, restore_if_necessary, is_duplication_follower, {});
 }
 
-/*static*/ std::string replica_stub::get_replica_dir_name(const std::string &dir)
+/*static*/ std::string_view replica_stub::get_replica_dir_name(std::string_view dir)
 {
-    static const char splitters[] = {'\\', '/', 0};
-    return utils::get_last_component(dir, splitters);
+    return utils::get_last_component(dir, "\\/");
 }
 
-/* static */ bool
-replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type)
+/*static*/ bool
+replica_stub::parse_replica_dir_name(std::string_view dir_name, gpid &pid, std::string &app_type)
 {
     std::vector<uint32_t> ids(2, 0);
     size_t begin = 0;
     for (auto &id : ids) {
-        size_t end = dir_name.find('.', begin);
+        const size_t end = dir_name.find('.', begin);
         if (end == std::string::npos) {
             return false;
         }
 
-        if (!buf2uint32(std::string_view(dir_name.data() + begin, end - begin), id)) {
+        if (!buf2uint32(dir_name.substr(begin, end - begin), id)) {
             return false;
         }
 
@@ -2273,9 +2277,7 @@ replica_stub::parse_replica_dir_name(const std::string &dir_name, gpid &pid, std
     pid.set_app_id(static_cast<int32_t>(ids[0]));
     pid.set_partition_index(static_cast<int32_t>(ids[1]));
 
-    // TODO(wangdan): the 3rd parameter `count` does not support default argument for CentOS 7
-    // (gcc 7.3.1). After CentOS 7 is deprecated, consider dropping std::string::npos.
-    app_type.assign(dir_name, begin, std::string::npos);
+    app_type = dir_name.substr(begin);
     return true;
 }
 

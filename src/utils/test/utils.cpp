@@ -29,8 +29,8 @@
 #include <map>
 #include <set>
 #include <string>
+#include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -50,14 +50,123 @@
 
 namespace dsn::utils {
 
-TEST(core, get_last_component)
+struct get_last_component_case
 {
-    ASSERT_EQ("a", get_last_component("a", "/"));
-    ASSERT_EQ("b", get_last_component("a/b", "/"));
-    ASSERT_EQ("b", get_last_component("a//b", "/"));
-    ASSERT_EQ("", get_last_component("a/", "/"));
-    ASSERT_EQ("c", get_last_component("a/b_c", "/_"));
+    const char *str;
+    const char *splitters;
+    std::string_view expected_result;
+};
+
+class GetLastComponentTest : public testing::TestWithParam<get_last_component_case>
+{
+protected:
+    template <typename TStr>
+    void test_get_last_component()
+    {
+        const auto &test_case = GetParam();
+
+        const TStr str(test_case.str);
+        const auto actual_result = get_last_component(str, test_case.splitters);
+        EXPECT_EQ(test_case.expected_result, actual_result);
+    }
+};
+
+TEST_P(GetLastComponentTest, GetLastComponentCString) { test_get_last_component<const char *>(); }
+
+TEST_P(GetLastComponentTest, GetLastComponentString) { test_get_last_component<std::string>(); }
+
+TEST_P(GetLastComponentTest, GetLastComponentStringView)
+{
+    test_get_last_component<std::string_view>();
 }
+
+const std::vector<get_last_component_case> get_last_component_tests = {
+    // Empty string.
+    {"", "", ""},
+    {"", "/", ""},
+    {"", "\\/", ""},
+    {"/", "", "/"},
+
+    // The only character is a splitter.
+    {"/", "/", ""},
+    {"/", "\\/", ""},
+
+    // The only character is not a splitter.
+    {"a", "/", "a"},
+    {"a", "\\/", "a"},
+    {"/", "\\", "/"},
+
+    // There is not any splitter in multiple characters.
+    {"aa", "/", "aa"},
+    {"aa", "\\/", "aa"},
+    {"ab", "/", "ab"},
+    {"ab", "\\/", "ab"},
+    {"abc", "/", "abc"},
+    {"abc", "\\/", "abc"},
+
+    // There is only one splitter in multiple characters.
+    {"a/", "/", ""},
+    {"/a", "/", "a"},
+    {"a/", "\\/", ""},
+    {"/a", "\\/", "a"},
+    {"aa/", "/", ""},
+    {"a/a", "/", "a"},
+    {"/aa", "/", "aa"},
+    {"aa/", "\\/", ""},
+    {"a/a", "\\/", "a"},
+    {"/aa", "\\/", "aa"},
+    {"ab/", "/", ""},
+    {"a/b", "/", "b"},
+    {"/ab", "/", "ab"},
+    {"abc/", "\\/", ""},
+    {"ab/c", "\\/", "c"},
+    {"a/bc", "\\/", "bc"},
+    {"/abc", "\\/", "abc"},
+    {"abc\\", "\\/", ""},
+    {"ab\\c", "\\/", "c"},
+    {"a\\bc", "\\/", "bc"},
+    {"\\abc", "\\/", "abc"},
+
+    // There are adjacent splitters in multiple characters.
+    {"a//", "/", ""},
+    {"a/\\", "\\/", ""},
+    {"//a", "/", "a"},
+    {"\\/a", "\\/", "a"},
+    {"aa//", "/", ""},
+    {"aa\\/", "/\\", ""},
+    {"a//a", "/", "a"},
+    {"a/\\a", "/\\", "a"},
+    {"//aa", "/", "aa"},
+    {"\\/aa", "/\\", "aa"},
+    {"ab//", "/", ""},
+    {"ab/\\", "\\/", ""},
+    {"a//b", "/", "b"},
+    {"a\\/b", "\\/", "b"},
+    {"//ab", "/", "ab"},
+    {"/\\ab", "\\/", "ab"},
+    {"abc//", "/", ""},
+    {"abc\\/", "\\/", ""},
+    {"ab//c", "/", "c"},
+    {"ab/\\c", "\\/", "c"},
+    {"a//bc", "/", "bc"},
+    {"a\\/bc", "/\\", "bc"},
+    {"//abc", "/", "abc"},
+    {"\\/abc", "/\\", "abc"},
+
+    // There are multiple splitters in multiple characters.
+    {"\\a/", "/\\", ""},
+    {"a\\a/", "/\\", ""},
+    {"/aa\\", "/\\", ""},
+    {"a/b\\", "/\\", ""},
+    {"\\ab/", "/\\", ""},
+    {"a/b/c", "/", "c"},
+    {"a\\b/c", "/\\", "c"},
+    {"ab/cd\\efg", "/\\", "efg"},
+};
+
+INSTANTIATE_TEST_SUITE_P(StringTest,
+                         GetLastComponentTest,
+                         testing::ValuesIn(get_last_component_tests));
 
 TEST(core, crc)
 {

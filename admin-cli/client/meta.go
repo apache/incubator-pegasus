@@ -302,7 +302,7 @@ func (m *rpcBasedMeta) DropApp(tableName string, reserveSeconds int64) error {
 			ReserveSeconds:    &reserveSeconds,
 		},
 	}
-	err := m.callMeta("DropApp", req, func(resp interface{}) {})
+	err := m.callMeta("DropApp", req, func(_ interface{}) {})
 	return err
 }
 
@@ -312,7 +312,7 @@ func (m *rpcBasedMeta) ModifyDuplication(tableName string, dupid int, status adm
 		Dupid:   int32(dupid),
 		Status:  &status,
 	}
-	err := m.callMeta("ModifyDuplication", req, func(resp interface{}) {})
+	err := m.callMeta("ModifyDuplication", req, func(_ interface{}) {})
 	return err
 }
 
@@ -404,7 +404,7 @@ func (m *rpcBasedMeta) Balance(gpid *base.Gpid, opType BalanceType, from *util.P
 	}
 	req.ActionList = actions
 
-	err := m.callMeta("Balance", req, func(resp interface{}) {})
+	err := m.callMeta("Balance", req, func(_ interface{}) {})
 	return err
 }
 
@@ -524,7 +524,7 @@ func (m *rpcBasedMeta) RestartPartitionSplit(tableName string, parentPidx int) e
 }
 
 func (m *rpcBasedMeta) CancelPartitionSplit(tableName string, oldPartitionCount int) error {
-	var partitionCount int32 = int32(oldPartitionCount)
+	partitionCount := int32(oldPartitionCount)
 	req := &admin.ControlSplitRequest{
 		AppName:           tableName,
 		ControlType:       admin.SplitControlType_CANCEL,
@@ -615,8 +615,8 @@ func (m *rpcBasedMeta) ClearBulkLoad(tableName string) error {
 }
 
 func (m *rpcBasedMeta) StartManualCompaction(tableName string, targetLevel int, maxRunningCount int, bottommost bool) error {
-	var level int32 = int32(targetLevel)
-	var count int32 = int32(maxRunningCount)
+	level := int32(targetLevel)
+	count := int32(maxRunningCount)
 	req := &admin.StartAppManualCompactRequest{
 		AppName:         tableName,
 		TargetLevel:     &level,

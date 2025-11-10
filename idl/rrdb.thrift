@@ -71,23 +71,45 @@ enum mutate_operation
 enum update_type
 {
     UT_PUT,
-    UT_INCR
+    UT_INCR,
+    UT_CHECK_AND_SET,
+    UT_CHECK_AND_MUTATE_PUT,
+    UT_CHECK_AND_MUTATE_REMOVE
 }
 
-// The single-put request, just writes a key/value pair into storage, which is certainly
+// The single-update request, just applies a key/value pair into storage, which is certainly
 // idempotent.
 struct update_request
 {
+    // Once `type` is UT_CHECK_AND_MUTATE_REMOVE, only `key` would be used (as one of the
+    // composite keys from check_and_mutate_request that should be deleted), while `value`
+    // and `expire_ts_seconds` would be ignored.
     1:dsn.blob      key;
     2:dsn.blob      value;
     3:i32           expire_ts_seconds;
 
-    // This field marks the type of a single-put request, mainly used to differentiate a general
-    // single-put request from the one translated from a non-idempotent atomic write request:
+    // This field marks the type of a single-update request, mainly used to differentiate a
+    // general single-put request from the one translated from an atomic write request which
+    // may be:
     // - a general single-put request, if `type` is UT_PUT or not set by default as it's
     // optional, or
-    // - a put request translated from an incr request, if `type` is UT_INCR.
+    // - a put request translated from an incr request, if `type` is UT_INCR, or
+    // - a put request translated from a check_and_set request, if `type` is UT_CHECK_AND_SET,
+    // or
+    // - a put request translated from a mutate of MO_PUT in a check_and_mutate request, if
+    // `type` is UT_CHECK_AND_MUTATE_PUT, or
+    // - a remove request translated from a mutate of MO_DELETE in a check_and_mutate request,
+    // if `type` is UT_CHECK_AND_MUTATE_REMOVE.
     4:optional update_type type;
+
+    // Following 3 fields are only available while `type` is UT_CHECK_AND_SET, UT_CHECK_AND_MUTATE_PUT
+    // or UT_CHECK_AND_MUTATE_REMOVE, used to build check_and_set_response or check_and_mutate_response
+    // to reply to the client, once this put request is translated from check_and_set_request or
+    // check_and_mutate_request.
+    5:optional bool     check_value_returned;
+    6:optional bool     check_value_exist; // Used only if check_value_returned is true.
+    7:optional dsn.blob check_value; // Used only if both check_value_returned and
+                                     // check_value_exist are true.
 }
 
 struct update_response
@@ -242,12 +264,13 @@ struct check_and_set_request
 
 struct check_and_set_response
 {
-    1:i32            error; // return kTryAgain if check not passed.
-                            // return kInvalidArgument if check type is int compare and
-                            // check_operand/check_value is not integer or out of range.
+    1:i32            error; // Return kTryAgain if check not passed.
+                            // Return kInvalidArgument if check_type is comparing integers and
+                            // check_value/check_operand is not a valid integer or out of range.
     2:bool           check_value_returned;
-    3:bool           check_value_exist; // used only if check_value_returned is true
-    4:dsn.blob       check_value; // used only if check_value_returned and check_value_exist is true
+    3:bool           check_value_exist; // Used only if check_value_returned is true.
+    4:dsn.blob       check_value; // Used only if both check_value_returned and
+                                  // check_value_exist are true.
     5:i32            app_id;
     6:i32            partition_index;
     7:i64            decree;
@@ -274,12 +297,13 @@ struct check_and_mutate_request
 
 struct check_and_mutate_response
 {
-    1:i32            error; // return kTryAgain if check not passed.
-                            // return kInvalidArgument if check type is int compare and
-                            // check_operand/check_value is not integer or out of range.
+    1:i32            error; // Return kTryAgain if check not passed.
+                            // Return kInvalidArgument if check_type is comparing integers and
+                            // check_value/check_operand is not a valid integer or out of range.
     2:bool           check_value_returned;
-    3:bool           check_value_exist; // used only if check_value_returned is true
-    4:dsn.blob       check_value; // used only if check_value_returned and check_value_exist is true
+    3:bool           check_value_exist; // Used only if check_value_returned is true.
+    4:dsn.blob       check_value; // Used only if both check_value_returned and
+                                  // check_value_exist are true.
     5:i32            app_id;
     6:i32            partition_index;
     7:i64            decree;

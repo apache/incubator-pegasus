@@ -475,7 +475,8 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
     const std::string &app_name = request.app_name;
     const gpid &pid = request.pid;
     const auto &primary_addr = request.primary;
-    const auto &primary_hp = request.hp_primary;
+    host_port primary_hp;
+    GET_HOST_PORT(request, primary, primary_hp);
 
     if (err != ERR_OK) {
         LOG_ERROR("app({}), partition({}) failed to receive bulk load response from node({}), "
@@ -587,11 +588,14 @@ void bulk_load_service::try_resend_bulk_load_request(const std::string &app_name
     FAIL_POINT_INJECT_F("meta_bulk_load_resend_request", [](std::string_view) {});
     zauto_read_lock l(_lock);
     if (is_app_bulk_loading_unlocked(pid.get_app_id())) {
+        int32_t interval = _partition_bulk_load_info[pid].status == bulk_load_status::BLS_INGESTING
+                               ? bulk_load_constant::BULK_LOAD_INGEST_REQUEST_INTERVAL
+                               : bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL;
         tasking::enqueue(LPC_META_STATE_NORMAL,
                          _meta_svc->tracker(),
                          std::bind(&bulk_load_service::partition_bulk_load, this, app_name, pid),
                          0,
-                         std::chrono::seconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
+                         std::chrono::milliseconds(interval));
     }
 }
 
@@ -1263,11 +1267,12 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
     if (!try_partition_ingestion(pc, app->helpers->contexts[pid.get_partition_index()])) {
         LOG_WARNING(
             "app({}) partition({}) couldn't execute ingestion, wait and try later", app_name, pid);
-        tasking::enqueue(LPC_META_STATE_NORMAL,
-                         _meta_svc->tracker(),
-                         std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
-                         pid.thread_hash(),
-                         std::chrono::seconds(5));
+        tasking::enqueue(
+            LPC_META_STATE_NORMAL,
+            _meta_svc->tracker(),
+            std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
+            pid.thread_hash(),
+            std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_INGEST_REQUEST_INTERVAL));
         return;
     }
 
@@ -1279,7 +1284,7 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         std::bind(
             &bulk_load_service::send_ingestion_request, this, app_name, pid, primary, meta_ballot),
         0,
-        std::chrono::seconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
+        std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
@@ -2093,7 +2098,9 @@ void bulk_load_service::check_app_bulk_load_states(std::shared_ptr<app_state> ap
 {
     std::string app_path = get_app_bulk_load_path(app->app_id);
     _meta_svc->get_remote_storage()->node_exist(
-        app_path, LPC_META_CALLBACK, [this, app_path, app, is_app_bulk_loading](error_code err) {
+        app_path,
+        LPC_META_CALLBACK,
+        [this, app_path, app, is_app_bulk_loading](error_code err) {
             if (err != ERR_OK && err != ERR_OBJECT_NOT_FOUND) {
                 LOG_WARNING("check app({}) bulk load dir({}) failed, error = {}, try later",
                             app->app_name,
@@ -2123,7 +2130,8 @@ void bulk_load_service::check_app_bulk_load_states(std::shared_ptr<app_state> ap
             // Normal cases:
             // err = ERR_OBJECT_NOT_FOUND, is_app_bulk_load = false: app is not executing bulk load
             // err = ERR_OK, is_app_bulk_load = true: app used to be executing bulk load
-        });
+        },
+        nullptr);
 }
 
 } // namespace replication

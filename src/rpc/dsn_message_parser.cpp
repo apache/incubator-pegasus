@@ -26,9 +26,10 @@
 
 #include "dsn_message_parser.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <numeric>
 #include <vector>
 
 #include "rpc/rpc_message.h"
@@ -102,50 +103,52 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
 void dsn_message_parser::prepare_on_send(message_ex *msg)
 {
     auto &header = msg->header;
-    auto &buffers = msg->buffers;
+    const auto &buffers = msg->buffers;
 
-#ifndef NDEBUG
-    int i_max = (int)buffers.size() - 1;
-    size_t len = 0;
-    for (int i = 0; i <= i_max; i++) {
-        len += (size_t)buffers[i].length();
+#if defined(MOCK_TEST) || !defined(NDEBUG)
+    {
+        const size_t len =
+            std::accumulate(buffers.begin(), buffers.end(), 0UL, [](size_t sum, const auto &buf) {
+                return sum + buf.length();
+            });
+        CHECK_EQ(len, header->body_length + sizeof(message_header));
     }
-    CHECK_EQ(len, header->body_length + sizeof(message_header));
 #endif
 
-    if (task_spec::get(msg->local_rpc_code)->rpc_message_crc_required) {
-        // compute data crc if necessary (only once for the first time)
-        if (header->body_crc32 == CRC_INVALID) {
-            int i_max = (int)buffers.size() - 1;
-            uint32_t crc32 = 0;
-            size_t len = 0;
-            for (int i = 0; i <= i_max; i++) {
-                uint32_t lcrc;
-                const void *ptr;
-                size_t sz;
+    if (!task_spec::get(msg->local_rpc_code)->rpc_message_crc_required) {
+        return;
+    }
 
-                if (i == 0) {
-                    ptr = (const void *)(buffers[i].data() + sizeof(message_header));
-                    sz = (size_t)buffers[i].length() - sizeof(message_header);
-                } else {
-                    ptr = (const void *)buffers[i].data();
-                    sz = (size_t)buffers[i].length();
-                }
+    // compute data crc if necessary (only once for the first time)
+    if (header->body_crc32 == CRC_INVALID) {
+        uint32_t crc32 = 0;
+        size_t len = 0;
 
-                lcrc = dsn::utils::crc32_calc(ptr, sz, crc32);
-                crc32 = dsn::utils::crc32_concat(0, 0, crc32, len, crc32, lcrc, sz);
+        for (size_t i = 0; i < buffers.size(); ++i) {
+            const auto &buf = buffers[i];
+            const char *ptr = buf.data();
+            size_t sz = buf.length();
 
-                len += sz;
+            if (i == 0) {
+                ptr += sizeof(message_header);
+
+                // TODO(wangdan): CHECK_GE(sz, sizeof(message_header)) ?
+                sz -= sizeof(message_header);
             }
 
-            CHECK_EQ(len, header->body_length);
-            header->body_crc32 = crc32;
+            const auto lcrc = dsn::utils::crc32_calc(ptr, sz, crc32);
+            crc32 = dsn::utils::crc32_concat(0, 0, crc32, len, crc32, lcrc, sz);
+
+            len += sz;
         }
 
-        // always compute header crc
-        header->hdr_crc32 = CRC_INVALID;
-        header->hdr_crc32 = dsn::utils::crc32_calc(header, sizeof(message_header), 0);
+        CHECK_EQ(len, header->body_length);
+        header->body_crc32 = crc32;
     }
+
+    // always compute header crc
+    header->hdr_crc32 = CRC_INVALID;
+    header->hdr_crc32 = dsn::utils::crc32_calc(header, sizeof(message_header), 0);
 }
 
 int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers)

@@ -49,6 +49,7 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
 */
 #include "runtime/profiler.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <memory>

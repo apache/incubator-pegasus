@@ -34,11 +34,11 @@ namespace pegasus {
 // =====================================================================================
 // rocksdb key = [hash_key_len(uint16_t)] [hash_key(bytes)] [sort_key(bytes)]
 
-// generate rocksdb key.
-// T may be std::string or ::dsn::blob.
-// data is copied into 'key'.
-template <typename T>
-void pegasus_generate_key(::dsn::blob &key, const T &hash_key, const T &sort_key)
+// Generate rocksdb `key` by `hash_key` and `sort_key`.
+//
+// TKey may be std::string_view, std::string or dsn::blob.
+template <typename TKey>
+void pegasus_generate_key(::dsn::blob &key, const TKey &hash_key, const TKey &sort_key)
 {
     CHECK_LT(hash_key.length(), UINT16_MAX);
 

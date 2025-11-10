@@ -34,6 +34,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -70,6 +71,12 @@
 #include "utils/fmt_utils.h"
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
+
+namespace pegasus::server {
+
+class pegasus_server_test_base;
+
+} // namespace pegasus::server
 
 namespace dsn::utils {
 
@@ -291,7 +298,7 @@ public:
                                            ::dsn::rpc_replier<TRespType> &reply,
                                            const ::dsn::ranger::access_type &ac_type) const
     {
-        if (!_access_controller->is_enable_ranger_acl()) {
+        if (!_access_controller->is_ranger_acl_enabled()) {
             return true;
         }
         const auto &pid = request.pid;
@@ -388,11 +395,10 @@ private:
 
     // Get the replica dir name from a potentially longer path (`dir` could be an absolute
     // or relative path).
-    static std::string get_replica_dir_name(const std::string &dir);
+    static std::string_view get_replica_dir_name(std::string_view dir);
 
     // Parse app id, partition id and app type from the replica dir name.
-    static bool
-    parse_replica_dir_name(const std::string &dir_name, gpid &pid, std::string &app_type);
+    static bool parse_replica_dir_name(std::string_view dir_name, gpid &pid, std::string &app_type);
 
     // Load an existing replica which is located in `dn` with `replica_dir`. Usually each
     // different `dn` represents a unique disk. `replica_dir` is the absolute path of the
@@ -494,6 +500,7 @@ private:
     friend class replica_disk_test_base;
     friend class replica_disk_migrate_test;
     friend class replica_stub_test_base;
+    friend class pegasus::server::pegasus_server_test_base;
     friend class open_replica_test;
     friend class replica_follower;
     friend class replica_follower_test;

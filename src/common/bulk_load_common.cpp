@@ -17,12 +17,11 @@
 
 #include "bulk_load_common.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 const std::string bulk_load_constant::BULK_LOAD_INFO("bulk_load_info");
-const int32_t bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL = 10;
+const int32_t bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL = 10000;
+const int32_t bulk_load_constant::BULK_LOAD_INGEST_REQUEST_INTERVAL = 150;
 const std::string bulk_load_constant::BULK_LOAD_METADATA("bulk_load_metadata");
 const std::string bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR("bulk_load");
 const int32_t bulk_load_constant::PROGRESS_FINISHED = 100;
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

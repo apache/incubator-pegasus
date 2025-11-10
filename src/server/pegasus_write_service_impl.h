@@ -31,11 +31,11 @@
 #include "utils/defer.h"
 #include "utils/env.h"
 #include "utils/filesystem.h"
+#include "utils/safe_arithmetic.h"
 #include "utils/string_conv.h"
 #include "utils/strings.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 /// internal error codes used for fail injection
 // TODO(yingchun): Use real rocksdb::Status::code.
@@ -119,14 +119,13 @@ public:
         }
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
-        for (auto &kv : update.kvs) {
-            resp.error = _rocksdb_wrapper->write_batch_put_ctx(
-                ctx,
-                composite_raw_key(update.hash_key.to_string_view(), kv.key.to_string_view())
-                    .to_string_view(),
-                kv.value.to_string_view(),
-                static_cast<uint32_t>(update.expire_ts_seconds));
-            if (resp.error) {
+        for (const auto &kv : update.kvs) {
+            resp.error =
+                _rocksdb_wrapper->write_batch_put_ctx(ctx,
+                                                      composite_raw_key(update.hash_key, kv.key),
+                                                      kv.value,
+                                                      update.expire_ts_seconds);
+            if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
                 return resp.error;
             }
         }
@@ -154,12 +153,10 @@ public:
         }
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
-        for (auto &sort_key : update.sort_keys) {
+        for (const auto &sort_key : update.sort_keys) {
             resp.error = _rocksdb_wrapper->write_batch_delete(
-                decree,
-                composite_raw_key(update.hash_key.to_string_view(), sort_key.to_string_view())
-                    .to_string_view());
-            if (resp.error) {
+                decree, composite_raw_key(update.hash_key, sort_key).to_string_view());
+            if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
                 return resp.error;
             }
         }
@@ -179,8 +176,14 @@ public:
     {
         // Get current raw value for the provided key from the RocksDB instance.
         db_get_context get_ctx;
-        const int err = _rocksdb_wrapper->get(req.key.to_string_view(), &get_ctx);
+        const int err = _rocksdb_wrapper->get(req.key, &get_ctx);
         if (dsn_unlikely(err != rocksdb::Status::kOk)) {
+            // Failed to read current raw value.
+            LOG_ERROR_PREFIX("failed to get current raw value for incr while making "
+                             "idempotent: rocksdb_status = {}, key = {}",
+                             err,
+                             utils::c_escape_sensitive_string(req.key));
+
             return make_error_response(err, err_resp);
         }
 
@@ -211,9 +214,7 @@ public:
                 return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
             }
 
-            new_int = base_int + req.increment;
-            if (dsn_unlikely((req.increment > 0 && new_int < base_int) ||
-                             (req.increment < 0 && new_int > base_int))) {
+            if (dsn_unlikely(!dsn::safe_add(base_int, req.increment, new_int))) {
                 // New value overflows, just respond with the base value.
                 LOG_ERROR_PREFIX("incr failed: error = new value is out of range, "
                                  "base_value = {}, increment = {}, new_value = {}",
@@ -224,28 +225,24 @@ public:
             }
         }
 
+        // Generate the idempotent single-put request for incr.
         return make_idempotent_request_for_incr(
             req.key, new_int, calc_expire_on_existing(req, get_ctx), update);
     }
 
-    // Apply single-put request translated from incr request into RocksDB, and build response
-    // for incr. Return current status for RocksDB. Only called by primary replicas.
+    // Apply the single-put request translated from an incr request into RocksDB, and build
+    // response for the incr request. Return current status for RocksDB. Only called by
+    // primary replicas.
     int put(const db_write_context &ctx,
             const dsn::apps::update_request &update,
             dsn::apps::incr_response &resp)
     {
-        resp.app_id = get_gpid().get_app_id();
-        resp.partition_index = get_gpid().get_partition_index();
-        resp.decree = ctx.decree;
-        resp.server = _primary_host_port;
+        make_basic_response(ctx.decree, resp);
 
-        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
+        const auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
 
-        resp.error =
-            _rocksdb_wrapper->write_batch_put_ctx(ctx,
-                                                  update.key.to_string_view(),
-                                                  update.value.to_string_view(),
-                                                  static_cast<uint32_t>(update.expire_ts_seconds));
+        resp.error = _rocksdb_wrapper->write_batch_put_ctx(
+            ctx, update.key, update.value, update.expire_ts_seconds);
         if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
             return resp.error;
         }
@@ -256,12 +253,12 @@ public:
         }
 
         // Shouldn't fail to parse since the value must be a valid int64.
-        CHECK(dsn::buf2int64(update.value.to_string_view(), resp.new_value),
-              "invalid int64 value for put idempotent incr: key={}, value={}",
-              update.key,
-              update.value);
+        CHECK_PREFIX_MSG(dsn::buf2int64(update.value.to_string_view(), resp.new_value),
+                         "invalid int64 value for put idempotent incr: key={}, value={}",
+                         update.key,
+                         update.value);
 
-        return resp.error;
+        return rocksdb::Status::kOk;
     }
 
     int incr(int64_t decree, const dsn::apps::incr_request &update, dsn::apps::incr_response &resp)
@@ -307,9 +304,8 @@ public:
                     // we should write empty record to update rocksdb's last flushed decree
                     return empty_put(decree);
                 }
-                new_value = old_value_int + update.increment;
-                if ((update.increment > 0 && new_value < old_value_int) ||
-                    (update.increment < 0 && new_value > old_value_int)) {
+
+                if (dsn_unlikely(!dsn::safe_add(old_value_int, update.increment, new_value))) {
                     // new value is out of range, return old value by 'new_value'
                     LOG_ERROR_PREFIX("incr failed: decree = {}, error = "
                                      "new value is out of range, old_value = {}, increment = {}",
@@ -347,6 +343,96 @@ public:
         return resp.error;
     }
 
+    // Tranlate a check_and_set request into a single-put request which is certainly idempotent.
+    // Return current status for RocksDB. Only called by primary replicas.
+    int make_idempotent(const dsn::apps::check_and_set_request &req,
+                        dsn::apps::check_and_set_response &err_resp,
+                        dsn::apps::update_request &update)
+    {
+        if (dsn_unlikely(!is_check_type_supported(req.check_type))) {
+            LOG_ERROR_PREFIX("check type {} is not supported for check_and_set ",
+                             "while making idempotent",
+                             cas_check_type_to_string(req.check_type));
+
+            return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
+        }
+
+        dsn::blob check_key;
+        pegasus_generate_key(check_key, req.hash_key, req.check_sort_key);
+
+        // Get the check value.
+        db_get_context get_ctx;
+        const int err = _rocksdb_wrapper->get(check_key, &get_ctx);
+        if (dsn_unlikely(err != rocksdb::Status::kOk)) {
+            // Failed to read the check value.
+            LOG_ERROR_PREFIX("failed to get the check value for check_and_set while making "
+                             "idempotent: rocksdb_status = {}, hash_key = {}, "
+                             "check_sort_key = {}",
+                             err,
+                             utils::c_escape_sensitive_string(req.hash_key),
+                             utils::c_escape_sensitive_string(req.check_sort_key));
+
+            return make_error_response(err, err_resp);
+        }
+
+        dsn::blob check_value;
+        const bool value_exist = !get_ctx.expired && get_ctx.found;
+        if (value_exist) {
+            pegasus_extract_user_data(
+                _pegasus_data_version, std::move(get_ctx.raw_value), check_value);
+        }
+
+        bool invalid_argument = false;
+        const bool passed = validate_check(
+            req.check_type, req.check_operand, value_exist, check_value, invalid_argument);
+        if (!passed) {
+            make_check_value(req, value_exist, check_value, err_resp);
+            return make_error_response(invalid_argument ? rocksdb::Status::kInvalidArgument
+                                                        : rocksdb::Status::kTryAgain,
+                                       err_resp);
+        }
+
+        // Check passed, generate new RocksDB key.
+        dsn::blob set_key;
+        if (req.set_diff_sort_key) {
+            pegasus_generate_key(set_key, req.hash_key, req.set_sort_key);
+        } else {
+            set_key = check_key;
+        }
+
+        // Generate new RocksDB value.
+        make_check_value(req, value_exist, check_value, update);
+
+        // Generate the idempotent single-put request for check_and_set.
+        return make_idempotent_request_for_check_and_set(
+            set_key, req.set_value, req.set_expire_ts_seconds, update);
+    }
+
+    // Apply the single-put request translated from a check_and_set request into RocksDB, and
+    // build response for the check_and_set request. Return current status for RocksDB. Only
+    // called by primary replicas.
+    int put(const db_write_context &ctx,
+            const dsn::apps::update_request &update,
+            dsn::apps::check_and_set_response &resp)
+    {
+        make_basic_response(ctx.decree, resp);
+
+        // Copy check_value's fields from the single-put request to the check_and_set
+        // response to reply to the client.
+        copy_check_value(update, resp);
+
+        const auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
+
+        resp.error = _rocksdb_wrapper->write_batch_put_ctx(
+            ctx, update.key, update.value, update.expire_ts_seconds);
+        if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
+            return resp.error;
+        }
+
+        resp.error = _rocksdb_wrapper->write(ctx.decree);
+        return resp.error;
+    }
+
     int check_and_set(int64_t decree,
                       const dsn::apps::check_and_set_request &update,
                       dsn::apps::check_and_set_response &resp)
@@ -370,14 +456,14 @@ public:
 
         db_get_context get_context;
         std::string_view check_raw_key = check_key.to_string_view();
-        int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
-        if (err != rocksdb::Status::kOk) {
+        const int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
+        if (dsn_unlikely(err != rocksdb::Status::kOk)) {
             // read check value failed
-            LOG_ERROR_ROCKSDB("Error to GetCheckValue for CheckAndSet decree: {}, hash_key: {}, "
-                              "check_sort_key: {}",
-                              decree,
-                              utils::c_escape_sensitive_string(update.hash_key),
-                              utils::c_escape_sensitive_string(update.check_sort_key));
+            LOG_ERROR_PREFIX("Error to GetCheckValue for CheckAndSet decree: {}, hash_key: {}, "
+                             "check_sort_key: {}",
+                             decree,
+                             utils::c_escape_sensitive_string(update.hash_key),
+                             utils::c_escape_sensitive_string(update.check_sort_key));
             resp.error = err;
             return resp.error;
         }
@@ -441,6 +527,184 @@ public:
         }
 
         return rocksdb::Status::kOk;
+    }
+
+    // Calling make_idempotent() on either an incr or check_and_set operation produces an
+    // idempotent single-put request, which is also the only element in the output array
+    // `updates`.
+    //
+    // This interface is provided to ensure consistency between the make_idempotent() interfaces
+    // of incr/check_and_set operations and that of check_and_mutate (both using std::vector
+    // for `updates`), thereby facilitating uniform templated function invocation.
+    template <typename TRequest, typename TResponse>
+    inline int make_idempotent(const TRequest &req,
+                               TResponse &err_resp,
+                               std::vector<dsn::apps::update_request> &updates)
+    {
+        updates.clear();
+        updates.emplace_back();
+        return make_idempotent(req, err_resp, updates.front());
+    }
+
+    // Apply `updates` into storage engine. Actually `updates` contains only one element --
+    // an idempotent single-put request translated from either an incr or check_and_set
+    // operation.
+    //
+    // This interface is provided to ensure consistency between the put() interfaces of
+    // incr/check_and_set operations and that of check_and_mutate (both using std::vector
+    // for `updates`), thereby facilitating uniform templated function invocation.
+    template <typename TResponse>
+    int put(const db_write_context &ctx,
+            const std::vector<dsn::apps::update_request> &updates,
+            TResponse &resp)
+    {
+        CHECK_EQ_PREFIX(updates.size(), 1);
+        return put(ctx, updates.front(), resp);
+    }
+
+    // Tranlate a check_and_mutate request into multiple single-put and single-remove requests
+    // which are certainly idempotent. Return current status for RocksDB. Only called by primary
+    // replicas.
+    int make_idempotent(const dsn::apps::check_and_mutate_request &req,
+                        dsn::apps::check_and_mutate_response &err_resp,
+                        std::vector<dsn::apps::update_request> &updates)
+    {
+        if (dsn_unlikely(req.mutate_list.empty())) {
+            LOG_ERROR_PREFIX("mutate_list is empty for check_and_mutate while making idempotent");
+
+            return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
+        }
+
+        // Verify operation type for each mutate.
+        for (size_t i = 0; i < req.mutate_list.size(); ++i) {
+            const auto &mu = req.mutate_list[i];
+            if (dsn_likely(mu.operation == dsn::apps::mutate_operation::MO_PUT ||
+                           mu.operation == dsn::apps::mutate_operation::MO_DELETE)) {
+                continue;
+            }
+
+            LOG_ERROR_PREFIX("mutate_list[{}]'s operation {} is invalid for check_and_mutate "
+                             "while making idempotent",
+                             i,
+                             mu.operation);
+
+            return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
+        }
+
+        if (dsn_unlikely(!is_check_type_supported(req.check_type))) {
+            LOG_ERROR_PREFIX("check type {} is not supported for check_and_mutate ",
+                             "while making idempotent",
+                             cas_check_type_to_string(req.check_type));
+
+            return make_error_response(rocksdb::Status::kInvalidArgument, err_resp);
+        }
+
+        dsn::blob check_key;
+        pegasus_generate_key(check_key, req.hash_key, req.check_sort_key);
+
+        // Get the check value.
+        db_get_context get_ctx;
+        const int err = _rocksdb_wrapper->get(check_key, &get_ctx);
+        if (dsn_unlikely(err != rocksdb::Status::kOk)) {
+            // Failed to read the check value.
+            LOG_ERROR_PREFIX("failed to get the check value for check_and_mutate while making "
+                             "idempotent: rocksdb_status = {}, hash_key = {}, "
+                             "check_sort_key = {}",
+                             err,
+                             utils::c_escape_sensitive_string(req.hash_key),
+                             utils::c_escape_sensitive_string(req.check_sort_key));
+
+            return make_error_response(err, err_resp);
+        }
+
+        dsn::blob check_value;
+        const bool value_exist = !get_ctx.expired && get_ctx.found;
+        if (value_exist) {
+            pegasus_extract_user_data(
+                _pegasus_data_version, std::move(get_ctx.raw_value), check_value);
+        }
+
+        bool invalid_argument = false;
+        const bool passed = validate_check(
+            req.check_type, req.check_operand, value_exist, check_value, invalid_argument);
+        if (!passed) {
+            make_check_value(req, value_exist, check_value, err_resp);
+            return make_error_response(invalid_argument ? rocksdb::Status::kInvalidArgument
+                                                        : rocksdb::Status::kTryAgain,
+                                       err_resp);
+        }
+
+        // Check passed.
+        updates.clear();
+        for (const auto &mu : req.mutate_list) {
+            // Generate new RocksDB key.
+            dsn::blob set_key;
+            pegasus_generate_key(set_key, req.hash_key, mu.sort_key);
+
+            // Add a new put request.
+            updates.emplace_back();
+
+            if (mu.operation == dsn::apps::mutate_operation::MO_PUT) {
+                make_idempotent_request_for_check_and_mutate_put(
+                    set_key, mu.value, mu.set_expire_ts_seconds, updates.back());
+                continue;
+            }
+
+            if (mu.operation == dsn::apps::mutate_operation::MO_DELETE) {
+                make_idempotent_request_for_check_and_mutate_remove(set_key, updates.back());
+                continue;
+            }
+
+            // It must have returned and replied to the client once there is some invalid
+            // mutate_operation. Here is just a defensive assertion.
+            LOG_FATAL("invalid mutate_operation {} for check_and_mutate while making idempotent",
+                      mu.operation);
+            __builtin_unreachable();
+        }
+
+        // Add check value to the first generated idempotent request, for the future response to
+        // the client.
+        make_check_value(req, value_exist, check_value, updates.front());
+
+        return rocksdb::Status::kOk;
+    }
+
+    // Apply the single-put and single-remove requests translated from a check_and_mutate request
+    // into RocksDB, and build response for the check_and_mutate request. Return current status
+    // for RocksDB. Only called by primary replicas.
+    int put(const db_write_context &ctx,
+            const std::vector<dsn::apps::update_request> &updates,
+            dsn::apps::check_and_mutate_response &resp)
+    {
+        CHECK_GT_PREFIX(updates.size(), 0);
+
+        make_basic_response(ctx.decree, resp);
+
+        // Copy check_value's fields from the first idempotent request to the check_and_mutate
+        // response to reply to the client.
+        copy_check_value(updates.front(), resp);
+
+        const auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
+
+        for (const auto &update : updates) {
+            if (update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT) {
+                resp.error = _rocksdb_wrapper->write_batch_put_ctx(
+                    ctx, update.key, update.value, update.expire_ts_seconds);
+            } else if (update.type == dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE) {
+                resp.error = _rocksdb_wrapper->write_batch_delete(ctx.decree, update.key);
+            } else {
+                LOG_FATAL("invalid update_type for check_and_mutate {} while making idempotent",
+                          update.type);
+                __builtin_unreachable();
+            }
+
+            if (dsn_unlikely(resp.error != rocksdb::Status::kOk)) {
+                return resp.error;
+            }
+        }
+
+        resp.error = _rocksdb_wrapper->write(ctx.decree);
+        return resp.error;
     }
 
     int check_and_mutate(int64_t decree,
@@ -610,11 +874,8 @@ public:
                   const dsn::apps::update_request &update,
                   dsn::apps::update_response &resp)
     {
-        resp.error =
-            _rocksdb_wrapper->write_batch_put_ctx(ctx,
-                                                  update.key.to_string_view(),
-                                                  update.value.to_string_view(),
-                                                  static_cast<uint32_t>(update.expire_ts_seconds));
+        resp.error = _rocksdb_wrapper->write_batch_put_ctx(
+            ctx, update.key, update.value, update.expire_ts_seconds);
         _update_responses.emplace_back(&resp);
         return resp.error;
     }
@@ -656,7 +917,11 @@ private:
         _rocksdb_wrapper->clear_up_write_batch();
     }
 
-    static dsn::blob composite_raw_key(std::string_view hash_key, std::string_view sort_key)
+    // Convenient encapsulation of pegasus_generate_key().
+    //
+    // TKey may be std::string_view, std::string or dsn::blob.
+    template <typename TKey>
+    static dsn::blob composite_raw_key(const TKey &hash_key, const TKey &sort_key)
     {
         dsn::blob raw_key;
         pegasus_generate_key(raw_key, hash_key, sort_key);
@@ -690,21 +955,53 @@ private:
         return req.expire_ts_seconds;
     }
 
-    // Build a single-put request by provided int64 value.
+    // Build a single-put request if only `key` and `type` are provided.
+    static inline void make_idempotent_request(const dsn::blob &key,
+                                               dsn::apps::update_type::type type,
+                                               dsn::apps::update_request &update)
+    {
+        update.key = key;
+
+        // Must use __set_type() since type is declared as optional.
+        update.__set_type(type);
+    }
+
+    // Build a single-put request while `key`, `type` and `expire_ts_seconds` are provided.
+    static inline void make_idempotent_request(const dsn::blob &key,
+                                               int32_t expire_ts_seconds,
+                                               dsn::apps::update_type::type type,
+                                               dsn::apps::update_request &update)
+    {
+        make_idempotent_request(key, type, update);
+        update.expire_ts_seconds = expire_ts_seconds;
+    }
+
+    // Build a single-put request while `key`, `type`, `expire_ts_seconds` and int64-typed
+    // `value` are provided.
     static inline void make_idempotent_request(const dsn::blob &key,
                                                int64_t value,
                                                int32_t expire_ts_seconds,
                                                dsn::apps::update_type::type type,
                                                dsn::apps::update_request &update)
     {
-        update.key = key;
+        make_idempotent_request(key, expire_ts_seconds, type, update);
         update.value = dsn::blob::create_from_numeric(value);
-        update.expire_ts_seconds = expire_ts_seconds;
-        update.__set_type(type);
     }
 
-    // Build corresponding single-put request for an incr request, and return current status
-    // for RocksDB, i.e. kOk.
+    // Build a single-put request while `key`, `type`, `expire_ts_seconds` and blob-typed
+    // `value` are provided.
+    static inline void make_idempotent_request(const dsn::blob &key,
+                                               const dsn::blob &value,
+                                               int32_t expire_ts_seconds,
+                                               dsn::apps::update_type::type type,
+                                               dsn::apps::update_request &update)
+    {
+        make_idempotent_request(key, expire_ts_seconds, type, update);
+        update.value = value;
+    }
+
+    // Build `update` (i.e. the corresponding single-put request for an incr request) based on
+    // `key`, `value` and `expire_ts_seconds`. Return current status for RocksDB (i.e. kOk).
     static inline int make_idempotent_request_for_incr(const dsn::blob &key,
                                                        int64_t value,
                                                        int32_t expire_ts_seconds,
@@ -715,10 +1012,92 @@ private:
         return rocksdb::Status::kOk;
     }
 
-    // Build incr response only for error, and return the current error status for RocksDB.
-    inline int make_error_response(int err, dsn::apps::incr_response &resp)
+    // Set check_value's fields in `resp` based on `req`, `value_exist` and `check_value`.
+    //
+    // `req` may be dsn::apps::check_and_set_request and dsn::apps::check_and_mutate_request.
+    //
+    // `resp` may be dsn::apps::check_and_set_response, dsn::apps::check_and_mutate_response
+    // and dsn::apps::update_request.
+    template <typename TRequest, typename TResponse>
+    static inline void make_check_value(const TRequest &req,
+                                        bool value_exist,
+                                        const dsn::blob &check_value,
+                                        TResponse &resp)
     {
-        CHECK(err != rocksdb::Status::kOk, "this incr response is built only for error");
+        // Must use __set_*() functions since in dsn::apps::update_request the fields are
+        // declared as optional.
+        resp.__set_check_value_returned(req.return_check_value);
+        resp.__set_check_value_exist(req.return_check_value && value_exist);
+        if (resp.check_value_exist) {
+            resp.__set_check_value(check_value);
+        }
+    }
+
+    // Copy check_value's fields from `update` (i.e. the single-put request) to `resp`.
+    //
+    // `resp` may be dsn::apps::check_and_set_response and dsn::apps::check_and_mutate_response.
+    template <typename TResponse>
+    static inline void copy_check_value(const dsn::apps::update_request &update, TResponse &resp)
+    {
+        resp.check_value_returned = update.check_value_returned;
+        resp.check_value_exist = update.check_value_exist;
+        resp.check_value = update.check_value;
+    }
+
+    // Build `update` (i.e. the corresponding single-put request for a check_and_set request)
+    // based on `key`, `value` and `expire_ts_seconds`. Return current status for RocksDB
+    // (i.e. kOk).
+    static inline int make_idempotent_request_for_check_and_set(const dsn::blob &key,
+                                                                const dsn::blob &value,
+                                                                int32_t expire_ts_seconds,
+                                                                dsn::apps::update_request &update)
+    {
+        make_idempotent_request(
+            key, value, expire_ts_seconds, dsn::apps::update_type::UT_CHECK_AND_SET, update);
+        return rocksdb::Status::kOk;
+    }
+
+    // Build a single-put `update` for a mutate of MO_PUT in a check_and_mutate request based
+    // on `key`, `value` and `expire_ts_seconds`.
+    static inline void
+    make_idempotent_request_for_check_and_mutate_put(const dsn::blob &key,
+                                                     const dsn::blob &value,
+                                                     int32_t expire_ts_seconds,
+                                                     dsn::apps::update_request &update)
+    {
+        make_idempotent_request(
+            key, value, expire_ts_seconds, dsn::apps::update_type::UT_CHECK_AND_MUTATE_PUT, update);
+    }
+
+    // Build a single-remove `update` for a mutate of MO_DELETE in a check_and_mutate request
+    // based on `key`.
+    static inline void
+    make_idempotent_request_for_check_and_mutate_remove(const dsn::blob &key,
+                                                        dsn::apps::update_request &update)
+    {
+        make_idempotent_request(key, dsn::apps::update_type::UT_CHECK_AND_MUTATE_REMOVE, update);
+    }
+
+    // Build response `resp` with basic info.
+    template <typename TResponse>
+    inline void make_basic_response(int64_t decree, TResponse &resp)
+    {
+        const auto pid = get_gpid();
+        resp.app_id = pid.get_app_id();
+        resp.partition_index = pid.get_partition_index();
+        resp.decree = decree;
+        resp.server = _primary_host_port;
+    }
+
+    // Build response `resp` based on `err` only for the error case (i.e. the current status
+    // `err` for RocksDB is not rocksdb::Status::kOk). Return `err`.
+    //
+    // `resp` may be dsn::apps::incr_response,  dsn::apps::check_and_set_response and
+    // dsn::apps::check_and_mutate_response.
+    template <typename TResponse>
+    inline int make_error_response(int err, TResponse &resp)
+    {
+        CHECK(err != rocksdb::Status::kOk, "this response is built only for error");
         resp.error = err;
 
         const auto pid = get_gpid();
@@ -733,7 +1112,8 @@ private:
         return err;
     }
 
-    // Build incr response as above, except that also set new value for response.
+    // Build the incr response `resp` based on `err` and `new_value` only for the error case
+    // (i.e. the current status `err` for RocksDB is not rocksdb::Status::kOk). Return `err`.
     inline int make_error_response(int err, int64_t new_value, dsn::apps::incr_response &resp)
     {
         resp.new_value = new_value;
@@ -747,106 +1127,157 @@ private:
                check_type <= ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER;
     }
 
-    // return true if check passed.
-    // for int compare, if check operand or value are not valid integer, then return false,
-    // and set out param `invalid_argument' to false.
-    bool validate_check(int64_t decree,
+    // Check whether the conditions are met for check_and_set and check_and_mutate based on
+    // `check_type`, `check_operand`, `value_exist` and `check_value`.
+    //
+    // `decree` is not used to decide. It is only used for logging. Its type is designed to
+    // be a template parameter, for the reason that this function might be called before the
+    // decree is assigned for a mutation, for example, while traslating an atomic write request
+    // to a single-put request. If unassigned, it could be any type as long as it is printable.
+    //
+    // `invalid_argument` is only used while comparing integers: if `check_operand` or
+    // `check_value` is not valid integer, `invalid_argument' would be set true, and the
+    // function would return false.
+    //
+    // Return true if check passed, otherwise false.
+    template <typename TDecree>
+    bool validate_check(TDecree decree,
                         ::dsn::apps::cas_check_type::type check_type,
                         const ::dsn::blob &check_operand,
                         bool value_exist,
-                        const ::dsn::blob &value,
+                        const ::dsn::blob &check_value,
                         bool &invalid_argument)
     {
         invalid_argument = false;
         switch (check_type) {
         case ::dsn::apps::cas_check_type::CT_NO_CHECK:
             return true;
+
         case ::dsn::apps::cas_check_type::CT_VALUE_NOT_EXIST:
             return !value_exist;
+
         case ::dsn::apps::cas_check_type::CT_VALUE_NOT_EXIST_OR_EMPTY:
-            return !value_exist || value.length() == 0;
+            return !value_exist || check_value.empty();
+
         case ::dsn::apps::cas_check_type::CT_VALUE_EXIST:
             return value_exist;
+
         case ::dsn::apps::cas_check_type::CT_VALUE_NOT_EMPTY:
-            return value_exist && value.length() != 0;
+            return value_exist && !check_value.empty();
+
         case ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE:
         case ::dsn::apps::cas_check_type::CT_VALUE_MATCH_PREFIX:
         case ::dsn::apps::cas_check_type::CT_VALUE_MATCH_POSTFIX: {
-            if (!value_exist)
+            if (!value_exist) {
                 return false;
-            if (check_operand.length() == 0)
-                return true;
-            if (value.length() < check_operand.length())
-                return false;
-            if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
-                return value.to_string_view().find(check_operand.to_string_view()) !=
-                       std::string_view::npos;
-            } else if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_PREFIX) {
-                return dsn::utils::mequals(
-                    value.data(), check_operand.data(), check_operand.length());
-            } else { // check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_POSTFIX
-                return dsn::utils::mequals(value.data() + value.length() - check_operand.length(),
-                                           check_operand.data(),
-                                           check_operand.length());
             }
+
+            if (check_operand.empty()) {
+                return true;
+            }
+
+            if (check_value.length() < check_operand.length()) {
+                return false;
+            }
+
+            if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
+                return check_value.contains(check_operand);
+            }
+
+            if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_PREFIX) {
+                return check_value.starts_with(check_operand);
+            }
+
+            CHECK(check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_POSTFIX,
+                  "check_type({}) should be CT_VALUE_MATCH_POSTFIX",
+                  cas_check_type_to_string(check_type));
+
+            return check_value.ends_with(check_operand);
         }
+
         case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS:
         case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL:
         case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_EQUAL:
         case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER_OR_EQUAL:
         case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER: {
-            if (!value_exist)
+            if (!value_exist) {
                 return false;
-            int c = value.to_string_view().compare(check_operand.to_string_view());
+            }
+
+            const int c = check_value.compare(check_operand);
             if (c < 0) {
                 return check_type <= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL;
-            } else if (c == 0) {
-                return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL &&
-                       check_type <= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER_OR_EQUAL;
-            } else { // c > 0
+            }
+
+            if (c > 0) {
                 return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER_OR_EQUAL;
             }
+
+            // Must be c == 0.
+            return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS_OR_EQUAL &&
+                   check_type <= ::dsn::apps::cas_check_type::CT_VALUE_BYTES_GREATER_OR_EQUAL;
         }
+
         case ::dsn::apps::cas_check_type::CT_VALUE_INT_LESS:
         case ::dsn::apps::cas_check_type::CT_VALUE_INT_LESS_OR_EQUAL:
         case ::dsn::apps::cas_check_type::CT_VALUE_INT_EQUAL:
         case ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER_OR_EQUAL:
         case ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER: {
-            if (!value_exist)
+            if (!value_exist) {
                 return false;
-            int64_t check_value_int;
-            if (!dsn::buf2int64(value.to_string_view(), check_value_int)) {
-                // invalid check value
-                LOG_ERROR_PREFIX("check failed: decree = {}, error = "
-                                 "check value \"{}\" is not an integer or out of range",
+            }
+
+            int64_t check_value_int = 0;
+            if (!dsn::buf2int64(check_value.to_string_view(), check_value_int)) {
+                // `check_value` is not a valid int64.
+                LOG_ERROR_PREFIX("check failed: decree = {}, error = check value \"{}\" is "
+                                 "not a valid integer or out of range",
                                  decree,
-                                 utils::c_escape_sensitive_string(value));
+                                 utils::c_escape_sensitive_string(check_value));
                 invalid_argument = true;
                 return false;
             }
-            int64_t check_operand_int;
+
+            int64_t check_operand_int = 0;
             if (!dsn::buf2int64(check_operand.to_string_view(), check_operand_int)) {
-                // invalid check operand
-                LOG_ERROR_PREFIX("check failed: decree = {}, error = "
-                                 "check operand \"{}\" is not an integer or out of range",
+                // `check_operand` is not a valid int64.
+                LOG_ERROR_PREFIX("check failed: decree = {}, error = check operand \"{}\" is "
+                                 "not a valid integer or out of range",
                                  decree,
                                  utils::c_escape_sensitive_string(check_operand));
                 invalid_argument = true;
                 return false;
             }
+
             if (check_value_int < check_operand_int) {
                 return check_type <= ::dsn::apps::cas_check_type::CT_VALUE_INT_LESS_OR_EQUAL;
-            } else if (check_value_int == check_operand_int) {
-                return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_INT_LESS_OR_EQUAL &&
-                       check_type <= ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER_OR_EQUAL;
-            } else { // check_value_int > check_operand_int
+            }
+
+            if (check_value_int > check_operand_int) {
                 return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER_OR_EQUAL;
             }
+
+            // Must be check_value_int == check_operand_int.
+            return check_type >= ::dsn::apps::cas_check_type::CT_VALUE_INT_LESS_OR_EQUAL &&
+                   check_type <= ::dsn::apps::cas_check_type::CT_VALUE_INT_GREATER_OR_EQUAL;
         }
+
         default:
             CHECK(false, "unsupported check type: {}", check_type);
         }
+
         return false;
+    }
+
+    // The same as the above function, only used when the decree has not been assigned.
+    bool validate_check(::dsn::apps::cas_check_type::type check_type,
+                        const ::dsn::blob &check_operand,
+                        bool value_exist,
+                        const ::dsn::blob &check_value,
+                        bool &invalid_argument)
+    {
+        return validate_check(
+            "UNASSIGNED", check_type, check_operand, value_exist, check_value, invalid_argument);
     }
 
     friend class pegasus_write_service_test;
@@ -863,5 +1294,4 @@ private:
     std::vector<dsn::apps::update_response *> _update_responses;
 };
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

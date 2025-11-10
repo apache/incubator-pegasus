@@ -532,7 +532,7 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
                 pid, cold_backup_constant::PROGRESS_FINISHED, dsn::host_port());
             return;
         }
-        partition_primary = app->pcs[pid.get_partition_index()].hp_primary;
+        GET_HOST_PORT(app->pcs[pid.get_partition_index()], primary, partition_primary);
     }
     if (!partition_primary) {
         LOG_WARNING("{}: partition {} doesn't have a primary now, retry to backup it later",
@@ -1129,7 +1129,7 @@ backup_service::backup_service(meta_service *meta_svc,
 void backup_service::start_create_policy_meta_root(dsn::task_ptr callback)
 {
     LOG_DEBUG("create policy meta root({}) on remote_storage", _policy_meta_root);
-    _meta_svc->get_remote_storage()->create_node(
+    _meta_svc->get_remote_storage()->create_empty_node(
         _policy_meta_root, LPC_DEFAULT_CALLBACK, [this, callback](dsn::error_code err) {
             if (err == dsn::ERR_OK || err == ERR_NODE_ALREADY_EXIST) {
                 LOG_INFO(
@@ -1342,11 +1342,12 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
                 msg->release_ref();
                 return;
             }
-            // when the Ranger ACL is enabled, access control will be checked for each table.
-            auto access_controller = _meta_svc->get_access_controller();
-            // adding multiple judgments here is to adapt to the old ACL and avoid checking again.
-            if (access_controller->is_enable_ranger_acl() &&
-                !access_controller->allowed(copied_msg, app->app_name)) {
+
+            // Once the Ranger ACL is enabled, access control will be checked for each table.
+            // Adding multiple judgments here is to adapt to the legacy ACL and avoid checking
+            // again.
+            if (security::access_controller::is_ranger_acl_enabled() &&
+                !_meta_svc->get_access_controller()->allowed(copied_msg, app->app_name)) {
                 response.err = ERR_ACL_DENY;
                 response.hint_message =
                     fmt::format("not authorized to add backup policy({}) for app id: {}",
@@ -1437,7 +1438,8 @@ void backup_service::do_add_policy(dsn::message_ex *req,
                 CHECK(false, "we can't handle this when create backup policy, err({})", err);
             }
         },
-        value);
+        value,
+        nullptr);
 }
 
 void backup_service::do_update_policy_to_remote_storage(
@@ -1448,7 +1450,10 @@ void backup_service::do_update_policy_to_remote_storage(
     std::string policy_path = get_policy_path(p.policy_name);
     blob value = json::json_forwarder<policy>::encode(p);
     _meta_svc->get_remote_storage()->set_data(
-        policy_path, value, LPC_DEFAULT_CALLBACK, [this, rpc, p, p_context_ptr](error_code err) {
+        policy_path,
+        value,
+        LPC_DEFAULT_CALLBACK,
+        [this, rpc, p, p_context_ptr](error_code err) {
             if (err == ERR_OK) {
                 configuration_modify_backup_policy_response resp;
                 resp.err = ERR_OK;
@@ -1472,7 +1477,8 @@ void backup_service::do_update_policy_to_remote_storage(
             } else {
                 CHECK(false, "we can't handle this when create backup policy, err({})", err);
             }
-        });
+        },
+        nullptr);
 }
 
 bool backup_service::is_valid_policy_name_unlocked(const std::string &policy_name,
@@ -1623,16 +1629,16 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
 
         for (const auto &appid : request.add_appids) {
             const auto &app = _state->get_app(appid);
-            auto access_controller = _meta_svc->get_access_controller();
-            // TODO: if app is dropped, how to process
+            // TODO(wangdan): if app is dropped, how to process.
             if (app == nullptr) {
                 LOG_WARNING("{}: add app to policy failed, because invalid app({}), ignore it",
                             cur_policy.policy_name,
                             appid);
                 continue;
             }
-            if (access_controller->is_enable_ranger_acl() &&
-                !access_controller->allowed(rpc.dsn_request(), app->app_name)) {
+
+            if (security::access_controller::is_ranger_acl_enabled() &&
+                !_meta_svc->get_access_controller()->allowed(rpc.dsn_request(), app->app_name)) {
                 LOG_WARNING("not authorized to modify backup policy({}) for app id: {}, skip it",
                             cur_policy.policy_name,
                             appid);

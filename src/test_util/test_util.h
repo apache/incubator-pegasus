@@ -25,28 +25,26 @@
 #include <cstdint>
 #include <cstdio>
 #include <functional>
+#include <memory>
 #include <string>
 
+#include "metadata_types.h"
 #include "runtime/api_layer1.h"
-#include "utils/env.h"
 // IWYU refused to include "utils/defer.h" everywhere, both in .h and .cpp files.
 // However, once "utils/defer.h" is not included, it is inevitable that compilation
 // will fail since dsn::defer is referenced. Thus force IWYU to keep it.
 #include "utils/defer.h" // IWYU pragma: keep
+#include "utils/env.h"
 #include "utils/flags.h"
+#include "utils/ports.h"
 #include "utils/test_macros.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);
 
-namespace dsn {
-namespace replication {
-class file_meta;
-} // namespace replication
-} // namespace dsn
-
 #define PRESERVE_VAR(name, expr)                                                                   \
     const auto PRESERVED_##name = expr;                                                            \
-    auto PRESERVED_##name##_cleanup = dsn::defer([PRESERVED_##name]() { expr = PRESERVED_##name; })
+    const auto PRESERVED_##name##_cleanup =                                                        \
+        dsn::defer([PRESERVED_##name]() { expr = PRESERVED_##name; })
 
 // Save the current value of a flag and restore it at the end of the function.
 #define PRESERVE_FLAG(name) PRESERVE_VAR(FLAGS_##name, FLAGS_##name)
@@ -90,7 +88,32 @@ private:
     uint64_t _start_ms = 0;
 };
 
-void create_local_test_file(const std::string &full_name, dsn::replication::file_meta *fm);
+// Used to generate a local file for test whose life cycle is managed with RAII: the file
+// will be removed automatically in destructor.
+class local_test_file
+{
+public:
+    // Generate a file whose content is user-defined.
+    static void create(const std::string &path,
+                       const std::string &content,
+                       std::shared_ptr<local_test_file> &file);
+
+    // Generate a file whose content is arbitrary.
+    static void create(const std::string &path, std::shared_ptr<local_test_file> &file);
+
+    [[nodiscard]] const dsn::replication::file_meta &get_file_meta() const { return _file_meta; }
+
+private:
+    explicit local_test_file(const dsn::replication::file_meta &meta);
+    ~local_test_file();
+
+    static void deleter(local_test_file *ptr) { delete ptr; }
+
+    dsn::replication::file_meta _file_meta;
+
+    DISALLOW_COPY_AND_ASSIGN(local_test_file);
+    DISALLOW_MOVE_AND_ASSIGN(local_test_file);
+};
 
 #define ASSERT_EVENTUALLY(expr)                                                                    \
     do {                                                                                           \

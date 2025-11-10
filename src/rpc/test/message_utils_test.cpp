@@ -27,6 +27,7 @@
 #include "runtime/message_utils.h"
 
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include "common/replication.codes.h"
@@ -47,11 +48,11 @@ TEST(message_utils_test, msg_blob_convertion)
 {
     std::string data = "hello";
 
-    blob b(data.c_str(), 0, data.size());
-    message_ptr m = from_blob_to_received_msg(RPC_CODE_FOR_TEST, std::move(b));
+    blob bb(data.c_str(), 0, data.size());
+    message_ptr m = from_blob_to_received_msg(RPC_CODE_FOR_TEST, bb);
 
     ASSERT_EQ(m->header->body_length, data.size());
-    ASSERT_EQ(b.to_string(), move_message_to_blob(m.get()).to_string());
+    ASSERT_EQ(bb.to_string(), move_message_to_blob(m.get()).to_string());
 }
 
 TEST(message_utils_test, thrift_msg_convertion)

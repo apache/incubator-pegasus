@@ -18,7 +18,6 @@
  */
 
 #include <fmt/core.h>
-#include <rocksdb/status.h>
 #include <thrift/transport/TTransportException.h>
 #include <algorithm>
 #include <string_view>
@@ -33,10 +32,9 @@
 #include "pegasus_server_impl.h"
 #include "pegasus_server_write.h"
 #include "pegasus_utils.h"
+#include "replica/idempotent_writer.h"
 #include "rpc/rpc_holder.h"
-#include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
-#include "runtime/message_utils.h"
 #include "server/pegasus_write_service.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
@@ -51,36 +49,51 @@ METRIC_DEFINE_counter(replica,
 
 DSN_DECLARE_bool(rocksdb_verbose_log);
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server)
     : replica_base(server),
-      _write_svc(new pegasus_write_service(server)),
+      _write_svc(std::make_unique<pegasus_write_service>(server)),
       METRIC_VAR_INIT_replica(corrupt_writes)
 {
     init_make_idempotent_handlers();
     init_non_batch_write_handlers();
-    init_on_idempotent_handlers();
 }
 
-int pegasus_server_write::make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request)
+int pegasus_server_write::make_idempotent(dsn::message_ex *request,
+                                          std::vector<dsn::message_ex *> &new_requests,
+                                          idempotent_writer_ptr &idem_writer)
 {
-    auto iter = std::as_const(_make_idempotent_handlers).find(request->rpc_code());
-    if (iter != _make_idempotent_handlers.end()) {
-        return iter->second(request, new_request);
+    const auto make_idempotent_handler =
+        std::as_const(_make_idempotent_handlers).find(request->rpc_code());
+    if (make_idempotent_handler == _make_idempotent_handlers.end()) {
+        // Those requests not in the handlers are considered as idempotent. Always be
+        // successful for them.
+        return rocksdb::Status::kOk;
     }
 
-    // Those requests not in the handlers are considered as idempotent. Always be successful
-    // for them.
-    return rocksdb::Status::kOk;
+    try {
+        return make_idempotent_handler->second(request, new_requests, idem_writer);
+    } catch (TTransportException &ex) {
+        METRIC_VAR_INCREMENT(corrupt_writes);
+        LOG_ERROR_PREFIX("make idempotent handler for {} failed: from = {}, exception = {}",
+                         request->rpc_code(),
+                         request->header->from_address,
+                         ex.what());
+
+        // The corrupt write is likely to be an attack or a scan for security. It needs to return
+        // `rocksdb::Status::kCorruption` to inform the caller that `make_idempotent()` has failed
+        // and that the subsequent 2PC should not proceed.
+        // See https://github.com/apache/incubator-pegasus/pull/798.
+        return rocksdb::Status::kCorruption;
+    }
 }
 
 int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
-                                                    int count,
+                                                    uint32_t count,
                                                     int64_t decree,
                                                     uint64_t timestamp,
-                                                    dsn::message_ex *original_request)
+                                                    idempotent_writer_ptr &&idem_writer)
 {
     _write_ctx = db_write_context::create(decree, timestamp);
     _decree = decree;
@@ -92,64 +105,61 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
         return _write_svc->empty_put(_decree);
     }
 
-    try {
-        auto iter = std::as_const(_non_batch_write_handlers).find(requests[0]->rpc_code());
-        if (iter != _non_batch_write_handlers.end()) {
-            CHECK_EQ(count, 1);
-            return iter->second(requests[0]);
-        }
-    } catch (TTransportException &ex) {
-        METRIC_VAR_INCREMENT(corrupt_writes);
-        LOG_ERROR_PREFIX("pegasus non-batch write handler failed, from = {}, exception = {}",
-                         requests[0]->header->from_address,
-                         ex.what());
+    const auto non_batch_write_handler =
+        std::as_const(_non_batch_write_handlers).find(requests[0]->rpc_code());
+    if (non_batch_write_handler != _non_batch_write_handlers.end()) {
+        CHECK_EQ_PREFIX_MSG(count,
+                            1,
+                            "there should be only one request for the non-batch "
+                            "write {}: from = {}, decree = {}",
+                            requests[0]->rpc_code(),
+                            requests[0]->header->from_address,
+                            _decree);
 
-        // The corrupt write is likely to be an attack or a scan for security. Since it has
-        // been in plog, just return rocksdb::Status::kOk to ignore it.
-        // See https://github.com/apache/incubator-pegasus/pull/798.
-        return rocksdb::Status::kOk;
+        try {
+            return non_batch_write_handler->second(requests[0]);
+        } catch (TTransportException &ex) {
+            METRIC_VAR_INCREMENT(corrupt_writes);
+            LOG_ERROR_PREFIX("non-batch write handler for {} failed: from = {}, "
+                             "decree = {}, exception = {}",
+                             requests[0]->rpc_code(),
+                             requests[0]->header->from_address,
+                             _decree,
+                             ex.what());
+
+            // The corrupt write is likely to be an attack or a scan for security. Since it has
+            // been in plog, just return rocksdb::Status::kOk to ignore it.
+            // See https://github.com/apache/incubator-pegasus/pull/798.
+            return rocksdb::Status::kOk;
+        }
     }
 
-    if (original_request != nullptr) {
-        // The request is regarded as idempotent once its original request is attached.
-        CHECK_EQ(count, 1);
-        return on_idempotent(requests[0], original_request);
+    if (idem_writer) {
+        // Pass ownership down the call stack layer by layer, and ultimately transfer it to
+        // the local variable `writer`, so that upon destruction it can automatically reply
+        // to the client and release the memory occupied by the atomic write RPC and its
+        // idempotent single-update requests.
+        const idempotent_writer_ptr writer(std::move(idem_writer));
+        return writer->apply();
     }
 
     return on_batched_writes(requests, count);
 }
 
-int pegasus_server_write::on_idempotent(dsn::message_ex *request, dsn::message_ex *original_request)
-{
-    try {
-        auto iter = std::as_const(_on_idempotent_handlers).find(request->rpc_code());
-        if (iter != _on_idempotent_handlers.end()) {
-            return iter->second(request, original_request);
-        }
-    } catch (TTransportException &ex) {
-        METRIC_VAR_INCREMENT(corrupt_writes);
-        LOG_ERROR_PREFIX("pegasus on idempotent handler failed, from = {}, exception = {}",
-                         request->header->from_address,
-                         ex.what());
-        // The corrupt write is likely to be an attack or a scan for security. Since it has
-        // been in plog, just return rocksdb::Status::kOk to ignore it.
-        // See https://github.com/apache/incubator-pegasus/pull/798.
-        return rocksdb::Status::kOk;
-    }
-
-    CHECK(false, "unsupported idempotent write request: rpc_code={}", request->rpc_code());
-    return rocksdb::Status::kNotSupported;
-}
-
 void pegasus_server_write::set_default_ttl(uint32_t ttl) { _write_svc->set_default_ttl(ttl); }
 
-int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int count)
+int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, uint32_t count)
 {
     _write_svc->batch_prepare(_decree);
 
     int err = rocksdb::Status::kOk;
-    for (int i = 0; i < count; ++i) {
-        CHECK_NOTNULL(requests[i], "request[{}] is null", i);
+    for (uint32_t i = 0; i < count; ++i) {
+        CHECK_NOTNULL_PREFIX_MSG(requests[i],
+                                 "batched requests[{}] should not be null: "
+                                 "decree = {}, count = {}",
+                                 i,
+                                 _decree,
+                                 count);
 
         // Make sure all writes are batched even if some of them failed, since we need to record
         // the total QPS and RPC latencies, and respond for all RPCs regardless of their result.
@@ -168,10 +178,6 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 if (!update.__isset.type || update.type == dsn::apps::update_type::UT_PUT) {
                     // We must reply to the client for the plain single-put request.
                     rpc.enable_auto_reply();
-                } else if (update.type == dsn::apps::update_type::UT_INCR) {
-                    // This put request must originate from an incr request and never be
-                    // batched in plog.
-                    CHECK_EQ(count, 1);
                 }
 
                 local_err = on_single_put_in_batch(rpc);
@@ -182,9 +188,9 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 _remove_rpc_batch.emplace_back(std::move(rpc));
             } else {
                 if (_non_batch_write_handlers.find(rpc_code) != _non_batch_write_handlers.end()) {
-                    LOG_FATAL("rpc code not allow batch: {}", rpc_code);
+                    LOG_FATAL_PREFIX("rpc code not allow batch: {}", rpc_code);
                 } else {
-                    LOG_FATAL("rpc code not handled: {}", rpc_code);
+                    LOG_FATAL_PREFIX("rpc code not handled: {}", rpc_code);
                 }
             }
         } catch (TTransportException &ex) {
@@ -245,21 +251,22 @@ void pegasus_server_write::init_make_idempotent_handlers()
 {
     _make_idempotent_handlers = {
         {dsn::apps::RPC_RRDB_RRDB_INCR,
-         [this](dsn::message_ex *request, dsn::message_ex **new_request) -> int {
-             auto rpc = incr_rpc(request);
-             dsn::apps::update_request update;
-             // Translate an incr request into a single-put request.
-             const auto err = _write_svc->make_idempotent(rpc.request(), rpc.response(), update);
-             if (dsn_likely(err == rocksdb::Status::kOk)) {
-                 // Build the message based on the resulting put request.
-                 *new_request = dsn::from_thrift_request_to_received_message(
-                     update, dsn::apps::RPC_RRDB_RRDB_PUT);
-             } else {
-                 // Once it failed, just reply to the client with error immediately.
-                 rpc.enable_auto_reply();
-             }
-
-             return err;
+         [this](dsn::message_ex *request,
+                std::vector<dsn::message_ex *> &new_requests,
+                idempotent_writer_ptr &idem_writer) -> int {
+             return make_idempotent<incr_rpc>(request, new_requests, idem_writer);
+         }},
+        {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
+         [this](dsn::message_ex *request,
+                std::vector<dsn::message_ex *> &new_requests,
+                idempotent_writer_ptr &idem_writer) -> int {
+             return make_idempotent<check_and_set_rpc>(request, new_requests, idem_writer);
+         }},
+        {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE,
+         [this](dsn::message_ex *request,
+                std::vector<dsn::message_ex *> &new_requests,
+                idempotent_writer_ptr &idem_writer) -> int {
+             return make_idempotent<check_and_mutate_rpc>(request, new_requests, idem_writer);
          }},
     };
 }
@@ -305,28 +312,4 @@ void pegasus_server_write::init_non_batch_write_handlers()
     };
 }
 
-void pegasus_server_write::init_on_idempotent_handlers()
-{
-    _on_idempotent_handlers = {
-        {dsn::apps::RPC_RRDB_RRDB_PUT,
-         [this](dsn::message_ex *request, dsn::message_ex *original_request) -> int {
-             auto put = put_rpc(request);
-
-             const auto &update = put.request();
-             CHECK(update.__isset.type, "update_request::type is not set for idempotent write");
-
-             if (update.type == dsn::apps::update_type::UT_INCR) {
-                 auto incr = incr_rpc::auto_reply(original_request);
-                 return _write_svc->put(_write_ctx, update, incr.response());
-             }
-
-             CHECK(false,
-                   "unsupported update_request::type for idempotent write {}",
-                   static_cast<int>(update.type));
-             return rocksdb::Status::kNotSupported;
-         }},
-    };
-}
-
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

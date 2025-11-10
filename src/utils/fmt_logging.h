@@ -324,9 +324,17 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
         }                                                                                          \
     } while (0)
 
+// TODO(wangdan): currently enable `DCHECK` for test code (via `MOCK_TEST`) causes many unit
+// tests to fail; it will be enabled after the issues are resolved.
+//
+// After resolved, enable `DCHECK` for test code by:
+// #if defined(MOCK_TEST) || !defined(NDEBUG)
 #ifndef NDEBUG
 #define DCHECK CHECK
 #define DCHECK_NOTNULL CHECK_NOTNULL
+
+#define DCHECK_PREFIX_MSG CHECK_PREFIX_MSG
+#define DCHECK_PREFIX CHECK_PREFIX
 
 #define DCHECK_NE_MSG CHECK_NE_MSG
 #define DCHECK_EQ_MSG CHECK_EQ_MSG
@@ -351,6 +359,9 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 #else
 #define DCHECK(x, ...)
 #define DCHECK_NOTNULL(p, ...)
+
+#define DCHECK_PREFIX_MSG(x, ...)
+#define DCHECK_PREFIX(x)
 
 #define DCHECK_NE_MSG(var1, var2, ...)
 #define DCHECK_EQ_MSG(var1, var2, ...)

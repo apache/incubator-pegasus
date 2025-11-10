@@ -80,11 +80,20 @@ public:
 
     dsn::error_code create_app(const std::string &app_name,
                                const std::string &app_type,
-                               int partition_count,
-                               int replica_count,
+                               int32_t partition_count,
+                               int32_t replica_count,
                                const std::map<std::string, std::string> &envs,
                                bool is_stateless,
-                               bool success_if_exist = true);
+                               bool success_if_exist,
+                               bool atomic_idempotent);
+
+    // The same as the above while both `is_stateless` and `atomic_idempotent` are set false
+    // and `success_if_exist` is set true.
+    dsn::error_code create_app(const std::string &app_name,
+                               const std::string &app_type,
+                               int32_t partition_count,
+                               int32_t replica_count,
+                               const std::map<std::string, std::string> &envs);
 
     // 'reserve_seconds' == 0 means use default value in configuration
     // FLAGS_hold_seconds_for_dropped_app.
@@ -298,6 +307,12 @@ public:
 
     error_with<configuration_set_max_replica_count_response>
     set_max_replica_count(const std::string &app_name, int32_t max_replica_count);
+
+    error_with<configuration_get_atomic_idempotent_response>
+    get_atomic_idempotent(const std::string &app_name);
+
+    error_with<configuration_set_atomic_idempotent_response>
+    set_atomic_idempotent(const std::string &app_name, bool atomic_idempotent);
 
     void set_max_wait_app_ready_secs(uint32_t max_wait_secs) { _max_wait_secs = max_wait_secs; }
     void set_meta_servers_leader();

@@ -109,7 +109,7 @@ static command_executor commands[] = {
         "create",
         "create an app",
         "<app_name> [-p|--partition_count num] [-r|--replica_count num] [-f|--fail_if_exist] "
-        "[-e|--envs k1=v1,k2=v2...]",
+        "[-i|--atomic_idempotent] [-e|--envs k1=v1,k2=v2...]",
         create_app,
     },
     {
@@ -612,6 +612,25 @@ static command_executor commands[] = {
         "set the max replica count of an app",
         "<app_name> <replica_count>",
         set_max_replica_count,
+    },
+    {
+        "get_atomic_idempotent",
+        "check whether all atomic writes to an app will be made idempotent: true means "
+        "made idempotent, while false means kept non-idempotent",
+        "<app_name> [-j|--json]",
+        get_atomic_idempotent,
+    },
+    {
+        "enable_atomic_idempotent",
+        "enable idempotence for all atomic writes to an app",
+        "<app_name>",
+        enable_atomic_idempotent,
+    },
+    {
+        "disable_atomic_idempotent",
+        "disable idempotence for all atomic writes to an app",
+        "<app_name>",
+        disable_atomic_idempotent,
     },
     {
         "local_partition_split",

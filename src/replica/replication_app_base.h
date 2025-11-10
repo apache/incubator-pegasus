@@ -30,11 +30,14 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "bulk_load_types.h"
 #include "common/json_helper.h"
 #include "common/replication_other_types.h"
 #include "metadata_types.h"
+#include "mutation.h"
+#include "replica/idempotent_writer.h"
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/error_code.h"
@@ -49,7 +52,6 @@ class message_ex;
 
 namespace replication {
 class learn_state;
-class mutation;
 class replica;
 
 class replica_init_info
@@ -160,7 +162,7 @@ public:
     //   - ERR_RDB_CORRUPTION: encountered some unrecoverable data errors, i.e. kCorruption from
     //     storage engine.
     //   - ERR_LOCAL_APP_FAILURE: other type of errors.
-    error_code apply_mutation(const mutation *mu) WARN_UNUSED_RESULT;
+    error_code apply_mutation(const mutation_ptr &mu) WARN_UNUSED_RESULT;
 
     // methods need to implement on storage engine side
     virtual error_code start(int argc, char **argv) = 0;
@@ -254,41 +256,46 @@ public:
     // not idempotent. This function is used to translate them into requests like single put
     // which is naturally idempotent.
     //
-    // For the other requests which must be idempotent such as single put/remove or non-batch
-    // writes, this function would do nothing.
+    // For the other requests such as single put/remove or non-batch writes all of which must be
+    // idempotent, this function would do nothing.
     //
     // Parameters:
     // - request: the original request received from a client.
-    // - new_request: as the output parameter pointing to the resulting idempotent request if the
+    // - new_requests: the output parameter, holding the resulting idempotent requests if the
     // original request is atomic, otherwise keeping unchanged.
+    // - idem_writer: the output parameter, holding the resulting idempotent writer.
     //
     // Return:
     // - for an idempotent requess always return rocksdb::Status::kOk .
     // - for an atomic request, return rocksdb::Status::kOk if succeed in making it idempotent;
     // otherwise, return error code (rocksdb::Status::Code).
-    virtual int make_idempotent(dsn::message_ex *request, dsn::message_ex **new_request) = 0;
+    virtual int make_idempotent(dsn::message_ex *request,
+                                std::vector<dsn::message_ex *> &new_requests,
+                                pegasus::idempotent_writer_ptr &idem_writer) = 0;
 
     // Apply batched write requests from a mutation. This is a virtual function, and base class
     // provide a naive implementation that just call on_request for each request. Storage engine
     // may override this function to get better performance.
     //
     // Parameters:
-    //  - decree: the decree of the mutation which these requests are batched into.
-    //  - timestamp: an incremental timestamp generated for this batch of requests.
-    //  - requests: the requests to be applied.
-    //  - request_length: the number of the requests.
-    //  - original_request: the original request received from the client. Must be an atomic
-    //  request (i.e. incr, check_and_set and check_and_mutate) if non-null, and another
-    //  parameter `requests` must hold the idempotent request translated from it. Used to
-    //  reply to the client.
+    // - decree: the decree of the mutation which these requests are batched into.
+    // - timestamp: an incremental timestamp generated for this batch of requests.
+    // - requests: the requests to be applied.
+    // - count: the number of the requests.
+    // - idem_writer: the original request received from the client. Must be an atomic
+    // request (i.e. incr, check_and_set and check_and_mutate) if non-null
+    // - idem_writer: if non-null, used to apply the idempotent requests to the storage engine
+    // and automatically responds to the atomic write request (i.e. incr, check_and_set or
+    // check_and_mutate), with the parameter `requests` holding the serialized idempotent
+    // requests and the parameter `count` recording the number.
     //
     // Return rocksdb::Status::kOk or some error code (rocksdb::Status::Code) if these requests
     // failed to be applied by storage engine.
     virtual int on_batched_write_requests(int64_t decree,
                                           uint64_t timestamp,
                                           message_ex **requests,
-                                          int request_length,
-                                          message_ex *original_request);
+                                          uint32_t count,
+                                          pegasus::idempotent_writer_ptr &&idem_writer);
 
     // Query compact state.
     [[nodiscard]] virtual std::string query_compact_state() const = 0;
@@ -321,21 +328,35 @@ public:
     }
 
     // query pegasus data version
-    virtual uint32_t query_data_version() const = 0;
+    [[nodiscard]] virtual uint32_t query_data_version() const = 0;
 
-    virtual manual_compaction_status::type query_compact_status() const = 0;
+    [[nodiscard]] virtual manual_compaction_status::type query_compact_status() const = 0;
 
-public:
     //
     // utility functions to be used by app
     //
-    const std::string &data_dir() const { return _dir_data; }
-    const std::string &learn_dir() const { return _dir_learn; }
-    const std::string &backup_dir() const { return _dir_backup; }
-    const std::string &bulk_load_dir() const { return _dir_bulk_load; }
-    const std::string &duplication_dir() const { return _dir_duplication; }
-    const app_info *get_app_info() const;
-    replication::decree last_committed_decree() const { return _last_committed_decree.load(); }
+    [[nodiscard]] const std::string &data_dir() const { return _dir_data; }
+    [[nodiscard]] const std::string &learn_dir() const { return _dir_learn; }
+    [[nodiscard]] const std::string &backup_dir() const { return _dir_backup; }
+    [[nodiscard]] const std::string &bulk_load_dir() const { return _dir_bulk_load; }
+    [[nodiscard]] const std::string &duplication_dir() const { return _dir_duplication; }
+    [[nodiscard]] const app_info *get_app_info() const;
+    [[nodiscard]] replication::decree last_committed_decree() const
+    {
+        return _last_committed_decree.load();
+    }
+
+protected:
+    explicit replication_app_base(replication::replica *replica);
+
+    std::string _dir_data;        // ${replica_dir}/data
+    std::string _dir_learn;       // ${replica_dir}/learn
+    std::string _dir_backup;      // ${replica_dir}/backup
+    std::string _dir_bulk_load;   // ${replica_dir}/bulk_load
+    std::string _dir_duplication; // ${replica_dir}/duplication
+    replica *_replica;
+    std::atomic<int64_t> _last_committed_decree;
+    replica_init_info _info;
 
 private:
     // routines for replica internal usage
@@ -351,21 +372,10 @@ private:
     error_code update_init_info(replica *r, int64_t private_log_offset, int64_t durable_decree);
     error_code update_init_info_ballot_and_decree(replica *r);
 
-protected:
-    std::string _dir_data;        // ${replica_dir}/data
-    std::string _dir_learn;       // ${replica_dir}/learn
-    std::string _dir_backup;      // ${replica_dir}/backup
-    std::string _dir_bulk_load;   // ${replica_dir}/bulk_load
-    std::string _dir_duplication; // ${replica_dir}/duplication
-    replica *_replica;
-    std::atomic<int64_t> _last_committed_decree;
-    replica_init_info _info;
-
-    explicit replication_app_base(replication::replica *replica);
-
-private:
     METRIC_VAR_DECLARE_counter(committed_requests);
 };
+
 USER_DEFINED_ENUM_FORMATTER(replication_app_base::chkpt_apply_mode)
+
 } // namespace replication
 } // namespace dsn

@@ -36,27 +36,43 @@ class access_controller
 {
 public:
     access_controller();
-    virtual ~access_controller();
+    virtual ~access_controller() = default;
 
-    // Update the access controller.
-    // users - the new allowed users to update
+    // Return true if Ranger ACL is enabled, otherwise false.
+    static bool is_ranger_acl_enabled();
+
+    // Return true if either Ranger ACL or legacy ACL is enabled, otherwise false.
+    static bool is_acl_enabled();
+
+    // Update allowed users for legacy ACL.
+    //
+    // Parameters:
+    // - users: the new allowed users used to update.
     virtual void update_allowed_users(const std::string &users) {}
 
-    // Check whether the Ranger ACL is enabled or not.
-    bool is_enable_ranger_acl() const;
-
-    // Update the access controller policy
-    // policies -  the new Ranger policies to update
+    // Update policies for Ranger ACL.
+    //
+    // Parameters:
+    // - policies: the new policies used to update.
     virtual void update_ranger_policies(const std::string &policies) {}
 
-    // Check if the message received is allowd to access the system.
-    // msg - the message received
+    // Return true if the received request is allowd to access the system with specified
+    // type, otherwise false.
+    //
+    // Parameters:
+    // - msg: the received request, should never be null.
+    // - req_type: the access type.
     virtual bool allowed(message_ex *msg, dsn::ranger::access_type req_type) const { return false; }
 
-    // Check if the message received is allowd to access the table.
-    // msg - the message received
-    // app_name - tables involved in ACL
-    virtual bool allowed(message_ex *msg, const std::string &app_name = "") const { return false; }
+    // Return true if the received request is allowd to access the table, otherwise false.
+    //
+    // Parameters:
+    // - msg: the received request, should never be null.
+    // - app_name: the name of the table on which the ACL check is performed.
+    virtual bool allowed(message_ex *msg, const std::string &app_name) const { return false; }
+
+    // The same as the above function, except that `app_name` is set empty.
+    bool allowed(message_ex *msg) const { return allowed(msg, ""); }
 
 protected:
     // Check if 'user_name' is the super user.
@@ -64,7 +80,7 @@ protected:
 
     std::unordered_set<std::string> _super_users;
 
-    friend class meta_access_controller_test;
+    friend class SuperUserTest;
 };
 
 std::shared_ptr<access_controller> create_meta_access_controller(
@@ -72,5 +88,6 @@ std::shared_ptr<access_controller> create_meta_access_controller(
 
 std::unique_ptr<access_controller>
 create_replica_access_controller(const std::string &replica_name);
+
 } // namespace security
 } // namespace dsn
