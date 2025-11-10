@@ -224,6 +224,8 @@ bool cluster_balance_policy::get_app_migration_info(std::shared_ptr<app_state> a
 {
     info.app_id = app->app_id;
     info.app_name = app->app_name;
+
+    info.partitions.clear();
     info.partitions.reserve(app->pcs.size());
     for (const auto &pc : app->pcs) {
         std::map<host_port, partition_status::type> pstatus_map;
