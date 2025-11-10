@@ -24,12 +24,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"math"
 	"sort"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
@@ -87,7 +89,7 @@ func testSingleKeyOperations(t *testing.T, tb TableConnector, hashKey []byte, so
 	assert.Nil(t, tb.Del(context.Background(), hashKey, sortKey))
 }
 
-var testingCfg = Config{
+var testingCfg = config.Config{
 	MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 }
 
