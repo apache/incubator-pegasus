@@ -49,18 +49,20 @@ RUN apt-get update -y; \
                        bison \
                        libkrb5-dev \
                        libsasl2-dev \
+                       libsasl2-modules \
                        maven \
                        flex; \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir --upgrade pip
-RUN pip3 install --no-cache-dir cmake
+RUN pip3 install --no-cache-dir cmake==3.31.6
 
-RUN wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -P /opt/thrift && \
-    cd /opt/thrift && tar xzf 0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
+ARG THRIFT_VERSION=0.11.0
+RUN wget --progress=dot:giga https://archive.apache.org/dist/thrift/${THRIFT_VERSION}/thrift-${THRIFT_VERSION}.tar.gz -P /opt/thrift && \
+    cd /opt/thrift && tar xzf thrift-${THRIFT_VERSION}.tar.gz && cd thrift-${THRIFT_VERSION} && ./bootstrap.sh && \
     ./configure --enable-libs=no && \
     make -j$(($(nproc)/2+1)) && make install && cd - && \
-    rm -rf thrift-0.11.0 0.11.0.tar.gz
+    rm -rf thrift-${THRIFT_VERSION} thrift-${THRIFT_VERSION}.tar.gz
 
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 ENV CLASSPATH=$JAVA_HOME/lib/

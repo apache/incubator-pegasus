@@ -35,7 +35,7 @@ Building environment for Pegasus compilation.
 
 Github Actions automatically rebuilds and publishes build-env for every commit.
 
-- `apache/pegasus:build-env-centos7-<branch>`
+- `apache/pegasus:build-env-rockylinux9-<branch>`
 - `apache/pegasus:build-env-ubuntu1804-<branch>`
 - `apache/pegasus:build-env-ubuntu2004-<branch>`
 - `apache/pegasus:build-env-ubuntu2204-<branch>`
@@ -51,14 +51,17 @@ It packages the downloaded sources into a zip in the container, so that
 other repos can easily extract third-parties from the container (via `docker cp`),
 without downloading from the cloud object storage.
 
-- `apache/pegasus:thirdparties-src-<branch>`
+- `apache/pegasus:thirdparties-src-rockylinux9-<branch>`
+- `apache/pegasus:thirdparties-src-ubuntu1804-<branch>`
+- `apache/pegasus:thirdparties-src-ubuntu2004-<branch>`
+- `apache/pegasus:thirdparties-src-ubuntu2204-<branch>`
 
 ## thirdparties-bin
 
 This is a Docker image for Pegasus unit-testing. It prebuilts the thirdparty libraries,
 so jobs based on this image can skip building third-parties.
 
-- `apache/pegasus:thirdparties-bin-centos7-<branch>`
+- `apache/pegasus:thirdparties-bin-rockylinux9-<branch>`
 - `apache/pegasus:thirdparties-bin-ubuntu1804-<branch>`
 - `apache/pegasus:thirdparties-bin-ubuntu2004-<branch>`
 - `apache/pegasus:thirdparties-bin-ubuntu2204-<branch>`

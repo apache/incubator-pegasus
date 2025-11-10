@@ -19,10 +19,11 @@
 
 // IWYU pragma: no_include <bits/std_abs.h>
 #include <rapidjson/ostreamwrapper.h>
-#include <stdlib.h>
 #include <algorithm>
 #include <cmath> // IWYU pragma: keep
+#include <fstream>
 #include <iomanip>
+#include <iostream>
 // IWYU pragma: no_include <new>
 #include <sstream> // IWYU pragma: keep
 #include <string>
@@ -223,8 +224,46 @@ private:
         out << std::endl;
     }
 
-private:
     std::vector<table_printer> _tps;
 };
+
+// Used as a general interface for printer to output to a file in json or tabular format,
+// typically `table_printer` and `multi_table_printer`.
+template <typename Printer>
+void output(const std::string &file_path, bool json, const Printer &printer)
+{
+    std::streambuf *buf = nullptr;
+    std::ofstream file;
+
+    if (file_path.empty()) {
+        buf = std::cout.rdbuf();
+    } else {
+        file.open(file_path);
+        buf = file.rdbuf();
+    }
+
+    std::ostream out(buf);
+
+    printer.output(out,
+                   json ? table_printer::output_format::kJsonPretty
+                        : table_printer::output_format::kTabular);
+}
+
+// Used as a general interface for printer to output to a file in tabular format, typically
+// `table_printer` and `multi_table_printer`.
+template <typename Printer>
+void output(const std::string &file_path, const Printer &printer)
+{
+    output(file_path, false, printer);
+}
+
+// Used as a general interface for printer to output to stdout in json or tabular format,
+// typically `table_printer` and `multi_table_printer`.
+template <typename Printer>
+void output(bool json, const Printer &printer)
+{
+    output({}, json, printer);
+}
+
 } // namespace utils
 } // namespace dsn

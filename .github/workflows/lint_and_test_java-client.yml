@@ -25,6 +25,7 @@ on:
         - ci-test # testing branch for github action
         - '*dev'      # developing branch
     paths:
+      - .github/actions/**
       - .github/workflows/lint_and_test_java-client.yml
       - java-client/**
 
@@ -40,9 +41,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-java@v4
         with:
           java-version: 8
+          distribution: temurin
       - name: spotless
         working-directory: ./java-client
         run: mvn spotless:check
@@ -77,18 +79,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ '8', '11']
+        java: [ '8', '11', '17' ]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Start Pegasus cluster

@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <stddef.h>
-#include <stdint.h>
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -37,9 +37,7 @@
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
 #include "common/replication_other_types.h"
-#include "consensus_types.h"
 #include "dsn.layer2_types.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "http/http_server.h"
 #include "http/http_status_code.h"
@@ -48,7 +46,6 @@
 #include "replica/replica.h"
 #include "replica/replica_http_service.h"
 #include "replica/replica_stub.h"
-#include "replica/replication_app_base.h"
 #include "replica/test/mock_utils.h"
 #include "replica_test_base.h"
 #include "rpc/network.sim.h"
@@ -102,15 +99,26 @@ public:
         // FLAGS_cold_backup_root is set by configuration "replication.cold_backup_root",
         // which is usually the cluster_name of production clusters.
         FLAGS_cold_backup_root = "test_cluster";
+
+        // Initially update the whole .app-info file with `_app_info` as the defined format
+        // (encrypted or unencrypted).
+        ASSERT_EQ(ERR_OK, _mock_replica->store_app_info());
     }
 
-    int64_t get_backup_request_count() const { return _mock_replica->get_backup_request_count(); }
+    [[nodiscard]] int64_t get_backup_request_count() const
+    {
+        return _mock_replica->get_backup_request_count();
+    }
 
-    bool get_validate_partition_hash() const { return _mock_replica->_validate_partition_hash; }
+    [[nodiscard]] bool get_validate_partition_hash() const
+    {
+        return _mock_replica->_validate_partition_hash;
+    }
 
-    void reset_validate_partition_hash() { _mock_replica->_validate_partition_hash = false; }
+    void reset_validate_partition_hash() const { _mock_replica->_validate_partition_hash = false; }
 
-    void update_validate_partition_hash(bool old_value, bool set_in_map, std::string new_value)
+    void
+    update_validate_partition_hash(bool old_value, bool set_in_map, std::string new_value) const
     {
         _mock_replica->_validate_partition_hash = old_value;
         std::map<std::string, std::string> envs;
@@ -240,43 +248,51 @@ public:
         return false;
     }
 
-    void test_update_app_max_replica_count()
+    // Load `info` from .app-info file to test whether it is consistent with the one
+    // in memory.
+    void load_app_info(app_info &info) const
     {
-        const auto reserved_max_replica_count = _app_info.max_replica_count;
-        const int32_t target_max_replica_count = 5;
-        CHECK_NE(target_max_replica_count, reserved_max_replica_count);
+        std::cout << ".app-info file is under " << _mock_replica->_dir << std::endl;
+        ASSERT_EQ(ERR_OK, _mock_replica->load_app_info(info));
 
-        // store new max_replica_count into file
-        _mock_replica->update_app_max_replica_count(target_max_replica_count);
-        _app_info.max_replica_count = target_max_replica_count;
+        std::cout << "The loaded app_info is " << info << std::endl;
+        ASSERT_EQ(_mock_replica->_app_info, info);
+    }
 
-        dsn::app_info info;
-        replica_app_info replica_info(&info);
+    void load_app_max_replica_count(int32_t expected_max_replica_count) const
+    {
+        app_info info;
+        load_app_info(info);
+        ASSERT_EQ(expected_max_replica_count, info.max_replica_count);
+    }
 
-        auto path = dsn::utils::filesystem::path_combine(
-            _mock_replica->_dir, dsn::replication::replica_app_info::kAppInfo);
-        std::cout << "the path of .app-info file is " << path << std::endl;
+    // Test `max_replica_count` both on disk and in memory after updated.
+    void update_app_max_replica_count(int32_t expected_max_replica_count)
+    {
+        _mock_replica->update_app_max_replica_count(expected_max_replica_count);
+        _app_info.max_replica_count = expected_max_replica_count;
 
-        // load new max_replica_count from file
-        auto err = replica_info.load(path);
-        ASSERT_EQ(ERR_OK, err);
-        ASSERT_EQ(info, _mock_replica->_app_info);
-        std::cout << "the loaded new app_info is " << info << std::endl;
+        load_app_max_replica_count(expected_max_replica_count);
+    }
 
-        // recover original max_replica_count
-        _mock_replica->update_app_max_replica_count(reserved_max_replica_count);
-        _app_info.max_replica_count = reserved_max_replica_count;
+    void load_app_atomic_idempotent(bool expected_atomic_idempotent) const
+    {
+        app_info info;
+        load_app_info(info);
+        ASSERT_EQ(expected_atomic_idempotent, info.atomic_idempotent);
+    }
 
-        // load original max_replica_count from file
-        err = replica_info.load(path);
-        ASSERT_EQ(err, ERR_OK);
-        ASSERT_EQ(info, _mock_replica->_app_info);
-        std::cout << "the loaded original app_info is " << info << std::endl;
+    // Test `atomic_idempotent` both on disk and in memory after updated.
+    void update_app_atomic_idempotent(bool expected_atomic_idempotent)
+    {
+        _mock_replica->update_app_atomic_idempotent(expected_atomic_idempotent);
+        _app_info.atomic_idempotent = expected_atomic_idempotent;
+
+        load_app_atomic_idempotent(expected_atomic_idempotent);
     }
 
     void test_auto_trash(error_code ec);
 
-public:
     dsn::app_info _app_info;
     dsn::gpid _pid;
     mock_replica_ptr _mock_replica;
@@ -326,7 +342,7 @@ TEST_P(replica_test, backup_request_count)
     backup_request->io_session = sim_net->create_client_session(rpc_address());
 
     const auto initial_backup_request_count = get_backup_request_count();
-    _mock_replica->on_client_read(backup_request);
+    _mock_replica->on_client_read(backup_request, false);
     ASSERT_EQ(initial_backup_request_count + 1, get_backup_request_count());
 }
 
@@ -497,29 +513,6 @@ TEST_P(replica_test, test_trigger_manual_emergency_checkpoint)
     _mock_replica->tracker()->wait_outstanding_tasks();
 }
 
-TEST_P(replica_test, test_query_last_checkpoint_info)
-{
-    // test no exist gpid
-    auto req = std::make_unique<learn_request>();
-    req->pid = gpid(100, 100);
-    query_last_checkpoint_info_rpc rpc =
-        query_last_checkpoint_info_rpc(std::move(req), RPC_QUERY_LAST_CHECKPOINT_INFO);
-    stub->on_query_last_checkpoint(rpc);
-    ASSERT_EQ(rpc.response().err, ERR_OBJECT_NOT_FOUND);
-
-    learn_response resp;
-    // last_checkpoint hasn't exist
-    _mock_replica->on_query_last_checkpoint(resp);
-    ASSERT_EQ(resp.err, ERR_PATH_NOT_FOUND);
-
-    // query ok
-    _mock_replica->update_last_durable_decree(100);
-    _mock_replica->set_last_committed_decree(200);
-    _mock_replica->on_query_last_checkpoint(resp);
-    ASSERT_EQ(resp.last_committed_decree, 200);
-    ASSERT_STR_CONTAINS(resp.base_local_dir, "/data/checkpoint.100");
-}
-
 TEST_P(replica_test, test_clear_on_failure)
 {
     // Clear up the remaining state.
@@ -628,7 +621,35 @@ TEST_P(replica_test, update_deny_client_test)
     }
 }
 
-TEST_P(replica_test, test_update_app_max_replica_count) { test_update_app_max_replica_count(); }
+TEST_P(replica_test, test_update_app_max_replica_count)
+{
+    const auto original_max_replica_count = _app_info.max_replica_count;
+    const int32_t target_max_replica_count = 5;
+
+    // The new value should not be equal to the original one.
+    CHECK_NE(target_max_replica_count, original_max_replica_count);
+
+    // Test the original value of `max_replica_count`.
+    load_app_max_replica_count(original_max_replica_count);
+
+    // Test `max_replica_count` after updated to the new value.
+    update_app_max_replica_count(target_max_replica_count);
+
+    // Test `max_replica_count` after recovered to the original value.
+    update_app_max_replica_count(original_max_replica_count);
+}
+
+TEST_P(replica_test, test_update_app_atomic_idempotent)
+{
+    // Test the default value of `atomic_idempotent` which should be false.
+    load_app_atomic_idempotent(false);
+
+    // Test `atomic_idempotent` after updated to true.
+    update_app_atomic_idempotent(true);
+
+    // Test `atomic_idempotent` after recovered to the default value.
+    update_app_atomic_idempotent(false);
+}
 
 } // namespace replication
 } // namespace dsn

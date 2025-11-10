@@ -54,23 +54,27 @@ public:
     void set_read_msg(message_ex *msg)
     {
         _msg = msg;
-        if (nullptr != _msg) {
-            ::dsn::blob bb;
-            CHECK(((::dsn::message_ex *)_msg)->read_next(bb),
-                  "read msg must have one segment of buffer ready");
-            init(std::move(bb));
+        if (_msg == nullptr) {
+            return;
         }
+
+        dsn::blob bb;
+        CHECK(_msg->read_next(bb), "read msg must have one segment of buffer ready");
+
+        init(std::move(bb));
     }
 
-    int read(char *buffer, int sz) { return inner_read(buffer, sz); }
+    int read(char *buffer, int sz) override { return inner_read(buffer, sz); }
 
-    int read(blob &blob, int len) { return inner_read(blob, len); }
+    int read(blob &blob, int len) override { return inner_read(blob, len); }
 
-    ~rpc_read_stream()
+    ~rpc_read_stream() override
     {
-        if (_msg) {
-            _msg->read_commit((size_t)(total_size() - get_remaining_size()));
+        if (_msg == nullptr) {
+            return;
         }
+
+        _msg->read_commit(static_cast<size_t>(total_size() - get_remaining_size()));
     }
 
 private:
@@ -83,7 +87,9 @@ typedef ::dsn::ref_ptr<rpc_read_stream> rpc_read_stream_ptr;
 class rpc_write_stream : public binary_writer
 {
 public:
-    rpc_write_stream(message_ex *msg)
+    rpc_write_stream() = delete;
+
+    explicit rpc_write_stream(message_ex *msg)
         : _msg(msg), _last_write_next_committed(true), _last_write_next_total_size(0)
     {
     }
@@ -104,16 +110,16 @@ public:
         }
     }
 
-    virtual ~rpc_write_stream() { flush(); }
-
-    virtual void flush() override
+    ~rpc_write_stream() override
     {
-        binary_writer::flush();
-        commit_buffer();
+        // Avoid calling virtual functions in destructor.
+        flush_internal();
     }
 
+    void flush() override { flush_internal(); }
+
 private:
-    virtual void create_new_buffer(size_t size, /*out*/ blob &bb) override
+    void create_new_buffer(size_t size, /*out*/ blob &bb) override
     {
         commit_buffer();
 
@@ -127,10 +133,20 @@ private:
         _last_write_next_committed = false;
     }
 
-private:
+    void flush_internal()
+    {
+        binary_writer::flush();
+        commit_buffer();
+    }
+
     message_ex *_msg;
     bool _last_write_next_committed;
     int _last_write_next_total_size;
+
+    DISALLOW_COPY_AND_ASSIGN(rpc_write_stream);
+    DISALLOW_MOVE_AND_ASSIGN(rpc_write_stream);
 };
-typedef ::dsn::ref_ptr<rpc_write_stream> rpc_write_stream_ptr;
+
+using rpc_write_stream_ptr = dsn::ref_ptr<rpc_write_stream>;
+
 } // namespace dsn

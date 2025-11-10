@@ -46,7 +46,7 @@ public class rrdb_remove_operator extends client_operator {
   }
 
   public void recv_data(TProtocol iprot) throws TException {
-    rrdb.put_result result = new rrdb.put_result();
+    rrdb.remove_result result = new rrdb.remove_result();
     result.read(iprot);
     if (result.isSetSuccess()) resp = result.success;
     else

@@ -108,7 +108,9 @@ class serverlet
 {
 public:
     explicit serverlet(const char *nm);
-    virtual ~serverlet();
+    virtual ~serverlet() = default;
+
+    [[nodiscard]] const std::string &name() const { return _name; }
 
 protected:
     template <typename TRequest>
@@ -121,10 +123,17 @@ protected:
                               const char *extra_name,
                               void (T::*handler)(const TRequest &, TResponse &));
 
+    // Register non-const member function of class T as handler.
     template <typename TRpcHolder>
     bool register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
                                               const char *extra_name,
                                               void (T::*handler)(TRpcHolder));
+
+    // Register const member function of class T as handler.
+    template <typename TRpcHolder>
+    bool register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
+                                              const char *extra_name,
+                                              void (T::*handler)(TRpcHolder) const);
 
     template <typename TRequest, typename TResponse>
     bool register_async_rpc_handler(task_code rpc_code,
@@ -138,10 +147,7 @@ protected:
     bool unregister_rpc_handler(task_code rpc_code);
 
     template <typename TResponse>
-    void reply(dsn::message_ex *request, const TResponse &resp);
-
-public:
-    const std::string &name() const { return _name; }
+    static void reply(dsn::message_ex *request, const TResponse &resp);
 
 private:
     std::string _name;
@@ -150,11 +156,6 @@ private:
 // ------------- inline implementation ----------------
 template <typename T>
 inline serverlet<T>::serverlet(const char *nm) : _name(nm)
-{
-}
-
-template <typename T>
-inline serverlet<T>::~serverlet()
 {
 }
 
@@ -197,8 +198,21 @@ inline bool serverlet<T>::register_rpc_handler_with_rpc_holder(dsn::task_code rp
                                                                const char *extra_name,
                                                                void (T::*handler)(TRpcHolder))
 {
-    rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
-        (((T *)this)->*(handler))(TRpcHolder::auto_reply(request));
+    const rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
+        (static_cast<T *>(this)->*handler)(TRpcHolder::auto_reply(request));
+    };
+
+    return dsn_rpc_register_handler(rpc_code, extra_name, cb);
+}
+
+template <typename T>
+template <typename TRpcHolder>
+inline bool serverlet<T>::register_rpc_handler_with_rpc_holder(dsn::task_code rpc_code,
+                                                               const char *extra_name,
+                                                               void (T::*handler)(TRpcHolder) const)
+{
+    const rpc_request_handler cb = [this, handler](dsn::message_ex *request) {
+        (static_cast<const T *>(this)->*handler)(TRpcHolder::auto_reply(request));
     };
 
     return dsn_rpc_register_handler(rpc_code, extra_name, cb);

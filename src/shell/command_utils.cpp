@@ -17,6 +17,8 @@
 
 #include "command_utils.h"
 
+#include <fmt/core.h>
+#include <cstdio>
 #include <memory>
 
 #include "client/replication_ddl_client.h"

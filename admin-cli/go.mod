@@ -20,6 +20,7 @@ module github.com/apache/incubator-pegasus/admin-cli
 go 1.18
 
 require (
+	github.com/apache/incubator-pegasus/collector v0.0.0-20250103031858-1091da5fbec8
 	github.com/apache/incubator-pegasus/go-client v0.0.0-20220617101220-e49a69d25a52
 	github.com/cheggaaa/pb/v3 v3.0.6
 	github.com/desertbit/grumble v1.1.1
@@ -27,9 +28,8 @@ require (
 	github.com/go-resty/resty/v2 v2.6.0
 	github.com/go-zookeeper/zk v1.0.2
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/pegasus-kv/collector v0.0.0-20220526124628-023287923c32
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.8.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.16.13
@@ -44,7 +44,7 @@ require (
 	github.com/desertbit/go-shlex v0.1.1 // indirect
 	github.com/desertbit/readline v1.5.1 // indirect
 	github.com/fatih/color v1.10.0 // indirect
-	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -66,10 +66,11 @@ require (
 	github.com/tidwall/gjson v1.14.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
-	gopkg.in/ini.v1 v1.62.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

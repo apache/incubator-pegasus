@@ -22,7 +22,7 @@ package executor
 import (
 	"github.com/apache/incubator-pegasus/admin-cli/tabular"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
-	"github.com/pegasus-kv/collector/aggregate"
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 )
 
 var nodeStatsTemplate = `---

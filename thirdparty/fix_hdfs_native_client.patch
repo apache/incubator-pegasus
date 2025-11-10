@@ -1,0 +1,131 @@
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt
+index 24ec297aa27b..e77c38435bba 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt
+@@ -152,24 +152,13 @@ add_subdirectory(main/native/libhdfs-examples)
+
+ # Temporary fix to disable Libhdfs++ build on older systems that do not support thread_local
+ include(CheckCXXSourceCompiles)
+-unset (THREAD_LOCAL_SUPPORTED CACHE)
+ set (CMAKE_REQUIRED_DEFINITIONS "-std=c++11")
+ set (CMAKE_REQUIRED_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+-check_cxx_source_compiles(
+-    "#include <thread>
+-    int main(void) {
+-      thread_local int s;
+-      return 0;
+-    }"
+-    THREAD_LOCAL_SUPPORTED)
+-if (THREAD_LOCAL_SUPPORTED)
++if (REQUIRE_LIBHDFSPP)
+     add_subdirectory(main/native/libhdfspp)
+ else()
+-    message(WARNING
+-    "WARNING: Libhdfs++ library was not built because the required feature thread_local storage \
+-    is not supported by your compiler. Known compilers that support this feature: GCC 4.8+, Visual Studio 2015+, \
+-    Clang (community version 3.3+), Clang (version for Xcode 8+ and iOS 9+).")
+-endif (THREAD_LOCAL_SUPPORTED)
++    message(WARNING "WARNING: Libhdfs++ library was not built because the REQUIRE_LIBHDFSPP is not enabled.")
++endif (REQUIRE_LIBHDFSPP)
+
+ if(REQUIRE_LIBWEBHDFS)
+     add_subdirectory(contrib/libwebhdfs)
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/pom.xml b/hadoop-hdfs-project/hadoop-hdfs-native-client/pom.xml
+index 04cf060..a4fc0e3 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/pom.xml
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/pom.xml
+@@ -147,7 +147,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
+                     <mkdir dir="${project.build.directory}/native"/>
+                     <exec executable="cmake" dir="${project.build.directory}/native"
+                           failonerror="true">
+-                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DHADOOP_BUILD=1 -DREQUIRE_FUSE=${require.fuse} -DREQUIRE_VALGRIND=${require.valgrind} -A '${env.PLATFORM}'"/>
++                      <arg line="${basedir}/src/ -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DHADOOP_BUILD=1 -DREQUIRE_FUSE=${require.fuse} -DREQUIRE_VALGRIND=${require.valgrind} -A '${env.PLATFORM}'"/>
+                       <arg line="${native_cmake_args}"/>
+                     </exec>
+                     <exec executable="msbuild" dir="${project.build.directory}/native"
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt
+index 24ec297..e158d7b 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/CMakeLists.txt
+@@ -16,7 +16,8 @@
+ # limitations under the License.
+ #
+ 
+-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
++cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
++project(hadoop-hdfs-native-client)
+ 
+ enable_testing()
+ 
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/CMakeLists.txt b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/CMakeLists.txt
+index c1ba3ad..44b18e6 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/CMakeLists.txt
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/CMakeLists.txt
+@@ -16,8 +16,6 @@
+ # limitations under the License.
+ #
+ 
+-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+-
+ set(CMAKE_SKIP_RPATH TRUE)
+ 
+ # Flatten a list into a string.
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs-examples/CMakeLists.txt b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs-examples/CMakeLists.txt
+index 1d33639..b950745 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs-examples/CMakeLists.txt
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs-examples/CMakeLists.txt
+@@ -16,8 +16,6 @@
+ # limitations under the License.
+ #
+ 
+-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+-
+ include_directories(
+     ${CMAKE_CURRENT_SOURCE_DIR}/../libhdfs/include
+     ${GENERATED_JAVAH}
+@@ -31,4 +29,4 @@ add_executable(hdfs_read libhdfs_read.c)
+ target_link_libraries(hdfs_read hdfs)
+ 
+ add_executable(hdfs_write libhdfs_write.c)
+-target_link_libraries(hdfs_write hdfs)
+\ No newline at end of file
++target_link_libraries(hdfs_write hdfs)
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs-tests/CMakeLists.txt b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs-tests/CMakeLists.txt
+index f16cc9e..01a671f 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs-tests/CMakeLists.txt
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs-tests/CMakeLists.txt
+@@ -16,8 +16,6 @@
+ # limitations under the License.
+ #
+ 
+-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+-
+ include_directories(
+     ${CMAKE_CURRENT_SOURCE_DIR}/../libhdfs/include
+     ${GENERATED_JAVAH}
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs/CMakeLists.txt b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs/CMakeLists.txt
+index a7fb311..b1e6f4e 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs/CMakeLists.txt
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfs/CMakeLists.txt
+@@ -16,8 +16,6 @@
+ # limitations under the License.
+ #
+ 
+-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+-
+ add_definitions(-DLIBHDFS_DLL_EXPORT)
+ 
+ include_directories(
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/CMakeLists.txt b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/CMakeLists.txt
+index f4dd492..0e9eee3 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/CMakeLists.txt
++++ b/hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/CMakeLists.txt
+@@ -26,8 +26,6 @@
+ 
+ project (libhdfspp)
+ 
+-cmake_minimum_required(VERSION 2.8)
+-
+ enable_testing()
+ include (CTest)
+ 

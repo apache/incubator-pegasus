@@ -24,6 +24,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -38,10 +39,7 @@
 #include "utils/fmt_utils.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace replication {
-
-class app_state;
+namespace dsn::replication {
 
 class duplication_info;
 
@@ -149,10 +147,10 @@ public:
 
     // duplication_query_rpc is handled in THREAD_POOL_META_SERVER,
     // which is not thread safe for read.
-    void append_if_valid_for_query(const app_state &app,
-                                   /*out*/ std::vector<duplication_entry> &entry_list) const;
+    void append_as_entry(std::vector<duplication_entry> &entry_list) const;
 
-    duplication_entry to_duplication_entry() const
+    // Build an entry including only duplication-level info.
+    duplication_entry to_duplication_level_entry() const
     {
         duplication_entry entry;
         entry.dupid = id;
@@ -162,13 +160,47 @@ public:
         entry.__set_fail_mode(_fail_mode);
         entry.__set_remote_app_name(remote_app_name);
         entry.__set_remote_replica_count(remote_replica_count);
+
+        return entry;
+    }
+
+    // Build an entry including also partition-level progress used for sync besides
+    // duplication-level info.
+    duplication_entry to_partition_level_entry_for_sync() const
+    {
+        auto entry = to_duplication_level_entry();
+
         entry.__isset.progress = true;
-        for (const auto &kv : _progress) {
-            if (!kv.second.is_inited) {
+        for (const auto &[partition_index, state] : _progress) {
+            if (!state.is_inited) {
                 continue;
             }
-            entry.progress[kv.first] = kv.second.stored_decree;
+
+            entry.progress.emplace(partition_index, state.stored_decree);
         }
+
+        return entry;
+    }
+
+    // Build an entry including also partition-level detailed states used for list
+    // besides duplication-level info.
+    duplication_entry to_partition_level_entry_for_list() const
+    {
+        auto entry = to_duplication_level_entry();
+
+        entry.__isset.partition_states = true;
+        for (const auto &[partition_index, state] : _progress) {
+            if (!state.is_inited) {
+                continue;
+            }
+
+            duplication_partition_state partition_state;
+            partition_state.confirmed_decree = state.stored_decree;
+            partition_state.last_committed_decree = state.last_committed_decree;
+
+            entry.partition_states.emplace(partition_index, partition_state);
+        }
+
         return entry;
     }
 
@@ -216,20 +248,22 @@ private:
 
     mutable zrwlock_nr _lock;
 
-    static constexpr int PROGRESS_UPDATE_PERIOD_MS = 5000;          // 5s
-    static constexpr int PROGRESS_REPORT_PERIOD_MS = 1000 * 60 * 5; // 5min
-
     struct partition_progress
     {
+        // Last committed decree collected from the primary replica of each partition.
+        // Not persisted to remote meta storage.
+        int64_t last_committed_decree{invalid_decree};
+
         int64_t volatile_decree{invalid_decree};
         int64_t stored_decree{invalid_decree};
+
         bool is_altering{false};
         uint64_t last_progress_update_ms{0};
         bool is_inited{false};
         bool checkpoint_prepared{false};
     };
 
-    // partition_idx => progress
+    // partition_index => progress
     std::map<int, partition_progress> _progress;
 
     uint64_t _last_progress_report_ms{0};
@@ -279,7 +313,6 @@ extern void json_encode(dsn::json::JsonWriter &out, const duplication_fail_mode:
 
 extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::type &s);
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::replication::duplication_info);

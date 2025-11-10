@@ -74,8 +74,7 @@ DSN_DEFINE_string(ranger,
                   "The name of the Ranger database policy matched by the legacy table(The table "
                   "name does not follow the naming rules of {database_name}.{table_name})");
 
-namespace dsn {
-namespace ranger {
+namespace dsn::ranger {
 
 #define RETURN_ERR_IF_MISSING_MEMBER(obj, member)                                                  \
     do {                                                                                           \
@@ -165,7 +164,11 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CLI_CLI_CALL_ACK"},
                              _ac_type_of_global_rpcs);
     // DATABASE - kList
-    register_rpc_access_type(access_type::kList, {"RPC_CM_LIST_APPS"}, _ac_type_of_database_rpcs);
+    // The `RPC_CM_DDD_DIAGNOSE` request is only used to retrieve information about DDD
+    // partitions and does not modify any data or metadata, so it is more appropriate to
+    // classify it as `kList` rather than `kControl`.
+    register_rpc_access_type(
+        access_type::kList, {"RPC_CM_LIST_APPS", "RPC_CM_DDD_DIAGNOSE"}, _ac_type_of_database_rpcs);
     // DATABASE - kCreate
     register_rpc_access_type(
         access_type::kCreate, {"RPC_CM_CREATE_APP"}, _ac_type_of_database_rpcs);
@@ -180,7 +183,8 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_QUERY_PARTITION_SPLIT",
                               "RPC_CM_QUERY_BULK_LOAD_STATUS",
                               "RPC_CM_QUERY_MANUAL_COMPACT_STATUS",
-                              "RPC_CM_GET_MAX_REPLICA_COUNT"},
+                              "RPC_CM_GET_MAX_REPLICA_COUNT",
+                              "RPC_CM_GET_ATOMIC_IDEMPOTENT"},
                              _ac_type_of_database_rpcs);
     // DATABASE - kControl
     register_rpc_access_type(access_type::kControl,
@@ -190,7 +194,6 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_ADD_DUPLICATION",
                               "RPC_CM_MODIFY_DUPLICATION",
                               "RPC_CM_UPDATE_APP_ENV",
-                              "RPC_CM_DDD_DIAGNOSE",
                               "RPC_CM_START_PARTITION_SPLIT",
                               "RPC_CM_CONTROL_PARTITION_SPLIT",
                               "RPC_CM_START_BULK_LOAD",
@@ -198,13 +201,23 @@ ranger_resource_policy_manager::ranger_resource_policy_manager(
                               "RPC_CM_CLEAR_BULK_LOAD",
                               "RPC_CM_START_MANUAL_COMPACT",
                               "RPC_CM_SET_MAX_REPLICA_COUNT",
+                              "RPC_CM_SET_ATOMIC_IDEMPOTENT",
                               "RPC_CM_RENAME_APP"},
                              _ac_type_of_database_rpcs);
 }
 
 void ranger_resource_policy_manager::start()
 {
+#ifdef MOCK_TEST
+    if (_meta_svc == nullptr) {
+        // `_meta_svc` being null implies that the policies will be updated manually,
+        // which is only used for testing purposes.
+        return;
+    }
+#else
     CHECK_NOTNULL(_meta_svc, "");
+#endif
+
     _ranger_policy_meta_root = dsn::utils::filesystem::concat_path_unix_style(
         _meta_svc->cluster_root(), "ranger_policy_meta_root");
     tasking::enqueue_timer(
@@ -489,7 +502,7 @@ void ranger_resource_policy_manager::start_to_dump_and_sync_policies()
     LOG_DEBUG("Start to create Ranger policy meta root on remote storage.");
     dsn::task_ptr sync_task = dsn::tasking::create_task(
         LPC_USE_RANGER_ACCESS_CONTROL, &_tracker, [this]() { dump_and_sync_policies(); });
-    _meta_svc->get_remote_storage()->create_node(
+    _meta_svc->get_remote_storage()->create_empty_node(
         _ranger_policy_meta_root,
         LPC_USE_RANGER_ACCESS_CONTROL,
         [this, sync_task](dsn::error_code err) {
@@ -528,7 +541,10 @@ void ranger_resource_policy_manager::dump_policies_to_remote_storage()
 {
     dsn::blob value = json::json_forwarder<all_resource_policies>::encode(_all_resource_policies);
     _meta_svc->get_remote_storage()->set_data(
-        _ranger_policy_meta_root, value, LPC_USE_RANGER_ACCESS_CONTROL, [this](dsn::error_code e) {
+        _ranger_policy_meta_root,
+        value,
+        LPC_USE_RANGER_ACCESS_CONTROL,
+        [this](dsn::error_code e) {
             if (e == dsn::ERR_OK) {
                 LOG_DEBUG("Dump Ranger policies to remote storage succeed.");
                 return;
@@ -542,7 +558,8 @@ void ranger_resource_policy_manager::dump_policies_to_remote_storage()
                 [this]() { dump_policies_to_remote_storage(); },
                 0,
                 kLoadRangerPolicyRetryDelayMs);
-        });
+        },
+        nullptr);
 }
 
 void ranger_resource_policy_manager::update_cached_policies()
@@ -643,18 +660,15 @@ dsn::error_code ranger_resource_policy_manager::sync_policies_to_app_envs()
 
 std::string get_database_name_from_app_name(const std::string &app_name)
 {
-    std::string prefix = utils::find_string_prefix(app_name, '.');
-    if (prefix.empty() || prefix == app_name) {
-        return std::string();
-    }
-
-    return prefix;
+    return utils::find_string_prefix(app_name, '.');
 }
 
 std::string get_table_name_from_app_name(const std::string &app_name)
 {
-    std::string database_name = get_database_name_from_app_name(app_name);
+    // TODO(wangdan): optimize getting table name by finding the separator without initializing
+    // an extra string object.
+    const auto &database_name = get_database_name_from_app_name(app_name);
     return database_name.empty() ? app_name : app_name.substr(database_name.size() + 1);
 }
-} // namespace ranger
-} // namespace dsn
+
+} // namespace dsn::ranger

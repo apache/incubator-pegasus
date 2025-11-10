@@ -54,3 +54,5 @@ set(MY_BINPLACES
     )
 
 dsn_add_test()
+
+add_subdirectory(sasl_auth)

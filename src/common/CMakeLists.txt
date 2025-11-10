@@ -27,6 +27,12 @@ set(MY_PROJ_NAME dsn_replication_common)
 thrift_generate_cpp(
     METADATA_THRIFT_SRCS
     METADATA_THRIFT_HDRS
+        ${PROJECT_ROOT}/idl/utils.thrift
+)
+
+thrift_generate_cpp(
+    METADATA_THRIFT_SRCS
+    METADATA_THRIFT_HDRS
         ${PROJECT_ROOT}/idl/metadata.thrift
 )
 

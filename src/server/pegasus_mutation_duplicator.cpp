@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <set>
 #include <string_view>
 #include <tuple>
 #include <utility>
@@ -34,7 +35,9 @@
 #include "client_lib/pegasus_client_impl.h"
 #include "common/common.h"
 #include "common/duplication_common.h"
+#include "common/replication.codes.h"
 #include "duplication_internal_types.h"
+#include "gutil/map_util.h"
 #include "pegasus/client.h"
 #include "pegasus_key_schema.h"
 #include "rpc/rpc_message.h"
@@ -238,6 +241,13 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
     auto batch_request = std::make_unique<dsn::apps::duplicate_request>();
     uint batch_count = 0;
     uint batch_bytes = 0;
+    // The rpc codes should be ignored:
+    // - RPC_RRDB_RRDB_DUPLICATE: Now not supports duplicating the deuplicate mutations to the
+    // remote cluster.
+    // - RPC_RRDB_RRDB_BULK_LOAD: Now not supports the control flow RPC.
+    const static std::set<int> ingnored_rpc_code = {dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
+                                                    dsn::apps::RPC_RRDB_RRDB_BULK_LOAD};
+
     for (auto mut : muts) {
         // mut: 0=timestamp, 1=rpc_code, 2=raw_message
         batch_count++;
@@ -245,20 +255,27 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         dsn::blob raw_message = std::get<2>(mut);
         auto dreq = std::make_unique<dsn::apps::duplicate_request>();
 
-        if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
-            // ignore if it is a DUPLICATE
-            // Because DUPLICATE comes from other clusters should not be forwarded to any other
-            // destinations. A DUPLICATE is meant to be targeting only one cluster.
+        if (gutil::ContainsKey(ingnored_rpc_code, rpc_code)) {
+            // It it do not recommend to use bulkload and normal writing in the same app,
+            // it may also cause inconsistency between actual data and expected data
+            // And duplication will not dup the data of bulkload to backup clusters,
+            // if you want to force use it, you can permit this risk in you own way on the clusters
+            // you maintenance. For example, you can do bulkload both on master-clusters and
+            // backup-cluster (with duplication enable) at the same time, but this will inevitably
+            // cause data inconsistency problems.
+            if (rpc_code == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
+                LOG_DEBUG_PREFIX("Ignore sending bulkload rpc when doing duplication");
+            }
             continue;
-        } else {
-            dsn::apps::duplicate_entry entry;
-            entry.__set_raw_message(raw_message);
-            entry.__set_task_code(rpc_code);
-            entry.__set_timestamp(std::get<0>(mut));
-            entry.__set_cluster_id(dsn::replication::get_current_dup_cluster_id());
-            batch_request->entries.emplace_back(std::move(entry));
-            batch_bytes += raw_message.length();
         }
+
+        dsn::apps::duplicate_entry entry;
+        entry.__set_raw_message(raw_message);
+        entry.__set_task_code(rpc_code);
+        entry.__set_timestamp(std::get<0>(mut));
+        entry.__set_cluster_id(dsn::replication::get_current_dup_cluster_id());
+        batch_request->entries.emplace_back(std::move(entry));
+        batch_bytes += raw_message.length();
 
         if (batch_count == muts.size() || batch_bytes >= FLAGS_duplicate_log_batch_bytes ||
             batch_bytes >= dsn::replication::FLAGS_dup_max_allowed_write_size) {

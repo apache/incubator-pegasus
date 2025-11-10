@@ -39,12 +39,25 @@ namespace application {
 class simple_kv_service : public replication_app_base, public storage_serverlet<simple_kv_service>
 {
 public:
-    simple_kv_service(replica *r) : replication_app_base(r) {}
-    virtual ~simple_kv_service() {}
+    explicit simple_kv_service(replica *r) : replication_app_base(r) {}
+    ~simple_kv_service() override = default;
 
-    virtual int on_request(dsn::message_ex *request) override WARN_UNUSED_RESULT
+    simple_kv_service(const simple_kv_service &) = delete;
+    simple_kv_service &operator=(const simple_kv_service &) = delete;
+
+    simple_kv_service(simple_kv_service &&) = delete;
+    simple_kv_service &operator=(simple_kv_service &&) = delete;
+
+    int on_request(dsn::message_ex *request) override WARN_UNUSED_RESULT
     {
         return handle_request(request);
+    }
+
+    int make_idempotent(dsn::message_ex *request,
+                        std::vector<dsn::message_ex *> &new_requests,
+                        pegasus::idempotent_writer_ptr &idem_writer) override
+    {
+        return rocksdb::Status::kOk;
     }
 
 protected:

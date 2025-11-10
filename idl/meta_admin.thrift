@@ -31,6 +31,7 @@ include "dsn.layer2.thrift"
 include "duplication.thrift"
 include "metadata.thrift"
 include "partition_split.thrift"
+include "utils.thrift"
 
 namespace cpp dsn.replication
 namespace go admin
@@ -138,6 +139,11 @@ struct create_app_options
     4:string           app_type;
     5:bool             is_stateful;
     6:map<string, string>  envs;
+
+    // Whether all atomic writes to this table are made idempotent:
+    // - true: made idempotent.
+    // - false: kept non-idempotent as their respective client requests. 
+    7:optional bool    atomic_idempotent = false;
 }
 
 struct configuration_create_app_request
@@ -196,13 +202,20 @@ struct configuration_recall_app_response
 
 struct configuration_list_apps_request
 {
-    1:dsn.layer2.app_status    status = app_status.AS_INVALID;
+    1:dsn.layer2.app_status                 status = app_status.AS_INVALID;
+
+    // The pattern is used to match an app name, whose type is specified by `match_type`.
+    2:optional string                       app_name_pattern;
+    3:optional utils.pattern_match_type     match_type;
 }
 
 struct configuration_list_apps_response
 {
-    1:dsn.error_code              err;
-    2:list<dsn.layer2.app_info>   infos;
+    1:dsn.error_code                err;
+    2:list<dsn.layer2.app_info>     infos;
+
+    // Extra message to describe the error.
+    3:optional string               hint_message;
 }
 
 struct query_app_info_request
@@ -429,6 +442,36 @@ struct configuration_set_max_replica_count_response
     3:string                    hint_message;
 }
 
+// Get the idempotence (see app_info::atomic_idempotent) of given table for atomic writes.
+struct configuration_get_atomic_idempotent_request
+{
+    1:string                    app_name;
+}
+
+struct configuration_get_atomic_idempotent_response
+{
+    1:dsn.error_code            err;
+    2:bool                      atomic_idempotent;
+    3:string                    hint_message;
+}
+
+// Change the idempotence (see app_info::atomic_idempotent) of given table for atomic writes.
+struct configuration_set_atomic_idempotent_request
+{
+    1:string                    app_name;
+    2:bool                      atomic_idempotent;
+}
+
+struct configuration_set_atomic_idempotent_response
+{
+    1:dsn.error_code            err;
+
+    // Previous atomic_idempotent before updated.
+    2:bool                      old_atomic_idempotent;
+
+    3:string                    hint_message;
+}
+
 // ONLY FOR GO
 // A client to MetaServer's administration API.
 service admin_client
@@ -446,6 +489,8 @@ service admin_client
     duplication.duplication_query_response query_duplication(1: duplication.duplication_query_request req);
 
     duplication.duplication_modify_response modify_duplication(1: duplication.duplication_modify_request req);
+
+    duplication.duplication_list_response list_duplication(1: duplication.duplication_list_request req);
 
     query_app_info_response query_app_info(1: query_app_info_request req);
 

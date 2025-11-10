@@ -29,6 +29,8 @@ function usage()
     echo
     echo "  -c|--cluster <str>          cluster meta server list, default is \"127.0.0.1:34601,127.0.0.1:34602\""
     echo
+    echo "  --config <str>              config file path"
+    echo
     echo "  -a|--app_name <str>         target table(app) name"
     echo
     echo "  -t|--type <str>             manual compact type, should be periodic or once, default is once"
@@ -67,15 +69,31 @@ function usage()
     echo
 }
 
+# determine whether the passed parameter is --cluster or --config.
+function is_cluster()
+{
+    # true:str is cluster, false: str is config
+    tmp_str=$1
+    if [[ ${tmp_str} == *":"* ]]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
+
 # get_env cluster app_name key
 function get_env()
 {
-    cluster=$1
+    tmp_str=$1
     app_name=$2
     key=$3
 
     log_file="/tmp/$UID.$PID.pegasus.get_app_envs.${app_name}"
-    echo -e "use ${app_name}\n get_app_envs" | ./run.sh shell --cluster ${cluster} &>${log_file}
+    if [ `is_cluster ${tmp_str}` == "true" ]; then
+        echo -e "use ${app_name}\n get_app_envs" | ./run.sh shell --cluster ${tmp_str} &>${log_file}
+    else
+        echo -e "use ${app_name}\n get_app_envs" | ./run.sh shell --config ${tmp_str} &>${log_file}
+    fi
     get_fail=`grep 'get app env failed' ${log_file} | wc -l`
     if [ ${get_fail} -eq 1 ]; then
         echo "ERROR: get app envs failed, refer to ${log_file}"
@@ -87,14 +105,18 @@ function get_env()
 # set_env cluster app_name key value
 function set_env()
 {
-    cluster=$1
+    tmp_str=$1
     app_name=$2
     key=$3
     value=$4
 
     echo "set_app_envs ${key}=${value}"
     log_file="/tmp/$UID.$PID.pegasus.set_app_envs.${app_name}"
-    echo -e "use ${app_name}\n set_app_envs ${key} ${value}" | ./run.sh shell --cluster ${cluster} &>${log_file}
+    if [ `is_cluster ${tmp_str}` == "true" ]; then
+        echo -e "use ${app_name}\n set_app_envs ${key} ${value}" | ./run.sh shell --cluster ${tmp_str} &>${log_file}
+    else
+        echo -e "use ${app_name}\n set_app_envs ${key} ${value}" | ./run.sh shell --config ${tmp_str} &>${log_file}
+    fi
     set_fail=`grep 'set app env failed' ${log_file} | wc -l`
     if [ ${set_fail} -eq 1 ]; then
         echo "ERROR: set app envs failed, refer to ${log_file}"
@@ -110,19 +132,23 @@ function wait_manual_compact()
     total_replica_count=$3
 
     query_cmd="remote_command -t replica-server replica.query-compact ${app_id}"
-    earliest_finish_time_ms=$(date -d @${trigger_time} +"%Y-%m-%d %H:%M:%S.000")
+    earliest_finish_time_ms=$(date -d @${trigger_time} +"%Y-%m-%d %H:%M:%S")
     echo "Checking once compact progress since [$trigger_time] [$earliest_finish_time_ms]..."
 
     slept=0
     while true
     do
         query_log_file="/tmp/$UID.$PID.pegasus.query_compact.${app_id}"
-        echo "${query_cmd}" | ./run.sh shell --cluster ${cluster} &>${query_log_file}
+        if [ "$cluster" != "" ]; then
+            echo "${query_cmd}" | ./run.sh shell --cluster ${cluster} &>${query_log_file}
+        else
+            echo "${query_cmd}" | ./run.sh shell --config ${config} &>${query_log_file}
+        fi
 
-        queue_count=`grep 'recent enqueue at' ${query_log_file} | grep -v 'recent start at' | wc -l`
-        running_count=`grep 'recent start at' ${query_log_file} | wc -l`
+        queue_count=$(awk 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); if (1 in enqueue && enqueue[1] != "-" && start[1] == "-") {count++}} END {print count}' "$query_log_file")
+        running_count=$(awk 'BEGIN {count=0} {match($0, /"recent_start_at":"([^"]+)"/, start); if (1 in start && start[1] != "-") {count++}} END {print count}' "$query_log_file")
         processing_count=$((queue_count+running_count))
-        finish_count=`grep "last finish at" ${query_log_file} | grep -v "recent enqueue at" | grep -v "recent start at" | grep -o 'last finish at [^,]*' | sed 's/\[/,/;s/\]//' | awk -F"," -v date="$earliest_finish_time_ms" 'BEGIN{count=0}{if(length($2)==23 && $2>=date){count++;}}END{print count}'`
+        finish_count=$(awk -v date="$earliest_finish_time_ms" 'BEGIN {count=0} {match($0, /"recent_enqueue_at":"([^"]+)"/, enqueue); match($0, /"recent_start_at":"([^"]+)"/, start); match($0, /"last_finish":"([^"]+)"/, finish); if (enqueue[1] == "-" && start[1] == "-" && 1 in finish && finish[1] >= date) {count++}} END {print count}' "$query_log_file")
         not_finish_count=$((total_replica_count-finish_count))
 
         if [ ${processing_count} -eq 0 -a ${finish_count} -eq ${total_replica_count} ]; then
@@ -145,12 +171,16 @@ function wait_manual_compact()
 # create_checkpoint cluster app_id
 function create_checkpoint()
 {
-    cluster=$1
+    tmp_str=$1
     app_id=$2
 
     echo "Start to create checkpoint..."
     chkpt_log_file="/tmp/$UID.$PID.pegasus.trigger_checkpoint.${app_id}"
-    echo "remote_command -t replica-server replica.trigger-checkpoint ${app_id}" | ./run.sh shell --cluster ${cluster} &>${chkpt_log_file}
+    if [ `is_cluster ${tmp_str}` == "true" ]; then
+        echo "remote_command -t replica-server replica.trigger-checkpoint ${app_id}" | ./run.sh shell --cluster ${tmp_str} &>${chkpt_log_file}
+    else
+        echo "remote_command -t replica-server replica.trigger-checkpoint ${app_id}" | ./run.sh shell --config ${tmp_str} &>${chkpt_log_file}
+    fi
     not_found_count=`grep '^    .*not found' ${chkpt_log_file} | wc -l`
     triggered_count=`grep '^    .*triggered' ${chkpt_log_file} | wc -l`
     ignored_count=`grep '^    .*ignored' ${chkpt_log_file} | wc -l`
@@ -165,6 +195,7 @@ fi
 
 # parse parameters
 cluster=""
+config=""
 app_name=""
 type="once"
 trigger_time=""
@@ -177,6 +208,10 @@ while [[ $# > 0 ]]; do
     case ${option_key} in
         -c|--cluster)
             cluster="$2"
+            shift
+            ;;
+        --config)
+            config="$2"
             shift
             ;;
         -t|--type)
@@ -219,9 +254,14 @@ pwd="$(cd "$(dirname "$0")" && pwd)"
 shell_dir="$(cd ${pwd}/.. && pwd )"
 cd ${shell_dir}
 
-# check cluster
-if [ "${cluster}" == "" ]; then
-    echo "ERROR: invalid cluster: ${cluster}"
+# check cluster and config
+if [ "${cluster}" == "" -a "${config}" == "" ]; then
+    echo "ERROR: invalid cluster: ${cluster}, config: ${config}"
+    exit 1
+fi
+
+if [ "${cluster}" != "" -a "${config}" != "" ]; then
+    echo "ERROR: cluster and config cannot be set at the same time."
     exit 1
 fi
 
@@ -250,7 +290,11 @@ if [ "${type}" == "once" ]; then
         exit 1
     fi
     if [ "${wait_only}" == "true" ]; then
-        trigger_time=`get_env ${cluster} ${app_name} "manual_compact.once.trigger_time"`
+        if [ "${cluster}" != "" ]; then
+            trigger_time=`get_env ${cluster} ${app_name} "manual_compact.once.trigger_time"`
+        else
+            trigger_time=`get_env ${config} ${app_name} "manual_compact.once.trigger_time"`
+        fi
         if [ "${trigger_time}" == "" ]; then
             echo "No once compact triggered previously, nothing to wait"
             exit 1
@@ -307,19 +351,39 @@ echo
 
 if [ "${type}" == "periodic" ] || [ "${type}" == "once" -a "${wait_only}" == "false" ]; then
     # set steady
-    echo "set_meta_level steady" | ./run.sh shell --cluster ${cluster} &>/tmp/$UID.$PID.pegasus.set_meta_level
+    if [ "${cluster}" != "" ]; then
+        echo "set_meta_level steady" | ./run.sh shell --cluster ${cluster} &>/tmp/$UID.$PID.pegasus.set_meta_level
+    else
+        echo "set_meta_level steady" | ./run.sh shell --config ${config} &>/tmp/$UID.$PID.pegasus.set_meta_level
+    fi
 
     # set manual compact envs
     if [ "${target_level}" != "" ]; then
-        set_env ${cluster} ${app_name} "manual_compact.${type}.target_level" ${target_level}
+        if [ "${cluster}" != "" ]; then
+            set_env ${cluster} ${app_name} "manual_compact.${type}.target_level" ${target_level}
+        else
+            set_env ${config} ${app_name} "manual_compact.${type}.target_level" ${target_level}
+        fi
     fi
     if [ "${bottommost_level_compaction}" != "" ]; then
-        set_env ${cluster} ${app_name} "manual_compact.${type}.bottommost_level_compaction" ${bottommost_level_compaction}
+        if [ "${cluster}" != "" ]; then
+            set_env ${cluster} ${app_name} "manual_compact.${type}.bottommost_level_compaction" ${bottommost_level_compaction}
+        else
+            set_env ${config} ${app_name} "manual_compact.${type}.bottommost_level_compaction" ${bottommost_level_compaction}
+        fi
     fi
     if [ "${max_concurrent_running_count}" != "" ]; then
-        set_env ${cluster} ${app_name} "manual_compact.max_concurrent_running_count" ${max_concurrent_running_count}
+        if [ "${cluster}" != "" ]; then
+            set_env ${cluster} ${app_name} "manual_compact.max_concurrent_running_count" ${max_concurrent_running_count}
+        else
+            set_env ${config} ${app_name} "manual_compact.max_concurrent_running_count" ${max_concurrent_running_count}
+        fi
     fi
-    set_env ${cluster} ${app_name} "manual_compact.${type}.trigger_time" ${trigger_time}
+    if [ "${cluster}" != "" ]; then
+        set_env ${cluster} ${app_name} "manual_compact.${type}.trigger_time" ${trigger_time}
+    else
+        set_env ${config} ${app_name} "manual_compact.${type}.trigger_time" ${trigger_time}
+    fi
     echo
 fi
 
@@ -330,7 +394,11 @@ if [ "${type}" != "once" ]; then
 fi
 
 ls_log_file="/tmp/$UID.$PID.pegasus.ls"
-echo ls | ./run.sh shell --cluster ${cluster} &>${ls_log_file}
+if [ "${cluster}" != "" ]; then
+    echo ls | ./run.sh shell --cluster ${cluster} &>${ls_log_file}
+else
+    echo ls | ./run.sh shell --config ${config} &>${ls_log_file}
+fi
 
 while read app_line
 do

@@ -91,9 +91,10 @@ static command_executor commands[] = {
     },
     {
         "ls",
-        "list all apps",
-        "[-a|-all] [-d|--detailed] [-j|--json] [-o|--output file_name] "
-        "[-s|--status all|available|creating|dropping|dropped]",
+        "list tables with specified status or pattern",
+        "[-a|--all] [-d|--detailed] [-j|--json] [-o|--output file_name] "
+        "[-s|--status all|available|creating|dropping|dropped] "
+        "[-p|--app_name_pattern str] [-m|--match_type all|exact|anywhere|prefix|postfix]",
         ls_apps,
     },
     {
@@ -108,7 +109,7 @@ static command_executor commands[] = {
         "create",
         "create an app",
         "<app_name> [-p|--partition_count num] [-r|--replica_count num] [-f|--fail_if_exist] "
-        "[-e|--envs k1=v1,k2=v2...]",
+        "[-i|--atomic_idempotent] [-e|--envs k1=v1,k2=v2...]",
         create_app,
     },
     {
@@ -540,6 +541,12 @@ static command_executor commands[] = {
      "[-r|--remote_replica_count num]",
      add_dup},
     {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
+    {"dups",
+     "list duplications of one or multiple tables with specified pattern",
+     "[-a|--app_name_pattern str] [-m|--match_type all|exact|anywhere|prefix|postfix] "
+     "[-p|--list_partitions] [-g|--progress_gap num] [-u|--show_unfinishd] "
+     "[-o|--output file_name] [-j|--json]",
+     ls_dups},
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
     {"pause_dup", "pause duplication", "<app_name> <dup_id>", pause_dup},
@@ -605,6 +612,25 @@ static command_executor commands[] = {
         "set the max replica count of an app",
         "<app_name> <replica_count>",
         set_max_replica_count,
+    },
+    {
+        "get_atomic_idempotent",
+        "check whether all atomic writes to an app will be made idempotent: true means "
+        "made idempotent, while false means kept non-idempotent",
+        "<app_name> [-j|--json]",
+        get_atomic_idempotent,
+    },
+    {
+        "enable_atomic_idempotent",
+        "enable idempotence for all atomic writes to an app",
+        "<app_name>",
+        enable_atomic_idempotent,
+    },
+    {
+        "disable_atomic_idempotent",
+        "disable idempotence for all atomic writes to an app",
+        "<app_name>",
+        disable_atomic_idempotent,
     },
     {
         "local_partition_split",

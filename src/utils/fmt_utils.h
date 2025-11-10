@@ -26,4 +26,4 @@
     }
 
 #define USER_DEFINED_ENUM_FORMATTER(type)                                                          \
-    inline auto format_as(type e)->int { return e; }
+    inline int format_as(type e) { return e; }

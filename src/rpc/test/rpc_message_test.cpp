@@ -167,8 +167,8 @@ TEST(rpc_message_test, message_ex)
 
         message_ex *receive = message_ex::create_received_request(
             request->local_rpc_code,
-            (dsn_msg_serialize_format)request->header->context.u.serialize_format,
-            (void *)request->buffers[1].data(),
+            static_cast<dsn_msg_serialize_format>(request->header->context.u.serialize_format),
+            request->buffers[1].data(),
             request->buffers[1].size(),
             request->header->client.thread_hash,
             request->header->client.partition_hash);
@@ -204,7 +204,7 @@ TEST(rpc_message_test, restore_read)
 
 TEST(rpc_message_test, create_receive_message_with_standalone_header)
 {
-    auto data = blob::create_from_bytes("10086");
+    const auto data = blob::create_from_bytes("10086");
 
     message_ptr msg = message_ex::create_receive_message_with_standalone_header(data);
     ASSERT_EQ(msg->buffers.size(), 2);
@@ -214,7 +214,7 @@ TEST(rpc_message_test, create_receive_message_with_standalone_header)
 
 TEST(rpc_message_test, copy_message_no_reply)
 {
-    auto data = blob::create_from_bytes("10086");
+    const auto data = blob::create_from_bytes("10086");
     message_ptr old_msg = message_ex::create_receive_message_with_standalone_header(data);
     old_msg->local_rpc_code = RPC_CODE_FOR_TEST;
 

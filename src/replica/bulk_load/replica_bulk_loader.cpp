@@ -16,6 +16,7 @@
 // under the License.
 
 #include <fmt/core.h>
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <string_view>
@@ -519,22 +520,32 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
     }
 
     // download sst files asynchronously
-    if (!_metadata.files.empty()) {
-        const file_meta &f_meta = _metadata.files[0];
-        _download_files_task[f_meta.name] = tasking::enqueue(
-            LPC_BACKGROUND_BULK_LOAD,
-            tracker(),
-            std::bind(&replica_bulk_loader::download_sst_file, this, remote_dir, local_dir, 0, fs));
+    {
+        zauto_read_lock l(_lock);
+        if (!_metadata.files.empty()) {
+            _download_files_task[_metadata.files.back().name] = tasking::enqueue(
+                LPC_BACKGROUND_BULK_LOAD,
+                tracker(),
+                [this, remote_dir, local_dir, file_meta = _metadata.files, fs]() mutable {
+                    this->download_sst_file(remote_dir, local_dir, std::move(file_meta), fs);
+                });
+        }
     }
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
-void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
-                                            const std::string &local_dir,
-                                            int32_t file_index,
-                                            dist::block_service::block_filesystem *fs)
+void replica_bulk_loader::download_sst_file(
+    const std::string &remote_dir,
+    const std::string &local_dir,
+    std::vector<::dsn::replication::file_meta> &&download_file_metas,
+    dist::block_service::block_filesystem *fs)
 {
-    const file_meta &f_meta = _metadata.files[file_index];
+    if (_status != bulk_load_status::BLS_DOWNLOADING) {
+        LOG_WARNING_PREFIX("Cancel download_sst_file task, because bulk_load local_status is {}.",
+                           enum_to_string(_status));
+        return;
+    }
+    const file_meta &f_meta = download_file_metas.back();
     uint64_t f_size = 0;
     std::string f_md5;
     error_code ec = _stub->_block_service_manager.download_file(
@@ -590,17 +601,14 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
     METRIC_VAR_INCREMENT_BY(bulk_load_download_file_bytes, f_size);
 
     // download next file
-    if (file_index + 1 < _metadata.files.size()) {
-        const file_meta &next_f_meta = _metadata.files[file_index + 1];
-        _download_files_task[next_f_meta.name] =
-            tasking::enqueue(LPC_BACKGROUND_BULK_LOAD,
-                             tracker(),
-                             std::bind(&replica_bulk_loader::download_sst_file,
-                                       this,
-                                       remote_dir,
-                                       local_dir,
-                                       file_index + 1,
-                                       fs));
+    download_file_metas.pop_back();
+    if (!download_file_metas.empty()) {
+        _download_files_task[download_file_metas.back().name] = tasking::enqueue(
+            LPC_BACKGROUND_BULK_LOAD,
+            tracker(),
+            [this, remote_dir, local_dir, download_file_metas, fs]() mutable {
+                this->download_sst_file(remote_dir, local_dir, std::move(download_file_metas), fs);
+            });
     }
 }
 
@@ -708,7 +716,7 @@ void replica_bulk_loader::check_ingestion_finish()
         // checkpoint, to gurantee the condition above, we should pop all committed mutations in
         // prepare list to gurantee learn type is LT_APP
         mutation_ptr mu = _replica->new_mutation(invalid_decree);
-        mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+        mu->add_client_request(nullptr);
         _replica->init_prepare(mu, false, true);
         _replica->_primary_states.ingestion_is_empty_prepare_sent = true;
     }
@@ -727,7 +735,7 @@ void replica_bulk_loader::handle_bulk_load_succeed()
     // send an empty prepare again to gurantee that learner should learn from checkpoint
     if (status() == partition_status::PS_PRIMARY) {
         mutation_ptr mu = _replica->new_mutation(invalid_decree);
-        mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+        mu->add_client_request(nullptr);
         _replica->init_prepare(mu, false, true);
     }
 }
@@ -928,10 +936,12 @@ void replica_bulk_loader::report_group_download_progress(/*out*/ bulk_load_respo
         primary_state.__set_download_progress(_download_progress.load());
         primary_state.__set_download_status(_download_status.load());
     }
+    host_port primary;
+    GET_HOST_PORT(_replica->_primary_states.pc, primary, primary);
     SET_VALUE_FROM_IP_AND_HOST_PORT(response,
                                     group_bulk_load_state,
                                     _replica->_primary_states.pc.primary,
-                                    _replica->_primary_states.pc.hp_primary,
+                                    primary,
                                     primary_state);
     LOG_INFO_PREFIX("primary = {}, download progress = {}%, status = {}",
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),
@@ -970,10 +980,12 @@ void replica_bulk_loader::report_group_ingestion_status(/*out*/ bulk_load_respon
 
     partition_bulk_load_state primary_state;
     primary_state.__set_ingest_status(_replica->_app->get_ingestion_status());
+    host_port primary;
+    GET_HOST_PORT(_replica->_primary_states.pc, primary, primary);
     SET_VALUE_FROM_IP_AND_HOST_PORT(response,
                                     group_bulk_load_state,
                                     _replica->_primary_states.pc.primary,
-                                    _replica->_primary_states.pc.hp_primary,
+                                    primary,
                                     primary_state);
     LOG_INFO_PREFIX("primary = {}, ingestion status = {}",
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),
@@ -1017,10 +1029,12 @@ void replica_bulk_loader::report_group_cleaned_up(bulk_load_response &response)
 
     partition_bulk_load_state primary_state;
     primary_state.__set_is_cleaned_up(is_cleaned_up());
+    host_port primary;
+    GET_HOST_PORT(_replica->_primary_states.pc, primary, primary);
     SET_VALUE_FROM_IP_AND_HOST_PORT(response,
                                     group_bulk_load_state,
                                     _replica->_primary_states.pc.primary,
-                                    _replica->_primary_states.pc.hp_primary,
+                                    primary,
                                     primary_state);
     LOG_INFO_PREFIX("primary = {}, bulk load states cleaned_up = {}",
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),
@@ -1056,10 +1070,12 @@ void replica_bulk_loader::report_group_is_paused(bulk_load_response &response)
 
     partition_bulk_load_state primary_state;
     primary_state.__set_is_paused(_status == bulk_load_status::BLS_PAUSED);
+    host_port primary;
+    GET_HOST_PORT(_replica->_primary_states.pc, primary, primary);
     SET_VALUE_FROM_IP_AND_HOST_PORT(response,
                                     group_bulk_load_state,
                                     _replica->_primary_states.pc.primary,
-                                    _replica->_primary_states.pc.hp_primary,
+                                    primary,
                                     primary_state);
     LOG_INFO_PREFIX("primary = {}, bulk_load is_paused = {}",
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),

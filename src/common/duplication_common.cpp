@@ -20,6 +20,7 @@
 #include <nlohmann/json.hpp>
 #include <cstdint>
 #include <map>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -55,12 +56,17 @@ namespace replication {
 
 const std::string duplication_constants::kDuplicationCheckpointRootDir /*NOLINT*/ = "duplication";
 const std::string duplication_constants::kClustersSectionName /*NOLINT*/ = "pegasus.clusters";
-const std::string duplication_constants::kDuplicationEnvMasterClusterKey /*NOLINT*/ =
+const std::string duplication_constants::kEnvMasterClusterKey /*NOLINT*/ =
     "duplication.master_cluster";
-const std::string duplication_constants::kDuplicationEnvMasterMetasKey /*NOLINT*/ =
-    "duplication.master_metas";
-const std::string duplication_constants::kDuplicationEnvMasterAppNameKey /*NOLINT*/ =
+const std::string duplication_constants::kEnvMasterMetasKey /*NOLINT*/ = "duplication.master_metas";
+const std::string duplication_constants::kEnvMasterAppNameKey /*NOLINT*/ =
     "duplication.master_app_name";
+const std::string duplication_constants::kEnvFollowerAppStatusKey /*NOLINT*/
+    = "duplication.follower_app_status";
+const std::string duplication_constants::kEnvFollowerAppStatusCreating /*NOLINT*/
+    = "creating";
+const std::string duplication_constants::kEnvFollowerAppStatusCreated /*NOLINT*/
+    = "created";
 
 /*extern*/ const char *duplication_status_to_string(duplication_status::type status)
 {
@@ -176,11 +182,12 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
     };
 
     if (ent.__isset.progress) {
-        nlohmann::json sub_json;
-        for (const auto &p : ent.progress) {
-            sub_json[std::to_string(p.first)] = p.second;
+        nlohmann::json progress;
+        for (const auto &[partition_index, state] : ent.progress) {
+            progress[std::to_string(partition_index)] = state;
         }
-        json["progress"] = sub_json;
+
+        json["progress"] = progress;
     }
 
     if (ent.__isset.remote_app_name) {
@@ -191,6 +198,19 @@ static nlohmann::json duplication_entry_to_json(const duplication_entry &ent)
     if (ent.__isset.remote_replica_count) {
         // remote_replica_count is supported since v2.6.0, thus it won't be shown before v2.6.0.
         json["remote_replica_count"] = ent.remote_replica_count;
+    }
+
+    if (ent.__isset.partition_states) {
+        nlohmann::json partition_states;
+        for (const auto &[partition_index, state] : ent.partition_states) {
+            nlohmann::json partition_state;
+            partition_state["confirmed_decree"] = state.confirmed_decree;
+            partition_state["last_committed_decree"] = state.last_committed_decree;
+
+            partition_states[std::to_string(partition_index)] = partition_state;
+        }
+
+        json["partition_states"] = partition_states;
     }
 
     return json;

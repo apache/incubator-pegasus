@@ -32,32 +32,31 @@
 #include "utils/blob.h"
 
 namespace dsn {
-int binary_writer::_reserved_size_per_buffer_static = 256;
 
-binary_writer::binary_writer(int reserveBufferSize)
+const int binary_writer::kReservedSizePerBuffer = 256;
+
+binary_writer::binary_writer() : binary_writer(0) {}
+
+binary_writer::binary_writer(int reserved_buffer_size)
+    : _current_buffer(nullptr),
+      _current_offset(0),
+      _current_buffer_length(0),
+      _total_size(0),
+      _reserved_size_per_buffer((reserved_buffer_size == 0) ? kReservedSizePerBuffer
+                                                            : reserved_buffer_size)
 {
-    _total_size = 0;
     _buffers.reserve(1);
-    _reserved_size_per_buffer = (reserveBufferSize == 0) ? _reserved_size_per_buffer_static
-                                                         : reserveBufferSize;
-    _current_buffer = nullptr;
-    _current_offset = 0;
-    _current_buffer_length = 0;
 }
 
 binary_writer::binary_writer(blob &buffer)
+    : _buffers({buffer}),
+      _current_buffer(const_cast<char *>(buffer.data())),
+      _current_offset(0),
+      _current_buffer_length(static_cast<int>(buffer.length())),
+      _total_size(0),
+      _reserved_size_per_buffer(kReservedSizePerBuffer)
 {
-    _total_size = 0;
-    _buffers.reserve(1);
-    _reserved_size_per_buffer = _reserved_size_per_buffer_static;
-
-    _buffers.push_back(buffer);
-    _current_buffer = (char *)buffer.data();
-    _current_offset = 0;
-    _current_buffer_length = buffer.length();
 }
-
-binary_writer::~binary_writer() {}
 
 void binary_writer::flush() { commit(); }
 
@@ -94,19 +93,22 @@ blob binary_writer::get_buffer()
 
     if (_buffers.size() == 1) {
         return _buffers[0];
-    } else if (_total_size == 0) {
-        return blob();
-    } else {
-        std::shared_ptr<char> bptr(::dsn::utils::make_shared_array<char>(_total_size));
-        blob bb(bptr, _total_size);
-        const char *ptr = bb.data();
-
-        for (int i = 0; i < static_cast<int>(_buffers.size()); i++) {
-            memcpy((void *)ptr, (const void *)_buffers[i].data(), (size_t)_buffers[i].length());
-            ptr += _buffers[i].length();
-        }
-        return bb;
     }
+
+    if (_total_size == 0) {
+        return {};
+    }
+
+    std::shared_ptr<char> bptr(utils::make_shared_array<char>(_total_size));
+    blob bb(bptr, _total_size);
+    char *ptr = const_cast<char *>(bb.data());
+
+    for (const auto &buf : _buffers) {
+        memcpy(ptr, buf.data(), buf.length());
+        ptr += buf.length();
+    }
+
+    return bb;
 }
 
 blob binary_writer::get_current_buffer()
@@ -200,4 +202,5 @@ bool binary_writer::backup(int count)
     _total_size -= count;
     return true;
 }
+
 } // namespace dsn

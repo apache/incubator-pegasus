@@ -233,7 +233,7 @@ bool split_file(const LocalPartitionSplitContext &lpsc,
 
     // 4. Iterate the sst file though sst reader, then split it to multiple sst files
     // though sst writers.
-    std::shared_ptr<rocksdb::SstFileWriter> writers[lpsc.split_count];
+    std::vector<std::shared_ptr<rocksdb::SstFileWriter>> writers(lpsc.split_count);
     std::unique_ptr<rocksdb::Iterator> iter(reader->NewIterator({}));
     for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
         const auto &skey = iter->key();

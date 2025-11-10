@@ -28,12 +28,13 @@ export REPORT_DIR="$ROOT/test_report"
 export THIRDPARTY_ROOT=${PEGASUS_THIRDPARTY_ROOT:-"$ROOT/thirdparty"}
 ARCH_TYPE=''
 arch_output=$(arch)
-if [ "$arch_output"x == "x86_64"x ]; then
-    ARCH_TYPE="amd64"
-elif [ "$arch_output"x == "aarch64"x ]; then
+if [ "$arch_output"x == "aarch64"x ]; then
     ARCH_TYPE="aarch64"
 else
-    echo "WARNING: unsupported CPU architecture '$arch_output', use 'x86_64' as default"
+    if [ "$arch_output"x != "x86_64"x ]; then
+        echo "WARNING: unrecognized CPU architecture '$arch_output', use 'x86_64' as default"
+    fi
+    ARCH_TYPE="amd64"
 fi
 export LD_LIBRARY_PATH=${JAVA_HOME}/jre/lib/${ARCH_TYPE}:${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server:${BUILD_LATEST_DIR}/output/lib:${THIRDPARTY_ROOT}/output/lib:${LD_LIBRARY_PATH}
 # Disable AddressSanitizerOneDefinitionRuleViolation, see https://github.com/google/sanitizers/issues/1017 for details.
@@ -401,6 +402,7 @@ function run_test()
     local clear_flags="1"
     local enable_gcov="no"
     local all_tests=(
+      atomic_write_test
       backup_restore_test
       base_api_test
       base_test
@@ -439,6 +441,7 @@ function run_test()
       recovery_test
       restore_test
       throttle_test
+      zookeeper_sasl_auth_test
     )
     local onebox_opts=""
     local test_opts=""
@@ -494,6 +497,7 @@ function run_test()
         echo "====================== run $module =========================="
         # The tests which need start onebox.
         local need_onebox_tests=(
+          atomic_write_test
           backup_restore_test
           base_api_test
           bulk_load_test
@@ -535,20 +539,26 @@ function run_test()
         else
             # Restart ZK in what ever case.
             run_stop_zk
-            run_start_zk
+
+            if [ "${module}" == "zookeeper_sasl_auth_test" ]; then
+                run_start_zk --sasl_auth
+            else
+                run_start_zk
+            fi
         fi
 
         # Run server test.
         pushd ${BUILD_LATEST_DIR}/bin/${module}
         local function_tests=(
-	      backup_restore_test
-	      recovery_test
-	      restore_test
-	      base_api_test
-	      throttle_test
-	      bulk_load_test
-	      detect_hotspot_test
-	      partition_split_test
+          atomic_write_test
+          backup_restore_test
+          base_api_test
+          bulk_load_test
+          detect_hotspot_test
+          partition_split_test
+          recovery_test
+          restore_test
+          throttle_test
         )
         # function_tests need client used meta_server_list to connect
         if [[ "${function_tests[@]}"  =~ "${module}" ]]; then
@@ -601,6 +611,7 @@ function usage_start_zk()
     echo "                     zookeeper install directory,"
     echo "                     if not set, then default is './.zk_install'"
     echo "   -p|--port <port>  listen port of zookeeper, default is 22181"
+    echo "   -s|--sasl_auth    start zookeeper with SASL Auth, default no"
 }
 
 function run_start_zk()
@@ -614,6 +625,7 @@ function run_start_zk()
 
     INSTALL_DIR=`pwd`/.zk_install
     PORT=22181
+    SASL_AUTH=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -628,6 +640,9 @@ function run_start_zk()
             -p|--port)
                 PORT=$2
                 shift
+                ;;
+            -s|--sasl_auth)
+                SASL_AUTH=YES
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -656,7 +671,7 @@ function run_start_zk()
         fi
     fi
 
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/build_tools/start_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" SASL_AUTH="$SASL_AUTH" $ROOT/admin_tools/start_zk.sh
 }
 
 #####################
@@ -693,7 +708,7 @@ function run_stop_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $ROOT/build_tools/stop_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/admin_tools/stop_zk.sh
 }
 
 #####################
@@ -730,7 +745,7 @@ function run_clear_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" $ROOT/build_tools/clear_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/admin_tools/clear_zk.sh
 }
 
 #####################
@@ -2105,6 +2120,8 @@ case $cmd in
         ;;
     pack_server)
         shift
+        # source the config_hdfs.sh to get the HADOOP_HOME.
+        source "${ROOT}"/admin_tools/config_hdfs.sh
         PEGASUS_ROOT=$ROOT ./build_tools/pack_server.sh $*
         ;;
     pack_client)

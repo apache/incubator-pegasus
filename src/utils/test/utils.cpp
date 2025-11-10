@@ -29,8 +29,8 @@
 #include <map>
 #include <set>
 #include <string>
+#include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -40,22 +40,133 @@
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
 #include "utils/crc.h"
+#include "utils/error_code.h"
+#include "utils/errors.h"
 #include "utils/link.h"
 #include "utils/rand.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
+#include "utils_types.h"
 
-namespace dsn {
-namespace utils {
+namespace dsn::utils {
 
-TEST(core, get_last_component)
+struct get_last_component_case
 {
-    ASSERT_EQ("a", get_last_component("a", "/"));
-    ASSERT_EQ("b", get_last_component("a/b", "/"));
-    ASSERT_EQ("b", get_last_component("a//b", "/"));
-    ASSERT_EQ("", get_last_component("a/", "/"));
-    ASSERT_EQ("c", get_last_component("a/b_c", "/_"));
+    const char *str;
+    const char *splitters;
+    std::string_view expected_result;
+};
+
+class GetLastComponentTest : public testing::TestWithParam<get_last_component_case>
+{
+protected:
+    template <typename TStr>
+    void test_get_last_component()
+    {
+        const auto &test_case = GetParam();
+
+        const TStr str(test_case.str);
+        const auto actual_result = get_last_component(str, test_case.splitters);
+        EXPECT_EQ(test_case.expected_result, actual_result);
+    }
+};
+
+TEST_P(GetLastComponentTest, GetLastComponentCString) { test_get_last_component<const char *>(); }
+
+TEST_P(GetLastComponentTest, GetLastComponentString) { test_get_last_component<std::string>(); }
+
+TEST_P(GetLastComponentTest, GetLastComponentStringView)
+{
+    test_get_last_component<std::string_view>();
 }
+
+const std::vector<get_last_component_case> get_last_component_tests = {
+    // Empty string.
+    {"", "", ""},
+    {"", "/", ""},
+    {"", "\\/", ""},
+    {"/", "", "/"},
+
+    // The only character is a splitter.
+    {"/", "/", ""},
+    {"/", "\\/", ""},
+
+    // The only character is not a splitter.
+    {"a", "/", "a"},
+    {"a", "\\/", "a"},
+    {"/", "\\", "/"},
+
+    // There is not any splitter in multiple characters.
+    {"aa", "/", "aa"},
+    {"aa", "\\/", "aa"},
+    {"ab", "/", "ab"},
+    {"ab", "\\/", "ab"},
+    {"abc", "/", "abc"},
+    {"abc", "\\/", "abc"},
+
+    // There is only one splitter in multiple characters.
+    {"a/", "/", ""},
+    {"/a", "/", "a"},
+    {"a/", "\\/", ""},
+    {"/a", "\\/", "a"},
+    {"aa/", "/", ""},
+    {"a/a", "/", "a"},
+    {"/aa", "/", "aa"},
+    {"aa/", "\\/", ""},
+    {"a/a", "\\/", "a"},
+    {"/aa", "\\/", "aa"},
+    {"ab/", "/", ""},
+    {"a/b", "/", "b"},
+    {"/ab", "/", "ab"},
+    {"abc/", "\\/", ""},
+    {"ab/c", "\\/", "c"},
+    {"a/bc", "\\/", "bc"},
+    {"/abc", "\\/", "abc"},
+    {"abc\\", "\\/", ""},
+    {"ab\\c", "\\/", "c"},
+    {"a\\bc", "\\/", "bc"},
+    {"\\abc", "\\/", "abc"},
+
+    // There are adjacent splitters in multiple characters.
+    {"a//", "/", ""},
+    {"a/\\", "\\/", ""},
+    {"//a", "/", "a"},
+    {"\\/a", "\\/", "a"},
+    {"aa//", "/", ""},
+    {"aa\\/", "/\\", ""},
+    {"a//a", "/", "a"},
+    {"a/\\a", "/\\", "a"},
+    {"//aa", "/", "aa"},
+    {"\\/aa", "/\\", "aa"},
+    {"ab//", "/", ""},
+    {"ab/\\", "\\/", ""},
+    {"a//b", "/", "b"},
+    {"a\\/b", "\\/", "b"},
+    {"//ab", "/", "ab"},
+    {"/\\ab", "\\/", "ab"},
+    {"abc//", "/", ""},
+    {"abc\\/", "\\/", ""},
+    {"ab//c", "/", "c"},
+    {"ab/\\c", "\\/", "c"},
+    {"a//bc", "/", "bc"},
+    {"a\\/bc", "/\\", "bc"},
+    {"//abc", "/", "abc"},
+    {"\\/abc", "/\\", "abc"},
+
+    // There are multiple splitters in multiple characters.
+    {"\\a/", "/\\", ""},
+    {"a\\a/", "/\\", ""},
+    {"/aa\\", "/\\", ""},
+    {"a/b\\", "/\\", ""},
+    {"\\ab/", "/\\", ""},
+    {"a/b/c", "/", "c"},
+    {"a\\b/c", "/\\", "c"},
+    {"ab/cd\\efg", "/\\", "efg"},
+};
+
+INSTANTIATE_TEST_SUITE_P(StringTest,
+                         GetLastComponentTest,
+                         testing::ValuesIn(get_last_component_tests));
 
 TEST(core, crc)
 {
@@ -246,6 +357,76 @@ const std::vector<c_string_n_bytes_equality> c_string_n_bytes_equality_tests = {
 INSTANTIATE_TEST_SUITE_P(StringTest,
                          CStringNBytesEqualityTest,
                          testing::ValuesIn(c_string_n_bytes_equality_tests));
+
+struct pattern_match_case
+{
+    std::string str;
+    std::string pattern;
+    pattern_match_type::type match_type;
+    error_code expected_err;
+};
+
+class PatternMatchTest : public testing::TestWithParam<pattern_match_case>
+{
+};
+
+const std::vector<pattern_match_case> pattern_match_tests = {
+    // Everything would be matched even if pattern is empty.
+    {"abc", "", pattern_match_type::PMT_MATCH_ALL, ERR_OK},
+    // Everything would be matched even if it is not matched completely.
+    {"abc", "xyz", pattern_match_type::PMT_MATCH_ALL, ERR_OK},
+    // It is matched exactly.
+    {"abc", "abc", pattern_match_type::PMT_MATCH_EXACT, ERR_OK},
+    // Empty string is matched exactly with empty pattern.
+    {"", "", pattern_match_type::PMT_MATCH_EXACT, ERR_OK},
+    // Non-empty string cannot be matched exactly with empty pattern.
+    {"abc", "", pattern_match_type::PMT_MATCH_EXACT, ERR_NOT_MATCHED},
+    // The string whose content is different from pattern would not be matched.
+    {"abc", "xyz", pattern_match_type::PMT_MATCH_EXACT, ERR_NOT_MATCHED},
+    // The pattern as a sub string would not be matched.
+    {"abc", "ab", pattern_match_type::PMT_MATCH_EXACT, ERR_NOT_MATCHED},
+    // It is matched with same prefix for anywhere.
+    {"abcdef", "ab", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_OK},
+    // It is matched with same middle for anywhere.
+    {"abcdef", "cd", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_OK},
+    // It is matched with same postfix for anywhere.
+    {"abcdef", "ef", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_OK},
+    // It is matched with empty content for anywhere.
+    {"abcdef", "", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_OK},
+    // It is not matched with different content for anywhere.
+    {"abcdef", "xyz", pattern_match_type::PMT_MATCH_ANYWHERE, ERR_NOT_MATCHED},
+    // It is matched for prefix.
+    {"abcdef", "ab", pattern_match_type::PMT_MATCH_PREFIX, ERR_OK},
+    // It is not matched with same middle for prefix.
+    {"abcdef", "cd", pattern_match_type::PMT_MATCH_PREFIX, ERR_NOT_MATCHED},
+    // It is not matched with same postfix for prefix.
+    {"abcdef", "ef", pattern_match_type::PMT_MATCH_PREFIX, ERR_NOT_MATCHED},
+    // It is not matched with different content for prefix.
+    {"abcdef", "xyz", pattern_match_type::PMT_MATCH_PREFIX, ERR_NOT_MATCHED},
+    // It is matched with empty content for prefix.
+    {"abcdef", "", pattern_match_type::PMT_MATCH_PREFIX, ERR_OK},
+    // It is matched for postfix.
+    {"abcdef", "ef", pattern_match_type::PMT_MATCH_POSTFIX, ERR_OK},
+    // It is not matched with same prefix for postfix.
+    {"abcdef", "ab", pattern_match_type::PMT_MATCH_POSTFIX, ERR_NOT_MATCHED},
+    // It is not matched with same middle for postfix.
+    {"abcdef", "cd", pattern_match_type::PMT_MATCH_POSTFIX, ERR_NOT_MATCHED},
+    // It is not matched with different content for postfix.
+    {"abcdef", "xyz", pattern_match_type::PMT_MATCH_PREFIX, ERR_NOT_MATCHED},
+    // It is matched with empty content for postfix.
+    {"abcdef", "", pattern_match_type::PMT_MATCH_POSTFIX, ERR_OK},
+    // PMT_MATCH_REGEX is still not supported.
+    {"unsupported", ".*", pattern_match_type::PMT_MATCH_REGEX, ERR_NOT_IMPLEMENTED},
+};
+
+TEST_P(PatternMatchTest, PatternMatch)
+{
+    const auto &test_case = GetParam();
+    const auto actual_err = pattern_match(test_case.str, test_case.pattern, test_case.match_type);
+    EXPECT_EQ(test_case.expected_err, actual_err.code());
+}
+
+INSTANTIATE_TEST_SUITE_P(StringTest, PatternMatchTest, testing::ValuesIn(pattern_match_tests));
 
 // For containers such as std::unordered_set, the expected result will be deduplicated
 // at initialization. Therefore, it can be used to compare with actual result safely.
@@ -600,5 +781,4 @@ const std::vector<has_space_case> has_space_tests = {
 
 INSTANTIATE_TEST_SUITE_P(StringTest, HasSpaceTest, testing::ValuesIn(has_space_tests));
 
-} // namespace utils
-} // namespace dsn
+} // namespace dsn::utils

@@ -44,9 +44,9 @@ func NewDetector(detectInterval time.Duration,
 	tableName := viper.GetStringMapString("availablity_detect")["table_name"]
 	// Create detect table.
 	adminClient := admin.NewClient(admin.Config{MetaServers: metaServers})
-	error := adminClient.CreateTable(context.Background(), tableName, partitionCount)
-	if error != nil {
-		log.Errorf("Create detect table %s failed, error: %s", tableName, error)
+	err := adminClient.CreateTable(context.Background(), tableName, partitionCount)
+	if err != nil {
+		log.Errorf("Create detect table %s failed, error: %s", tableName, err)
 	}
 	pegasusClient := pegasus.NewClient(pegasus.Config{MetaServers: metaServers})
 	return &pegasusDetector{

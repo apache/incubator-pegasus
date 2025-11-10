@@ -27,12 +27,14 @@
 #pragma once
 
 #include <gtest/gtest_prod.h>
-#include <stdint.h>
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -69,6 +71,18 @@
 #include "utils/fmt_utils.h"
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
+
+namespace pegasus::server {
+
+class pegasus_server_test_base;
+
+} // namespace pegasus::server
+
+namespace dsn::utils {
+
+class ex_lock;
+
+} // namespace dsn::utils
 
 DSN_DECLARE_uint32(max_concurrent_manual_emergency_checkpointing_count);
 
@@ -112,14 +126,14 @@ typedef rpc_holder<add_new_disk_request, add_new_disk_response> add_new_disk_rpc
 
 namespace test {
 class test_checker;
-}
+} // namespace test
+
 class cold_backup_context;
 class replica_split_manager;
-typedef std::function<void(const ::dsn::host_port & /*from*/,
-                           const replica_configuration & /*new_config*/,
-                           bool /*is_closing*/)>
-    replica_state_subscriber;
-typedef std::unordered_map<gpid, replica_ptr> replicas;
+
+using replica_state_subscriber = std::function<void(const ::dsn::host_port & /*from*/,
+                                                    const replica_configuration & /*new_config*/,
+                                                    bool /*is_closing*/)>;
 
 class replica_stub;
 
@@ -184,7 +198,6 @@ public:
     //
     void on_meta_server_connected();
     void on_meta_server_disconnected();
-    void on_replicas_stat();
     void on_disk_stat();
 
     //
@@ -223,9 +236,9 @@ public:
     //   - if allow_empty_args = false, you should specify at least one argument.
     // each argument should be in format of:
     //     id1,id2... (where id is 'app_id' or 'app_id.partition_id')
-    std::string exec_command_on_replica(const std::vector<std::string> &args,
+    std::string exec_command_on_replica(const std::vector<std::string> &arg_str_list,
                                         bool allow_empty_args,
-                                        std::function<std::string(const replica_ptr &rep)> func);
+                                        std::function<std::string(const replica_ptr &)> func);
 
     //
     // partition split
@@ -285,7 +298,7 @@ public:
                                            ::dsn::rpc_replier<TRespType> &reply,
                                            const ::dsn::ranger::access_type &ac_type) const
     {
-        if (!_access_controller->is_enable_ranger_acl()) {
+        if (!_access_controller->is_ranger_acl_enabled()) {
             return true;
         }
         const auto &pid = request.pid;
@@ -352,15 +365,60 @@ private:
                       gpid id,
                       const std::shared_ptr<group_check_request> &req,
                       const std::shared_ptr<configuration_update_request> &req2);
-    // Create a new replica according to the parameters.
-    // 'parent_dir' is used in partition split for create_child_replica_dir().
+
+    // Create a child replica for partition split, with 'parent_dir' specified as the parent
+    // replica dir used for `create_child_replica_dir()`.
     replica *new_replica(gpid gpid,
                          const app_info &app,
                          bool restore_if_necessary,
                          bool is_duplication_follower,
-                         const std::string &parent_dir = "");
-    // Load an existing replica which is located in 'dn' with 'dir' directory.
-    replica *load_replica(dir_node *dn, const char *dir);
+                         const std::string &parent_dir);
+
+    // Create a new replica, choosing and assigning the best dir for it.
+    replica *new_replica(gpid gpid,
+                         const app_info &app,
+                         bool restore_if_necessary,
+                         bool is_duplication_follower);
+
+    // Each disk with its candidate replica dirs, used to load replicas while initializing.
+    struct disk_replicas_info
+    {
+        // `dir_node` for each disk.
+        dir_node *disk_node;
+
+        // All replica dirs on each disk.
+        std::vector<std::string> replica_dirs;
+    };
+
+    // Get the absolute dirs of all replicas for all healthy disks without IO errors.
+    std::vector<disk_replicas_info> get_all_disk_dirs() const;
+
+    // Get the replica dir name from a potentially longer path (`dir` could be an absolute
+    // or relative path).
+    static std::string_view get_replica_dir_name(std::string_view dir);
+
+    // Parse app id, partition id and app type from the replica dir name.
+    static bool parse_replica_dir_name(std::string_view dir_name, gpid &pid, std::string &app_type);
+
+    // Load an existing replica which is located in `dn` with `replica_dir`. Usually each
+    // different `dn` represents a unique disk. `replica_dir` is the absolute path of the
+    // directory for a replica.
+    virtual replica_ptr load_replica(dir_node *disk_node, const std::string &replica_dir);
+
+    using replica_map_by_gpid = std::unordered_map<gpid, replica_ptr>;
+
+    // The same as the above `load_replica` function, except that this function is to load
+    // each replica to `reps` with protection from `reps_lock`.
+    void load_replica(dir_node *disk_node,
+                      const std::string &replica_dir,
+                      size_t total_dir_count,
+                      utils::ex_lock &reps_lock,
+                      replica_map_by_gpid &reps,
+                      std::atomic<size_t> &finished_dir_count);
+
+    // Load all replicas simultaneously from all disks to `reps`.
+    void load_replicas(replica_map_by_gpid &reps);
+
     // Clean up the memory state and on disk data if creating replica failed.
     void clear_on_failure(replica *rep);
     task_ptr begin_close_replica(replica_ptr r);
@@ -384,6 +442,8 @@ private:
         decree last_durable_decree;
     };
     using replica_stat_info_by_gpid = std::unordered_map<gpid, replica_stat_info>;
+
+    void on_replicas_stat();
 
     void response_client(gpid id,
                          bool is_read,
@@ -440,25 +500,31 @@ private:
     friend class replica_disk_test_base;
     friend class replica_disk_migrate_test;
     friend class replica_stub_test_base;
+    friend class pegasus::server::pegasus_server_test_base;
     friend class open_replica_test;
     friend class replica_follower;
     friend class replica_follower_test;
     friend class replica_http_service_test;
+    friend class mock_load_replica;
+    friend class GetReplicaDirNameTest;
+    friend class ParseReplicaDirNameTest;
     FRIEND_TEST(open_replica_test, open_replica_add_decree_and_ballot_check);
     FRIEND_TEST(replica_test, test_auto_trash_of_corruption);
     FRIEND_TEST(replica_test, test_clear_on_failure);
 
-    typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
-    typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
-        closing_replicas; // <gpid, <close_task, replica, app_info, replica_info> >
-    typedef std::map<gpid, std::pair<app_info, replica_info>>
-        closed_replicas; // <gpid, <app_info, replica_info> >
+    using opening_replica_map_by_gpid = std::unordered_map<gpid, task_ptr>;
+
+    // `task_ptr` is the task closing a replica.
+    using closing_replica_map_by_gpid =
+        std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>;
+
+    using closed_replica_map_by_gpid = std::map<gpid, std::pair<app_info, replica_info>>;
 
     mutable zrwlock_nr _replicas_lock;
-    replicas _replicas;
-    opening_replicas _opening_replicas;
-    closing_replicas _closing_replicas;
-    closed_replicas _closed_replicas;
+    replica_map_by_gpid _replicas;
+    opening_replica_map_by_gpid _opening_replicas;
+    closing_replica_map_by_gpid _closing_replicas;
+    closed_replica_map_by_gpid _closed_replicas;
 
     ::dsn::host_port _primary_host_port;
     // The stringify of '_primary_host_port', used by logging usually.
@@ -528,6 +594,10 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(opening_replicas);
     METRIC_VAR_DECLARE_gauge_int64(closing_replicas);
 
+    METRIC_VAR_DECLARE_gauge_int64(inactive_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(error_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(primary_replicas);
+    METRIC_VAR_DECLARE_gauge_int64(secondary_replicas);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_duration_ms);
     METRIC_VAR_DECLARE_gauge_int64(learning_replicas_max_copy_file_bytes);
@@ -560,5 +630,6 @@ private:
 
     dsn::task_tracker _tracker;
 };
+
 } // namespace replication
 } // namespace dsn

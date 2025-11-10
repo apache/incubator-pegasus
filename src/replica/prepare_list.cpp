@@ -149,8 +149,9 @@ error_code prepare_list::prepare(mutation_ptr &mu,
 //
 void prepare_list::commit(decree d, commit_type ct)
 {
-    if (d <= last_committed_decree())
+    if (d <= last_committed_decree()) {
         return;
+    }
 
     ballot last_bt = 0;
     switch (ct) {
@@ -183,17 +184,16 @@ void prepare_list::commit(decree d, commit_type ct)
         return;
     }
     case COMMIT_ALL_READY: {
-        if (d != last_committed_decree() + 1)
+        if (d != last_committed_decree() + 1) {
             return;
+        }
 
-        int count = 0;
-        mutation_ptr mu = get_mutation_by_decree(last_committed_decree() + 1);
+        mutation_ptr mu = get_mutation_by_decree(d);
 
         while (mu != nullptr && mu->is_ready_for_commit() && mu->data.header.ballot >= last_bt) {
             _last_committed_decree++;
             last_bt = mu->data.header.ballot;
             _committer(mu);
-            count++;
             mu = mutation_cache::get_mutation_by_decree(_last_committed_decree + 1);
         }
 

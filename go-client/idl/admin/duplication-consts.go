@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/idl/utils"
 	"github.com/apache/thrift/lib/go/thrift"
 	"reflect"
 )
@@ -22,6 +23,7 @@ var _ = bytes.Equal
 
 var _ = base.GoUnusedProtection__
 var _ = replication.GoUnusedProtection__
+var _ = utils.GoUnusedProtection__
 
 func init() {
 }

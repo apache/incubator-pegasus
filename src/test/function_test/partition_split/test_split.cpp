@@ -58,7 +58,7 @@ public:
 
     void SetUp() override
     {
-        test_util::SetUp();
+        SET_UP_BASE(test_util);
         NO_FATALS(write_data_before_split());
         ASSERT_EQ(
             ERR_OK,

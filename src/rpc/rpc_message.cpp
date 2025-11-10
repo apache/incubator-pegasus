@@ -41,8 +41,8 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
-#include "utils/strings.h"
 #include "utils/utils.h"
+#include "utils_types.h"
 
 // init common for all per-node providers
 DSN_DEFINE_uint32(core,
@@ -142,13 +142,13 @@ message_ex *message_ex::create_receive_message(const blob &data)
 
 message_ex *message_ex::create_received_request(dsn::task_code code,
                                                 dsn_msg_serialize_format format,
-                                                void *buffer,
-                                                int size,
+                                                const char *buffer,
+                                                unsigned int size,
                                                 int thread_hash,
                                                 uint64_t partition_hash)
 {
-    ::dsn::blob bb((const char *)buffer, 0, size);
-    auto msg = ::dsn::message_ex::create_receive_message_with_standalone_header(bb);
+    auto *msg =
+        ::dsn::message_ex::create_receive_message_with_standalone_header(blob(buffer, 0, size));
     msg->local_rpc_code = code;
     const char *name = code.to_string();
     strncpy(msg->header->rpc_name, name, sizeof(msg->header->rpc_name) - 1);
@@ -161,27 +161,9 @@ message_ex *message_ex::create_received_request(dsn::task_code code,
     return msg;
 }
 
-message_ex *message_ex::create_receive_message_with_standalone_header(const blob &data)
-{
-    message_ex *msg = new message_ex();
-    size_t header_size = sizeof(message_header);
-    std::string str(header_size, '\0');
-    msg->header = reinterpret_cast<message_header *>(const_cast<char *>(str.data()));
-
-    msg->buffers.emplace_back(blob::create_from_bytes(std::move(str)));
-    msg->buffers.push_back(data);
-
-    msg->header->body_length = data.length();
-    msg->_is_read = true;
-    // we skip the message header
-    msg->_rw_index = 1;
-
-    return msg;
-}
-
 message_ex *message_ex::copy_message_no_reply(const message_ex &old_msg)
 {
-    message_ex *msg = new message_ex();
+    auto *msg = new message_ex();
     size_t header_size = sizeof(message_header);
     std::string str(header_size, '\0');
     msg->header = reinterpret_cast<message_header *>(const_cast<char *>(str.data()));

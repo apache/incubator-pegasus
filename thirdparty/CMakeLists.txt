@@ -58,11 +58,10 @@ file(MAKE_DIRECTORY ${TP_OUTPUT}/include)
 file(MAKE_DIRECTORY ${TP_OUTPUT}/lib)
 
 ExternalProject_Add(boost
-        URL ${OSS_URL_PREFIX}/boost_1_69_0.tar.bz2
-        https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.bz2
-        URL_MD5 a1332494397bf48332cb152abfefcec2
-        CONFIGURE_COMMAND ./bootstrap.sh --prefix=. --with-libraries=system,filesystem --with-toolset=gcc
-        BUILD_COMMAND ./b2 toolset=gcc cxxflags=-fPIC cxxstd=11 install
+        URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
+        URL_MD5 30a657150d8e5cf431e1de4396a433d0
+        CONFIGURE_COMMAND ./bootstrap.sh --prefix=. --with-libraries=filesystem,system --with-toolset=gcc
+        BUILD_COMMAND ./b2 toolset=gcc link=static cxxflags=-fPIC cxxflags=--std=c++17 install
         INSTALL_COMMAND cp -R include/boost ${TP_OUTPUT}/include && cp -R lib ${TP_OUTPUT}/
         BUILD_IN_SOURCE 1
         DOWNLOAD_EXTRACT_TIMESTAMP true
@@ -120,17 +119,52 @@ ExternalProject_Add(gperftools
         DOWNLOAD_NO_PROGRESS true
 )
 
+ExternalProject_Add(abseil
+        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
+        https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
+        URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_absl_build_on_macos_arm64.patch
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DABSL_FIND_GOOGLETEST=OFF
+        -DCMAKE_CXX_STANDARD=17
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
+ExternalProject_Add(protobuf
+        URL https://github.com/protocolbuffers/protobuf/archive/refs/tags/v27.0.tar.gz
+        URL_MD5 c96aaf02c8acea549d65bb7b2d549bf6
+        CMAKE_ARGS -DCMAKE_BUILD_TYPE=release
+        -Dprotobuf_BUILD_TESTS=OFF
+        -Dprotobuf_BUILD_PROTOC_BINARIES=ON
+        -Dprotobuf_BUILD_LIBUPB=ON
+        -Dprotobuf_ABSL_PROVIDER=package
+        -DBUILD_SHARED_LIBS=ON
+        -DBUILD_SHARED_HDFSPP=ON
+        -DHDFSPP_LIBRARY_ONLY=ON
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DCMAKE_CXX_STANDARD=17
+        -DABSL_ROOT_DIR=${TP_OUTPUT}
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        DEPENDS abseil
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        DOWNLOAD_NO_PROGRESS true
+)
+
 set(HDFS_CLIENT_DIR "hadoop-hdfs-project/hadoop-hdfs-native-client")
 ExternalProject_Add(hadoop
-        URL ${OSS_URL_PREFIX}/hadoop-release-2.8.4.tar.gz
-        https://github.com/apache/hadoop/archive/refs/tags/rel/release-2.8.4.tar.gz
-        URL_MD5 a1be737d4bff14923689619ab6545a96
-        PATCH_COMMAND ""
+        URL https://mirrors.aliyun.com/apache/hadoop/common/hadoop-3.3.6/hadoop-3.3.6-src.tar.gz
+        URL_MD5 285c07d8ad2c837c8ee04a4fa49c73cd
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_hdfs_native_client.patch
         COMMAND cd ${HDFS_CLIENT_DIR} && mvn package -Pdist,native -DskipTests -Dmaven.javadoc.skip=true -Dtar
-        COMMAND cd ${HDFS_CLIENT_DIR} && cp -R target/hadoop-hdfs-native-client-2.8.4/include/. ${TP_OUTPUT}/include/hdfs && cp -R target/hadoop-hdfs-native-client-2.8.4/lib/native/. ${TP_OUTPUT}/lib
+        COMMAND cd ${HDFS_CLIENT_DIR} && cp -R target/hadoop-hdfs-native-client-3.3.6/include/. ${TP_OUTPUT}/include/hdfs && cp -R target/hadoop-hdfs-native-client-3.3.6/lib/native/. ${TP_OUTPUT}/lib
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND ""
+        DEPENDS protobuf
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
 )
@@ -152,8 +186,9 @@ ExternalProject_Add(thrift
         URL ${OSS_URL_PREFIX}/thrift-0.9.3.tar.gz
         http://archive.apache.org/dist/thrift/0.9.3/thrift-0.9.3.tar.gz
         URL_MD5 88d667a8ae870d5adeca8cb7d6795442
-        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_thrift_for_cpp11.patch
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_thrift_build_and_link_errors.patch
         CMAKE_ARGS -DCMAKE_BUILD_TYPE=release
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DWITH_JAVA=OFF
         -DWITH_PYTHON=OFF
         -DWITH_C_GLIB=OFF
@@ -170,6 +205,9 @@ ExternalProject_Add(thrift
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DWITH_SHARED_LIB=OFF
         -DBOOST_ROOT=${TP_OUTPUT}
+        # The dependence boost library of thrift needs C++14 at least, but some standard
+        # functions (e.g. std::random_shuffle) are removed from C++17, so don't use C++17.
+        -DCMAKE_CXX_STANDARD=14
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         DEPENDS boost
@@ -189,9 +227,9 @@ else ()
 endif ()
 
 ExternalProject_Add(zookeeper
-        URL ${OSS_URL_PREFIX}/apache-zookeeper-3.7.0.tar.gz
-        http://downloads.apache.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0.tar.gz
-        URL_MD5 44c2a33e01931aed94ef7f3d39d0963e
+        URL ${OSS_URL_PREFIX}/apache-zookeeper-3.9.4.tar.gz
+        https://archive.apache.org/dist/zookeeper/zookeeper-3.9.4/apache-zookeeper-3.9.4.tar.gz
+        URL_MD5 f3bc1e774792e3dc4f979be410b61d97
         PATCH_COMMAND ""
         COMMAND cd zookeeper-jute && mvn compile && cd ../zookeeper-client/zookeeper-client-c && cmake -DCMAKE_BUILD_TYPE=release -DWANT_CPPUNIT=OFF -DWITH_OPENSSL=OFF -DWITH_CYRUS_SASL=${ZOOKEEPER_WITH_CYRUS_SASL} -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         COMMAND cd zookeeper-client/zookeeper-client-c && make -j${PARALLEL}
@@ -210,6 +248,7 @@ ExternalProject_Add(libevent
         URL_MD5 80f8652e4b08d2ec86a5f5eb46b74510
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_libevent_for_macos.patch
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DEVENT__DISABLE_DEBUG_MODE=On
         -DEVENT__DISABLE_BENCHMARK=On
         -DEVENT__DISABLE_TESTS=On
@@ -303,18 +342,6 @@ ExternalProject_Add(nlohmann_json
         DOWNLOAD_NO_PROGRESS true
 )
 
-ExternalProject_Add(abseil
-        URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
-        https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
-        URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DABSL_FIND_GOOGLETEST=OFF
-        -DCMAKE_CXX_STANDARD=17
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-        DOWNLOAD_NO_PROGRESS true
-)
-
 ExternalProject_Add(s2geometry
         URL ${OSS_URL_PREFIX}/s2geometry-0.10.0.tar.gz
         https://github.com/google/s2geometry/archive/refs/tags/v0.10.0.tar.gz
@@ -349,6 +376,7 @@ ExternalProject_Add(jemalloc
 set(SNAPPY_OPTIONS
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_BUILD_TYPE=Release
         -DBUILD_SHARED_LIBS=OFF
@@ -357,8 +385,7 @@ set(SNAPPY_OPTIONS
         -DSNAPPY_FUZZING_BUILD=OFF
         -DSNAPPY_INSTALL=ON)
 execute_process(COMMAND arch OUTPUT_VARIABLE ARCH_NAME OUTPUT_STRIP_TRAILING_WHITESPACE)
-message(STATUS "ARCH_NAME = ${ARCH_NAME}")
-if (ARCH_NAME EQUAL "x86_64")
+if (ARCH_NAME STREQUAL "x86_64")
     set(SNAPPY_OPTIONS
             ${SNAPPY_OPTIONS}
             -DSNAPPY_REQUIRE_AVX=ON
@@ -384,6 +411,7 @@ ExternalProject_Add(zstd
         CONFIGURE_COMMAND cmake build/cmake
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DCMAKE_BUILD_TYPE=Release
         -DZSTD_BUILD_PROGRAMS=OFF
@@ -406,6 +434,7 @@ ExternalProject_Add(lz4
         CONFIGURE_COMMAND cmake build/cmake
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         -DLZ4_POSITION_INDEPENDENT_LIB=ON
         -DCMAKE_BUILD_TYPE=Release
         -DLZ4_BUILD_CLI=OFF

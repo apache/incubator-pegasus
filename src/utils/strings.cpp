@@ -25,14 +25,16 @@
  */
 
 #include <absl/strings/ascii.h>
+#include <boost/algorithm/string/predicate.hpp>
 #include <openssl/md5.h>
-#include <stdio.h>
 #include <strings.h>
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <sstream> // IWYU pragma: keep
 #include <utility>
 
+#include "utils/error_code.h"
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
@@ -113,22 +115,54 @@ bool mequals(const void *lhs, const void *rhs, size_t n)
 
 #undef CHECK_NULL_PTR
 
-std::string get_last_component(const std::string &input, const char splitters[])
+error_s pattern_match(const std::string &str,
+                      const std::string &pattern,
+                      pattern_match_type::type match_type)
 {
-    int index = -1;
-    const char *s = splitters;
+    bool matched = false;
+    switch (match_type) {
+    case pattern_match_type::PMT_MATCH_ALL:
+        // Everything is matched.
+        matched = true;
+        break;
 
-    while (*s != 0) {
-        auto pos = input.find_last_of(*s);
-        if (pos != std::string::npos && (static_cast<int>(pos) > index))
-            index = static_cast<int>(pos);
-        s++;
+    case pattern_match_type::PMT_MATCH_EXACT:
+        matched = str == pattern;
+        break;
+
+    case pattern_match_type::PMT_MATCH_ANYWHERE:
+        matched = boost::algorithm::contains(str, pattern);
+        break;
+
+    case pattern_match_type::PMT_MATCH_PREFIX:
+        matched = boost::algorithm::starts_with(str, pattern);
+        break;
+
+    case pattern_match_type::PMT_MATCH_POSTFIX:
+        matched = boost::algorithm::ends_with(str, pattern);
+        break;
+
+    // TODO(wangdan): PMT_MATCH_REGEX would be supported soon.
+    case pattern_match_type::PMT_MATCH_REGEX:
+
+    default:
+        return FMT_ERR(ERR_NOT_IMPLEMENTED,
+                       "match_type is not supported: val={}, str={}",
+                       static_cast<int>(match_type),
+                       enum_to_string(match_type));
     }
 
-    if (index != -1)
-        return input.substr(index + 1);
-    else
-        return input;
+    if (!matched) {
+        return error_s::make(ERR_NOT_MATCHED);
+    }
+
+    return error_s::ok();
+}
+
+std::string_view get_last_component(std::string_view str, std::string_view splitters)
+{
+    const auto pos = str.find_last_of(splitters);
+    return (pos == std::string_view::npos) ? str : str.substr(pos + 1);
 }
 
 namespace {
@@ -419,11 +453,12 @@ std::string string_md5(const char *buffer, unsigned length)
 
 std::string find_string_prefix(const std::string &input, char separator)
 {
-    auto current = input.find(separator);
-    if (current == 0 || current == std::string::npos) {
-        return std::string();
+    const auto pos = input.find(separator);
+    if (pos == 0 || pos == std::string::npos) {
+        return {};
     }
-    return input.substr(0, current);
+
+    return input.substr(0, pos);
 }
 
 bool has_space(const std::string &str)

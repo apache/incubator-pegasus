@@ -60,8 +60,8 @@ void replica_follower::init_master_info()
 {
     const auto &envs = _replica->get_app_info()->envs;
 
-    const auto &cluster_name = envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
-    const auto &metas = envs.find(duplication_constants::kDuplicationEnvMasterMetasKey);
+    const auto &cluster_name = envs.find(duplication_constants::kEnvMasterClusterKey);
+    const auto &metas = envs.find(duplication_constants::kEnvMasterMetasKey);
     if (cluster_name == envs.end() || metas == envs.end()) {
         return;
     }
@@ -70,7 +70,7 @@ void replica_follower::init_master_info()
 
     _master_cluster_name = cluster_name->second;
 
-    const auto &app_name = envs.find(duplication_constants::kDuplicationEnvMasterAppNameKey);
+    const auto &app_name = envs.find(duplication_constants::kEnvMasterAppNameKey);
     if (app_name == envs.end()) {
         // The version of meta server of master cluster is old(< v2.6.0), thus the app name of
         // the follower cluster is the same with master cluster.

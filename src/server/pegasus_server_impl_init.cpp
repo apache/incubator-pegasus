@@ -238,6 +238,18 @@ METRIC_DEFINE_gauge_int64(server,
                           "The memory usage of rocksdb block cache");
 
 METRIC_DEFINE_gauge_int64(server,
+                          rdb_wbm_total_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The total memory usage of memtables managed by rocksdb write buffer "
+                          "manager");
+
+METRIC_DEFINE_gauge_int64(server,
+                          rdb_wbm_mutable_mem_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The memory usage of mutable memtables managed by rocksdb write buffer "
+                          "manager");
+
+METRIC_DEFINE_gauge_int64(server,
                           rdb_write_rate_limiter_through_bytes_per_sec,
                           dsn::metric_unit::kBytesPerSec,
                           "The through bytes per second that go through the rate limiter which "
@@ -846,6 +858,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         METRIC_VAR_ASSIGN_server(rdb_block_cache_mem_usage_bytes);
+        METRIC_VAR_ASSIGN_server(rdb_wbm_total_mem_usage_bytes);
+        METRIC_VAR_ASSIGN_server(rdb_wbm_mutable_mem_usage_bytes);
         METRIC_VAR_ASSIGN_server(rdb_write_rate_limiter_through_bytes_per_sec);
     });
 }

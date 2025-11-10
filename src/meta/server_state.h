@@ -29,7 +29,7 @@
 // IWYU pragma: no_include <boost/detail/basic_pointerbuf.hpp>
 #include <boost/lexical_cast.hpp>
 #include <gtest/gtest_prod.h>
-#include <stdint.h>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -41,24 +41,29 @@
 #include "app_env_validator.h"
 #include "common/gpid.h"
 #include "common/manual_compact.h"
-#include "dsn.layer2_types.h"
+#include "gutil/map_util.h"
 #include "meta/meta_rpc_types.h"
 #include "meta_data.h"
+#include "table_metrics.h"
 #include "task/task.h"
 #include "task/task_tracker.h"
-#include "table_metrics.h"
 #include "utils/error_code.h"
 #include "utils/zlocks.h"
 
 namespace dsn {
+class app_info;
 class blob;
 class command_deregister;
-class message_ex;
 class host_port;
+class message_ex;
+class partition_configuration;
+class query_cfg_request;
+class query_cfg_response;
 
 namespace replication {
 class configuration_balancer_request;
 class configuration_balancer_response;
+class configuration_create_app_request;
 class configuration_list_apps_request;
 class configuration_list_apps_response;
 class configuration_proposal_action;
@@ -66,6 +71,7 @@ class configuration_recovery_request;
 class configuration_recovery_response;
 class configuration_restore_request;
 class configuration_update_request;
+class ddd_partition_info;
 class query_app_info_response;
 class query_replica_info_response;
 
@@ -139,34 +145,51 @@ public:
 
     void lock_read(zauto_read_lock &other);
     void lock_write(zauto_write_lock &other);
-    const meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
-    std::shared_ptr<app_state> get_app(const std::string &name) const
+
+    meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
+
+    // TODO(wangdan): some calls to get_app() function are not thread-safe and need to be
+    // fixed.
+    std::shared_ptr<app_state> get_app(const std::string &app_name) const
     {
-        auto iter = _exist_apps.find(name);
-        if (iter == _exist_apps.end())
-            return nullptr;
-        return iter->second;
+        return gutil::FindWithDefault(_exist_apps, app_name);
     }
+
     std::shared_ptr<app_state> get_app(int32_t app_id) const
     {
-        auto iter = _all_apps.find(app_id);
-        if (iter == _all_apps.end())
-            return nullptr;
-        return iter->second;
+        return gutil::FindWithDefault(_all_apps, app_id);
     }
+
+    error_code get_app_name(int32_t app_id, std::string &app_name) const;
 
     void query_configuration_by_index(const query_cfg_request &request,
                                       /*out*/ query_cfg_response &response);
-    bool query_configuration_by_gpid(const dsn::gpid id, /*out*/ partition_configuration &pc);
+    bool query_configuration_by_gpid(const dsn::gpid &id,
+                                     /*out*/ partition_configuration &pc) const;
+
+    // This function is used for ACL checks. Given `ddd_partitions`, this function would
+    // select the partitions that pass the ACL checks (based on `msg`) and place them into
+    // `allowed_partitions`. `msg` should never be null.
+    void get_allowed_partitions(dsn::message_ex *msg,
+                                const std::vector<ddd_partition_info> &ddd_partitions,
+                                std::vector<ddd_partition_info> &allowed_partitions) const;
 
     // app options
     void create_app(dsn::message_ex *msg);
     void drop_app(dsn::message_ex *msg);
     void recall_app(dsn::message_ex *msg);
     void rename_app(configuration_rename_app_rpc rpc);
+
+    // List tables according to `request` into `response`, with non-null request `msg` from
+    // client used for ACL checks. Null `msg` means disabling ACL checks.
+    void list_apps(dsn::message_ex *msg,
+                   const configuration_list_apps_request &request,
+                   configuration_list_apps_response &response) const;
+
+    // The same as the above function, except that `msg` is set null to disable ACL checks.
     void list_apps(const configuration_list_apps_request &request,
-                   configuration_list_apps_response &response,
-                   dsn::message_ex *msg = nullptr) const;
+                   configuration_list_apps_response &response) const;
+
     void restore_app(dsn::message_ex *msg);
 
     // app env operations
@@ -200,6 +223,12 @@ public:
     void get_max_replica_count(configuration_get_max_replica_count_rpc rpc) const;
     void set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
     void recover_from_max_replica_count_env();
+
+    // Get `atomic_idempotent` of a table.
+    void get_atomic_idempotent(configuration_get_atomic_idempotent_rpc rpc) const;
+
+    // Set `atomic_idempotent` of a table.
+    void set_atomic_idempotent(configuration_set_atomic_idempotent_rpc rpc);
 
     // return true if no need to do any actions
     bool check_all_partitions();
@@ -257,6 +286,21 @@ private:
         const std::vector<dsn::host_port> &replica_nodes,
         bool skip_lost_partitions,
         std::string &hint_message);
+
+    // Process the status carried in the environment variables of creating table request while
+    // the table is at the status of AS_AVAILABLE, to update remote and local states and reply
+    // to the master cluster.
+    void process_create_follower_app_status(message_ex *msg,
+                                            const configuration_create_app_request &request,
+                                            const std::string &req_master_cluster,
+                                            std::shared_ptr<app_state> &app);
+
+    // Update the meta data with the new creating status both on the remote storage and local
+    // memory.
+    void update_create_follower_app_status(message_ex *msg,
+                                           const std::string &old_status,
+                                           const std::string &new_status,
+                                           std::shared_ptr<app_state> &app);
 
     void do_app_create(std::shared_ptr<app_state> &app);
     void do_app_drop(std::shared_ptr<app_state> &app);
@@ -363,6 +407,14 @@ private:
                                        int32_t max_replica_count,
                                        dsn::task_tracker &tracker);
 
+    // Update `atomic_idempotent` of given table on remote storage.
+    //
+    // Parameters:
+    // - app: the given table.
+    // - rpc: RPC request/response to change `atomic_idempotent`.
+    void update_app_atomic_idempotent_on_remote(std::shared_ptr<app_state> &app,
+                                                configuration_set_atomic_idempotent_rpc rpc);
+
     // Used for `on_start_manual_compaction`
     bool parse_compaction_envs(start_manual_compact_rpc rpc,
                                std::vector<std::string> &keys,
@@ -371,19 +423,6 @@ private:
                                                   const std::vector<std::string> &keys,
                                                   const std::vector<std::string> &values);
 
-    bool app_info_compatible_equal(const app_info &l, const app_info &r) const
-    {
-        if (l.status != r.status || l.app_type != r.app_type || l.app_name != r.app_name ||
-            l.app_id != r.app_id || l.partition_count != r.partition_count ||
-            l.is_stateful != r.is_stateful || l.max_replica_count != r.max_replica_count ||
-            l.expire_second != r.expire_second || l.create_second != r.create_second ||
-            l.drop_second != r.drop_second) {
-            return false;
-        }
-        return true;
-    }
-
-private:
     friend class bulk_load_service;
     friend class bulk_load_service_test;
     friend class meta_app_operation_test;
@@ -393,6 +432,7 @@ private:
     friend class meta_split_service;
     friend class meta_split_service_test;
     friend class meta_service_test_app;
+    friend class server_state_test;
     friend class meta_test_base;
     friend class test::test_checker;
     friend class server_state_restore_test;

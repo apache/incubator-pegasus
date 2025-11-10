@@ -51,3 +51,16 @@ index dadaac3..ef32fe1 100644
      } // apache::thrift::stdcxx::placeholders
    }}} // apache::thrift::stdcxx
  #endif
+diff --git a/lib/cpp/src/thrift/protocol/TJSONProtocol.cpp b/lib/cpp/src/thrift/protocol/TJSONProtocol.cpp
+index e4077bc10..00512990a 100644
+--- a/lib/cpp/src/thrift/protocol/TJSONProtocol.cpp
++++ b/lib/cpp/src/thrift/protocol/TJSONProtocol.cpp
+@@ -528,7 +528,7 @@ uint32_t TJSONProtocol::writeJSONDouble(double num) {
+   bool special = false;
+   switch (boost::math::fpclassify(num)) {
+   case FP_INFINITE:
+-    if (boost::math::signbit(num)) {
++    if (std::signbit(num)) {
+       val = kThriftNegativeInfinity;
+     } else {
+       val = kThriftInfinity;

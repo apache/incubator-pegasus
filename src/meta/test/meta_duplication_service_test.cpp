@@ -46,6 +46,7 @@
 #include "dsn.layer2_types.h"
 #include "duplication_types.h"
 #include "gtest/gtest.h"
+#include "gutil/map_util.h"
 #include "http/http_server.h"
 #include "http/http_status_code.h"
 #include "meta/duplication/duplication_info.h"
@@ -64,9 +65,9 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/time_utils.h"
+#include "utils_types.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 
 class meta_duplication_service_test : public meta_test_base
 {
@@ -76,7 +77,7 @@ public:
     static const std::string kTestRemoteAppName;
     static const int32_t kTestRemoteReplicaCount;
 
-    meta_duplication_service_test() {}
+    meta_duplication_service_test() = default;
 
     duplication_add_response create_dup(const std::string &app_name,
                                         const std::string &remote_cluster,
@@ -141,6 +142,19 @@ public:
         return rpc.response();
     }
 
+    duplication_list_response list_dup_info(const std::string &app_name_pattern,
+                                            utils::pattern_match_type::type match_type)
+    {
+        auto req = std::make_unique<duplication_list_request>();
+        req->app_name_pattern = app_name_pattern;
+        req->match_type = match_type;
+
+        duplication_list_rpc rpc(std::move(req), RPC_CM_LIST_DUPLICATION);
+        dup_svc().list_duplication_info(rpc.request(), rpc.response());
+
+        return rpc.response();
+    }
+
     duplication_modify_response
     change_dup_status(const std::string &app_name, dupid_t dupid, duplication_status::type status)
     {
@@ -198,12 +212,14 @@ public:
         dup_svc().create_follower_app_for_duplication(dup, app);
     }
 
-    void check_follower_app_if_create_completed(const std::shared_ptr<duplication_info> &dup)
+    void mark_follower_app_created_for_duplication(const std::shared_ptr<duplication_info> &dup,
+                                                   const std::shared_ptr<app_state> &app)
     {
-        dup_svc().check_follower_app_if_create_completed(dup);
+        dup_svc().mark_follower_app_created_for_duplication(dup, app);
     }
 
-    duplication_status::type next_status(const std::shared_ptr<duplication_info> &dup) const
+    [[nodiscard]] static duplication_status::type
+    next_status(const std::shared_ptr<duplication_info> &dup)
     {
         return dup->_next_status;
     }
@@ -231,9 +247,12 @@ public:
             ASSERT_EQ(duplication_status::DS_INIT, dup->_status);
             ASSERT_EQ(duplication_status::DS_INIT, dup->_next_status);
 
-            auto ent = dup->to_duplication_entry();
-            for (int j = 0; j < app->partition_count; j++) {
-                ASSERT_EQ(invalid_decree, ent.progress[j]);
+            const auto &entry = dup->to_partition_level_entry_for_sync();
+            ASSERT_EQ(app->partition_count, entry.progress.size());
+            for (int partition_index = 0; partition_index < app->partition_count;
+                 ++partition_index) {
+                ASSERT_TRUE(gutil::ContainsKey(entry.progress, partition_index));
+                ASSERT_EQ(invalid_decree, gutil::FindOrDie(entry.progress, partition_index));
             }
 
             if (last_dup != 0) {
@@ -513,6 +532,48 @@ public:
             ASSERT_TRUE(app->duplicating);
         }
     }
+
+    void test_list_dup_app_state(const std::string &app_name, const duplication_app_state &state)
+    {
+        const auto &app = find_app(app_name);
+
+        // Each app id should be matched.
+        ASSERT_EQ(app->app_id, state.appid);
+
+        // The number of returned duplications for each table should be as expected.
+        ASSERT_EQ(app->duplications.size(), state.duplications.size());
+
+        for (const auto &[dup_id, dup] : app->duplications) {
+            // Each dup id should be matched.
+            ASSERT_TRUE(gutil::ContainsKey(state.duplications, dup_id));
+            ASSERT_EQ(dup_id, gutil::FindOrDie(state.duplications, dup_id).dupid);
+
+            // The number of returned partitions should be as expected.
+            ASSERT_EQ(app->partition_count,
+                      gutil::FindOrDie(state.duplications, dup_id).partition_states.size());
+        }
+    }
+
+    void test_list_dup_info(const std::vector<std::string> &app_names,
+                            const std::string &app_name_pattern,
+                            utils::pattern_match_type::type match_type)
+    {
+        const auto &resp = list_dup_info(app_name_pattern, match_type);
+
+        // Request for listing duplications should be successful.
+        ASSERT_EQ(ERR_OK, resp.err);
+
+        // The number of returned tables should be as expected.
+        ASSERT_EQ(app_names.size(), resp.app_states.size());
+
+        for (const auto &app_name : app_names) {
+            // Each table name should be in the returned list.
+            ASSERT_TRUE(gutil::ContainsKey(resp.app_states, app_name));
+
+            // Test the states of each table.
+            test_list_dup_app_state(app_name, gutil::FindOrDie(resp.app_states, app_name));
+        }
+    }
 };
 
 const std::string meta_duplication_service_test::kTestAppName = "test_app";
@@ -675,11 +736,11 @@ TEST_F(meta_duplication_service_test, remove_dup)
 TEST_F(meta_duplication_service_test, duplication_sync)
 {
     const auto &server_nodes = ensure_enough_alive_nodes(3);
-    const std::string test_app = "test_app_0";
+    const std::string test_app("test_app_0");
     create_app(test_app);
     auto app = find_app(test_app);
 
-    // generate all primaries on node[0]
+    // Generate all primaries on node[0].
     for (auto &pc : app->pcs) {
         pc.ballot = random32(1, 10000);
         SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, server_nodes[0]);
@@ -694,6 +755,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
     for (int i = 0; i < app->partition_count; i++) {
         dup->init_progress(i, invalid_decree);
     }
+
     {
         std::map<gpid, std::vector<duplication_confirm_entry>> confirm_list;
 
@@ -710,20 +772,20 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         confirm_list[gpid(app->app_id, 3)].push_back(ce);
 
         duplication_sync_response resp = duplication_sync(node, confirm_list);
-        ASSERT_EQ(resp.err, ERR_OK);
-        ASSERT_EQ(resp.dup_map.size(), 1);
-        ASSERT_EQ(resp.dup_map[app->app_id].size(), 1);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].dupid, dupid);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].status, duplication_status::DS_PREPARE);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].create_ts, dup->create_timestamp_ms);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].remote, dup->remote_cluster_name);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].fail_mode, dup->fail_mode());
+        ASSERT_EQ(ERR_OK, resp.err);
+        ASSERT_EQ(1, resp.dup_map.size());
+        ASSERT_EQ(1, resp.dup_map[app->app_id].size());
+        ASSERT_EQ(dupid, resp.dup_map[app->app_id][dupid].dupid);
+        ASSERT_EQ(duplication_status::DS_PREPARE, resp.dup_map[app->app_id][dupid].status);
+        ASSERT_EQ(dup->create_timestamp_ms, resp.dup_map[app->app_id][dupid].create_ts);
+        ASSERT_EQ(dup->remote_cluster_name, resp.dup_map[app->app_id][dupid].remote);
+        ASSERT_EQ(dup->fail_mode(), resp.dup_map[app->app_id][dupid].fail_mode);
 
         auto progress_map = resp.dup_map[app->app_id][dupid].progress;
-        ASSERT_EQ(progress_map.size(), 8);
-        ASSERT_EQ(progress_map[1], 5);
-        ASSERT_EQ(progress_map[2], 6);
-        ASSERT_EQ(progress_map[3], 7);
+        ASSERT_EQ(8, progress_map.size());
+        ASSERT_EQ(5, progress_map[1]);
+        ASSERT_EQ(6, progress_map[2]);
+        ASSERT_EQ(7, progress_map[3]);
 
         // ensure no updated progresses will also be included in response
         for (int p = 4; p < 8; p++) {
@@ -789,16 +851,60 @@ TEST_F(meta_duplication_service_test, query_duplication_info)
     change_dup_status(kTestAppName, test_dup, duplication_status::DS_PAUSE);
 
     auto resp = query_dup_info(kTestAppName);
-    ASSERT_EQ(resp.err, ERR_OK);
-    ASSERT_EQ(resp.entry_list.size(), 1);
-    ASSERT_EQ(resp.entry_list.back().status, duplication_status::DS_PREPARE);
-    ASSERT_EQ(resp.entry_list.back().dupid, test_dup);
-    ASSERT_EQ(resp.appid, app->app_id);
+    ASSERT_EQ(ERR_OK, resp.err);
+    ASSERT_EQ(1, resp.entry_list.size());
+    ASSERT_EQ(duplication_status::DS_PREPARE, resp.entry_list.back().status);
+    ASSERT_EQ(test_dup, resp.entry_list.back().dupid);
+    ASSERT_EQ(app->app_id, resp.appid);
 
     change_dup_status(kTestAppName, test_dup, duplication_status::DS_REMOVED);
     resp = query_dup_info(kTestAppName);
-    ASSERT_EQ(resp.err, ERR_OK);
-    ASSERT_EQ(resp.entry_list.size(), 0);
+    ASSERT_EQ(ERR_OK, resp.err);
+    ASSERT_TRUE(resp.entry_list.empty());
+}
+
+TEST_F(meta_duplication_service_test, list_duplication_info)
+{
+    // Remove all tables from memory to prevent later tests from interference.
+    clear_apps();
+
+    // Create some tables with some partitions and duplications randomly.
+    create_app(kTestAppName, 8);
+    create_dup(kTestAppName);
+    create_dup(kTestAppName);
+
+    std::string app_name_1("test_list_dup");
+    create_app(app_name_1, 4);
+    create_dup(app_name_1);
+
+    std::string app_name_2("list_apps_test");
+    create_app(app_name_2, 8);
+
+    std::string app_name_3("test_dup_list");
+    create_app(app_name_3, 8);
+    create_dup(app_name_3);
+    create_dup(app_name_3);
+    create_dup(app_name_3);
+
+    // Test for returning all of the existing tables.
+    test_list_dup_info({kTestAppName, app_name_1, app_name_2, app_name_3},
+                       {},
+                       utils::pattern_match_type::PMT_MATCH_ALL);
+
+    // Test for returning the tables whose name are matched exactly.
+    test_list_dup_info({app_name_2}, app_name_2, utils::pattern_match_type::PMT_MATCH_EXACT);
+
+    // Test for returning the tables whose name are matched with pattern anywhere.
+    test_list_dup_info(
+        {kTestAppName, app_name_2}, "app", utils::pattern_match_type::PMT_MATCH_ANYWHERE);
+
+    // Test for returning the tables whose name are matched with pattern as prefix.
+    test_list_dup_info({kTestAppName, app_name_1, app_name_3},
+                       "test",
+                       utils::pattern_match_type::PMT_MATCH_PREFIX);
+
+    // Test for returning the tables whose name are matched with pattern as postfix.
+    test_list_dup_info({app_name_2}, "test", utils::pattern_match_type::PMT_MATCH_POSTFIX);
 }
 
 TEST_F(meta_duplication_service_test, re_add_duplication)
@@ -866,9 +972,17 @@ TEST_F(meta_duplication_service_test, query_duplication_handler)
         static_cast<uint64_t>(dup->create_timestamp_ms), ts_buf, sizeof(ts_buf));
     ASSERT_EQ(std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
                   std::to_string(dup->id) +
-                  R"(,"fail_mode":"FAIL_SLOW","remote":"slave-cluster")"
-                  R"(,"remote_app_name":"remote_test_app","remote_replica_count":3)"
-                  R"(,"status":"DS_PREPARE"},"appid":2})",
+                  R"(,"fail_mode":"FAIL_SLOW","partition_states":{)"
+                  R"("0":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("1":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("2":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("3":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("4":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("5":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("6":{"confirmed_decree":-1,"last_committed_decree":-1},)"
+                  R"("7":{"confirmed_decree":-1,"last_committed_decree":-1})"
+                  R"(},"remote":"slave-cluster","remote_app_name":"remote_test_app",)"
+                  R"("remote_replica_count":3,"status":"DS_PREPARE"},"appid":2})",
               fake_resp.body);
 }
 
@@ -965,108 +1079,123 @@ TEST_F(meta_duplication_service_test, create_follower_app_for_duplication)
     }
 }
 
-TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
+TEST_F(meta_duplication_service_test, mark_follower_app_created_for_duplication)
 {
     struct test_case
     {
-        int32_t remote_replica_count;
         std::vector<std::string> fail_cfg_name;
         std::vector<std::string> fail_cfg_action;
-        bool is_altering;
+        int32_t remote_replica_count;
         duplication_status::type cur_status;
         duplication_status::type next_status;
+        bool is_altering;
     } test_cases[] = {// 3 remote replicas with both primary and secondaries valid.
-                      {3,
-                       {"create_app_ok"},
-                       {"void(true,2,0)"},
-                       false,
+                      {{"on_follower_app_created", "create_app_ok"},
+                       {"void(ERR_OK)", "void(true,2,0)"},
+                       3,
                        duplication_status::DS_LOG,
-                       duplication_status::DS_INIT},
-                      // 3 remote replicas with primary invalid and all secondaries valid.
-                      {3,
-                       {"create_app_ok"},
-                       {"void(false,2,0)"},
-                       false,
+                       duplication_status::DS_INIT,
+                       false},
+                      // The follower app failed to be marked as created.
+                      {{"on_follower_app_created", "create_app_ok"},
+                       {"void(ERR_TIMEOUT)", "void(true,2,0)"},
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
+                      //
+                      // 3 remote replicas with primary invalid and all secondaries valid.
+                      {{"on_follower_app_created", "create_app_ok"},
+                       {"void(ERR_OK)", "void(false,2,0)"},
+                       3,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT,
+                       false},
                       // 3 remote replicas with primary valid and only one secondary present
                       // and valid.
-                      {3,
-                       {"create_app_ok"},
-                       {"void(true,1,0)"},
-                       false,
+                      {{"on_follower_app_created", "create_app_ok"},
+                       {"void(ERR_OK)", "void(true,1,0)"},
+                       3,
                        duplication_status::DS_LOG,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
                       // 3 remote replicas with primary valid and one secondary invalid.
-                      {3,
-                       {"create_app_ok"},
-                       {"void(true,1,1)"},
-                       false,
+                      {{"on_follower_app_created", "create_app_ok"},
+                       {"void(ERR_OK)", "void(true,1,1)"},
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
                       // 3 remote replicas with primary valid and only one secondary present
                       // and invalid.
-                      {3,
-                       {"create_app_ok"},
-                       {"void(true,0,1)"},
-                       false,
+                      {{"on_follower_app_created", "create_app_ok"},
+                       {"void(ERR_OK)", "void(true,0,1)"},
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                       duplication_status::DS_INIT,
+                       false},
                       // 3 remote replicas with primary valid and both secondaries absent.
-                      {3,
-                       {"create_app_ok"},
-                       {"void(true,0,0)"},
-                       false,
-                       duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                      {
+                          {"on_follower_app_created", "create_app_ok"},
+                          {"void(ERR_OK)", "void(true,0,0)"},
+                          3,
+                          duplication_status::DS_APP,
+                          duplication_status::DS_INIT,
+                          false,
+                      },
                       // 1 remote replicas with primary valid.
-                      {1,
-                       {"create_app_ok"},
-                       {"void(true,0,0)"},
-                       false,
-                       duplication_status::DS_LOG,
-                       duplication_status::DS_INIT},
+                      {
+                          {"on_follower_app_created", "create_app_ok"},
+                          {"void(ERR_OK)", "void(true,0,0)"},
+                          1,
+                          duplication_status::DS_LOG,
+                          duplication_status::DS_INIT,
+                          false,
+                      },
                       // 1 remote replicas with primary invalid.
-                      {1,
-                       {"create_app_ok"},
-                       {"void(false,0,0)"},
-                       false,
-                       duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
+                      {
+                          {"on_follower_app_created", "create_app_ok"},
+                          {"void(ERR_OK)", "void(false,0,0)"},
+                          1,
+                          duplication_status::DS_APP,
+                          duplication_status::DS_INIT,
+                          false,
+                      },
                       // The case is just a "palace holder", actually
                       // `check_follower_app_if_create_completed` would fail by default
                       // in unit test.
-                      {3,
-                       {"create_app_failed"},
-                       {"off()"},
-                       false,
+                      {{"on_follower_app_created", "create_app_failed"},
+                       {"void(ERR_OK)", "off()"},
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_INIT},
-                      {3,
-                       {"create_app_ok", "persist_dup_status_failed"},
-                       {"void(true,2,0)", "return()"},
-                       true,
+                       duplication_status::DS_INIT,
+                       false},
+                      {{"on_follower_app_created", "create_app_ok", "persist_dup_status_failed"},
+                       {"void(ERR_OK)", "void(true,2,0)", "return()"},
+                       3,
                        duplication_status::DS_APP,
-                       duplication_status::DS_LOG}};
+                       duplication_status::DS_LOG,
+                       true}};
 
     size_t i = 0;
     for (const auto &test : test_cases) {
-        const auto &app_name = fmt::format("check_follower_app_if_create_completed_test_{}", i++);
+        const auto &app_name =
+            fmt::format("mark_follower_app_created_for_duplication_test_{}", i++);
         create_app(app_name);
 
         auto app = find_app(app_name);
         auto dup_add_resp = create_dup(app_name, test.remote_replica_count);
         auto dup = app->duplications[dup_add_resp.dupid];
 
-        // 'check_follower_app_if_create_completed' must execute under duplication_status::DS_APP,
-        // so force update it.
+        // 'mark_follower_app_created_for_duplication' must execute under
+        // duplication_status::DS_APP, so force update it.
         force_update_dup_status(dup, duplication_status::DS_APP);
 
         fail::setup();
         for (int i = 0; i < test.fail_cfg_name.size(); i++) {
             fail::cfg(test.fail_cfg_name[i], test.fail_cfg_action[i]);
         }
-        check_follower_app_if_create_completed(dup);
+        mark_follower_app_created_for_duplication(dup, app);
         wait_all();
         fail::teardown();
 
@@ -1076,5 +1205,4 @@ TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
     }
 }
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication

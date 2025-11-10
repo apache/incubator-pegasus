@@ -58,7 +58,6 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
-#include "utils/ports.h"
 #include "utils/rand.h"
 
 DSN_DEFINE_bool(replication,
@@ -275,7 +274,7 @@ replica::replica(replica_stub *stub,
     : serverlet<replica>(replication_options::kReplicaAppType.c_str()),
       replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_host_port_cache), app.app_name),
       _app_info(app),
-      _primary_states(gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
+      _primary_states(this, gpid, FLAGS_staleness_for_commit, FLAGS_batch_write_disabled),
       _potential_secondary_states(this),
       _chkpt_total_size(0),
       _cur_download_size(0),
@@ -377,7 +376,7 @@ void replica::init_state()
     get_bool_envs(_app_info.envs, replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, _allow_ingest_behind);
 }
 
-replica::~replica(void)
+replica::~replica()
 {
     close();
     _prepare_list = nullptr;
@@ -560,21 +559,34 @@ void replica::execute_mutation(mutation_ptr &mu)
     }
 
     ADD_CUSTOM_POINT(mu->_tracer, "completed");
-    auto next = _primary_states.write_queue.check_possible_work(
-        static_cast<int>(_prepare_list->max_decree() - d));
+    auto next = _primary_states.write_queue.next_work(static_cast<int>(max_prepared_decree() - d));
 
     if (next != nullptr) {
         init_prepare(next, false);
     }
 }
 
-mutation_ptr replica::new_mutation(decree decree)
+mutation_ptr replica::new_mutation(decree d)
 {
     mutation_ptr mu(new mutation());
     mu->data.header.pid = get_gpid();
     mu->data.header.ballot = get_ballot();
-    mu->data.header.decree = decree;
+    mu->data.header.decree = d;
     mu->data.header.log_offset = invalid_offset;
+    return mu;
+}
+
+mutation_ptr replica::new_mutation(decree d, bool is_blocking_candidate)
+{
+    auto mu = new_mutation(d);
+    mu->is_blocking_candidate = is_blocking_candidate;
+    return mu;
+}
+
+mutation_ptr replica::new_mutation(decree d, pegasus::idempotent_writer_ptr &&idem_writer)
+{
+    auto mu = new_mutation(d);
+    mu->idem_writer = std::move(idem_writer);
     return mu;
 }
 
@@ -695,21 +707,48 @@ uint32_t replica::query_data_version() const
     return _app->query_data_version();
 }
 
-error_code replica::store_app_info(app_info &info, const std::string &path)
+error_code replica::store_app_info(app_info &info, const std::string &dir)
 {
-    replica_app_info new_info((app_info *)&info);
-    const auto &info_path =
-        path.empty() ? utils::filesystem::path_combine(_dir, replica_app_info::kAppInfo) : path;
-    auto err = new_info.store(info_path);
+    const auto path = utils::filesystem::path_combine(dir, replica_app_info::kAppInfo);
+
+    replica_app_info rep_info(&info);
+    const auto err = rep_info.store(path);
     if (dsn_unlikely(err != ERR_OK)) {
-        LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", info_path, err);
+        LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", path, err);
     }
+
     return err;
 }
 
+error_code replica::store_app_info(app_info &info) { return store_app_info(info, _dir); }
+
+error_code replica::store_app_info(const std::string &dir)
+{
+    return store_app_info(_app_info, dir);
+}
+
+error_code replica::store_app_info() { return store_app_info(_app_info, _dir); }
+
+error_code replica::load_app_info(const std::string &dir, app_info &info) const
+{
+    const auto path =
+        utils::filesystem::path_combine(dir, dsn::replication::replica_app_info::kAppInfo);
+
+    replica_app_info rep_info(&info);
+    const auto err = rep_info.load(path);
+    if (dsn_unlikely(err != ERR_OK)) {
+        LOG_ERROR_PREFIX("failed to load app_info from {}, error = {}", path, err);
+    }
+
+    return err;
+}
+
+error_code replica::load_app_info(app_info &info) const { return load_app_info(_dir, info); }
+
 bool replica::access_controller_allowed(message_ex *msg, const ranger::access_type &ac_type) const
 {
-    return !_access_controller->is_enable_ranger_acl() || _access_controller->allowed(msg, ac_type);
+    return !_access_controller->is_ranger_acl_enabled() ||
+           _access_controller->allowed(msg, ac_type);
 }
 
 int64_t replica::get_backup_request_count() const { return METRIC_VAR_VALUE(backup_requests); }

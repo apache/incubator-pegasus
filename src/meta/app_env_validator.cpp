@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/duplication_common.h"
 #include "common/replica_envs.h"
 #include "http/http_status_code.h"
 #include "utils/fmt_logging.h"
@@ -59,7 +60,7 @@ bool app_env_validator::validate_app_envs(const std::map<std::string, std::strin
         }
         std::string hint_message;
         if (!validate_app_env(key, value, hint_message)) {
-            LOG_WARNING("app env '{}={}' is invalid, hint_message: {}", key, value, hint_message);
+            LOG_ERROR("app env '{}={}' is invalid, hint_message: {}", key, value, hint_message);
             return false;
         }
     }
@@ -339,7 +340,12 @@ void app_env_validator::register_all_validators()
           [](int64_t new_value) { return new_value == -1 || new_value >= 1; }}},
         {replica_envs::MANUAL_COMPACT_PERIODIC_BOTTOMMOST_LEVEL_COMPACTION, mcblc},
         {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, {ValueType::kString}},
-        {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, {ValueType::kString}}};
+        {replica_envs::REPLICA_ACCESS_CONTROLLER_RANGER_POLICIES, {ValueType::kString}},
+        {duplication_constants::kEnvMasterClusterKey, {ValueType::kString}},
+        {duplication_constants::kEnvMasterMetasKey, {ValueType::kString}},
+        {duplication_constants::kEnvMasterAppNameKey, {ValueType::kString}},
+        {duplication_constants::kEnvFollowerAppStatusKey, {ValueType::kString}},
+    };
 }
 
 const std::unordered_map<app_env_validator::ValueType, std::string>

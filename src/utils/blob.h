@@ -26,15 +26,20 @@
 
 #pragma once
 
-#include <memory>
+#include <boost/algorithm/string/predicate.hpp>
+#include <fmt/core.h>
+#include <algorithm>
 #include <cstring>
-
+#include <memory>
 #include <string_view>
+#include <type_traits>
+
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/protocol/TProtocol.h>
 
 #include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"
+#include "utils/strings.h"
 #include "utils.h"
 
 namespace dsn {
@@ -109,9 +114,11 @@ public:
     /// NOTE: this operation is not efficient since it involves a memory copy.
     [[nodiscard]] static blob create_from_bytes(const char *s, size_t len)
     {
-        DCHECK(s != nullptr || len == 0,
-               "null source pointer with non-zero length would lead to "
-               "undefined behaviour");
+#if defined(MOCK_TEST) || !defined(NDEBUG)
+        CHECK(s != nullptr || len == 0,
+              "null source pointer with non-zero length would lead to "
+              "undefined behaviour");
+#endif
 
         std::shared_ptr<char> s_arr(new char[len], std::default_delete<char[]>());
         memcpy(s_arr.get(), s, len);
@@ -124,6 +131,13 @@ public:
         auto *s = new std::string(std::move(bytes));
         std::shared_ptr<char> buf(const_cast<char *>(s->data()), [s](char *) { delete s; });
         return {std::move(buf), static_cast<unsigned int>(s->length())};
+    }
+
+    template <typename TNum,
+              typename = typename std::enable_if<std::is_arithmetic<TNum>::value>::type>
+    [[nodiscard]] static blob create_from_numeric(TNum val)
+    {
+        return create_from_bytes(fmt::format("{}", val));
     }
 
     void assign(const std::shared_ptr<char> &buffer, int offset, unsigned int length)
@@ -214,6 +228,31 @@ public:
     }
 
     [[nodiscard]] std::string_view to_string_view() const { return {_data, _length}; }
+
+    // Returns an integer less than, equal to, or greater than zero if _data is less than,
+    // equal to, or greater than rhs._data.
+    [[nodiscard]] int compare(const blob &rhs) const noexcept
+    {
+        return to_string_view().compare(rhs.to_string_view());
+    }
+
+    // Return true if _data contains rhs._data, otherwise false.
+    [[nodiscard]] bool contains(const blob &rhs) const
+    {
+        return boost::algorithm::contains(to_string_view(), rhs.to_string_view());
+    }
+
+    // Return true if _data starts with rhs._data, otherwise false.
+    [[nodiscard]] bool starts_with(const blob &rhs) const
+    {
+        return boost::algorithm::starts_with(to_string_view(), rhs.to_string_view());
+    }
+
+    // Return true if _data ends with rhs._data, otherwise false.
+    [[nodiscard]] bool ends_with(const blob &rhs) const
+    {
+        return boost::algorithm::ends_with(to_string_view(), rhs.to_string_view());
+    }
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;

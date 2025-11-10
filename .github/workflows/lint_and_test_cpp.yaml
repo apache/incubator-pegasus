@@ -27,7 +27,7 @@ on:
       - ci-test # testing branch for github action
       - '*dev'
     paths:
-      - .github/actions
+      - .github/actions/**
       - .github/workflows/lint_and_test_cpp.yaml
       - .github/workflows/thirdparty-regular-push.yml
       - build_tools/pack_server.sh
@@ -135,6 +135,7 @@ jobs:
       fail-fast: false
       matrix:
         test_module:
+          - atomic_write_test
           - backup_restore_test
           - base_api_test
           - base_test
@@ -172,7 +173,7 @@ jobs:
           - dsn.zookeeper.tests
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
           # it has been optimized.
-#          - partition_split_test
+          # - partition_split_test
           - pegasus_geo_test
           - pegasus_rproxy_test
           - pegasus_unit_test
@@ -180,6 +181,7 @@ jobs:
           - restore_test
           - security_test
           - throttle_test
+          - zookeeper_sasl_auth_test
     needs: build_Release
     runs-on: ubuntu-latest
     env:
@@ -220,6 +222,7 @@ jobs:
       fail-fast: false
       matrix:
         test_module:
+          - atomic_write_test
           - backup_restore_test
           - base_api_test
           - base_test
@@ -257,7 +260,7 @@ jobs:
           - dsn.zookeeper.tests
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
           # it has been optimized.
-#          - partition_split_test
+          # - partition_split_test
           - pegasus_geo_test
           - pegasus_rproxy_test
           - pegasus_unit_test
@@ -266,7 +269,8 @@ jobs:
           - security_test
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
           # it has been optimized.
-#          - throttle_test
+          # - throttle_test
+          - zookeeper_sasl_auth_test
     needs: build_ASAN
     runs-on: ubuntu-latest
     env:
@@ -310,6 +314,7 @@ jobs:
 #      fail-fast: false
 #      matrix:
 #        test_module:
+#          - atomic_write_test
 #          - backup_restore_test
 #          - base_api_test
 #          - base_test
@@ -353,6 +358,7 @@ jobs:
 #          - restore_test
 #          - security_test
 #          - throttle_test
+#          - zookeeper_sasl_auth_test
 #    needs: build_UBSAN
 #    runs-on: ubuntu-latest
 #    env:
@@ -413,11 +419,11 @@ jobs:
     name: Build Release on macOS
     needs:
       - cpp_clang_format_linter
-    runs-on: macos-12
+    runs-on: macos-15
     steps:
       - name: Install Softwares
         run: |
-          # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-12-Readme.md
+          # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-15-Readme.md
           brew install ccache
           brew install openssl@1.1
       - uses: actions/checkout@v4
@@ -429,7 +435,7 @@ jobs:
           key: macos_build_ccache
           restore-keys: |
             macos_build_ccache
-            macos-12-thirdparty-bins
+            macos-15-thirdparty-bins
       - name: Build thirdparty
         working-directory: thirdparty
         run: |
@@ -444,8 +450,8 @@ jobs:
           ./run.sh build --test --skip_thirdparty -j $(sysctl -n hw.physicalcpu)
           ccache -s
 
-  build_debug_on_centos7:
-    name: Build Debug on CentOS 7
+  build_debug_on_rockylinux9:
+    name: Build Debug on Rockylinux 9
     needs:
       - cpp_clang_format_linter
     runs-on: ubuntu-latest
@@ -453,10 +459,8 @@ jobs:
       USE_JEMALLOC: OFF
       BUILD_OPTIONS: -t debug --test --separate_servers
       PACK_OPTIONS: --separate_servers
-      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     container:
-      image: apache/pegasus:thirdparties-bin-centos7-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-rockylinux9-${{ github.base_ref }}
     steps:
       - name: Clone code
         uses: actions/checkout@v3

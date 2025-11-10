@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include <alloca.h>
 #include <fmt/core.h>
 #include <rocksdb/env.h>
 #include <rocksdb/status.h>
@@ -40,13 +39,15 @@
 #include "common/replication_enums.h"
 #include "consensus_types.h"
 #include "dsn.layer2_types.h"
-#include "mutation.h"
 #include "replica.h"
+#include "replica/idempotent_writer.h"
+#include "replica/mutation.h"
 #include "replica/replication_app_base.h"
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
 #include "task/task_code.h"
 #include "task/task_spec.h"
+#include "utils/alloc.h"
 #include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
@@ -137,17 +138,18 @@ replication_app_base *replication_app_base::new_storage_instance(const std::stri
 }
 
 replication_app_base::replication_app_base(replica *replica)
-    : replica_base(replica), METRIC_VAR_INIT_replica(committed_requests)
+    : replica_base(replica),
+      _dir_data(utils::filesystem::path_combine(replica->dir(), kDataDir)),
+      _dir_learn(utils::filesystem::path_combine(replica->dir(), "learn")),
+      _dir_backup(utils::filesystem::path_combine(replica->dir(), "backup")),
+      _dir_bulk_load(utils::filesystem::path_combine(replica->dir(),
+                                                     bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR)),
+      _dir_duplication(utils::filesystem::path_combine(
+          replica->dir(), duplication_constants::kDuplicationCheckpointRootDir)),
+      _replica(replica),
+      _last_committed_decree(0),
+      METRIC_VAR_INIT_replica(committed_requests)
 {
-    _dir_data = utils::filesystem::path_combine(replica->dir(), kDataDir);
-    _dir_learn = utils::filesystem::path_combine(replica->dir(), "learn");
-    _dir_backup = utils::filesystem::path_combine(replica->dir(), "backup");
-    _dir_bulk_load = utils::filesystem::path_combine(replica->dir(),
-                                                     bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR);
-    _dir_duplication = utils::filesystem::path_combine(
-        replica->dir(), duplication_constants::kDuplicationCheckpointRootDir);
-    _last_committed_decree = 0;
-    _replica = replica;
 }
 
 bool replication_app_base::is_primary() const
@@ -264,21 +266,25 @@ error_code replication_app_base::apply_checkpoint(chkpt_apply_mode mode, const l
 int replication_app_base::on_batched_write_requests(int64_t decree,
                                                     uint64_t timestamp,
                                                     message_ex **requests,
-                                                    int request_length)
+                                                    uint32_t count,
+                                                    pegasus::idempotent_writer_ptr &&idem_writer)
 {
     int storage_error = rocksdb::Status::kOk;
-    for (int i = 0; i < request_length; ++i) {
-        int e = on_request(requests[i]);
-        if (e != rocksdb::Status::kOk) {
-            LOG_ERROR_PREFIX("got storage engine error when handler request({})",
-                             requests[i]->header->rpc_name);
-            storage_error = e;
+    for (uint32_t i = 0; i < count; ++i) {
+        const int err = on_request(requests[i]);
+        if (err == rocksdb::Status::kOk) {
+            continue;
         }
+
+        LOG_ERROR_PREFIX("got storage engine error when handler request({}): error = {}",
+                         requests[i]->header->rpc_name,
+                         err);
+        storage_error = err;
     }
     return storage_error;
 }
 
-error_code replication_app_base::apply_mutation(const mutation *mu)
+error_code replication_app_base::apply_mutation(const mutation_ptr &mu)
 {
     FAIL_POINT_INJECT_F("replication_app_base_apply_mutation",
                         [](std::string_view) { return ERR_OK; });
@@ -292,37 +298,42 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
     }
 
     bool has_ingestion_request = false;
-    int request_count = static_cast<int>(mu->client_requests.size());
-    message_ex **batched_requests = (message_ex **)alloca(sizeof(message_ex *) * request_count);
-    message_ex **faked_requests = (message_ex **)alloca(sizeof(message_ex *) * request_count);
-    int batched_count = 0; // write-empties are not included.
-    int faked_count = 0;
-    for (int i = 0; i < request_count; i++) {
+    const auto request_count = static_cast<uint32_t>(mu->client_requests.size());
+    auto **batched_requests = ALLOC_STACK(message_ex *, request_count);
+    auto **faked_requests = ALLOC_STACK(message_ex *, request_count);
+    uint32_t batched_count = 0; // write-empties are not included.
+    uint32_t faked_count = 0;
+    for (uint32_t i = 0; i < request_count; ++i) {
         const mutation_update &update = mu->data.updates[i];
-        message_ex *req = mu->client_requests[i];
         LOG_DEBUG_PREFIX("mutation {} #{}: dispatch rpc call {}", mu->name(), i, update.code);
-        if (update.code != RPC_REPLICATION_WRITE_EMPTY) {
-            if (req == nullptr) {
-                req = message_ex::create_received_request(
-                    update.code,
-                    (dsn_msg_serialize_format)update.serialization_type,
-                    (void *)update.data.data(),
-                    update.data.length());
-                faked_requests[faked_count++] = req;
-            }
+        if (update.code == RPC_REPLICATION_WRITE_EMPTY) {
+            continue;
+        }
 
-            batched_requests[batched_count++] = req;
-            if (update.code == apps::RPC_RRDB_RRDB_BULK_LOAD) {
-                has_ingestion_request = true;
-            }
+        message_ex *req = mu->client_requests[i];
+        if (req == nullptr) {
+            req = message_ex::create_received_request(
+                update.code,
+                static_cast<dsn_msg_serialize_format>(update.serialization_type),
+                update.data.data(),
+                update.data.length());
+            faked_requests[faked_count++] = req;
+        }
+
+        batched_requests[batched_count++] = req;
+        if (update.code == apps::RPC_RRDB_RRDB_BULK_LOAD) {
+            has_ingestion_request = true;
         }
     }
 
-    int storage_error = on_batched_write_requests(
-        mu->data.header.decree, mu->data.header.timestamp, batched_requests, batched_count);
+    const int storage_error = on_batched_write_requests(mu->data.header.decree,
+                                                        mu->data.header.timestamp,
+                                                        batched_requests,
+                                                        batched_count,
+                                                        std::move(mu->idem_writer));
 
     // release faked requests
-    for (int i = 0; i < faked_count; i++) {
+    for (uint32_t i = 0; i < faked_count; ++i) {
         faked_requests[i]->release_ref();
     }
 

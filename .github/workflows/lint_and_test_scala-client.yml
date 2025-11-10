@@ -22,6 +22,7 @@ on:
       - master
       - 'v[0-9]+.*' # release branch
     paths:
+      - .github/actions/**
       - .github/workflows/lint_and_test_scala-client.yml
       - scala-client/**
 
@@ -35,21 +36,30 @@ env:
   ARTIFACT_NAME: release_for_scala_client
 
 jobs:
-  format:
+  check_format:
     name: Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-java@v4
         with:
           java-version: 8
-      - name: format
+          distribution: temurin
+      - name: Install sbt
+        run: |
+          curl -s "https://get.sdkman.io" | bash
+          source "${HOME}/.sdkman/bin/sdkman-init.sh"
+          sdk install sbt
+          sbt -V
+      - name: Check format with sbt
         working-directory: ./scala-client
-        run: sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck
+        run: |
+          source "${HOME}/.sdkman/bin/sdkman-init.sh"
+          sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck
 
   build_server:
     name: Build server
-    needs: format
+    needs: check_format
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
@@ -71,22 +81,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ '8', '11']
+        java: [ '8', '11', '17' ]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
-      - name: Setup sbt
+          distribution: temurin
+      - name: Install sbt
         run: |
           curl -s "https://get.sdkman.io" | bash
-          source /github/home/.sdkman/bin/sdkman-init.sh
+          source "${HOME}/.sdkman/bin/sdkman-init.sh"
           sdk install sbt
           sbt -V
       - name: Download thrift
@@ -107,5 +118,5 @@ jobs:
       - name: Run Scala client tests
         working-directory: ./scala-client
         run: |
-          source /github/home/.sdkman/bin/sdkman-init.sh
+          source "${HOME}/.sdkman/bin/sdkman-init.sh"
           sbt test

@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <string.h>
 #include <zookeeper/zookeeper.h>
+#include <cstdint>
+#include <cstring>
 #include <functional>
 #include <list>
 #include <memory>
@@ -37,12 +37,12 @@
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/fmt_utils.h"
+#include "utils/ports.h"
 #include "utils/synchronize.h"
 
 struct String_vector;
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 // A C++ wrapper of zookeeper c async APIs.
 class zookeeper_session
@@ -82,20 +82,22 @@ public:
 
     struct zoo_input
     {
-        std::string _path;
+        std::shared_ptr<std::string> _path;
 
-        /* for create and set */
+        // For create and set.
         blob _value;
-        /* for create */
-        int _flags;
-        /* for get/exists/get_children */
-        int _is_set_watch;
 
-        /* for watcher callback */
-        void *_owner;
+        // For create.
+        int _flags{0};
+
+        // For get/exists/get_children.
+        int _is_set_watch{0};
+
+        // For watcher callback.
+        void *_owner{nullptr};
         std::function<void(int)> _watcher_callback;
 
-        /* for multi-op transaction */
+        // For multi-op transaction.
         std::shared_ptr<zoo_atomic_packet> _pkt;
     };
 
@@ -164,10 +166,10 @@ public:
     static const char *string_zoo_event(int zoo_event);
     static const char *string_zoo_state(int zoo_state);
 
-public:
-    typedef std::function<void(int)> state_callback;
-    zookeeper_session(const service_app_info &info);
-    ~zookeeper_session();
+    using state_callback = std::function<void(int)>;
+
+    explicit zookeeper_session(service_app_info info);
+    ~zookeeper_session() = default;
     int attach(void *callback_owner, const state_callback &cb);
     void detach(void *callback_owner);
 
@@ -177,14 +179,16 @@ public:
 
 private:
     utils::rw_lock_nr _watcher_lock;
+
     struct watcher_object
     {
-        std::string watcher_path;
+        std::shared_ptr<std::string> watcher_path;
         void *callback_owner;
         state_callback watcher_callback;
     };
     std::list<watcher_object> _watchers;
-    service_app_info _srv_node;
+
+    service_app_info _info;
     zhandle_t *_handle;
 
     void dispatch_event(int type, int zstate, const char *path);
@@ -196,8 +200,11 @@ private:
     static void
     global_strings_completion(int rc, const struct String_vector *strings, const void *data);
     static void global_void_completion(int rc, const void *data);
+
+    DISALLOW_COPY_AND_ASSIGN(zookeeper_session);
+    DISALLOW_MOVE_AND_ASSIGN(zookeeper_session);
 };
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::dist::zookeeper_session);

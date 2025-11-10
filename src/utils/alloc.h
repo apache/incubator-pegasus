@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <alloca.h>
 #include <algorithm> // IWYU pragma: keep
 #include <cstddef>
 #include <functional>
@@ -29,8 +30,13 @@
 // where CACHELINE_SIZE is defined.
 #ifdef CACHELINE_SIZE
 
-#ifndef NDEBUG
+#if defined(MOCK_TEST) || !defined(NDEBUG)
+
+#include <cstdint>
+#include <fmt/format.h>
+
 #include "utils/fmt_logging.h"
+
 #endif
 
 namespace dsn {
@@ -52,7 +58,7 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len)
 
     T *array = new (buffer) T[len];
 
-#ifndef NDEBUG
+#if defined(MOCK_TEST) || !defined(NDEBUG)
     if (sizeof(T) <= CACHELINE_SIZE && (sizeof(T) & (sizeof(T) - 1)) == 0) {
         for (size_t i = 0; i < len; ++i) {
             T *elem = &(array[i]);
@@ -84,6 +90,11 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len, const T &val)
 
     return array;
 }
+
+// Allocate space with `num` objects of `type` from stack by alloca() function. Since the
+// space is allocated within the stack frame of the caller, it could only be implemented
+// by a macro.
+#define ALLOC_STACK(type, num) static_cast<type *>(alloca(sizeof(type) * (num)))
 
 } // namespace dsn
 

@@ -46,8 +46,9 @@
 // argument, preprocess for this macro would fail for mismatched arguments.
 #define FAIL_POINT_INJECT_F(name, ...)                                                             \
     do {                                                                                           \
-        if (dsn_likely(!::dsn::fail::_S_FAIL_POINT_ENABLED))                                       \
+        if (dsn_likely(!::dsn::fail::_S_FAIL_POINT_ENABLED)) {                                     \
             break;                                                                                 \
+        }                                                                                          \
         auto __Func = __VA_ARGS__;                                                                 \
         auto __Res = ::dsn::fail::eval(name);                                                      \
         if (__Res != nullptr) {                                                                    \
@@ -63,8 +64,9 @@
 // argument, preprocess for this macro would fail for mismatched arguments.
 #define FAIL_POINT_INJECT_NOT_RETURN_F(name, ...)                                                  \
     do {                                                                                           \
-        if (dsn_likely(!::dsn::fail::_S_FAIL_POINT_ENABLED))                                       \
+        if (dsn_likely(!::dsn::fail::_S_FAIL_POINT_ENABLED)) {                                     \
             break;                                                                                 \
+        }                                                                                          \
         auto __Func = __VA_ARGS__;                                                                 \
         auto __Res = ::dsn::fail::eval(name);                                                      \
         if (__Res != nullptr) {                                                                    \

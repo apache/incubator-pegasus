@@ -25,10 +25,11 @@
  */
 
 #include <fmt/core.h>
-#include <inttypes.h>
-#include <stddef.h>
+#include <rocksdb/status.h>
 #include <atomic>
 #include <chrono>
+#include <cinttypes>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <string>
@@ -51,6 +52,7 @@
 #include "mutation_log.h"
 #include "ranger/access_type.h"
 #include "replica.h"
+#include "replica/idempotent_writer.h"
 #include "replica/prepare_list.h"
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
@@ -146,17 +148,26 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    task_spec *spec = task_spec::get(request->rpc_code());
-    if (dsn_unlikely(nullptr == spec || request->rpc_code() == TASK_CODE_INVALID)) {
-        LOG_ERROR("recv message with unhandled rpc name {} from {}, trace_id = {}",
-                  request->rpc_code(),
-                  request->header->from_address,
-                  request->header->trace_id);
+    if (dsn_unlikely(request->rpc_code() == TASK_CODE_INVALID)) {
+        LOG_ERROR_PREFIX("recv message with invalid RPC code {} from {}, trace_id = {}",
+                         request->rpc_code(),
+                         request->header->from_address,
+                         request->header->trace_id);
+        response_client_write(request, ERR_INVALID_PARAMETERS);
+        return;
+    }
+
+    const auto *spec = task_spec::get(request->rpc_code());
+    if (dsn_unlikely(spec == nullptr)) {
+        LOG_ERROR_PREFIX("recv message with unhandled RPC code {} from {}, trace_id = {}",
+                         request->rpc_code(),
+                         request->header->from_address,
+                         request->header->trace_id);
         response_client_write(request, ERR_HANDLER_NOT_FOUND);
         return;
     }
 
-    if (is_duplication_master() && !spec->rpc_request_is_write_idempotent) {
+    if (need_reject_non_idempotent(spec)) {
         // Ignore non-idempotent write, because duplication provides no guarantee of atomicity to
         // make this write produce the same result on multiple clusters.
         METRIC_VAR_INCREMENT(dup_rejected_non_idempotent_write_requests);
@@ -188,6 +199,16 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
+    if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
+        _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
+        response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
+        return;
+    }
+
+    if (!ignore_throttling && throttle_write_request(request)) {
+        return;
+    }
+
     if (request->rpc_code() == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
         auto cur_bulk_load_status = _bulk_loader->get_bulk_load_status();
         if (cur_bulk_load_status != bulk_load_status::BLS_DOWNLOADED &&
@@ -209,26 +230,111 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         _bulk_load_ingestion_start_time_ms = dsn_now_ms();
     }
 
-    if (static_cast<int32_t>(_primary_states.pc.hp_secondaries.size()) + 1 <
-        _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
-        response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
-        return;
-    }
-
-    if (!ignore_throttling && throttle_write_request(request)) {
-        return;
-    }
-
     LOG_DEBUG_PREFIX("got write request from {}", request->header->from_address);
-    auto mu = _primary_states.write_queue.add_work(request->rpc_code(), request, this);
-    if (mu) {
+    auto mu = _primary_states.write_queue.add_work(request);
+    if (mu != nullptr) {
         init_prepare(mu, false);
     }
+}
+
+bool replica::need_reject_non_idempotent(const task_spec *spec) const
+{
+    if (!is_duplication_master()) {
+        // This is not the dup master that needs to duplicate writes to followers, thus
+        // non-idempotent requests are accepted.
+        return false;
+    }
+
+    if (_app_info.atomic_idempotent) {
+        // Since the table which this replica belongs to has been configured to make
+        // all atomic write requests idempotent, certainly they are accepted.
+        return false;
+    }
+
+    return !spec->rpc_request_is_write_idempotent;
+}
+
+bool replica::need_make_idempotent(const task_spec *spec) const
+{
+    if (!_app_info.atomic_idempotent) {
+        return false;
+    }
+
+    return !spec->rpc_request_is_write_idempotent;
+}
+
+bool replica::need_make_idempotent(message_ex *request) const
+{
+    if (request == nullptr) {
+        return false;
+    }
+
+    if (!_app_info.atomic_idempotent) {
+        // The table which this replica belongs to is not configured to make all atomic
+        // write requests idempotent.
+        return false;
+    }
+
+    const auto *spec = task_spec::get(request->rpc_code());
+    CHECK_NOTNULL_PREFIX_MSG(spec, "RPC code {} not found", request->rpc_code());
+
+    return !spec->rpc_request_is_write_idempotent;
+}
+
+int replica::make_idempotent(mutation_ptr &mu)
+{
+    CHECK_PREFIX_MSG(!mu->client_requests.empty(),
+                     "the mutation should include at least one request");
+
+    message_ex *request = mu->client_requests.front();
+    if (!need_make_idempotent(request)) {
+        return rocksdb::Status::kOk;
+    }
+
+    CHECK_EQ_PREFIX_MSG(
+        mu->client_requests.size(), 1, "the original atomic write request must not be batched");
+
+    std::vector<dsn::message_ex *> new_requests;
+    pegasus::idempotent_writer_ptr idem_writer;
+    const int err = _app->make_idempotent(request, new_requests, idem_writer);
+
+    // When the condition checks of `check_and_set` and `check_and_mutate` fail, make_idempotent()
+    // would return rocksdb::Status::kTryAgain. Therefore, there is still a certain probability
+    // that a status code other than rocksdb::Status::kOk is returned.
+    if (err != rocksdb::Status::kOk) {
+        // Once some error occurred, the response with error must have been returned to the
+        // client during _app->make_idempotent(). Thus do nothing here.
+        return err;
+    }
+
+    CHECK_PREFIX_MSG(
+        !new_requests.empty(),
+        "new_requests should not be empty since its original write request must be atomic "
+        "and translated into at least one idempotent request");
+
+    CHECK_PREFIX_MSG(idem_writer, "idem_writer should not be empty");
+
+    CHECK_EQ_PREFIX_MSG(mu->get_decree(), invalid_decree, "the decree must have not been assigned");
+
+    // Create a new mutation to hold the new idempotent requests. The old mutation holding the
+    // original atomic write request will be released automatically.
+    mu = new_mutation(invalid_decree, std::move(idem_writer));
+    for (dsn::message_ex *new_request : new_requests) {
+        mu->add_client_request(new_request);
+    }
+
+    return rocksdb::Status::kOk;
 }
 
 void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations)
 {
     CHECK_EQ(partition_status::PS_PRIMARY, status());
+
+    if (make_idempotent(mu) != rocksdb::Status::kOk) {
+        // If some error occurred, the response with error must have been returned to the
+        // client during make_idempotent(). Thus do nothing here.
+        return;
+    }
 
     mu->_tracer->set_description("primary");
     ADD_POINT(mu->_tracer);
@@ -243,9 +349,10 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
         // print a debug log if necessary
         if (FLAGS_prepare_decree_gap_for_debug_logging > 0 &&
-            mu->get_decree() % FLAGS_prepare_decree_gap_for_debug_logging == 0)
+            mu->get_decree() % FLAGS_prepare_decree_gap_for_debug_logging == 0) {
             level = LOG_LEVEL_INFO;
-        mu->set_timestamp(_uniq_timestamp_us.next());
+        }
+        mu->set_timestamp(static_cast<int64_t>(_uniq_timestamp_us.next()));
     } else {
         mu->set_id(get_ballot(), mu->data.header.decree);
     }
@@ -259,7 +366,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // check bounded staleness
     if (mu->data.header.decree > last_committed_decree() + FLAGS_staleness_for_commit) {
         err = ERR_CAPACITY_EXCEEDED;
-        goto ErrOut;
+        reply_with_error(mu, err);
+        return;
     }
 
     // stop prepare bulk load ingestion if there are secondaries unalive
@@ -276,7 +384,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         }
     }
     if (err != ERR_OK) {
-        goto ErrOut;
+        reply_with_error(mu, err);
+        return;
     }
 
     // stop prepare if there are too few replicas unless it's a reconciliation
@@ -286,7 +395,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count) &&
         !reconciliation) {
         err = ERR_NOT_ENOUGH_MEMBER;
-        goto ErrOut;
+        reply_with_error(mu, err);
+        return;
     }
 
     CHECK_GT(mu->data.header.decree, last_committed_decree());
@@ -294,8 +404,12 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // local prepare
     err = _prepare_list->prepare(mu, partition_status::PS_PRIMARY, pop_all_committed_mutations);
     if (err != ERR_OK) {
-        goto ErrOut;
+        reply_with_error(mu, err);
+        return;
     }
+
+    // Tell the assigned decree that has entered the 2PC phase to the mutation queue.
+    _primary_states.write_queue.enter_2pc(mu);
 
     // remote prepare
     mu->set_prepare_ts();
@@ -306,7 +420,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
                              partition_status::PS_SECONDARY,
                              mu,
                              FLAGS_prepare_timeout_ms_for_secondaries,
-                             pop_all_committed_mutations);
+                             pop_all_committed_mutations,
+                             invalid_signature);
     }
 
     count = 0;
@@ -348,16 +463,23 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     }
 
     _primary_states.last_prepare_ts_ms = mu->prepare_ts_ms();
-    return;
-
-ErrOut:
-    for (auto &r : mu->client_requests) {
-        response_client_write(r, err);
-    }
-    return;
 }
 
-void replica::send_prepare_message(const ::dsn::host_port &hp,
+void replica::reply_with_error(const mutation_ptr &mu, const error_code &err)
+{
+    // Respond to the original atomic request if it is non-null. And it could never be batched.
+    if (mu->idem_writer) {
+        response_client_write(mu->idem_writer->request(), err);
+        return;
+    }
+
+    // Just respond to each client request directly if there is no original request for them.
+    for (auto *req : mu->client_requests) {
+        response_client_write(req, err);
+    }
+}
+
+void replica::send_prepare_message(const host_port &hp,
                                    partition_status::type status,
                                    const mutation_ptr &mu,
                                    int timeout_milliseconds,

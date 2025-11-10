@@ -47,7 +47,7 @@ jobs:
     name: Build Cpp
     runs-on: ubuntu-latest
     env:
-      # The glibc version on ubuntu1804 and centos7 is lower than the node20 required, so
+      # The glibc version on ubuntu1804 is lower than the node20 required, so
       # we need to force the node version to 16.
       # See more details: https://github.com/actions/checkout/issues/1809
       ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
@@ -59,7 +59,7 @@ jobs:
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
-          - centos7
+          - rockylinux9
         compiler:
           - "gcc,g++"
         include:
@@ -76,7 +76,7 @@ jobs:
         working-directory: /root/incubator-pegasus
     steps:
       - name: Clone Apache Pegasus Source
-        # The glibc version on ubuntu1804 and centos7 is lower than the actions/checkout@v4 required, so
+        # The glibc version on ubuntu1804 is lower than the actions/checkout@v4 required, so
         # we need to force to use actions/checkout@v3.
         uses: actions/checkout@v3
       - name: Unpack prebuilt third-parties
@@ -86,16 +86,14 @@ jobs:
 
   build_and_lint_go:
     name: Build and Lint Golang
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:build-env-ubuntu2204-${{ github.ref_name }}-go
     steps:
-      - name: Install thrift
-        # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
-        # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
-        run: sudo apt-get install -y thrift-compiler
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v2
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
           go-version: 1.18
       - name: Build go-client
@@ -104,15 +102,23 @@ jobs:
       - name: Lint go-client
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.2
+          version: v1.56.2
           working-directory: ./go-client
+      - name: Build collector
+        run: make
+        working-directory: ./collector
+      - name: Lint collector
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.56.2
+          working-directory: ./collector
       - name: Build admin-cli
         run: make
         working-directory: ./admin-cli
       - name: Lint admin-cli
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.2
+          version: v1.56.2
           working-directory: ./admin-cli
       - name: Build pegic
         run: make
@@ -120,7 +126,7 @@ jobs:
       - name: Lint pegic
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.55.2
+          version: v1.56.2
           working-directory: ./pegic
 
   build_java:
@@ -128,18 +134,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '8', '11']
+        java: [ '8', '11', '17' ]
     steps:
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v1
+      - uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
       - name: Download thrift
         working-directory: ./java-client/scripts
         run: ./download_thrift.sh

@@ -52,47 +52,31 @@ struct list_nodes_helper
 {
     std::string node_name;
     std::string node_status;
-    int primary_count;
-    int secondary_count;
-    int64_t memused_res_mb;
-    int64_t block_cache_bytes;
-    int64_t mem_tbl_bytes;
-    int64_t mem_idx_bytes;
-    int64_t disk_available_total_ratio;
-    int64_t disk_available_min_ratio;
-    double get_qps;
-    double put_qps;
-    double multi_get_qps;
-    double batch_get_qps;
-    double multi_put_qps;
-    double get_p99;
-    double put_p99;
-    double multi_get_p99;
-    double batch_get_p99;
-    double multi_put_p99;
-    double read_cu;
-    double write_cu;
-    list_nodes_helper(const std::string &n, const std::string &s)
-        : node_name(n),
-          node_status(s),
-          primary_count(0),
-          secondary_count(0),
-          memused_res_mb(0),
-          block_cache_bytes(0),
-          mem_tbl_bytes(0),
-          mem_idx_bytes(0),
-          disk_available_total_ratio(0),
-          disk_available_min_ratio(0),
-          get_qps(0.0),
-          put_qps(0.0),
-          multi_get_qps(0.0),
-          multi_put_qps(0.0),
-          get_p99(0.0),
-          put_p99(0.0),
-          multi_get_p99(0.0),
-          multi_put_p99(0.0),
-          read_cu(0.0),
-          write_cu(0.0)
+    int primary_count{0};
+    int secondary_count{0};
+    int64_t memused_res_mb{0};
+    int64_t block_cache_bytes{0};
+    int64_t wbm_total_bytes{0};
+    int64_t wbm_mutable_bytes{0};
+    int64_t mem_tbl_bytes{0};
+    int64_t mem_idx_bytes{0};
+    int64_t disk_available_total_ratio{0};
+    int64_t disk_available_min_ratio{0};
+    double get_qps{0.0};
+    double put_qps{0.0};
+    double multi_get_qps{0.0};
+    double batch_get_qps{0.0};
+    double multi_put_qps{0.0};
+    double get_p99{0.0};
+    double put_p99{0.0};
+    double multi_get_p99{0.0};
+    double batch_get_p99{0.0};
+    double multi_put_p99{0.0};
+    double read_cu{0.0};
+    double write_cu{0.0};
+
+    list_nodes_helper(std::string &&name, std::string &&status)
+        : node_name(std::move(name)), node_status(std::move(status))
     {
     }
 };
@@ -158,6 +142,12 @@ bool clear_app_envs(command_executor *e, shell_context *sc, arguments args);
 bool get_max_replica_count(command_executor *e, shell_context *sc, arguments args);
 
 bool set_max_replica_count(command_executor *e, shell_context *sc, arguments args);
+
+bool get_atomic_idempotent(command_executor *e, shell_context *sc, arguments args);
+
+bool enable_atomic_idempotent(command_executor *e, shell_context *sc, arguments args);
+
+bool disable_atomic_idempotent(command_executor *e, shell_context *sc, arguments args);
 
 // == data operations (see 'commands/data_operations.cpp') == //
 
@@ -259,6 +249,8 @@ bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args);
 bool add_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool query_dup(command_executor *e, shell_context *sc, arguments args);
+
+bool ls_dups(command_executor *e, shell_context *sc, arguments args);
 
 bool remove_dup(command_executor *e, shell_context *sc, arguments args);
 

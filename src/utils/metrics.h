@@ -196,6 +196,7 @@ class error_code;
 #define METRIC_VAR_INIT_replica(name, ...) METRIC_VAR_INIT(name, replica, ##__VA_ARGS__)
 #define METRIC_VAR_ASSIGN_server(name, ...) METRIC_VAR_ASSIGN(name, server, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_server(name, ...) METRIC_VAR_INIT(name, server, ##__VA_ARGS__)
+#define METRIC_VAR_INIT_connection(name, ...) METRIC_VAR_INIT(name, connection, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_disk(name, ...) METRIC_VAR_INIT(name, disk, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_table(name, ...) METRIC_VAR_INIT(name, table, ##__VA_ARGS__)
 #define METRIC_VAR_INIT_partition(name, ...) METRIC_VAR_INIT(name, partition, ##__VA_ARGS__)
@@ -1342,6 +1343,9 @@ public:
         _samples.get()[index & (_sample_size - 1)] = val;
     }
 
+    // Set the same value for n times, used to treat a single value as the result of multiple
+    // observations, e.g. taking the latency of executing the entire batch as the latency for
+    // processing each request within it (see pegasus_write_service::batch_finish()).
     void set(size_t n, const value_type &val)
     {
         for (size_t i = 0; i < n; ++i) {

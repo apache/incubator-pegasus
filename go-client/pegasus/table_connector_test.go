@@ -24,12 +24,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"math"
 	"sort"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
@@ -87,7 +89,7 @@ func testSingleKeyOperations(t *testing.T, tb TableConnector, hashKey []byte, so
 	assert.Nil(t, tb.Del(context.Background(), hashKey, sortKey))
 }
 
-var testingCfg = Config{
+var testingCfg = config.Config{
 	MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 }
 
@@ -227,6 +229,12 @@ func TestPegasusTableConnector_EmptyInput(t *testing.T) {
 	assert.Contains(t, err.Error(), "sortkey must not be nil")
 	_, err = tb.TTL(context.Background(), []byte("h1"), []byte(""))
 	assert.Nil(t, err)
+
+	// DelRange
+	err = tb.DelRange(context.Background(), nil, nil, nil)
+	assert.Contains(t, err.Error(), "hashkey must not be nil")
+	err = tb.DelRangeOpt(context.Background(), []byte{}, nil, nil, &DelRangeOptions{})
+	assert.Contains(t, err.Error(), "hashkey must not be empty")
 }
 
 func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
@@ -349,18 +357,6 @@ func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, partitionCount, len(p.parts))
 	}
-
-	{
-		resp := replication.NewQueryCfgResponse()
-		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
-
-		resp.Partitions = make([]*replication.PartitionConfiguration, 2)
-		resp.PartitionCount = 2
-
-		err := p.handleQueryConfigResp(resp)
-		assert.NotNil(t, err)
-		assert.Equal(t, partitionCount, len(p.parts))
-	}
 }
 
 func TestPegasusTableConnector_QueryConfigRespWhileStartSplit(t *testing.T) {
@@ -438,6 +434,50 @@ func TestPegasusTableConnector_QueryConfigRespWhileCancelSplit(t *testing.T) {
 	err = ptb.handleQueryConfigResp(resp)
 	assert.Nil(t, err)
 	assert.Equal(t, partitionCount, len(ptb.parts))
+	ptb.Close()
+}
+
+func TestPegasusTableConnector_QueryConfigRespWhileTablePartitionResize(t *testing.T) {
+	// In certain scenarios, when dealing with partitions that consume excessive disk space,
+	// we may split a single partition into multiple ones (more than double the original number).
+	// To achieve this, we typically use an offline approach involving multiple splits,
+	// followed by reconstruction on another cluster. Meanwhile, we utilize metaproxy to ensure
+	// seamless traffic switching. As a result, significant changes in the partition count
+	// are possible (e.g., 8x or 1/8x the original count). Therefore, when updating the configuration,
+	// we do not require the new partition count to be related to the previous one.
+	// It only needs to be a valid number.
+
+	// Ensure loopForAutoUpdate will be closed.
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+	ptb, _ := tb.(*pegasusTableConnector)
+
+	partitionCount := len(ptb.parts)
+	resp := replication.NewQueryCfgResponse()
+	resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
+	resp.AppID = ptb.appID
+	resp.PartitionCount = int32(partitionCount * 8)
+	resp.Partitions = make([]*replication.PartitionConfiguration, partitionCount*8)
+	for i := 0; i < partitionCount*8; i++ {
+		if i < partitionCount {
+			resp.Partitions[i] = ptb.parts[i].pconf
+		} else {
+			conf := replication.NewPartitionConfiguration()
+			conf.Ballot = -1
+			conf.Pid = &base.Gpid{ptb.appID, int32(i)}
+			resp.Partitions[i] = conf
+		}
+	}
+
+	err = ptb.handleQueryConfigResp(resp)
+	assert.Nil(t, err)
+	assert.Equal(t, partitionCount*8, len(ptb.parts))
 	ptb.Close()
 }
 
@@ -655,6 +695,87 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 
 	// test with invalid ttl
 	assert.Error(t, tb.MultiSetOpt(context.Background(), hashKey, sortKeys, values, -1*time.Second))
+}
+
+func TestPegasusTableConnector_DelRange(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+
+	testDelRangeOperations(t, tb)
+}
+
+func testDelRangeOperations(t *testing.T, tb TableConnector) {
+	hashKey := []byte("h1")
+
+	sortKeys := make([][]byte, 10)
+	values := make([][]byte, 10)
+	for i := 0; i < 10; i++ {
+		// make sortKeys sorted.
+		sidBuf := []byte(fmt.Sprintf("%d", i))
+		var sidWithLeadingZero bytes.Buffer
+		for k := 0; k < 20-len(sidBuf); k++ {
+			sidWithLeadingZero.WriteByte('0')
+		}
+		sidWithLeadingZero.Write(sidBuf)
+		sortKeys[i] = sidWithLeadingZero.Bytes()
+		values[i] = []byte(fmt.Sprintf("v%d", i))
+	}
+
+	// delete non-existent sortKey should be ok
+	err := tb.DelRange(context.Background(), hashKey, sortKeys[0], sortKeys[9])
+	assert.NoError(t, err)
+
+	// setup
+	err = tb.MultiSet(context.Background(), hashKey, sortKeys, values)
+	assert.NoError(t, err)
+
+	// read after deletion
+	err = tb.DelRange(context.Background(), hashKey, sortKeys[5], sortKeys[6])
+	assert.NoError(t, err)
+	count, err := tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(9), count) // 0,1,2,3,4,5,7,8,9
+
+	// DelRange with "*Inclusive" option
+	err = tb.DelRangeOpt(context.Background(), hashKey, sortKeys[2], sortKeys[6],
+		&DelRangeOptions{StartInclusive: true, StopInclusive: true})
+	assert.NoError(t, err)
+	count, err = tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(5), count) // 0,1,7,8,9
+
+	err = tb.DelRangeOpt(context.Background(), hashKey, sortKeys[6], sortKeys[8],
+		&DelRangeOptions{StartInclusive: false, StopInclusive: false})
+	assert.NoError(t, err)
+	count, err = tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(4), count) // 0,1,8,9
+
+	// DelRange with FilterTypeMatchPostfix option
+	err = tb.DelRangeOpt(context.Background(), hashKey, sortKeys[0], sortKeys[9], &DelRangeOptions{SortKeyFilter: Filter{
+		Type:    FilterTypeMatchPostfix,
+		Pattern: []byte("8"),
+	}})
+	assert.NoError(t, err)
+	count, err = tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(3), count) // 0,1,9
+
+	// ensure passing nil to startSortKey and stopSortKey in DelRange deletes all entries
+	err = tb.MultiSet(context.Background(), hashKey, sortKeys, values)
+	assert.NoError(t, err)
+	err = tb.DelRange(context.Background(), hashKey, nil, nil)
+	assert.NoError(t, err)
+	count, err = tb.SortKeyCount(context.Background(), hashKey)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), count)
+
 }
 
 func TestPegasusTableConnector_CheckAndSet(t *testing.T) {

@@ -25,9 +25,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/apache/incubator-pegasus/collector/aggregate"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/session"
-	"github.com/pegasus-kv/collector/aggregate"
 )
 
 // PegasusNode is a representation of MetaServer and ReplicaServer.
@@ -82,6 +82,13 @@ func (n *PegasusNode) Session() session.NodeSession {
 
 func (n *PegasusNode) RPCAddress() *base.RPCAddress {
 	return base.NewRPCAddress(n.IP, n.Port)
+}
+
+func (n *PegasusNode) Close() error {
+	if n.session != nil {
+		return n.session.Close()
+	}
+	return nil
 }
 
 // NewNodeFromTCPAddr creates a node from tcp address.
@@ -210,4 +217,18 @@ func (m *PegasusNodeManager) GetPerfSession(addr string, ntype session.NodeType)
 	}
 
 	return aggregate.WrapPerf(addr, node.session)
+}
+
+func (m *PegasusNodeManager) CloseAllNodes() error {
+	var errorStrings []string
+	for _, n := range m.nodes {
+		err := n.Close()
+		if err != nil {
+			errorStrings = append(errorStrings, err.Error())
+		}
+	}
+	if len(errorStrings) != 0 {
+		return fmt.Errorf("%s", strings.Join(errorStrings, "\n"))
+	}
+	return nil
 }

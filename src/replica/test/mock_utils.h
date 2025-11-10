@@ -78,7 +78,13 @@ public:
         return ERR_OK;
     }
     int on_request(message_ex *request) override WARN_UNUSED_RESULT { return 0; }
-    std::string query_compact_state() const { return ""; };
+    int make_idempotent(dsn::message_ex *request,
+                        std::vector<dsn::message_ex *> &new_requests,
+                        pegasus::idempotent_writer_ptr &idem_writer) override
+    {
+        return rocksdb::Status::kOk;
+    }
+    [[nodiscard]] std::string query_compact_state() const override { return ""; };
 
     // we mock the followings
     void update_app_envs(const std::map<std::string, std::string> &envs) override { _envs = envs; }

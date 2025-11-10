@@ -69,7 +69,7 @@ func init() {
 	interactive.App.AddCommand(rootCmd)
 }
 
-func compressionCompleter(prefix string, args []string) []string {
+func compressionCompleter(prefix string, _ []string) []string {
 	return filterStringWithPrefix([]string{
 		"zstd",
 		"no",

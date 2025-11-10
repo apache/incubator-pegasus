@@ -76,9 +76,9 @@ enum app_status
     AS_INVALID,
     AS_AVAILABLE,
     AS_CREATING,
-    AS_CREATE_FAILED, // depricated
+    AS_CREATE_FAILED, // deprecated
     AS_DROPPING,
-    AS_DROP_FAILED, // depricated
+    AS_DROP_FAILED, // deprecated
     AS_DROPPED,
     AS_RECALLING
 }
@@ -113,4 +113,9 @@ struct app_info
     // New fields for bulk load
     // Whether this app is executing bulk load
     14:optional bool    is_bulk_loading = false;
+
+    // Whether all atomic writes to this table are made idempotent:
+    // - true: made idempotent.
+    // - false: kept non-idempotent as their respective client requests. 
+    15:optional bool    atomic_idempotent = false;
 }

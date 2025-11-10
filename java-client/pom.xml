@@ -64,14 +64,14 @@
     <mockito.version>2.24.5</mockito.version>
     <dropwizard.version>3.1.2</dropwizard.version>
     <slf4j.version>1.7.36</slf4j.version>
-    <apache.commons.lang3.version>3.12.0</apache.commons.lang3.version>
+    <apache.commons.lang3.version>3.18.0</apache.commons.lang3.version>
     <json.version>20231013</json.version>
-    <netty.version>4.1.85.Final</netty.version>
+    <netty.version>4.1.123.Final</netty.version>
     <zstd-jni.version>1.3.7-1</zstd-jni.version>
-    <libthrift.version>0.11.0</libthrift.version>
+    <libthrift.version>0.13.0</libthrift.version>
     <thrift-maven-plugin.version>0.10.0</thrift-maven-plugin.version>
     <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
-    <zookeeper.version>3.7.2</zookeeper.version>
+    <zookeeper.version>3.9.4</zookeeper.version>
     <doclint>none</doclint>
   </properties>
 
@@ -427,6 +427,7 @@
             <excludes>
               <exclude>src/main/java/org/apache/pegasus/apps/*</exclude>
               <exclude>src/main/java/org/apache/pegasus/replication/*</exclude>
+              <exclude>src/main/java/org/apache/pegasus/utils/*</exclude>
             </excludes>
             <googleJavaFormat>
               <version>1.7</version>
@@ -487,6 +488,7 @@
             <include>partition_split.thrift</include>
             <include>rrdb.thrift</include>
             <include>security.thrift</include>
+            <include>utils.thrift</include>
           </includes>
           <thriftExecutable>thrift</thriftExecutable>
           <outputDirectory>${project.basedir}/src/main/java</outputDirectory>

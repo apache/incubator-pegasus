@@ -19,7 +19,7 @@ name: Rebuild thirdparty if needed
 runs:
   using: composite
   steps:
-    - uses: dorny/paths-filter@v2
+    - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
       id: changes
       with:
         filters: |
@@ -42,8 +42,10 @@ runs:
         cmake --build build/ -j $(nproc)
         rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
         find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-        ../build_tools/download_hadoop.sh hadoop-bin
-        ../build_tools/download_zk.sh zookeeper-bin
+        ../admin_tools/download_hadoop.sh hadoop-bin
+        ../admin_tools/download_zk.sh zookeeper-bin
         rm -rf hadoop-bin/share/doc
         rm -rf zookeeper-bin/docs
+        mv hadoop-bin ..
+        mv zookeeper-bin ..
       shell: bash

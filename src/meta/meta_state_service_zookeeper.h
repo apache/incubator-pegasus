@@ -37,11 +37,12 @@
 #include "task/task_code.h"
 #include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
-#include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
+class blob;
+
 namespace dist {
 
 class zookeeper_session;
@@ -50,53 +51,53 @@ class meta_state_service_zookeeper : public meta_state_service, public ref_count
 {
 public:
     explicit meta_state_service_zookeeper();
-    virtual ~meta_state_service_zookeeper() override;
+    ~meta_state_service_zookeeper() override;
 
     // no parameter need
-    virtual error_code initialize(const std::vector<std::string> &args) override;
-    virtual error_code finalize() override;
+    error_code initialize(const std::vector<std::string> &args) override;
+    error_code finalize() override;
 
-    virtual std::shared_ptr<meta_state_service::transaction_entries>
+    std::shared_ptr<meta_state_service::transaction_entries>
     new_transaction_entries(unsigned int capacity) override;
 
-    virtual task_ptr
+    task_ptr
     submit_transaction(const std::shared_ptr<meta_state_service::transaction_entries> &entries,
                        task_code cb_code,
                        const err_callback &cb_transaction,
-                       task_tracker *tracker = nullptr) override;
+                       task_tracker *tracker) override;
 
-    virtual task_ptr create_node(const std::string &node,
-                                 task_code cb_code,
-                                 const err_callback &cb_create,
-                                 const blob &value = blob(),
-                                 dsn::task_tracker *tracker = nullptr) override;
+    task_ptr create_node(const std::string &node,
+                         task_code cb_code,
+                         const err_callback &cb_create,
+                         const blob &value,
+                         dsn::task_tracker *tracker) override;
 
-    virtual task_ptr delete_node(const std::string &node,
-                                 bool recursively_delete,
-                                 task_code cb_code,
-                                 const err_callback &cb_delete,
-                                 dsn::task_tracker *tracker = nullptr) override;
+    task_ptr delete_node(const std::string &node,
+                         bool recursively_delete,
+                         task_code cb_code,
+                         const err_callback &cb_delete,
+                         dsn::task_tracker *tracker) override;
 
-    virtual task_ptr node_exist(const std::string &node,
-                                task_code cb_code,
-                                const err_callback &cb_exist,
-                                dsn::task_tracker *tracker = nullptr) override;
+    task_ptr node_exist(const std::string &node,
+                        task_code cb_code,
+                        const err_callback &cb_exist,
+                        dsn::task_tracker *tracker) override;
 
-    virtual task_ptr get_data(const std::string &node,
-                              task_code cb_code,
-                              const err_value_callback &cb_get_data,
-                              dsn::task_tracker *tracker = nullptr) override;
+    task_ptr get_data(const std::string &node,
+                      task_code cb_code,
+                      const err_value_callback &cb_get_data,
+                      dsn::task_tracker *tracker) override;
 
-    virtual task_ptr set_data(const std::string &node,
-                              const blob &value,
-                              task_code cb_code,
-                              const err_callback &cb_set_data,
-                              dsn::task_tracker *tracker = nullptr) override;
+    task_ptr set_data(const std::string &node,
+                      const blob &value,
+                      task_code cb_code,
+                      const err_callback &cb_set_data,
+                      dsn::task_tracker *tracker) override;
 
-    virtual task_ptr get_children(const std::string &node,
-                                  task_code cb_code,
-                                  const err_stringv_callback &cb_get_children,
-                                  dsn::task_tracker *tracker = nullptr) override;
+    task_ptr get_children(const std::string &node,
+                          task_code cb_code,
+                          const err_stringv_callback &cb_get_children,
+                          dsn::task_tracker *tracker) override;
 
     task_ptr delete_empty_node(const std::string &node,
                                task_code cb_code,

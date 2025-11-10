@@ -17,38 +17,53 @@
  * under the License.
  */
 
+// IWYU pragma: no_include <ext/alloc_traits.h>
 #include <base/pegasus_key_schema.h>
 #include <fmt/core.h>
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
-#include <stdint.h>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include "common/gpid.h"
 #include "common/replica_envs.h"
+#include "common/replication.codes.h"
+#include "common/replication_other_types.h"
+#include "consensus_types.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "pegasus_server_test_base.h"
+#include "replica/replica_stub.h"
+#include "rpc/rpc_holder.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/serverlet.h"
 #include "server/pegasus_read_service.h"
+#include "test_util/test_util.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
+#include "utils/defer.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 #include "utils/metrics.h"
+#include "utils/test_macros.h"
+#include "utils_types.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 class pegasus_server_impl_test : public pegasus_server_test_base
 {
-public:
-    pegasus_server_impl_test() : pegasus_server_test_base() {}
+protected:
+    pegasus_server_impl_test() = default;
 
     void test_table_level_slow_query()
     {
@@ -139,6 +154,194 @@ public:
                 ASSERT_TRUE(false) << fmt::format("query_app_envs not supported {}", test.env_key);
             }
         }
+    }
+
+    // Test last checkpoint query in `pegasus_server_impl_test` rather than in `replica_test`,
+    // because `pegasus_server_impl::get_checkpoint()` needs to be tested instead of being
+    // mocked.
+    void test_query_last_checkpoint(bool create_checkpoint_dir,
+                                    const dsn::gpid &pid,
+                                    dsn::utils::checksum_type::type checksum_type,
+                                    const dsn::error_code &expected_err,
+                                    dsn::replication::decree expected_last_committed_decree,
+                                    dsn::replication::decree expected_last_durable_decree,
+                                    const std::vector<std::string> &expected_file_names,
+                                    const std::vector<int64_t> &expected_file_sizes,
+                                    const std::vector<std::string> &expected_file_checksums)
+    {
+        const std::string checkpoint_dir(dsn::utils::filesystem::path_combine(
+            _server->data_dir(), fmt::format("checkpoint.{}", expected_last_durable_decree)));
+
+        // After the test case is finished, remove the whole checkpoint dir.
+        const auto cleanup = dsn::defer([checkpoint_dir, expected_file_names]() {
+            if (!dsn::utils::filesystem::directory_exists(checkpoint_dir)) {
+                return;
+            }
+
+            ASSERT_TRUE(dsn::utils::filesystem::remove_path(checkpoint_dir));
+        });
+
+        std::map<std::string, std::shared_ptr<local_test_file>> local_files;
+        if (create_checkpoint_dir) {
+            ASSERT_TRUE(dsn::utils::filesystem::create_directory(checkpoint_dir));
+
+            // Generate all files in the checkpoint dir with respective specified size.
+            for (size_t i = 0; i < expected_file_names.size(); ++i) {
+                const auto file_path =
+                    dsn::utils::filesystem::path_combine(checkpoint_dir, expected_file_names[i]);
+
+                std::shared_ptr<local_test_file> local_file;
+                NO_FATALS(local_test_file::create(
+                    file_path, std::string(expected_file_sizes[i], 'a'), local_file));
+                ASSERT_TRUE(local_files.emplace(file_path, local_file).second);
+            }
+        }
+
+        // Build the request to get the last checkpoint info.
+        auto req = std::make_unique<dsn::replication::learn_request>();
+        req->pid = pid;
+        req->__set_checksum_type(checksum_type);
+
+        // Mock the RPC.
+        auto rpc = dsn::replication::query_last_checkpoint_info_rpc(std::move(req),
+                                                                    RPC_QUERY_LAST_CHECKPOINT_INFO);
+
+        // Execute the last checkpoint query on server side.
+        _replica_stub->on_query_last_checkpoint(rpc);
+
+        // The error code in the response should be match the expected.
+        const auto &resp = rpc.response();
+        ASSERT_EQ(expected_err, resp.err);
+
+        // No need to check others in the response once the error code is not ERR_OK.
+        if (expected_err != dsn::ERR_OK) {
+            return;
+        }
+
+        ASSERT_EQ(expected_last_committed_decree, resp.last_committed_decree);
+        ASSERT_STR_ENDSWITH(resp.base_local_dir,
+                            fmt::format("/data/checkpoint.{}", expected_last_durable_decree));
+
+        // Check whether all file names in the response are matched.
+        check_checkpoint_file_names(resp.state.files, expected_file_names);
+
+        // The file sizes and checksums shoule be kept empty if checksum is not required.
+        if (checksum_type <= dsn::utils::checksum_type::CST_NONE) {
+            ASSERT_FALSE(resp.state.__isset.file_sizes);
+            ASSERT_FALSE(resp.state.__isset.file_checksums);
+            ASSERT_TRUE(resp.state.file_sizes.empty());
+            ASSERT_TRUE(resp.state.file_checksums.empty());
+            return;
+        }
+
+        // Check whether all file sizes in the response are matched.
+        ASSERT_TRUE(resp.state.__isset.file_sizes);
+        check_checkpoint_file_sizes(resp.state.file_sizes, resp.state.files, expected_file_sizes);
+
+        // Check whether all file checksums in the response are matched.
+        ASSERT_TRUE(resp.state.__isset.file_checksums);
+        check_checkpoint_file_checksums(
+            resp.state.file_checksums, resp.state.files, expected_file_checksums);
+    }
+
+    // Only test for failed cases.
+    void test_query_last_checkpoint(bool create_checkpoint_dir,
+                                    const dsn::gpid &pid,
+                                    const dsn::error_code &expected_err)
+    {
+        test_query_last_checkpoint(create_checkpoint_dir,
+                                   pid,
+                                   dsn::utils::checksum_type::CST_INVALID,
+                                   expected_err,
+                                   0,
+                                   0,
+                                   {},
+                                   {},
+                                   {});
+    }
+
+    // Only test for failed cases.
+    void test_query_last_checkpoint(const dsn::gpid &pid, const dsn::error_code &expected_err)
+    {
+        test_query_last_checkpoint(true, pid, expected_err);
+    }
+
+    // Test for each checksum type.
+    void test_query_last_checkpoint_for_all_checksum_types(
+        dsn::replication::decree expected_last_committed_decree,
+        dsn::replication::decree expected_last_durable_decree,
+        const std::vector<std::string> &expected_file_names,
+        const std::vector<int64_t> &expected_file_sizes,
+        const std::vector<std::string> &expected_file_checksums)
+    {
+        for (const auto checksum_type : {dsn::utils::checksum_type::CST_INVALID,
+                                         dsn::utils::checksum_type::CST_NONE,
+                                         dsn::utils::checksum_type::CST_MD5}) {
+            test_query_last_checkpoint(true,
+                                       _gpid,
+                                       checksum_type,
+                                       dsn::ERR_OK,
+                                       200,
+                                       100,
+                                       expected_file_names,
+                                       expected_file_sizes,
+                                       expected_file_checksums);
+        }
+    }
+
+private:
+    static void check_checkpoint_file_names(const std::vector<std::string> &file_names,
+                                            const std::vector<std::string> &expected_file_names)
+    {
+        std::vector<std::string> ordered_file_names(file_names);
+        std::sort(ordered_file_names.begin(), ordered_file_names.end());
+        ASSERT_EQ(expected_file_names, ordered_file_names);
+    }
+
+    // Sort `file_properties` so that its order is consistent with that of `file_names`.
+    template <typename TFileProperty>
+    static std::vector<TFileProperty>
+    sort_checkpoint_file_properties(const std::vector<TFileProperty> &file_properties,
+                                    const std::vector<std::string> &file_names)
+    {
+        CHECK_EQ(file_properties.size(), file_names.size());
+
+        std::vector<size_t> order_indices(file_names.size());
+        for (size_t i = 0; i < order_indices.size(); ++i) {
+            order_indices[i] = i;
+        }
+
+        std::sort(order_indices.begin(), order_indices.end(), [&file_names](size_t a, size_t b) {
+            return file_names[a] < file_names[b];
+        });
+
+        std::vector<TFileProperty> ordered_file_properties;
+        ordered_file_properties.reserve(file_properties.size());
+        for (size_t idx : order_indices) {
+            ordered_file_properties.push_back(file_properties[idx]);
+        }
+
+        return ordered_file_properties;
+    }
+
+    static void check_checkpoint_file_sizes(const std::vector<int64_t> &file_sizes,
+                                            const std::vector<std::string> &file_names,
+                                            const std::vector<int64_t> &expected_file_sizes)
+    {
+        const auto ordered_file_sizes = sort_checkpoint_file_properties(file_sizes, file_names);
+
+        ASSERT_EQ(expected_file_sizes, ordered_file_sizes);
+    }
+
+    static void
+    check_checkpoint_file_checksums(const std::vector<std::string> &file_checksums,
+                                    const std::vector<std::string> &file_names,
+                                    const std::vector<std::string> &expected_file_checksums)
+    {
+        const auto ordered_file_checksums =
+            sort_checkpoint_file_properties(file_checksums, file_names);
+
+        ASSERT_EQ(expected_file_checksums, ordered_file_checksums);
     }
 };
 
@@ -251,5 +454,68 @@ TEST_P(pegasus_server_impl_test, test_load_from_duplication_data)
     dsn::utils::filesystem::remove_file_name(new_file);
 }
 
-} // namespace server
-} // namespace pegasus
+// Fail to get last checkpoint since the replica does not exist.
+TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_replica_not_found)
+{
+    // To make sure the replica does not exist, give a gpid that does not exist.
+    test_query_last_checkpoint(dsn::gpid(101, 101), dsn::ERR_OBJECT_NOT_FOUND);
+}
+
+// Fail to get last checkpoint since it does not exist.
+TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_last_checkpoint_not_exist)
+{
+    // To make sure the last checkpoint does not exist, set last_durable_decree zero.
+    set_last_committed_decree(0);
+    set_last_durable_decree(0);
+
+    test_query_last_checkpoint(_gpid, dsn::ERR_PATH_NOT_FOUND);
+}
+
+// Fail to get last checkpoint since its dir does not exist.
+TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_last_checkpoint_dir_not_exist)
+{
+    ASSERT_EQ(dsn::ERR_OK, start());
+
+    // Make sure the last_durable_decree is not zero.
+    set_last_committed_decree(200);
+    set_last_durable_decree(100);
+
+    test_query_last_checkpoint(false, _gpid, dsn::ERR_GET_LEARN_STATE_FAILED);
+}
+
+// Succeed in getting last checkpoint whose dir is empty and has no file.
+TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_empty_dir)
+{
+    ASSERT_EQ(dsn::ERR_OK, start());
+
+    // Make sure the last_durable_decree is not zero.
+    set_last_committed_decree(200);
+    set_last_durable_decree(100);
+
+    test_query_last_checkpoint_for_all_checksum_types(200, 100, {}, {}, {});
+}
+
+// Succeed in getting last checkpoint whose dir is not empty and has some files.
+TEST_P(pegasus_server_impl_test, test_query_last_checkpoint_with_non_empty_dir)
+{
+    static const std::vector<std::string> kCheckpointFileNames = {
+        "test_file.1", "test_file.2", "test_file.3", "test_file.4", "test_file.5", "test_file.6"};
+    static const std::vector<int64_t> kCheckpointFileSizes = {0, 1, 2, 4095, 4096, 4097};
+    static const std::vector<std::string> kCheckpointFileChecksums = {
+        "d41d8cd98f00b204e9800998ecf8427e",
+        "0cc175b9c0f1b6a831c399e269772661",
+        "4124bc0a9335c27f086f24ba207a4912",
+        "559110baa849c7608ee70abe1d76273e",
+        "21a199c53f422a380e20b162fb6ebe9c",
+        "8cfc1a0bd8cd76599e76e5e721c6e62e"};
+
+    ASSERT_EQ(dsn::ERR_OK, start());
+
+    set_last_committed_decree(200);
+    set_last_durable_decree(100);
+
+    test_query_last_checkpoint_for_all_checksum_types(
+        200, 100, kCheckpointFileNames, kCheckpointFileSizes, kCheckpointFileChecksums);
+}
+
+} // namespace pegasus::server
