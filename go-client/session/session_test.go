@@ -400,3 +400,35 @@ func TestNodeSession_ReadEOF(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	assert.Equal(t, n.ConnState(), rpc.ConnStateTransientFailure)
 }
+
+func TestNodeSession_SessionResetDuringWait(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	reader := bytes.NewBuffer(make([]byte, 0))
+	writer := &bytes.Buffer{}
+	n := newFakeNodeSession(reader, writer)
+	defer n.Close()
+
+	n.tom.Go(n.loopForRequest)
+	time.Sleep(100 * time.Millisecond)
+	assert.Equal(t, rpc.ConnStateReady, n.conn.GetState())
+
+	arg := rrdb.NewMetaQueryCfgArgs()
+	arg.Query = replication.NewQueryCfgRequest()
+
+	// test the scenario where the server is busy or unresponsive and doesn't reply,
+	// causing the client to time out. This results in context.DeadlineExceeded.
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*1)
+	_, err := n.CallWithGpid(ctx, &base.Gpid{}, 0, arg, "RPC_NAME")
+	assert.Equal(t, context.DeadlineExceeded, err)
+
+	// Now simulate a session reset on the client side.
+	n.conn.Close()
+
+	// Wait for the session to become ready again — this should fail due to the session reset.
+	// This part verifies that the session correctly reports ERR_SESSION_RESET instead of
+	// a timeout or other error types, ensuring proper error handling and distinction.
+	ctx, _ = context.WithTimeout(context.Background(), time.Second*1)
+	err = n.waitUntilSessionReady(ctx)
+	assert.Equal(t, base.ERR_SESSION_RESET, err)
+}

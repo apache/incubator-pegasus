@@ -115,6 +115,8 @@ const (
 	ERR_PARENT_PARTITION_MISUSED
 	ERR_CHILD_NOT_READY
 	ERR_DISK_INSUFFICIENT
+	// ERROR_CODE defined by client
+	ERR_SESSION_RESET
 )
 
 func (e DsnErrCode) Error() string {
