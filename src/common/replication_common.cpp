@@ -28,6 +28,7 @@
 
 #include <string.h>
 #include <fstream>
+#include <map>
 #include <memory>
 
 #include "common/gpid.h"
@@ -41,6 +42,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/output_utils.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 
@@ -112,8 +114,8 @@ DSN_DEFINE_string(meta_server,
                   "",
                   "Comma-separated list of MetaServers in the Pegasus cluster");
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication  {
+
 const std::string replication_options::kRepsDir = "reps";
 const std::string replication_options::kReplicaAppType = "replica";
 
@@ -333,5 +335,112 @@ replication_options::check_if_in_black_list(const std::vector<std::string> &blac
     return false;
 }
 
-} // namespace replication
-} // namespace dsn
+void add_app_info(
+        const std::string &app_name,
+        int32_t app_id,
+        int32_t partition_count,
+        const std::vector<partition_configuration> &pcs,
+        bool detailed,
+        bool resolve_ip,
+        std::string_view total_row_name,
+        utils::multi_table_printer &multi_printer)
+{
+    utils::table_printer general_printer("general");
+    general_printer.add_row_name_and_data("app_name", app_name);
+    general_printer.add_row_name_and_data("app_id", app_id);
+    general_printer.add_row_name_and_data("partition_count", partition_count);
+    general_printer.add_row_name_and_data("max_replica_count", pcs.empty() ?0:pcs[0].max_replica_count);
+
+    multi_printer.add(std::move(general_printer));
+
+    if (!detailed) {
+        return;
+    }
+
+    // "replicas" section.
+    utils::table_printer partitions_printer("replicas");
+    partitions_printer.add_title("pidx");
+    partitions_printer.add_column("ballot");
+    partitions_printer.add_column("replica_count");
+    partitions_printer.add_column("primary");
+    partitions_printer.add_column("secondaries");
+
+    struct node_stat
+    {
+        int primary_count{0};
+        int secondary_count{0};
+    };
+    std::map<host_port, node_stat> node_stats;
+
+    int total_prim_count = 0;
+    int total_sec_count = 0;
+    int fully_healthy = 0;
+    int write_unhealthy = 0;
+    int read_unhealthy = 0;
+    for (const auto &pc : pcs) {
+        int replica_count = 0;
+        if (pc.hp_primary) {
+            ++replica_count;
+            ++node_stats[pc.hp_primary].primary_count;
+            ++total_prim_count;
+        }
+        replica_count += pc.hp_secondaries.size();
+        total_sec_count += pc.hp_secondaries.size();
+
+        if (pc.hp_primary) {
+            if (replica_count >= pc.max_replica_count) {
+                ++fully_healthy;
+            } else if (replica_count < 2) {
+                ++write_unhealthy;
+            }
+        } else {
+            ++write_unhealthy;
+            ++read_unhealthy;
+        }
+
+        partitions_printer.add_row(pc.pid.get_partition_index());
+        partitions_printer.append_data(pc.ballot);
+        partitions_printer.append_data(fmt::format("{}/{}", replica_count, pc.max_replica_count));
+        partitions_printer.append_data(pc.hp_primary ? pc.hp_primary.to_string() : "-");
+        partitions_printer.append_data(fmt::format("[{}]", fmt::join(pc.hp_secondaries, ",")));
+
+        for (const auto &secondary : pc.hp_secondaries) {
+            ++node_stats[secondary].secondary_count;
+        }
+    }
+
+    multi_printer.add(std::move(partitions_printer));
+
+    // "nodes" section.
+    utils::table_printer nodes_printer("nodes");
+    nodes_printer.add_title("node");
+    nodes_printer.add_column("primary");
+    nodes_printer.add_column("secondary");
+    nodes_printer.add_column("total");
+
+    for (const auto &[addr, stat] : node_stats) {
+        nodes_printer.add_row(addr.resolve(resolve_ip));
+        nodes_printer.append_data(stat.primary_count);
+        nodes_printer.append_data(stat.secondary_count);
+        nodes_printer.append_data(stat.primary_count+ stat.secondary_count);
+    }
+
+    nodes_printer.add_row(total_row_name);
+    nodes_printer.append_data(total_prim_count);
+    nodes_printer.append_data(total_sec_count);
+    nodes_printer.append_data(total_prim_count + total_sec_count);
+
+    multi_printer.add(std::move(nodes_printer));
+
+    // "healthy" partition count section.
+    utils::table_printer healthy_printer("healthy");
+    healthy_printer.add_row_name_and_data("fully_healthy_partition_count", fully_healthy);
+    healthy_printer.add_row_name_and_data("unhealthy_partition_count",
+            partition_count - fully_healthy);
+    healthy_printer.add_row_name_and_data("write_unhealthy_partition_count", write_unhealthy);
+    healthy_printer.add_row_name_and_data("read_unhealthy_partition_count", read_unhealthy);
+
+    multi_printer.add(std::move(healthy_printer));
+}
+  
+} // namespace dsn::replication

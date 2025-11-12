@@ -27,6 +27,7 @@
 // IWYU pragma: no_include <new>
 #include <sstream> // IWYU pragma: keep
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -200,6 +201,12 @@ template <>
 inline std::string table_printer::to_string<const char *>(const char *data)
 {
     return std::string(data);
+}
+
+template <>
+inline std::string table_printer::to_string<std::string>(std::string_view data)
+{
+    return {data};
 }
 
 // Helper to output multiple tables into one large table.

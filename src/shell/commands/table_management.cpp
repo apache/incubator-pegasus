@@ -370,7 +370,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
             }
             std::stringstream oss;
-            oss << replication_ddl_client::node_name(pc.hp_primary, resolve_ip) << "(";
+            oss << pc.hp_primary.resolve(resolve_ip) << "(";
             if (disk_found)
                 oss << disk_value;
             else
@@ -415,7 +415,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                     }
                 }
 
-                oss << replication_ddl_client::node_name(pc.hp_secondaries[j], resolve_ip) << "(";
+                oss << pc.hp_secondaries[j].resolve(resolve_ip) << "(";
                 if (found)
                     oss << value;
                 else

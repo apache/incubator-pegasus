@@ -30,8 +30,8 @@
 
 #include "backup_types.h"
 #include "bulk_load_types.h"
-#include "common//duplication_common.h"
 #include "common/bulk_load_common.h"
+#include "common/duplication_common.h"
 #include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
@@ -129,94 +129,14 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
         return;
     }
 
-    // output as json format
-    dsn::utils::multi_table_printer mtp;
+    dsn::utils::multi_table_printer multi_printer;
+    add_app_info(app_name, response.app_id, response.partition_count,
+            response.partitions, detailed, false, "total", multi_printer);
+
+    // Output as json format.
     std::ostringstream out;
-    dsn::utils::table_printer tp_general("general");
-    tp_general.add_row_name_and_data("app_name", app_name);
-    tp_general.add_row_name_and_data("app_id", response.app_id);
-    tp_general.add_row_name_and_data("partition_count", response.partition_count);
-    if (!response.partitions.empty()) {
-        tp_general.add_row_name_and_data("max_replica_count",
-                                         response.partitions[0].max_replica_count);
-    } else {
-        tp_general.add_row_name_and_data("max_replica_count", 0);
-    }
-    mtp.add(std::move(tp_general));
+    multi_printer.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
 
-    if (detailed) {
-        dsn::utils::table_printer tp_details("replicas");
-        tp_details.add_title("pidx");
-        tp_details.add_column("ballot");
-        tp_details.add_column("replica_count");
-        tp_details.add_column("primary");
-        tp_details.add_column("secondaries");
-        std::map<host_port, std::pair<int, int>> node_stat;
-
-        int total_prim_count = 0;
-        int total_sec_count = 0;
-        int fully_healthy = 0;
-        int write_unhealthy = 0;
-        int read_unhealthy = 0;
-        for (const auto &pc : response.partitions) {
-            int replica_count = 0;
-            if (pc.hp_primary) {
-                replica_count++;
-                node_stat[pc.hp_primary].first++;
-                total_prim_count++;
-            }
-            replica_count += pc.hp_secondaries.size();
-            total_sec_count += pc.hp_secondaries.size();
-            if (pc.hp_primary) {
-                if (replica_count >= pc.max_replica_count) {
-                    fully_healthy++;
-                } else if (replica_count < 2) {
-                    write_unhealthy++;
-                }
-            } else {
-                write_unhealthy++;
-                read_unhealthy++;
-            }
-            tp_details.add_row(pc.pid.get_partition_index());
-            tp_details.append_data(pc.ballot);
-            tp_details.append_data(fmt::format("{}/{}", replica_count, pc.max_replica_count));
-            tp_details.append_data(pc.hp_primary ? pc.hp_primary.to_string() : "-");
-            tp_details.append_data(fmt::format("[{}]", fmt::join(pc.hp_secondaries, ",")));
-            for (const auto &secondary : pc.hp_secondaries) {
-                node_stat[secondary].second++;
-            }
-        }
-        mtp.add(std::move(tp_details));
-
-        // 'node' section.
-        dsn::utils::table_printer tp_nodes("nodes");
-        tp_nodes.add_title("node");
-        tp_nodes.add_column("primary");
-        tp_nodes.add_column("secondary");
-        tp_nodes.add_column("total");
-        for (auto &kv : node_stat) {
-            tp_nodes.add_row(kv.first.to_string());
-            tp_nodes.append_data(kv.second.first);
-            tp_nodes.append_data(kv.second.second);
-            tp_nodes.append_data(kv.second.first + kv.second.second);
-        }
-        tp_nodes.add_row("total");
-        tp_nodes.append_data(total_prim_count);
-        tp_nodes.append_data(total_sec_count);
-        tp_nodes.append_data(total_prim_count + total_sec_count);
-        mtp.add(std::move(tp_nodes));
-
-        // healthy partition count section.
-        dsn::utils::table_printer tp_hpc("healthy");
-        tp_hpc.add_row_name_and_data("fully_healthy_partition_count", fully_healthy);
-        tp_hpc.add_row_name_and_data("unhealthy_partition_count",
-                                     response.partition_count - fully_healthy);
-        tp_hpc.add_row_name_and_data("write_unhealthy_partition_count", write_unhealthy);
-        tp_hpc.add_row_name_and_data("read_unhealthy_partition_count", read_unhealthy);
-        mtp.add(std::move(tp_hpc));
-    }
-
-    mtp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();
     resp.status_code = http_status_code::kOk;
 }

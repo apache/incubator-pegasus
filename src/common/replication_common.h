@@ -36,8 +36,8 @@
 #include "rpc/rpc_host_port.h"
 #include "task/task.h"
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
+
 class configuration_update_app_env_request;
 class configuration_update_app_env_response;
 class query_app_info_request;
@@ -85,5 +85,15 @@ public:
     static bool check_if_in_black_list(const std::vector<std::string> &black_list_dir,
                                        const std::string &dir);
 };
-} // namespace replication
-} // namespace dsn
+
+void add_app_info(
+        const std::string &app_name,
+        int32_t app_id,
+        int32_t partition_count,
+        const std::vector<partition_configuration> &pcs,
+        bool detailed,
+        bool resolve_ip,
+        std::string_view total_row_name,
+        utils::multi_table_printer &multi_printer);
+
+} // namespace dsn::replication

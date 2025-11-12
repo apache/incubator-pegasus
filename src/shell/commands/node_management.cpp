@@ -527,7 +527,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
 
         const std::string status_str(dsn::enum_to_string(kv.second));
         tmp_map.emplace(kv.first,
-                        list_nodes_helper(replication_ddl_client::node_name(kv.first, resolve_ip),
+                        list_nodes_helper(kv.first.resolve(resolve_ip),
                                           status_str.substr(status_str.find("NS_") + 3)));
     }
 
@@ -868,7 +868,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         } else {
             failed++;
         }
-        info["details"].emplace(replication_ddl_client::node_name(nodes[i].hp, resolve_ip),
+        info["details"].emplace(nodes[i].hp.resolve(resolve_ip),
                                 node_info);
     }
     info["succeed_count"] = succeed;
