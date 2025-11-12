@@ -371,15 +371,17 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             }
             std::stringstream oss;
             oss << pc.hp_primary.resolve(resolve_ip) << "(";
-            if (disk_found)
+            if (disk_found) {
                 oss << disk_value;
-            else
+            } else {
                 oss << "-";
+            }
             oss << ",";
-            if (count_found)
+            if (count_found) {
                 oss << "#" << count_value;
-            else
+            } else {
                 oss << "-";
+            }
             oss << ")";
             primary_str = oss.str();
         }
@@ -416,15 +418,17 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
 
                 oss << pc.hp_secondaries[j].resolve(resolve_ip) << "(";
-                if (found)
+                if (found) {
                     oss << value;
-                else
+                } else {
                     oss << "-";
+                }
                 oss << ",";
-                if (count_found)
+                if (count_found) {
                     oss << "#" << count_value;
-                else
+                } else {
                     oss << "-";
+                }
                 oss << ")";
             }
             oss << "]";

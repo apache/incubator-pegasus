@@ -26,7 +26,7 @@
 
 #include "common/replication_common.h"
 
-#include <string.h>
+#include <cstring>
 #include <fstream>
 #include <map>
 #include <memory>
@@ -383,8 +383,8 @@ void add_app_info(const std::string &app_name,
             ++node_stats[pc.hp_primary].primary_count;
             ++total_prim_count;
         }
-        replica_count += pc.hp_secondaries.size();
-        total_sec_count += pc.hp_secondaries.size();
+        replica_count += static_cast<int>(pc.hp_secondaries.size());
+        total_sec_count += static_cast<int>(pc.hp_secondaries.size());
 
         if (pc.hp_primary) {
             if (replica_count >= pc.max_replica_count) {

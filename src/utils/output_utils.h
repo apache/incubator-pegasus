@@ -200,7 +200,7 @@ inline std::string table_printer::to_string<std::string>(std::string data)
 template <>
 inline std::string table_printer::to_string<const char *>(const char *data)
 {
-    return std::string(data);
+    return {data};
 }
 
 template <>
