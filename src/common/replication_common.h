@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -35,6 +36,7 @@
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
 #include "task/task.h"
+#include "utils/output_utils.h"
 
 namespace dsn::replication {
 
@@ -86,14 +88,13 @@ public:
                                        const std::string &dir);
 };
 
-void add_app_info(
-        const std::string &app_name,
-        int32_t app_id,
-        int32_t partition_count,
-        const std::vector<partition_configuration> &pcs,
-        bool detailed,
-        bool resolve_ip,
-        std::string_view total_row_name,
-        utils::multi_table_printer &multi_printer);
+void add_app_info(const std::string &app_name,
+                  int32_t app_id,
+                  int32_t partition_count,
+                  const std::vector<partition_configuration> &pcs,
+                  bool detailed,
+                  bool resolve_ip,
+                  std::string_view total_row_name,
+                  utils::multi_table_printer &multi_printer);
 
 } // namespace dsn::replication

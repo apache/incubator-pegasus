@@ -42,7 +42,6 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
-#include "utils/output_utils.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 
@@ -114,7 +113,7 @@ DSN_DEFINE_string(meta_server,
                   "",
                   "Comma-separated list of MetaServers in the Pegasus cluster");
 
-namespace dsn::replication  {
+namespace dsn::replication {
 
 const std::string replication_options::kRepsDir = "reps";
 const std::string replication_options::kReplicaAppType = "replica";
@@ -335,21 +334,21 @@ replication_options::check_if_in_black_list(const std::vector<std::string> &blac
     return false;
 }
 
-void add_app_info(
-        const std::string &app_name,
-        int32_t app_id,
-        int32_t partition_count,
-        const std::vector<partition_configuration> &pcs,
-        bool detailed,
-        bool resolve_ip,
-        std::string_view total_row_name,
-        utils::multi_table_printer &multi_printer)
+void add_app_info(const std::string &app_name,
+                  int32_t app_id,
+                  int32_t partition_count,
+                  const std::vector<partition_configuration> &pcs,
+                  bool detailed,
+                  bool resolve_ip,
+                  std::string_view total_row_name,
+                  utils::multi_table_printer &multi_printer)
 {
     utils::table_printer general_printer("general");
     general_printer.add_row_name_and_data("app_name", app_name);
     general_printer.add_row_name_and_data("app_id", app_id);
     general_printer.add_row_name_and_data("partition_count", partition_count);
-    general_printer.add_row_name_and_data("max_replica_count", pcs.empty() ?0:pcs[0].max_replica_count);
+    general_printer.add_row_name_and_data("max_replica_count",
+                                          pcs.empty() ? 0 : pcs[0].max_replica_count);
 
     multi_printer.add(std::move(general_printer));
 
@@ -422,7 +421,7 @@ void add_app_info(
         nodes_printer.add_row(addr.resolve(resolve_ip));
         nodes_printer.append_data(stat.primary_count);
         nodes_printer.append_data(stat.secondary_count);
-        nodes_printer.append_data(stat.primary_count+ stat.secondary_count);
+        nodes_printer.append_data(stat.primary_count + stat.secondary_count);
     }
 
     nodes_printer.add_row(total_row_name);
@@ -436,11 +435,11 @@ void add_app_info(
     utils::table_printer healthy_printer("healthy");
     healthy_printer.add_row_name_and_data("fully_healthy_partition_count", fully_healthy);
     healthy_printer.add_row_name_and_data("unhealthy_partition_count",
-            partition_count - fully_healthy);
+                                          partition_count - fully_healthy);
     healthy_printer.add_row_name_and_data("write_unhealthy_partition_count", write_unhealthy);
     healthy_printer.add_row_name_and_data("read_unhealthy_partition_count", read_unhealthy);
 
     multi_printer.add(std::move(healthy_printer));
 }
-  
+
 } // namespace dsn::replication

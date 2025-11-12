@@ -204,9 +204,9 @@ inline std::string table_printer::to_string<const char *>(const char *data)
 }
 
 template <>
-inline std::string table_printer::to_string<std::string>(std::string_view data)
+inline std::string table_printer::to_string<std::string_view>(std::string_view data)
 {
-    return {data};
+    return std::string(data);
 }
 
 // Helper to output multiple tables into one large table.

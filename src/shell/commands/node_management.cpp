@@ -868,8 +868,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         } else {
             failed++;
         }
-        info["details"].emplace(nodes[i].hp.resolve(resolve_ip),
-                                node_info);
+        info["details"].emplace(nodes[i].hp.resolve(resolve_ip), node_info);
     }
     info["succeed_count"] = succeed;
     info["failed_count"] = failed;

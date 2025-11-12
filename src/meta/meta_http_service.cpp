@@ -130,8 +130,14 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
     }
 
     dsn::utils::multi_table_printer multi_printer;
-    add_app_info(app_name, response.app_id, response.partition_count,
-            response.partitions, detailed, false, "total", multi_printer);
+    add_app_info(app_name,
+                 response.app_id,
+                 response.partition_count,
+                 response.partitions,
+                 detailed,
+                 false,
+                 "total",
+                 multi_printer);
 
     // Output as json format.
     std::ostringstream out;
