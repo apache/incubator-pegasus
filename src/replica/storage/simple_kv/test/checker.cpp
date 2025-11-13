@@ -57,6 +57,7 @@
 #include "runtime/service_engine.h"
 #include "runtime/tool_api.h"
 #include "utils/autoref_ptr.h"
+#include "utils/casts.h"
 #include "utils/factory_store.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
