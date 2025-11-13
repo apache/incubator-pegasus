@@ -36,7 +36,13 @@
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
 #include "task/task.h"
-#include "utils/output_utils.h"
+
+namespace dsn {
+class partition_configuration;
+namespace utils {
+class multi_table_printer;
+} // namespace utils
+} // namespace dsn
 
 namespace dsn::replication {
 

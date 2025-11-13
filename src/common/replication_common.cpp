@@ -30,11 +30,14 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <type_traits>
+#include <utility>
 
 #include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "fmt/core.h"
+#include "fmt/format.h"
 #include "rpc/dns_resolver.h" // IWYU pragma: keep
 #include "rpc/rpc_address.h"
 #include "runtime/service_app.h"
@@ -42,6 +45,7 @@
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/output_utils.h"
 #include "utils/strings.h"
 #include "utils/utils.h"
 

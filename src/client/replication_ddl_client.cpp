@@ -35,7 +35,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <type_traits>
 
 #include "backup_types.h"
 #include "common//duplication_common.h"

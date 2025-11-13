@@ -15,11 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <cstddef>
 #include <fmt/core.h>
-#include <fmt/format.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <algorithm>
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
@@ -32,7 +31,6 @@
 #include "bulk_load_types.h"
 #include "common/bulk_load_common.h"
 #include "common/duplication_common.h"
-#include "common/gpid.h"
 #include "common/replica_envs.h"
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
