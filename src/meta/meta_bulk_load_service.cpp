@@ -1276,13 +1276,16 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
-    tasking::enqueue(
-        LPC_BULK_LOAD_INGESTION,
-        _meta_svc->tracker(),
-        std::bind(
-            &bulk_load_service::send_ingestion_request, this, app_name, pid, pc.hp_primary, pc.ballot),
-        0,
-        std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
+    tasking::enqueue(LPC_BULK_LOAD_INGESTION,
+                     _meta_svc->tracker(),
+                     std::bind(&bulk_load_service::send_ingestion_request,
+                               this,
+                               app_name,
+                               pid,
+                               pc.hp_primary,
+                               pc.ballot),
+                     0,
+                     std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
