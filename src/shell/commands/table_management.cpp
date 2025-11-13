@@ -369,6 +369,8 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                     count_value = f4->second;
                 }
             }
+
+            // TODO(wangdan): refactor as format style.
             std::stringstream oss;
             oss << pc.hp_primary.resolve(resolve_ip) << "(";
             if (disk_found) {
@@ -417,6 +419,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                     }
                 }
 
+                // TODO(wangdan): refactor as format style.
                 oss << pc.hp_secondaries[j].resolve(resolve_ip) << "(";
                 if (found) {
                     oss << value;

@@ -94,6 +94,18 @@ public:
                                        const std::string &dir);
 };
 
+// Add base info and statistics for an app into `multi_printer`.
+//
+// Parameters:
+// - app_name: the name of the app.
+// - app_id: the id of the app.
+// - partition_count: the number of the app partitions.
+// - pcs: the configuration for each partition.
+// - detailed: false means only base info would be added into `multi_printer`, while true
+//             means more detailed statistics would also be added.
+// - resolve_ip: whether host would be resolved into ip.
+// - total_row_name: the name of the total row for "nodes" section.
+// - multi_printer: the target printer which has multiple sections.
 void add_app_info(const std::string &app_name,
                   int32_t app_id,
                   int32_t partition_count,

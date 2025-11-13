@@ -347,6 +347,7 @@ void add_app_info(const std::string &app_name,
                   std::string_view total_row_name,
                   utils::multi_table_printer &multi_printer)
 {
+    // "general" section.
     utils::table_printer general_printer("general");
     general_printer.add_row_name_and_data("app_name", app_name);
     general_printer.add_row_name_and_data("app_id", app_id);
