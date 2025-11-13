@@ -189,17 +189,16 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
 
     for (const auto &app : _apps) {
         if (app->info().type == "meta") {
-            const auto * const meta_app = down_cast<meta_service_app *>(app);
+            auto *const meta_app = down_cast<meta_service_app *>(app);
             meta_app->_service->_state->set_config_change_subscriber_for_test(
                 std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
             FLAGS_partition_guardian_type = "checker_partition_guardian";
             _meta_servers.push_back(meta_app);
             continue;
         }
-        
-        if (app->info().type ==
-                   dsn::replication::replication_options::kReplicaAppType) {
-            const auto * const replica_app = down_cast<replication_service_app *>(app);
+
+        if (app->info().type == dsn::replication::replication_options::kReplicaAppType) {
+            auto *const replica_app = down_cast<replication_service_app *>(app);
             replica_app->_stub->set_replica_state_subscriber_for_test(
                 std::bind(&test_checker::on_replica_state_change,
                           this,
