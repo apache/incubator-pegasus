@@ -57,6 +57,7 @@
 #include "runtime/service_engine.h"
 #include "runtime/tool_api.h"
 #include "utils/autoref_ptr.h"
+#include "utils/casts.h"
 #include "utils/factory_store.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
@@ -177,8 +178,9 @@ void test_checker::control_balancer(bool disable_it)
 
 bool test_checker::init(const std::string &name, const std::vector<service_app *> apps)
 {
-    if (s_inited)
+    if (s_inited) {
         return false;
+    }
 
     _apps = apps;
     utils::factory_store<replication::partition_guardian>::register_factory(
@@ -186,16 +188,18 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
         replication::partition_guardian::create<checker_partition_guardian>,
         PROVIDER_TYPE_MAIN);
 
-    for (auto &app : _apps) {
+    for (const auto &app : _apps) {
         if (app->info().type == "meta") {
-            meta_service_app *meta_app = (meta_service_app *)app;
+            auto *const meta_app = down_cast<meta_service_app *>(app);
             meta_app->_service->_state->set_config_change_subscriber_for_test(
                 std::bind(&test_checker::on_config_change, this, std::placeholders::_1));
             FLAGS_partition_guardian_type = "checker_partition_guardian";
             _meta_servers.push_back(meta_app);
-        } else if (app->info().type ==
-                   dsn::replication::replication_options::kReplicaAppType.c_str()) {
-            replication_service_app *replica_app = (replication_service_app *)app;
+            continue;
+        }
+
+        if (app->info().type == dsn::replication::replication_options::kReplicaAppType) {
+            auto *const replica_app = down_cast<replication_service_app *>(app);
             replica_app->_stub->set_replica_state_subscriber_for_test(
                 std::bind(&test_checker::on_replica_state_change,
                           this,
@@ -204,19 +208,23 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
                           std::placeholders::_3),
                 false);
             _replica_servers.push_back(replica_app);
+            continue;
         }
     }
 
     const auto &nodes = dsn::service_engine::instance().get_all_nodes();
     for (const auto &node : nodes) {
-        int id = node.second->id();
-        std::string addr = node.second->full_name();
+        const std::string addr(node.second->full_name());
+
         const auto &hp = node.second->rpc()->primary_host_port();
-        int port = hp.port();
         _node_to_host_port[addr] = hp;
         LOG_INFO("=== node_to_address[{}]={}", addr, hp);
+
+        const int port = hp.port();
         _address_to_node[port] = addr;
         LOG_INFO("=== address_to_node[{}]={}", port, addr);
+
+        const int id = node.second->id();
         if (id != port) {
             _address_to_node[id] = addr;
             LOG_INFO("=== address_to_node[{}]={}", id, addr);
