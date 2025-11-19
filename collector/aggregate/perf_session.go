@@ -48,7 +48,7 @@ func (p *PerfCounter) String() string {
 func NewPerfSession(addr string) *PerfSession {
 	return &PerfSession{
 		Address:     addr,
-		NodeSession: session.NewNodeSession(addr, session.NodeTypeReplica),
+		NodeSession: session.NewNodeSession(addr, session.NodeTypeReplica, false),
 	}
 }
 
