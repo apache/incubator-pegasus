@@ -62,7 +62,7 @@ func NewDetector(detectInterval time.Duration,
 	}
 
 	// Create detect table.
-	adminClient := admin.NewClient(admin.Config{MetaServers: metaServers})
+	adminClient := admin.NewClient(admin.Config{MetaServers: metaServers, Timeout: 10 * time.Second})
 	_, err := adminClient.CreateTable(tableName, partitionCount, maxReplicaCount, make(map[string]string), 600, true)
 	if err != nil {
 		log.Fatalf("Create detect table %s failed, error: %s", tableName, err)
