@@ -33,9 +33,10 @@ import (
 )
 
 const (
-	replicaCount   = 3
-	maxWaitSeconds = 600
-	reserveSeconds = 1
+	partitionCount int32 = 16
+	replicaCount   int32 = 3
+	maxWaitSeconds int32 = 600
+	reserveSeconds int64 = 1
 )
 
 func defaultConfig() Config {
@@ -84,10 +85,10 @@ func TestAdmin_Table(t *testing.T) {
 	_, err = c.CreateTable("admin_table_test", 16, replicaCount, make(map[string]string), maxWaitSeconds)
 	assert.Nil(t, err)
 
-	_, partitionCount, partitions, err := c.QueryConfig("admin_table_test")
+	_, pCount, partitions, err := c.QueryConfig("admin_table_test")
 	assert.Nil(t, err)
-	assert.Equal(t, 16, partitionCount)
-	assert.Equal(t, 16, len(partitions))
+	assert.Equal(t, partitionCount, pCount)
+	assert.Equal(t, int(partitionCount), len(partitions))
 	for _, partition := range partitions {
 		assert.Equal(t, replicaCount, partition.MaxReplicaCount)
 		assert.NotNil(t, partition.Primary)
