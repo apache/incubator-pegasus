@@ -40,7 +40,7 @@ func generateAdminRPC(rpcCode, rpcName, reqName, respName string) string {
 	s += fmt.Sprintf("	arg.Req = req\n")
 	s += fmt.Sprintf("	result, err := ms.call(ctx, arg, \"%s\")\n", rpcCode)
 	s += fmt.Sprintf("	if err != nil {\n")
-	s += fmt.Sprintf("		return nil, fmt.Errorf(\"RPC to session %%s failed: %%s\", ms, err)\n")
+	s += fmt.Sprintf("		return nil, fmt.Errorf(\"%s to session %%s failed: %%s\", ms, err)\n", rpcCode)
 	s += fmt.Sprintf("	}\n")
 	s += fmt.Sprintf("	ret, _ := result.(*admin.AdminClient%sResult)\n", rpcName)
 	s += fmt.Sprintf("	return ret.GetSuccess(), nil\n")

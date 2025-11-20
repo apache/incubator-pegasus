@@ -84,6 +84,22 @@ func TestAdmin_Table(t *testing.T) {
 	_, err = c.CreateTable("admin_table_test", 16, replicaCount, make(map[string]string), maxWaitSeconds)
 	assert.Nil(t, err)
 
+	_, partitionCount, partitions, err := c.QueryConfig("admin_table_test")
+	assert.Nil(t, err)
+	assert.Equal(t, 16, partitionCount)
+	assert.Equal(t, 16, len(partitions))
+	for _, partition := range partitions {
+		assert.Equal(t, replicaCount, partition.MaxReplicaCount)
+		assert.NotNil(t, partition.Primary)
+		assert.NotNil(t, partition.HpPrimary)
+		assert.Equal(t, 2, len(partition.Secondaries))
+		assert.Equal(t, 2, len(partition.HpSecondaries))
+		for i := 0; i < 2; i++ {
+			assert.NotNil(t, partition.Secondaries[i])
+			assert.NotNil(t, partition.HpSecondaries[i])
+		}
+	}
+
 	tables, err = c.ListTables()
 	assert.Nil(t, err)
 	assert.True(t, hasTable(tables, "admin_table_test"))
@@ -123,8 +139,9 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	retries := 0
 	for { // retry for timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
 		tb, err = rwClient.OpenTable(ctx, tableName)
+		cancel()
+
 		if err != nil && strings.Contains(err.Error(), "context deadline exceeded") && retries <= 3 {
 			retries++
 			continue
