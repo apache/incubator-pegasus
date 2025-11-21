@@ -46,14 +46,14 @@ type Client interface {
 	SetTimeout(timeout time.Duration)
 
 	// QueryConfig Query all partition configurations for the specified table.
-	QueryConfig(tableName string) (int32, int32, []*replication.PartitionConfiguration, error)
+	QueryConfig(tableName string) (AppID int32, PartitionCount int32, partitions []*replication.PartitionConfiguration, err error)
 
 	// CreateTable Create a table with the specified options for it.
 	// `maxWaitSeconds` specify the number of seconds that is spent on waiting for
 	// the created table to be ready. This method would return error once the table
 	// is still not ready after `maxWaitSeconds`. The administrator should check if
 	// there is something wrong with the table.
-	CreateTable(tableName string, partitionCount int32, replicaCount int32, envs map[string]string, maxWaitSeconds int32, successIfExistOptional ...bool) (int32, error)
+	CreateTable(tableName string, partitionCount int32, replicaCount int32, envs map[string]string, maxWaitSeconds int32, successIfExistOptional ...bool) (AppID int32, err error)
 
 	// DropTable Delete a table with the specified retention interval.
 	// `reserveSeconds` specify the retention interval for a table before it is actually
