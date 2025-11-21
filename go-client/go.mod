@@ -17,7 +17,7 @@
 
 module github.com/apache/incubator-pegasus/go-client
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/agiledragon/gomonkey v2.0.2+incompatible
@@ -45,6 +45,6 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
