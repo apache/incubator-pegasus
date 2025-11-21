@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/tomb.v2"
@@ -133,7 +133,7 @@ func (ag *tableStatsAggregator) updateTableMap() error {
 	return nil
 }
 
-func (ag *tableStatsAggregator) doUpdateTableMap(tables []*admin.AppInfo) {
+func (ag *tableStatsAggregator) doUpdateTableMap(tables []*replication.AppInfo) {
 	currentTableSet := make(map[int32]*struct{})
 	for _, tb := range tables {
 		currentTableSet[tb.AppID] = nil

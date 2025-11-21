@@ -25,6 +25,7 @@ import (
 
 	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/session"
 	log "github.com/sirupsen/logrus"
 	batchErr "k8s.io/apimachinery/pkg/util/errors"
@@ -171,7 +172,7 @@ func (m *PerfClient) GetNodeStats(filter string) ([]*NodeStat, error) {
 func (m *PerfClient) listNodes() ([]*admin.NodeInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	resp, err := m.meta.ListNodes(ctx, &admin.ListNodesRequest{
+	resp, err := m.meta.ListNodes(ctx, &admin.ConfigurationListNodesRequest{
 		Status: admin.NodeStatus_NS_ALIVE,
 	})
 	if err != nil {
@@ -180,11 +181,11 @@ func (m *PerfClient) listNodes() ([]*admin.NodeInfo, error) {
 	return resp.Infos, nil
 }
 
-func (m *PerfClient) listTables() ([]*admin.AppInfo, error) {
+func (m *PerfClient) listTables() ([]*replication.AppInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	resp, err := m.meta.ListApps(ctx, &admin.ListAppsRequest{
-		Status: admin.AppStatus_AS_AVAILABLE,
+	resp, err := m.meta.ListApps(ctx, &admin.ConfigurationListAppsRequest{
+		Status: replication.AppStatus_AS_AVAILABLE,
 	})
 	if err != nil {
 		return nil, err
@@ -202,7 +203,7 @@ func (m *PerfClient) updateNodes() {
 
 	newNodes := make(map[string]*PerfSession)
 	for _, n := range nodeInfos {
-		addr := n.Address.GetAddress()
+		addr := n.Node.GetAddress()
 		node, found := m.nodes[addr]
 		if !found {
 			newNodes[addr] = NewPerfSession(addr)

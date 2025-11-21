@@ -42,8 +42,10 @@ falcon_agent:
   port : 1988
   http_path : "/v1/push"
 
-availablity_detect:
+availability_detect:
   table_name : test
+  partition_count : 16
+  max_replica_count : 3
 
 hotspot:
   partition_detect_interval : 10s
