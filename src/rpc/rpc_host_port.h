@@ -305,6 +305,10 @@ public:
     }
     void assign_group(const char *name);
 
+    // Resolve this host_port object to the string of ip:port if 'resolve_ip' is true;
+    // otherwise, just return the string of this host_port object.
+    [[nodiscard]] std::string resolve(bool resolve_ip) const;
+
     // Construct a host_port object from 'addr'
     static host_port from_address(rpc_address addr);
 

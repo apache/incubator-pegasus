@@ -156,8 +156,8 @@ public:
     dsn::error_code list_app(const std::string &app_name,
                              bool detailed,
                              bool json,
-                             const std::string &file_name,
-                             bool resolve_ip = false);
+                             const std::string &output_file,
+                             bool resolve_ip);
 
     dsn::error_code list_app(const std::string &app_name,
                              int32_t &app_id,
@@ -317,10 +317,12 @@ public:
     void set_max_wait_app_ready_secs(uint32_t max_wait_secs) { _max_wait_secs = max_wait_secs; }
     void set_meta_servers_leader();
 
-    static error_s validate_app_name(const std::string &app_name, bool allow_empty_name = false);
+    static error_s validate_app_name(const std::string &app_name, bool allow_empty_name);
 
-    // Resolve the host:port 'hp' to ip:port if 'resolve_ip' is true.
-    static std::string node_name(const host_port &hp, bool resolve_ip);
+    static error_s validate_app_name(const std::string &app_name)
+    {
+        return validate_app_name(app_name, false);
+    }
 
 private:
     void end_meta_request(const rpc_response_task_ptr &callback,
@@ -528,7 +530,6 @@ private:
         }
     }
 
-private:
     dsn::host_port _meta_server;
     dsn::task_tracker _tracker;
     uint32_t _max_wait_secs = 3600; // Wait at most 1 hour by default.

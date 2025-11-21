@@ -34,6 +34,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -437,7 +438,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
                                            {"sample_interval_ms", required_argument, nullptr, 'i'},
                                            {nullptr, 0, nullptr, 0}};
 
-    std::string status;
+    std::string target_status_str;
     std::string output_file;
     uint32_t sample_interval_ms = FLAGS_nodes_sample_interval_ms;
     bool detailed = false;
@@ -476,7 +477,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
             json = true;
             break;
         case 's':
-            status = optarg;
+            target_status_str = optarg;
             break;
         case 'o':
             output_file = optarg;
@@ -490,10 +491,10 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     }
 
     dsn::utils::multi_table_printer multi_printer;
-    if (!(status.empty() && output_file.empty())) {
+    if (!(target_status_str.empty() && output_file.empty())) {
         dsn::utils::table_printer tp("parameters");
-        if (!status.empty()) {
-            tp.add_row_name_and_data("status", status);
+        if (!target_status_str.empty()) {
+            tp.add_row_name_and_data("status", target_status_str);
         }
         if (!output_file.empty()) {
             tp.add_row_name_and_data("out_file", output_file);
@@ -501,18 +502,21 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         multi_printer.add(std::move(tp));
     }
 
-    ::dsn::replication::node_status::type s = ::dsn::replication::node_status::NS_INVALID;
-    if (!status.empty() && status != "all") {
-        s = type_from_string(dsn::replication::_node_status_VALUES_TO_NAMES,
-                             std::string("ns_") + status,
-                             ::dsn::replication::node_status::NS_INVALID);
-        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(s != ::dsn::replication::node_status::NS_INVALID,
+    ::dsn::replication::node_status::type target_status =
+        ::dsn::replication::node_status::NS_INVALID;
+    if (!target_status_str.empty() && target_status_str != "all") {
+        target_status = type_from_string(dsn::replication::_node_status_VALUES_TO_NAMES,
+                                         std::string("ns_") + target_status_str,
+                                         ::dsn::replication::node_status::NS_INVALID);
+        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(target_status !=
+                                                ::dsn::replication::node_status::NS_INVALID,
                                             "parse {} as node_status::type failed",
-                                            status);
+                                            target_status_str);
     }
 
     std::map<dsn::host_port, dsn::replication::node_status::type> status_by_hp;
-    auto r = sc->ddl_client->list_nodes(s, status_by_hp);
+    // TODO(wangdan): encapsulated as a macro.
+    auto r = sc->ddl_client->list_nodes(target_status, status_by_hp);
     if (r != dsn::ERR_OK) {
         fmt::println("list nodes failed, error={}", r);
         return true;
@@ -520,14 +524,14 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
 
     std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
-    for (auto &kv : status_by_hp) {
-        if (kv.second == dsn::replication::node_status::NS_ALIVE) {
+    for (const auto &[addr, status] : status_by_hp) {
+        if (status == dsn::replication::node_status::NS_ALIVE) {
             ++alive_node_count;
         }
 
-        const std::string status_str(dsn::enum_to_string(kv.second));
-        tmp_map.emplace(kv.first,
-                        list_nodes_helper(replication_ddl_client::node_name(kv.first, resolve_ip),
+        const std::string status_str(dsn::enum_to_string(status));
+        tmp_map.emplace(addr,
+                        list_nodes_helper(addr.resolve(resolve_ip),
                                           status_str.substr(status_str.find("NS_") + 3)));
     }
 
@@ -540,9 +544,11 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         }
 
         for (auto &app : apps) {
-            int32_t app_id;
-            int32_t partition_count;
+            int32_t app_id{0};
+            int32_t partition_count{0};
             std::vector<dsn::partition_configuration> pcs;
+
+            // TODO(wangdan): encapsulated as a macro.
             r = sc->ddl_client->list_app(app.app_name, app_id, partition_count, pcs);
             if (r != dsn::ERR_OK) {
                 fmt::println("list app {} failed, error={}", app.app_name, r);
@@ -868,8 +874,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         } else {
             failed++;
         }
-        info["details"].emplace(replication_ddl_client::node_name(nodes[i].hp, resolve_ip),
-                                node_info);
+        info["details"].emplace(nodes[i].hp.resolve(resolve_ip), node_info);
     }
     info["succeed_count"] = succeed;
     info["failed_count"] = failed;
