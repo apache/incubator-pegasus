@@ -186,7 +186,7 @@ void replica_duplicator::pause_dup_log()
     LOG_INFO_PREFIX("pausing duplication: {}", to_string());
 
     pause();
-    cancel_all();
+    wait_all();
 
     _load.reset();
     _ship.reset();
@@ -264,7 +264,7 @@ void replica_duplicator::update_status_if_needed(duplication_status::type next_s
 replica_duplicator::~replica_duplicator()
 {
     pause();
-    cancel_all();
+    wait_all();
     LOG_INFO_PREFIX("closing duplication {}", to_string());
 }
 
