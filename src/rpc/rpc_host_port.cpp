@@ -162,10 +162,7 @@ void host_port::assign_group(const char *name)
     _group_host_port = std::make_shared<rpc_group_host_port>(name);
 }
 
-rpc_address host_port::resolve() const
-{
-    return dns_resolver::instance().resolve_address(*this);
-}
+rpc_address host_port::resolve() const { return dns_resolver::instance().resolve_address(*this); }
 
 std::string host_port::resolve(bool resolve_ip) const
 {

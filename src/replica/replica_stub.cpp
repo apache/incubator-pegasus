@@ -1550,8 +1550,7 @@ void replica_stub::query_configuration_by_node()
     LOG_INFO("send query node partitions request to meta server, stored_replicas_count = {}",
              req.stored_replicas.size());
 
-    const auto &target =
-        _failure_detector->get_servers().resolve();
+    const auto &target = _failure_detector->get_servers().resolve();
     _config_query_task =
         rpc::call(target,
                   msg,
@@ -1764,8 +1763,7 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
 
     ::dsn::marshall(msg, *request);
 
-    const auto &target =
-        _failure_detector->get_servers().resolve();
+    const auto &target = _failure_detector->get_servers().resolve();
     rpc::call(target, msg, nullptr, [](error_code err, dsn::message_ex *, dsn::message_ex *) {});
 }
 

@@ -246,10 +246,8 @@ void replica::add_potential_secondary(const configuration_update_request &propos
                     FMT_HOST_PORT_AND_IP(proposal, node),
                     state.signature);
 
-    rpc::call_one_way_typed(node.resolve(),
-                            RPC_LEARN_ADD_LEARNER,
-                            request,
-                            get_gpid().thread_hash());
+    rpc::call_one_way_typed(
+        node.resolve(), RPC_LEARN_ADD_LEARNER, request, get_gpid().thread_hash());
 }
 
 void replica::upgrade_to_secondary_on_primary(const ::dsn::host_port &node)
@@ -417,8 +415,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
         enum_to_string(request->type),
         FMT_HOST_PORT_AND_IP(*request, node));
 
-    rpc_address target(
-        _stub->_failure_detector->get_servers().resolve());
+    rpc_address target(_stub->_failure_detector->get_servers().resolve());
     _primary_states.reconfiguration_task = rpc::call(
         target,
         msg,
@@ -459,8 +456,7 @@ void replica::on_update_configuration_on_meta_server_reply(
                 LPC_DELAY_UPDATE_CONFIG,
                 &_tracker,
                 [this, request, req2 = std::move(req)]() {
-                    rpc_address target(
-                        _stub->_failure_detector->get_servers().resolve());
+                    rpc_address target(_stub->_failure_detector->get_servers().resolve());
                     rpc_response_task_ptr t = rpc::create_rpc_response_task(
                         request,
                         &_tracker,
@@ -517,10 +513,8 @@ void replica::on_update_configuration_on_meta_server_reply(
                 CHECK_NE(req->node, _stub->primary_address());
                 replica_configuration rconfig;
                 replica_helper::get_replica_config(resp.config, node, rconfig);
-                rpc::call_one_way_typed(node.resolve(),
-                                        RPC_REMOVE_REPLICA,
-                                        rconfig,
-                                        get_gpid().thread_hash());
+                rpc::call_one_way_typed(
+                    node.resolve(), RPC_REMOVE_REPLICA, rconfig, get_gpid().thread_hash());
             }
             break;
         }

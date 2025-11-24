@@ -1292,11 +1292,7 @@ call_remote_command(shell_context *sc,
             }
         };
         tasks[i] = dsn::dist::cmd::async_call_remote(
-            nodes[i].hp.resolve(),
-            cmd,
-            arguments,
-            callback,
-            std::chrono::milliseconds(5000));
+            nodes[i].hp.resolve(), cmd, arguments, callback, std::chrono::milliseconds(5000));
     }
     for (int i = 0; i < nodes.size(); ++i) {
         tasks[i]->wait();
@@ -2161,8 +2157,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
-        nodes_stat[i].node_address =
-            nodes[i].hp.resolve().to_string();
+        nodes_stat[i].node_address = nodes[i].hp.resolve().to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
             int32_t app_id, pidx;
             std::string counter_name;

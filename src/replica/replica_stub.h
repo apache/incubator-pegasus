@@ -221,10 +221,7 @@ public:
     {
         return _failure_detector->get_servers().resolve();
     }
-    rpc_address primary_address() const
-    {
-        return _primary_host_port.resolve();
-    }
+    rpc_address primary_address() const { return _primary_host_port.resolve(); }
     const host_port &primary_host_port() const { return _primary_host_port; }
 
     //

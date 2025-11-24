@@ -632,34 +632,31 @@ void replica_split_manager::child_notify_catch_up() // on child partition
                             _replica->_split_states.parent_gpid.thread_hash());
     host_port primary;
     GET_HOST_PORT(_replica->_config, primary, primary);
-    rpc.call(primary.resolve(),
-             tracker(),
-             [this, rpc](error_code ec) mutable {
-                 auto response = rpc.response();
-                 if (ec == ERR_TIMEOUT) {
-                     LOG_WARNING_PREFIX("notify primary catch up timeout, please wait and retry");
-                     tasking::enqueue(
-                         LPC_PARTITION_SPLIT,
-                         tracker(),
-                         std::bind(&replica_split_manager::child_notify_catch_up, this),
-                         get_gpid().thread_hash(),
-                         std::chrono::seconds(1));
-                     return;
-                 }
-                 if (ec != ERR_OK || response.err != ERR_OK) {
-                     error_code err = (ec == ERR_OK) ? response.err : ec;
-                     LOG_ERROR_PREFIX("failed to notify primary catch up, error={}", err);
-                     _stub->split_replica_error_handler(
-                         _replica->_split_states.parent_gpid,
-                         std::bind(&replica_split_manager::parent_cleanup_split_context,
-                                   std::placeholders::_1));
-                     child_handle_split_error("notify_primary_split_catch_up failed");
-                     return;
-                 }
-                 LOG_INFO_PREFIX("notify primary parent[{}@{}] catch up succeed",
-                                 _replica->_split_states.parent_gpid,
-                                 FMT_HOST_PORT_AND_IP(_replica->_config, primary));
-             });
+    rpc.call(primary.resolve(), tracker(), [this, rpc](error_code ec) mutable {
+        auto response = rpc.response();
+        if (ec == ERR_TIMEOUT) {
+            LOG_WARNING_PREFIX("notify primary catch up timeout, please wait and retry");
+            tasking::enqueue(LPC_PARTITION_SPLIT,
+                             tracker(),
+                             std::bind(&replica_split_manager::child_notify_catch_up, this),
+                             get_gpid().thread_hash(),
+                             std::chrono::seconds(1));
+            return;
+        }
+        if (ec != ERR_OK || response.err != ERR_OK) {
+            error_code err = (ec == ERR_OK) ? response.err : ec;
+            LOG_ERROR_PREFIX("failed to notify primary catch up, error={}", err);
+            _stub->split_replica_error_handler(
+                _replica->_split_states.parent_gpid,
+                std::bind(&replica_split_manager::parent_cleanup_split_context,
+                          std::placeholders::_1));
+            child_handle_split_error("notify_primary_split_catch_up failed");
+            return;
+        }
+        LOG_INFO_PREFIX("notify primary parent[{}@{}] catch up succeed",
+                        _replica->_split_states.parent_gpid,
+                        FMT_HOST_PORT_AND_IP(_replica->_config, primary));
+    });
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -1022,8 +1019,7 @@ void replica_split_manager::parent_send_register_request(
         request.parent_config.ballot,
         request.child_config.ballot);
 
-    rpc_address meta_address(
-        _stub->_failure_detector->get_servers().resolve());
+    rpc_address meta_address(_stub->_failure_detector->get_servers().resolve());
     std::unique_ptr<register_child_request> req = std::make_unique<register_child_request>(request);
     register_child_rpc rpc(std::move(req),
                            RPC_CM_REGISTER_CHILD_REPLICA,
@@ -1518,8 +1514,7 @@ void replica_split_manager::parent_send_notify_stop_request(
     split_status::type meta_split_status) // on primary parent
 {
     FAIL_POINT_INJECT_F("replica_parent_send_notify_stop_request", [](std::string_view) {});
-    auto meta_address =
-        _stub->_failure_detector->get_servers().resolve());
+    auto meta_address = _stub->_failure_detector->get_servers().resolve();
     std::unique_ptr<notify_stop_split_request> req = std::make_unique<notify_stop_split_request>();
     req->app_name = _replica->_app_info.app_name;
     req->parent_gpid = get_gpid();
@@ -1550,8 +1545,7 @@ void replica_split_manager::query_child_state() // on primary parent
     request->pid = get_gpid();
     request->partition_count = _replica->_app_info.partition_count;
 
-    rpc_address meta_address(
-        _stub->_failure_detector->get_servers().resolve());
+    rpc_address meta_address(_stub->_failure_detector->get_servers().resolve());
     LOG_INFO_PREFIX("send query child partition state request to meta server({})", meta_address);
     query_child_state_rpc rpc(
         std::move(request), RPC_CM_QUERY_CHILD_STATE, 0_ms, 0, get_gpid().thread_hash());

@@ -591,10 +591,7 @@ void meta_duplication_service::do_create_follower_app_for_duplication(
              app->app_name,
              duplication_status_to_string(dup->status()));
 
-    rpc::call(meta_servers.resolve(),
-              msg,
-              _meta_svc->tracker(),
-              std::move(create_callback));
+    rpc::call(meta_servers.resolve(), msg, _meta_svc->tracker(), std::move(create_callback));
 }
 
 void meta_duplication_service::on_follower_app_creating_for_duplication(

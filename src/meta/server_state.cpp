@@ -2579,35 +2579,32 @@ error_code server_state::construct_partitions(
                              pc.pid.get_partition_index(),
                              boost::lexical_cast<std::string>(pc));
                     if (pc.hp_last_drops.size() + 1 < pc.max_replica_count) {
-                        hint_message += fmt::format("WARNING: partition({}.{}) only collects {}/{} "
-                                                    "of replicas, may lost data",
+                        hint_message += fmt::format("WARNING: partition({}.{}) only collects "
+                                                    "{}/{} of replicas, may lost data",
                                                     app->app_id,
                                                     pc.pid.get_partition_index(),
                                                     pc.hp_last_drops.size() + 1,
                                                     pc.max_replica_count);
                     }
-                    succeed_count++;
+                    ++succeed_count;
                 } else {
                     LOG_WARNING("construct partition({}.{}) failed",
                                 app->app_id,
                                 pc.pid.get_partition_index());
-                    std::ostringstream oss;
                     if (skip_lost_partitions) {
-                        hint_message += fmt::format();
-                        oss << "WARNING: partition(" << app->app_id << "."
-                            << pc.pid.get_partition_index()
-                            << ") has no replica collected, force "
-                               "recover the lost partition to empty"
-                            << std::endl;
+                        hint_message +=
+                            fmt::format("WARNING: partition({}.{}) has no replica "
+                                        "collected, force recover the lost partition to empty\n",
+                                        app->app_id,
+                                        pc.pid.get_partition_index());
                     } else {
-                        oss << "ERROR: partition(" << app->app_id << "."
-                            << pc.pid.get_partition_index()
-                            << ") has no replica collected, you can force recover it by set "
-                               "skip_lost_partitions option"
-                            << std::endl;
+                        hint_message += fmt::format("ERROR: partition({}.{}) has no replica "
+                                                    "collected, you can force recover it by set "
+                                                    "skip_lost_partitions option\n",
+                                                    app->app_id,
+                                                    pc.pid.get_partition_index());
                     }
-                    hint_message += oss.str();
-                    failed_count++;
+                    ++failed_count;
                 }
             }
         }
