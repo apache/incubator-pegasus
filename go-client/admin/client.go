@@ -161,8 +161,8 @@ func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, 
 		}
 
 		readyCount := int32(0)
-		for _, part := range partitions {
-			if part.Primary.GetRawAddress() != 0 && int32(len(part.Secondaries)+1) == replicaCount {
+		for _, partition := range partitions {
+			if partition.Primary.GetRawAddress() != 0 && int32(len(partition.Secondaries)+1) == replicaCount {
 				readyCount++
 			}
 		}

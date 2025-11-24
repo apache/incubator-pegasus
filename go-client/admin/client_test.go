@@ -92,12 +92,18 @@ func TestAdmin_Table(t *testing.T) {
 	for _, partition := range partitions {
 		assert.Equal(t, replicaCount, partition.MaxReplicaCount)
 		assert.NotNil(t, partition.Primary)
+		assert.NotZero(t, partition.Primary.GetRawAddress())
 		assert.NotNil(t, partition.HpPrimary)
+		assert.NotEmpty(t, partition.HpPrimary.GetHost())
+		assert.NotZero(t, partition.HpPrimary.GetPort())
 		assert.Equal(t, 2, len(partition.Secondaries))
 		assert.Equal(t, 2, len(partition.HpSecondaries))
 		for i := 0; i < 2; i++ {
 			assert.NotNil(t, partition.Secondaries[i])
+			assert.NotZero(t, partition.Secondaries[i].GetRawAddress())
 			assert.NotNil(t, partition.HpSecondaries[i])
+			assert.NotEmpty(t, partition.HpSecondaries[i].GetHost())
+			assert.NotZero(t, partition.HpSecondaries[i].GetPort())
 		}
 	}
 
