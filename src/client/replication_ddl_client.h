@@ -347,7 +347,7 @@ private:
 
         auto task =
             dsn::rpc::create_rpc_response_task(msg, nullptr, empty_rpc_handler, reply_thread_hash);
-        rpc::call(dsn::dns_resolver::instance().resolve_address(_meta_server),
+        rpc::call(_meta_server.resolve(),
                   msg,
                   &_tracker,
                   [this, task](
@@ -480,7 +480,7 @@ private:
         error_code err = ERR_UNKNOWN;
         for (int retry = 0; retry < MAX_RETRY; retry++) {
             task_ptr task = rpc.call(
-                dsn::dns_resolver::instance().resolve_address(_meta_server),
+                _meta_server.resolve(),
                 &_tracker,
                 [&err](error_code code) { err = code; },
                 reply_thread_hash);
@@ -505,7 +505,7 @@ private:
         dsn::task_tracker tracker;
         error_code err = ERR_UNKNOWN;
         for (auto &rpc : rpcs) {
-            rpc.second.call(dsn::dns_resolver::instance().resolve_address(rpc.first),
+            rpc.second.call(rpc.first.resolve(),
                             &tracker,
                             [&err, &resps, &rpcs, &rpc](error_code code) mutable {
                                 err = code;

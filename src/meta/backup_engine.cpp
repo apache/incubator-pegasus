@@ -216,7 +216,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
              pid,
              partition_primary);
     backup_rpc rpc(std::move(req), RPC_COLD_BACKUP, 10000_ms, 0, pid.thread_hash());
-    rpc.call(dsn::dns_resolver::instance().resolve_address(partition_primary),
+    rpc.call(partition_primary.resolve(),
              &_tracker,
              [this, rpc, pid, partition_primary](error_code err) mutable {
                  on_backup_reply(err, rpc.response(), pid, partition_primary);

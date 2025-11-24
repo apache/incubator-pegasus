@@ -219,11 +219,11 @@ public:
     bool is_connected() const { return NS_Connected == _state; }
     virtual rpc_address get_meta_server_address() const
     {
-        return dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
+        return _failure_detector->get_servers().resolve();
     }
     rpc_address primary_address() const
     {
-        return dsn::dns_resolver::instance().resolve_address(_primary_host_port);
+        return _primary_host_port.resolve();
     }
     const host_port &primary_host_port() const { return _primary_host_port; }
 

@@ -196,7 +196,7 @@ void replica_bulk_loader::broadcast_group_bulk_load(const bulk_load_request &met
 
         auto request = std::make_unique<group_bulk_load_request>();
         request->app_name = _replica->_app_info.app_name;
-        const auto &addr = dsn::dns_resolver::instance().resolve_address(secondary);
+        const auto &addr = secondary.resolve();
         SET_IP_AND_HOST_PORT(*request, target, addr, secondary);
         _replica->_primary_states.get_replica_config(partition_status::PS_SECONDARY,
                                                      request->config);

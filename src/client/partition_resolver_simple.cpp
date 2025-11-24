@@ -262,7 +262,7 @@ task_ptr partition_resolver_simple::query_config(int partition_index, int timeou
     marshall(msg, req);
 
     return rpc::call(
-        dns_resolver::instance().resolve_address(_meta_server),
+        _meta_server.resolve(),
         msg,
         &_tracker,
         [this, partition_index](error_code err, dsn::message_ex *req, dsn::message_ex *resp) {

@@ -130,7 +130,7 @@ void replica::broadcast_group_check()
         std::shared_ptr<group_check_request> request(new group_check_request);
 
         request->app = _app_info;
-        const auto addr = dsn::dns_resolver::instance().resolve_address(hp);
+        const auto addr = hp.resolve();
         SET_IP_AND_HOST_PORT(*request, node, addr, hp);
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();

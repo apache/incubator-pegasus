@@ -1270,7 +1270,7 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
         return;
     }
 
-    rpc::call(dsn::dns_resolver::instance().resolve_address(_meta_server),
+    rpc::call(_meta_server.resolve(),
               request,
               &_tracker,
               [this, attempt_count, callback](

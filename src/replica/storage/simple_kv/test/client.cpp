@@ -167,7 +167,7 @@ void simple_kv_client_app::send_config_to_meta(const host_port &receiver,
 
     dsn::marshall(req, request);
 
-    dsn_rpc_call_one_way(dsn::dns_resolver::instance().resolve_address(_meta_server_group), req);
+    dsn_rpc_call_one_way(_meta_server_group.resolve(), req);
 }
 
 struct read_context

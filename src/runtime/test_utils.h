@@ -98,7 +98,7 @@ public:
             if (next_hp.port() != TEST_PORT_END) {
                 next_hp = dsn::host_port(next_hp.host(), next_hp.port() + 1);
                 LOG_INFO("test_client_server, talk_to_others: {}", next_hp);
-                dsn_rpc_forward(message, dsn::dns_resolver::instance().resolve_address(next_hp));
+                dsn_rpc_forward(message, next_hp.resolve());
             } else {
                 LOG_INFO("test_client_server, talk_to_me: {}", next_hp);
                 reply(message, next_hp.to_string());

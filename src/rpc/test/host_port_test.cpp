@@ -283,9 +283,9 @@ TEST(host_port_test, test_macros)
     static const host_port kHp2("localhost", 8082);
     static const host_port kHp3("localhost", 8083);
     static const std::vector<host_port> kHps({kHp1, kHp2, kHp3});
-    static const rpc_address kAddr1 = dns_resolver::instance().resolve_address(kHp1);
-    static const rpc_address kAddr2 = dns_resolver::instance().resolve_address(kHp2);
-    static const rpc_address kAddr3 = dns_resolver::instance().resolve_address(kHp3);
+    static const rpc_address kAddr1 = kHp1.resolve();
+    static const rpc_address kAddr2 = kHp2.resolve();
+    static const rpc_address kAddr3 = kHp3.resolve();
     static const std::vector<rpc_address> kAddres({kAddr1, kAddr2, kAddr3});
 
     // Test GET_HOST_PORT-1.
@@ -303,7 +303,7 @@ TEST(host_port_test, test_macros)
         GET_HOST_PORT(beacon, from_node, hp_from_node);
         ASSERT_TRUE(hp_from_node);
         ASSERT_EQ(kHp1, hp_from_node);
-        ASSERT_EQ(kAddr1, dns_resolver::instance().resolve_address(hp_from_node));
+        ASSERT_EQ(kAddr1, hp_from_node.resolve());
     }
     // Test GET_HOST_PORT-3.
     {
@@ -314,7 +314,7 @@ TEST(host_port_test, test_macros)
         GET_HOST_PORT(beacon, from_node, hp_from_node);
         ASSERT_TRUE(hp_from_node);
         ASSERT_EQ(kHp1, hp_from_node);
-        ASSERT_EQ(kAddr1, dns_resolver::instance().resolve_address(hp_from_node));
+        ASSERT_EQ(kAddr1, hp_from_node.resolve());
     }
 
     // Test GET_HOST_PORTS-1.

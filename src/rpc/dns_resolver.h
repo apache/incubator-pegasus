@@ -42,9 +42,6 @@ namespace dsn {
 class dns_resolver : public utils::singleton<dns_resolver>
 {
 public:
-    // Resolve this host_port to an unique rpc_address.
-    rpc_address resolve_address(const host_port &hp);
-
     // Resolve comma separated host:port list 'host_ports' to comma separated ip:port list.
     static std::string ip_ports_from_host_ports(const std::string &host_ports);
 
@@ -53,6 +50,10 @@ private:
     ~dns_resolver() = default;
 
     friend class utils::singleton<dns_resolver>;
+    friend class host_port;
+
+    // Resolve this host_port to an unique rpc_address.
+    rpc_address resolve_address(const host_port &hp);
 
     bool get_cached_addresses(const host_port &hp, std::vector<rpc_address> &addresses);
 

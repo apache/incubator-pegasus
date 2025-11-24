@@ -117,8 +117,8 @@ rpc_address dns_resolver::resolve_address(const host_port &hp)
         auto hp_group = hp.group_host_port();
         addr.assign_group(hp_group->name());
 
-        for (const auto &hp : hp_group->members()) {
-            CHECK_TRUE(addr.group_address()->add(resolve_address(hp)));
+        for (const auto &member : hp_group->members()) {
+            CHECK_TRUE(addr.group_address()->add(resolve_address(member)));
         }
         addr.group_address()->set_update_leader_automatically(
             hp_group->is_update_leader_automatically());
@@ -155,7 +155,7 @@ std::string dns_resolver::ip_ports_from_host_ports(const std::string &host_ports
     std::vector<std::string> ip_port_vec;
     ip_port_vec.reserve(host_port_vec.size());
     for (const auto &hp : host_port_vec) {
-        const auto addr = dsn::dns_resolver::instance().resolve_address(host_port::from_string(hp));
+        const auto addr = host_port::from_string(hp).resolve();
         ip_port_vec.emplace_back(addr.to_string());
     }
 

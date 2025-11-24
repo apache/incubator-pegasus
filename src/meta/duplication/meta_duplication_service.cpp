@@ -591,7 +591,7 @@ void meta_duplication_service::do_create_follower_app_for_duplication(
              app->app_name,
              duplication_status_to_string(dup->status()));
 
-    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
+    rpc::call(meta_servers.resolve(),
               msg,
               _meta_svc->tracker(),
               std::move(create_callback));
@@ -747,7 +747,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
              duplication_status_to_string(dup->status()));
 
     rpc::call(
-        dsn::dns_resolver::instance().resolve_address(meta_servers),
+        meta_servers.resolve(),
         msg,
         _meta_svc->tracker(),
         [dup, this](error_code err, query_cfg_response &&resp) mutable {

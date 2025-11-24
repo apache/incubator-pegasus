@@ -581,7 +581,7 @@ bool failure_detector::is_worker_connected(const ::dsn::host_port &node) const
 
 void failure_detector::send_beacon(const host_port &target, uint64_t time)
 {
-    const auto &addr_target = dsn::dns_resolver::instance().resolve_address(target);
+    const auto &addr_target = target.resolve();
     beacon_msg beacon;
     beacon.time = time;
     SET_IP_AND_HOST_PORT(beacon, from_node, dsn_primary_address(), dsn_primary_host_port());

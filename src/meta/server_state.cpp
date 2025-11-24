@@ -2188,25 +2188,26 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
                                                    int pidx,
                                                    const host_port &node)
 {
-    partition_configuration &pc = app->pcs[pidx];
-    config_context &cc = app->helpers->contexts[pidx];
-
+    const partition_configuration &pc = app->pcs[pidx];
     CHECK(pc.hp_primary, "this shouldn't be called if the primary is invalid");
-    if (config_status::pending_remote_sync != cc.stage) {
-        configuration_update_request request;
-        request.info = *app;
-        request.config = pc;
-        request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
-        SET_IP_AND_HOST_PORT_BY_DNS(request, node, node);
-        host_port primary;
-        GET_HOST_PORT(pc, primary, primary);
-        send_proposal(primary, request);
-    } else {
+
+    if (config_status::pending_remote_sync == app->helpers->contexts[pidx].stage) {
         LOG_INFO("gpid({}.{}) is syncing with remote storage, ignore the remove seconary({})",
                  app->app_id,
                  pidx,
                  node);
+        return;
     }
+
+    configuration_update_request request;
+    request.info = *app;
+    request.config = pc;
+    request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
+    SET_IP_AND_HOST_PORT_BY_DNS(request, node, node);
+
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    send_proposal(primary, request);
 }
 
 void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
@@ -2216,7 +2217,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
     auto req = std::make_shared<configuration_update_request>();
     req->info = *app;
     req->type = config_type::CT_REMOVE;
-    req->host_node = dsn::dns_resolver::instance().resolve_address(node);
+    req->host_node = node.resolve();
     RESET_IP_AND_HOST_PORT(*req, node);
     req->config = app->pcs[pidx];
 
@@ -2353,7 +2354,7 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
         return;
     }
 
-    CHECK(is_secondary(pc, node), "");
+    CHECK(is_secondary(pc, node), "no primary/secondary on this node: node = {}", node);
     LOG_INFO("gpid({}): secondary({}) is down, ignored it due to no primary for this partition "
              "available",
              pc.pid,
@@ -2592,6 +2593,7 @@ error_code server_state::construct_partitions(
                                 pc.pid.get_partition_index());
                     std::ostringstream oss;
                     if (skip_lost_partitions) {
+                        hint_message += fmt::format();
                         oss << "WARNING: partition(" << app->app_id << "."
                             << pc.pid.get_partition_index()
                             << ") has no replica collected, force "
@@ -2644,7 +2646,7 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::host_port> &re
         SET_IP_AND_HOST_PORT(
             *app_query_req, meta_server, dsn_primary_address(), dsn_primary_host_port());
         query_app_info_rpc app_rpc(std::move(app_query_req), RPC_QUERY_APP_INFO);
-        const auto addr = dsn::dns_resolver::instance().resolve_address(replica_nodes[i]);
+        const auto addr = replica_nodes[i].resolve();
         app_rpc.call(addr,
                      &tracker,
                      [app_rpc, i, &replica_nodes, &query_app_errors, &query_app_responses](

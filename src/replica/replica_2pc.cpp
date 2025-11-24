@@ -506,7 +506,7 @@ void replica::send_prepare_message(const host_port &hp,
     }
 
     mu->remote_tasks()[hp] = rpc::call(
-        dsn::dns_resolver::instance().resolve_address(hp),
+        hp.resolve(),
         msg,
         &_tracker,
         [=](error_code err, dsn::message_ex *request, dsn::message_ex *reply) {

@@ -259,7 +259,7 @@ void replica::init_learn(uint64_t signature)
     host_port primary;
     GET_HOST_PORT(_config, primary, primary);
     _potential_secondary_states.learning_task = rpc::call(
-        dsn::dns_resolver::instance().resolve_address(primary),
+        primary.resolve(),
         msg,
         &_tracker,
         [this, req_cap = std::move(request)](error_code err, learn_response &&resp) mutable {
@@ -1307,7 +1307,7 @@ void replica::notify_learn_completion()
     host_port primary;
     GET_HOST_PORT(_config, primary, primary);
     _potential_secondary_states.completion_notify_task = rpc::call(
-        dsn::dns_resolver::instance().resolve_address(primary),
+        primary.resolve(),
         msg,
         &_tracker,
         [this, report = std::move(report)](error_code err, learn_notify_response &&resp) mutable {

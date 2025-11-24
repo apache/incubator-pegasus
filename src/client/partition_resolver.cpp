@@ -130,7 +130,7 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                 }
                 hdr.gpid = result.pid;
             }
-            dsn_rpc_call(dns_resolver::instance().resolve_address(result.hp), t.get());
+            dsn_rpc_call(result.hp.resolve(), t.get());
         },
         hdr.client.timeout_ms);
 }

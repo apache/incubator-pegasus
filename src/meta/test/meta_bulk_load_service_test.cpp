@@ -513,10 +513,10 @@ protected:
     const host_port SECONDARY2_HP = host_port("localhost", 10087);
     const host_port SECONDARY3_HP = host_port("localhost", 10080);
 
-    const rpc_address PRIMARY = dsn::dns_resolver::instance().resolve_address(PRIMARY_HP);
-    const rpc_address SECONDARY1 = dsn::dns_resolver::instance().resolve_address(SECONDARY1_HP);
-    const rpc_address SECONDARY2 = dsn::dns_resolver::instance().resolve_address(SECONDARY2_HP);
-    const rpc_address SECONDARY3 = dsn::dns_resolver::instance().resolve_address(SECONDARY3_HP);
+    const rpc_address PRIMARY = PRIMARY_HP.resolve();
+    const rpc_address SECONDARY1 = SECONDARY1_HP.resolve();
+    const rpc_address SECONDARY2 = SECONDARY2_HP.resolve();
+    const rpc_address SECONDARY3 = SECONDARY3_HP.resolve();
 };
 
 /// start bulk load unit tests

@@ -177,13 +177,13 @@ public:
     }
     virtual void send_message(const host_port &target, dsn::message_ex *request)
     {
-        dsn_rpc_call_one_way(dsn::dns_resolver::instance().resolve_address(target), request);
+        dsn_rpc_call_one_way(target.resolve(), request);
     }
     virtual void send_request(dsn::message_ex * /*req*/,
                               const host_port &target,
                               const rpc_response_task_ptr &callback)
     {
-        dsn_rpc_call(dsn::dns_resolver::instance().resolve_address(target), callback);
+        dsn_rpc_call(target.resolve(), callback);
     }
 
     // these two callbacks are running in fd's thread_pool, and in fd's lock
@@ -447,7 +447,7 @@ meta_leader_state meta_service::check_leader(TRpcHolder rpc, host_port *forward_
     }
 
     if (leader) {
-        rpc.forward(dsn::dns_resolver::instance().resolve_address(leader));
+        rpc.forward(leader.resolve());
         return meta_leader_state::kNotLeaderAndCanForwardRpc;
     }
 

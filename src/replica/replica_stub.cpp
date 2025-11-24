@@ -1551,7 +1551,7 @@ void replica_stub::query_configuration_by_node()
              req.stored_replicas.size());
 
     const auto &target =
-        dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
+        _failure_detector->get_servers().resolve();
     _config_query_task =
         rpc::call(target,
                   msg,
@@ -1757,16 +1757,15 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
     GET_HOST_PORT(pc, primary, primary);
     if (_primary_host_port == primary) {
         RESET_IP_AND_HOST_PORT(request->config, primary);
-    } else if (REMOVE_IP_AND_HOST_PORT(
+    } else if (!REMOVE_IP_AND_HOST_PORT(
                    primary_address(), _primary_host_port, request->config, secondaries)) {
-    } else {
         return;
     }
 
     ::dsn::marshall(msg, *request);
 
     const auto &target =
-        dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
+        _failure_detector->get_servers().resolve();
     rpc::call(target, msg, nullptr, [](error_code err, dsn::message_ex *, dsn::message_ex *) {});
 }
 
@@ -1775,8 +1774,9 @@ void replica_stub::on_meta_server_disconnected()
     LOG_INFO("meta server disconnected");
 
     zauto_lock sl(_state_lock);
-    if (NS_Disconnected == _state)
+    if (NS_Disconnected == _state) {
         return;
+    }
 
     _state = NS_Disconnected;
 

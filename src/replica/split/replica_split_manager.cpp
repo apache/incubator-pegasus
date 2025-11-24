@@ -632,7 +632,7 @@ void replica_split_manager::child_notify_catch_up() // on child partition
                             _replica->_split_states.parent_gpid.thread_hash());
     host_port primary;
     GET_HOST_PORT(_replica->_config, primary, primary);
-    rpc.call(dsn::dns_resolver::instance().resolve_address(primary),
+    rpc.call(primary.resolve(),
              tracker(),
              [this, rpc](error_code ec) mutable {
                  auto response = rpc.response();
@@ -823,7 +823,7 @@ void replica_split_manager::parent_send_update_partition_count_request(
                                                0,
                                                get_gpid().thread_hash());
     DCHECK(request->hp_target, "");
-    DCHECK_EQ(request->target, dsn::dns_resolver::instance().resolve_address(request->hp_target));
+    DCHECK_EQ(request->target, request->hp_target.resolve());
     rpc.call(request->target, tracker(), [this, rpc, not_replied_addresses](error_code ec) mutable {
         on_update_child_group_partition_count_reply(
             ec, rpc.request(), rpc.response(), not_replied_addresses);
@@ -920,7 +920,7 @@ void replica_split_manager::on_update_child_group_partition_count_reply(
             FMT_HOST_PORT_AND_IP(request, target),
             error);
         DCHECK(request.hp_target, "");
-        DCHECK_EQ(request.target, dsn::dns_resolver::instance().resolve_address(request.hp_target));
+        DCHECK_EQ(request.target, request.hp_target.resolve());
         tasking::enqueue(
             LPC_PARTITION_SPLIT,
             tracker(),
@@ -1023,7 +1023,7 @@ void replica_split_manager::parent_send_register_request(
         request.child_config.ballot);
 
     rpc_address meta_address(
-        dsn::dns_resolver::instance().resolve_address(_stub->_failure_detector->get_servers()));
+        _stub->_failure_detector->get_servers().resolve());
     std::unique_ptr<register_child_request> req = std::make_unique<register_child_request>(request);
     register_child_rpc rpc(std::move(req),
                            RPC_CM_REGISTER_CHILD_REPLICA,
@@ -1519,7 +1519,7 @@ void replica_split_manager::parent_send_notify_stop_request(
 {
     FAIL_POINT_INJECT_F("replica_parent_send_notify_stop_request", [](std::string_view) {});
     auto meta_address =
-        dsn::dns_resolver::instance().resolve_address(_stub->_failure_detector->get_servers());
+        _stub->_failure_detector->get_servers().resolve());
     std::unique_ptr<notify_stop_split_request> req = std::make_unique<notify_stop_split_request>();
     req->app_name = _replica->_app_info.app_name;
     req->parent_gpid = get_gpid();
@@ -1551,7 +1551,7 @@ void replica_split_manager::query_child_state() // on primary parent
     request->partition_count = _replica->_app_info.partition_count;
 
     rpc_address meta_address(
-        dsn::dns_resolver::instance().resolve_address(_stub->_failure_detector->get_servers()));
+        _stub->_failure_detector->get_servers().resolve());
     LOG_INFO_PREFIX("send query child partition state request to meta server({})", meta_address);
     query_child_state_rpc rpc(
         std::move(request), RPC_CM_QUERY_CHILD_STATE, 0_ms, 0, get_gpid().thread_hash());
