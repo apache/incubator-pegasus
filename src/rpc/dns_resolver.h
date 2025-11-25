@@ -56,7 +56,7 @@ private:
     // Resolve this host_port to an unique rpc_address.
     rpc_address resolve_address(const host_port &hp);
 
-    rpc_address resolve_address(const rpc_group_host_port&group);
+    rpc_address resolve_address(const rpc_group_host_port &group);
 
     bool get_cached_addresses(const host_port &hp, std::vector<rpc_address> &addresses);
 
