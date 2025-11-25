@@ -107,6 +107,7 @@ error_s dns_resolver::resolve_addresses(const host_port &hp, std::vector<rpc_add
     return error_s::ok();
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 rpc_address dns_resolver::resolve_address(const rpc_group_host_port &group)
 {
     rpc_address addr;
@@ -120,6 +121,7 @@ rpc_address dns_resolver::resolve_address(const rpc_group_host_port &group)
     return addr;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 rpc_address dns_resolver::resolve_address(const host_port &hp)
 {
     METRIC_VAR_AUTO_LATENCY(dns_resolver_resolve_duration_ns);

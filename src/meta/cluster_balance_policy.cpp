@@ -367,7 +367,10 @@ bool cluster_balance_policy::pick_up_move(const cluster_migration_info &cluster_
     if (max_load_disk_set.empty()) {
         return false;
     }
-    auto index = ::rand() % max_load_disk_set.size();
+
+    // TODO(wangdan): consider using C++11 random library instead.
+    // NOLINTNEXTLINE(cert-msc30-c,cert-msc50-cpp)
+    const size_t index = std::rand() % max_load_disk_set.size();
     auto max_load_disk = *select_random(max_load_disk_set, index);
     LOG_INFO("most load disk({}) on node({}) is picked, has {} partition",
              max_load_disk.node,

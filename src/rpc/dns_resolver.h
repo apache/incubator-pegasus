@@ -28,6 +28,7 @@
 #include "rpc/rpc_host_port.h"
 #include "utils/errors.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/singleton.h"
 #include "utils/synchronize.h"
 
