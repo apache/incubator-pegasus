@@ -33,7 +33,6 @@
 #include "nfs/nfs_node.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"

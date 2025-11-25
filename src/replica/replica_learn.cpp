@@ -55,7 +55,6 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
@@ -262,6 +261,7 @@ void replica::init_learn(uint64_t signature)
         primary.resolve(),
         msg,
         &_tracker,
+        // NOLINTNEXTLINE(hicpp-move-const-arg,performance-move-const-arg)
         [this, req_cap = std::move(request)](error_code err, learn_response &&resp) mutable {
             on_learn_reply(err, std::move(req_cap), std::move(resp));
         });
@@ -1310,6 +1310,7 @@ void replica::notify_learn_completion()
         primary.resolve(),
         msg,
         &_tracker,
+        // NOLINTNEXTLINE(hicpp-move-const-arg,performance-move-const-arg)
         [this, report = std::move(report)](error_code err, learn_notify_response &&resp) mutable {
             on_learn_completion_notification_reply(err, std::move(report), std::move(resp));
         });

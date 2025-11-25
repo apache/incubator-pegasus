@@ -35,7 +35,6 @@
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"

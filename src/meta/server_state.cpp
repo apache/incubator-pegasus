@@ -63,7 +63,6 @@
 #include "meta_bulk_load_service.h"
 #include "metadata_types.h"
 #include "replica_admin_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"

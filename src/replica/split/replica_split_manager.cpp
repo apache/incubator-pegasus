@@ -35,7 +35,6 @@
 #include "replica/replica_context.h"
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
@@ -805,8 +804,12 @@ void replica_split_manager::parent_send_update_partition_count_request(
     CHECK_EQ_PREFIX(status(), partition_status::PS_PRIMARY);
 
     auto request = std::make_unique<update_child_group_partition_count_request>();
-    request->new_partition_count = new_partition_count;
+
     SET_IP_AND_HOST_PORT_BY_DNS(*request, target, hp);
+    DCHECK(request->hp_target, "");
+    DCHECK_EQ(request->target, request->hp_target.resolve());
+
+    request->new_partition_count = new_partition_count;
     request->child_pid = _child_gpid;
     request->ballot = get_ballot();
 
@@ -814,14 +817,14 @@ void replica_split_manager::parent_send_update_partition_count_request(
         "send update child group partition count request to node({}), new partition_count = {}",
         hp,
         new_partition_count);
+
+    const auto target = request->target;
     update_child_group_partition_count_rpc rpc(std::move(request),
                                                RPC_SPLIT_UPDATE_CHILD_PARTITION_COUNT,
                                                0_ms,
                                                0,
                                                get_gpid().thread_hash());
-    DCHECK(request->hp_target, "");
-    DCHECK_EQ(request->target, request->hp_target.resolve());
-    rpc.call(request->target, tracker(), [this, rpc, not_replied_addresses](error_code ec) mutable {
+    rpc.call(target, tracker(), [this, rpc, not_replied_addresses](error_code ec) mutable {
         on_update_child_group_partition_count_reply(
             ec, rpc.request(), rpc.response(), not_replied_addresses);
     });

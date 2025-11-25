@@ -39,7 +39,6 @@
 #include "metadata_types.h"
 #include "replica.h"
 #include "replica_stub.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
 #include "task/async_calls.h"

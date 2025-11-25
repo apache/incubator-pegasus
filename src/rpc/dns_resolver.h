@@ -23,6 +23,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "rpc/group_host_port.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "utils/errors.h"
@@ -55,6 +56,8 @@ private:
     // Resolve this host_port to an unique rpc_address.
     rpc_address resolve_address(const host_port &hp);
 
+    rpc_address resolve_address(const rpc_group_host_port&group);
+
     bool get_cached_addresses(const host_port &hp, std::vector<rpc_address> &addresses);
 
     error_s resolve_addresses(const host_port &hp, std::vector<rpc_address> &addresses);
@@ -67,6 +70,9 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(dns_resolver_cache_size);
     METRIC_VAR_DECLARE_percentile_int64(dns_resolver_resolve_duration_ns);
     METRIC_VAR_DECLARE_percentile_int64(dns_resolver_resolve_by_dns_duration_ns);
+
+    DISALLOW_COPY_AND_ASSIGN(dns_resolver);
+    DISALLOW_MOVE_AND_ASSIGN(dns_resolver);
 };
 
 } // namespace dsn

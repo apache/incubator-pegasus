@@ -49,6 +49,7 @@
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "meta/meta_rpc_types.h"
+#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_address.h"
 #include "runtime/api_layer1.h"

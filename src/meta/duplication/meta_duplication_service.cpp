@@ -25,8 +25,8 @@
 #include <string_view>
 #include <type_traits>
 
-#include "common/duplication_common.h"
 #include "common/common.h"
+#include "common/duplication_common.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
@@ -39,7 +39,6 @@
 #include "meta_admin_types.h"
 #include "meta_duplication_service.h"
 #include "metadata_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"

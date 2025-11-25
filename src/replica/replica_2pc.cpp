@@ -57,7 +57,6 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
 #include "rpc/rpc_stream.h"

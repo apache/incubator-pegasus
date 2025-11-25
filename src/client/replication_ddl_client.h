@@ -44,7 +44,6 @@
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
 #include "replica_admin_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"

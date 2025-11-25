@@ -34,7 +34,6 @@
 #include "pegasus_client_impl.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/serialization.h"
 #include "rrdb/rrdb.client.h"

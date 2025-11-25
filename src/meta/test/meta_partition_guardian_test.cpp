@@ -55,7 +55,6 @@
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "metadata_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"

@@ -2159,7 +2159,8 @@ inline bool get_capacity_unit_stat(shell_context *sc,
         nodes_stat[i].timestamp = info.timestamp_str;
         nodes_stat[i].node_address = nodes[i].hp.resolve().to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
-            int32_t app_id, pidx;
+            int32_t app_id{0};
+            int32_t pidx{0};
             std::string counter_name;
             bool r = parse_app_pegasus_perf_counter_name(m.name, app_id, pidx, counter_name);
             CHECK(r, "name = {}", m.name);

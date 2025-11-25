@@ -46,7 +46,6 @@
 #include "meta_options.h"
 #include "meta_rpc_types.h"
 #include "meta_server_failure_detector.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/network.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"

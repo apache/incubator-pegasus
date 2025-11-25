@@ -40,7 +40,6 @@
 #include "meta/meta_state_service.h"
 #include "meta/server_state.h"
 #include "meta_admin_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_message.h"

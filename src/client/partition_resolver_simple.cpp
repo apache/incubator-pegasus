@@ -34,7 +34,6 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "partition_resolver_simple.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_message.h"
 #include "rpc/serialization.h"
 #include "runtime/api_layer1.h"

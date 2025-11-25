@@ -37,7 +37,6 @@
 #include "replica/replica_stub.h"
 #include "replica/replication_app_base.h"
 #include "replica_bulk_loader.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"

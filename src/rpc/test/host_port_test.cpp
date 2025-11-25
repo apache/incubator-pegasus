@@ -31,7 +31,6 @@
 #include "fd_types.h"
 #include "gtest/gtest.h"
 #include "meta_admin_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/group_address.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_address.h"

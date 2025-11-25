@@ -27,7 +27,6 @@
 #include "fmt/format.h"
 #include "rpc/dns_resolver.h"
 #include "rpc/group_address.h"
-#include "rpc/group_host_port.h"
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -57,7 +56,7 @@ dns_resolver::dns_resolver()
 {
 #ifndef MOCK_TEST
     static int only_one_instance = 0;
-    only_one_instance++;
+    ++only_one_instance;
     CHECK_EQ_MSG(1, only_one_instance, "dns_resolver should only created once!");
 #endif
 }
@@ -108,23 +107,26 @@ error_s dns_resolver::resolve_addresses(const host_port &hp, std::vector<rpc_add
     return error_s::ok();
 }
 
+rpc_address dns_resolve::resolve_address(const rpc_group_host_port&group)
+{
+        rpc_address addr;
+        addr.assign_group(group->name());
+
+        for (const auto &member : group->members()) {
+            CHECK_TRUE(addr.group_address()->add(resolve_address(member)));
+        }
+        addr.group_address()->set_update_leader_automatically(
+            group->is_update_leader_automatically());
+        addr.group_address()->set_leader(resolve_address(group->leader()));
+        return addr;
+}
+
 rpc_address dns_resolver::resolve_address(const host_port &hp)
 {
     METRIC_VAR_AUTO_LATENCY(dns_resolver_resolve_duration_ns);
     switch (hp.type()) {
-    case HOST_TYPE_GROUP: {
-        rpc_address addr;
-        auto hp_group = hp.group_host_port();
-        addr.assign_group(hp_group->name());
-
-        for (const auto &member : hp_group->members()) {
-            CHECK_TRUE(addr.group_address()->add(resolve_address(member)));
-        }
-        addr.group_address()->set_update_leader_automatically(
-            hp_group->is_update_leader_automatically());
-        addr.group_address()->set_leader(resolve_address(hp_group->leader()));
-        return addr;
-    }
+    case HOST_TYPE_GROUP: 
+        return resolve_address(hp.group_host_port());
     case HOST_TYPE_IPV4: {
         std::vector<rpc_address> addresses;
         CHECK_OK(resolve_addresses(hp, addresses), "host_port '{}' can not be resolved", hp);
