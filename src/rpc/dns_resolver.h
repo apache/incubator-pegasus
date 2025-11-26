@@ -54,9 +54,10 @@ private:
     friend class utils::singleton<dns_resolver>;
     friend class host_port;
 
-    // Resolve this host_port to an unique rpc_address.
+    // Resolve the host_port object 'hp' into an rpc_address(i.e. a group or an ip).
     rpc_address resolve_address(const host_port &hp);
 
+    // Resolve the host_port group object into an rpc_address(i.e. a group).
     rpc_address resolve_address(const rpc_group_host_port &group);
 
     bool get_cached_addresses(const host_port &hp, std::vector<rpc_address> &addresses);

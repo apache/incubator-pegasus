@@ -2592,14 +2592,14 @@ error_code server_state::construct_partitions(
                                 pc.pid.get_partition_index());
                     if (skip_lost_partitions) {
                         hint_message +=
-                            fmt::format("WARNING: partition({}.{}) has no replica "
-                                        "collected, force recover the lost partition to empty\n",
+                            fmt::format("WARNING: partition({}.{}) has no replica collected, "
+                                        "force recover the lost partition to empty\n",
                                         app->app_id,
                                         pc.pid.get_partition_index());
                     } else {
                         hint_message += fmt::format("ERROR: partition({}.{}) has no replica "
-                                                    "collected, you can force recover it by set "
-                                                    "skip_lost_partitions option\n",
+                                                    "collected, you can force recover it by "
+                                                    "set skip_lost_partitions option\n",
                                                     app->app_id,
                                                     pc.pid.get_partition_index());
                     }
