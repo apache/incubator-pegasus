@@ -154,6 +154,7 @@ func (c *rpcBasedClient) QueryConfig(tableName string) (int32, int32, []*replica
 }
 
 func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, replicaCount int32, maxWaitSeconds int32) error {
+	originalWaitSeconds := maxWaitSeconds
 	for ; maxWaitSeconds > 0; maxWaitSeconds-- {
 		_, _, partitions, err := c.QueryConfig(tableName)
 		if err != nil {
@@ -166,14 +167,16 @@ func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, 
 				readyCount++
 			}
 		}
+
 		if readyCount == partitionCount {
 			break
 		}
+
 		time.Sleep(time.Second)
 	}
 
 	if maxWaitSeconds <= 0 {
-		return fmt.Errorf("after %d seconds, table '%s' is still not ready", maxWaitSeconds, tableName)
+		return fmt.Errorf("after %d seconds, table '%s' is still not ready", originalWaitSeconds, tableName)
 	}
 
 	return nil
