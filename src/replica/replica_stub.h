@@ -56,7 +56,6 @@
 #include "replica.h"
 #include "replica/mutation_log.h"
 #include "replica_admin_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
@@ -219,12 +218,9 @@ public:
     bool is_connected() const { return NS_Connected == _state; }
     virtual rpc_address get_meta_server_address() const
     {
-        return dsn::dns_resolver::instance().resolve_address(_failure_detector->get_servers());
+        return _failure_detector->get_servers().resolve();
     }
-    rpc_address primary_address() const
-    {
-        return dsn::dns_resolver::instance().resolve_address(_primary_host_port);
-    }
+    rpc_address primary_address() const { return _primary_host_port.resolve(); }
     const host_port &primary_host_port() const { return _primary_host_port; }
 
     //

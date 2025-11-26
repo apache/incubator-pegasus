@@ -590,7 +590,7 @@ meta_leader_state meta_service::check_leader(dsn::message_ex *req,
 
     LOG_DEBUG("leader address: {}", leader);
     if (leader) {
-        dsn_rpc_forward(req, dsn::dns_resolver::instance().resolve_address(leader));
+        dsn_rpc_forward(req, leader.resolve());
         return meta_leader_state::kNotLeaderAndCanForwardRpc;
     }
 

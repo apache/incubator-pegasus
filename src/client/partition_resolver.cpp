@@ -31,7 +31,6 @@
 #include "partition_resolver_manager.h"
 #include "runtime/api_layer1.h"
 #include "runtime/api_task.h"
-#include "rpc/dns_resolver.h"
 #include "task/task_spec.h"
 #include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
@@ -130,7 +129,7 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                 }
                 hdr.gpid = result.pid;
             }
-            dsn_rpc_call(dns_resolver::instance().resolve_address(result.hp), t.get());
+            dsn_rpc_call(result.hp.resolve(), t.get());
         },
         hdr.client.timeout_ms);
 }

@@ -235,7 +235,7 @@ protected:
     dsn::task_tracker _tracker;
 
     // subClass can rewrite these method.
-    virtual void send_beacon(const host_port &node, uint64_t time);
+    virtual void send_beacon(const host_port &target, uint64_t time);
 };
 } // namespace fd
 } // namespace dsn

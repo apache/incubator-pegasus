@@ -23,10 +23,12 @@
 #include <unordered_map>
 #include <vector>
 
+#include "rpc/group_host_port.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "utils/errors.h"
 #include "utils/metrics.h"
+#include "utils/ports.h"
 #include "utils/singleton.h"
 #include "utils/synchronize.h"
 
@@ -42,9 +44,6 @@ namespace dsn {
 class dns_resolver : public utils::singleton<dns_resolver>
 {
 public:
-    // Resolve this host_port to an unique rpc_address.
-    rpc_address resolve_address(const host_port &hp);
-
     // Resolve comma separated host:port list 'host_ports' to comma separated ip:port list.
     static std::string ip_ports_from_host_ports(const std::string &host_ports);
 
@@ -53,6 +52,13 @@ private:
     ~dns_resolver() = default;
 
     friend class utils::singleton<dns_resolver>;
+    friend class host_port;
+
+    // Resolve the host_port object 'hp' into an rpc_address(i.e. a group or an ip).
+    rpc_address resolve_address(const host_port &hp);
+
+    // Resolve the host_port group object into an rpc_address(i.e. a group).
+    rpc_address resolve_address(const rpc_group_host_port &group);
 
     bool get_cached_addresses(const host_port &hp, std::vector<rpc_address> &addresses);
 
@@ -66,6 +72,9 @@ private:
     METRIC_VAR_DECLARE_gauge_int64(dns_resolver_cache_size);
     METRIC_VAR_DECLARE_percentile_int64(dns_resolver_resolve_duration_ns);
     METRIC_VAR_DECLARE_percentile_int64(dns_resolver_resolve_by_dns_duration_ns);
+
+    DISALLOW_COPY_AND_ASSIGN(dns_resolver);
+    DISALLOW_MOVE_AND_ASSIGN(dns_resolver);
 };
 
 } // namespace dsn
