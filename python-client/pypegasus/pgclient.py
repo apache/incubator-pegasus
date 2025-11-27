@@ -22,11 +22,12 @@ import os
 import logging.config
 import six
 import ipaddress
+import socket
 
 from thrift.Thrift import TMessageType, TApplicationException
 from twisted.internet import defer
 from twisted.internet import reactor
-from twisted.internet.defer import inlineCallbacks, succeed, fail, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.protocol import ClientCreator
 from twisted.names import client, dns
 
@@ -253,17 +254,18 @@ class MetaSessionManager(SessionManager):
     # validate if the given string is a valid IP address     
     def is_valid_ip(self, address):
         try:
-            socket.inet_pton(socket.AF_INET, address)
+            ipaddress.ip_address(address)
             return True
-        except Exception as e:
-            # maybe ipv6
-            try:
-                socket.inet_pton(socket.AF_INET6, address)
-                return True
-            except Exception as e:
-                return False
+        except ValueError:
+            return False
             
     def get_host_type(self, ip_list):
+        """
+        Determines the host type based on the provided list of IP addresses.
+        
+        This function analyzes the IP version distribution in the given list to classify
+        the host as IPv4-only, IPv6-only, mixed (both IPv4 and IPv6), or invalid.
+        """
         has_ipv4 = False
         has_ipv6 = False
 
@@ -287,7 +289,11 @@ class MetaSessionManager(SessionManager):
             return host_port_types.kHostTypeInvalid
     
     def resolve_all_ips(self, hostname):
+        """
+        Resolves a hostname to all associated IP addresses (both A and AAAA records).
 
+        This function performs DNS lookups for IPv4 and IPv6 records and combines the results.
+        """
         def extract_ips(result, record_type):
             answers, _, _ = result
             ips = []
@@ -354,9 +360,17 @@ class MetaSessionManager(SessionManager):
 
     @inlineCallbacks
     def resolve_host(self, err):
+        """
+        Resolves the hostname of meta server and updates the address list.
+        
+        call this function means that all the meta server is not reachable, so we need to
+        resolve the hostname of meta server and update the address list. then, client will 
+        retry to query new meta server.
+        """
         if not self.host_ports:
             returnValue(None) 
-        
+
+        logger.error("fail to query meta server, try to resolve hostname, err: %s", err)    
         new_addr_list = []
         for host_port in self.host_ports:
             host, port = host_port.to_host_port()
@@ -370,7 +384,7 @@ class MetaSessionManager(SessionManager):
                 logger.error("failed to resolve hostname %s: %s", host, e)
                 continue
                 
-        if not new_addr_list or new_addr_list == self.addr_list:
+        if not new_addr_list or set(new_addr_list) == set(self.addr_list):
             returnValue(None)
      
         stale_sessions = []
@@ -383,7 +397,7 @@ class MetaSessionManager(SessionManager):
         self.addr_list = new_addr_list
 
         for session in stale_sessions:
-            if session: 
+            if session is not None:
                 reactor.callFromThread(session.close)
 
         returnValue(None)
