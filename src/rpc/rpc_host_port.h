@@ -73,7 +73,7 @@ class TProtocol;
         } else {                                                                                   \
             _target.reserve(_obj.field.size());                                                    \
             for (const auto &addr : _obj.field) {                                                  \
-                _target.emplace_back(host_port::from_address(addr));                               \
+                _target.emplace_back(dsn::host_port::from_address(addr));                          \
             }                                                                                      \
         }                                                                                          \
     } while (0)
@@ -131,6 +131,7 @@ class TProtocol;
         auto &_obj = (obj);                                                                        \
         _obj.field.set_invalid();                                                                  \
         _obj.hp_##field.reset();                                                                   \
+        _obj.__isset.hp_##field = false;                                                           \
     } while (0)
 
 // Clear the '<field>' and optional 'hp_<field>' of 'obj'. The types of the fields are std::vector
@@ -139,7 +140,8 @@ class TProtocol;
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
         _obj.field.clear();                                                                        \
-        _obj.__set_hp_##field({});                                                                 \
+        _obj.hp_##field.clear();                                                                   \
+        _obj.__isset.hp_##field = false;                                                           \
     } while (0)
 
 // Add 'addr' and 'hp' to the vector '<field>' and optional vector 'hp_<field>' of 'obj'. The types
