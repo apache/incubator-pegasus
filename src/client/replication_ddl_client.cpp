@@ -444,10 +444,10 @@ error_s replication_ddl_client::list_apps(bool detailed,
                 if (primary) {
                     replica_count++;
                 }
-                
+
                 std::vector<host_port> secondaries;
                 GET_HOST_PORTS(pc, secondaries, secondaries);
-                replica_count += secondaries.size();
+                replica_count += static_cast<int>(secondaries.size());
                 if (primary) {
                     if (replica_count >= pc.max_replica_count) {
                         fully_healthy++;
