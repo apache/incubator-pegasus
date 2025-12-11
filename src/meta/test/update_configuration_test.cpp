@@ -388,7 +388,7 @@ void meta_service_test_app::adjust_dropped_size()
 static void clone_app_mapper(app_mapper &output, const app_mapper &input)
 {
     output.clear();
-    for (const auto &[_, old_app]: input) {
+    for (const auto &[_, old_app] : input) {
         ASSERT_EQ(old_app->partition_count, old_app->pcs.size());
 
         const dsn::app_info info = *old_app;

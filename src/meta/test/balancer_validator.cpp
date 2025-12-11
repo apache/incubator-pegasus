@@ -217,7 +217,7 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
         ASSERT_EQ(info.partition_count, app->partition_count);
         ASSERT_EQ(info.partition_count, app->pcs.size());
         apps[info.app_id] = app;
-        for (auto &pc: app->pcs) {
+        for (auto &pc : app->pcs) {
             int n{0};
             infile >> n >> ip_port;
 
