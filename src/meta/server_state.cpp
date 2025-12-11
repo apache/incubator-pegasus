@@ -2579,7 +2579,7 @@ error_code server_state::construct_partitions(
                              boost::lexical_cast<std::string>(pc));
                     if (pc.hp_last_drops.size() + 1 < pc.max_replica_count) {
                         hint_message += fmt::format("WARNING: partition({}.{}) only collects "
-                                                    "{}/{} of replicas, may lost data",
+                                                    "{}/{} of replicas, may lost data\n",
                                                     app->app_id,
                                                     pc.pid.get_partition_index(),
                                                     pc.hp_last_drops.size() + 1,
