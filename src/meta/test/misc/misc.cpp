@@ -28,11 +28,13 @@
 
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
+#include <gtest/gtest.h>
+
 // IWYU pragma: no_include <ext/alloc_traits.h>
-#include <stdio.h>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <set>
@@ -78,7 +80,7 @@ void verbose_apps(const app_mapper &input_apps)
     for (const auto &apps : input_apps) {
         const std::shared_ptr<app_state> &app = apps.second;
         std::cout << apps.first << " " << app->partition_count << std::endl;
-        CHECK_EQ(app->partition_count, app->pcs.size());
+        ASSERT_EQ(app->partition_count, app->pcs.size());
         for (const auto &pc : app->pcs) {
             std::cout << pc.hp_secondaries.size() + 1 << " " << pc.hp_primary;
             for (const auto &secondary : pc.hp_secondaries) {
@@ -454,7 +456,7 @@ void app_mapper_compare(const app_mapper &mapper1, const app_mapper &mapper2)
                   app1->status == dsn::app_status::AS_DROPPED,
               "");
         if (app1->status == dsn::app_status::AS_AVAILABLE) {
-            CHECK_EQ(app1->partition_count, app2->partition_count);
+            ASSERT_EQ(app1->partition_count, app2->partition_count);
             for (unsigned int i = 0; i < app1->partition_count; ++i) {
                 CHECK(is_partition_config_equal(app1->pcs[i], app2->pcs[i]), "");
             }

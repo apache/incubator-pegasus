@@ -821,7 +821,7 @@ void meta_partition_guardian_test::cure()
         pc_status status;
         all_partitions_healthy = true;
 
-        CHECK_EQ(app->partition_count, app->pcs.size());
+        ASSERT_EQ(app->partition_count, app->pcs.size());
         for (const auto &pc : app->pcs) {
             status = guardian.cure({&apps, &nodes}, pc.pid, action);
             if (status != pc_status::healthy) {
@@ -873,8 +873,8 @@ void meta_partition_guardian_test::from_proposal_test()
     configuration_proposal_action cpa;
     configuration_proposal_action cpa2;
 
-    dsn::partition_configuration &pc = *get_config(apps, p);
-    config_context &cc = *get_config_context(apps, p);
+    auto &pc = *get_config(apps, p);
+    auto &cc = *get_config_context(apps, p);
 
     std::cerr << "Case 1: test no proposals in config_context" << std::endl;
     ASSERT_FALSE(guardian.from_proposals(mv, p, cpa));
