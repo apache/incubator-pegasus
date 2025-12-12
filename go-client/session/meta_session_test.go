@@ -81,7 +81,7 @@ func testMetaSessionMustQueryLeader(t *testing.T, metaServers []string) {
 func TestNodeSession_ConcurrentCall(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	meta := newMetaSession("127.0.0.1:34601")
+	meta := newMetaSession("0.0.0.0:34601")
 	defer meta.Close()
 
 	var wg sync.WaitGroup
