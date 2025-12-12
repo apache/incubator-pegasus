@@ -128,11 +128,13 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 		addr := forwardAddr.GetAddress()
 		c.lock.Lock()
 		found := addMetaSession(&c.metaIPAddrs, &c.metas, addr)
-		c.lock.Unlock()
 		if found {
 			curLeader = len(c.metas) - 1
 			meta = c.metas[curLeader]
 			meta.logger.Printf("add forward address %s as meta server", addr)
+		}
+		c.lock.Unlock()
+		if found {
 			resp, err = c.callFunc(ctx, meta)
 		}
 	}
