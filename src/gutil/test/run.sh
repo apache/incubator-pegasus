@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,4 +16,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
-./pgs_gutil_test
+if [ -z "${REPORT_DIR}" ]; then
+    REPORT_DIR="."
+fi
+
+output_xml="${REPORT_DIR}/gutil_test.xml"
+GTEST_OUTPUT="xml:${output_xml}" ./gutil_test
+
+if [ $? -ne 0 ]; then
+    echo "run gutil_test failed"
+    echo "---- ls ----"
+    ls -l
+    if [ `find . -name pegasus.log.* | wc -l` -ne 0 ]; then
+        echo "---- tail -n 100 pegasus.log.* ----"
+        tail -n 100 `find . -name pegasus.log.*`
+    fi
+    if [ -f core ]; then
+        echo "---- gdb ./gutil_test core ----"
+        gdb ./gutil_test core -ex "thread apply all bt" -ex "set pagination 0" -batch
+    fi
+    exit 1
+fi

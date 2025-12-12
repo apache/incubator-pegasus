@@ -434,6 +434,7 @@ function run_test()
       dsn_runtime_tests
       dsn_utils_tests
       dsn.zookeeper.tests
+      gutil_test
       partition_split_test
       pegasus_geo_test
       pegasus_rproxy_test
