@@ -38,6 +38,7 @@
 
 #include "common/replication_other_types.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
@@ -212,17 +213,20 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
         info.status = app_status::AS_AVAILABLE;
 
         std::shared_ptr<app_state> app(new app_state(info));
+        ASSERT_EQ(info.partition_count, app->partition_count);
+        ASSERT_EQ(info.partition_count, app->pcs.size());
         apps[info.app_id] = app;
-        for (int j = 0; j < info.partition_count; ++j) {
-            int n;
-            infile >> n;
-            infile >> ip_port;
+        for (auto &pc : app->pcs) {
+            int n{0};
+            infile >> n >> ip_port;
+
             const auto primary = host_port::from_string(ip_port);
-            SET_IP_AND_HOST_PORT_BY_DNS(app->pcs[j], primary, primary);
-            for (int k = 1; k < n; ++k) {
+            SET_IP_AND_HOST_PORT_BY_DNS(pc, primary, primary);
+
+            for (int j = 1; j < n; ++j) {
                 infile >> ip_port;
                 const auto secondary = host_port::from_string(ip_port);
-                ADD_IP_AND_HOST_PORT_BY_DNS(app->pcs[j], secondaries, secondary);
+                ADD_IP_AND_HOST_PORT_BY_DNS(pc, secondaries, secondary);
             }
         }
     }

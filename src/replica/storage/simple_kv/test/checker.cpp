@@ -330,9 +330,9 @@ void test_checker::get_current_states(state_snapshot &states)
 bool test_checker::get_current_config(parti_config &config)
 {
     meta_service_app *meta = meta_leader();
-    if (meta == nullptr)
+    if (meta == nullptr) {
         return false;
-    partition_configuration pc;
+    }
 
     // we should never try to acquire lock when we are in checker. Because we are the only
     // thread that is running.

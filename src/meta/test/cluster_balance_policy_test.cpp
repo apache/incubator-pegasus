@@ -192,13 +192,15 @@ TEST(cluster_balance_policy, get_node_migration_info)
 
     node_state ns;
     ns.set_hp(hp);
-    gpid pid = gpid(appid, 0);
+
+    const gpid pid(appid, 0);
     ns.put_partition(pid, true);
 
     cluster_balance_policy::node_migration_info migration_info;
     policy.get_node_migration_info(ns, all_apps, migration_info);
 
-    ASSERT_EQ(migration_info.hp, hp);
+    ASSERT_EQ(hp, migration_info.hp);
+
     const auto *ps = gutil::FindOrNull(migration_info.partitions, disk_tag);
     ASSERT_NE(ps, nullptr);
     ASSERT_EQ(1, ps->size());
