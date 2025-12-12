@@ -35,6 +35,7 @@
 #include "meta_admin_types.h"
 #include "rpc/dns_resolver.h" // IWYU pragma: keep
 #include "rpc/rpc_address.h"
+#include "rpc/rpc_host_port.h"
 #include "utils/command_manager.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
@@ -172,14 +173,17 @@ generate_balancer_request(const app_mapper &apps,
             new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
         result.action_list.emplace_back(new_proposal_action(to, from, config_type::CT_REMOVE));
         break;
-    case balance_type::COPY_SECONDARY:
+    case balance_type::COPY_SECONDARY: {
         ans = "copy_secondary";
         result.balance_type = balancer_request_type::copy_secondary;
+        host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
         result.action_list.emplace_back(
-            new_proposal_action(pc.hp_primary, to, config_type::CT_ADD_SECONDARY_FOR_LB));
+            new_proposal_action(primary, to, config_type::CT_ADD_SECONDARY_FOR_LB));
         result.action_list.emplace_back(
-            new_proposal_action(pc.hp_primary, from, config_type::CT_REMOVE));
+            new_proposal_action(primary, from, config_type::CT_REMOVE));
         break;
+    }
     default:
         CHECK(false, "");
     }
@@ -566,7 +570,9 @@ void ford_fulkerson::update_decree(int node_id, const node_state &ns)
 {
     ns.for_each_primary(_app->app_id, [&, this](const gpid &pid) {
         const auto &pc = _app->pcs[pid.get_partition_index()];
-        for (const auto &secondary : pc.hp_secondaries) {
+        std::vector<host_port> secondaries;
+        GET_HOST_PORTS(pc, secondaries, secondaries);
+        for (const auto &secondary : secondaries) {
             auto i = _host_port_id.find(secondary);
             CHECK(i != _host_port_id.end(), "invalid secondary: {}", secondary);
             _network[node_id][i->second]++;

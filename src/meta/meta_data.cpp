@@ -538,6 +538,10 @@ app_state::app_state(const app_info &info) : app_info(info), helpers(new app_sta
     CLEAR_IP_AND_HOST_PORT(pc, secondaries);
     CLEAR_IP_AND_HOST_PORT(pc, last_drops);
 
+    // TODO(yujingwei): use marco simplify the code, and the logical may should change
+    pc.__set_hp_secondaries({});
+    pc.__set_hp_last_drops({});
+
     pcs.assign(app_info::partition_count, pc);
     for (int i = 0; i != app_info::partition_count; ++i) {
         pcs[i].pid.set_partition_index(i);
