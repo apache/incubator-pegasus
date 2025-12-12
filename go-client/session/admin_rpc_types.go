@@ -33,7 +33,7 @@ func (ms *metaSession) dropApp(ctx context.Context, req *admin.ConfigurationDrop
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_DROP_APP")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_DROP_APP on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientDropAppResult)
 	return ret.GetSuccess(), nil
@@ -58,7 +58,7 @@ func (ms *metaSession) createApp(ctx context.Context, req *admin.ConfigurationCr
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_CREATE_APP")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_CREATE_APP on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientCreateAppResult)
 	return ret.GetSuccess(), nil
@@ -83,7 +83,7 @@ func (ms *metaSession) recallApp(ctx context.Context, req *admin.ConfigurationRe
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_RECALL_APP")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_RECALL_APP on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientRecallAppResult)
 	return ret.GetSuccess(), nil
@@ -108,7 +108,7 @@ func (ms *metaSession) listApps(ctx context.Context, req *admin.ConfigurationLis
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_LIST_APPS")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_LIST_APPS on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientListAppsResult)
 	return ret.GetSuccess(), nil
@@ -133,7 +133,7 @@ func (ms *metaSession) queryDuplication(ctx context.Context, req *admin.Duplicat
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_DUPLICATION")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_QUERY_DUPLICATION on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientQueryDuplicationResult)
 	return ret.GetSuccess(), nil
@@ -158,7 +158,7 @@ func (ms *metaSession) modifyDuplication(ctx context.Context, req *admin.Duplica
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_MODIFY_DUPLICATION")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_MODIFY_DUPLICATION on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientModifyDuplicationResult)
 	return ret.GetSuccess(), nil
@@ -183,7 +183,7 @@ func (ms *metaSession) addDuplication(ctx context.Context, req *admin.Duplicatio
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_ADD_DUPLICATION")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_ADD_DUPLICATION on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientAddDuplicationResult)
 	return ret.GetSuccess(), nil
@@ -208,7 +208,7 @@ func (ms *metaSession) queryAppInfo(ctx context.Context, req *admin.QueryAppInfo
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_QUERY_APP_INFO")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_QUERY_APP_INFO on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientQueryAppInfoResult)
 	return ret.GetSuccess(), nil
@@ -233,7 +233,7 @@ func (ms *metaSession) updateAppEnv(ctx context.Context, req *admin.Configuratio
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_UPDATE_APP_ENV")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_UPDATE_APP_ENV on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientUpdateAppEnvResult)
 	return ret.GetSuccess(), nil
@@ -258,7 +258,7 @@ func (ms *metaSession) listNodes(ctx context.Context, req *admin.ConfigurationLi
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_LIST_NODES")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_LIST_NODES on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientListNodesResult)
 	return ret.GetSuccess(), nil
@@ -283,7 +283,7 @@ func (ms *metaSession) queryClusterInfo(ctx context.Context, req *admin.Configur
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_CLUSTER_INFO")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_CLUSTER_INFO on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientQueryClusterInfoResult)
 	return ret.GetSuccess(), nil
@@ -308,7 +308,7 @@ func (ms *metaSession) metaControl(ctx context.Context, req *admin.Configuration
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_CONTROL_META")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_CONTROL_META on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientMetaControlResult)
 	return ret.GetSuccess(), nil
@@ -333,7 +333,7 @@ func (ms *metaSession) queryBackupPolicy(ctx context.Context, req *admin.Configu
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_BACKUP_POLICY")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_QUERY_BACKUP_POLICY on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientQueryBackupPolicyResult)
 	return ret.GetSuccess(), nil
@@ -358,7 +358,7 @@ func (ms *metaSession) balance(ctx context.Context, req *admin.ConfigurationBala
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_PROPOSE_BALANCER")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_PROPOSE_BALANCER on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientBalanceResult)
 	return ret.GetSuccess(), nil
@@ -383,7 +383,7 @@ func (ms *metaSession) startBackupApp(ctx context.Context, req *admin.StartBacku
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_START_BACKUP_APP")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_START_BACKUP_APP on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientStartBackupAppResult)
 	return ret.GetSuccess(), nil
@@ -408,7 +408,7 @@ func (ms *metaSession) queryBackupStatus(ctx context.Context, req *admin.QueryBa
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_BACKUP_STATUS")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_QUERY_BACKUP_STATUS on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientQueryBackupStatusResult)
 	return ret.GetSuccess(), nil
@@ -433,7 +433,7 @@ func (ms *metaSession) restoreApp(ctx context.Context, req *admin.ConfigurationR
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_START_RESTORE")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_START_RESTORE on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientRestoreAppResult)
 	return ret.GetSuccess(), nil
@@ -458,7 +458,7 @@ func (ms *metaSession) startPartitionSplit(ctx context.Context, req *admin.Start
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_START_PARTITION_SPLIT")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_START_PARTITION_SPLIT on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientStartPartitionSplitResult)
 	return ret.GetSuccess(), nil
@@ -483,7 +483,7 @@ func (ms *metaSession) querySplitStatus(ctx context.Context, req *admin.QuerySpl
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_PARTITION_SPLIT")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_QUERY_PARTITION_SPLIT on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientQuerySplitStatusResult)
 	return ret.GetSuccess(), nil
@@ -508,7 +508,7 @@ func (ms *metaSession) controlPartitionSplit(ctx context.Context, req *admin.Con
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_CONTROL_PARTITION_SPLIT")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_CONTROL_PARTITION_SPLIT on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientControlPartitionSplitResult)
 	return ret.GetSuccess(), nil
@@ -533,7 +533,7 @@ func (ms *metaSession) startBulkLoad(ctx context.Context, req *admin.StartBulkLo
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_START_BULK_LOAD")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_START_BULK_LOAD on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientStartBulkLoadResult)
 	return ret.GetSuccess(), nil
@@ -558,7 +558,7 @@ func (ms *metaSession) queryBulkLoadStatus(ctx context.Context, req *admin.Query
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_BULK_LOAD_STATUS")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_QUERY_BULK_LOAD_STATUS on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientQueryBulkLoadStatusResult)
 	return ret.GetSuccess(), nil
@@ -583,7 +583,7 @@ func (ms *metaSession) controlBulkLoad(ctx context.Context, req *admin.ControlBu
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_CONTROL_BULK_LOAD")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_CONTROL_BULK_LOAD on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientControlBulkLoadResult)
 	return ret.GetSuccess(), nil
@@ -608,7 +608,7 @@ func (ms *metaSession) clearBulkLoad(ctx context.Context, req *admin.ClearBulkLo
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_CLEAR_BULK_LOAD")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_CLEAR_BULK_LOAD on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientClearBulkLoadResult)
 	return ret.GetSuccess(), nil
@@ -633,7 +633,7 @@ func (ms *metaSession) startManualCompact(ctx context.Context, req *admin.StartA
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_START_MANUAL_COMPACT")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_START_MANUAL_COMPACT on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientStartManualCompactResult)
 	return ret.GetSuccess(), nil
@@ -658,7 +658,7 @@ func (ms *metaSession) queryManualCompact(ctx context.Context, req *admin.QueryA
 	arg.Req = req
 	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_MANUAL_COMPACT_STATUS")
 	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+		return nil, fmt.Errorf("RPC_CM_QUERY_MANUAL_COMPACT_STATUS on session %s failed: %s", ms, err)
 	}
 	ret, _ := result.(*admin.AdminClientQueryManualCompactResult)
 	return ret.GetSuccess(), nil
