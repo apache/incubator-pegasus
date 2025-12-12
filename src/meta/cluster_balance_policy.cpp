@@ -17,9 +17,9 @@
 
 #include "cluster_balance_policy.h"
 
-#include <limits.h>
-#include <stdlib.h>
+#include <climits>
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <iterator>
 #include <unordered_map>
@@ -347,6 +347,7 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
     return found;
 }
 
+// TODO(wangdan): refactor this function into utils.
 template <typename S>
 auto select_random(const S &s, size_t n)
 {
@@ -367,8 +368,11 @@ bool cluster_balance_policy::pick_up_move(const cluster_migration_info &cluster_
     if (max_load_disk_set.empty()) {
         return false;
     }
-    auto index = rand() % max_load_disk_set.size();
-    auto max_load_disk = *select_random(max_load_disk_set, index);
+
+    // TODO(wangdan): consider using C++11 random library instead.
+    // NOLINTNEXTLINE(cert-msc30-c,cert-msc50-cpp)
+    const auto index = static_cast<size_t>(std::rand()) % max_load_disk_set.size();
+    const auto max_load_disk = *select_random(max_load_disk_set, index);
     LOG_INFO("most load disk({}) on node({}) is picked, has {} partition",
              max_load_disk.node,
              max_load_disk.disk_tag,

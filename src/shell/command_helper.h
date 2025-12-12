@@ -1292,11 +1292,7 @@ call_remote_command(shell_context *sc,
             }
         };
         tasks[i] = dsn::dist::cmd::async_call_remote(
-            dsn::dns_resolver::instance().resolve_address(nodes[i].hp),
-            cmd,
-            arguments,
-            callback,
-            std::chrono::milliseconds(5000));
+            nodes[i].hp.resolve(), cmd, arguments, callback, std::chrono::milliseconds(5000));
     }
     for (int i = 0; i < nodes.size(); ++i) {
         tasks[i]->wait();
@@ -2161,10 +2157,10 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
-        nodes_stat[i].node_address =
-            dsn::dns_resolver::instance().resolve_address(nodes[i].hp).to_string();
+        nodes_stat[i].node_address = nodes[i].hp.resolve().to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
-            int32_t app_id, pidx;
+            int32_t app_id{0};
+            int32_t pidx{0};
             std::string counter_name;
             bool r = parse_app_pegasus_perf_counter_name(m.name, app_id, pidx, counter_name);
             CHECK(r, "name = {}", m.name);

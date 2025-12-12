@@ -55,7 +55,6 @@
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "metadata_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
@@ -235,7 +234,7 @@ void meta_partition_guardian_test::cure_test()
         EXPECT_TRUE(is_secondary(pc, update_req->hp_node));
         EXPECT_TRUE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, update_req->hp_node);
-        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), update_req->node);
+        EXPECT_EQ(target.resolve(), update_req->node);
 
         last_addr = update_req->hp_node;
         proposal_sent = true;
@@ -258,9 +257,9 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(config_type::CT_UPGRADE_TO_PRIMARY, update_req->type);
         EXPECT_EQ(update_req->hp_node, last_addr);
-        EXPECT_EQ(update_req->node, dsn::dns_resolver::instance().resolve_address(last_addr));
+        EXPECT_EQ(update_req->node, last_addr.resolve());
         EXPECT_EQ(target, update_req->hp_node);
-        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), update_req->node);
+        EXPECT_EQ(target.resolve(), update_req->node);
 
         proposal_sent = true;
         apply_update_request(*update_req);
@@ -299,7 +298,7 @@ void meta_partition_guardian_test::cure_test()
         EXPECT_TRUE(is_secondary(pc, update_req->hp_node));
         EXPECT_TRUE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, update_req->hp_node);
-        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), update_req->node);
+        EXPECT_EQ(target.resolve(), update_req->node);
 
         proposal_sent = true;
         last_addr = update_req->hp_node;
@@ -325,7 +324,7 @@ void meta_partition_guardian_test::cure_test()
         EXPECT_TRUE(is_secondary(pc, update_req->hp_node));
         EXPECT_TRUE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, update_req->hp_node);
-        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), update_req->node);
+        EXPECT_EQ(target.resolve(), update_req->node);
         EXPECT_NE(target, last_addr);
 
         proposal_sent = true;
@@ -386,7 +385,7 @@ void meta_partition_guardian_test::cure_test()
 
         EXPECT_EQ(update_req->type, config_type::CT_ADD_SECONDARY);
         EXPECT_EQ(update_req->hp_node, last_addr);
-        EXPECT_EQ(update_req->node, dsn::dns_resolver::instance().resolve_address(last_addr));
+        EXPECT_EQ(update_req->node, last_addr.resolve());
         EXPECT_EQ(target, nodes[0]);
 
         proposal_sent = true;
@@ -531,7 +530,7 @@ void meta_partition_guardian_test::cure_test()
         EXPECT_FALSE(is_secondary(pc, update_req->hp_node));
         EXPECT_FALSE(is_secondary(pc, update_req->node));
         EXPECT_EQ(target, pc.hp_primary);
-        EXPECT_EQ(dsn::dns_resolver::instance().resolve_address(target), pc.primary);
+        EXPECT_EQ(target.resolve(), pc.primary);
 
         proposal_sent = true;
         svc->set_node_state({pc.hp_primary}, false);

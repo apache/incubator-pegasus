@@ -34,7 +34,7 @@ TEST(host_port_test, dns_resolver)
     // Resolve HOST_TYPE_IPV4 type host_port.
     {
         host_port hp("localhost", 8080);
-        const auto &addr = dns_resolver::instance().resolve_address(hp);
+        const auto &addr = hp.resolve();
         ASSERT_TRUE(rpc_address::from_ip_port("127.0.0.1", 8080) == addr ||
                     rpc_address::from_ip_port("127.0.1.1", 8080) == addr);
     }
@@ -50,7 +50,7 @@ TEST(host_port_test, dns_resolver)
         host_port hp2("localhost", 8081);
         g_hp->set_leader(hp2);
 
-        const auto &addr_grp = dns_resolver::instance().resolve_address(hp_grp);
+        const auto &addr_grp = hp_grp.resolve();
         const auto *const g_addr = addr_grp.group_address();
 
         ASSERT_EQ(g_addr->is_update_leader_automatically(), g_hp->is_update_leader_automatically());
