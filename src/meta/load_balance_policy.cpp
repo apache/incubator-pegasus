@@ -180,8 +180,7 @@ generate_balancer_request(const app_mapper &apps,
         GET_HOST_PORT(pc, primary, primary);
         result.action_list.emplace_back(
             new_proposal_action(primary, to, config_type::CT_ADD_SECONDARY_FOR_LB));
-        result.action_list.emplace_back(
-            new_proposal_action(primary, from, config_type::CT_REMOVE));
+        result.action_list.emplace_back(new_proposal_action(primary, from, config_type::CT_REMOVE));
         break;
     }
     default:
