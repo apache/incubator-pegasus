@@ -28,8 +28,6 @@
 
 #include <boost/lexical_cast.hpp>
 #include <fmt/core.h>
-#include <gtest/gtest.h>
-
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <atomic>
 #include <chrono>
@@ -48,6 +46,7 @@
 #include "common/replication_other_types.h"
 #include "dsn.layer2_types.h"
 #include "duplication_types.h"
+#include "gtest/gtest.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
 #include "rpc/dns_resolver.h" // IWYU pragma: keep

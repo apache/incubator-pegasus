@@ -26,8 +26,6 @@
 
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
-#include <gtest/gtest.h>
-
 #include <algorithm>
 #include <cstdint>
 #include <fstream>
@@ -40,6 +38,7 @@
 
 #include "common/replication_other_types.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
+#include "gtest/gtest.h"
 #include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
