@@ -815,8 +815,10 @@ void meta_partition_guardian_test::cure()
         get_node_state(nodes, hp, true)->set_alive(true);
     }
 
-    for (bool all_partitions_healthy = false; !all_partitions_healthy;
-         all_partitions_healthy = true) {
+    bool all_partitions_healthy{false};
+    while (!all_partitions_healthy) {
+        all_partitions_healthy = true;
+
         ASSERT_EQ(app->partition_count, app->pcs.size());
         for (const auto &pc : app->pcs) {
             configuration_proposal_action action;
