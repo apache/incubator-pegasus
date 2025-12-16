@@ -259,7 +259,10 @@ jobs:
           - dsn_task_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
-          - gutil_test
+          # TODO(wangdan): absl::node_hash_map will fail when ASan tests run because some objects
+          # have different structures between non-ASan and ASan building. Will be enabled after
+          # this issue is fixed.
+          # - gutil_test
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
           # it has been optimized.
           # - partition_split_test
