@@ -57,6 +57,16 @@ message(STATUS "Setting up third-parties...")
 file(MAKE_DIRECTORY ${TP_OUTPUT}/include)
 file(MAKE_DIRECTORY ${TP_OUTPUT}/lib)
 
+option(ENABLE_ASAN "enable ASan" OFF)
+message(STATUS "ENABLE_ASAN = ${ENABLE_ASAN}")
+
+set(ASAN_OPTIONS
+        -DCMAKE_C_FLAGS="-fsanitize=address"
+        -DCMAKE_CXX_FLAGS="-fsanitize=address"
+        -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+        -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address"
+)
+
 ExternalProject_Add(boost
         URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
         URL_MD5 30a657150d8e5cf431e1de4396a433d0
@@ -119,23 +129,30 @@ ExternalProject_Add(gperftools
         DOWNLOAD_NO_PROGRESS true
 )
 
+
+set(ABSL_OPTIONS
+        -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DABSL_FIND_GOOGLETEST=OFF
+        -DCMAKE_CXX_STANDARD=17
+)
+
+if (ENABLE_ASAN)
+    list(APPEND ABSL_OPTIONS ${ASAN_OPTIONS})
+endif()
+
 ExternalProject_Add(abseil
         URL ${OSS_URL_PREFIX}/abseil-20230802.1.zip
         https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip
         URL_MD5 5c6193dbc82834f8e762c6a28c9cc615
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_absl_build_on_macos_arm64.patch
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DABSL_FIND_GOOGLETEST=OFF
-        -DCMAKE_CXX_STANDARD=17
+        CMAKE_ARGS ${ABSL_OPTIONS}
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
 )
 
-ExternalProject_Add(protobuf
-        URL https://github.com/protocolbuffers/protobuf/archive/refs/tags/v27.0.tar.gz
-        URL_MD5 c96aaf02c8acea549d65bb7b2d549bf6
-        CMAKE_ARGS -DCMAKE_BUILD_TYPE=release
+set(PROTOBUF_OPTIONS
+        -DCMAKE_BUILD_TYPE=release
         -Dprotobuf_BUILD_TESTS=OFF
         -Dprotobuf_BUILD_PROTOC_BINARIES=ON
         -Dprotobuf_BUILD_LIBUPB=ON
@@ -149,6 +166,16 @@ ExternalProject_Add(protobuf
         -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+)
+
+if (ENABLE_ASAN)
+    list(APPEND PROTOBUF_OPTIONS ${ASAN_OPTIONS})
+endif()
+
+ExternalProject_Add(protobuf
+        URL https://github.com/protocolbuffers/protobuf/archive/refs/tags/v27.0.tar.gz
+        URL_MD5 c96aaf02c8acea549d65bb7b2d549bf6
+        CMAKE_ARGS ${PROTOBUF_OPTIONS}
         DEPENDS abseil
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true

@@ -288,6 +288,10 @@ function run_build()
         echo "Start building third-parties..."
         mkdir -p build
         pushd build
+        if [[ "${SANITIZER}" == *address* ]]; then
+            echo "ASan for third-parties is enabled"
+            CMAKE_OPTIONS="${CMAKE_OPTIONS} -DENABLE_ASAN=ON"
+        fi
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE}"
         cmake .. ${CMAKE_OPTIONS}
         make -j$JOB_NUM
