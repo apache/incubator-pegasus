@@ -32,29 +32,40 @@ import (
 )
 
 // Client provides the administration API to a specific cluster.
-// Remember only the superusers configured to the cluster have the admin priviledges.
+// Remember only the superusers configured to the cluster have the admin privileges.
 type Client interface {
+	// Close Release the resources of the client.
 	Close() error
 
-	// The timeout specify the max duration that is spent on an client request. For
-	// example, if the client is based on RPC, it would be the timeout for the RPC
-	// request.
+	// GetTimeout The timeout specifies the max duration that is spent on a client
+	// request. For example, if the client is based on RPC, it would be the timeout
+	// for the RPC request.
 	GetTimeout() time.Duration
+
+	// SetTimeout Set the timeout.
 	SetTimeout(timeout time.Duration)
 
+	// QueryConfig Query all partition configurations for the specified table.
+	QueryConfig(tableName string) (AppID int32, PartitionCount int32, partitions []*replication.PartitionConfiguration, err error)
+
+	// CreateTable Create a table with the specified options for it.
 	// `maxWaitSeconds` specify the number of seconds that is spent on waiting for
 	// the created table to be ready. This method would return error once the table
 	// is still not ready after `maxWaitSeconds`. The administrator should check if
 	// there is something wrong with the table.
-	CreateTable(tableName string, partitionCount int32, replicaCount int32, envs map[string]string, maxWaitSeconds int32, successIfExistOptional ...bool) (int32, error)
+	CreateTable(tableName string, partitionCount int32, replicaCount int32, envs map[string]string, maxWaitSeconds int32, successIfExistOptional ...bool) (AppID int32, err error)
 
-	// `reserveSeconds` specify the retention interval for a table before it is actually dropped.
+	// DropTable Delete a table with the specified retention interval.
+	// `reserveSeconds` specify the retention interval for a table before it is actually
+	// dropped.
 	DropTable(tableName string, reserveSeconds int64) error
 
-	// Empty `args` means "list all available tables"; Otherwise, the only parameter would
-	// specify the status of the returned tables.
+	// ListTables Fetch the table info list.
+	// Empty `args` means "list all available tables"; Otherwise, the only parameter
+	// would specify the status of the returned tables.
 	ListTables(args ...interface{}) ([]*replication.AppInfo, error)
 
+	// ListNodes Fetch the node info list.
 	// Empty `args` means "list all alive nodes"; Otherwise, the only parameter would
 	// specify the status of the returned nodes.
 	ListNodes(args ...interface{}) ([]*admin.NodeInfo, error)
@@ -125,33 +136,47 @@ func (c *rpcBasedClient) callMeta(methodName string, req interface{}, callback f
 	return err
 }
 
+func (c *rpcBasedClient) QueryConfig(tableName string) (int32, int32, []*replication.PartitionConfiguration, error) {
+	var resp *replication.QueryCfgResponse
+
+	err := c.callMeta("QueryConfig", tableName, func(iresp interface{}) {
+		resp = iresp.(*replication.QueryCfgResponse)
+	})
+	if err != nil {
+		return 0, 0, nil, err
+	}
+
+	if resp.GetErr().Errno != base.ERR_OK.String() {
+		return 0, 0, nil, fmt.Errorf("query config failed: %s", base.GetResponseError(resp))
+	}
+
+	return resp.AppID, resp.PartitionCount, resp.Partitions, nil
+}
+
 func (c *rpcBasedClient) waitTableReady(tableName string, partitionCount int32, replicaCount int32, maxWaitSeconds int32) error {
+	originalWaitSeconds := maxWaitSeconds
 	for ; maxWaitSeconds > 0; maxWaitSeconds-- {
-		var resp *replication.QueryCfgResponse
-		err := c.callMeta("QueryConfig", tableName, func(iresp interface{}) {
-			resp = iresp.(*replication.QueryCfgResponse)
-		})
+		_, _, partitions, err := c.QueryConfig(tableName)
 		if err != nil {
 			return err
 		}
-		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return fmt.Errorf("QueryConfig failed: %s", base.GetResponseError(resp))
-		}
 
 		readyCount := int32(0)
-		for _, part := range resp.Partitions {
-			if part.Primary.GetRawAddress() != 0 && int32(len(part.Secondaries)+1) == replicaCount {
+		for _, partition := range partitions {
+			if partition.Primary.GetRawAddress() != 0 && int32(len(partition.Secondaries)+1) == replicaCount {
 				readyCount++
 			}
 		}
+
 		if readyCount == partitionCount {
 			break
 		}
+
 		time.Sleep(time.Second)
 	}
 
 	if maxWaitSeconds <= 0 {
-		return fmt.Errorf("After %d seconds, table '%s' is still not ready", maxWaitSeconds, tableName)
+		return fmt.Errorf("after %d seconds, table '%s' is still not ready", originalWaitSeconds, tableName)
 	}
 
 	return nil
