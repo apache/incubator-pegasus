@@ -52,7 +52,7 @@ class TProtocol;
         auto &_target = (target);                                                                  \
         if (_obj.__isset.hp_##field) {                                                             \
             DCHECK(_obj.field, "invalid address: {}", _obj.field);                                 \
-            DCHECK_EQ(_obj.field, dsn::dns_resolver::instance().resolve_address(_obj.hp_##field)); \
+            DCHECK_EQ(_obj.field, _obj.hp_##field.resolve());                                      \
             _target = _obj.hp_##field;                                                             \
         } else {                                                                                   \
             _target = std::move(dsn::host_port::from_address(_obj.field));                         \
@@ -85,7 +85,7 @@ class TProtocol;
         auto &_obj = (obj);                                                                        \
         const auto &_addr = (addr);                                                                \
         const auto &_hp = (hp);                                                                    \
-        DCHECK_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        DCHECK_EQ(_addr, _hp.resolve());                                                           \
         _obj.field = _addr;                                                                        \
         _obj.__set_hp_##field(_hp);                                                                \
     } while (0)
@@ -97,7 +97,7 @@ class TProtocol;
         const auto &_obj = (obj);                                                                  \
         const auto &_addr = (addr);                                                                \
         const auto &_hp = (hp);                                                                    \
-        ASSERT_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        ASSERT_EQ(_addr, _hp.resolve());                                                           \
         ASSERT_EQ(_addr, _obj.field);                                                              \
         ASSERT_EQ(_hp, _obj.hp_##field);                                                           \
     } while (0)
@@ -109,8 +109,7 @@ class TProtocol;
     do {                                                                                           \
         const auto &_src_obj = (src_obj);                                                          \
         auto &_dst_obj = (dst_obj);                                                                \
-        DCHECK_EQ(_src_obj.src_field,                                                              \
-                  dsn::dns_resolver::instance().resolve_address(_src_obj.hp_##src_field));         \
+        DCHECK_EQ(_src_obj.src_field, _src_obj.hp_##src_field.resolve());                          \
         _dst_obj.dst_field = _src_obj.src_field;                                                   \
         _dst_obj.__set_hp_##dst_field(_src_obj.hp_##src_field);                                    \
     } while (0)
@@ -121,7 +120,7 @@ class TProtocol;
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
         const auto &_hp = (hp);                                                                    \
-        _obj.field = dsn::dns_resolver::instance().resolve_address(_hp);                           \
+        _obj.field = _hp.resolve();                                                                \
         _obj.__set_hp_##field(_hp);                                                                \
     } while (0)
 
@@ -149,7 +148,7 @@ class TProtocol;
     do {                                                                                           \
         const auto &_addr = (addr);                                                                \
         const auto &_hp = (hp);                                                                    \
-        DCHECK_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        DCHECK_EQ(_addr, _hp.resolve());                                                           \
         auto &_obj = (obj);                                                                        \
         _obj.field.push_back(_addr);                                                               \
         if (!_obj.__isset.hp_##field) {                                                            \
@@ -166,7 +165,7 @@ class TProtocol;
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
         const auto &_hp = (hp);                                                                    \
-        _obj.field.push_back(dsn::dns_resolver::instance().resolve_address(_hp));                  \
+        _obj.field.push_back(_hp.resolve());                                                       \
         if (!_obj.__isset.hp_##field) {                                                            \
             _obj.__set_hp_##field({_hp});                                                          \
         } else {                                                                                   \
@@ -179,7 +178,7 @@ class TProtocol;
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
         const auto &_hp1 = (hp1);                                                                  \
-        _obj.field = {dsn::dns_resolver::instance().resolve_address(_hp1)};                        \
+        _obj.field = {_hp1.resolve()};                                                             \
         _obj.__set_hp_##field({_hp1});                                                             \
     } while (0)
 #define SET_IPS_AND_HOST_PORTS_BY_DNS_2(obj, field, hp1, hp2)                                      \
@@ -187,8 +186,7 @@ class TProtocol;
         auto &_obj = (obj);                                                                        \
         const auto &_hp1 = (hp1);                                                                  \
         const auto &_hp2 = (hp2);                                                                  \
-        _obj.field = {dsn::dns_resolver::instance().resolve_address(_hp1),                         \
-                      dsn::dns_resolver::instance().resolve_address(_hp2)};                        \
+        _obj.field = {_hp1.resolve(), _hp2.resolve()};                                             \
         _obj.__set_hp_##field({_hp1, _hp2});                                                       \
     } while (0)
 #define SET_IPS_AND_HOST_PORTS_BY_DNS_3(obj, field, hp1, hp2, hp3)                                 \
@@ -197,9 +195,7 @@ class TProtocol;
         const auto &_hp1 = (hp1);                                                                  \
         const auto &_hp2 = (hp2);                                                                  \
         const auto &_hp3 = (hp3);                                                                  \
-        _obj.field = {dsn::dns_resolver::instance().resolve_address(_hp1),                         \
-                      dsn::dns_resolver::instance().resolve_address(_hp2),                         \
-                      dsn::dns_resolver::instance().resolve_address(_hp3)};                        \
+        _obj.field = {_hp1.resolve(), _hp2.resolve(), _hp3.resolve()};                             \
         _obj.__set_hp_##field({_hp1, _hp2, _hp3});                                                 \
     } while (0)
 #define SET_IPS_AND_HOST_PORTS_BY_DNS_GET_MACRO(hp1, hp2, hp3, NAME, ...) NAME
@@ -223,7 +219,7 @@ class TProtocol;
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
         const auto &_hp = (hp);                                                                    \
-        _obj.field.insert(_obj.field.begin(), dsn::dns_resolver::instance().resolve_address(_hp)); \
+        _obj.field.insert(_obj.field.begin(), _hp.resolve());                                      \
         if (!_obj.__isset.hp_##field) {                                                            \
             _obj.__set_hp_##field({_hp});                                                          \
         } else {                                                                                   \
@@ -247,7 +243,7 @@ class TProtocol;
     do {                                                                                           \
         const auto &_hp = (hp);                                                                    \
         const auto &_addr = (addr);                                                                \
-        DCHECK_EQ(_addr, dsn::dns_resolver::instance().resolve_address(_hp));                      \
+        DCHECK_EQ(_addr, _hp.resolve());                                                           \
         auto &_obj = (obj);                                                                        \
         const auto &_value = (value);                                                              \
         _obj.field[_addr] = _value;                                                                \
@@ -264,7 +260,7 @@ class TProtocol;
 #define SET_VALUE_FROM_HOST_PORT(obj, field, hp, value)                                            \
     do {                                                                                           \
         const auto &__hp = (hp);                                                                   \
-        const auto addr = dsn::dns_resolver::instance().resolve_address(__hp);                     \
+        const auto addr = __hp.resolve();                                                          \
         SET_VALUE_FROM_IP_AND_HOST_PORT(obj, field, addr, __hp, value);                            \
     } while (0)
 
@@ -304,6 +300,9 @@ public:
         return _group_host_port;
     }
     void assign_group(const char *name);
+
+    // Resolve this host_port object to ip:port.
+    [[nodiscard]] rpc_address resolve() const;
 
     // Resolve this host_port object to the string of ip:port if 'resolve_ip' is true;
     // otherwise, just return the string of this host_port object.

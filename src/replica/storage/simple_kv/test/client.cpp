@@ -37,7 +37,6 @@
 #include "common/replication_other_types.h"
 #include "replica/storage/simple_kv/simple_kv.client.h"
 #include "replica/storage/simple_kv/test/common.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_message.h"
@@ -167,27 +166,16 @@ void simple_kv_client_app::send_config_to_meta(const host_port &receiver,
 
     dsn::marshall(req, request);
 
-    dsn_rpc_call_one_way(dsn::dns_resolver::instance().resolve_address(_meta_server_group), req);
+    dsn_rpc_call_one_way(_meta_server_group.resolve(), req);
 }
-
-struct read_context
-{
-    int id;
-    std::string key;
-    int timeout_ms;
-};
 
 void simple_kv_client_app::begin_read(int id, const std::string &key, int timeout_ms)
 {
     LOG_INFO("=== on_begin_read:id={},key={},timeout={}", id, key, timeout_ms);
-    std::shared_ptr<read_context> ctx(new read_context());
-    ctx->id = id;
-    ctx->key = key;
-    ctx->timeout_ms = timeout_ms;
     _simple_kv_client->read(
         key,
-        [ctx](error_code err, std::string &&resp) {
-            test_case::instance().on_end_read(ctx->id, err, resp);
+        [id](error_code err, std::string &&resp) {
+            test_case::instance().on_end_read(id, err, resp);
         },
         std::chrono::milliseconds(timeout_ms));
 }

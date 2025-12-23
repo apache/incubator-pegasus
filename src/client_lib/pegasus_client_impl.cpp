@@ -34,7 +34,6 @@
 #include "pegasus_client_impl.h"
 #include "pegasus_key_schema.h"
 #include "pegasus_utils.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/serialization.h"
 #include "rrdb/rrdb.client.h"
@@ -1244,7 +1243,7 @@ void pegasus_client_impl::async_get_unordered_scanners(
 
     query_cfg_request req;
     req.app_name = _app_name;
-    ::dsn::rpc::call(dns_resolver::instance().resolve_address(_meta_server),
+    ::dsn::rpc::call(_meta_server.resolve(),
                      RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
                      req,
                      nullptr,

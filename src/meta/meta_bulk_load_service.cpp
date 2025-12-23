@@ -40,7 +40,6 @@
 #include "meta/meta_state_service.h"
 #include "meta/server_state.h"
 #include "meta_admin_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_message.h"
@@ -1622,7 +1621,7 @@ void bulk_load_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
 
             std::map<rpc_address, partition_bulk_load_state> pbls_by_addrs;
             for (const auto &[hp, pbls] : pbls_by_hps) {
-                pbls_by_addrs[dsn::dns_resolver::instance().resolve_address(hp)] = pbls;
+                pbls_by_addrs[hp.resolve()] = pbls;
             }
             response.bulk_load_states[pidx] = pbls_by_addrs;
         }

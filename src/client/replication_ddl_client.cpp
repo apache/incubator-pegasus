@@ -49,6 +49,7 @@
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "meta/meta_rpc_types.h"
+#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_address.h"
 #include "runtime/api_layer1.h"
@@ -1270,7 +1271,7 @@ void replication_ddl_client::end_meta_request(const rpc_response_task_ptr &callb
         return;
     }
 
-    rpc::call(dsn::dns_resolver::instance().resolve_address(_meta_server),
+    rpc::call(_meta_server.resolve(),
               request,
               &_tracker,
               [this, attempt_count, callback](
