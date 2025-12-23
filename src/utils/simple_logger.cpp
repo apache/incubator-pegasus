@@ -26,13 +26,13 @@
 
 #include "utils/simple_logger.h"
 
-#include <errno.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
 #include <fmt/printf.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <algorithm>
+#include <cerrno>
 #include <cstdint>
 #include <ctime>
 #include <functional>
