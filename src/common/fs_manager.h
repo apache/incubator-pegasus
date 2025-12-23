@@ -18,12 +18,13 @@
 #pragma once
 
 #include <gtest/gtest_prod.h>
-#include <stdint.h>
 #include <atomic>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "common/replication_other_types.h"
@@ -31,7 +32,6 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "utils/flags.h"
-#include <string_view>
 #include "utils/metrics.h"
 #include "utils/ports.h"
 #include "utils/zlocks.h"

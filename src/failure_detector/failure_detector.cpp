@@ -31,10 +31,10 @@
 #include <ctime>
 #include <map>
 #include <mutex>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
-#include <string_view>
 #include "failure_detector/fd.code.definition.h"
 #include "fd_types.h"
 #include "fmt/core.h"

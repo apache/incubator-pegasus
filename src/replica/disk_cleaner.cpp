@@ -21,11 +21,12 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <fmt/core.h>
-#include <stdint.h>
 #include <sys/types.h>
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <cstdint>
+#include <string_view>
 
 #include "common/fs_manager.h"
 #include "metadata_types.h"
@@ -36,7 +37,6 @@
 #include "utils/fmt_logging.h"
 #include "utils/macros.h"
 #include "utils/string_conv.h"
-#include <string_view>
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_error_replica_interval_seconds,

@@ -35,9 +35,8 @@
 #include <thrift/protocol/TVirtualProtocol.h>
 #include <thrift/transport/TVirtualTransport.h>
 #include <thrift/TApplicationException.h>
-#include <type_traits>
-
 #include <string_view>
+#include <type_traits>
 
 using namespace ::apache::thrift::transport;
 namespace dsn {

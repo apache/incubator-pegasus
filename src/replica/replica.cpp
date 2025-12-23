@@ -26,10 +26,10 @@
 
 #include "replica.h"
 
-#include <string_view>
 #include <fmt/core.h>
 #include <rocksdb/status.h>
 #include <functional>
+#include <string_view>
 #include <vector>
 
 #include "backup/replica_backup_manager.h"

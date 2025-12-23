@@ -24,8 +24,8 @@
  * THE SOFTWARE.
  */
 
-#include <string_view>
 #include <fmt/core.h>
+#include <string_view>
 #include <utility>
 
 #include "mutation_log_utils.h"

@@ -37,11 +37,11 @@
 #include <ctime>
 #include <functional>
 #include <mutex>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-#include <string_view>
 #include "runtime/api_layer1.h"
 #include "utils/command_manager.h"
 #include "utils/errors.h"

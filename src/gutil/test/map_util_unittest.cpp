@@ -17,16 +17,16 @@
 #include "gutil/map_util.h"
 
 #include <absl/hash/hash.h>
-#include <string_view>
 #include <fmt/core.h>
-#include <stdint.h>
 #include <algorithm>
+#include <cstdint>
 #include <deque>
 #include <list>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 

@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -29,7 +30,6 @@
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/blob.h"
-#include <string_view>
 
 namespace pegasus {
 namespace server {

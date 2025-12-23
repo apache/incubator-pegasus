@@ -17,11 +17,11 @@
 
 #include "table_metrics.h"
 
-#include <string_view>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <fmt/core.h>
-#include <stddef.h>
+#include <cstddef>
 #include <string>
+#include <string_view>
 
 #include "utils/fmt_logging.h"
 

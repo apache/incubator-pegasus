@@ -27,9 +27,9 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #include "common/gpid.h"
-#include <string_view>
 #include "utils/fmt_logging.h"
 #include "utils/metrics.h"
 
