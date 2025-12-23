@@ -814,29 +814,29 @@ void meta_partition_guardian_test::cure()
         get_node_state(nodes, hp, true)->set_alive(true);
     }
 
-    bool all_partitions_healthy = false;
+    bool all_partitions_healthy{false};
     while (!all_partitions_healthy) {
-        configuration_proposal_action action;
-        pc_status status;
         all_partitions_healthy = true;
 
-        CHECK_EQ(app->partition_count, app->pcs.size());
+        ASSERT_EQ(app->partition_count, app->pcs.size());
         for (const auto &pc : app->pcs) {
-            status = guardian.cure({&apps, &nodes}, pc.pid, action);
-            if (status != pc_status::healthy) {
-                all_partitions_healthy = false;
-                proposal_action_check_and_apply(action, pc.pid, apps, nodes, nullptr);
-
-                configuration_update_request fake_request;
-                fake_request.info = *app;
-                fake_request.config = pc;
-                fake_request.type = action.type;
-                SET_OBJ_IP_AND_HOST_PORT(fake_request, node, action, node);
-                fake_request.host_node = action.node;
-
-                guardian.reconfig({&apps, &nodes}, fake_request);
-                check_nodes_loads(nodes);
+            configuration_proposal_action action;
+            if (guardian.cure({&apps, &nodes}, pc.pid, action) == pc_status::healthy) {
+                continue;
             }
+
+            all_partitions_healthy = false;
+            proposal_action_check_and_apply(action, pc.pid, apps, nodes, nullptr);
+
+            configuration_update_request fake_request;
+            fake_request.info = *app;
+            fake_request.config = pc;
+            fake_request.type = action.type;
+            SET_OBJ_IP_AND_HOST_PORT(fake_request, node, action, node);
+            fake_request.host_node = action.node;
+
+            guardian.reconfig({&apps, &nodes}, fake_request);
+            check_nodes_loads(nodes);
         }
     }
 }
@@ -872,8 +872,8 @@ void meta_partition_guardian_test::from_proposal_test()
     configuration_proposal_action cpa;
     configuration_proposal_action cpa2;
 
-    dsn::partition_configuration &pc = *get_config(apps, p);
-    config_context &cc = *get_config_context(apps, p);
+    auto &pc = *get_config(apps, p);
+    auto &cc = *get_config_context(apps, p);
 
     std::cerr << "Case 1: test no proposals in config_context" << std::endl;
     ASSERT_FALSE(guardian.from_proposals(mv, p, cpa));
