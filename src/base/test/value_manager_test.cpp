@@ -17,13 +17,13 @@
  * under the License.
  */
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
+#include <string_view>
 
 #include "base/value_schema_manager.h"
 #include "gtest/gtest.h"
 #include "pegasus_value_schema.h"
-#include <string_view>
 #include "value_field.h"
 
 using namespace pegasus;

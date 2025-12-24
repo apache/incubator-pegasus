@@ -26,8 +26,9 @@
 
 #include "thrift_message_parser.h"
 
-#include <string.h>
+#include <cstring>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -46,7 +47,6 @@
 #include "utils/endians.h"
 #include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"
-#include <string_view>
 #include "utils/strings.h"
 
 namespace dsn {

@@ -19,10 +19,11 @@
 
 #include "compaction_filter_rule.h"
 
+#include <string_view>
+
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
 #include "utils/fmt_logging.h"
-#include <string_view>
 #include "utils/strings.h"
 
 namespace pegasus {

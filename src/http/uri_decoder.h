@@ -18,9 +18,9 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #include "utils/errors.h"
-#include <string_view>
 
 namespace dsn {
 namespace uri {

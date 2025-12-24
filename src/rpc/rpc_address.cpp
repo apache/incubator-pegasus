@@ -27,12 +27,12 @@
 #include "rpc/rpc_address.h"
 
 #include <arpa/inet.h>
-#include <errno.h>
 #include <ifaddrs.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <string.h>
 #include <sys/socket.h>
+#include <cerrno>
+#include <cstring>
 #include <string>
 #include <string_view>
 

@@ -32,9 +32,9 @@
 #include <stdio.h>
 #include <regex>
 #include <string>
+#include <string_view>
 #include <vector>
 
-#include <string_view>
 #include "fail_point_impl.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"

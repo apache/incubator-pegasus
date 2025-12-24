@@ -18,12 +18,12 @@
 #include "sasl_wrapper.h"
 
 #include <sasl/sasl.h>
+#include <string_view>
 
 #include "sasl_client_wrapper.h"
 #include "sasl_server_wrapper.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
-#include <string_view>
 
 namespace dsn {
 namespace security {

@@ -28,13 +28,13 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "replica/log_file.h"
 #include "replica/mutation_log.h"
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
-#include <string_view>
 
 namespace dsn {
 namespace replication {

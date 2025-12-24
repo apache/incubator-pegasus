@@ -18,12 +18,12 @@
 #include "sasl_client_wrapper.h"
 
 #include <sasl/sasl.h>
+#include <string_view>
 
 #include "utils/blob.h"
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 #include "utils/flags.h"
-#include <string_view>
 
 DSN_DECLARE_string(service_fqdn);
 DSN_DECLARE_string(service_name);

@@ -20,19 +20,19 @@
 #pragma once
 
 #include <rocksdb/slice.h>
-#include <stdint.h>
-#include <string.h>
 #include <algorithm>
 #include <array>
+#include <cstdint>
+#include <cstring>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "utils/blob.h"
 #include "utils/endians.h"
 #include "utils/fmt_logging.h"
-#include <string_view>
 #include "value_field.h"
 
 namespace pegasus {

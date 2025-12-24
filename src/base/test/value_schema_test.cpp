@@ -18,11 +18,12 @@
  */
 
 #include <rocksdb/slice.h>
-#include <stdint.h>
 #include <array>
+#include <cstdint>
 #include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -30,7 +31,6 @@
 #include "base/value_schema_manager.h"
 #include "gtest/gtest.h"
 #include "utils/blob.h"
-#include <string_view>
 #include "value_field.h"
 
 using namespace pegasus;

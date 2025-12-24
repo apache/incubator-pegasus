@@ -26,8 +26,9 @@
 
 #include "utils/string_conv.h"
 
-#include "gtest/gtest.h"
 #include <string_view>
+
+#include "gtest/gtest.h"
 
 TEST(string_conv, buf2bool)
 {

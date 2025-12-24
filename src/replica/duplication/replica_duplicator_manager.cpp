@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <string_view>
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <string_view>
 
 #include "common//duplication_common.h"
 #include "common/gpid.h"

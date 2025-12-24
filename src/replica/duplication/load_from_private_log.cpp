@@ -18,9 +18,9 @@
 #include <iterator>
 #include <map>
 #include <string>
+#include <string_view>
 #include <utility>
 
-#include <string_view>
 #include "common/duplication_common.h"
 #include "duplication_types.h"
 #include "load_from_private_log.h"

@@ -19,8 +19,8 @@
 
 #include "value_schema_manager.h"
 
-#include <string_view>
 #include <iterator>
+#include <string_view>
 #include <utility>
 
 #include "utils/endians.h"

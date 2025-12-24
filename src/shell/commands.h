@@ -20,28 +20,28 @@
 #pragma once
 
 #include <getopt.h>
-#include <thread>
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+#include <pegasus/error.h>
+#include <pegasus/git_commit.h>
+#include <pegasus/version.h>
+#include <rocksdb/db.h>
+#include <rrdb/rrdb.code.definition.h>
+#include <rrdb/rrdb_types.h>
+
 #include <iomanip>
 #include <fstream>
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp>
-#include <rocksdb/db.h>
+#include <string_view>
+#include <thread>
+
+#include "args.h"
+#include "client/replication_ddl_client.h"
+#include "command_executor.h"
+#include "command_helper.h"
+#include "tools/mutation_log_tool.h"
 #include "utils/filesystem.h"
 #include "utils/output_utils.h"
 #include "utils/string_conv.h"
-#include <string_view>
-#include "client/replication_ddl_client.h"
-#include "tools/mutation_log_tool.h"
-
-#include <rrdb/rrdb.code.definition.h>
-#include <rrdb/rrdb_types.h>
-#include <pegasus/version.h>
-#include <pegasus/git_commit.h>
-#include <pegasus/error.h>
-
-#include "command_executor.h"
-#include "command_helper.h"
-#include "args.h"
 
 using namespace dsn::replication;
 using tp_alignment = ::dsn::utils::table_printer::alignment;
