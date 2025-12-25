@@ -31,18 +31,17 @@
 #include <ctime>
 #include <map>
 #include <mutex>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
-#include <string_view>
 #include "failure_detector/fd.code.definition.h"
 #include "fd_types.h"
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "nlohmann/json_fwd.hpp"
-#include "runtime/api_layer1.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
+#include "runtime/api_layer1.h"
 #include "runtime/serverlet.h"
 #include "task/async_calls.h"
 #include "task/task_spec.h"
@@ -581,9 +580,9 @@ bool failure_detector::is_worker_connected(const ::dsn::host_port &node) const
 
 void failure_detector::send_beacon(const host_port &target, uint64_t time)
 {
-    const auto &addr_target = dsn::dns_resolver::instance().resolve_address(target);
+    const auto &addr_target = target.resolve();
     beacon_msg beacon;
-    beacon.time = time;
+    beacon.time = static_cast<int64_t>(time);
     SET_IP_AND_HOST_PORT(beacon, from_node, dsn_primary_address(), dsn_primary_host_port());
     SET_IP_AND_HOST_PORT(beacon, to_node, addr_target, target);
     beacon.__set_start_time(static_cast<int64_t>(dsn::utils::process_start_millis()));

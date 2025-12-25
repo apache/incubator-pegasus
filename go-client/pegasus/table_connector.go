@@ -26,12 +26,14 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/idl/rrdb"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/pegasus/op"
 	"github.com/apache/incubator-pegasus/go-client/session"
@@ -232,10 +234,11 @@ type pegasusTableConnector struct {
 
 	logger pegalog.Logger
 
-	tableName string
-	appID     int32
-	parts     []*replicaNode
-	mu        sync.RWMutex
+	tableName     string
+	appID         int32
+	parts         []*replicaNode
+	enableMetrics bool
+	mu            sync.RWMutex
 
 	confUpdateCh chan bool
 	tom          tomb.Tomb
@@ -248,13 +251,14 @@ type replicaNode struct {
 
 // ConnectTable queries for the configuration of the given table, and set up connection to
 // the replicas which the table locates on.
-func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager) (TableConnector, error) {
+func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManager, replica *session.ReplicaManager, enableMetrics bool) (TableConnector, error) {
 	p := &pegasusTableConnector{
-		tableName:    tableName,
-		meta:         meta,
-		replica:      replica,
-		confUpdateCh: make(chan bool, 1),
-		logger:       pegalog.GetLogger(),
+		tableName:     tableName,
+		meta:          meta,
+		replica:       replica,
+		enableMetrics: enableMetrics,
+		confUpdateCh:  make(chan bool, 1),
+		logger:        pegalog.GetLogger(),
 	}
 
 	// if the session became unresponsive, TableConnector auto-triggers
@@ -716,8 +720,32 @@ func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKe
 }
 
 func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []byte, req op.Request, optype OpType) (interface{}, error) {
+	var errResult error
+	if p.enableMetrics {
+		start := time.Now()
+		defer func() {
+			status := "success"
+			if errResult != nil {
+				if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+					status = "timeout"
+				} else {
+					status = "fail"
+				}
+			}
+			labels := []string{
+				p.tableName,
+				optype.String(),
+				status,
+				strings.Join(p.meta.GetMetaIPAddrs(), ","),
+			}
+			elapsed := time.Since(start).Nanoseconds()
+			metrics.PegasusClientOperationsSummary.Observe(labels, float64(elapsed))
+		}()
+	}
+
 	// validate arguments
 	if err := req.Validate(); err != nil {
+		errResult = err
 		return 0, WrapError(err, optype)
 	}
 	partitionHash := crc64Hash(hashKey)
@@ -727,6 +755,7 @@ func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []by
 		confUpdated, retry, err = p.handleReplicaError(err, part)
 		return
 	})
+	errResult = err
 	return res, p.wrapPartitionError(err, gpid, part, optype)
 }
 
@@ -807,8 +836,10 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 			return false, false, nil
 
 		case base.ERR_TIMEOUT:
-		case context.DeadlineExceeded:
+		case base.ERR_SESSION_RESET:
+			// connection with the server failed
 			confUpdate = true
+		case context.DeadlineExceeded:
 		case context.Canceled:
 			// timeout will not trigger a configuration update
 

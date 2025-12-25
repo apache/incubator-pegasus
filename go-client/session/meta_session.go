@@ -77,7 +77,7 @@ func NewMetaManager(addrs []string, creator NodeSessionCreator) *MetaManager {
 	metaIPAddrs := make([]string, len(addrs))
 	for i, addr := range addrs {
 		metas[i] = &metaSession{
-			NodeSession: creator(addr, NodeTypeMeta),
+			NodeSession: creator(addr, NodeTypeMeta, DisableMetrics),
 			logger:      pegalog.GetLogger(),
 		}
 		metaIPAddrs[i] = addr
@@ -118,6 +118,10 @@ func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*repli
 		return queryCfgResp, nil
 	}
 	return nil, err
+}
+
+func (m *MetaManager) GetMetaIPAddrs() []string {
+	return m.metaIPAddrs
 }
 
 func (m *MetaManager) getCurrentLeader() int {

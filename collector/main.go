@@ -93,7 +93,7 @@ func main() {
 
 	tom.Go(func() error {
 		// Set detect inteverl and detect timeout 10s.
-		return avail.NewDetector(10000000000, 10000000000, 16).Run(tom)
+		return avail.NewDetector(10000000000, 10000000000).Run(tom)
 	})
 
 	tom.Go(func() error {

@@ -26,8 +26,9 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -37,7 +38,14 @@
 #include "task/task.h"
 
 namespace dsn {
-namespace replication {
+class partition_configuration;
+namespace utils {
+class multi_table_printer;
+} // namespace utils
+} // namespace dsn
+
+namespace dsn::replication {
+
 class configuration_update_app_env_request;
 class configuration_update_app_env_response;
 class query_app_info_request;
@@ -85,5 +93,26 @@ public:
     static bool check_if_in_black_list(const std::vector<std::string> &black_list_dir,
                                        const std::string &dir);
 };
-} // namespace replication
-} // namespace dsn
+
+// Add base info and statistics for an app into `multi_printer`.
+//
+// Parameters:
+// - app_name: the name of the app.
+// - app_id: the id of the app.
+// - partition_count: the number of the app partitions.
+// - pcs: the configuration for each partition.
+// - detailed: false means only base info would be added into `multi_printer`, while true
+//             means more detailed statistics would also be added.
+// - resolve_ip: whether host would be resolved into ip.
+// - total_row_name: the name of the total row for "nodes" section.
+// - multi_printer: the target printer which has multiple sections.
+void add_app_info(const std::string &app_name,
+                  int32_t app_id,
+                  int32_t partition_count,
+                  const std::vector<partition_configuration> &pcs,
+                  bool detailed,
+                  bool resolve_ip,
+                  std::string_view total_row_name,
+                  utils::multi_table_printer &multi_printer);
+
+} // namespace dsn::replication

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/apache/incubator-pegasus/go-client/admin"
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -39,16 +40,35 @@ type Detector interface {
 
 // NewDetector returns a service-availability detector.
 func NewDetector(detectInterval time.Duration,
-	detectTimeout time.Duration, partitionCount int) Detector {
+	detectTimeout time.Duration) Detector {
 	metaServers := viper.GetStringSlice("meta_servers")
-	tableName := viper.GetStringMapString("availablity_detect")["table_name"]
-	// Create detect table.
-	adminClient := admin.NewClient(admin.Config{MetaServers: metaServers})
-	err := adminClient.CreateTable(context.Background(), tableName, partitionCount)
-	if err != nil {
-		log.Errorf("Create detect table %s failed, error: %s", tableName, err)
+	if len(metaServers) == 0 {
+		log.Fatal("meta_servers is empty")
 	}
-	pegasusClient := pegasus.NewClient(pegasus.Config{MetaServers: metaServers})
+
+	tableName := viper.GetString("availability_detect.table_name")
+	if len(tableName) == 0 {
+		log.Fatal("availability_detect.table_name is empty")
+	}
+
+	partitionCount := viper.GetInt32("availability_detect.partition_count")
+	if partitionCount <= 0 || (partitionCount&(partitionCount-1)) != 0 {
+		log.Fatalf("availability_detect.partition_count(%d) must be power of 2", partitionCount)
+	}
+
+	maxReplicaCount := viper.GetInt32("availability_detect.max_replica_count")
+	if maxReplicaCount <= 0 {
+		log.Fatalf("availability_detect.max_replica_count(%d) must be > 0", partitionCount)
+	}
+
+	// Create detect table.
+	adminClient := admin.NewClient(admin.Config{MetaServers: metaServers, Timeout: 10 * time.Second})
+	_, err := adminClient.CreateTable(tableName, partitionCount, maxReplicaCount, make(map[string]string), 600, true)
+	if err != nil {
+		log.Fatalf("Create detect table %s failed, error: %s", tableName, err)
+	}
+
+	pegasusClient := pegasus.NewClient(*config.NewConfig(metaServers))
 	return &pegasusDetector{
 		client:          pegasusClient,
 		detectTableName: tableName,
@@ -93,7 +113,7 @@ type pegasusDetector struct {
 	// timeout of a single detect.
 	detectTimeout time.Duration
 	// partition count.
-	partitionCount int
+	partitionCount int32
 }
 
 func (d *pegasusDetector) Run(tom *tomb.Tomb) error {
@@ -143,7 +163,7 @@ func (d *pegasusDetector) detectPartition() {
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 // Generate a random string.
-func RandStringBytes(n int) string {
+func RandStringBytes(n int32) string {
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]

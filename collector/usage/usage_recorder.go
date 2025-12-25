@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/apache/incubator-pegasus/collector/aggregate"
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -58,7 +59,7 @@ func (rec *tableUsageRecorder) Start(tom *tomb.Tomb) {
 	}
 
 	metaServer := viper.GetString("meta_server")
-	rec.client = pegasus.NewClient(pegasus.Config{MetaServers: []string{metaServer}})
+	rec.client = pegasus.NewClient(*config.NewConfig([]string{metaServer}))
 	for {
 		var err error
 		rec.table, err = rec.client.OpenTable(tom.Context(context.TODO()), rec.usageStatApp)

@@ -29,6 +29,7 @@
 #include <utility>
 
 #include "fmt/core.h"
+#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_host_port.h"
 #include "utils/api_utilities.h"
@@ -159,6 +160,17 @@ void host_port::assign_group(const char *name)
     reset();
     _type = HOST_TYPE_GROUP;
     _group_host_port = std::make_shared<rpc_group_host_port>(name);
+}
+
+rpc_address host_port::resolve() const { return dns_resolver::instance().resolve_address(*this); }
+
+std::string host_port::resolve(bool resolve_ip) const
+{
+    if (!resolve_ip) {
+        return to_string();
+    }
+
+    return resolve().to_string();
 }
 
 error_s host_port::resolve_addresses(std::vector<rpc_address> &addresses) const

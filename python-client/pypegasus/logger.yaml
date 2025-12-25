@@ -17,20 +17,28 @@
 # under the License.
 #
 
-[loggers]
-keys=root
-[logger_root]
-level=INFO
-handlers=hand01
-propagate=0
-[handlers]
-keys=hand01
-[handler_hand01]
-class=handlers.RotatingFileHandler
-formatter=form01
-args=('pegasus.log', 'a', 100*1024*1024, 10)
-[formatters]
-keys=form01
-[formatter_form01]
-format=%(asctime)s [%(thread)d] [%(levelname)s] %(filename)s:%(lineno)d %(message)s
-datefmt=%Y-%m-%d %H:%M:%S
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  pegasus_formatter:
+    format: "%(asctime)s [%(thread)d] [%(levelname)s] %(filename)s:%(lineno)d %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+handlers:
+  pegasus_file_handler:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: pegasus_formatter
+    filename: pegasus.log
+    mode: a
+    maxBytes: 104857600  # 100 * 1024 * 1024
+    backupCount: 10
+    encoding: utf8
+
+loggers:
+  pgclient:
+    level: INFO
+    handlers: [pegasus_file_handler]
+    propagate: false
+    

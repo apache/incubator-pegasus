@@ -51,6 +51,7 @@
 #include "task/async_calls.h"
 #include "task/task.h"
 #include "task/task_code.h"
+#include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
 #include "utils/chrono_literals.h"
 #include "utils/error_code.h"
@@ -599,6 +600,8 @@ TEST_F(policy_context_test, test_disable_backup_policy)
     // 'start_backup_app_meta_unlocked()' should not be called because policy is disabled
     _mp.continue_current_backup_unlocked();
     ASSERT_FALSE(_mp.notifier_start_backup_app_meta_unlocked().wait_for(5000));
+
+    _mp._tracker.cancel_outstanding_tasks();
 }
 
 TEST_F(policy_context_test, test_backup_failed)

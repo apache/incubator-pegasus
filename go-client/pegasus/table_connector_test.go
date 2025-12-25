@@ -24,12 +24,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"math"
 	"sort"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
@@ -87,7 +89,7 @@ func testSingleKeyOperations(t *testing.T, tb TableConnector, hashKey []byte, so
 	assert.Nil(t, tb.Del(context.Background(), hashKey, sortKey))
 }
 
-var testingCfg = Config{
+var testingCfg = config.Config{
 	MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 }
 
@@ -275,14 +277,14 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	assert.True(t, confUpdate)
 	assert.False(t, retry)
 
-	confUpdate, retry, err = ptb.handleReplicaError(context.DeadlineExceeded, nil)
+	confUpdate, retry, err = ptb.handleReplicaError(base.ERR_SESSION_RESET, nil)
 	<-ptb.confUpdateCh
 	assert.Error(t, err)
 	assert.True(t, confUpdate)
 	assert.False(t, retry)
 
 	{ // Ensure: The following errors should not trigger configuration update
-		errorTypes := []error{base.ERR_TIMEOUT, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER, base.ERR_BUSY, base.ERR_SPLITTING, base.ERR_DISK_INSUFFICIENT}
+		errorTypes := []error{base.ERR_TIMEOUT, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER, base.ERR_BUSY, base.ERR_SPLITTING, base.ERR_DISK_INSUFFICIENT, context.DeadlineExceeded}
 
 		for _, err := range errorTypes {
 			channelEmpty := false

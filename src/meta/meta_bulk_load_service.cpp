@@ -40,7 +40,6 @@
 #include "meta/meta_state_service.h"
 #include "meta/server_state.h"
 #include "meta_admin_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_message.h"
@@ -1230,7 +1229,7 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
 {
     FAIL_POINT_INJECT_F("meta_bulk_load_partition_ingestion", [](std::string_view) {});
 
-    auto app_status = get_app_bulk_load_status(pid.get_app_id());
+    const auto app_status = get_app_bulk_load_status(pid.get_app_id());
     if (app_status != bulk_load_status::BLS_INGESTING) {
         LOG_WARNING("app({}) current status is {}, partition({}), ignore it",
                     app_name,
@@ -1263,7 +1262,7 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
-    auto app = get_app(pid.get_app_id());
+    const auto app = get_app(pid.get_app_id());
     if (!try_partition_ingestion(pc, app->helpers->contexts[pid.get_partition_index()])) {
         LOG_WARNING(
             "app({}) partition({}) couldn't execute ingestion, wait and try later", app_name, pid);
@@ -1276,15 +1275,16 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
-    const auto &primary = pc.hp_primary;
-    ballot meta_ballot = pc.ballot;
-    tasking::enqueue(
-        LPC_BULK_LOAD_INGESTION,
-        _meta_svc->tracker(),
-        std::bind(
-            &bulk_load_service::send_ingestion_request, this, app_name, pid, primary, meta_ballot),
-        0,
-        std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
+    tasking::enqueue(LPC_BULK_LOAD_INGESTION,
+                     _meta_svc->tracker(),
+                     std::bind(&bulk_load_service::send_ingestion_request,
+                               this,
+                               app_name,
+                               pid,
+                               pc.hp_primary,
+                               pc.ballot),
+                     0,
+                     std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
@@ -1621,7 +1621,7 @@ void bulk_load_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
 
             std::map<rpc_address, partition_bulk_load_state> pbls_by_addrs;
             for (const auto &[hp, pbls] : pbls_by_hps) {
-                pbls_by_addrs[dsn::dns_resolver::instance().resolve_address(hp)] = pbls;
+                pbls_by_addrs[hp.resolve()] = pbls;
             }
             response.bulk_load_states[pidx] = pbls_by_addrs;
         }

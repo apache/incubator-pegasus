@@ -44,7 +44,6 @@
 #include "meta_admin_types.h"
 #include "partition_split_types.h"
 #include "replica_admin_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
@@ -156,8 +155,8 @@ public:
     dsn::error_code list_app(const std::string &app_name,
                              bool detailed,
                              bool json,
-                             const std::string &file_name,
-                             bool resolve_ip = false);
+                             const std::string &output_file,
+                             bool resolve_ip);
 
     dsn::error_code list_app(const std::string &app_name,
                              int32_t &app_id,
@@ -317,10 +316,12 @@ public:
     void set_max_wait_app_ready_secs(uint32_t max_wait_secs) { _max_wait_secs = max_wait_secs; }
     void set_meta_servers_leader();
 
-    static error_s validate_app_name(const std::string &app_name, bool allow_empty_name = false);
+    static error_s validate_app_name(const std::string &app_name, bool allow_empty_name);
 
-    // Resolve the host:port 'hp' to ip:port if 'resolve_ip' is true.
-    static std::string node_name(const host_port &hp, bool resolve_ip);
+    static error_s validate_app_name(const std::string &app_name)
+    {
+        return validate_app_name(app_name, false);
+    }
 
 private:
     void end_meta_request(const rpc_response_task_ptr &callback,
@@ -345,7 +346,7 @@ private:
 
         auto task =
             dsn::rpc::create_rpc_response_task(msg, nullptr, empty_rpc_handler, reply_thread_hash);
-        rpc::call(dsn::dns_resolver::instance().resolve_address(_meta_server),
+        rpc::call(_meta_server.resolve(),
                   msg,
                   &_tracker,
                   [this, task](
@@ -478,7 +479,7 @@ private:
         error_code err = ERR_UNKNOWN;
         for (int retry = 0; retry < MAX_RETRY; retry++) {
             task_ptr task = rpc.call(
-                dsn::dns_resolver::instance().resolve_address(_meta_server),
+                _meta_server.resolve(),
                 &_tracker,
                 [&err](error_code code) { err = code; },
                 reply_thread_hash);
@@ -503,7 +504,7 @@ private:
         dsn::task_tracker tracker;
         error_code err = ERR_UNKNOWN;
         for (auto &rpc : rpcs) {
-            rpc.second.call(dsn::dns_resolver::instance().resolve_address(rpc.first),
+            rpc.second.call(rpc.first.resolve(),
                             &tracker,
                             [&err, &resps, &rpcs, &rpc](error_code code) mutable {
                                 err = code;
@@ -528,7 +529,6 @@ private:
         }
     }
 
-private:
     dsn::host_port _meta_server;
     dsn::task_tracker _tracker;
     uint32_t _max_wait_secs = 3600; // Wait at most 1 hour by default.

@@ -20,8 +20,8 @@ package aggregate
 import (
 	"testing"
 
-	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,7 +36,7 @@ func TestUpdateLocalTableMap(t *testing.T) {
 	assert.Equal(t, len(ag.tables[1].Partitions), 4) // test
 	assert.Equal(t, len(ag.tables[2].Partitions), 8) // stat
 
-	tables := []*admin.AppInfo{
+	tables := []*replication.AppInfo{
 		{AppID: 1, AppName: "stat", PartitionCount: 4},
 		{AppID: 2, AppName: "test", PartitionCount: 8},
 		{AppID: 3, AppName: "new_table", PartitionCount: 16},
@@ -45,7 +45,7 @@ func TestUpdateLocalTableMap(t *testing.T) {
 	assert.Equal(t, len(ag.tables), 3)
 	assert.Equal(t, len(ag.tables[3].Partitions), 16)
 
-	tables = []*admin.AppInfo{
+	tables = []*replication.AppInfo{
 		{AppID: 1, AppName: "stat", PartitionCount: 4},
 	}
 	ag.doUpdateTableMap(tables)
@@ -57,7 +57,7 @@ func TestUpdatePartitionStats(t *testing.T) {
 	ag := &tableStatsAggregator{
 		tables: make(map[int32]*TableStats),
 	}
-	tables := []*admin.AppInfo{
+	tables := []*replication.AppInfo{
 		{AppID: 1, AppName: "stat", PartitionCount: 4},
 	}
 	ag.doUpdateTableMap(tables)
