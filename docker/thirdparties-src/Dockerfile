@@ -17,7 +17,24 @@
 
 ARG GITHUB_BRANCH=master
 ARG OS_VERSION=rockylinux9
-FROM apache/pegasus:build-env-${OS_VERSION}-${GITHUB_BRANCH} as builder
+FROM apache/pegasus:build-env-${OS_VERSION}-${GITHUB_BRANCH} as base
+
+
+# --- Ubuntu 特有层 ---
+FROM base AS stage-ubuntu2004
+ENV OPENSSL_ROOT_DIR=/usr/local/ssl \
+    LIBRARY_PATH=/usr/local/ssl/lib64:/usr/local/ssl/lib:$LIBRARY_PATH \
+    LD_LIBRARY_PATH=/usr/local/ssl/lib64:/usr/local/ssl/lib:$LD_LIBRARY_PATH \
+    CMAKE_PREFIX_PATH=/usr/local/ssl:$CMAKE_PREFIX_PATH 
+
+# --- 其他系统默认层 ---
+FROM base AS stage-rockylinux9
+# 不做任何操作
+
+# --- 最终编译切换 ---
+# 必须再次声明 ARG 才能在 FROM 中使用
+ARG OS_VERSION
+FROM stage-${OS_VERSION} AS builder
 
 WORKDIR /root
 
