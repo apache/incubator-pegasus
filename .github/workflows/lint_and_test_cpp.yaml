@@ -60,6 +60,9 @@ jobs:
   cpp_clang_tidy_linter:
     name: Tidy
     runs-on: ubuntu-22.04
+    env:
+      USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
     steps:
@@ -86,6 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
     steps:
@@ -115,6 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
       ARTIFACT_NAME: release
       BUILD_OPTIONS: -t release --test
     container:
@@ -204,6 +209,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: ON
       ARTIFACT_NAME: release_address
       BUILD_OPTIONS: --sanitizer address --disable_gperf --test
     container:
@@ -297,6 +303,7 @@ jobs:
 #    runs-on: ubuntu-latest
 #    env:
 #      USE_JEMALLOC: OFF
+#      ENABLE_ASAN: OFF
 #      ARTIFACT_NAME: release_undefined
 #      BUILD_OPTIONS: --sanitizer undefined --disable_gperf --test
 #    container:
@@ -383,6 +390,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: ON
+      ENABLE_ASAN: OFF
       ARTIFACT_NAME: release_jemalloc
       BUILD_OPTIONS: -t release --use_jemalloc --test
     container:
@@ -460,6 +468,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
       BUILD_OPTIONS: -t debug --test --separate_servers
       PACK_OPTIONS: --separate_servers
     container:
