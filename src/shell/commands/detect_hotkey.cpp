@@ -123,7 +123,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    detect_hotkey_response resp;
+    dsn::replication::detect_hotkey_response resp;
     auto err = sc->ddl_client->detect_hotkey(target_hp, req, resp);
     if (err != dsn::ERR_OK) {
         fmt::print(stderr,

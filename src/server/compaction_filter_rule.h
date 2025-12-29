@@ -31,8 +31,8 @@
 #include "utils/factory_store.h"
 #include "utils/fmt_utils.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
+
 enum filter_rule_type
 {
     FRT_HASHKEY_PATTERN = 0,
@@ -161,5 +161,5 @@ private:
 };
 
 void register_compaction_filter_rules();
-} // namespace server
-} // namespace pegasus
+
+} // namespace pegasus::server

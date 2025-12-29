@@ -38,10 +38,10 @@
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_stream.h"
 
-using namespace ::apache::thrift::transport;
 namespace dsn {
 
-class binary_reader_transport : public TVirtualTransport<binary_reader_transport>
+class binary_reader_transport
+    : public apache::thrift::transport::TVirtualTransport<binary_reader_transport>
 {
 public:
     binary_reader_transport(binary_reader &reader) : _reader(reader) {}
@@ -56,8 +56,9 @@ public:
     {
         int l = _reader.read((char *)buf, static_cast<int>(len));
         if (dsn_unlikely(l <= 0)) {
-            throw TTransportException(TTransportException::END_OF_FILE,
-                                      "no more data to read after end-of-buffer");
+            throw apache::thrift::transport::TTransportException(
+                apache::thrift::transport::TTransportException::END_OF_FILE,
+                "no more data to read after end-of-buffer");
         }
         return (uint32_t)l;
     }
@@ -66,7 +67,8 @@ private:
     binary_reader &_reader;
 };
 
-class binary_writer_transport : public TVirtualTransport<binary_writer_transport>
+class binary_writer_transport
+    : public apache::thrift::transport::TVirtualTransport<binary_writer_transport>
 {
 public:
     binary_writer_transport(binary_writer &writer) : _writer(writer) {}

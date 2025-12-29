@@ -40,7 +40,7 @@
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_error_replica_interval_seconds,
-                  7 * 24 * 3600,
+                  7 * 24 * 3600ULL,
                   "The interval in seconds to GC error replicas, which are in directories "
                   "suffixed with '.err'");
 DSN_TAG_VARIABLE(gc_disk_error_replica_interval_seconds, FT_MUTABLE);
@@ -48,20 +48,20 @@ DSN_TAG_VARIABLE(gc_disk_error_replica_interval_seconds, FT_MUTABLE);
 DSN_DEFINE_uint64(
     replication,
     gc_disk_garbage_replica_interval_seconds,
-    24 * 3600 /*1day*/,
+    24 * 3600ULL /*1day*/,
     "Duration of garbaged replica being removed, which is in a directory with '.gar' suffixed");
 DSN_TAG_VARIABLE(gc_disk_garbage_replica_interval_seconds, FT_MUTABLE);
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_migration_tmp_replica_interval_seconds,
-                  24 * 3600 /*1day*/,
+                  24 * 3600ULL /*1day*/,
                   "Duration of disk-migration tmp replica being removed, which is in a directory "
                   "with '.tmp' suffixed");
 DSN_TAG_VARIABLE(gc_disk_migration_tmp_replica_interval_seconds, FT_MUTABLE);
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_migration_origin_replica_interval_seconds,
-                  7 * 24 * 3600 /*7day*/,
+                  7 * 24 * 3600ULL /*7day*/,
                   "Duration of disk-migration origin replica being removed, which is in a "
                   "directory with '.ori' suffixed");
 DSN_TAG_VARIABLE(gc_disk_migration_origin_replica_interval_seconds, FT_MUTABLE);

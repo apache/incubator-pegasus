@@ -25,8 +25,8 @@
 #include "utils/error_code.h"
 #include "utils/fail_point.h"
 
-namespace dsn {
-namespace security {
+namespace dsn::security {
+
 const char *sasl_err_desc(int status, sasl_conn_t *conn)
 {
     if (conn != nullptr) {
@@ -96,5 +96,5 @@ std::unique_ptr<sasl_wrapper> create_sasl_wrapper(bool is_client)
         return std::make_unique<sasl_server_wrapper>();
     }
 }
-} // namespace security
-} // namespace dsn
+
+} // namespace dsn::security

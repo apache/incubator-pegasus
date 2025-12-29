@@ -26,7 +26,7 @@
 #include "pegasus_value_schema.h"
 #include "value_field.h"
 
-using namespace pegasus;
+namespace pegasus {
 
 extern std::string generate_value(value_schema *schema,
                                   uint32_t expire_ts,
@@ -89,3 +89,5 @@ TEST(pegasus_value_manager, get_value_schema)
         ASSERT_EQ(t.expect_version, schema->version());
     }
 }
+
+} // namespace pegasus

@@ -43,7 +43,6 @@
 #include "utils/output_utils.h"
 #include "utils/string_conv.h"
 
-using namespace dsn::replication;
 using tp_alignment = ::dsn::utils::table_printer::alignment;
 using tp_output_format = ::dsn::utils::table_printer::output_format;
 

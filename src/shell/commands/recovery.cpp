@@ -163,7 +163,7 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
-dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
+dsn::host_port diagnose_recommend(const dsn::replication::ddd_partition_info &pinfo)
 {
     if (pinfo.config.hp_last_drops.size() < 2) {
         return dsn::host_port();
@@ -171,23 +171,24 @@ dsn::host_port diagnose_recommend(const ddd_partition_info &pinfo)
 
     std::vector<dsn::host_port> last_two_nodes(pinfo.config.hp_last_drops.end() - 2,
                                                pinfo.config.hp_last_drops.end());
-    std::vector<ddd_node_info> last_dropped;
+    std::vector<dsn::replication::ddd_node_info> last_dropped;
     for (auto &node : last_two_nodes) {
-        auto it = std::find_if(pinfo.dropped.begin(),
-                               pinfo.dropped.end(),
-                               [&node](const ddd_node_info &r) { return r.hp_node == node; });
+        auto it = std::find_if(
+            pinfo.dropped.begin(),
+            pinfo.dropped.end(),
+            [&node](const dsn::replication::ddd_node_info &r) { return r.hp_node == node; });
         if (it->is_alive && it->is_collected)
             last_dropped.push_back(*it);
     }
 
     if (last_dropped.size() == 1) {
-        const ddd_node_info &ninfo = last_dropped.back();
+        const dsn::replication::ddd_node_info &ninfo = last_dropped.back();
         if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree) {
             return ninfo.hp_node;
         }
     } else if (last_dropped.size() == 2) {
-        const ddd_node_info &secondary = last_dropped.front();
-        const ddd_node_info &latest = last_dropped.back();
+        const dsn::replication::ddd_node_info &secondary = last_dropped.front();
+        const dsn::replication::ddd_node_info &latest = last_dropped.back();
 
         // Select a best node to be the new primary, following the rule:
         //  - choose the node with the largest last committed decree
@@ -263,7 +264,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    std::vector<ddd_partition_info> ddd_partitions;
+    std::vector<dsn::replication::ddd_partition_info> ddd_partitions;
     ::dsn::error_code ret = sc->ddl_client->ddd_diagnose(id, ddd_partitions);
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "ERROR: DDD diagnose failed with err = %s\n", ret.to_string());
@@ -285,7 +286,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
     out << std::endl;
     int proposed_count = 0;
     int i = 0;
-    for (const ddd_partition_info &pinfo : ddd_partitions) {
+    for (const dsn::replication::ddd_partition_info &pinfo : ddd_partitions) {
         out << "(" << ++i << ") " << pinfo.config.pid << std::endl;
         out << "    config: ballot(" << pinfo.config.ballot << "), "
             << "last_committed(" << pinfo.config.last_committed_decree << ")" << std::endl;
@@ -299,7 +300,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
                 pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 2];
         }
         int j = 0;
-        for (const ddd_node_info &n : pinfo.dropped) {
+        for (const dsn::replication::ddd_node_info &n : pinfo.dropped) {
             dsn::host_port hp_node;
             GET_HOST_PORT(n, node, hp_node);
             char time_buf[30] = {0};
@@ -379,8 +380,8 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
             if (primary && !skip_this) {
                 dsn::replication::configuration_balancer_request request;
                 request.gpid = pinfo.config.pid;
-                request.action_list = {
-                    new_proposal_action(primary, primary, config_type::CT_ASSIGN_PRIMARY)};
+                request.action_list = {new_proposal_action(
+                    primary, primary, dsn::replication::config_type::CT_ASSIGN_PRIMARY)};
                 request.force = false;
                 dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
                 out << "    propose_request: propose -g " << request.gpid

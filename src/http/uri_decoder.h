@@ -22,12 +22,10 @@
 
 #include "utils/errors.h"
 
-namespace dsn {
-namespace uri {
+namespace dsn::uri {
 
 /// \brief Decodes a sequence according to the percent decoding rules.
 /// \returns the decoded uri path
 error_with<std::string> decode(const std::string_view &encoded_uri);
 
-} // namespace uri
-} // namespace dsn
+} // namespace dsn::uri

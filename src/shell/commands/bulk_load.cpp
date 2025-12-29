@@ -322,8 +322,10 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     dsn::utils::multi_table_printer mtp;
 
     bool all_partitions = (pidx == -1);
-    bool print_ingestion_progress = (resp.app_status == bulk_load_status::BLS_INGESTING);
-    bool print_download_progress = (resp.app_status == bulk_load_status::BLS_DOWNLOADING);
+    bool print_ingestion_progress =
+        (resp.app_status == dsn::replication::bulk_load_status::BLS_INGESTING);
+    bool print_download_progress =
+        (resp.app_status == dsn::replication::bulk_load_status::BLS_DOWNLOADING);
 
     std::unordered_map<int32_t, int32_t> partitions_progress;
     auto total_download_progress = 0, total_ingestion_progress = 0;
@@ -343,9 +345,10 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
 
     // print all partitions
     if (detailed && all_partitions) {
-        bool print_cleanup_flag = (resp.app_status == bulk_load_status::BLS_CANCELED ||
-                                   resp.app_status == bulk_load_status::BLS_FAILED ||
-                                   resp.app_status == bulk_load_status::BLS_SUCCEED);
+        bool print_cleanup_flag =
+            (resp.app_status == dsn::replication::bulk_load_status::BLS_CANCELED ||
+             resp.app_status == dsn::replication::bulk_load_status::BLS_FAILED ||
+             resp.app_status == dsn::replication::bulk_load_status::BLS_SUCCEED);
         dsn::utils::table_printer tp_all("all partitions");
         tp_all.add_title("partition_index");
         tp_all.add_column("partition_status");
@@ -365,7 +368,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
                 tp_all.append_data(partitions_progress[i]);
             }
             if (print_ingestion_progress &&
-                resp.partitions_status[i] == bulk_load_status::BLS_SUCCEED) {
+                resp.partitions_status[i] == dsn::replication::bulk_load_status::BLS_SUCCEED) {
                 total_ingestion_progress += 1;
             }
             if (print_cleanup_flag) {
@@ -382,16 +385,16 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     // print specific partition
     if (detailed && !all_partitions) {
         auto pstatus = resp.partitions_status[pidx];
-        bool no_detailed =
-            (pstatus == bulk_load_status::BLS_INVALID || pstatus == bulk_load_status::BLS_PAUSED ||
-             pstatus == bulk_load_status::BLS_DOWNLOADED);
+        bool no_detailed = (pstatus == dsn::replication::bulk_load_status::BLS_INVALID ||
+                            pstatus == dsn::replication::bulk_load_status::BLS_PAUSED ||
+                            pstatus == dsn::replication::bulk_load_status::BLS_DOWNLOADED);
         if (!no_detailed) {
-            bool p_prgress = (pstatus == bulk_load_status::BLS_DOWNLOADING);
-            bool p_istatus = (pstatus == bulk_load_status::BLS_INGESTING);
-            bool p_cleanup_flag = (pstatus == bulk_load_status::BLS_SUCCEED ||
-                                   pstatus == bulk_load_status::BLS_CANCELED ||
-                                   pstatus == bulk_load_status::BLS_FAILED);
-            bool p_pause_flag = (pstatus == bulk_load_status::BLS_PAUSING);
+            bool p_prgress = (pstatus == dsn::replication::bulk_load_status::BLS_DOWNLOADING);
+            bool p_istatus = (pstatus == dsn::replication::bulk_load_status::BLS_INGESTING);
+            bool p_cleanup_flag = (pstatus == dsn::replication::bulk_load_status::BLS_SUCCEED ||
+                                   pstatus == dsn::replication::bulk_load_status::BLS_CANCELED ||
+                                   pstatus == dsn::replication::bulk_load_status::BLS_FAILED);
+            bool p_pause_flag = (pstatus == dsn::replication::bulk_load_status::BLS_PAUSING);
 
             dsn::utils::table_printer tp_single("single partition");
             tp_single.add_title("partition_index");
@@ -439,7 +442,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     bool is_bulk_loading = resp.__isset.is_bulk_loading ? resp.is_bulk_loading : false;
     tp_summary.add_row_name_and_data("is_bulk_loading", is_bulk_loading ? "YES" : "NO");
     tp_summary.add_row_name_and_data("app_bulk_load_status", get_short_status(resp.app_status));
-    if (bulk_load_status::BLS_FAILED == resp.app_status) {
+    if (resp.app_status == dsn::replication::bulk_load_status::BLS_FAILED) {
         tp_summary.add_row_name_and_data("bulk_load_err", resp.err.to_string());
     }
     if (print_download_progress) {

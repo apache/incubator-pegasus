@@ -33,7 +33,7 @@
 #include "utils/blob.h"
 #include "value_field.h"
 
-using namespace pegasus;
+namespace pegasus {
 
 uint32_t extract_expire_ts(value_schema *schema, const std::string &raw_value)
 {
@@ -134,3 +134,5 @@ TEST(value_schema, update_expire_ts)
         ASSERT_EQ(t.update_expire_ts, extract_expire_ts(schema, raw_value));
     }
 }
+
+} // namespace pegasus

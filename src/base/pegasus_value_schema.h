@@ -269,4 +269,5 @@ public:
 
     virtual data_version version() const = 0;
 };
+
 } // namespace pegasus

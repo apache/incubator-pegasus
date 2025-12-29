@@ -31,8 +31,7 @@
 #include "replica_admin_types.h"
 #include "utils/blob.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 class hotkey_coarse_data_collector;
 class hotkey_empty_data_collector;
@@ -193,5 +192,4 @@ private:
     friend class fine_collector_test;
 };
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

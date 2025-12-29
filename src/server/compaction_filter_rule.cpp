@@ -26,8 +26,8 @@
 #include "utils/fmt_logging.h"
 #include "utils/strings.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
+
 bool string_pattern_match(std::string_view value,
                           string_match_type type,
                           std::string_view filter_pattern)
@@ -97,5 +97,5 @@ void register_compaction_filter_rules()
     hashkey_pattern_rule::register_component<hashkey_pattern_rule>(
         enum_to_string(FRT_HASHKEY_PATTERN));
 }
-} // namespace server
-} // namespace pegasus
+
+} // namespace pegasus::server

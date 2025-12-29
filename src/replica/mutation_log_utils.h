@@ -36,9 +36,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
 
-namespace dsn {
-namespace replication {
-namespace log_utils {
+namespace dsn::replication::log_utils {
 
 extern error_s open_read(std::string_view path, /*out*/ log_file_ptr &file);
 
@@ -81,6 +79,4 @@ inline error_s check_log_files_continuity(const std::string &dir)
     return check_log_files_continuity(log_file_map) << "check_log_files_continuity(dir)";
 }
 
-} // namespace log_utils
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication::log_utils
