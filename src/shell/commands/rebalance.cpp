@@ -18,9 +18,10 @@
  */
 
 // IWYU pragma: no_include <bits/getopt_core.h>
+#include <fmt/core.h>
 #include <getopt.h>
-#include <stdio.h>
 #include <algorithm>
+#include <cstdio>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -43,19 +44,18 @@
 
 bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
 {
-    if (args.argc <= 1)
+    if (args.argc <= 1) {
         return false;
+    }
 
-    dsn::replication::meta_function_level::type l;
-    l = type_from_string(dsn::replication::_meta_function_level_VALUES_TO_NAMES,
-                         std::string("fl_") + args.argv[1],
-                         dsn::replication::meta_function_level::fl_invalid);
-    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(l != dsn::replication::meta_function_level::fl_invalid,
+    const auto level = type_from_string(dsn::replication::_meta_function_level_VALUES_TO_NAMES,
+                                        std::string("fl_") + args.argv[1],
+                                        dsn::replication::meta_function_level::fl_invalid);
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(level != dsn::replication::meta_function_level::fl_invalid,
                                         "parse {} as meta function level failed",
                                         args.argv[1]);
 
-    dsn::replication::configuration_meta_control_response resp =
-        sc->ddl_client->control_meta_function_level(l);
+    const auto resp = sc->ddl_client->control_meta_function_level(level);
     if (resp.err == dsn::ERR_OK) {
         std::cout
             << "control meta level ok, the old level is "
@@ -222,23 +222,24 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
         actions.emplace_back(new_proposal_action(
             dsn::host_port(), from, dsn::replication::config_type::CT_DOWNGRADE_TO_INACTIVE));
     } else {
-        fprintf(stderr, "parse %s as a balance type failed\n", balance_type.c_str());
+        fmt::println(stderr, "parse {} as a balance type failed", balance_type);
         return false;
     }
 
     if (!from) {
-        fprintf(stderr, "need set from address by -f\n");
+        fmt::println(stderr, "need set from address by -f");
         return false;
     }
     if (!to) {
-        fprintf(stderr, "need set target address by -t\n");
+        fmt::println(stderr, "need set target address by -t");
         return false;
     }
     if (request.gpid.get_app_id() == -1) {
-        fprintf(stderr, "need set the gpid by -g\n");
+        fmt::println(stderr, "need set the gpid by -g");
         return false;
     }
-    dsn::error_code ec = sc->ddl_client->send_balancer_proposal(request);
+
+    const auto ec = sc->ddl_client->send_balancer_proposal(request);
     std::cout << "send balance proposal result: " << ec << std::endl;
     return true;
 }

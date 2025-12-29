@@ -267,7 +267,7 @@ public:
     virtual void update_field(std::string &value, std::unique_ptr<value_field> field) = 0;
     virtual rocksdb::SliceParts generate_value(const value_params &params) = 0;
 
-    virtual data_version version() const = 0;
+    [[nodiscard]] virtual data_version version() const = 0;
 };
 
 } // namespace pegasus

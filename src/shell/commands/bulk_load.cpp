@@ -310,7 +310,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
         return true;
     }
 
-    int partition_count = resp.partitions_status.size();
+    const auto partition_count = static_cast<int32_t>(resp.partitions_status.size());
     if (pidx < -1 || pidx >= partition_count) {
         fmt::print(stderr,
                    "query bulk load failed, error={} [hint:\"invalid partition index\"]\n",
@@ -321,17 +321,18 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     // print query result
     dsn::utils::multi_table_printer mtp;
 
-    bool all_partitions = (pidx == -1);
-    bool print_ingestion_progress =
+    const bool all_partitions = (pidx == -1);
+    const bool print_ingestion_progress =
         (resp.app_status == dsn::replication::bulk_load_status::BLS_INGESTING);
-    bool print_download_progress =
+    const bool print_download_progress =
         (resp.app_status == dsn::replication::bulk_load_status::BLS_DOWNLOADING);
 
     std::unordered_map<int32_t, int32_t> partitions_progress;
-    auto total_download_progress = 0, total_ingestion_progress = 0;
+    int32_t total_download_progress{0};
+    int32_t total_ingestion_progress{0};
     if (print_download_progress) {
         for (auto i = 0; i < partition_count; ++i) {
-            auto progress = 0;
+            int32_t progress{0};
             // The 'bulk_load_states' must be set whatever the version of the server is.
             for (const auto &kv : resp.bulk_load_states[i]) {
                 progress += kv.second.download_progress;

@@ -19,9 +19,10 @@
 
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <boost/algorithm/string/trim.hpp>
+#include <fmt/core.h>
 #include <getopt.h>
-#include <stdio.h>
 #include <algorithm>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -173,12 +174,13 @@ dsn::host_port diagnose_recommend(const dsn::replication::ddd_partition_info &pi
                                                pinfo.config.hp_last_drops.end());
     std::vector<dsn::replication::ddd_node_info> last_dropped;
     for (auto &node : last_two_nodes) {
-        auto it = std::find_if(
+        const auto it = std::find_if(
             pinfo.dropped.begin(),
             pinfo.dropped.end(),
             [&node](const dsn::replication::ddd_node_info &r) { return r.hp_node == node; });
-        if (it->is_alive && it->is_collected)
+        if (it->is_alive && it->is_collected) {
             last_dropped.push_back(*it);
+        }
     }
 
     if (last_dropped.size() == 1) {
@@ -267,7 +269,7 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
     std::vector<dsn::replication::ddd_partition_info> ddd_partitions;
     ::dsn::error_code ret = sc->ddl_client->ddd_diagnose(id, ddd_partitions);
     if (ret != dsn::ERR_OK) {
-        fprintf(stderr, "ERROR: DDD diagnose failed with err = %s\n", ret.to_string());
+        fmt::println(stderr, "ERROR: DDD diagnose failed with err = {}", ret);
         return true;
     }
 

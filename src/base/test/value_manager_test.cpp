@@ -24,7 +24,6 @@
 #include "base/value_schema_manager.h"
 #include "gtest/gtest.h"
 #include "pegasus_value_schema.h"
-#include "value_field.h"
 
 namespace pegasus {
 
