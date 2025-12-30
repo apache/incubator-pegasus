@@ -27,10 +27,10 @@
 #include <rocksdb/status.h>
 #include <rrdb/rrdb.client.h>
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
-#include <cctype>
 #include <string_view>
 
 #include "common/common.h"

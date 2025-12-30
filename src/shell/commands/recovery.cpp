@@ -184,13 +184,13 @@ dsn::host_port diagnose_recommend(const dsn::replication::ddd_partition_info &pi
     }
 
     if (last_dropped.size() == 1) {
-        const dsn::replication::ddd_node_info &ninfo = last_dropped.back();
+        const auto &ninfo = last_dropped.back();
         if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree) {
             return ninfo.hp_node;
         }
     } else if (last_dropped.size() == 2) {
-        const dsn::replication::ddd_node_info &secondary = last_dropped.front();
-        const dsn::replication::ddd_node_info &latest = last_dropped.back();
+        const auto &secondary = last_dropped.front();
+        const auto &latest = last_dropped.back();
 
         // Select a best node to be the new primary, following the rule:
         //  - choose the node with the largest last committed decree

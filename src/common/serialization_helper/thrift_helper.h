@@ -46,11 +46,11 @@ class binary_reader_transport
 public:
     explicit binary_reader_transport(binary_reader &reader) : _reader(reader) {}
 
-    bool isOpen() { return true; }
+    bool isOpen() override { return true; }
 
-    void open() {}
+    void open() override {}
 
-    void close() {}
+    void close() override {}
 
     uint32_t read(uint8_t *buf, uint32_t len)
     {
@@ -73,11 +73,11 @@ class binary_writer_transport
 public:
     explicit binary_writer_transport(binary_writer &writer) : _writer(writer) {}
 
-    bool isOpen() { return true; }
+    bool isOpen() override { return true; }
 
-    void open() {}
+    void open() override {}
 
-    void close() {}
+    void close() override {}
 
     void write(const uint8_t *buf, uint32_t len)
     {

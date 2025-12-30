@@ -69,9 +69,8 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
 
 bool get_meta_level(command_executor *e, shell_context *sc, arguments args)
 {
-    dsn::replication::configuration_meta_control_response resp =
-        sc->ddl_client->control_meta_function_level(
-            dsn::replication::meta_function_level::fl_invalid);
+    const auto resp = sc->ddl_client->control_meta_function_level(
+        dsn::replication::meta_function_level::fl_invalid);
     if (resp.err == dsn::ERR_OK) {
         std::cout
             << "current meta level is "

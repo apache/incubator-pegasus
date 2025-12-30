@@ -61,7 +61,7 @@ DSN_TAG_VARIABLE(gc_disk_migration_tmp_replica_interval_seconds, FT_MUTABLE);
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_migration_origin_replica_interval_seconds,
-                  7UL * 24UL * 3600ULL /*7day*/,
+                  7UL * 24UL * 3600UL /*7day*/,
                   "Duration of disk-migration origin replica being removed, which is in a "
                   "directory with '.ori' suffixed");
 DSN_TAG_VARIABLE(gc_disk_migration_origin_replica_interval_seconds, FT_MUTABLE);
