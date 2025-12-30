@@ -331,7 +331,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     int32_t total_download_progress{0};
     int32_t total_ingestion_progress{0};
     if (print_download_progress) {
-        for (auto i = 0; i < partition_count; ++i) {
+        for (int32_t i = 0; i < partition_count; ++i) {
             int32_t progress{0};
             // The 'bulk_load_states' must be set whatever the version of the server is.
             for (const auto &kv : resp.bulk_load_states[i]) {

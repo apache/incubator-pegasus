@@ -173,7 +173,7 @@ dsn::host_port diagnose_recommend(const dsn::replication::ddd_partition_info &pi
     std::vector<dsn::host_port> last_two_nodes(pinfo.config.hp_last_drops.end() - 2,
                                                pinfo.config.hp_last_drops.end());
     std::vector<dsn::replication::ddd_node_info> last_dropped;
-    for (auto &node : last_two_nodes) {
+    for (const auto &node : last_two_nodes) {
         const auto it = std::find_if(
             pinfo.dropped.begin(),
             pinfo.dropped.end(),
