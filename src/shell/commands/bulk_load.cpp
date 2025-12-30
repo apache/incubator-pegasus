@@ -321,7 +321,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     // print query result
     dsn::utils::multi_table_printer mtp;
 
-    const bool all_partitions = (pidx == -1);
+    const bool all_partitions = pidx == -1;
     const bool print_ingestion_progress =
         resp.app_status == dsn::replication::bulk_load_status::BLS_INGESTING;
     const bool print_download_progress =
