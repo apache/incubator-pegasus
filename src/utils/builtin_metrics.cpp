@@ -17,9 +17,9 @@
 
 #include "utils/builtin_metrics.h"
 
-#include <string_view>
-#include <stdint.h>
+#include <cstdint>
 #include <functional>
+#include <string_view>
 
 #include "utils/autoref_ptr.h"
 #include "utils/flags.h"

@@ -18,11 +18,12 @@
  */
 
 #include <rocksdb/slice.h>
-#include <stdint.h>
 #include <array>
+#include <cstdint>
 #include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -30,10 +31,9 @@
 #include "base/value_schema_manager.h"
 #include "gtest/gtest.h"
 #include "utils/blob.h"
-#include <string_view>
 #include "value_field.h"
 
-using namespace pegasus;
+namespace pegasus {
 
 uint32_t extract_expire_ts(value_schema *schema, const std::string &raw_value)
 {
@@ -134,3 +134,5 @@ TEST(value_schema, update_expire_ts)
         ASSERT_EQ(t.update_expire_ts, extract_expire_ts(schema, raw_value));
     }
 }
+
+} // namespace pegasus

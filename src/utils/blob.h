@@ -28,14 +28,13 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <fmt/core.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/protocol/TProtocol.h>
 #include <algorithm>
 #include <cstring>
 #include <memory>
 #include <string_view>
 #include <type_traits>
-
-#include <thrift/protocol/TBinaryProtocol.h>
-#include <thrift/protocol/TProtocol.h>
 
 #include "utils/fmt_logging.h"
 #include "utils/fmt_utils.h"

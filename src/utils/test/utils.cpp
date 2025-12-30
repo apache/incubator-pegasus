@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <stddef.h>
+#include <cstddef>
 #include <list>
 #include <map>
 #include <set>

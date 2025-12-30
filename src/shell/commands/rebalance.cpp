@@ -18,9 +18,10 @@
  */
 
 // IWYU pragma: no_include <bits/getopt_core.h>
+#include <fmt/core.h>
 #include <getopt.h>
-#include <stdio.h>
 #include <algorithm>
+#include <cstdio>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -43,21 +44,23 @@
 
 bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
 {
-    if (args.argc <= 1)
+    if (args.argc <= 1) {
         return false;
+    }
 
-    dsn::replication::meta_function_level::type l;
-    l = type_from_string(_meta_function_level_VALUES_TO_NAMES,
-                         std::string("fl_") + args.argv[1],
-                         meta_function_level::fl_invalid);
-    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(l != meta_function_level::fl_invalid,
+    const auto level = type_from_string(dsn::replication::_meta_function_level_VALUES_TO_NAMES,
+                                        std::string("fl_") + args.argv[1],
+                                        dsn::replication::meta_function_level::fl_invalid);
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(level != dsn::replication::meta_function_level::fl_invalid,
                                         "parse {} as meta function level failed",
                                         args.argv[1]);
 
-    configuration_meta_control_response resp = sc->ddl_client->control_meta_function_level(l);
+    const auto resp = sc->ddl_client->control_meta_function_level(level);
     if (resp.err == dsn::ERR_OK) {
-        std::cout << "control meta level ok, the old level is "
-                  << _meta_function_level_VALUES_TO_NAMES.find(resp.old_level)->second << std::endl;
+        std::cout
+            << "control meta level ok, the old level is "
+            << dsn::replication::_meta_function_level_VALUES_TO_NAMES.find(resp.old_level)->second
+            << std::endl;
     } else {
         std::cout << "control meta level got error " << resp.err << std::endl;
     }
@@ -66,11 +69,13 @@ bool set_meta_level(command_executor *e, shell_context *sc, arguments args)
 
 bool get_meta_level(command_executor *e, shell_context *sc, arguments args)
 {
-    configuration_meta_control_response resp = sc->ddl_client->control_meta_function_level(
+    const auto resp = sc->ddl_client->control_meta_function_level(
         dsn::replication::meta_function_level::fl_invalid);
     if (resp.err == dsn::ERR_OK) {
-        std::cout << "current meta level is "
-                  << _meta_function_level_VALUES_TO_NAMES.find(resp.old_level)->second << std::endl;
+        std::cout
+            << "current meta level is "
+            << dsn::replication::_meta_function_level_VALUES_TO_NAMES.find(resp.old_level)->second
+            << std::endl;
     } else {
         std::cout << "get meta level got error " << resp.err << std::endl;
     }
@@ -130,10 +135,12 @@ bool propose(command_executor *e, shell_context *sc, arguments args)
     SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(node, "need set node by -n");
     SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(request.gpid.get_app_id() != -1, "need set gpid by -g");
 
-    config_type::type tp =
-        type_from_string(_config_type_VALUES_TO_NAMES, proposal_type, config_type::CT_INVALID);
-    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(
-        tp != config_type::CT_INVALID, "parse {} as config_type failed.\n", proposal_type);
+    const auto tp = type_from_string(dsn::replication::_config_type_VALUES_TO_NAMES,
+                                     proposal_type,
+                                     dsn::replication::config_type::CT_INVALID);
+    SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(tp != dsn::replication::config_type::CT_INVALID,
+                                        "parse {} as config_type failed.\n",
+                                        proposal_type);
     request.action_list = {new_proposal_action(target, node, tp)};
     dsn::error_code err = sc->ddl_client->send_balancer_proposal(request);
     std::cout << "send proposal response: " << err << std::endl;
@@ -194,40 +201,44 @@ bool balance(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    std::vector<configuration_proposal_action> &actions = request.action_list;
+    std::vector<dsn::replication::configuration_proposal_action> &actions = request.action_list;
     actions.reserve(4);
     if (balance_type == "move_pri") {
+        actions.emplace_back(new_proposal_action(
+            from, from, dsn::replication::config_type::CT_DOWNGRADE_TO_SECONDARY));
         actions.emplace_back(
-            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
-        actions.emplace_back(new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(to, to, dsn::replication::config_type::CT_UPGRADE_TO_PRIMARY));
     } else if (balance_type == "copy_pri") {
-        actions.emplace_back(new_proposal_action(from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
         actions.emplace_back(
-            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
-        actions.emplace_back(new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+            new_proposal_action(from, to, dsn::replication::config_type::CT_ADD_SECONDARY_FOR_LB));
+        actions.emplace_back(new_proposal_action(
+            from, from, dsn::replication::config_type::CT_DOWNGRADE_TO_SECONDARY));
+        actions.emplace_back(
+            new_proposal_action(to, to, dsn::replication::config_type::CT_UPGRADE_TO_PRIMARY));
     } else if (balance_type == "copy_sec") {
-        actions.emplace_back(
-            new_proposal_action(dsn::host_port(), to, config_type::CT_ADD_SECONDARY_FOR_LB));
-        actions.emplace_back(
-            new_proposal_action(dsn::host_port(), from, config_type::CT_DOWNGRADE_TO_INACTIVE));
+        actions.emplace_back(new_proposal_action(
+            dsn::host_port(), to, dsn::replication::config_type::CT_ADD_SECONDARY_FOR_LB));
+        actions.emplace_back(new_proposal_action(
+            dsn::host_port(), from, dsn::replication::config_type::CT_DOWNGRADE_TO_INACTIVE));
     } else {
-        fprintf(stderr, "parse %s as a balance type failed\n", balance_type.c_str());
+        fmt::println(stderr, "parse {} as a balance type failed", balance_type);
         return false;
     }
 
     if (!from) {
-        fprintf(stderr, "need set from address by -f\n");
+        fmt::println(stderr, "need set from address by -f");
         return false;
     }
     if (!to) {
-        fprintf(stderr, "need set target address by -t\n");
+        fmt::println(stderr, "need set target address by -t");
         return false;
     }
     if (request.gpid.get_app_id() == -1) {
-        fprintf(stderr, "need set the gpid by -g\n");
+        fmt::println(stderr, "need set the gpid by -g");
         return false;
     }
-    dsn::error_code ec = sc->ddl_client->send_balancer_proposal(request);
+
+    const auto ec = sc->ddl_client->send_balancer_proposal(request);
     std::cout << "send balance proposal result: " << ec << std::endl;
     return true;
 }

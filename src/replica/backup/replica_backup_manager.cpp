@@ -17,12 +17,12 @@
 
 #include "replica_backup_manager.h"
 
-#include <string_view>
-#include <stdint.h>
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <map>
 #include <memory>
+#include <string_view>
 #include <utility>
 #include <vector>
 

@@ -17,8 +17,8 @@
 
 #include "replica_base.h"
 
-#include <string_view>
 #include <fmt/core.h>
+#include <string_view>
 
 METRIC_DEFINE_entity(replica);
 

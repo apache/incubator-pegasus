@@ -156,7 +156,7 @@ bool validate_parameters(LocalPartitionSplitContext &lpsc)
                         lpsc.dst_partition_count,
                         lpsc.src_partition_count);
 
-    const auto es = replication_ddl_client::validate_app_name(lpsc.dst_app_name);
+    const auto es = dsn::replication::replication_ddl_client::validate_app_name(lpsc.dst_app_name);
     RETURN_FALSE_IF_NOT(es.is_ok(),
                         "invalid command, <dst_app_name> '{}' is invalid: {}",
                         lpsc.dst_app_name,
@@ -530,8 +530,8 @@ bool split_partition(const LocalPartitionSplitContext &lpsc,
         dsn::replication::replica_init_info new_rii(tsp.rii);
         new_rii.init_offset_in_shared_log = 0;
         new_rii.init_offset_in_private_log = 0;
-        const auto rii_path =
-            dsn::utils::filesystem::path_combine(new_replica_dir, replica_init_info::kInitInfo);
+        const auto rii_path = dsn::utils::filesystem::path_combine(
+            new_replica_dir, dsn::replication::replica_init_info::kInitInfo);
         RETURN_FALSE_IF_NON_OK(dsn::utils::dump_rjobj_to_file(new_rii, rii_path),
                                "write replica_init_info '{}' failed",
                                rii_path);
@@ -578,7 +578,8 @@ bool split_data_directory(const LocalPartitionSplitContext &lpsc,
         dsn::app_info ai;
         dsn::gpid pid;
         std::string hint_message;
-        if (!replica_stub::validate_replica_dir(replica_dir, ai, pid, hint_message)) {
+        if (!dsn::replication::replica_stub::validate_replica_dir(
+                replica_dir, ai, pid, hint_message)) {
             fmt::print(stderr, "invalid replica dir '{}': {}\n", replica_dir, hint_message);
             continue;
         }
@@ -638,8 +639,8 @@ bool split_data_directory(const LocalPartitionSplitContext &lpsc,
 
         // ix. Load the replica_init_info.
         dsn::replication::replica_init_info rii;
-        const auto rii_path =
-            dsn::utils::filesystem::path_combine(replica_dir, replica_init_info::kInitInfo);
+        const auto rii_path = dsn::utils::filesystem::path_combine(
+            replica_dir, dsn::replication::replica_init_info::kInitInfo);
         RETURN_FALSE_IF_NON_OK(dsn::utils::load_rjobj_from_file(rii_path, &rii),
                                "load replica_init_info from '{}' failed",
                                rii_path);

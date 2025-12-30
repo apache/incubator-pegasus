@@ -74,7 +74,7 @@ int pegasus_server_write::make_idempotent(dsn::message_ex *request,
 
     try {
         return make_idempotent_handler->second(request, new_requests, idem_writer);
-    } catch (TTransportException &ex) {
+    } catch (apache::thrift::transport::TTransportException &ex) {
         METRIC_VAR_INCREMENT(corrupt_writes);
         LOG_ERROR_PREFIX("make idempotent handler for {} failed: from = {}, exception = {}",
                          request->rpc_code(),
@@ -118,7 +118,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
 
         try {
             return non_batch_write_handler->second(requests[0]);
-        } catch (TTransportException &ex) {
+        } catch (apache::thrift::transport::TTransportException &ex) {
             METRIC_VAR_INCREMENT(corrupt_writes);
             LOG_ERROR_PREFIX("non-batch write handler for {} failed: from = {}, "
                              "decree = {}, exception = {}",
@@ -193,7 +193,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, uint32_t
                     LOG_FATAL_PREFIX("rpc code not handled: {}", rpc_code);
                 }
             }
-        } catch (TTransportException &ex) {
+        } catch (apache::thrift::transport::TTransportException &ex) {
             METRIC_VAR_INCREMENT(corrupt_writes);
             LOG_ERROR_PREFIX("pegasus batch writes handler failed, from = {}, exception = {}",
                              requests[i]->header->from_address,

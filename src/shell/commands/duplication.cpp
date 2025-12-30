@@ -696,7 +696,8 @@ bool ls_dups(command_executor *e, shell_context *sc, arguments args)
 }
 
 void handle_duplication_modify_response(
-    const std::string &operation, const dsn::error_with<duplication_modify_response> &err_resp)
+    const std::string &operation,
+    const dsn::error_with<dsn::replication::duplication_modify_response> &err_resp)
 {
     dsn::error_s err = err_resp.get_error();
     if (err.is_ok()) {

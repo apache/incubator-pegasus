@@ -19,8 +19,8 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <fmt/core.h>
-
 #include <string_view>
+
 #include "common/fs_manager.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"

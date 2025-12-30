@@ -34,9 +34,9 @@
 /// This lib is ported from https://github.com/pingcap/fail-rs.
 
 #include <string>
+#include <string_view>
 
 #include "utils/ports.h"
-#include <string_view>
 
 // The only entry to define a fail point with `return` function: lambda function must be
 // return non-void type. When a fail point is defined, it's referenced via the name.
