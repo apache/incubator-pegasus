@@ -55,6 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
       ARTIFACT_NAME: release_for_java_client
       BUILD_OPTIONS: -t release
     container:

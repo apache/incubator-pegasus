@@ -86,6 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
       BUILD_OPTIONS: -t release
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}

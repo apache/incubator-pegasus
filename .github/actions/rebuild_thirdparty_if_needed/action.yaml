@@ -38,7 +38,7 @@ runs:
       run: |
         rm -f /root/thirdparties-src.zip
         mkdir build
-        cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -DUSE_JEMALLOC=${USE_JEMALLOC} -B build/
+        cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -DUSE_JEMALLOC=${USE_JEMALLOC} -DENABLE_ASAN=${ENABLE_ASAN} -B build/
         cmake --build build/ -j $(nproc)
         rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
         find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
