@@ -34,7 +34,9 @@ scalafmtOnCompile := true
 //custom repository
 resolvers ++= Seq(
   //"Remote Maven Repository" at "http://your-url/",
-  "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
+  "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository",
+  Resolver.mavenCentral,
+  "Sonatype OSS" at "https://oss.sonatype.org/content/repositories/releases"
 )
 
 //custom publish url
