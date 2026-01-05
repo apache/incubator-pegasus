@@ -19,14 +19,15 @@
 
 #include "compaction_filter_rule.h"
 
+#include <string_view>
+
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
 #include "utils/fmt_logging.h"
-#include <string_view>
 #include "utils/strings.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
+
 bool string_pattern_match(std::string_view value,
                           string_match_type type,
                           std::string_view filter_pattern)
@@ -96,5 +97,5 @@ void register_compaction_filter_rules()
     hashkey_pattern_rule::register_component<hashkey_pattern_rule>(
         enum_to_string(FRT_HASHKEY_PATTERN));
 }
-} // namespace server
-} // namespace pegasus
+
+} // namespace pegasus::server

@@ -19,29 +19,29 @@
 
 #pragma once
 
+#include <boost/algorithm/string.hpp>
+#include <fmt/color.h>
+#include <fmt/ostream.h>
+#include <geo/lib/geo_client.h>
 #include <getopt.h>
+#include <pegasus/error.h>
+#include <pegasus/git_commit.h>
+#include <pegasus/version.h>
+#include <rocksdb/db.h>
+#include <rocksdb/env.h>
+#include <rocksdb/sst_dump_tool.h>
+#include <rocksdb/statistics.h>
+#include <rrdb/rrdb.code.definition.h>
+#include <rrdb/rrdb_types.h>
+
 #include <fstream>
 #include <functional>
 #include <iomanip>
 #include <memory>
 #include <queue>
+#include <string_view>
 #include <thread>
 #include <utility>
-
-#include <boost/algorithm/string.hpp>
-#include <fmt/color.h>
-#include <fmt/ostream.h>
-#include <rocksdb/db.h>
-#include <rocksdb/env.h>
-#include <rocksdb/sst_dump_tool.h>
-#include <rocksdb/statistics.h>
-
-#include <geo/lib/geo_client.h>
-#include <pegasus/error.h>
-#include <pegasus/git_commit.h>
-#include <pegasus/version.h>
-#include <rrdb/rrdb.code.definition.h>
-#include <rrdb/rrdb_types.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
@@ -56,7 +56,6 @@
 #include "task/async_calls.h"
 #include "tools/mutation_log_tool.h"
 #include "utils/fmt_utils.h"
-#include <string_view>
 #include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"

@@ -19,10 +19,10 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <string>
-
 #include <gtest/gtest_prod.h>
+#include <cstdint>
+#include <string>
+#include <string_view>
 
 #include "base/pegasus_value_schema.h"
 #include "common/json_helper.h"
@@ -30,10 +30,9 @@
 #include "utils/enum_helper.h"
 #include "utils/factory_store.h"
 #include "utils/fmt_utils.h"
-#include <string_view>
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
+
 enum filter_rule_type
 {
     FRT_HASHKEY_PATTERN = 0,
@@ -162,5 +161,5 @@ private:
 };
 
 void register_compaction_filter_rules();
-} // namespace server
-} // namespace pegasus
+
+} // namespace pegasus::server

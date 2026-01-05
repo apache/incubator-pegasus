@@ -19,13 +19,13 @@
 
 #include "pegasus_manual_compact_service.h"
 
-#include <string_view>
-#include <limits.h>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <rocksdb/options.h>
+#include <climits>
 #include <list>
 #include <set>
+#include <string_view>
 #include <utility>
 
 #include "common/replica_envs.h"

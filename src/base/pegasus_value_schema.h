@@ -20,19 +20,19 @@
 #pragma once
 
 #include <rocksdb/slice.h>
-#include <stdint.h>
-#include <string.h>
 #include <algorithm>
 #include <array>
+#include <cstdint>
+#include <cstring>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "utils/blob.h"
 #include "utils/endians.h"
 #include "utils/fmt_logging.h"
-#include <string_view>
 #include "value_field.h"
 
 namespace pegasus {
@@ -267,6 +267,7 @@ public:
     virtual void update_field(std::string &value, std::unique_ptr<value_field> field) = 0;
     virtual rocksdb::SliceParts generate_value(const value_params &params) = 0;
 
-    virtual data_version version() const = 0;
+    [[nodiscard]] virtual data_version version() const = 0;
 };
+
 } // namespace pegasus

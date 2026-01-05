@@ -28,13 +28,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 #include <regex>
 #include <string>
+#include <string_view>
 #include <vector>
 
-#include <string_view>
 #include "fail_point_impl.h"
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
