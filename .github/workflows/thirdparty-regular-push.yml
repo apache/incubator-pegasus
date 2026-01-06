@@ -52,3 +52,4 @@ jobs:
     uses: "./.github/workflows/build-push-thirdparty.yml"
     with:
       osversion: ${{ matrix.osversion }}
+    secrets: inherit
