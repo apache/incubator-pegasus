@@ -49,6 +49,6 @@ jobs:
           - ubuntu2004
           - ubuntu2204
           - rockylinux9
-    uses: .github/workflows/build-push-thirdparty.yml@${{ github.ref_name }}
+    uses: "./.github/workflows/build-push-thirdparty.yml"
     with:
       osversion: ${{ matrix.osversion }}
