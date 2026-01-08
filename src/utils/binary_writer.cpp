@@ -68,23 +68,25 @@ void binary_writer::create_buffer(size_t size)
     create_new_buffer(size, bb);
     _buffers.push_back(bb);
 
-    _current_buffer = (char *)bb.data();
+    _current_buffer = const_cast<char *>(bb.data());
     _current_buffer_length = bb.length();
 }
 
 void binary_writer::create_new_buffer(size_t size, /*out*/ blob &bb)
 {
-    bb.assign(::dsn::utils::make_shared_array<char>(size), 0, (int)size);
+    bb.assign(::dsn::utils::make_shared_array<char>(size), 0, size);
 }
 
 void binary_writer::commit()
 {
-    if (_current_offset > 0) {
-        *_buffers.rbegin() = _buffers.rbegin()->range(0, _current_offset);
-
-        _current_offset = 0;
-        _current_buffer_length = 0;
+    if (_current_offset <= 0) {
+        return;
     }
+
+    *_buffers.rbegin() = _buffers.rbegin()->range(0, _current_offset);
+
+    _current_offset = 0;
+    _current_buffer_length = 0;
 }
 
 blob binary_writer::get_buffer()
@@ -101,7 +103,7 @@ blob binary_writer::get_buffer()
 
     std::shared_ptr<char> bptr(utils::make_shared_array<char>(_total_size));
     blob bb(bptr, _total_size);
-    char *ptr = const_cast<char *>(bb.data());
+    auto *ptr = const_cast<char *>(bb.data());
 
     for (const auto &buf : _buffers) {
         memcpy(ptr, buf.data(), buf.length());
@@ -115,22 +117,22 @@ blob binary_writer::get_current_buffer()
 {
     if (_buffers.size() == 1) {
         return _current_offset > 0 ? _buffers[0].range(0, _current_offset) : _buffers[0];
-    } else {
-        std::shared_ptr<char> bptr(::dsn::utils::make_shared_array<char>(_total_size));
-        blob bb(bptr, _total_size);
-        const char *ptr = bb.data();
-
-        for (int i = 0; i < static_cast<int>(_buffers.size()); i++) {
-            size_t len = (size_t)_buffers[i].length();
-            if (_current_offset > 0 && i + 1 == (int)_buffers.size()) {
-                len = _current_offset;
-            }
-
-            memcpy((void *)ptr, (const void *)_buffers[i].data(), len);
-            ptr += _buffers[i].length();
-        }
-        return bb;
     }
+
+    std::shared_ptr<char> bptr(::dsn::utils::make_shared_array<char>(_total_size));
+    blob bb(bptr, _total_size);
+    auto *ptr = const_cast<char *>(bb.data());
+
+    for (int i = 0; i < static_cast<int>(_buffers.size()); i++) {
+        size_t len = (size_t)_buffers[i].length();
+        if (_current_offset > 0 && i + 1 == (int)_buffers.size()) {
+            len = _current_offset;
+        }
+
+        memcpy(ptr, _buffers[i].data(), len);
+        ptr += _buffers[i].length();
+    }
+    return bb;
 }
 
 void binary_writer::write_empty(int sz)
@@ -154,53 +156,27 @@ void binary_writer::write_empty(int sz)
     _total_size += sz0;
 }
 
-void binary_writer::write(const char *buffer, int sz)
+void binary_writer::write(const char *buffer, int size)
 {
-    int rem_size = _current_buffer_length - _current_offset;
-    if (rem_size >= sz) {
-        memcpy((void *)(_current_buffer + _current_offset), buffer, (size_t)sz);
-        _current_offset += sz;
-        _total_size += sz;
-    } else {
-        if (rem_size > 0) {
-            memcpy((void *)(_current_buffer + _current_offset), buffer, (size_t)rem_size);
-            _current_offset += rem_size;
-            _total_size += rem_size;
-            sz -= rem_size;
-        }
-
-        int allocSize = _reserved_size_per_buffer;
-        if (sz > allocSize)
-            allocSize = sz;
-
-        create_buffer(allocSize);
-        memcpy((void *)(_current_buffer + _current_offset), buffer + rem_size, (size_t)sz);
-        _current_offset += sz;
-        _total_size += sz;
-    }
-}
-
-bool binary_writer::next(void **data, int *size)
-{
-    int rem_size = _current_buffer_length - _current_offset;
-    if (rem_size == 0) {
-        create_buffer(_reserved_size_per_buffer);
-        rem_size = _current_buffer_length;
+    const int remaining_size = _current_buffer_length - _current_offset;
+    if (remaining_size >= size) {
+        memcpy(_current_buffer + _current_offset, buffer, size);
+        _current_offset += size;
+        _total_size += size;
+        return;
     }
 
-    *size = rem_size;
-    *data = (void *)(_current_buffer + _current_offset);
-    _current_offset = _current_buffer_length;
-    _total_size += rem_size;
-    return true;
-}
+    if (remaining_size > 0) {
+        memcpy(_current_buffer + _current_offset, buffer, remaining_size);
+        _current_offset += remaining_size;
+        _total_size += remaining_size;
+        size -= remaining_size;
+    }
 
-bool binary_writer::backup(int count)
-{
-    assert(count <= _current_offset);
-    _current_offset -= count;
-    _total_size -= count;
-    return true;
+    create_buffer(std::max(size, _reserved_size_per_buffer));
+    memcpy(_current_buffer + _current_offset, buffer + remaining_size, size);
+    _current_offset += size;
+    _total_size += size;
 }
 
 } // namespace dsn

@@ -26,14 +26,13 @@
 
 #pragma once
 
-#include <assert.h>
-#include <stdint.h>
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <string>
 #include <vector>
 
-#include "blob.h"
+#include "utils/blob.h"
 #include "utils/ports.h"
 
 namespace dsn {
@@ -48,14 +47,9 @@ public:
 
     virtual void flush();
 
-    template <typename T>
-    void write_pod(const T &val);
-    template <typename T>
-    void write(const T &val)
-    {
-        // write of this type is not implemented
-        assert(false);
-    }
+    template <typename TVal>
+    void write_pod(const TVal &val);
+
     void write(const int8_t &val) { write_pod(val); }
     void write(const uint8_t &val) { write_pod(val); }
     void write(const int16_t &val) { write_pod(val); }
@@ -66,13 +60,10 @@ public:
     void write(const uint64_t &val) { write_pod(val); }
     void write(const bool &val) { write_pod(val); }
 
-    void write(const std::string &val);
-    void write(const char *buffer, int sz);
+    void write(std::string_view val);
     void write(const blob &val);
+    void write(const char *buffer, int sz);
     void write_empty(int sz);
-
-    bool next(void **data, int *size);
-    bool backup(int count);
 
     void get_buffers(/*out*/ std::vector<blob> &buffers);
     int get_buffer_count() const { return static_cast<int>(_buffers.size()); }
@@ -89,6 +80,9 @@ protected:
     virtual void create_new_buffer(size_t size, /*out*/ blob &bb);
 
 private:
+    template <typename TBytes>
+    void write_bytes(const TBytes &val);
+
     std::vector<blob> _buffers;
 
     char *_current_buffer;
@@ -104,10 +98,10 @@ private:
 };
 
 //--------------- inline implementation -------------------
-template <typename T>
-inline void binary_writer::write_pod(const T &val)
+template <typename TVal>
+inline void binary_writer::write_pod(const TVal &val)
 {
-    write((char *)&val, static_cast<int>(sizeof(T)));
+    write(reinterpret_cast<const char *>(&val), static_cast<int>(sizeof(val)));
 }
 
 inline void binary_writer::get_buffers(/*out*/ std::vector<blob> &buffers)
@@ -118,20 +112,18 @@ inline void binary_writer::get_buffers(/*out*/ std::vector<blob> &buffers)
 
 inline blob binary_writer::get_first_buffer() const { return _buffers[0]; }
 
-inline void binary_writer::write(const std::string &val)
+template <typename TBytes>
+inline void binary_writer::write_bytes(const TBytes &val)
 {
-    int len = static_cast<int>(val.length());
-    write((const char *)&len, sizeof(int));
-    if (len > 0)
-        write((const char *)&val[0], len);
+    const auto len = static_cast<int>(val.length());
+    write_pod(len);
+    if (len > 0) {
+        write(val.data(), len);
+    }
 }
 
-inline void binary_writer::write(const blob &val)
-{
-    // TODO: optimization by not memcpy
-    int len = val.length();
-    write((const char *)&len, sizeof(int));
-    if (len > 0)
-        write((const char *)val.data(), len);
-}
+inline void binary_writer::write(std::string_view val) { write_bytes(val); }
+
+inline void binary_writer::write(const blob &val) { write_bytes(val); }
+
 } // namespace dsn
