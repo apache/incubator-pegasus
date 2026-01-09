@@ -42,7 +42,7 @@ class binary_writer
 public:
     binary_writer();
     explicit binary_writer(int reserved_buffer_size);
-    explicit binary_writer(blob &buffer);
+
     virtual ~binary_writer() = default;
 
     virtual void flush();
@@ -65,11 +65,8 @@ public:
     void write(const char *buffer, int sz);
     void write_empty(int sz);
 
-    void get_buffers(/*out*/ std::vector<blob> &buffers);
-    int get_buffer_count() const { return static_cast<int>(_buffers.size()); }
     blob get_buffer();
-    blob get_current_buffer(); // without commit, write can be continued on the last buffer
-    blob get_first_buffer() const;
+    blob get_current_buffer() const; // without commit, write can be continued on the last buffer
 
     int total_size() const { return _total_size; }
 
@@ -103,14 +100,6 @@ inline void binary_writer::write_pod(const TVal &val)
 {
     write(reinterpret_cast<const char *>(&val), static_cast<int>(sizeof(val)));
 }
-
-inline void binary_writer::get_buffers(/*out*/ std::vector<blob> &buffers)
-{
-    commit();
-    buffers = _buffers;
-}
-
-inline blob binary_writer::get_first_buffer() const { return _buffers[0]; }
 
 template <typename TBytes>
 inline void binary_writer::write_bytes(const TBytes &val)
