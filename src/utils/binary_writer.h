@@ -26,10 +26,9 @@
 
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
 #include <cstring>
-#include <string>
+#include <string_view>
 #include <vector>
 
 #include "utils/blob.h"
@@ -47,9 +46,11 @@ public:
 
     virtual void flush();
 
+    // Write data of POD types into the buffers.
     template <typename TVal>
     void write_pod(const TVal &val);
 
+    // Write data of built-in types into the buffers.
     void write(const int8_t &val) { write_pod(val); }
     void write(const uint8_t &val) { write_pod(val); }
     void write(const int16_t &val) { write_pod(val); }
@@ -60,28 +61,46 @@ public:
     void write(const uint64_t &val) { write_pod(val); }
     void write(const bool &val) { write_pod(val); }
 
+    // Write bytes in string_view into the buffers.
     void write(std::string_view val);
+
+    // Write bytes in blob into the buffers.
     void write(const blob &val);
-    void write(const char *buffer, int sz);
-    void write_empty(int sz);
 
+    // Write `size` bytes from `buffer` into the buffers.
+    void write(const char *buffer, int size);
+
+    // Just increase the buffers by `size` bytes without writing any data into it.
+    void write_empty(int size);
+
+    // Commit the current buffer and return a blob filled with all bytes over all buffers.
     blob get_buffer();
-    blob get_current_buffer() const; // without commit, write can be continued on the last buffer
 
-    int total_size() const { return _total_size; }
+    // Return a blob filled with all bytes over all buffers without committing the current
+    // buffer and thus future written bytes will continue to be put into the current buffer.
+    [[nodiscard]] blob get_current_buffer() const;
+
+    // Get the total size in bytes over all buffers.
+    [[nodiscard]] int total_size() const { return _total_size; }
 
 protected:
-    // bb may have large space than size
+    // Commit the current buffer and create a new buffer of at least `size` bytes.
     void create_buffer(size_t size);
-    void commit();
+
+    // Allocate space of at least `size` bytes for a new buffer into `bb`.
     virtual void create_new_buffer(size_t size, /*out*/ blob &bb);
 
+    // Commit the current buffer.
+    void commit();
+
 private:
+    // Write data of bytes-like types into buffers.
     template <typename TBytes>
     void write_bytes(const TBytes &val);
 
     std::vector<blob> _buffers;
 
+    // The current buffer is just the last buffer of `_buffers`.
     char *_current_buffer;
     int _current_offset;
     int _current_buffer_length;

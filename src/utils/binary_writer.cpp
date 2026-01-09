@@ -26,6 +26,7 @@
 
 #include "binary_writer.h"
 
+#include <algorithm>
 #include <memory>
 
 #include "utils.h"
@@ -59,7 +60,7 @@ void binary_writer::create_buffer(size_t size)
     _buffers.push_back(bb);
 
     _current_buffer = const_cast<char *>(bb.data());
-    _current_buffer_length = bb.length();
+    _current_buffer_length = static_cast<int>(bb.length());
 }
 
 void binary_writer::create_new_buffer(size_t size, /*out*/ blob &bb)
