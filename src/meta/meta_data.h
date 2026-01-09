@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <fmt/core.h>
 #include <stdint.h>
 #include <algorithm>
 #include <atomic>
@@ -46,6 +47,7 @@
 #include "meta/duplication/duplication_info.h"
 #include "meta_admin_types.h"
 #include "metadata_types.h"
+#include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
 #include "task/task.h"
@@ -547,7 +549,30 @@ inline int count_partitions(const app_mapper &apps)
 
 void when_update_replicas(config_type::type t, const std::function<void(bool)> &func);
 
-// TODO(yingchun): refactor to deal both rpc_address and host_port
+#define MAINTAIN_DROP_NODE(obj, field, type)                                                       \
+    do {                                                                                           \
+        auto obj_copy = obj;                                                                       \
+        if (obj.primary) {                                                                         \
+            maintain_drops(obj_copy.field, obj.primary, type);                                     \
+        }                                                                                          \
+        if (obj.__isset.hp_primary && obj.hp_primary) {                                            \
+            maintain_drops(obj_copy.hp_##field, obj.hp_primary, type);                             \
+        }                                                                                          \
+    } while (0)
+
+#define MAINTAIN_DROP_NODES(obj, field, type)                                                      \
+    do {                                                                                           \
+        auto obj_copy = obj;                                                                       \
+        for (const auto &secondary : obj.secondaries) {                                            \
+            maintain_drops(obj_copy.field, secondary, type);                                       \
+        }                                                                                          \
+        if (obj.__isset.hp_secondaries) {                                                          \
+            for (const auto &secondary : obj.hp_secondaries) {                                     \
+                maintain_drops(obj_copy.hp_##field, secondary, type);                              \
+            }                                                                                      \
+        }                                                                                          \
+    } while (0)
+
 template <typename T>
 void maintain_drops(/*inout*/ std::vector<T> &drops, const T &node, config_type::type t)
 {
