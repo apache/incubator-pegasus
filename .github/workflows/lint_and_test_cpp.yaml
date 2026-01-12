@@ -213,7 +213,7 @@ jobs:
       ARTIFACT_NAME: release_address
       BUILD_OPTIONS: --sanitizer address --disable_gperf --test
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-asan-ubuntu2204-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v4
       - name: Rebuild thirdparty if needed
@@ -284,7 +284,7 @@ jobs:
     env:
       ARTIFACT_NAME: release_address
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-asan-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v4
