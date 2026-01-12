@@ -21,6 +21,7 @@ package session
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -141,4 +142,80 @@ func TestNodeSession_ForwardToPrimaryMeta(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
 	}
+}
+
+// TestMetaManager_DNSResolveHost tests that MetaManager can resolve meta IP addresses from a domain name.
+func TestMetaManager_DNSResolveHost(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	originalResolveMetaAddr := ResolveMetaAddr
+	defer func() {
+		ResolveMetaAddr = originalResolveMetaAddr
+	}()
+
+	// Mock the ResolveMetaAddr function
+	ResolveMetaAddr = func(hosts []string) ([]string, error) {
+		return []string{"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"}, nil
+	}
+
+	// Create a MetaManager with a domain name
+	mm := NewMetaManager([]string{"localhost:34601"}, NewNodeSession)
+	defer mm.Close()
+
+	// Verify initial resolution
+	assert.Equal(t, []string{"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"}, mm.GetMetaIPAddrs())
+
+	_, err := mm.QueryConfig(context.Background(), "temp")
+	assert.Nil(t, err)
+}
+
+// TestMetaManager_DNSMetaAllChanged tests that MetaManager re-resolves DNS and updates meta servers when all meta servers fail.
+func TestMetaManager_DNSMetaAllChanged(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	// Save original ResolveMetaAddr function
+	originalResolveMetaAddr := ResolveMetaAddr
+	defer func() {
+		ResolveMetaAddr = originalResolveMetaAddr
+	}()
+
+	// Mock the ResolveMetaAddr function to return addresses（unreachable ones）
+	ResolveMetaAddr = func(hosts []string) ([]string, error) {
+		return []string{"172.0.0.1:34601", "172.0.0.2:34601"}, nil
+	}
+
+	// Create a MetaManager with a domain name
+	mm := NewMetaManager([]string{"localhost:34601"}, NewNodeSession)
+	defer mm.Close()
+
+	// Verify initial resolution
+	assert.Equal(t, []string{"172.0.0.1:34601", "172.0.0.2:34601"}, mm.GetMetaIPAddrs())
+
+	// Create a context with timeout to trigger failure
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// This should timeout because the initial meta servers are unreachable
+	_, err := mm.QueryConfig(ctx, "temp")
+	assert.NotNil(t, err)
+	assert.True(t, errors.Is(context.DeadlineExceeded, ctx.Err()))
+
+	// Mock the ResolveMetaAddr function to return new addresses（reachable ones）
+	ResolveMetaAddr = func(hosts []string) ([]string, error) {
+		return []string{"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"}, nil
+	}
+
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// This should also timeout because the initial meta servers are still unreachable, but it will update the meta servers after timeout.
+	_, err = mm.QueryConfig(ctx, "temp")
+	assert.NotNil(t, err)
+	assert.True(t, errors.Is(context.DeadlineExceeded, ctx.Err()))
+
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	// This should not timeout because meta servers are reachable now.
+	_, err = mm.QueryConfig(ctx, "temp")
+	assert.Nil(t, err)
 }
