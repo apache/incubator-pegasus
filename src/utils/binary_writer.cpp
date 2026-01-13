@@ -74,6 +74,7 @@ void binary_writer::commit()
         return;
     }
 
+    // Commit the last buffer.
     *_buffers.rbegin() = _buffers.rbegin()->range(0, _current_offset);
 
     _current_offset = 0;
@@ -110,21 +111,25 @@ blob binary_writer::get_current_buffer() const
     }
 
     blob bb(utils::make_shared_array<char>(_total_size), _total_size);
-    auto *ptr = const_cast<char *>(bb.data());
+    if (_buffers.empty()) {
+        // TODO(wangdan): just return a default-initialized blob object?
+        return bb;
+    }
 
+    auto *ptr = const_cast<char *>(bb.data());
     int i = 0;
-    const int num_buffers = static_cast<int>(_buffers.size());
-    for (; i < num_buffers - 1; ++i) {
+
+    // Now the size of _buffers is at least 2.
+    for (; i < static_cast<int>(_buffers.size()) - 1; ++i) {
         std::memcpy(ptr, _buffers[i].data(), _buffers[i].length());
         ptr += _buffers[i].length();
     }
 
-    if (i < num_buffers) {
-        if (_current_offset > 0) {
-            std::memcpy(ptr, _buffers[i].data(), _current_offset);
-        } else {
-            std::memcpy(ptr, _buffers[i].data(), _buffers[i].length());
-        }
+    // Get bytes from the last buffer(namely current buffer).
+    if (_current_offset > 0) {
+        std::memcpy(ptr, _buffers[i].data(), _current_offset);
+    } else {
+        std::memcpy(ptr, _buffers[i].data(), _buffers[i].length());
     }
 
     return bb;

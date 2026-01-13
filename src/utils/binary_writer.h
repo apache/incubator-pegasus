@@ -123,8 +123,11 @@ inline void binary_writer::write_pod(const TVal &val)
 template <typename TBytes>
 inline void binary_writer::write_bytes(const TBytes &val)
 {
+    // Write the length of `val` into the buffers.
     const auto len = static_cast<int>(val.length());
     write_pod(len);
+
+    // Write `val` into the buffers if it's not empty.
     if (len > 0) {
         write(val.data(), len);
     }
