@@ -26,6 +26,7 @@
 
 #include "binary_writer.h"
 
+#include <algorithm>
 #include <memory>
 
 #include "utils.h"
@@ -48,16 +49,6 @@ binary_writer::binary_writer(int reserved_buffer_size)
     _buffers.reserve(1);
 }
 
-binary_writer::binary_writer(blob &buffer)
-    : _buffers({buffer}),
-      _current_buffer(const_cast<char *>(buffer.data())),
-      _current_offset(0),
-      _current_buffer_length(static_cast<int>(buffer.length())),
-      _total_size(0),
-      _reserved_size_per_buffer(kReservedSizePerBuffer)
-{
-}
-
 void binary_writer::flush() { commit(); }
 
 void binary_writer::create_buffer(size_t size)
@@ -68,23 +59,26 @@ void binary_writer::create_buffer(size_t size)
     create_new_buffer(size, bb);
     _buffers.push_back(bb);
 
-    _current_buffer = (char *)bb.data();
-    _current_buffer_length = bb.length();
+    _current_buffer = const_cast<char *>(bb.data());
+    _current_buffer_length = static_cast<int>(bb.length());
 }
 
 void binary_writer::create_new_buffer(size_t size, /*out*/ blob &bb)
 {
-    bb.assign(::dsn::utils::make_shared_array<char>(size), 0, (int)size);
+    bb.assign(utils::make_shared_array<char>(size), 0, size);
 }
 
 void binary_writer::commit()
 {
-    if (_current_offset > 0) {
-        *_buffers.rbegin() = _buffers.rbegin()->range(0, _current_offset);
-
-        _current_offset = 0;
-        _current_buffer_length = 0;
+    if (_current_offset <= 0) {
+        return;
     }
+
+    // Commit the last buffer.
+    *_buffers.rbegin() = _buffers.rbegin()->range(0, _current_offset);
+
+    _current_offset = 0;
+    _current_buffer_length = 0;
 }
 
 blob binary_writer::get_buffer()
@@ -99,108 +93,95 @@ blob binary_writer::get_buffer()
         return {};
     }
 
-    std::shared_ptr<char> bptr(utils::make_shared_array<char>(_total_size));
-    blob bb(bptr, _total_size);
-    char *ptr = const_cast<char *>(bb.data());
+    blob bb(utils::make_shared_array<char>(_total_size), _total_size);
+    auto *ptr = const_cast<char *>(bb.data());
 
     for (const auto &buf : _buffers) {
-        memcpy(ptr, buf.data(), buf.length());
+        std::memcpy(ptr, buf.data(), buf.length());
         ptr += buf.length();
     }
 
     return bb;
 }
 
-blob binary_writer::get_current_buffer()
+blob binary_writer::get_current_buffer() const
 {
     if (_buffers.size() == 1) {
         return _current_offset > 0 ? _buffers[0].range(0, _current_offset) : _buffers[0];
-    } else {
-        std::shared_ptr<char> bptr(::dsn::utils::make_shared_array<char>(_total_size));
-        blob bb(bptr, _total_size);
-        const char *ptr = bb.data();
+    }
 
-        for (int i = 0; i < static_cast<int>(_buffers.size()); i++) {
-            size_t len = (size_t)_buffers[i].length();
-            if (_current_offset > 0 && i + 1 == (int)_buffers.size()) {
-                len = _current_offset;
-            }
-
-            memcpy((void *)ptr, (const void *)_buffers[i].data(), len);
-            ptr += _buffers[i].length();
-        }
+    blob bb(utils::make_shared_array<char>(_total_size), _total_size);
+    if (_buffers.empty()) {
+        // TODO(wangdan): just return a default-initialized blob object?
         return bb;
     }
-}
 
-void binary_writer::write_empty(int sz)
-{
-    int sz0 = sz;
-    int rem_size = _current_buffer_length - _current_offset;
-    if (rem_size >= sz) {
-        _current_offset += sz;
+    auto *ptr = const_cast<char *>(bb.data());
+    int i = 0;
+
+    // Now the size of _buffers is at least 2.
+    for (; i < static_cast<int>(_buffers.size()) - 1; ++i) {
+        std::memcpy(ptr, _buffers[i].data(), _buffers[i].length());
+        ptr += _buffers[i].length();
+    }
+
+    // Get bytes from the last buffer(namely current buffer).
+    if (_current_offset > 0) {
+        std::memcpy(ptr, _buffers[i].data(), _current_offset);
     } else {
-        _current_offset += rem_size;
-        sz -= rem_size;
-
-        int allocSize = _reserved_size_per_buffer;
-        if (sz > allocSize)
-            allocSize = sz;
-
-        create_buffer(allocSize);
-        _current_offset += sz;
+        std::memcpy(ptr, _buffers[i].data(), _buffers[i].length());
     }
 
-    _total_size += sz0;
+    return bb;
 }
 
-void binary_writer::write(const char *buffer, int sz)
+void binary_writer::write_empty(int size)
 {
-    int rem_size = _current_buffer_length - _current_offset;
-    if (rem_size >= sz) {
-        memcpy((void *)(_current_buffer + _current_offset), buffer, (size_t)sz);
-        _current_offset += sz;
-        _total_size += sz;
-    } else {
-        if (rem_size > 0) {
-            memcpy((void *)(_current_buffer + _current_offset), buffer, (size_t)rem_size);
-            _current_offset += rem_size;
-            _total_size += rem_size;
-            sz -= rem_size;
-        }
-
-        int allocSize = _reserved_size_per_buffer;
-        if (sz > allocSize)
-            allocSize = sz;
-
-        create_buffer(allocSize);
-        memcpy((void *)(_current_buffer + _current_offset), buffer + rem_size, (size_t)sz);
-        _current_offset += sz;
-        _total_size += sz;
-    }
-}
-
-bool binary_writer::next(void **data, int *size)
-{
-    int rem_size = _current_buffer_length - _current_offset;
-    if (rem_size == 0) {
-        create_buffer(_reserved_size_per_buffer);
-        rem_size = _current_buffer_length;
+    const int remaining_size = _current_buffer_length - _current_offset;
+    if (remaining_size >= size) {
+        _current_offset += size;
+        _total_size += size;
+        return;
     }
 
-    *size = rem_size;
-    *data = (void *)(_current_buffer + _current_offset);
-    _current_offset = _current_buffer_length;
-    _total_size += rem_size;
-    return true;
+    _current_offset += remaining_size;
+    _total_size += remaining_size;
+    size -= remaining_size;
+
+    // Because the create_buffer() function will commit the last buffer - that is, it reads
+    // `_current_offset` first and then resets it - we need to ensure that `_current_offset`
+    // has already been updated to the latest value before create_buffer() is called.
+    create_buffer(std::max(size, _reserved_size_per_buffer));
+
+    _current_offset += size;
+    _total_size += size;
 }
 
-bool binary_writer::backup(int count)
+void binary_writer::write(const char *buffer, int size)
 {
-    assert(count <= _current_offset);
-    _current_offset -= count;
-    _total_size -= count;
-    return true;
+    const int remaining_size = _current_buffer_length - _current_offset;
+    if (remaining_size >= size) {
+        std::memcpy(_current_buffer + _current_offset, buffer, size);
+        _current_offset += size;
+        _total_size += size;
+        return;
+    }
+
+    if (remaining_size > 0) {
+        std::memcpy(_current_buffer + _current_offset, buffer, remaining_size);
+        _current_offset += remaining_size;
+        _total_size += remaining_size;
+        size -= remaining_size;
+    }
+
+    // Because the create_buffer() function will commit the last buffer - that is, it reads
+    // `_current_offset` first and then resets it - we need to ensure that `_current_offset`
+    // has already been updated to the latest value before create_buffer() is called.
+    create_buffer(std::max(size, _reserved_size_per_buffer));
+
+    std::memcpy(_current_buffer + _current_offset, buffer + remaining_size, size);
+    _current_offset += size;
+    _total_size += size;
 }
 
 } // namespace dsn
