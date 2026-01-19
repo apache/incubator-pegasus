@@ -148,7 +148,11 @@ void binary_writer::write_empty(int size)
     _total_size += remaining_size;
     size -= remaining_size;
 
+    // Because the create_buffer() function will commit the last buffer - that is, it reads
+    // `_current_offset` first and then resets it - we need to ensure that `_current_offset`
+    // has already been updated to the latest value before create_buffer() is called.
     create_buffer(std::max(size, _reserved_size_per_buffer));
+
     _current_offset += size;
     _total_size += size;
 }
@@ -170,7 +174,11 @@ void binary_writer::write(const char *buffer, int size)
         size -= remaining_size;
     }
 
+    // Because the create_buffer() function will commit the last buffer - that is, it reads
+    // `_current_offset` first and then resets it - we need to ensure that `_current_offset`
+    // has already been updated to the latest value before create_buffer() is called.
     create_buffer(std::max(size, _reserved_size_per_buffer));
+
     std::memcpy(_current_buffer + _current_offset, buffer + remaining_size, size);
     _current_offset += size;
     _total_size += size;
