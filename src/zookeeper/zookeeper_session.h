@@ -205,6 +205,11 @@ private:
     DISALLOW_MOVE_AND_ASSIGN(zookeeper_session);
 };
 
+// Obtain a ZooKeeper session. Each service node has at most one ZooKeeper session; if none
+// exists for the service app, one will be created. The obtained ZooKeeper session can be
+// shared across multiple threads in one service node.
+zookeeper_session *get_zookeeper_session(const service_app_info &info);
+
 } // namespace dsn::dist
 
 USER_DEFINED_STRUCTURE_FORMATTER(::dsn::dist::zookeeper_session);
