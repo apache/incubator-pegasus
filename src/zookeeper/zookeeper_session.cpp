@@ -283,6 +283,7 @@ zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
         if (zoo_log_file == nullptr) {
             LOG_ERROR("failed to open the log file for ZooKeeper C Client, use stderr instead: "
                       "path = {}, error = {}",
+                      FLAGS_logfile,
                       utils::safe_strerror(errno));
             zoo_set_log_stream(stderr);
         } else {
