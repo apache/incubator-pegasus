@@ -26,25 +26,39 @@
 
 #include "zookeeper_session_mgr.h"
 
-#include <stdio.h>
 #include <zookeeper/zookeeper.h>
+#include <cerrno>
+#include <cstdio>
 #include <functional>
 
 #include "runtime/service_app.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/singleton_store.h"
 #include "zookeeper_session.h"
 
-DSN_DEFINE_string(zookeeper, logfile, "zoo.log", "The Zookeeper logfile");
+DSN_DEFINE_string(zookeeper, logfile, "zoo.log", "The path of the log file for ZooKeeper C client");
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 zookeeper_session_mgr::zookeeper_session_mgr()
 {
-    FILE *fp = fopen(FLAGS_logfile, "a");
-    if (fp != nullptr)
-        zoo_set_log_stream(fp);
+    FILE *zoo_log_file = std::fopen(FLAGS_logfile, "a");
+    if (zoo_log_file == nullptr) {
+        LOG_ERROR("failed to open the log file for ZooKeeper C Client: path = {}, error = {}",
+                  utils::safe_strerror(errno));
+    } else {
+        // The file handle pointed to by `zoo_log_file` will never be released because:
+        // 1. `zookeeper_session_mgr` is a singleton, so each meta server process contains
+        // holds only one log file handle.
+        // 2. It cannot be guaranteed that the handle will no longer be used after being
+        // released. Even if it is closed in a different place (instead of in the destructor
+        // of `zookeeper_session_mgr`), there is still no guarantee. Once `fclose` is called
+        // on the log file handle, any subsequent read or write operations on it would result
+        // in undefined behavior.
+        zoo_set_log_stream(zoo_log_file);
+    }
 }
 
 zookeeper_session *zookeeper_session_mgr::get_session(const service_app_info &info)
@@ -57,5 +71,5 @@ zookeeper_session *zookeeper_session_mgr::get_session(const service_app_info &in
     }
     return ans;
 }
-} // namespace dist
-} // namespace dsn
+
+} // namespace dsn::dist

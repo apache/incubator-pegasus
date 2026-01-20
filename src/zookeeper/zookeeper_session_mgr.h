@@ -48,5 +48,6 @@ private:
 
     friend class utils::singleton<zookeeper_session_mgr>;
 };
+
 } // namespace dist
 } // namespace dsn
