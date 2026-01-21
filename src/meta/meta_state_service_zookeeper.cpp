@@ -41,7 +41,6 @@
 #include "utils/utils.h"
 #include "zookeeper/zookeeper_error.h"
 #include "zookeeper/zookeeper_session.h"
-#include "zookeeper/zookeeper_session_mgr.h"
 
 DSN_DECLARE_int32(timeout_ms);
 
@@ -160,8 +159,7 @@ meta_state_service_zookeeper::~meta_state_service_zookeeper()
 
 error_code meta_state_service_zookeeper::initialize(const std::vector<std::string> &)
 {
-    _session =
-        zookeeper_session_mgr::instance().get_session(service_app::current_service_app_info());
+    _session = get_zookeeper_session(service_app::current_service_app_info());
     _zoo_state = _session->attach(this,
                                   std::bind(&meta_state_service_zookeeper::on_zoo_session_evt,
                                             ref_this(this),

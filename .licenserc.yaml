@@ -668,8 +668,6 @@ header:
     - 'src/zookeeper/zookeeper_error.h'
     - 'src/zookeeper/zookeeper_session.cpp'
     - 'src/zookeeper/zookeeper_session.h'
-    - 'src/zookeeper/zookeeper_session_mgr.cpp'
-    - 'src/zookeeper/zookeeper_session_mgr.h'
     # Apache License, Version 2.0, Copyright 2018 Google LLC
     - 'src/gutil/test/map_traits_test.cpp'
     - 'src/gutil/test/map_util_test.h'

@@ -39,7 +39,6 @@
 #include "utils/strings.h"
 #include "zookeeper/lock_struct.h"
 #include "zookeeper/lock_types.h"
-#include "zookeeper/zookeeper_session_mgr.h"
 #include "zookeeper_error.h"
 #include "zookeeper_session.h"
 
@@ -94,8 +93,7 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
     }
     const char *lock_root = args[0].c_str();
 
-    _session =
-        zookeeper_session_mgr::instance().get_session(service_app::current_service_app_info());
+    _session = get_zookeeper_session(service_app::current_service_app_info());
     _zoo_state = _session->attach(this,
                                   std::bind(&distributed_lock_service_zookeeper::on_zoo_session_evt,
                                             lock_srv_ptr(this),

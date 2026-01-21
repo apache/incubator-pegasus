@@ -31,7 +31,9 @@
 #include <zookeeper/zookeeper.h>
 #include <algorithm>
 #include <cerrno>
+#include <cstdio>
 #include <cstdlib>
+#include <mutex>
 #include <utility>
 
 #include "rpc/rpc_address.h"
@@ -42,6 +44,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
+#include "utils/singleton_store.h"
 #include "utils/strings.h"
 #include "zookeeper/proto.h"
 #include "zookeeper/zookeeper.jute.h"
@@ -70,6 +73,7 @@ DSN_DEFINE_int32(zookeeper,
                  timeout_ms,
                  30000,
                  "The timeout of accessing ZooKeeper, in milliseconds");
+DSN_DEFINE_string(zookeeper, logfile, "zoo.log", "The path of the log file for ZooKeeper C client");
 DSN_DEFINE_string(zookeeper, zoo_log_level, "ZOO_LOG_LEVEL_INFO", "ZooKeeper log level");
 DSN_DEFINE_string(zookeeper, hosts_list, "", "ZooKeeper hosts list");
 DSN_DEFINE_string(zookeeper, sasl_service_name, "zookeeper", "");
@@ -119,8 +123,7 @@ DSN_DEFINE_group_validator(consistency_between_configurations, [](std::string &m
     return true;
 });
 
-namespace dsn {
-namespace dist {
+namespace dsn::dist {
 
 zookeeper_session::zoo_atomic_packet::zoo_atomic_packet(unsigned int size)
 {
@@ -274,9 +277,32 @@ bool is_password_file_plaintext()
 
 zhandle_t *create_zookeeper_handle(watcher_fn watcher, void *context)
 {
-    const auto zoo_log_level = enum_from_string(FLAGS_zoo_log_level, INVALID_ZOO_LOG_LEVEL);
-    CHECK(zoo_log_level != INVALID_ZOO_LOG_LEVEL, "Invalid zoo log level: {}", FLAGS_zoo_log_level);
-    zoo_set_debug_level(zoo_log_level);
+    static std::once_flag flag;
+    std::call_once(flag, []() {
+        FILE *zoo_log_file = std::fopen(FLAGS_logfile, "a");
+        if (zoo_log_file == nullptr) {
+            LOG_ERROR("failed to open the log file for ZooKeeper C Client, use stderr instead: "
+                      "path = {}, error = {}",
+                      FLAGS_logfile,
+                      utils::safe_strerror(errno));
+            zoo_set_log_stream(stderr);
+        } else {
+            // The file handle pointed to by `zoo_log_file` will never be released because:
+            // 1. Each meta server process holds only one log file handle.
+            // 2. It cannot be guaranteed that the handle will no longer be used in some
+            // background thread of ZooKeeper C Client after being released even by atexit(),
+            // since zhandle_t objects are not closed in the end. Once `fclose` is called on
+            // the log file handle, any subsequent write operations on it would result in
+            // undefined behavior.
+            zoo_set_log_stream(zoo_log_file);
+        }
+
+        const auto zoo_log_level = enum_from_string(FLAGS_zoo_log_level, INVALID_ZOO_LOG_LEVEL);
+        CHECK(zoo_log_level != INVALID_ZOO_LOG_LEVEL,
+              "Invalid zoo log level: {}",
+              FLAGS_zoo_log_level);
+        zoo_set_debug_level(zoo_log_level);
+    });
 
     // SASL auth is enabled iff FLAGS_sasl_mechanisms_type is non-empty.
     if (dsn::utils::is_empty(FLAGS_sasl_mechanisms_type)) {
@@ -565,5 +591,21 @@ void zookeeper_session::global_void_completion(int rc, const void *data)
     release_ref(op_ctx);
 }
 
-} // namespace dist
-} // namespace dsn
+zookeeper_session *get_zookeeper_session(const service_app_info &info)
+{
+    static std::mutex mtx;
+    auto &store = utils::singleton_store<int, zookeeper_session *>::instance();
+
+    zookeeper_session *session{nullptr};
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (!store.get(info.entity_id, session)) {
+            session = new zookeeper_session(info);
+            store.put(info.entity_id, session);
+        }
+    }
+
+    return session;
+}
+
+} // namespace dsn::dist
