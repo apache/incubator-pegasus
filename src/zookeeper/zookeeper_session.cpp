@@ -593,12 +593,17 @@ void zookeeper_session::global_void_completion(int rc, const void *data)
 
 zookeeper_session *get_zookeeper_session(const service_app_info &info)
 {
-    auto &store = utils::singleton_store<int, zookeeper_session *>::instance();
+    static std::mutex mtx;
 
+    auto &store = utils::singleton_store<int, zookeeper_session *>::instance();
     zookeeper_session *session{nullptr};
-    if (!store.get(info.entity_id, session)) {
-        session = new zookeeper_session(info);
-        store.put(info.entity_id, session);
+
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (!store.get(info.entity_id, session)) {
+            session = new zookeeper_session(info);
+            store.put(info.entity_id, session);
+        }
     }
 
     return session;
