@@ -207,7 +207,7 @@ private:
 
 // Obtain a ZooKeeper session. Each service node has at most one ZooKeeper session; if none
 // exists for the service app, one will be created. The obtained ZooKeeper session can be
-// shared across multiple threads in one service node.
+// shared across multiple threads in one service node. This function is thread-safe.
 zookeeper_session *get_zookeeper_session(const service_app_info &info);
 
 } // namespace dsn::dist
