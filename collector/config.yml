@@ -24,6 +24,8 @@ meta_servers:
   - 127.0.0.1:34602
   - 127.0.0.1:34603
 
+rpc_timeout : 10s
+
 # local server port
 port : 34101
 
@@ -49,3 +51,5 @@ availability_detect:
 
 hotspot:
   partition_detect_interval : 10s
+  pull_metrics_timeout : 10s
+  sample_interval : 10s

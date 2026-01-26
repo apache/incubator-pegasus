@@ -37,6 +37,8 @@ github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/
 github.com/andybalholm/brotli v1.0.5/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/apache/incubator-pegasus/go-client v0.0.0-20251112031012-5eb1665e0630 h1:W+pNxPZKNEBxx+G2V7KXuWpEXSyMPIHWJgLXiEQB4Uk=
 github.com/apache/incubator-pegasus/go-client v0.0.0-20251112031012-5eb1665e0630/go.mod h1:SQnz/3Qg6uH1tfl3MKmiYwNk+i5CZiMD9AtMOTZkpgw=
+github.com/apache/incubator-pegasus/go-client v0.0.0-20251223112416-b67c1537a1b2 h1:vqT8L8MXM3pssoBew9e2hOmrh1eyFeB0DMTO4oPjSTE=
+github.com/apache/incubator-pegasus/go-client v0.0.0-20251223112416-b67c1537a1b2/go.mod h1:SQnz/3Qg6uH1tfl3MKmiYwNk+i5CZiMD9AtMOTZkpgw=
 github.com/apache/thrift v0.13.0 h1:5hryIiq9gtn+MiLVn0wP37kb/uTeRZgN08WoCsAhIhI=
 github.com/apache/thrift v0.13.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=

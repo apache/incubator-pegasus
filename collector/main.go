@@ -88,7 +88,7 @@ func main() {
 
 	tom := &tomb.Tomb{}
 	setupSignalHandler(func() {
-		tom.Kill(errors.New("Collector terminates")) // kill other goroutines
+		tom.Kill(errors.New("collector terminates")) // kill other goroutines
 	})
 
 	tom.Go(func() error {
@@ -105,10 +105,12 @@ func main() {
 	})
 
 	tom.Go(func() error {
-		conf := hotspot.PartitionDetectorConfig{
-			DetectInterval: viper.GetDuration("hotspot.partition_detect_interval"),
+		partitionDetector, err := hotspot.NewPartitionDetector(hotspot.LoadPartitionDetectorConfig())
+		if err != nil {
+			log.Fatalf("failed to create partition detector for hotspot: %v", err)
 		}
-		return hotspot.NewPartitionDetector(conf).Run(tom)
+
+		return partitionDetector.Run(tom)
 	})
 
 	err := tom.Wait()
