@@ -148,9 +148,7 @@ func (d *partitionDetectorImpl) aggregate() error {
 		MetaServers: d.cfg.MetaServers,
 		Timeout:     d.cfg.RpcTimeout,
 	})
-	defer func(adminClient client.Client) {
-		_ = adminClient.Close()
-	}(adminClient)
+	defer adminClient.Close()
 
 	appMap, err := pullAppPartitions(adminClient)
 	if err != nil {

@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -65,9 +64,7 @@ func (c *metricClientImpl) GetBriefValueSnapshot(ctx context.Context, filter Met
 		return nil, err
 	}
 
-	defer func(body io.ReadCloser) {
-		_ = body.Close()
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("bad status: %s", resp.Status)
