@@ -1031,9 +1031,8 @@ bool replica::update_local_configuration(const replica_configuration &config,
             init_prepare(next, false);
         }
 
-        std::vector<dsn::host_port> secondaries;
-        GET_HOST_PORTS(_primary_states.pc, secondaries, secondaries);
-        if (secondaries.size() + 1 <
+        CHECK(_primary_states.pc.__isset.hp_secondaries, "");
+        if (_primary_states.pc.hp_secondaries.size() + 1 <
             _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
             std::vector<mutation_ptr> queued;
             _primary_states.write_queue.clear(queued);

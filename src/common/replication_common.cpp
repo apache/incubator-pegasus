@@ -387,15 +387,19 @@ void add_app_info(const std::string &app_name,
     int read_unhealthy = 0;
     for (const auto &pc : pcs) {
         int replica_count = 0;
-        if (pc.hp_primary) {
+        host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
+        if (primary) {
             ++replica_count;
-            ++node_stats[pc.hp_primary].primary_count;
+            ++node_stats[primary].primary_count;
             ++total_prim_count;
         }
-        replica_count += static_cast<int>(pc.hp_secondaries.size());
-        total_sec_count += static_cast<int>(pc.hp_secondaries.size());
+        std::vector<host_port> secondaries;
+        GET_HOST_PORTS(pc, secondaries, secondaries);
+        replica_count += static_cast<int>(secondaries.size());
+        total_sec_count += static_cast<int>(secondaries.size());
 
-        if (pc.hp_primary) {
+        if (primary) {
             if (replica_count >= pc.max_replica_count) {
                 ++fully_healthy;
             } else if (replica_count < 2) {
@@ -409,10 +413,10 @@ void add_app_info(const std::string &app_name,
         partitions_printer.add_row(pc.pid.get_partition_index());
         partitions_printer.append_data(pc.ballot);
         partitions_printer.append_data(fmt::format("{}/{}", replica_count, pc.max_replica_count));
-        partitions_printer.append_data(pc.hp_primary ? pc.hp_primary.to_string() : "-");
-        partitions_printer.append_data(fmt::format("[{}]", fmt::join(pc.hp_secondaries, ",")));
+        partitions_printer.append_data(primary ? primary.to_string() : "-");
+        partitions_printer.append_data(fmt::format("[{}]", fmt::join(secondaries, ",")));
 
-        for (const auto &secondary : pc.hp_secondaries) {
+        for (const auto &secondary : secondaries) {
             ++node_stats[secondary].secondary_count;
         }
     }

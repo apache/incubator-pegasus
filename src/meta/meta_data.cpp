@@ -24,8 +24,8 @@
  * THE SOFTWARE.
  */
 
-#include <boost/lexical_cast.hpp>
 #include <algorithm>
+#include <boost/lexical_cast.hpp>
 #include <cstdint>
 #include <ostream>
 
@@ -39,36 +39,40 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 
-// There is an option FLAGS_max_replicas_in_group which restricts the max replica count of the whole
-// cluster. It's a cluster-level option. However, now that it's allowed to update the replication
-// factor of each table, this cluster-level option should be replaced.
+// There is an option FLAGS_max_replicas_in_group which restricts the max
+// replica count of the whole cluster. It's a cluster-level option. However, now
+// that it's allowed to update the replication factor of each table, this
+// cluster-level option should be replaced.
 //
-// Conceptually FLAGS_max_replicas_in_group is the total number of alive and dropped replicas. Its
-// default value is 4. For a table that has replication factor 3, that FLAGS_max_replicas_in_group
-// is set to 4 means 3 alive replicas plus a dropped replica.
+// Conceptually FLAGS_max_replicas_in_group is the total number of alive and
+// dropped replicas. Its default value is 4. For a table that has replication
+// factor 3, that FLAGS_max_replicas_in_group is set to 4 means 3 alive replicas
+// plus a dropped replica.
 //
-// FLAGS_max_replicas_in_group can also be loaded from configuration file, which means its default
-// value will be overridden. The value of FLAGS_max_replicas_in_group will be assigned to another
-// static variable `MAX_REPLICA_COUNT_IN_GRROUP`, whose default value is also 4.
+// FLAGS_max_replicas_in_group can also be loaded from configuration file, which
+// means its default value will be overridden. The value of
+// FLAGS_max_replicas_in_group will be assigned to another static variable
+// `MAX_REPLICA_COUNT_IN_GRROUP`, whose default value is also 4.
 //
-// For unit tests, `MAX_REPLICA_COUNT_IN_GRROUP` is set to the default value 4; for production
-// environments, `MAX_REPLICA_COUNT_IN_GRROUP` is set to 3 since FLAGS_max_replicas_in_group is
-// configured as 3 in `.ini` file.
+// For unit tests, `MAX_REPLICA_COUNT_IN_GRROUP` is set to the default value 4;
+// for production environments, `MAX_REPLICA_COUNT_IN_GRROUP` is set to 3 since
+// FLAGS_max_replicas_in_group is configured as 3 in `.ini` file.
 //
-// Since the cluster-level option FLAGS_max_replicas_in_group contains the alive and dropped
-// replicas, we can use the replication factor of each table as the number of alive replicas, and
-// introduce another option FLAGS_max_reserved_dropped_replicas representing the max reserved number
+// Since the cluster-level option FLAGS_max_replicas_in_group contains the alive
+// and dropped replicas, we can use the replication factor of each table as the
+// number of alive replicas, and introduce another option
+// FLAGS_max_reserved_dropped_replicas representing the max reserved number
 // allowed for dropped replicas.
 //
-// If FLAGS_max_reserved_dropped_replicas is set to 1, there is at most one dropped replicas
-// reserved, which means, once the number of alive replicas reaches max_replica_count, at most one
-// dropped replica can be reserved and others will be eliminated; If
-// FLAGS_max_reserved_dropped_replicas is set to 0, however, none of dropped replicas can be
-// reserved.
+// If FLAGS_max_reserved_dropped_replicas is set to 1, there is at most one
+// dropped replicas reserved, which means, once the number of alive replicas
+// reaches max_replica_count, at most one dropped replica can be reserved and
+// others will be eliminated; If FLAGS_max_reserved_dropped_replicas is set to
+// 0, however, none of dropped replicas can be reserved.
 //
 // To be consistent with FLAGS_max_replicas_in_group, default value of
-// FLAGS_max_reserved_dropped_replicas is set to 1 so that the unit tests can be passed. For
-// production environments, it should be set to 0.
+// FLAGS_max_reserved_dropped_replicas is set to 1 so that the unit tests can be
+// passed. For production environments, it should be set to 0.
 DSN_DEFINE_uint32(meta_server,
                   max_reserved_dropped_replicas,
                   1,
@@ -121,7 +125,8 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     pc.partition_flags = 0;
     pc.max_replica_count = max_replica_count;
 
-    LOG_INFO("construct for ({}), select {} as primary, ballot({}), committed_decree({}), "
+    LOG_INFO("construct for ({}), select {} as primary, ballot({}), "
+             "committed_decree({}), "
              "prepare_decree({})",
              pid,
              server.node,
@@ -131,12 +136,15 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
 
     drop_list.pop_back();
 
-    // we put max_replica_count-1 recent replicas to last_drops, in case of the DDD-state when the
-    // only primary dead
-    // when add node to pc.last_drops, we don't remove it from our cc.drop_list
-    CHECK(pc.hp_last_drops.empty(), "last_drops of partition({}) must be empty", pid);
+    // we put max_replica_count-1 recent replicas to last_drops, in case of the
+    // DDD-state when the only primary dead when add node to pc.last_drops, we
+    // don't remove it from our cc.drop_list
+    std::vector<host_port> last_drops;
+    GET_HOST_PORTS(pc, last_drops, last_drops);
+    CHECK(last_drops.empty(), "last_drops of partition({}) must be empty", pid);
     for (auto iter = drop_list.rbegin(); iter != drop_list.rend(); ++iter) {
-        if (pc.hp_last_drops.size() + 1 >= max_replica_count) {
+        // hp_last_drops is added in the steps bellow.
+        if (last_drops.size() + 1 >= max_replica_count) {
             break;
         }
         // similar to cc.drop_list, pc.last_drop is also a stack structure
@@ -206,10 +214,11 @@ void proposal_actions::track_current_learner(const dsn::host_port &node, const r
 
         if (info.status == partition_status::PS_ERROR ||
             info.status == partition_status::PS_INACTIVE) {
-            // if we've collected inforamtions for the learner, then it claims it's down
-            // we will treat the learning process failed
+            // if we've collected inforamtions for the learner, then it claims
+            // it's down we will treat the learning process failed
             if (current_learner.ballot != invalid_ballot) {
-                LOG_INFO("{}: a learner's is down to status({}), perhaps learn failed",
+                LOG_INFO("{}: a learner's is down to status({}), perhaps learn "
+                         "failed",
                          info.pid,
                          dsn::enum_to_string(info.status));
                 learning_progress_abnormal_detected = true;
@@ -223,15 +232,17 @@ void proposal_actions::track_current_learner(const dsn::host_port &node, const r
                 current_learner.last_prepared_decree > info.last_prepared_decree) {
 
                 // TODO: need to add a metric here.
-                LOG_WARNING("{}: learner({})'s progress step back, please trace this carefully",
+                LOG_WARNING("{}: learner({})'s progress step back, please "
+                            "trace this carefully",
                             info.pid,
                             node);
             }
 
-            // NOTICE: the flag may be abormal currently. it's balancer's duty to make use of the
-            // abnormal flag and decide whether to cancel the proposal.
-            // if the balancer try to give the proposal another chance, or another learning round
-            // starts before the balancer notice it, let's just treat it normal again.
+            // NOTICE: the flag may be abormal currently. it's balancer's duty
+            // to make use of the abnormal flag and decide whether to cancel the
+            // proposal. if the balancer try to give the proposal another
+            // chance, or another learning round starts before the balancer
+            // notice it, let's just treat it normal again.
             learning_progress_abnormal_detected = false;
             current_learner = info;
         }
@@ -304,8 +315,8 @@ void config_context::cancel_sync()
 
 void config_context::check_size()
 {
-    // when add learner, it is possible that replica_count > max_replica_count, so we
-    // need to remove things from dropped only when it's not empty.
+    // when add learner, it is possible that replica_count > max_replica_count,
+    // so we need to remove things from dropped only when it's not empty.
     while (replica_count(*pc) + dropped.size() >
                pc->max_replica_count + FLAGS_max_reserved_dropped_replicas &&
            !dropped.empty()) {
@@ -378,7 +389,8 @@ int config_context::collect_drop_replica(const host_port &node, const replica_in
     iter = find_from_dropped(node);
     if (iter == dropped.end()) {
         CHECK(!in_dropped,
-              "adjust position of existing node({}) failed, this is a bug, partition({})",
+              "adjust position of existing node({}) failed, this is a bug, "
+              "partition({})",
               node,
               pc->pid);
         return -1;
@@ -392,7 +404,8 @@ bool config_context::check_order()
         return true;
     for (unsigned int i = 0; i < dropped.size() - 1; ++i) {
         if (dropped_cmp(dropped[i], dropped[i + 1]) > 0) {
-            LOG_ERROR("check dropped order for gpid({}) failed, [{},{},{},{},{}@{}] vs "
+            LOG_ERROR("check dropped order for gpid({}) failed, "
+                      "[{},{},{},{},{}@{}] vs "
                       "[{},{},{},{},{}@{}]",
                       pc->pid,
                       dropped[i].node,
@@ -457,7 +470,8 @@ void config_context::adjust_proposal(const host_port &node, const replica_info &
     lb_actions.track_current_learner(node, info);
 }
 
-bool config_context::get_disk_tag(const host_port &node, /*out*/ std::string &disk_tag) const
+bool config_context::get_disk_tag(const host_port &node,
+                                  /*out*/ std::string &disk_tag) const
 {
     auto iter = find_from_serving(node);
     if (iter == serving.end()) {
@@ -495,12 +509,14 @@ void app_state_helper::reset_manual_compact_status()
     }
 }
 
-bool app_state_helper::get_manual_compact_progress(/*out*/ int32_t &progress) const
+bool app_state_helper::get_manual_compact_progress(
+    /*out*/ int32_t &progress) const
 {
     int32_t total_replica_count = owner->partition_count * owner->max_replica_count;
     CHECK_GT_MSG(total_replica_count,
                  0,
-                 "invalid app metadata, app({}), partition_count({}), max_replica_count({})",
+                 "invalid app metadata, app({}), partition_count({}), "
+                 "max_replica_count({})",
                  owner->app_name,
                  owner->partition_count,
                  owner->max_replica_count);
@@ -538,7 +554,8 @@ app_state::app_state(const app_info &info) : app_info(info), helpers(new app_sta
     CLEAR_IP_AND_HOST_PORT(pc, secondaries);
     CLEAR_IP_AND_HOST_PORT(pc, last_drops);
 
-    // TODO(yujingwei): use marco simplify the code, and the logical may should change
+    // TODO(yujingwei): use marco simplify the code, and the logical may should
+    // change
     pc.__set_hp_secondaries({});
     pc.__set_hp_last_drops({});
 
