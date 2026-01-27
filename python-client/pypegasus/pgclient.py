@@ -603,8 +603,6 @@ class Pegasus(object):
 
         if hash_key_len >= 0xFFFF:
             raise ValueError("hash_key length must be less than 65535")
-        if sort_key_len >= 0xFFFF:
-            raise ValueError("sort_key length must be less than 65535")
         
         if sort_key_len > 0:
             values = (hash_key_len, hash_key, sort_key)
