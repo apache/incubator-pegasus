@@ -54,10 +54,10 @@ class blob:
   def __init__(self, data=None):
     if isinstance(data,str):
         self._is_str = True
-        data = data.encode('UTF-8')
+        self.data = data.encode('UTF-8')
     else:
         self._is_str = False
-    self.data = data
+        self.data = data
 
   def __hash__(self):
     value = 17
