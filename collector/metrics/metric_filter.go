@@ -22,7 +22,11 @@ import (
 	"strings"
 )
 
+// MetricBriefValueFilter is used to set each field of the query for "Brief Value" (i.e.
+// asking for only 2 fields for each metric: "name" and "value"), and generate query string
+// of the http request to the target node. Also see *BriefValue* structures in metric_snapshot.go.
 type MetricBriefValueFilter interface {
+	// ToQueryFields generates the query string according to the required fields.
 	ToQueryFields() url.Values
 }
 
@@ -56,6 +60,8 @@ func (filter *metricFilter) ToQueryFields() url.Values {
 	fields.Set(MetricQueryTypes, joinValues(filter.EntityTypes))
 	fields.Set(MetricQueryIDs, joinValues(filter.EntityIDs))
 
+	// Join all the attributes in a map into one string as the value of the attribute field:
+	// "key0,val0,key1,val1,key2,val2,..."
 	attrs := make([]string, 0, len(filter.EntityAttributes)*2)
 	for attrKey, attrValue := range filter.EntityAttributes {
 		attrs = append(attrs, attrKey, attrValue)
@@ -67,6 +73,7 @@ func (filter *metricFilter) ToQueryFields() url.Values {
 	return fields
 }
 
+// Use comma to join all elements of a slice as the value of a field in a query.
 func joinValues(values []string) string {
 	return strings.Join(values, ",")
 }

@@ -150,6 +150,7 @@ func (d *partitionDetectorImpl) aggregate() error {
 	})
 	defer adminClient.Close()
 
+	// appMap is the final structure that includes all the statistical values.
 	appMap, err := pullAppPartitions(adminClient)
 	if err != nil {
 		return err
@@ -163,6 +164,8 @@ func (d *partitionDetectorImpl) aggregate() error {
 	return nil
 }
 
+// Pull metadata of all available tables with all their partitions and form the final structure
+// that includes all the statistical values.
 func pullAppPartitions(adminClient client.Client) (appStatsMap, error) {
 	tables, err := adminClient.ListTables()
 	if err != nil {
@@ -195,12 +198,15 @@ func pullAppPartitions(adminClient client.Client) (appStatsMap, error) {
 
 type aggregator func(map[string]float64, string, float64)
 
+// Pull metrics from all nodes and aggregate them to produce the statistics.
 func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client, appMap appStatsMap) error {
 	nodes, err := adminClient.ListNodes()
 	if err != nil {
 		return err
 	}
 
+	// Pull multiple results of metrics to perform cumulative calculation to produce the
+	// statistics such as QPS.
 	startSnapshots, err := d.pullMetrics(nodes)
 	if err != nil {
 		return err
@@ -221,7 +227,8 @@ func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client, appM
 
 		d.calculateStats(snapshot, nodes[i],
 			func(stats map[string]float64, key string, operand float64) {
-				stats[key] += operand
+				// Just set the ending number of requests.
+				stats[key] = operand
 			},
 			appMap)
 	}
@@ -236,6 +243,8 @@ func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client, appM
 						return
 					}
 
+					// Calculate QPS based on the ending number of requests that have been
+					// set previously.
 					stats[key] = (value - operand) / duration.Seconds()
 				}
 			}(time.Duration(endSnapshots[i].TimestampNS-snapshot.TimestampNS)),
@@ -251,6 +260,7 @@ func (d *partitionDetectorImpl) pullMetrics(nodes []*admin.NodeInfo) ([]*metrics
 	ctx, cancel := context.WithTimeout(context.Background(), d.cfg.PullMetricsTimeout)
 	defer cancel()
 
+	// Request the metrics simultaneously from all nodes.
 	eg, ctx := errgroup.WithContext(ctx)
 	puller := func(index int, node *admin.NodeInfo) func() error {
 		return func() error {
@@ -273,6 +283,7 @@ func (d *partitionDetectorImpl) pullMetrics(nodes []*admin.NodeInfo) ([]*metrics
 		eg.Go(puller(i, node))
 	}
 
+	// Wait all requests to be finished.
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
@@ -286,29 +297,36 @@ func (d *partitionDetectorImpl) calculateStats(
 	adder aggregator,
 	appMap appStatsMap) {
 	for _, entity := range snapshot.Entities {
+		// The metric must belong to the entity of "replica".
 		if entity.Type != metrics.MetricEntityTypeReplica {
 			continue
 		}
 
+		// The metric must have valid table id.
 		appID, err := strconv.Atoi(entity.Attributes[metrics.MetricEntityTableID])
 		if err != nil {
 			continue
 		}
 
+		// The table must exist in the returned metadata, which means it is available.
 		stats, ok := appMap[int32(appID)]
 		if !ok {
 			continue
 		}
 
+		// The metric must have valid partition id.
 		partitionID, err := strconv.Atoi(entity.Attributes[metrics.MetricEntityPartitionID])
 		if err != nil {
 			continue
 		}
 
+		// The partition id should be less than the number of partitions.
 		if partitionID >= len(stats.partitionConfigs) {
 			continue
 		}
 
+		// Only primary replica of a partition will be counted.
+		// TODO(wangdan): support Equal() for base.HostPort.
 		primary := stats.partitionConfigs[partitionID].HpPrimary
 		if primary.GetHost() != node.HpNode.GetHost() ||
 			primary.GetPort() != node.HpNode.GetPort() {
@@ -316,6 +334,7 @@ func (d *partitionDetectorImpl) calculateStats(
 		}
 
 		for _, metric := range entity.Metrics {
+			// Perform cumulative calculation for each statistical value.
 			adder(stats.partitionStats[partitionID], metric.Name, metric.Value)
 		}
 	}

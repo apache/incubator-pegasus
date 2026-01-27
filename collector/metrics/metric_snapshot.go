@@ -25,6 +25,9 @@ type MetricQueryBaseInfo struct {
 	TimestampNS int64  `json:"timestamp_ns"`
 }
 
+// All the *BriefValue* structures are used as the target objects for the http requests
+// that ask for only 2 fields of each metric: "name" and "value".
+
 type MetricQueryBriefValueSnapshot struct {
 	MetricQueryBaseInfo
 	Entities []MetricEntityBriefValueSnapshot `json:"entities"`

@@ -18,6 +18,7 @@
 package metrics
 
 const (
+	MetricQueryPath             string = "/metrics"
 	MetricQueryWithMetricFields string = "with_metric_fields"
 	MetricQueryTypes            string = "types"
 	MetricQueryIDs              string = "ids"
