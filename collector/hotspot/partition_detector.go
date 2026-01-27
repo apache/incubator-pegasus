@@ -38,20 +38,20 @@ type PartitionDetector interface {
 }
 
 type PartitionDetectorConfig struct {
-	MetaServers        []string
-	RpcTimeout         time.Duration
-	DetectInterval     time.Duration
-	PullMetricsTimeout time.Duration
-	SampleInterval     time.Duration
+	MetaServers           []string
+	RpcTimeout            time.Duration
+	DetectInterval        time.Duration
+	PullMetricsTimeout    time.Duration
+	SampleMetricsInterval time.Duration
 }
 
 func LoadPartitionDetectorConfig() *PartitionDetectorConfig {
 	return &PartitionDetectorConfig{
-		MetaServers:        viper.GetStringSlice("meta_servers"),
-		RpcTimeout:         viper.GetDuration("rpc_timeout"),
-		DetectInterval:     viper.GetDuration("hotspot.partition_detect_interval"),
-		PullMetricsTimeout: viper.GetDuration("hotspot.pull_metrics_timeout"),
-		SampleInterval:     viper.GetDuration("hotspot.sample_interval"),
+		MetaServers:           viper.GetStringSlice("meta_servers"),
+		RpcTimeout:            viper.GetDuration("hotspot.rpc_timeout"),
+		DetectInterval:        viper.GetDuration("hotspot.partition_detect_interval"),
+		PullMetricsTimeout:    viper.GetDuration("hotspot.pull_metrics_timeout"),
+		SampleMetricsInterval: viper.GetDuration("hotspot.sample_metrics_interval"),
 	}
 }
 
@@ -93,13 +93,13 @@ func NewPartitionDetector(cfg *PartitionDetectorConfig) (PartitionDetector, erro
 		return nil, fmt.Errorf("PullMetricsTimeout(%d) must be > 0", cfg.PullMetricsTimeout)
 	}
 
-	if cfg.SampleInterval <= 0 {
-		return nil, fmt.Errorf("SampleInterval(%d) must be > 0", cfg.SampleInterval)
+	if cfg.SampleMetricsInterval <= 0 {
+		return nil, fmt.Errorf("SampleMetricsInterval(%d) must be > 0", cfg.SampleMetricsInterval)
 	}
 
-	if cfg.DetectInterval <= cfg.SampleInterval {
-		return nil, fmt.Errorf("DetectInterval(%d) must be > SampleInterval(%d)",
-			cfg.DetectInterval, cfg.SampleInterval)
+	if cfg.DetectInterval <= cfg.SampleMetricsInterval {
+		return nil, fmt.Errorf("DetectInterval(%d) must be > SampleMetricsInterval(%d)",
+			cfg.DetectInterval, cfg.SampleMetricsInterval)
 	}
 
 	return &partitionDetectorImpl{
@@ -127,6 +127,10 @@ func (d *partitionDetectorImpl) Run(tom *tomb.Tomb) error {
 }
 
 func (d *partitionDetectorImpl) detect() {
+	err := d.aggregate()
+	if err != nil {
+		log.Error("failed to aggregate metrics for hotspot: ", err)
+	}
 }
 
 // {appID -> appStats}.
@@ -204,7 +208,7 @@ func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client, appM
 		return err
 	}
 
-	time.Sleep(d.cfg.SampleInterval)
+	time.Sleep(d.cfg.SampleMetricsInterval)
 
 	endSnapshots, err := d.pullMetrics(nodes)
 	if err != nil {

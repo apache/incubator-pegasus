@@ -18,7 +18,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -86,9 +85,10 @@ func main() {
 	registry := prometheus.NewRegistry()
 	webui.StartWebServer(registry)
 
+	// TODO(wangdan): consider replacing tomb since it has not been released since 2017.
 	tom := &tomb.Tomb{}
 	setupSignalHandler(func() {
-		tom.Kill(errors.New("collector terminates")) // kill other goroutines
+		tom.Kill(nil) // kill other goroutines
 	})
 
 	tom.Go(func() error {
@@ -115,7 +115,7 @@ func main() {
 
 	err := tom.Wait()
 	if err != nil {
-		log.Error("Collector exited abnormally:", err)
+		log.Error("Collector exited abnormally: ", err)
 		return
 	}
 
