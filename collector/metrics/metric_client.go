@@ -27,9 +27,9 @@ import (
 	"strconv"
 )
 
-// MetricClient encapsulates the APIs that are used to pull metrics from target node.
+// MetricClient encapsulates the APIs that are used to pull metrics from a specified target node.
 type MetricClient interface {
-	// GetBriefValueSnapshot pulls the metrics
+	// GetBriefValueSnapshot pulls the metrics according to the query defined by filter.
 	GetBriefValueSnapshot(ctx context.Context, filter MetricBriefValueFilter) (*MetricQueryBriefValueSnapshot, error)
 }
 
@@ -64,7 +64,7 @@ func (c *metricClientImpl) GetBriefValueSnapshot(ctx context.Context, filter Met
 		return nil, err
 	}
 
-	// Send the http request and return the response.
+	// Send the http request and get the response.
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (c *metricClientImpl) GetBriefValueSnapshot(ctx context.Context, filter Met
 		return nil, fmt.Errorf("bad status: %s", resp.Status)
 	}
 
-	// Decode the response as the object.
+	// Decode the response as the desired object.
 	var result MetricQueryBriefValueSnapshot
 	if err = json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
