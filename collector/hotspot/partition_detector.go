@@ -55,31 +55,6 @@ func LoadPartitionDetectorConfig() *PartitionDetectorConfig {
 	}
 }
 
-var readMetricNames = []string{
-	metrics.MetricReplicaGetRequests,
-	metrics.MetricReplicaMultiGetRequests,
-	metrics.MetricReplicaBatchGetRequests,
-	metrics.MetricReplicaScanRequests,
-}
-
-var writeMetricNames = []string{
-	metrics.MetricReplicaPutRequests,
-	metrics.MetricReplicaMultiGetRequests,
-	metrics.MetricReplicaRemoveRequests,
-	metrics.MetricReplicaMultiRemoveRequests,
-	metrics.MetricReplicaIncrRequests,
-	metrics.MetricReplicaCheckAndSetRequests,
-	metrics.MetricReplicaCheckAndMutateRequests,
-	metrics.MetricReplicaDupRequests,
-}
-
-var metricFilter = metrics.NewMetricBriefValueFilter(
-	[]string{metrics.MetricEntityTypeReplica},
-	[]string{},
-	map[string]string{},
-	append(append([]string(nil), readMetricNames...), writeMetricNames...),
-)
-
 func NewPartitionDetector(cfg *PartitionDetectorConfig) (PartitionDetector, error) {
 	if len(cfg.MetaServers) == 0 {
 		return nil, fmt.Errorf("MetaServers should not be empty")
@@ -151,7 +126,7 @@ func (d *partitionDetectorImpl) aggregate() error {
 	defer adminClient.Close()
 
 	// appMap is the final structure that includes all the statistical values.
-	appMap, err := pullAppPartitions(adminClient)
+	appMap, err := pullTablePartitions(adminClient)
 	if err != nil {
 		return err
 	}
@@ -166,7 +141,7 @@ func (d *partitionDetectorImpl) aggregate() error {
 
 // Pull metadata of all available tables with all their partitions and form the final structure
 // that includes all the statistical values.
-func pullAppPartitions(adminClient client.Client) (appStatsMap, error) {
+func pullTablePartitions(adminClient client.Client) (appStatsMap, error) {
 	tables, err := adminClient.ListTables()
 	if err != nil {
 		return nil, err
@@ -174,11 +149,13 @@ func pullAppPartitions(adminClient client.Client) (appStatsMap, error) {
 
 	appMap := make(appStatsMap)
 	for _, table := range tables {
+		// Query metadata for each partition of each table.
 		appID, partitionCount, partitionConfigs, err := adminClient.QueryConfig(table.AppName)
 		if err != nil {
 			return nil, err
 		}
 
+		// Initialize statistical value for each partition.
 		partitionStats := make([]map[string]float64, 0, len(partitionConfigs))
 		for range partitionConfigs {
 			m := make(map[string]float64)
@@ -254,32 +231,64 @@ func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client, appM
 	return nil
 }
 
+var (
+	readMetricNames = []string{
+		metrics.MetricReplicaGetRequests,
+		metrics.MetricReplicaMultiGetRequests,
+		metrics.MetricReplicaBatchGetRequests,
+		metrics.MetricReplicaScanRequests,
+	}
+
+	writeMetricNames = []string{
+		metrics.MetricReplicaPutRequests,
+		metrics.MetricReplicaMultiGetRequests,
+		metrics.MetricReplicaRemoveRequests,
+		metrics.MetricReplicaMultiRemoveRequests,
+		metrics.MetricReplicaIncrRequests,
+		metrics.MetricReplicaCheckAndSetRequests,
+		metrics.MetricReplicaCheckAndMutateRequests,
+		metrics.MetricReplicaDupRequests,
+	}
+
+	metricFilter = metrics.NewMetricBriefValueFilter(
+		[]string{metrics.MetricEntityTypeReplica},
+		[]string{},
+		map[string]string{},
+		append(append([]string(nil), readMetricNames...), writeMetricNames...),
+	)
+)
+
 func (d *partitionDetectorImpl) pullMetrics(nodes []*admin.NodeInfo) ([]*metrics.MetricQueryBriefValueSnapshot, error) {
 	results := make([]*metrics.MetricQueryBriefValueSnapshot, len(nodes))
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.cfg.PullMetricsTimeout)
 	defer cancel()
 
-	// Request the metrics simultaneously from all nodes.
+	// Pull the metrics simultaneously from all nodes.
 	eg, ctx := errgroup.WithContext(ctx)
 	puller := func(index int, node *admin.NodeInfo) func() error {
 		return func() error {
+			// Create a client for each target node.
 			metricClient := metrics.NewMetricClient(&metrics.MetricClientConfig{
 				Host: node.HpNode.GetHost(),
 				Port: node.HpNode.GetPort(),
 			})
 
+			// Pull the metrics from the target node.
 			snapshot, err := metricClient.GetBriefValueSnapshot(ctx, metricFilter)
 			if err != nil {
 				return err
 			}
 
+			// Place the pulled result into the position in the slice that correspond to
+			// the target node.
 			results[index] = snapshot
 			return nil
 		}
 	}
 
 	for i, node := range nodes {
+		// Launch one Go routine for each target node to pull metrics from it.
 		eg.Go(puller(i, node))
 	}
 
