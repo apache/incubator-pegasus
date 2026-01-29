@@ -20,13 +20,13 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
+#include <algorithm>
+#include <cstdint>
 #include <inttypes.h>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
-#include <stdio.h>
-#include <algorithm>
-#include <cstdint>
 #include <ostream>
+#include <stdio.h>
 #include <type_traits>
 #include <unordered_map>
 
@@ -46,15 +46,16 @@
 #include "utils/strings.h"
 #include "utils/time_utils.h"
 
-DSN_DEFINE_int32(
-    meta_server,
-    max_replicas_in_group,
-    4,
-    "The maximum number of replicas retained in a replica group (alive + dead replicas)");
+DSN_DEFINE_int32(meta_server,
+                 max_replicas_in_group,
+                 4,
+                 "The maximum number of replicas retained in a replica group "
+                 "(alive + dead replicas)");
 DSN_DEFINE_int64(meta_server,
                  replica_assign_delay_ms_for_dropouts,
                  600000,
-                 "The maximum time threshold for waiting for a secondary replica to re-join the "
+                 "The maximum time threshold for waiting for a secondary replica to re-join "
+                 "the "
                  "cluster after it has been removed. If the secondary replica has not yet "
                  "recovered beyond this time threshold, an attempt will be made to add new "
                  "secondary replicas on other nodes");
@@ -86,11 +87,15 @@ pc_status partition_guardian::cure(meta_view view,
     CHECK(acts.empty(), "");
 
     pc_status status;
-    if (!pc.hp_primary) {
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    if (!primary) {
         status = on_missing_primary(view, gpid);
-    } else if (static_cast<int>(pc.hp_secondaries.size()) + 1 < pc.max_replica_count) {
+    } else if (static_cast<int>(secondaries.size()) + 1 < pc.max_replica_count) {
         status = on_missing_secondary(view, gpid);
-    } else if (static_cast<int>(pc.hp_secondaries.size()) >= pc.max_replica_count) {
+    } else if (static_cast<int>(secondaries.size()) >= pc.max_replica_count) {
         status = on_redundant_secondary(view, gpid);
     } else {
         status = pc_status::healthy;
@@ -125,8 +130,8 @@ void partition_guardian::reconfig(meta_view view, const configuration_update_req
     // handle the dropped out servers
     if (request.type == config_type::CT_DROP_PARTITION) {
         cc->serving.clear();
-
-        const auto &last_drops = request.config.hp_last_drops;
+        std::vector<host_port> last_drops;
+        GET_HOST_PORTS(request.config, last_drops, last_drops);
         for (const auto &last_drop : last_drops) {
             cc->record_drop_history(last_drop);
         }
@@ -164,6 +169,8 @@ bool partition_guardian::from_proposals(meta_view &view,
     host_port node;
     GET_HOST_PORT(action, target, target);
     std::string reason;
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
     if (!target) {
         reason = "action target is invalid";
         goto invalid_action;
@@ -189,10 +196,10 @@ bool partition_guardian::from_proposals(meta_view &view,
 
     switch (action.type) {
     case config_type::CT_ASSIGN_PRIMARY:
-        is_action_valid = (node == target && !pc.primary && !is_secondary(pc, node));
+        is_action_valid = (node == target && !primary && !is_secondary(pc, node));
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        is_action_valid = (node == target && !pc.primary && is_secondary(pc, node));
+        is_action_valid = (node == target && !primary && is_secondary(pc, node));
         break;
     case config_type::CT_ADD_SECONDARY:
     case config_type::CT_ADD_SECONDARY_FOR_LB:
@@ -218,7 +225,8 @@ bool partition_guardian::from_proposals(meta_view &view,
     }
 
 invalid_action:
-    LOG_INFO("proposal action({}) for gpid({}) is invalid, clear all proposal actions: {}",
+    LOG_INFO("proposal action({}) for gpid({}) is invalid, clear all proposal "
+             "actions: {}",
              action,
              gpid,
              reason);
@@ -247,10 +255,14 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
 
     action.type = config_type::CT_INVALID;
     // try to upgrade a secondary to primary if the primary is missing
-    if (!pc.hp_secondaries.empty()) {
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    std::vector<host_port> last_drops;
+    GET_HOST_PORTS(pc, last_drops, last_drops);
+    if (!secondaries.empty()) {
         RESET_IP_AND_HOST_PORT(action, node);
-        for (const auto &secondary : pc.hp_secondaries) {
-            const auto ns = get_node_state(*(view.nodes), secondary, false);
+        for (const auto &secondary : secondaries) {
+            auto *const ns = get_node_state(*(view.nodes), secondary, false);
             CHECK_NOTNULL(ns, "invalid secondary: {}", secondary);
             if (dsn_unlikely(!ns->alive())) {
                 continue;
@@ -269,9 +281,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
         host_port node;
         GET_HOST_PORT(action, node, node);
         if (!node) {
-            LOG_ERROR(
-                "all nodes for gpid({}) are dead, waiting for some secondary to come back....",
-                gpid_name);
+            LOG_ERROR("all nodes for gpid({}) are dead, waiting for some "
+                      "secondary to come back....",
+                      gpid_name);
             result = pc_status::dead;
         } else {
             action.type = config_type::CT_UPGRADE_TO_PRIMARY;
@@ -282,9 +294,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             result = pc_status::ill;
         }
     }
-    // if nothing in the last_drops, it means that this is a newly created partition, so let's
-    // just find a node and assign primary for it.
-    else if (pc.hp_last_drops.empty()) {
+    // if nothing in the last_drops, it means that this is a newly created
+    // partition, so let's just find a node and assign primary for it.
+    else if (last_drops.empty()) {
         dsn::host_port min_primary_server;
         newly_partitions *min_primary_server_np = nullptr;
 
@@ -312,12 +324,13 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
     }
     // well, all replicas in this partition is dead
     else {
-        LOG_WARNING("{} enters DDD state, we are waiting for all replicas to come back, "
+        LOG_WARNING("{} enters DDD state, we are waiting for all replicas to "
+                    "come back, "
                     "and select primary according to informations collected",
                     gpid_name);
-        // when considering how to handle the DDD state, we must keep in mind that our
-        // shared/private-log data only write to OS-cache.
-        // so the last removed replica can't act as primary directly.
+        // when considering how to handle the DDD state, we must keep in mind
+        // that our shared/private-log data only write to OS-cache. so the last
+        // removed replica can't act as primary directly.
         std::string reason;
         config_context &cc = *get_config_context(*view.apps, gpid);
         RESET_IP_AND_HOST_PORT(action, node);
@@ -338,28 +351,29 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                      dr.last_prepared_decree);
         }
 
-        for (int i = 0; i < pc.hp_last_drops.size(); ++i) {
+        for (int i = 0; i < last_drops.size(); ++i) {
             int dropped_index = -1;
             for (int k = 0; k < cc.dropped.size(); k++) {
-                if (cc.dropped[k].node == pc.hp_last_drops[i]) {
+                if (cc.dropped[k].node == last_drops[i]) {
                     dropped_index = k;
                     break;
                 }
             }
-            LOG_INFO("{}: config_context.last_drops[{}]: node({}), dropped_index({})",
+            LOG_INFO("{}: config_context.last_drops[{}]: node({}), "
+                     "dropped_index({})",
                      gpid_name,
                      i,
                      FMT_HOST_PORT_AND_IP(pc, last_drops[i]),
                      dropped_index);
         }
 
-        if (pc.hp_last_drops.size() == 1) {
+        if (last_drops.size() == 1) {
             LOG_WARNING("{}: the only node({}) is dead, waiting it to come back",
                         gpid_name,
                         FMT_HOST_PORT_AND_IP(pc, last_drops.back()));
             SET_OBJ_IP_AND_HOST_PORT(action, node, pc, last_drops.back());
         } else {
-            std::vector<dsn::host_port> nodes(pc.hp_last_drops.end() - 2, pc.hp_last_drops.end());
+            std::vector<dsn::host_port> nodes(last_drops.end() - 2, last_drops.end());
             std::vector<dropped_replica> collected_info(2);
             bool ready = true;
 
@@ -379,19 +393,22 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                     const auto &it = cc.find_from_dropped(nodes[i]);
                     if (it == cc.dropped.end() || it->ballot == invalid_ballot) {
                         if (ns->has_collected()) {
-                            LOG_INFO("{}: ignore {}'s replica info as it doesn't exist on "
+                            LOG_INFO("{}: ignore {}'s replica info as it "
+                                     "doesn't exist on "
                                      "replica server",
                                      gpid_name,
                                      nodes[i]);
                             collected_info[i] = {nodes[i], 0, -1, -1, -1};
                         } else {
                             ready = false;
-                            reason = fmt::format(
-                                "the last dropped node({}) is unavailable because ", nodes[i]);
+                            reason = fmt::format("the last dropped node({}) is "
+                                                 "unavailable because ",
+                                                 nodes[i]);
                             if (it == cc.dropped.end()) {
                                 reason += "the node is not exist in dropped_nodes";
                             } else {
-                                reason += "replica info has not been collected from the node";
+                                reason += "replica info has not been collected "
+                                          "from the node";
                             }
                             LOG_WARNING("{}: don't select primary: {}", gpid_name, reason);
                         }
@@ -412,7 +429,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                 dropped_replica &recent_dead = collected_info[1];
 
                 // 1. larger ballot should have larger committed decree
-                // 2. max_prepared_decree should larger than meta's committed decree
+                // 2. max_prepared_decree should larger than meta's committed
+                // decree
                 int64_t gap1 = previous_dead.ballot - recent_dead.ballot;
                 int64_t gap2 =
                     previous_dead.last_committed_decree - recent_dead.last_committed_decree;
@@ -443,7 +461,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                     } else {
                         char buf[1000];
                         sprintf(buf,
-                                "for the last two drops, larger_prepared_decree(%" PRId64 "), "
+                                "for the last two drops, "
+                                "larger_prepared_decree(%" PRId64 "), "
                                 "last committed decree on meta(%" PRId64 "), "
                                 "larger_committed_decree(%" PRId64 ")",
                                 larger_pd,
@@ -452,7 +471,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                         LOG_WARNING("{}: don't select primary: {}", gpid_name, reason);
                     }
                 } else {
-                    reason = "for the last two drops, the node with larger ballot has smaller last "
+                    reason = "for the last two drops, the node with larger "
+                             "ballot has smaller last "
                              "committed decree";
                     LOG_WARNING("{}: don't select primary: {}", gpid_name, reason);
                 }
@@ -468,7 +488,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             get_newly_partitions(*view.nodes, action.hp_node)
                 ->newly_add_primary(gpid.get_app_id(), false);
         } else {
-            LOG_WARNING("{}: don't select any node for security reason, administrator can select "
+            LOG_WARNING("{}: don't select any node for security reason, "
+                        "administrator can select "
                         "a proper one by shell",
                         gpid_name);
             METRIC_INCREMENT(_svc->get_server_state()->get_table_metric_entities(),
@@ -521,8 +542,9 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         replica_count(pc) <
             _svc->get_options().app_mutation_2pc_min_replica_count(pc.max_replica_count)) {
         // ATTENTION:
-        // when max_replica_count == 2, even if there is only 1 replica alive now, we will still
-        // wait for '_replica_assign_delay_ms_for_dropouts' before recover the second replica.
+        // when max_replica_count == 2, even if there is only 1 replica alive
+        // now, we will still wait for '_replica_assign_delay_ms_for_dropouts'
+        // before recover the second replica.
         is_emergency = true;
         LOG_INFO("gpid({}): is emergency due to too few replicas", gpid);
     } else if (cc.dropped.empty()) {
@@ -554,13 +576,14 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
                 oss << ",";
             oss << cc.dropped[i].node;
         }
-        LOG_INFO(
-            "gpid({}): try to choose node in dropped list, dropped_list({}), prefered_dropped({})",
-            gpid,
-            oss.str(),
-            cc.prefered_dropped);
+        LOG_INFO("gpid({}): try to choose node in dropped list, "
+                 "dropped_list({}), prefered_dropped({})",
+                 gpid,
+                 oss.str(),
+                 cc.prefered_dropped);
         if (cc.prefered_dropped < 0 || cc.prefered_dropped >= (int)cc.dropped.size()) {
-            LOG_INFO("gpid({}): prefered_dropped({}) is invalid according to drop_list(size {}), "
+            LOG_INFO("gpid({}): prefered_dropped({}) is invalid according to "
+                     "drop_list(size {}), "
                      "reset it to {} (drop_list.size - 1)",
                      gpid,
                      cc.prefered_dropped,
@@ -572,7 +595,8 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         while (cc.prefered_dropped >= 0) {
             const dropped_replica &server = cc.dropped[cc.prefered_dropped];
             if (is_node_alive(*view.nodes, server.node)) {
-                LOG_INFO("gpid({}): node({}) at cc.dropped[{}] is alive now, choose it, "
+                LOG_INFO("gpid({}): node({}) at cc.dropped[{}] is alive now, "
+                         "choose it, "
                          "and forward prefered_dropped from {} to {}",
                          gpid,
                          server.node,
@@ -598,8 +622,10 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         GET_HOST_PORT(action, node, node);
         if (!node || in_black_list(node)) {
             if (node) {
-                LOG_INFO(
-                    "gpid({}) refuse to use selected node({}) as it is in black list", gpid, node);
+                LOG_INFO("gpid({}) refuse to use selected node({}) as it is in "
+                         "black list",
+                         gpid,
+                         node);
             }
             newly_partitions *min_server_np = nullptr;
             for (auto &[_, ns] : *view.nodes) {
@@ -616,12 +642,14 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
 
             // Use the action.hp_node after being updated.
             if (action.hp_node) {
-                LOG_INFO("gpid({}): can't find valid node in dropped list to add as secondary, "
+                LOG_INFO("gpid({}): can't find valid node in dropped list to "
+                         "add as secondary, "
                          "choose new node({}) with minimal partitions serving",
                          gpid,
                          action.hp_node);
             } else {
-                LOG_INFO("gpid({}): can't find valid node in dropped list to add as secondary, "
+                LOG_INFO("gpid({}): can't find valid node in dropped list to add as "
+                         "secondary, "
                          "but also we can't find a new node to add as secondary",
                          gpid);
             }
@@ -636,12 +664,14 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
 
         // Use the action.hp_node after being updated.
         if (action.hp_node) {
-            LOG_INFO("gpid({}): choose node({}) as secondary coz it is last_dropped_node and is "
+            LOG_INFO("gpid({}): choose node({}) as secondary coz it is "
+                     "last_dropped_node and is "
                      "alive now",
                      gpid,
                      server.node);
         } else {
-            LOG_INFO("gpid({}): can't add secondary coz last_dropped_node({}) is not alive now, "
+            LOG_INFO("gpid({}): can't add secondary coz last_dropped_node({}) "
+                     "is not alive now, "
                      "ignore this as not in emergency",
                      gpid,
                      server.node);
@@ -668,9 +698,11 @@ pc_status partition_guardian::on_redundant_secondary(meta_view &view, const dsn:
     const node_mapper &nodes = *(view.nodes);
     const partition_configuration &pc = *get_config(*(view.apps), gpid);
     int target = 0;
-    int load = nodes.find(pc.hp_secondaries.front())->second.partition_count();
-    for (int i = 0; i != pc.hp_secondaries.size(); ++i) {
-        int l = nodes.find(pc.hp_secondaries[i])->second.partition_count();
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    int load = static_cast<int>(nodes.find(secondaries.front())->second.partition_count());
+    for (int i = 0; i != secondaries.size(); ++i) {
+        int l = static_cast<int>(nodes.find(secondaries[i])->second.partition_count());
         if (l > load) {
             load = l;
             target = i;
@@ -761,8 +793,8 @@ partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::stri
     std::vector<std::string> host_ports;
     dsn::utils::split_args(args[0].c_str(), host_ports, ',');
     if (host_ports.empty()) {
-        msg["error"] =
-            "invalid argument, the argument should be in form of '<host:port,host:port,host:port>'";
+        msg["error"] = "invalid argument, the argument should be in form of "
+                       "'<host:port,host:port,host:port>'";
         return msg.dump(2);
     }
 

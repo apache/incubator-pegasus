@@ -31,13 +31,13 @@
 #include "client/partition_resolver.h"
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
-#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "metadata_types.h"
 #include "misc/misc.h"
 #include "rpc/dns_resolver.h" // IWYU pragma: keep
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
+#include "gtest/gtest.h"
 
 using namespace dsn::replication;
 

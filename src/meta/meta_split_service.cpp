@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <fmt/core.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <fmt/core.h>
 #include <functional>
 #include <map>
 #include <utility>
@@ -80,11 +80,11 @@ void meta_split_service::start_partition_split(start_split_rpc rpc)
         // new_partition_count != old_partition_count*2
         if (request.new_partition_count != app->partition_count * 2) {
             response.err = ERR_INVALID_PARAMETERS;
-            LOG_ERROR(
-                "wrong partition count: app({}), partition count({}), new_partition_count({})",
-                request.app_name,
-                app->partition_count,
-                request.new_partition_count);
+            LOG_ERROR("wrong partition count: app({}), partition count({}), "
+                      "new_partition_count({})",
+                      request.app_name,
+                      app->partition_count,
+                      request.new_partition_count);
             response.hint_msg =
                 fmt::format("wrong partition_count, should be {}", app->partition_count * 2);
             return;
@@ -111,7 +111,8 @@ void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app
                                                   start_split_rpc rpc)
 {
     auto on_write_storage_complete = [app, rpc, this]() {
-        LOG_INFO("app({}) update partition count on remote storage, new partition_count = {}",
+        LOG_INFO("app({}) update partition count on remote storage, new "
+                 "partition_count = {}",
                  app->app_name,
                  app->partition_count * 2);
 
@@ -164,7 +165,8 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
     const gpid &child_gpid = request.child_config.pid;
     const auto &parent_pc = app->pcs[parent_gpid.get_partition_index()];
     if (request.parent_config.ballot != parent_pc.ballot) {
-        LOG_ERROR("app({}) partition({}) register child({}) failed, request is outdated, request "
+        LOG_ERROR("app({}) partition({}) register child({}) failed, request is "
+                  "outdated, request "
                   "parent ballot = {}, local parent ballot = {}",
                   app_name,
                   parent_gpid,
@@ -178,7 +180,8 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
 
     config_context &parent_context = app->helpers->contexts[parent_gpid.get_partition_index()];
     if (parent_context.stage == config_status::pending_remote_sync) {
-        LOG_WARNING("app({}) partition({}): another request is syncing with remote storage, ignore "
+        LOG_WARNING("app({}) partition({}): another request is syncing with "
+                    "remote storage, ignore "
                     "this request",
                     app_name,
                     parent_gpid);
@@ -186,11 +189,11 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
     }
 
     if (child_gpid.get_partition_index() >= app->partition_count) {
-        LOG_ERROR(
-            "app({}) partition({}) register child({}) failed, partition split has been canceled",
-            app_name,
-            parent_gpid,
-            child_gpid);
+        LOG_ERROR("app({}) partition({}) register child({}) failed, partition "
+                  "split has been canceled",
+                  app_name,
+                  parent_gpid,
+                  child_gpid);
         response.err = ERR_INVALID_STATE;
         response.parent_config = parent_pc;
         return;
@@ -198,10 +201,10 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
 
     auto iter = app->helpers->split_states.status.find(parent_gpid.get_partition_index());
     if (iter == app->helpers->split_states.status.end()) {
-        LOG_ERROR(
-            "duplicated register request, app({}) child partition({}) has already been registered",
-            app_name,
-            child_gpid);
+        LOG_ERROR("duplicated register request, app({}) child partition({}) "
+                  "has already been registered",
+                  app_name,
+                  child_gpid);
         const auto &child_pc = app->pcs[child_gpid.get_partition_index()];
         CHECK_GT_MSG(child_pc.ballot,
                      0,
@@ -214,12 +217,12 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
     }
 
     if (iter->second != split_status::SPLITTING) {
-        LOG_ERROR(
-            "app({}) partition({}) register child({}) failed, current partition split_status = {}",
-            app_name,
-            parent_gpid,
-            child_gpid,
-            dsn::enum_to_string(iter->second));
+        LOG_ERROR("app({}) partition({}) register child({}) failed, current "
+                  "partition split_status = {}",
+                  app_name,
+                  parent_gpid,
+                  child_gpid,
+                  dsn::enum_to_string(iter->second));
         response.err = ERR_INVALID_STATE;
         return;
     }
@@ -311,10 +314,12 @@ void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
     // TODO(yingchun): should use conference?
     auto child_pc = app->pcs[child_gpid.get_partition_index()];
     child_pc.secondaries = request.child_config.secondaries;
-    child_pc.__set_hp_secondaries(request.child_config.hp_secondaries);
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(request.child_config, secondaries, secondaries);
+    child_pc.__set_hp_secondaries(secondaries);
     _state->update_configuration_locally(*app, update_child_request);
 
-    if (parent_context.msg) {
+    if (parent_context.msg != nullptr) {
         response.err = ERR_OK;
         response.app = *app;
         response.parent_config = app->pcs[parent_gpid.get_partition_index()];
@@ -350,7 +355,8 @@ void meta_split_service::query_partition_split(query_split_rpc rpc) const
 
     response.new_partition_count = app->partition_count;
     response.status = app->helpers->split_states.status;
-    LOG_INFO("query partition split succeed, app({}), partition_count({}), splitting_count({})",
+    LOG_INFO("query partition split succeed, app({}), partition_count({}), "
+             "splitting_count({})",
              app->app_name,
              response.new_partition_count,
              response.status.size());
@@ -451,7 +457,8 @@ void meta_split_service::do_control_all(std::shared_ptr<app_state> app, control_
             response.err = ERR_INVALID_PARAMETERS;
             response.__set_hint_msg(
                 fmt::format("wrong partition_count, should be {}", app->partition_count / 2));
-            LOG_ERROR("cancel split for app({}) failed, wrong partition count: partition count({}) "
+            LOG_ERROR("cancel split for app({}) failed, wrong partition count: "
+                      "partition count({}) "
                       "VS req partition_count({})",
                       app->app_name,
                       app->partition_count,
@@ -510,18 +517,19 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
     const auto iter =
         app->helpers->split_states.status.find(request.parent_gpid.get_partition_index());
     if (iter == app->helpers->split_states.status.end()) {
-        LOG_WARNING(
-            "app({}) partition({}) is not executing partition split, ignore out-dated {} split "
-            "request",
-            app->app_name,
-            request.parent_gpid,
-            stop_type);
+        LOG_WARNING("app({}) partition({}) is not executing partition split, "
+                    "ignore out-dated {} split "
+                    "request",
+                    app->app_name,
+                    request.parent_gpid,
+                    stop_type);
         response.err = ERR_INVALID_VERSION;
         return;
     }
 
     if (iter->second != request.meta_split_status) {
-        LOG_WARNING("app({}) partition({}) split_status = {}, ignore out-dated {} split request",
+        LOG_WARNING("app({}) partition({}) split_status = {}, ignore out-dated "
+                    "{} split request",
                     app->app_name,
                     request.parent_gpid,
                     dsn::enum_to_string(iter->second),
@@ -556,7 +564,8 @@ void meta_split_service::do_cancel_partition_split(std::shared_ptr<app_state> ap
                                                    notify_stop_split_rpc rpc)
 {
     auto on_write_storage_complete = [app, rpc, this]() {
-        LOG_INFO("app({}) update partition count on remote storage, new partition count is {}",
+        LOG_INFO("app({}) update partition count on remote storage, new "
+                 "partition count is {}",
                  app->app_name,
                  app->partition_count / 2);
 
