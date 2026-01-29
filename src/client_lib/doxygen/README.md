@@ -11,39 +11,15 @@ documentation on **macOS** and **Linux**.
 > If you update the C++ client headers or comments, re-run the generation command to
 > refresh the documentation.
 
-## macOS
+## 1. Install Doxygen
 
-### 1. Install Doxygen (Homebrew)
+### macOS (Homebrew)
 
 ```bash
 brew install doxygen
 ```
 
-Verify the installation:
-
-```bash
-doxygen -v
-```
-
-### 2. Generate Documentation
-
-Run this from the repository root:
-
-```bash
-doxygen docs/doxygen/Doxyfile
-```
-
-The generated HTML entry point is:
-
-```
-docs/doxygen/output/html/index.html
-```
-
-## Linux
-
-### 1. Install Doxygen
-
-#### Debian / Ubuntu
+### Linux (Debian / Ubuntu)
 
 ```bash
 sudo apt-get update
@@ -56,7 +32,7 @@ Verify the installation:
 doxygen -v
 ```
 
-### 2. Generate Documentation
+## 2. Generate Documentation
 
 Run this from the repository root:
 
