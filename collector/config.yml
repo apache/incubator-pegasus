@@ -48,4 +48,7 @@ availability_detect:
   max_replica_count : 3
 
 hotspot:
-  partition_detect_interval : 10s
+  rpc_timeout : 5s
+  partition_detect_interval : 30s
+  pull_metrics_timeout : 5s
+  sample_metrics_interval : 10s
