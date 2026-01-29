@@ -31,18 +31,17 @@
 #include "client/partition_resolver.h"
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
-#include "gtest/gtest.h"
 #include "meta/meta_data.h"
 #include "metadata_types.h"
 #include "misc/misc.h"
 #include "rpc/dns_resolver.h" // IWYU pragma: keep
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
+#include "gtest/gtest.h"
 
 using namespace dsn::replication;
 
-TEST(meta_data, dropped_cmp)
-{
+TEST(meta_data, dropped_cmp) {
     dsn::host_port n;
 
     dropped_replica d1, d2;
@@ -88,8 +87,7 @@ TEST(meta_data, dropped_cmp)
 }
 
 static bool vec_equal(const std::vector<dropped_replica> &vec1,
-                      const std::vector<dropped_replica> &vec2)
-{
+                      const std::vector<dropped_replica> &vec2) {
     if (vec1.size() != vec2.size())
         return false;
     for (unsigned int i = 0; i != vec1.size(); ++i) {
@@ -107,8 +105,7 @@ static bool vec_equal(const std::vector<dropped_replica> &vec1,
     return true;
 }
 
-TEST(meta_data, collect_replica)
-{
+TEST(meta_data, collect_replica) {
     app_mapper apps;
     node_mapper nodes;
 
@@ -134,20 +131,20 @@ TEST(meta_data, collect_replica)
     std::vector<dsn::host_port> node_list;
     generate_node_list(node_list, 10, 10);
 
-#define CLEAR_REPLICA                                                                              \
-    do {                                                                                           \
-        RESET_IP_AND_HOST_PORT(pc, primary);                                                       \
-        CLEAR_IP_AND_HOST_PORT(pc, secondaries);                                                   \
-        CLEAR_IP_AND_HOST_PORT(pc, last_drops);                                                    \
+#define CLEAR_REPLICA                                                          \
+    do {                                                                       \
+        RESET_IP_AND_HOST_PORT(pc, primary);                                   \
+        CLEAR_IP_AND_HOST_PORT(pc, secondaries);                               \
+        CLEAR_IP_AND_HOST_PORT(pc, last_drops);                                \
     } while (false)
 
-#define CLEAR_DROP_LIST                                                                            \
-    do {                                                                                           \
-        cc.dropped.clear();                                                                        \
+#define CLEAR_DROP_LIST                                                        \
+    do {                                                                       \
+        cc.dropped.clear();                                                    \
     } while (false)
 
-#define CLEAR_ALL                                                                                  \
-    CLEAR_REPLICA;                                                                                 \
+#define CLEAR_ALL                                                              \
+    CLEAR_REPLICA;                                                             \
     CLEAR_DROP_LIST
 
     {
@@ -210,8 +207,10 @@ TEST(meta_data, collect_replica)
         // drop_list mixed, full, minimal position
         CLEAR_ALL;
         cc.dropped = {
-            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 3, 5},
-            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 5},
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2,
+                            3, 5},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2,
+                            4, 5},
             dropped_replica{node_list[2], 7, 1, 1, 5},
             dropped_replica{node_list[3], 8, 1, 1, 5},
         };
@@ -226,8 +225,10 @@ TEST(meta_data, collect_replica)
         // drop_list mixed, not full, minimal position
         CLEAR_ALL;
         cc.dropped = {
-            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 3, 5},
-            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 5},
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2,
+                            3, 5},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2,
+                            4, 5},
             dropped_replica{node_list[2], 7, 1, 1, 6},
         };
 
@@ -245,8 +246,10 @@ TEST(meta_data, collect_replica)
         // drop_list mixed, full, not minimal position
         CLEAR_ALL;
         cc.dropped = {
-            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 6},
-            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2,
+                            2, 6},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2,
+                            4, 6},
             dropped_replica{node_list[2], 7, 1, 1, 6},
             dropped_replica{node_list[3], 8, 1, 1, 6},
         };
@@ -265,9 +268,12 @@ TEST(meta_data, collect_replica)
     {
         // drop_list mixed, not full, not minimal position
         CLEAR_ALL;
-        cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 6},
-                      dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
-                      dropped_replica{node_list[2], 7, 1, 1, 6}};
+        cc.dropped = {
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2,
+                            2, 6},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2,
+                            4, 6},
+            dropped_replica{node_list[2], 7, 1, 1, 6}};
 
         rep.ballot = 3;
         rep.last_committed_decree = 1;
@@ -275,9 +281,12 @@ TEST(meta_data, collect_replica)
         ASSERT_TRUE(collect_replica(view, node_list[5], rep));
 
         std::vector<dropped_replica> result_dropped = {
-            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 6},
-            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 6},
-            dropped_replica{node_list[5], dropped_replica::INVALID_TIMESTAMP, 3, 1, 6},
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2,
+                            2, 6},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2,
+                            4, 6},
+            dropped_replica{node_list[5], dropped_replica::INVALID_TIMESTAMP, 3,
+                            1, 6},
             dropped_replica{node_list[2], 7, 1, 1, 6}};
 
         ASSERT_TRUE(vec_equal(result_dropped, cc.dropped));
@@ -287,10 +296,14 @@ TEST(meta_data, collect_replica)
         // drop_list no timestamp, full, minimal position
         CLEAR_ALL;
         cc.dropped = {
-            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 8},
-            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
-            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2,
+                            2, 8},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2,
+                            4, 8},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2,
+                            6, 8},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4,
+                            2, 8},
         };
 
         rep.ballot = 1;
@@ -303,10 +316,14 @@ TEST(meta_data, collect_replica)
         // drop_list no timestamp, full, middle position
         CLEAR_ALL;
         cc.dropped = {
-            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2, 2, 8},
-            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
-            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 2,
+                            2, 8},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2,
+                            4, 8},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2,
+                            6, 8},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4,
+                            2, 8},
         };
 
         rep.ballot = 3;
@@ -315,10 +332,14 @@ TEST(meta_data, collect_replica)
         ASSERT_TRUE(collect_replica(view, node_list[5], rep));
 
         std::vector<dropped_replica> result_dropped = {
-            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
-            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-            dropped_replica{node_list[5], dropped_replica::INVALID_TIMESTAMP, 3, 6, 8},
-            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2,
+                            4, 8},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2,
+                            6, 8},
+            dropped_replica{node_list[5], dropped_replica::INVALID_TIMESTAMP, 3,
+                            6, 8},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4,
+                            2, 8},
         };
 
         ASSERT_TRUE(vec_equal(result_dropped, cc.dropped));
@@ -327,10 +348,15 @@ TEST(meta_data, collect_replica)
     {
         // drop_list no timestamp, full, largest position
         CLEAR_ALL;
-        cc.dropped = {dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2, 4, 8},
-                      dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-                      dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
-                      dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8}};
+        cc.dropped = {
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 2,
+                            4, 8},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2,
+                            6, 8},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4,
+                            2, 8},
+            dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 4,
+                            6, 8}};
 
         rep.ballot = 4;
         rep.last_committed_decree = 8;
@@ -338,10 +364,14 @@ TEST(meta_data, collect_replica)
         ASSERT_TRUE(collect_replica(view, node_list[5], rep));
 
         std::vector<dropped_replica> result_dropped = {
-            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2, 6, 8},
-            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4, 2, 8},
-            dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 4, 6, 8},
-            dropped_replica{node_list[5], dropped_replica::INVALID_TIMESTAMP, 4, 8, 8}};
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 2,
+                            6, 8},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 4,
+                            2, 8},
+            dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 4,
+                            6, 8},
+            dropped_replica{node_list[5], dropped_replica::INVALID_TIMESTAMP, 4,
+                            8, 8}};
 
         ASSERT_TRUE(vec_equal(result_dropped, cc.dropped));
     }
@@ -350,8 +380,7 @@ TEST(meta_data, collect_replica)
 #undef CLEAR_DROP_LIST
 }
 
-TEST(meta_data, construct_replica)
-{
+TEST(meta_data, construct_replica) {
     app_mapper apps;
     node_mapper nodes;
 
@@ -377,20 +406,20 @@ TEST(meta_data, construct_replica)
     std::vector<dsn::host_port> node_list;
     generate_node_list(node_list, 10, 10);
 
-#define CLEAR_REPLICA                                                                              \
-    do {                                                                                           \
-        RESET_IP_AND_HOST_PORT(pc, primary);                                                       \
-        CLEAR_IP_AND_HOST_PORT(pc, secondaries);                                                   \
-        CLEAR_IP_AND_HOST_PORT(pc, last_drops);                                                    \
+#define CLEAR_REPLICA                                                          \
+    do {                                                                       \
+        RESET_IP_AND_HOST_PORT(pc, primary);                                   \
+        CLEAR_IP_AND_HOST_PORT(pc, secondaries);                               \
+        CLEAR_IP_AND_HOST_PORT(pc, last_drops);                                \
     } while (false)
 
-#define CLEAR_DROP_LIST                                                                            \
-    do {                                                                                           \
-        cc.dropped.clear();                                                                        \
+#define CLEAR_DROP_LIST                                                        \
+    do {                                                                       \
+        cc.dropped.clear();                                                    \
     } while (false)
 
-#define CLEAR_ALL                                                                                  \
-    CLEAR_REPLICA;                                                                                 \
+#define CLEAR_ALL                                                              \
+    CLEAR_REPLICA;                                                             \
     CLEAR_DROP_LIST
 
     // drop_list is empty, can't construct replica
@@ -403,7 +432,8 @@ TEST(meta_data, construct_replica)
     // only have one node in drop_list
     {
         CLEAR_ALL;
-        cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12}};
+        cc.dropped = {dropped_replica{
+            node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12}};
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
         ASSERT_EQ(node_list[0], pc.hp_primary);
         ASSERT_TRUE(pc.hp_secondaries.empty());
@@ -414,16 +444,21 @@ TEST(meta_data, construct_replica)
     // have multiple nodes, ballots are not same
     {
         CLEAR_ALL;
-        cc.dropped = {dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 6, 10, 12},
-                      dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 10, 12},
-                      dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 8, 10, 12},
-                      dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 9, 11, 12}};
+        cc.dropped = {
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 6,
+                            10, 12},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7,
+                            10, 12},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 8,
+                            10, 12},
+            dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 9,
+                            11, 12}};
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-        ASSERT_EQ(node_list[4], primary);
-        ASSERT_TRUE(_secondaries.empty());
+        ASSERT_EQ(node_list[4], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
 
         std::vector<dsn::host_port> nodes = {node_list[2], node_list[3]};
-        ASSERT_EQ(nodes, last_drops);
+        ASSERT_EQ(nodes, pc.hp_last_drops);
         ASSERT_EQ(3, cc.dropped.size());
         ASSERT_EQ(2, cc.prefered_dropped);
     }
@@ -431,16 +466,20 @@ TEST(meta_data, construct_replica)
     // have multiple node, two have same ballots
     {
         CLEAR_ALL;
-        cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12},
-                      dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 7, 11, 12},
-                      dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 12, 12}};
+        cc.dropped = {
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 5,
+                            10, 12},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 7,
+                            11, 12},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7,
+                            12, 12}};
 
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-        ASSERT_EQ(node_list[2], primary);
-        ASSERT_TRUE(secondaries.empty());
+        ASSERT_EQ(node_list[2], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
 
         std::vector<dsn::host_port> nodes = {node_list[0], node_list[1]};
-        ASSERT_EQ(nodes, last_drops);
+        ASSERT_EQ(nodes, pc.hp_last_drops);
         ASSERT_EQ(2, cc.dropped.size());
         ASSERT_EQ(1, cc.prefered_dropped);
     }
@@ -448,17 +487,22 @@ TEST(meta_data, construct_replica)
     // have multiple nodes, all have same ballots
     {
         CLEAR_ALL;
-        cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 7, 11, 14},
-                      dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 7, 12, 14},
-                      dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 13, 14},
-                      dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 7, 14, 14}};
+        cc.dropped = {
+            dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 7,
+                            11, 14},
+            dropped_replica{node_list[1], dropped_replica::INVALID_TIMESTAMP, 7,
+                            12, 14},
+            dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7,
+                            13, 14},
+            dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 7,
+                            14, 14}};
 
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-        ASSERT_EQ(node_list[3], primary);
-        ASSERT_TRUE(secondaries.empty());
+        ASSERT_EQ(node_list[3], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
 
         std::vector<dsn::host_port> nodes = {node_list[1], node_list[2]};
-        ASSERT_EQ(nodes, last_drops);
+        ASSERT_EQ(nodes, pc.hp_last_drops);
 
         ASSERT_EQ(3, cc.dropped.size());
         ASSERT_EQ(2, cc.prefered_dropped);
