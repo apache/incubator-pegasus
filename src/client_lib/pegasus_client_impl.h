@@ -17,6 +17,19 @@
  * under the License.
  */
 
+/**
+ * @file pegasus_client_impl.h
+ * @brief Public C++ client interfaces for Pegasus.
+ *
+ * This file contains the concrete client implementation as well as scanner
+ * utilities that are exposed to users. The declarations are annotated with
+ * Doxygen-friendly comments so that C++ client documentation can be generated
+ * directly via Doxygen.
+ *
+ * @addtogroup pegasus_cpp_client
+ * @{
+ */
+
 #pragma once
 
 #include <pegasus/client.h>
@@ -51,24 +64,118 @@ struct check_and_set_results;
 struct check_and_mutate_results;
 class pegasus_scanner;
 class abstract_pegasus_scanner;
-typedef std::function<void(int, std::string &&, std::string &&, std::string &&)> async_set_callback_t;
-typedef std::function<void(int, std::string &&, std::string &&, std::string &&)> async_get_callback_t;
-typedef std::function<void(int, std::string &&, std::map<std::string, std::string> &&)> async_multi_get_callback_t;
-typedef std::function<void(int, std::string &&, std::set<std::string> &&)> async_multi_get_sortkeys_callback_t;
-typedef std::function<void(int, std::string &&, std::string &&)> async_del_callback_t;
-typedef std::function<void(int, std::string &&, int64_t)> async_incr_callback_t;
-typedef std::function<void(int, std::string &&, check_and_set_results &&)> async_check_and_set_callback_t;
-typedef std::function<void(int, std::string &&, check_and_mutate_results &&)> async_check_and_mutate_callback_t;
-typedef std::function<void(int, pegasus_scanner *)> async_get_scanner_callback_t;
-typedef std::function<void(int, std::vector<pegasus_scanner *> &&)> async_get_unordered_scanners_callback_t;
-typedef std::function<void(int, std::string &&, std::string &&, std::string &&)> async_scan_next_callback_t;
 
 /**
- * @brief The implementation class of Pegasus client
+ * @brief Callback for async set operations.
+ * @param err Operation result code (0 for success).
+ * @param hashkey Hash key of the request.
+ * @param sortkey Sort key of the request.
+ * @param value Value passed to set.
+ */
+typedef std::function<void(int, std::string &&, std::string &&, std::string &&)> async_set_callback_t;
+
+/**
+ * @brief Callback for async get operations.
+ * @param err Operation result code (0 for success).
+ * @param hashkey Hash key of the request.
+ * @param sortkey Sort key of the request.
+ * @param value Retrieved value.
+ */
+typedef std::function<void(int, std::string &&, std::string &&, std::string &&)> async_get_callback_t;
+
+/**
+ * @brief Callback for async multi-get operations.
+ * @param err Operation result code (0 for success).
+ * @param hashkey Hash key of the request.
+ * @param values Retrieved key-value map.
+ */
+typedef std::function<void(int, std::string &&, std::map<std::string, std::string> &&)>
+    async_multi_get_callback_t;
+
+/**
+ * @brief Callback for async multi-get sortkeys operations.
+ * @param err Operation result code (0 for success).
+ * @param hashkey Hash key of the request.
+ * @param sortkeys Retrieved sort key set.
+ */
+typedef std::function<void(int, std::string &&, std::set<std::string> &&)>
+    async_multi_get_sortkeys_callback_t;
+
+/**
+ * @brief Callback for async delete operations.
+ * @param err Operation result code (0 for success).
+ * @param hashkey Hash key of the request.
+ * @param sortkey Sort key of the request.
+ */
+typedef std::function<void(int, std::string &&, std::string &&)> async_del_callback_t;
+
+/**
+ * @brief Callback for async increment operations.
+ * @param err Operation result code (0 for success).
+ * @param sortkey Sort key of the request.
+ * @param new_value Value after increment.
+ */
+typedef std::function<void(int, std::string &&, int64_t)> async_incr_callback_t;
+
+/**
+ * @brief Callback for async check-and-set operations.
+ * @param err Operation result code (0 for success).
+ * @param hashkey Hash key of the request.
+ * @param results Result payload of the operation.
+ */
+typedef std::function<void(int, std::string &&, check_and_set_results &&)>
+    async_check_and_set_callback_t;
+
+/**
+ * @brief Callback for async check-and-mutate operations.
+ * @param err Operation result code (0 for success).
+ * @param hashkey Hash key of the request.
+ * @param results Result payload of the operation.
+ */
+typedef std::function<void(int, std::string &&, check_and_mutate_results &&)>
+    async_check_and_mutate_callback_t;
+
+/**
+ * @brief Callback for async scanner creation.
+ * @param err Operation result code (0 for success).
+ * @param scanner Newly created scanner instance.
+ */
+typedef std::function<void(int, pegasus_scanner *)> async_get_scanner_callback_t;
+
+/**
+ * @brief Callback for async unordered scanner creation.
+ * @param err Operation result code (0 for success).
+ * @param scanners List of scanners for parallel scan.
+ */
+typedef std::function<void(int, std::vector<pegasus_scanner *> &&)>
+    async_get_unordered_scanners_callback_t;
+
+/**
+ * @brief Callback for async scanner next calls.
+ * @param err Operation result code (0 for success).
+ * @param hashkey Hash key of the scanned record.
+ * @param sortkey Sort key of the scanned record.
+ * @param value Value of the scanned record.
+ */
+typedef std::function<void(int, std::string &&, std::string &&, std::string &&)>
+    async_scan_next_callback_t;
+
+/**
+ * @brief The implementation class of Pegasus client.
  *
  * This class provides the concrete implementation of all Pegasus client operations,
- * including data access APIs like get/set/delete and scan operations.
- * It communicates with Pegasus server cluster to perform these operations.
+ * including data access APIs like get/set/delete and scan operations. It communicates
+ * with the Pegasus server cluster to perform these operations.
+ *
+ * @ingroup pegasus_cpp_client
+ *
+ * Example usage:
+ * @code
+ * auto *client = pegasus::client::pegasus_client_factory::create_client(
+ *     "cluster", "table", "config.ini");
+ * std::string value;
+ * int rc = client->get("hash", "sort", value);
+ * @endcode
  */
 class pegasus_client_impl : public pegasus_client
 {
@@ -457,7 +564,7 @@ public:
      * @param hash_key The hash key
      * @param check_sort_key The sort key to check
      * @param check_type Type of check to perform (e.g. EQ, LE, GE)
-     * @param check_operant Value to compare against
+     * @param check_operand Value to compare against
      * @param set_sort_key The sort key to set if check passes
      * @param set_value The value to set if check passes
      * @param options Additional options for the operation
@@ -651,12 +758,7 @@ public:
         int next(int32_t &count, internal_info *info = nullptr) override;
 
         /**
-         * @brief Asynchronously get next key-value pair from scanner
-         * 
-         * @param callback Callback function to handle the async result
-         */
-        /**
-         * @brief Asynchronously get next key-value pair from scanner
+         * @brief Asynchronously get next key-value pair from scanner.
          * @param callback Callback function to handle the async result
          * The callback parameters are:
          *   - error_code: Operation result code (0 for success)
@@ -820,3 +922,5 @@ private:
 };
 } // namespace client
 } // namespace pegasus
+
+/** @} */
