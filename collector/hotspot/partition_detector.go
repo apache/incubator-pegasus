@@ -21,12 +21,14 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/apache/incubator-pegasus/collector/metrics"
 	client "github.com/apache/incubator-pegasus/go-client/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/gammazero/deque"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -43,6 +45,7 @@ type PartitionDetectorConfig struct {
 	DetectInterval        time.Duration
 	PullMetricsTimeout    time.Duration
 	SampleMetricsInterval time.Duration
+	MaxSampleSize         int
 }
 
 func LoadPartitionDetectorConfig() *PartitionDetectorConfig {
@@ -52,6 +55,7 @@ func LoadPartitionDetectorConfig() *PartitionDetectorConfig {
 		DetectInterval:        viper.GetDuration("hotspot.partition_detect_interval"),
 		PullMetricsTimeout:    viper.GetDuration("hotspot.pull_metrics_timeout"),
 		SampleMetricsInterval: viper.GetDuration("hotspot.sample_metrics_interval"),
+		MaxSampleSize:         viper.GetInt("hotspot.max_sample_size"),
 	}
 }
 
@@ -83,7 +87,9 @@ func NewPartitionDetector(cfg *PartitionDetectorConfig) (PartitionDetector, erro
 }
 
 type partitionDetectorImpl struct {
-	cfg *PartitionDetectorConfig
+	cfg       *PartitionDetectorConfig
+	mtx       sync.RWMutex
+	analyzers map[partitionAnalyzerKey]*partitionAnalyzer // {-> partitionAnalyzer}
 }
 
 func (d *partitionDetectorImpl) Run(tom *tomb.Tomb) error {
@@ -125,16 +131,12 @@ func (d *partitionDetectorImpl) aggregate() error {
 	})
 	defer adminClient.Close()
 
-	// appMap is the final structure that includes all the statistical values.
-	appMap, err := pullTablePartitions(adminClient)
+	appMap, err := d.aggregateMetrics(adminClient)
 	if err != nil {
 		return err
 	}
 
-	err = d.aggregateMetrics(adminClient, appMap)
-	if err != nil {
-		return err
-	}
+	d.addHotspotStats(appMap)
 
 	return nil
 }
@@ -176,29 +178,35 @@ func pullTablePartitions(adminClient client.Client) (appStatsMap, error) {
 type aggregator func(map[string]float64, string, float64)
 
 // Pull metrics from all nodes and aggregate them to produce the statistics.
-func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client, appMap appStatsMap) error {
+func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client) (appStatsMap, error) {
+	// appMap is the final structure that includes all the statistical values.
+	appMap, err := pullTablePartitions(adminClient)
+	if err != nil {
+		return nil, err
+	}
+
 	nodes, err := adminClient.ListNodes()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Pull multiple results of metrics to perform cumulative calculation to produce the
 	// statistics such as QPS.
 	startSnapshots, err := d.pullMetrics(nodes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	time.Sleep(d.cfg.SampleMetricsInterval)
 
 	endSnapshots, err := d.pullMetrics(nodes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for i, snapshot := range endSnapshots {
 		if snapshot.TimestampNS <= startSnapshots[i].TimestampNS {
-			return fmt.Errorf("end timestamp (%d) must be greater than start timestamp (%d)",
+			return nil, fmt.Errorf("end timestamp (%d) must be greater than start timestamp (%d)",
 				snapshot.TimestampNS, startSnapshots[i].TimestampNS)
 		}
 
@@ -228,7 +236,7 @@ func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client, appM
 			appMap)
 	}
 
-	return nil
+	return appMap, nil
 }
 
 var (
@@ -347,4 +355,75 @@ func (d *partitionDetectorImpl) calculateStats(
 			adder(stats.partitionStats[partitionID], metric.Name, metric.Value)
 		}
 	}
+}
+
+type partitionAnalyzerKey struct {
+	appID          int32
+	partitionCount int32
+}
+
+const (
+	readHotspotData = iota
+	writeHotspotData
+	operateHotspotDataNumber
+)
+
+type hotspotPartitionStats struct {
+	totalQPS [operateHotspotDataNumber]float64
+}
+
+func calculateHotspotStats(appMap appStatsMap) map[partitionAnalyzerKey][]hotspotPartitionStats {
+	results := make(map[partitionAnalyzerKey][]hotspotPartitionStats)
+	for appID, stats := range appMap {
+		value := make([]hotspotPartitionStats, 0, len(stats.partitionStats))
+
+		for _, partitionStats := range stats.partitionStats {
+			var hotspotStats hotspotPartitionStats
+			for _, metricName := range readMetricNames {
+				hotspotStats.totalQPS[readHotspotData] += partitionStats[metricName]
+			}
+			for _, metricName := range writeMetricNames {
+				hotspotStats.totalQPS[writeHotspotData] += partitionStats[metricName]
+			}
+			value = append(value, hotspotStats)
+		}
+
+		key := partitionAnalyzerKey{appID: appID, partitionCount: int32(len(stats.partitionStats))}
+		results[key] = value
+	}
+
+	return results
+}
+
+func (d *partitionDetectorImpl) addHotspotStats(appMap appStatsMap) {
+	hotspotMap := calculateHotspotStats(appMap)
+
+	d.mtx.Lock()
+	defer d.mtx.Unlock()
+
+	for key, value := range hotspotMap {
+		analyzer, ok := d.analyzers[key]
+		if !ok {
+			analyzer = newPartitionAnalyzer(d.cfg.MaxSampleSize)
+		}
+
+		analyzer.add(value)
+	}
+}
+
+func newPartitionAnalyzer(maxSampleSize int) *partitionAnalyzer {
+	return &partitionAnalyzer{maxSampleSize: maxSampleSize}
+}
+
+type partitionAnalyzer struct {
+	maxSampleSize int
+	samples       deque.Deque[[]hotspotPartitionStats]
+}
+
+func (a *partitionAnalyzer) add(sample []hotspotPartitionStats) {
+	for a.samples.Len() >= a.maxSampleSize {
+		a.samples.PopFront()
+	}
+
+	a.samples.PushBack(sample)
 }
