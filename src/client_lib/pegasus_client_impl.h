@@ -869,10 +869,10 @@ public:
     /**
      * @brief Convert RocksDB error code to Pegasus server error code
      *
-     * @param rocskdb_error RocksDB error code
+     * @param rocksdb_error RocksDB error code
      * @return int Corresponding Pegasus server error code
      */
-    static int get_rocksdb_server_error(int rocskdb_error);
+    static int get_rocksdb_server_error(int rocksdb_error);
 
 private:
     /**
