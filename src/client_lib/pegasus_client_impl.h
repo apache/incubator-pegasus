@@ -169,8 +169,8 @@ using async_scan_next_callback_t =
  *
  * Example usage:
  * @code
- * auto *client = pegasus::client::pegasus_client_factory::create_client(
- *     "cluster", "table", "config.ini");
+ * pegasus::client::pegasus_client_factory::initialize("config.ini");
+ * auto *client = pegasus::client::pegasus_client_factory::get_client("cluster", "table");
  * std::string value;
  * int rc = client->get("hash", "sort", value);
  * @endcode
