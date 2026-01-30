@@ -122,7 +122,7 @@ using async_incr_callback_t = std::function<void(int, std::string &&, int64_t)>;
  * @param results Result payload of the operation.
  */
 using async_check_and_set_callback_t =
-    std::function<void(int, std::string &&, check_and_set_results &&)>;
+    std::function<void(int, std::string &&, pegasus_client::check_and_set_results &&)>;
 
 /**
  * @brief Callback for async check-and-mutate operations.
@@ -131,7 +131,7 @@ using async_check_and_set_callback_t =
  * @param results Result payload of the operation.
  */
 using async_check_and_mutate_callback_t =
-    std::function<void(int, std::string &&, check_and_mutate_results &&)>;
+    std::function<void(int, std::string &&, pegasus_client::check_and_mutate_results &&)>;
 
 /**
  * @brief Callback for async scanner creation.
@@ -690,10 +690,9 @@ public:
      * @param options Scan options like sort direction
      * @param callback Callback function to handle the async result
      */
-    void async_get_unordered_scanners(
-        int max_split_count,
-        const scan_options &options,
-        async_get_unordered_scanners_callback_t &&callback) override;
+    void async_get_unordered_scanners(int max_split_count,
+                                      const scan_options &options,
+                                      async_get_unordered_scanners_callback_t &&callback) override;
 
     /**
      * @internal
@@ -890,10 +889,7 @@ private:
 
         void async_next(async_scan_next_callback_t &&callback) override;
 
-        int next(int32_t &count, internal_info *info) override
-        {
-            return _p->next(count, info);
-        }
+        int next(int32_t &count, internal_info *info) override { return _p->next(count, info); }
 
         int next(std::string &hashkey,
                  std::string &sortkey,

@@ -24,8 +24,8 @@ documentation on **macOS** and **Linux**.
 
 ## Directory Layout
 
-- `docs/doxygen/Doxyfile`: Preconfigured Doxygen configuration
-- `docs/doxygen/output/html`: Generated HTML output
+- `src/client_lib/doxygen/Doxyfile`: Preconfigured Doxygen configuration
+- `src/client_lib/doxygen/output/html`: Generated HTML output
 
 > If you update the C++ client headers or comments, re-run the generation command to
 > refresh the documentation.
@@ -56,11 +56,11 @@ doxygen -v
 Run this from the repository root:
 
 ```bash
-doxygen docs/doxygen/Doxyfile
+doxygen src/client_lib/doxygen/Doxyfile
 ```
 
 The generated HTML entry point is:
 
 ```
-docs/doxygen/output/html/index.html
+src/client_lib/doxygen/output/html/index.html
 ```
