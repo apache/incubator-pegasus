@@ -757,12 +757,17 @@ public:
 
         /**
          * @brief Asynchronously get next key-value pair from scanner.
-         * @param callback Callback function to handle the async result
-         * The callback parameters are:
+         * @param callback Callback function to handle the async result.
+         *
+         * The exact callback signature is defined by ::pegasus::client::async_scan_next_callback_t
+         * in pegasus/client.h. The callback parameters include:
          *   - error_code: Operation result code (0 for success)
          *   - hashkey: The hash key of the scanned item
          *   - sortkey: The sort key of the scanned item
          *   - value: The value of the scanned item
+         *   - internal_info: Optional internal information about the scanned item
+         *   - expire_ts_seconds: Expiration timestamp (in seconds) of the scanned item
+         *   - kv_count: Number of key-value pairs remaining in the current batch
          */
         void async_next(async_scan_next_callback_t &&callback) override;
 
