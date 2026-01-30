@@ -853,8 +853,6 @@ public:
         void _next_batch();
         void _on_scan_response(::dsn::error_code, dsn::message_ex *, dsn::message_ex *);
         void _split_reset();
-
-    private:
         static const char _holder[];
         static const ::dsn::blob _min;
         static const ::dsn::blob _max;
