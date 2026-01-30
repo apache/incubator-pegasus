@@ -52,8 +52,8 @@ class pegasus_client_impl;
  *
  * Typical usage:
  * @code
- * auto *client = pegasus::client::pegasus_client_factory::create_client(
- *     "cluster", "table", "config.ini");
+ * pegasus::client::pegasus_client_factory::initialize("config.ini");
+ * auto *client = pegasus::client::pegasus_client_factory::get_client("cluster", "table");
  * @endcode
  */
 class pegasus_client_factory_impl
