@@ -89,7 +89,7 @@ func NewPartitionDetector(cfg *PartitionDetectorConfig) (PartitionDetector, erro
 type partitionDetectorImpl struct {
 	cfg       *PartitionDetectorConfig
 	mtx       sync.RWMutex
-	analyzers map[partitionAnalyzerKey]*partitionAnalyzer // {-> partitionAnalyzer}
+	analyzers map[partitionAnalyzerKey]*partitionAnalyzer
 }
 
 func (d *partitionDetectorImpl) Run(tom *tomb.Tomb) error {
@@ -121,17 +121,17 @@ type appStats struct {
 	appName          string
 	partitionCount   int32
 	partitionConfigs []*replication.PartitionConfiguration
-	partitionStats   []map[string]float64 // {metric_name -> metric_value} for each partition.
+	partitionStats   []map[string]float64 // {metricName -> metricValue} for each partition.
 }
 
 func (d *partitionDetectorImpl) aggregate() error {
-	adminClient := client.NewClient(client.Config{
-		MetaServers: d.cfg.MetaServers,
-		Timeout:     d.cfg.RpcTimeout,
-	})
-	defer adminClient.Close()
+	// appMap includes the structures that hold all the final statistical values.
+	appMap, nodes, err := d.fetchMetadata()
+	if err != nil {
+		return err
+	}
 
-	appMap, err := d.aggregateMetrics(adminClient)
+	err = d.aggregateMetrics(appMap, nodes)
 	if err != nil {
 		return err
 	}
@@ -141,12 +141,22 @@ func (d *partitionDetectorImpl) aggregate() error {
 	return nil
 }
 
-// Pull metadata of all available tables with all their partitions and form the final structure
-// that includes all the statistical values.
-func pullTablePartitions(adminClient client.Client) (appStatsMap, error) {
+// Fetch necessary metadata from meta server for the aggregation of metrics, including:
+// - the metadata of all available tables with all their partitions, and
+// - the node information of all replica servers.
+// Also, the returned appStatsMap includes the structures that hold all the final
+// statistical values.
+func (d *partitionDetectorImpl) fetchMetadata() (appStatsMap, []*admin.NodeInfo, error) {
+	adminClient := client.NewClient(client.Config{
+		MetaServers: d.cfg.MetaServers,
+		Timeout:     d.cfg.RpcTimeout,
+	})
+	defer adminClient.Close()
+
+	// Fetch the information of all available tables.
 	tables, err := adminClient.ListTables()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	appMap := make(appStatsMap)
@@ -154,7 +164,7 @@ func pullTablePartitions(adminClient client.Client) (appStatsMap, error) {
 		// Query metadata for each partition of each table.
 		appID, partitionCount, partitionConfigs, err := adminClient.QueryConfig(table.AppName)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Initialize statistical value for each partition.
@@ -172,47 +182,43 @@ func pullTablePartitions(adminClient client.Client) (appStatsMap, error) {
 		}
 	}
 
-	return appMap, nil
+	// Fetch the node information of all replica servers.
+	nodes, err := adminClient.ListNodes()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return appMap, nodes, nil
 }
 
 type aggregator func(map[string]float64, string, float64)
 
-// Pull metrics from all nodes and aggregate them to produce the statistics.
-func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client) (appStatsMap, error) {
-	// appMap is the final structure that includes all the statistical values.
-	appMap, err := pullTablePartitions(adminClient)
-	if err != nil {
-		return nil, err
-	}
-
-	nodes, err := adminClient.ListNodes()
-	if err != nil {
-		return nil, err
-	}
-
-	// Pull multiple results of metrics to perform cumulative calculation to produce the
-	// statistics such as QPS.
+// Pull metric samples from nodes and aggregate them to produce the final statistical results
+// into appMap.
+func (d *partitionDetectorImpl) aggregateMetrics(appMap appStatsMap, nodes []*admin.NodeInfo) error {
+	// Pull multiple samples of metrics to perform cumulative calculation to produce the
+	// statistical results such as QPS.
 	startSnapshots, err := d.pullMetrics(nodes)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	time.Sleep(d.cfg.SampleMetricsInterval)
 
 	endSnapshots, err := d.pullMetrics(nodes)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for i, snapshot := range endSnapshots {
 		if snapshot.TimestampNS <= startSnapshots[i].TimestampNS {
-			return nil, fmt.Errorf("end timestamp (%d) must be greater than start timestamp (%d)",
+			return fmt.Errorf("end timestamp (%d) must be greater than start timestamp (%d)",
 				snapshot.TimestampNS, startSnapshots[i].TimestampNS)
 		}
 
 		d.calculateStats(snapshot, nodes[i],
 			func(stats map[string]float64, key string, operand float64) {
-				// Just set the ending number of requests.
+				// Just set the number of requests with ending snapshot.
 				stats[key] = operand
 			},
 			appMap)
@@ -228,7 +234,7 @@ func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client) (app
 						return
 					}
 
-					// Calculate QPS based on the ending number of requests that have been
+					// Calculate QPS based on ending snapshot that have been
 					// set previously.
 					stats[key] = (value - operand) / duration.Seconds()
 				}
@@ -236,7 +242,7 @@ func (d *partitionDetectorImpl) aggregateMetrics(adminClient client.Client) (app
 			appMap)
 	}
 
-	return appMap, nil
+	return nil
 }
 
 var (
@@ -405,6 +411,7 @@ func (d *partitionDetectorImpl) addHotspotStats(appMap appStatsMap) {
 		analyzer, ok := d.analyzers[key]
 		if !ok {
 			analyzer = newPartitionAnalyzer(d.cfg.MaxSampleSize)
+			d.analyzers[key] = analyzer
 		}
 
 		analyzer.add(value)
