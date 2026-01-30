@@ -61,102 +61,22 @@ namespace pegasus::client {
 class pegasus_scanner;
 class abstract_pegasus_scanner;
 
-/**
- * @brief Callback for async set operations.
- * @param err Operation result code (0 for success).
- * @param hashkey Hash key of the request.
- * @param sortkey Sort key of the request.
- * @param value Value passed to set.
- */
-using async_set_callback_t =
-    std::function<void(int, std::string &&, std::string &&, std::string &&)>;
-
-/**
- * @brief Callback for async get operations.
- * @param err Operation result code (0 for success).
- * @param hashkey Hash key of the request.
- * @param sortkey Sort key of the request.
- * @param value Retrieved value.
- */
-using async_get_callback_t =
-    std::function<void(int, std::string &&, std::string &&, std::string &&)>;
-
-/**
- * @brief Callback for async multi-get operations.
- * @param err Operation result code (0 for success).
- * @param hashkey Hash key of the request.
- * @param values Retrieved key-value map.
- */
-using async_multi_get_callback_t =
-    std::function<void(int, std::string &&, std::map<std::string, std::string> &&)>;
-
-/**
- * @brief Callback for async multi-get sortkeys operations.
- * @param err Operation result code (0 for success).
- * @param hashkey Hash key of the request.
- * @param sortkeys Retrieved sort key set.
- */
+// Reuse callback aliases from pegasus_client to keep the public API consistent in Doxygen.
+using async_set_callback_t = pegasus_client::async_set_callback_t;
+using async_multi_set_callback_t = pegasus_client::async_multi_set_callback_t;
+using async_get_callback_t = pegasus_client::async_get_callback_t;
+using async_multi_get_callback_t = pegasus_client::async_multi_get_callback_t;
 using async_multi_get_sortkeys_callback_t =
-    std::function<void(int, std::string &&, std::set<std::string> &&)>;
-
-/**
- * @brief Callback for async delete operations.
- * @param err Operation result code (0 for success).
- * @param hashkey Hash key of the request.
- * @param sortkey Sort key of the request.
- */
-using async_del_callback_t = std::function<void(int, std::string &&, std::string &&)>;
-
-/**
- * @brief Callback for async increment operations.
- * @param err Operation result code (0 for success).
- * @param sortkey Sort key of the request.
- * @param new_value Value after increment.
- */
-using async_incr_callback_t = std::function<void(int, std::string &&, int64_t)>;
-
-/**
- * @brief Callback for async check-and-set operations.
- * @param err Operation result code (0 for success).
- * @param hashkey Hash key of the request.
- * @param results Result payload of the operation.
- */
-using async_check_and_set_callback_t =
-    std::function<void(int, std::string &&, pegasus_client::check_and_set_results &&)>;
-
-/**
- * @brief Callback for async check-and-mutate operations.
- * @param err Operation result code (0 for success).
- * @param hashkey Hash key of the request.
- * @param results Result payload of the operation.
- */
-using async_check_and_mutate_callback_t =
-    std::function<void(int, std::string &&, pegasus_client::check_and_mutate_results &&)>;
-
-/**
- * @brief Callback for async scanner creation.
- * @param err Operation result code (0 for success).
- * @param scanner Newly created scanner instance.
- */
-using async_get_scanner_callback_t = std::function<void(int, pegasus_scanner *)>;
-
-/**
- * @brief Callback for async unordered scanner creation.
- * @param err Operation result code (0 for success).
- * @param scanners List of scanners for parallel scan.
- */
+    pegasus_client::async_multi_get_sortkeys_callback_t;
+using async_del_callback_t = pegasus_client::async_del_callback_t;
+using async_multi_del_callback_t = pegasus_client::async_multi_del_callback_t;
+using async_incr_callback_t = pegasus_client::async_incr_callback_t;
+using async_check_and_set_callback_t = pegasus_client::async_check_and_set_callback_t;
+using async_check_and_mutate_callback_t = pegasus_client::async_check_and_mutate_callback_t;
+using async_scan_next_callback_t = pegasus_client::async_scan_next_callback_t;
+using async_get_scanner_callback_t = pegasus_client::async_get_scanner_callback_t;
 using async_get_unordered_scanners_callback_t =
-    std::function<void(int, std::vector<pegasus_scanner *> &&)>;
-
-/**
- * @brief Callback for async scanner next calls.
- * @param err Operation result code (0 for success).
- * @param hashkey Hash key of the scanned record.
- * @param sortkey Sort key of the scanned record.
- * @param value Value of the scanned record.
- */
-using async_scan_next_callback_t =
-    std::function<void(int, std::string &&, std::string &&, std::string &&)>;
+    pegasus_client::async_get_unordered_scanners_callback_t;
 
 /**
  * @brief The implementation class of Pegasus client.
@@ -186,18 +106,22 @@ public:
      */
     pegasus_client_impl(const char *cluster_name, const char *app_name);
     ~pegasus_client_impl() override;
+    pegasus_client_impl(const pegasus_client_impl &) = delete;
+    pegasus_client_impl &operator=(const pegasus_client_impl &) = delete;
+    pegasus_client_impl(pegasus_client_impl &&) = delete;
+    pegasus_client_impl &operator=(pegasus_client_impl &&) = delete;
 
     /**
      * @brief Get the cluster name this client is connected to
      * @return const char* The cluster name
      */
-    const char *get_cluster_name() const override;
+    [[nodiscard]] const char *get_cluster_name() const override;
 
     /**
      * @brief Get the table (app) name this client is operating on
      * @return const char* The table name
      */
-    const char *get_app_name() const override;
+    [[nodiscard]] const char *get_app_name() const override;
 
     /**
      * @brief Set a key-value pair in Pegasus
@@ -213,9 +137,9 @@ public:
     int set(const std::string &hashkey,
             const std::string &sortkey,
             const std::string &value,
-            int timeout_milliseconds = 5000,
-            int ttl_seconds = 0,
-            internal_info *info = nullptr) override;
+            int timeout_milliseconds,
+            int ttl_seconds,
+            internal_info *info) override;
 
     /**
      * @brief Asynchronously set a key-value pair in Pegasus
@@ -230,9 +154,9 @@ public:
     void async_set(const std::string &hashkey,
                    const std::string &sortkey,
                    const std::string &value,
-                   async_set_callback_t &&callback = nullptr,
-                   int timeout_milliseconds = 5000,
-                   int ttl_seconds = 0) override;
+                   async_set_callback_t &&callback,
+                   int timeout_milliseconds,
+                   int ttl_seconds) override;
 
     /**
      * @brief Set multiple key-value pairs in batch
@@ -246,9 +170,9 @@ public:
      */
     int multi_set(const std::string &hashkey,
                   const std::map<std::string, std::string> &kvs,
-                  int timeout_milliseconds = 5000,
-                  int ttl_seconds = 0,
-                  internal_info *info = nullptr) override;
+                  int timeout_milliseconds,
+                  int ttl_seconds,
+                  internal_info *info) override;
 
     /**
      * @brief Asynchronously set multiple key-value pairs in batch
@@ -261,9 +185,9 @@ public:
      */
     void async_multi_set(const std::string &hashkey,
                          const std::map<std::string, std::string> &kvs,
-                         async_multi_set_callback_t &&callback = nullptr,
-                         int timeout_milliseconds = 5000,
-                         int ttl_seconds = 0) override;
+                         async_multi_set_callback_t &&callback,
+                         int timeout_milliseconds,
+                         int ttl_seconds) override;
 
     /**
      * @brief Get a value from Pegasus
@@ -278,8 +202,8 @@ public:
     int get(const std::string &hashkey,
             const std::string &sortkey,
             std::string &value,
-            int timeout_milliseconds = 5000,
-            internal_info *info = nullptr) override;
+            int timeout_milliseconds,
+            internal_info *info) override;
 
     /**
      * @brief Asynchronously get a value from Pegasus
@@ -291,8 +215,8 @@ public:
      */
     void async_get(const std::string &hashkey,
                    const std::string &sortkey,
-                   async_get_callback_t &&callback = nullptr,
-                   int timeout_milliseconds = 5000) override;
+                   async_get_callback_t &&callback,
+                   int timeout_milliseconds) override;
 
     /**
      * @brief Get multiple values by sort keys
@@ -309,10 +233,10 @@ public:
     int multi_get(const std::string &hashkey,
                   const std::set<std::string> &sortkeys,
                   std::map<std::string, std::string> &values,
-                  int max_fetch_count = 100,
-                  int max_fetch_size = 1000000,
-                  int timeout_milliseconds = 5000,
-                  internal_info *info = nullptr) override;
+                  int max_fetch_count,
+                  int max_fetch_size,
+                  int timeout_milliseconds,
+                  internal_info *info) override;
 
     /**
      * @brief Asynchronously get multiple values by sort keys
@@ -326,10 +250,10 @@ public:
      */
     void async_multi_get(const std::string &hashkey,
                          const std::set<std::string> &sortkeys,
-                         async_multi_get_callback_t &&callback = nullptr,
-                         int max_fetch_count = 100,
-                         int max_fetch_size = 1000000,
-                         int timeout_milliseconds = 5000) override;
+                         async_multi_get_callback_t &&callback,
+                         int max_fetch_count,
+                         int max_fetch_size,
+                         int timeout_milliseconds) override;
 
     /**
      * @brief Get multiple values by sort key range
@@ -350,10 +274,10 @@ public:
                   const std::string &stop_sortkey,
                   const multi_get_options &options,
                   std::map<std::string, std::string> &values,
-                  int max_fetch_count = 100,
-                  int max_fetch_size = 1000000,
-                  int timeout_milliseconds = 5000,
-                  internal_info *info = nullptr) override;
+                  int max_fetch_count,
+                  int max_fetch_size,
+                  int timeout_milliseconds,
+                  internal_info *info) override;
 
     /**
      * @brief Asynchronously get multiple values by sort key range
@@ -371,10 +295,10 @@ public:
                          const std::string &start_sortkey,
                          const std::string &stop_sortkey,
                          const multi_get_options &options,
-                         async_multi_get_callback_t &&callback = nullptr,
-                         int max_fetch_count = 100,
-                         int max_fetch_size = 1000000,
-                         int timeout_milliseconds = 5000) override;
+                         async_multi_get_callback_t &&callback,
+                         int max_fetch_count,
+                         int max_fetch_size,
+                         int timeout_milliseconds) override;
 
     /**
      * @brief Get multiple sort keys for a hash key
@@ -389,10 +313,10 @@ public:
      */
     int multi_get_sortkeys(const std::string &hashkey,
                            std::set<std::string> &sortkeys,
-                           int max_fetch_count = 100,
-                           int max_fetch_size = 1000000,
-                           int timeout_milliseconds = 5000,
-                           internal_info *info = nullptr) override;
+                           int max_fetch_count,
+                           int max_fetch_size,
+                           int timeout_milliseconds,
+                           internal_info *info) override;
 
     /**
      * @brief Asynchronously get multiple sort keys
@@ -404,10 +328,10 @@ public:
      * @param timeout_milliseconds Operation timeout in milliseconds (default 5000)
      */
     void async_multi_get_sortkeys(const std::string &hashkey,
-                                  async_multi_get_sortkeys_callback_t &&callback = nullptr,
-                                  int max_fetch_count = 100,
-                                  int max_fetch_size = 1000000,
-                                  int timeout_milliseconds = 5000) override;
+                                  async_multi_get_sortkeys_callback_t &&callback,
+                                  int max_fetch_count,
+                                  int max_fetch_size,
+                                  int timeout_milliseconds) override;
 
     /**
      * @brief Check if a key-value pair exists
@@ -420,8 +344,8 @@ public:
      */
     int exist(const std::string &hashkey,
               const std::string &sortkey,
-              int timeout_milliseconds = 5000,
-              internal_info *info = nullptr) override;
+              int timeout_milliseconds,
+              internal_info *info) override;
 
     /**
      * @brief Get count of sort keys for a hash key
@@ -434,8 +358,8 @@ public:
      */
     int sortkey_count(const std::string &hashkey,
                       int64_t &count,
-                      int timeout_milliseconds = 5000,
-                      internal_info *info = nullptr) override;
+                      int timeout_milliseconds,
+                      internal_info *info) override;
 
     /**
      * @brief Delete a key-value pair
@@ -448,8 +372,8 @@ public:
      */
     int del(const std::string &hashkey,
             const std::string &sortkey,
-            int timeout_milliseconds = 5000,
-            internal_info *info = nullptr) override;
+            int timeout_milliseconds,
+            internal_info *info) override;
 
     /**
      * @brief Asynchronously delete a key-value pair
@@ -461,8 +385,8 @@ public:
      */
     void async_del(const std::string &hashkey,
                    const std::string &sortkey,
-                   async_del_callback_t &&callback = nullptr,
-                   int timeout_milliseconds = 5000) override;
+                   async_del_callback_t &&callback,
+                   int timeout_milliseconds) override;
 
     /**
      * @brief Delete multiple key-value pairs
@@ -477,8 +401,8 @@ public:
     int multi_del(const std::string &hashkey,
                   const std::set<std::string> &sortkeys,
                   int64_t &deleted_count,
-                  int timeout_milliseconds = 5000,
-                  internal_info *info = nullptr) override;
+                  int timeout_milliseconds,
+                  internal_info *info) override;
 
     /**
      * @brief Asynchronously delete multiple key-value pairs
@@ -490,8 +414,8 @@ public:
      */
     void async_multi_del(const std::string &hashkey,
                          const std::set<std::string> &sortkeys,
-                         async_multi_del_callback_t &&callback = nullptr,
-                         int timeout_milliseconds = 5000) override;
+                         async_multi_del_callback_t &&callback,
+                         int timeout_milliseconds) override;
 
     /**
      * @brief Increment a counter value
@@ -509,9 +433,9 @@ public:
              const std::string &sortkey,
              int64_t increment,
              int64_t &new_value,
-             int timeout_milliseconds = 5000,
-             int ttl_seconds = 0,
-             internal_info *info = nullptr) override;
+             int timeout_milliseconds,
+             int ttl_seconds,
+             internal_info *info) override;
 
     /**
      * @brief Asynchronously increment a counter value
@@ -526,9 +450,9 @@ public:
     void async_incr(const std::string &hashkey,
                     const std::string &sortkey,
                     int64_t increment,
-                    async_incr_callback_t &&callback = nullptr,
-                    int timeout_milliseconds = 5000,
-                    int ttl_seconds = 0) override;
+                    async_incr_callback_t &&callback,
+                    int timeout_milliseconds,
+                    int ttl_seconds) override;
 
     /**
      * @brief Atomically check and set a value (CAS operation)
@@ -553,8 +477,8 @@ public:
                       const std::string &set_value,
                       const check_and_set_options &options,
                       check_and_set_results &results,
-                      int timeout_milliseconds = 5000,
-                      internal_info *info = nullptr) override;
+                      int timeout_milliseconds,
+                      internal_info *info) override;
 
     /**
      * @brief Asynchronously atomically check and set a value (CAS operation)
@@ -576,8 +500,8 @@ public:
                              const std::string &set_sort_key,
                              const std::string &set_value,
                              const check_and_set_options &options,
-                             async_check_and_set_callback_t &&callback = nullptr,
-                             int timeout_milliseconds = 5000) override;
+                             async_check_and_set_callback_t &&callback,
+                             int timeout_milliseconds) override;
 
     /**
      * @brief Atomically check and perform multiple mutations
@@ -600,8 +524,8 @@ public:
                          const mutations &mutations,
                          const check_and_mutate_options &options,
                          check_and_mutate_results &results,
-                         int timeout_milliseconds = 5000,
-                         internal_info *info = nullptr) override;
+                         int timeout_milliseconds,
+                         internal_info *info) override;
 
     /**
      * @brief Asynchronously atomically check and perform multiple mutations
@@ -621,8 +545,8 @@ public:
                                 const std::string &check_operand,
                                 const mutations &mutations,
                                 const check_and_mutate_options &options,
-                                async_check_and_mutate_callback_t &&callback = nullptr,
-                                int timeout_milliseconds = 5000) override;
+                                async_check_and_mutate_callback_t &&callback,
+                                int timeout_milliseconds) override;
 
     /**
      * @brief Get time-to-live (TTL) for a key-value pair
@@ -637,8 +561,8 @@ public:
     int ttl(const std::string &hashkey,
             const std::string &sortkey,
             int &ttl_seconds,
-            int timeout_milliseconds = 5000,
-            internal_info *info = nullptr) override;
+            int timeout_milliseconds,
+            internal_info *info) override;
 
     /**
      * @brief Get a scanner for range query
