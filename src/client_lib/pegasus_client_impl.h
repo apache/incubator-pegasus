@@ -58,9 +58,6 @@ class task_tracker;
 namespace pegasus::client {
 
 // Forward declarations
-struct internal_info;
-struct check_and_set_results;
-struct check_and_mutate_results;
 class pegasus_scanner;
 class abstract_pegasus_scanner;
 
