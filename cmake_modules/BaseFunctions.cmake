@@ -360,10 +360,15 @@ function(dsn_setup_thirdparty_libs)
   endif()
   find_package(RocksDB REQUIRED)
 
-  # libhdfs
-  find_package(JNI REQUIRED)
-  message (STATUS "JAVA_JVM_LIBRARY=${JAVA_JVM_LIBRARY}")
-  link_libraries(${JAVA_JVM_LIBRARY})
+  # Enable access to HDFS:
+  # 1. libhdfs is used by block service to access HDFS.
+  # 2. The RocksDB HDFS plugin (rocksdb-hdfs-env) in thirdparty relies on ${JAVA_HOME}
+  # and ${HADOOP_HOME} environment variables to locate the libraries to link against.
+  message(STATUS "JAVA_HOME = ${JAVA_HOME}")
+  message(STATUS "HADOOP_HOME = ${HADOOP_HOME}")
+  link_directories(${JAVA_HOME}/jre/lib/amd64/server)
+  link_directories(${JAVA_HOME}/jre/lib/amd64)
+  link_directories(${HADOOP_HOME}/lib/native)
 
   find_package(OpenSSL REQUIRED)
   include_directories(${OPENSSL_INCLUDE_DIR})

@@ -1,0 +1,21 @@
+diff --git a/env_hdfs_impl.cc b/env_hdfs_impl.cc
+index 01574bc..3927e5d 100644
+--- a/env_hdfs_impl.cc
++++ b/env_hdfs_impl.cc
+@@ -14,6 +14,7 @@
+ #include <iostream>
+ #include <sstream>
+ #include "logging/logging.h"
++#include "port/sys_time.h"
+ #include "rocksdb/status.h"
+ #include "util/string_util.h"
+ 
+@@ -524,7 +525,7 @@ IOStatus HdfsFileSystem::FileExists(const std::string& fname,
+     default:  // anything else should be an error
+       ROCKS_LOG_FATAL(mylog, "FileExists hdfsExists call failed");
+       return IOStatus::IOError("hdfsExists call failed with error " +
+-                               ROCKSDB_NAMESPACE::ToString(value) + " on path " + fname + ".\n");
++                               std::to_string(value) + " on path " + fname + ".\n");
+   }
+ }
+ 

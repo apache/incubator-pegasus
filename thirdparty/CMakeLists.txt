@@ -502,7 +502,7 @@ set(ROCKSDB_OPTIONS
 if (NOT APPLE)
     set(ROCKSDB_OPTIONS
             ${ROCKSDB_OPTIONS}
-            -DROCKSDB_PLUGINS=encfs)
+            "-DROCKSDB_PLUGINS=encfs hdfs")
 endif ()
 ExternalProject_Add(rocksdb
         URL ${OSS_URL_PREFIX}/rocksdb-v8.5.3.tar.gz
@@ -511,6 +511,9 @@ ExternalProject_Add(rocksdb
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_rocksdb-cmake-PORTABLE-option.patch
         COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
         COMMAND git clone -b main --depth=1 https://github.com/pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
+        COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/hdfs
+        COMMAND git clone -b master --depth=1 https://github.com/riversand963/rocksdb-hdfs-env.git ${TP_DIR}/build/Source/rocksdb/plugin/hdfs
+        COMMAND cd ${TP_DIR}/build/Source/rocksdb/plugin/hdfs && patch -p1 < ${TP_DIR}/fix_rocksdb-plugin-hdfs.patch
         DEPENDS googletest jemalloc lz4 snappy zstd
         CMAKE_ARGS ${ROCKSDB_OPTIONS}
         DOWNLOAD_EXTRACT_TIMESTAMP true
