@@ -21,12 +21,12 @@
 #include <fmt/format.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
 #include <algorithm>
+#include <cinttypes>
 #include <cstdint>
-#include <inttypes.h>
+#include <cstdio>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <ostream>
-#include <stdio.h>
 #include <type_traits>
 #include <unordered_map>
 
@@ -86,7 +86,7 @@ pc_status partition_guardian::cure(meta_view view,
     CHECK(app->is_stateful, "");
     CHECK(acts.empty(), "");
 
-    pc_status status;
+    pc_status status{0};
     host_port primary;
     GET_HOST_PORT(pc, primary, primary);
     std::vector<host_port> secondaries;
@@ -581,7 +581,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
                  gpid,
                  oss.str(),
                  cc.prefered_dropped);
-        if (cc.prefered_dropped < 0 || cc.prefered_dropped >= (int)cc.dropped.size()) {
+        if (cc.prefered_dropped < 0 || cc.prefered_dropped >= static_cast<int>(cc.dropped.size())) {
             LOG_INFO("gpid({}): prefered_dropped({}) is invalid according to "
                      "drop_list(size {}), "
                      "reset it to {} (drop_list.size - 1)",
