@@ -20,6 +20,7 @@
 package base
 
 import (
+	"fmt"
 	"net"
 	"testing"
 
@@ -27,18 +28,61 @@ import (
 )
 
 func TestRPCAddress(t *testing.T) {
-	testCases := []string{
+	tests := []string{
 		"127.0.0.1:8080",
 		"192.168.0.1:123",
 		"0.0.0.0:12345",
 	}
 
-	for _, ts := range testCases {
-		tcpAddrStr := ts
-		addr, err := net.ResolveTCPAddr("tcp", tcpAddrStr)
-		assert.NoError(t, err)
+	runner := func(test string) func(t *testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
 
-		rpcAddr := NewRPCAddress(addr.IP, addr.Port)
-		assert.Equal(t, rpcAddr.GetAddress(), tcpAddrStr)
+			addr, err := net.ResolveTCPAddr("tcp", test)
+			assert.NoError(t, err)
+
+			rpcAddr := NewRPCAddress(addr.IP, addr.Port)
+			assert.Equal(t, test, rpcAddr.GetAddress())
+			assert.True(t, rpcAddr.Equal(rpcAddr))
+		}
+	}
+
+	for _, test := range tests {
+		t.Run(test, runner(test))
+	}
+}
+
+func TestRPCAddressEquality(t *testing.T) {
+	tests := []struct {
+		x     string
+		y     string
+		equal bool
+	}{
+		{"127.0.0.1:8080", "127.0.0.1:8080", true},
+		{"127.0.0.1:8080", "192.168.0.1:8080", false},
+		{"127.0.0.1:8080", "127.0.0.1:8081", false},
+	}
+
+	runner := func(x string, y string, equal bool) func(t *testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
+
+			addrX, err := net.ResolveTCPAddr("tcp", x)
+			assert.NoError(t, err)
+
+			addrY, err := net.ResolveTCPAddr("tcp", y)
+			assert.NoError(t, err)
+
+			rpcAddrX := NewRPCAddress(addrX.IP, addrX.Port)
+			rpcAddrY := NewRPCAddress(addrY.IP, addrY.Port)
+
+			assert.Equal(t, equal, rpcAddrX.Equal(rpcAddrY))
+			assert.Equal(t, equal, rpcAddrY.Equal(rpcAddrX))
+		}
+	}
+
+	for _, test := range tests {
+		name := fmt.Sprintf("%s-vs-%s", test.x, test.y)
+		t.Run(name, runner(test.x, test.y, test.equal))
 	}
 }
