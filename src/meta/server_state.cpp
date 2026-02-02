@@ -1757,15 +1757,15 @@ void server_state::request_check(const partition_configuration &old_pc,
     switch (request.type) {
     case config_type::CT_ASSIGN_PRIMARY:
         CHECK_NE(old_primary, req_node);
-        CHECK(utils::contains(old_secondaries, req_node), "");
+        CHECK(!utils::contains(old_secondaries, req_node), "");
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
         CHECK_NE(old_primary, req_node);
         CHECK(utils::contains(old_secondaries, req_node), "");
         break;
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        CHECK_NE(old_primary, req_node);
-        CHECK(utils::contains(old_secondaries, req_node), "");
+        CHECK_EQ(old_primary, req_node);
+        CHECK(!utils::contains(old_secondaries, req_node), "");
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
     case config_type::CT_REMOVE:
