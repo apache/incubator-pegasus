@@ -82,7 +82,8 @@ func NewPartitionDetector(cfg *PartitionDetectorConfig) (PartitionDetector, erro
 	}
 
 	return &partitionDetectorImpl{
-		cfg: cfg,
+		cfg:       cfg,
+		analyzers: make(map[partitionAnalyzerKey]*partitionAnalyzer),
 	}, nil
 }
 
