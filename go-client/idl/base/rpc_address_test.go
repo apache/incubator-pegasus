@@ -27,6 +27,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func testNewRPCAddress(t *testing.T, addrStr string) *RPCAddress {
+	addr, err := net.ResolveTCPAddr("tcp", addrStr)
+	assert.NoError(t, err)
+
+	rpcAddr := NewRPCAddress(addr.IP, addr.Port)
+	assert.Equal(t, addrStr, rpcAddr.GetAddress())
+	assert.True(t, rpcAddr.Equal(rpcAddr))
+
+	return rpcAddr
+}
+
 func TestRPCAddress(t *testing.T) {
 	tests := []string{
 		"127.0.0.1:8080",
@@ -38,17 +49,13 @@ func TestRPCAddress(t *testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
 
-			addr, err := net.ResolveTCPAddr("tcp", test)
-			assert.NoError(t, err)
-
-			rpcAddr := NewRPCAddress(addr.IP, addr.Port)
-			assert.Equal(t, test, rpcAddr.GetAddress())
-			assert.True(t, rpcAddr.Equal(rpcAddr))
+			testNewRPCAddress(t, test)
 		}
 	}
 
 	for _, test := range tests {
-		t.Run(test, runner(test))
+		name := fmt.Sprintf("<%s>", test)
+		t.Run(name, runner(test))
 	}
 }
 
@@ -67,14 +74,8 @@ func TestRPCAddressEquality(t *testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
 
-			addrX, err := net.ResolveTCPAddr("tcp", x)
-			assert.NoError(t, err)
-
-			addrY, err := net.ResolveTCPAddr("tcp", y)
-			assert.NoError(t, err)
-
-			rpcAddrX := NewRPCAddress(addrX.IP, addrX.Port)
-			rpcAddrY := NewRPCAddress(addrY.IP, addrY.Port)
+			rpcAddrX := testNewRPCAddress(t, x)
+			rpcAddrY := testNewRPCAddress(t, y)
 
 			assert.Equal(t, equal, rpcAddrX.Equal(rpcAddrY))
 			assert.Equal(t, equal, rpcAddrY.Equal(rpcAddrX))
@@ -82,7 +83,7 @@ func TestRPCAddressEquality(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name := fmt.Sprintf("%s-vs-%s", test.x, test.y)
+		name := fmt.Sprintf("<%s>-vs-<%s>", test.x, test.y)
 		t.Run(name, runner(test.x, test.y, test.equal))
 	}
 }

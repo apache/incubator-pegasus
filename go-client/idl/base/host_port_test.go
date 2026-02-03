@@ -27,9 +27,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func stringify(host string, port uint16) string {
+	return fmt.Sprintf("<%s:%d>", host, port)
+}
+
 func TestHostPort(t *testing.T) {
 	tests := map[string]uint16{
-		"localhost": 8080,
+		"localhost":          8080,
+		"pegasus.apache.org": 443,
 	}
 
 	runner := func(host string, port uint16) func(t *testing.T) {
@@ -59,8 +64,7 @@ func TestHostPort(t *testing.T) {
 	}
 
 	for host, port := range tests {
-		name := fmt.Sprintf("%s:%d", host, port)
-		t.Run(name, runner(host, port))
+		t.Run(stringify(host, port), runner(host, port))
 	}
 }
 
@@ -76,12 +80,15 @@ func TestHostPortEquality(t *testing.T) {
 	}
 	tests := []testCase{
 		{hpCase{"localhost", 8080}, hpCase{"localhost", 8080}, true},
-		{hpCase{"localhost", 8080}, hpCase{"abc.def", 8080}, false},
+		{hpCase{"localhost", 8080}, hpCase{"pegasus.apache.org", 8080}, false},
 		{hpCase{"localhost", 8080}, hpCase{"localhost", 8081}, false},
 	}
 
-	stringify := func(hp hpCase) string {
-		return fmt.Sprintf("<%s:%d>", hp.host, hp.port)
+	testName := func(hpX hpCase, hpY hpCase) string {
+		hpName := func(hp hpCase) string {
+			return stringify(hp.host, hp.port)
+		}
+		return fmt.Sprintf("%s-vs-%s", hpName(hpX), hpName(hpY))
 	}
 
 	runner := func(test testCase) func(t *testing.T) {
@@ -97,7 +104,6 @@ func TestHostPortEquality(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name := fmt.Sprintf("%s-vs-%s", stringify(test.x), stringify(test.y))
-		t.Run(name, runner(test))
+		t.Run(testName(test.x, test.y), runner(test))
 	}
 }
