@@ -27,6 +27,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func testNewHostPort(t *testing.T, host string, port uint16) *HostPort {
+	hp := NewHostPort(host, port)
+	assert.Equal(t, host, hp.GetHost())
+	assert.Equal(t, port, hp.GetPort())
+	assert.True(t, hp.Equal(hp))
+
+	return hp
+}
+
 func stringify(host string, port uint16) string {
 	return fmt.Sprintf("<%s:%d>", host, port)
 }
@@ -41,10 +50,7 @@ func TestHostPort(t *testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
 
-			hp := NewHostPort(host, port)
-			assert.Equal(t, host, hp.GetHost())
-			assert.Equal(t, port, hp.GetPort())
-			assert.True(t, hp.Equal(hp))
+			hp := testNewHostPort(t, host, port)
 
 			// Test serialization.
 			buf := thrift.NewTMemoryBuffer()
@@ -95,8 +101,8 @@ func TestHostPortEquality(t *testing.T) {
 		return func(t *testing.T) {
 			t.Parallel()
 
-			hpX := NewHostPort(test.x.host, test.x.port)
-			hpY := NewHostPort(test.y.host, test.y.port)
+			hpX := testNewHostPort(t, test.x.host, test.x.port)
+			hpY := testNewHostPort(t, test.y.host, test.y.port)
 
 			assert.Equal(t, test.equal, hpX.Equal(hpY))
 			assert.Equal(t, test.equal, hpY.Equal(hpX))
