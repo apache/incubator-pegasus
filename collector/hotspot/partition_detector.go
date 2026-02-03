@@ -136,7 +136,7 @@ func (d *partitionDetectorImpl) aggregate() error {
 		return err
 	}
 
-	d.addHotspotStats(appMap)
+	d.addHotspotSamples(appMap)
 
 	return nil
 }
@@ -363,6 +363,8 @@ func (d *partitionDetectorImpl) calculateStats(
 	}
 }
 
+// Since the partition number of a table might be changed, use (appID, partitionCount)
+// pair as the key for each table.
 type partitionAnalyzerKey struct {
 	appID          int32
 	partitionCount int32
@@ -374,34 +376,46 @@ const (
 	operateHotspotDataNumber
 )
 
+// hotspotPartitionStats holds all the statistical values of each partition, used for analysis
+// of hotspot partitions.
 type hotspotPartitionStats struct {
 	totalQPS [operateHotspotDataNumber]float64
 }
 
+// Receive statistical values of all kinds of reads and writes, and by aggregating them we
+// can obtain the overall statistics of reads and writes.
 func calculateHotspotStats(appMap appStatsMap) map[partitionAnalyzerKey][]hotspotPartitionStats {
 	results := make(map[partitionAnalyzerKey][]hotspotPartitionStats)
 	for appID, stats := range appMap {
-		value := make([]hotspotPartitionStats, 0, len(stats.partitionStats))
+		partitionCount := len(stats.partitionStats)
+		value := make([]hotspotPartitionStats, 0, partitionCount)
 
 		for _, partitionStats := range stats.partitionStats {
 			var hotspotStats hotspotPartitionStats
+
+			// Calculate total QPS over all kinds of reads.
 			for _, metricName := range readMetricNames {
 				hotspotStats.totalQPS[readHotspotData] += partitionStats[metricName]
 			}
+
+			// Calculate total QPS over all kinds of writes.
 			for _, metricName := range writeMetricNames {
 				hotspotStats.totalQPS[writeHotspotData] += partitionStats[metricName]
 			}
+
 			value = append(value, hotspotStats)
 		}
 
-		key := partitionAnalyzerKey{appID: appID, partitionCount: int32(len(stats.partitionStats))}
+		key := partitionAnalyzerKey{appID: appID, partitionCount: int32(partitionCount)}
 		results[key] = value
 	}
 
 	return results
 }
 
-func (d *partitionDetectorImpl) addHotspotStats(appMap appStatsMap) {
+// Calculate statistical values over multiples tables with all partitions of each table as
+// a sample used for future analysis of hotspot partitions.
+func (d *partitionDetectorImpl) addHotspotSamples(appMap appStatsMap) {
 	hotspotMap := calculateHotspotStats(appMap)
 
 	d.mtx.Lock()
@@ -414,7 +428,7 @@ func (d *partitionDetectorImpl) addHotspotStats(appMap appStatsMap) {
 			d.analyzers[key] = analyzer
 		}
 
-		analyzer.add(value)
+		analyzer.addSample(value)
 	}
 }
 
@@ -422,12 +436,16 @@ func newPartitionAnalyzer(maxSampleSize int) *partitionAnalyzer {
 	return &partitionAnalyzer{maxSampleSize: maxSampleSize}
 }
 
+// partitionAnalyzer holds the samples for all partitions of a table and analyses hotspot
+// partitions based on them.
 type partitionAnalyzer struct {
+	// TODO(wangdan): bump gammazero/deque to the lastest version after upgrading Go to 1.23+,
+	// since older Go versions do not support the `Deque.Iter()` iterator interface.
 	maxSampleSize int
-	samples       deque.Deque[[]hotspotPartitionStats]
+	samples       deque.Deque[[]hotspotPartitionStats] // Each element is a sample of all partitions of the table
 }
 
-func (a *partitionAnalyzer) add(sample []hotspotPartitionStats) {
+func (a *partitionAnalyzer) addSample(sample []hotspotPartitionStats) {
 	for a.samples.Len() >= a.maxSampleSize {
 		a.samples.PopFront()
 	}
