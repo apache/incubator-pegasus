@@ -325,6 +325,48 @@ function(dsn_setup_include_path)#TODO(huangwei5): remove this
   include_directories(${THIRDPARTY_INSTALL_DIR}/include)
 endfunction(dsn_setup_include_path)
 
+function(dsn_setup_java_libs)
+  if (NOT DEFINED JAVA_HOME)
+    message(FATAL_ERROR "JAVA_HOME is not defined. Please configure with -DJAVA_HOME=...")
+  endif()
+
+  if (NOT EXISTS "${JAVA_HOME}")
+    message(FATAL_ERROR "JAVA_HOME does not exist: ${JAVA_HOME}")
+  endif()
+
+  message(STATUS "JAVA_HOME = ${JAVA_HOME}")
+
+  if (NOT EXISTS "${JAVA_HOME}/lib/server/libjvm.so"
+      AND NOT EXISTS "${JAVA_HOME}/jre/lib/amd64/server/libjvm.so")
+    message(FATAL_ERROR
+        "libjvm.so not found under JAVA_HOME: ${JAVA_HOME}"
+    )
+  endif()
+
+  link_directories(${JAVA_HOME}/jre/lib/amd64/server)
+  link_directories(${JAVA_HOME}/jre/lib/amd64)
+endfunction(dsn_setup_java_libs)
+
+function(dsn_setup_hadoop_libs)
+  if (NOT DEFINED HADOOP_HOME)
+    message(FATAL_ERROR "HADOOP_HOME is not defined. Please configure with -DHADOOP_HOME=...")
+  endif()
+
+  if (NOT EXISTS "${HADOOP_HOME}")
+    message(FATAL_ERROR "HADOOP_HOME does not exist: ${HADOOP_HOME}")
+  endif()
+
+  message(STATUS "HADOOP_HOME = ${HADOOP_HOME}")
+
+  if (NOT EXISTS "${HADOOP_HOME}/lib/native/libhdfs.so")
+    message(FATAL_ERROR
+        "libhdfs.so not found under HADOOP_HOME: ${HADOOP_HOME}"
+    )
+  endif()
+
+  link_directories(${HADOOP_HOME}/lib/native)
+endfunction(dsn_setup_hadoop_libs)
+
 function(dsn_setup_thirdparty_libs)
   set(BOOST_ROOT ${THIRDPARTY_INSTALL_DIR})
   set(Boost_USE_MULTITHREADED ON)
@@ -364,11 +406,8 @@ function(dsn_setup_thirdparty_libs)
   # 1. libhdfs is used by block service to access HDFS.
   # 2. The RocksDB HDFS plugin (rocksdb-hdfs-env) in thirdparty relies on ${JAVA_HOME}
   # and ${HADOOP_HOME} environment variables to locate the libraries to link against.
-  message(STATUS "JAVA_HOME = ${JAVA_HOME}")
-  message(STATUS "HADOOP_HOME = ${HADOOP_HOME}")
-  link_directories(${JAVA_HOME}/jre/lib/amd64/server)
-  link_directories(${JAVA_HOME}/jre/lib/amd64)
-  link_directories(${HADOOP_HOME}/lib/native)
+  dsn_setup_java_libs()
+  dsn_setup_hadoop_libs()
 
   find_package(OpenSSL REQUIRED)
   include_directories(${OPENSSL_INCLUDE_DIR})
