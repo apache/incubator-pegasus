@@ -17,14 +17,14 @@
 
 module github.com/apache/incubator-pegasus/collector
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/apache/incubator-pegasus/go-client v0.0.0-20260121121155-96868ed93b2a
 	github.com/gammazero/deque v1.0.0
 	github.com/kataras/iris/v12 v12.2.0
 	github.com/prometheus/client_golang v1.18.0
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.8.3
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.8.2
 	github.com/tidwall/gjson v1.14.0
