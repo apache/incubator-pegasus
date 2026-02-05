@@ -276,9 +276,16 @@ function run_build()
     echo "Build start time: `date`"
     start_time=`date +%s`
 
-    # The RocksDB HDFS plugin (rocksdb-hdfs-env) in thirdparty relies on ${HADOOP_HOME}
-    # environment variable to locate the libraries to link against.
-    source "${ROOT}"/admin_tools/config_hdfs.sh
+    case "$(uname)" in
+        Darwin)
+            echo "Currently, macOS does not support ${ROOT}/admin_tools/config_hdfs.sh"
+            ;;
+        *)
+            # The RocksDB HDFS plugin (rocksdb-hdfs-env) in thirdparty relies on ${HADOOP_HOME}
+            # environment variable to locate the libraries to link against.
+            source "${ROOT}"/admin_tools/config_hdfs.sh
+            ;;
+    esac
 
     if [[ ${SKIP_THIRDPARTY} == "YES" ]]; then
         echo "Skip building third-parties..."
