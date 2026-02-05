@@ -1,3 +1,15 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c660747..5fef10e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.4)
+ # Windows is not supported.
+ 
+ set(hdfs_SOURCES "env_hdfs.cc" "env_hdfs_impl.cc" PARENT_SCOPE)
++set(hdfs_HEADERS "env_hdfs.h" PARENT_SCOPE)
+ set(hdfs_LIBS "hdfs" "dl" "verify" "java" "jvm" PARENT_SCOPE)
+ set(hdfs_INCLUDE_PATHS "$ENV{JAVA_HOME}/include" "$ENV{JAVA_HOME}/include/linux" "$ENV{HADOOP_HOME}/include" PARENT_SCOPE)
+ set(hdfs_LINK_PATHS "$ENV{JAVA_HOME}/jre/lib/amd64/server" "$ENV{JAVA_HOME}/jre/lib/amd64" "$ENV{HADOOP_HOME}/lib/native" PARENT_SCOPE)
 diff --git a/env_hdfs_impl.cc b/env_hdfs_impl.cc
 index 01574bc..3927e5d 100644
 --- a/env_hdfs_impl.cc

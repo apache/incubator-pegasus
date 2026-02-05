@@ -305,8 +305,8 @@ function run_build()
     fi
 
     CMAKE_OPTIONS="${CMAKE_OPTIONS}
+                   -DARCH_TYPE=${ARCH_TYPE}
                    -DJAVA_HOME=${JAVA_HOME}
-                   -DHADOOP_HOME=${HADOOP_HOME}
                    -DENABLE_GCOV=${ENABLE_GCOV}
                    -DENABLE_GPERF=${ENABLE_GPERF}
                    -DBoost_NO_BOOST_CMAKE=ON

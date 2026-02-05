@@ -326,6 +326,10 @@ function(dsn_setup_include_path)#TODO(huangwei5): remove this
 endfunction(dsn_setup_include_path)
 
 function(dsn_setup_java_libs)
+  if (NOT DEFINED ARCH_TYPE)
+    message(FATAL_ERROR "ARCH_TYPE is not defined. Please configure with -DARCH_TYPE=...")
+  endif()
+
   if (NOT DEFINED JAVA_HOME)
     message(FATAL_ERROR "JAVA_HOME is not defined. Please configure with -DJAVA_HOME=...")
   endif()
@@ -337,35 +341,20 @@ function(dsn_setup_java_libs)
   message(STATUS "JAVA_HOME = ${JAVA_HOME}")
 
   if (NOT EXISTS "${JAVA_HOME}/lib/server/libjvm.so"
-      AND NOT EXISTS "${JAVA_HOME}/jre/lib/amd64/server/libjvm.so")
+      AND NOT EXISTS "${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server/libjvm.so")
     message(FATAL_ERROR
         "libjvm.so not found under JAVA_HOME: ${JAVA_HOME}"
     )
   endif()
 
-  link_directories(${JAVA_HOME}/jre/lib/amd64/server)
-  link_directories(${JAVA_HOME}/jre/lib/amd64)
+  # Provide directories to be searched for JVM libraries such as libjvm.so, libjava.so
+  # and libverify.so.
+  #
+  # Currently these directories are used by the RocksDB HDFS plugin (rocksdb-hdfs-env)
+  # in thirdparty to be searched while linking against JVM libraries for JNI.
+  link_directories(${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server)
+  link_directories(${JAVA_HOME}/jre/lib/${ARCH_TYPE})
 endfunction(dsn_setup_java_libs)
-
-function(dsn_setup_hadoop_libs)
-  if (NOT DEFINED HADOOP_HOME)
-    message(FATAL_ERROR "HADOOP_HOME is not defined. Please configure with -DHADOOP_HOME=...")
-  endif()
-
-  if (NOT EXISTS "${HADOOP_HOME}")
-    message(FATAL_ERROR "HADOOP_HOME does not exist: ${HADOOP_HOME}")
-  endif()
-
-  message(STATUS "HADOOP_HOME = ${HADOOP_HOME}")
-
-  if (NOT EXISTS "${HADOOP_HOME}/lib/native/libhdfs.so")
-    message(FATAL_ERROR
-        "libhdfs.so not found under HADOOP_HOME: ${HADOOP_HOME}"
-    )
-  endif()
-
-  link_directories(${HADOOP_HOME}/lib/native)
-endfunction(dsn_setup_hadoop_libs)
 
 function(dsn_setup_thirdparty_libs)
   set(BOOST_ROOT ${THIRDPARTY_INSTALL_DIR})
@@ -402,12 +391,7 @@ function(dsn_setup_thirdparty_libs)
   endif()
   find_package(RocksDB REQUIRED)
 
-  # Enable access to HDFS:
-  # 1. libhdfs is used by block service to access HDFS.
-  # 2. The RocksDB HDFS plugin (rocksdb-hdfs-env) in thirdparty relies on ${JAVA_HOME}
-  # and ${HADOOP_HOME} environment variables to locate the libraries to link against.
   dsn_setup_java_libs()
-  dsn_setup_hadoop_libs()
 
   find_package(OpenSSL REQUIRED)
   include_directories(${OPENSSL_INCLUDE_DIR})
