@@ -340,11 +340,16 @@ function(dsn_setup_java_libs)
 
   message(STATUS "JAVA_HOME = ${JAVA_HOME}")
 
-  if (NOT EXISTS "${JAVA_HOME}/lib/server/libjvm.so"
-      AND NOT EXISTS "${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server/libjvm.so")
-    message(FATAL_ERROR
-        "libjvm.so not found under JAVA_HOME: ${JAVA_HOME}"
-    )
+  if (APPLE)
+    if (NOT EXISTS "${JAVA_HOME}/lib/server/libjvm.dylib"
+        AND NOT EXISTS "${JAVA_HOME}/jre/lib/server/libjvm.dylib")
+      message(FATAL_ERROR "libjvm.dylib not found under JAVA_HOME: ${JAVA_HOME}")
+    endif()
+  else()
+    if (NOT EXISTS "${JAVA_HOME}/lib/server/libjvm.so"
+        AND NOT EXISTS "${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server/libjvm.so")
+      message(FATAL_ERROR "libjvm.so not found under JAVA_HOME: ${JAVA_HOME}")
+    endif()
   endif()
 
   # Provide directories to be searched for JVM libraries such as libjvm.so, libjava.so
