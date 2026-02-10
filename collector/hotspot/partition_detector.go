@@ -148,8 +148,9 @@ func (d *partitionDetectorImpl) aggregate() error {
 		return err
 	}
 
-	d.analyseHotspots(appMap)
+	log.Debugf("stats=%v", appMap)
 
+	d.analyseHotspots(appMap)
 	return nil
 }
 
@@ -477,6 +478,7 @@ func (a *partitionAnalyzer) addSample(sample []hotspotPartitionStats) {
 	}
 
 	a.samples.PushBack(sample)
+	log.Debugf("appID=%d, samples=%v", a.appID, a.samples)
 }
 
 // Calculates [Z-score](https://en.wikipedia.org/wiki/Standard_score) for each partition by
@@ -504,7 +506,8 @@ func (a *partitionAnalyzer) calculateZScores(operationType int) []float64 {
 	// TODO(wangdan): use `range a.samples.Iter()` instead for Go 1.23+.
 	for i, n := 0, a.samples.Len(); i < n; i++ {
 		for _, stats := range a.samples.At(i) {
-			standardDeviation += math.Pow(stats.totalQPS[operationType]-partitionQPSAvg, 2)
+			deviation := stats.totalQPS[operationType] - partitionQPSAvg
+			standardDeviation += deviation * deviation
 		}
 	}
 	standardDeviation = math.Sqrt(standardDeviation / float64(count-1))
@@ -527,11 +530,9 @@ func (a *partitionAnalyzer) calculateZScores(operationType int) []float64 {
 func (a *partitionAnalyzer) countHotPartitions(zScores []float64) int {
 	hotCount := 0
 	for _, zScore := range zScores {
-		if zScore < a.hotPartitionThreshold {
-			continue
+		if zScore >= a.hotPartitionThreshold {
+			hotCount++
 		}
-
-		hotCount++
 	}
 
 	return hotCount
@@ -543,7 +544,7 @@ func (a *partitionAnalyzer) analyseHotPartitions(operationType int) {
 
 	// TODO(wangdan): export the hotspot-related metrics for collection by monitoring
 	// systems such as Prometheus.
-	log.Infof("appID=%d, hotCount=%d", a.appID, hotCount)
+	log.Infof("appID=%d, operationType=%d, hotCount=%d, zScores=%v", a.appID, operationType, hotCount, zScores)
 }
 
 func (a *partitionAnalyzer) analyse() {
