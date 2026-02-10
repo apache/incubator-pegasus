@@ -41,24 +41,26 @@ type PartitionDetector interface {
 }
 
 type PartitionDetectorConfig struct {
-	MetaServers           []string
-	RpcTimeout            time.Duration
-	DetectInterval        time.Duration
-	PullMetricsTimeout    time.Duration
-	SampleMetricsInterval time.Duration
-	MaxSampleSize         int
-	HotPartitionThreshold float64
+	MetaServers              []string
+	RpcTimeout               time.Duration
+	DetectInterval           time.Duration
+	PullMetricsTimeout       time.Duration
+	SampleMetricsInterval    time.Duration
+	MaxSampleSize            int
+	HotspotPartitionMinScore float64
+	HotspotPartitionMinQPS   float64
 }
 
 func LoadPartitionDetectorConfig() *PartitionDetectorConfig {
 	return &PartitionDetectorConfig{
-		MetaServers:           viper.GetStringSlice("meta_servers"),
-		RpcTimeout:            viper.GetDuration("hotspot.rpc_timeout"),
-		DetectInterval:        viper.GetDuration("hotspot.partition_detect_interval"),
-		PullMetricsTimeout:    viper.GetDuration("hotspot.pull_metrics_timeout"),
-		SampleMetricsInterval: viper.GetDuration("hotspot.sample_metrics_interval"),
-		MaxSampleSize:         viper.GetInt("hotspot.max_sample_size"),
-		HotPartitionThreshold: viper.GetFloat64("hotspot.hot_partition_threshold"),
+		MetaServers:              viper.GetStringSlice("meta_servers"),
+		RpcTimeout:               viper.GetDuration("hotspot.rpc_timeout"),
+		DetectInterval:           viper.GetDuration("hotspot.partition_detect_interval"),
+		PullMetricsTimeout:       viper.GetDuration("hotspot.pull_metrics_timeout"),
+		SampleMetricsInterval:    viper.GetDuration("hotspot.sample_metrics_interval"),
+		MaxSampleSize:            viper.GetInt("hotspot.max_sample_size"),
+		HotspotPartitionMinScore: viper.GetFloat64("hotspot.hotspot_partition_min_score"),
+		HotspotPartitionMinQPS:   viper.GetFloat64("hotspot.hotspot_partition_min_qps"),
 	}
 }
 
@@ -88,8 +90,12 @@ func NewPartitionDetector(cfg *PartitionDetectorConfig) (PartitionDetector, erro
 		return nil, fmt.Errorf("MaxSampleSize(%d) must be > 0", cfg.MaxSampleSize)
 	}
 
-	if cfg.HotPartitionThreshold <= 0 {
-		return nil, fmt.Errorf("HotPartitionThreshold(%f) must be > 0", cfg.HotPartitionThreshold)
+	if cfg.HotspotPartitionMinScore <= 0 {
+		return nil, fmt.Errorf("HotspotPartitionMinScore(%f) must be > 0", cfg.HotspotPartitionMinScore)
+	}
+
+	if cfg.HotspotPartitionMinQPS <= 0 {
+		return nil, fmt.Errorf("HotspotPartitionMinQPS (%f) must be > 0", cfg.HotspotPartitionMinQPS)
 	}
 
 	return &partitionDetectorImpl{
@@ -120,10 +126,14 @@ func (d *partitionDetectorImpl) Run(tom *tomb.Tomb) error {
 }
 
 func (d *partitionDetectorImpl) detect() {
-	err := d.aggregate()
+	appMap, err := d.aggregate()
 	if err != nil {
 		log.Error("failed to aggregate metrics for hotspot: ", err)
 	}
+
+	log.Debugf("stats=%v", appMap)
+
+	d.analyse(appMap)
 }
 
 // {appID -> appStats}.
@@ -136,22 +146,19 @@ type appStats struct {
 	partitionStats   []map[string]float64 // {metricName -> metricValue} for each partition.
 }
 
-func (d *partitionDetectorImpl) aggregate() error {
+func (d *partitionDetectorImpl) aggregate() (appStatsMap, error) {
 	// appMap includes the structures that hold all the final statistical values.
 	appMap, nodes, err := d.fetchMetadata()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = d.aggregateMetrics(appMap, nodes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	log.Debugf("stats=%v", appMap)
-
-	d.analyseHotspots(appMap)
-	return nil
+	return appMap, nil
 }
 
 // Fetch necessary metadata from meta server for the aggregation of metrics, including:
@@ -390,7 +397,7 @@ const (
 )
 
 // hotspotPartitionStats holds all the statistical values of each partition, used for analysis
-// of hot partitions.
+// of hotspot partitions.
 type hotspotPartitionStats struct {
 	totalQPS [operateHotspotDataNumber]float64
 }
@@ -429,7 +436,7 @@ func calculateHotspotStats(appMap appStatsMap) map[partitionAnalyzerKey][]hotspo
 // Calculate statistical values over multiples tables with all partitions of each table as
 // a sample, and analyse all samples of each table asynchronously to decide which partitions
 // of it are hotspots.
-func (d *partitionDetectorImpl) analyseHotspots(appMap appStatsMap) {
+func (d *partitionDetectorImpl) analyse(appMap appStatsMap) {
 	hotspotMap := calculateHotspotStats(appMap)
 
 	d.mtx.Lock()
@@ -438,38 +445,54 @@ func (d *partitionDetectorImpl) analyseHotspots(appMap appStatsMap) {
 	for key, value := range hotspotMap {
 		analyzer, ok := d.analyzers[key]
 		if !ok {
-			analyzer = newPartitionAnalyzer(d.cfg.MaxSampleSize, d.cfg.HotPartitionThreshold, key.appID)
+			analyzer = newPartitionAnalyzer(
+				d.cfg.MaxSampleSize,
+				d.cfg.HotspotPartitionMinScore,
+				d.cfg.HotspotPartitionMinQPS,
+				key.appID,
+				key.partitionCount,
+			)
 			d.analyzers[key] = analyzer
 		}
 
-		analyzer.addSample(value)
+		analyzer.add(value)
 
 		// Perform the analysis asynchronously.
 		go analyzer.analyse()
 	}
 }
 
-func newPartitionAnalyzer(maxSampleSize int, hotPartitionThreshold float64, appID int32) *partitionAnalyzer {
+func newPartitionAnalyzer(
+	maxSampleSize int,
+	hotspotPartitionMinScore float64,
+	hotspotPartitionMinQPS float64,
+	appID int32,
+	partitionCount int32,
+) *partitionAnalyzer {
 	return &partitionAnalyzer{
-		maxSampleSize:         maxSampleSize,
-		hotPartitionThreshold: hotPartitionThreshold,
-		appID:                 appID,
+		maxSampleSize:            maxSampleSize,
+		hotspotPartitionMinScore: hotspotPartitionMinScore,
+		hotspotPartitionMinQPS:   hotspotPartitionMinQPS,
+		appID:                    appID,
+		partitionCount:           partitionCount,
 	}
 }
 
-// partitionAnalyzer holds the samples for all partitions of a table and analyses hot
+// partitionAnalyzer holds the samples for all partitions of a table and analyses hotspot
 // partitions based on them.
 type partitionAnalyzer struct {
 	// TODO(wangdan): bump gammazero/deque to the lastest version after upgrading Go to 1.23+,
 	// since older Go versions do not support the `Deque.Iter()` iterator interface.
-	maxSampleSize         int
-	hotPartitionThreshold float64
-	appID                 int32
-	mtx                   sync.RWMutex
-	samples               deque.Deque[[]hotspotPartitionStats] // Each element is a sample of all partitions of the table
+	maxSampleSize            int
+	hotspotPartitionMinScore float64
+	hotspotPartitionMinQPS   float64
+	appID                    int32
+	partitionCount           int32
+	mtx                      sync.RWMutex
+	samples                  deque.Deque[[]hotspotPartitionStats] // Each element is a sample of all partitions of the table
 }
 
-func (a *partitionAnalyzer) addSample(sample []hotspotPartitionStats) {
+func (a *partitionAnalyzer) add(sample []hotspotPartitionStats) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
@@ -481,10 +504,37 @@ func (a *partitionAnalyzer) addSample(sample []hotspotPartitionStats) {
 	log.Debugf("appID=%d, samples=%v", a.appID, a.samples)
 }
 
+func (a *partitionAnalyzer) analyse() {
+	a.mtx.RLock()
+	defer a.mtx.RUnlock()
+
+	a.analyseHotspots(readHotspotData)
+	a.analyseHotspots(writeHotspotData)
+}
+
+func (a *partitionAnalyzer) analyseHotspots(operationType int) {
+	sample, scores := a.calculateScores(operationType)
+	if len(scores) == 0 {
+		return
+	}
+
+	hotspotCount := a.countHotspots(operationType, sample, scores)
+
+	// TODO(wangdan): export the hotspot-related metrics for collection by monitoring
+	// systems such as Prometheus.
+	log.Infof("appID=%d, operationType=%d, hotspotPartitions=%d, scores=%v",
+		a.appID, operationType, hotspotCount, scores)
+}
+
 // Calculates [Z-score](https://en.wikipedia.org/wiki/Standard_score) for each partition by
 // comparing historical data vertically and concurrent data horizontally to describe the
 // hotspots.
-func (a *partitionAnalyzer) calculateZScores(operationType int) []float64 {
+func (a *partitionAnalyzer) calculateScores(
+	operationType int,
+) (
+	[]hotspotPartitionStats,
+	[]float64,
+) {
 	var count int
 	var partitionQPSSum float64
 	// TODO(wangdan): use `range a.samples.Iter()` instead for Go 1.23+.
@@ -495,9 +545,10 @@ func (a *partitionAnalyzer) calculateZScores(operationType int) []float64 {
 			partitionQPSSum += stats.totalQPS[operationType]
 		}
 	}
+
 	if count <= 1 {
 		log.Infof("sample size(%d) <= 1, not enough data for calculation", count)
-		return nil
+		return nil, nil
 	}
 
 	partitionQPSAvg := partitionQPSSum / float64(count)
@@ -510,47 +561,40 @@ func (a *partitionAnalyzer) calculateZScores(operationType int) []float64 {
 			standardDeviation += deviation * deviation
 		}
 	}
+
 	standardDeviation = math.Sqrt(standardDeviation / float64(count-1))
 
 	sample := a.samples.Back()
-	zScores := make([]float64, 0, len(sample))
+	scores := make([]float64, 0, len(sample))
 	for i := 0; i < len(sample); i++ {
 		if standardDeviation == 0 {
-			zScores = append(zScores, 0)
+			scores = append(scores, 0)
 			continue
 		}
 
-		zScore := (sample[i].totalQPS[operationType] - partitionQPSAvg) / standardDeviation
-		zScores = append(zScores, zScore)
+		score := (sample[i].totalQPS[operationType] - partitionQPSAvg) / standardDeviation
+		scores = append(scores, score)
 	}
 
-	return zScores
+	return sample, scores
 }
 
-func (a *partitionAnalyzer) countHotPartitions(zScores []float64) int {
-	hotCount := 0
-	for _, zScore := range zScores {
-		if zScore >= a.hotPartitionThreshold {
-			hotCount++
+func (a *partitionAnalyzer) countHotspots(
+	operationType int,
+	sample []hotspotPartitionStats,
+	scores []float64,
+) (hotspotCount int) {
+	for i, score := range scores {
+		if score < a.hotspotPartitionMinScore {
+			continue
 		}
+
+		if sample[i].totalQPS[operationType] < a.hotspotPartitionMinQPS {
+			continue
+		}
+
+		hotspotCount++
 	}
 
-	return hotCount
-}
-
-func (a *partitionAnalyzer) analyseHotPartitions(operationType int) {
-	zScores := a.calculateZScores(operationType)
-	hotCount := a.countHotPartitions(zScores)
-
-	// TODO(wangdan): export the hotspot-related metrics for collection by monitoring
-	// systems such as Prometheus.
-	log.Infof("appID=%d, operationType=%d, hotCount=%d, zScores=%v", a.appID, operationType, hotCount, zScores)
-}
-
-func (a *partitionAnalyzer) analyse() {
-	a.mtx.RLock()
-	defer a.mtx.RUnlock()
-
-	a.analyseHotPartitions(readHotspotData)
-	a.analyseHotPartitions(writeHotspotData)
+	return
 }
