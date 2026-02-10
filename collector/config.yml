@@ -53,5 +53,5 @@ hotspot:
   pull_metrics_timeout : 5s
   sample_metrics_interval : 10s
   max_sample_size : 128
-  hotspot_partition_min_score: 4
+  hotspot_partition_min_score: 3
   hotspot_partition_min_qps: 100
