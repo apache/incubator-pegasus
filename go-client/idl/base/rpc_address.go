@@ -37,38 +37,42 @@ func NewRPCAddress(ip net.IP, port int) *RPCAddress {
 	}
 }
 
-func (r *RPCAddress) Read(iprot thrift.TProtocol) error {
+func (a *RPCAddress) Read(iprot thrift.TProtocol) error {
 	address, err := iprot.ReadI64()
 	if err != nil {
 		return err
 	}
-	r.address = address
+	a.address = address
 	return nil
 }
 
-func (r *RPCAddress) Write(oprot thrift.TProtocol) error {
-	return oprot.WriteI64(r.address)
+func (a *RPCAddress) Write(oprot thrift.TProtocol) error {
+	return oprot.WriteI64(a.address)
 }
 
-func (r *RPCAddress) String() string {
-	if r == nil {
+func (a *RPCAddress) String() string {
+	if a == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("RPCAddress(%s)", r.GetAddress())
+	return fmt.Sprintf("RPCAddress(%s)", a.GetAddress())
 }
 
-func (r *RPCAddress) GetIP() net.IP {
-	return net.IPv4(byte(0xff&(r.address>>56)), byte(0xff&(r.address>>48)), byte(0xff&(r.address>>40)), byte(0xff&(r.address>>32)))
+func (a *RPCAddress) GetIP() net.IP {
+	return net.IPv4(byte(0xff&(a.address>>56)), byte(0xff&(a.address>>48)), byte(0xff&(a.address>>40)), byte(0xff&(a.address>>32)))
 }
 
-func (r *RPCAddress) GetPort() int {
-	return int(0xffff & (r.address >> 16))
+func (a *RPCAddress) GetPort() int {
+	return int(0xffff & (a.address >> 16))
 }
 
-func (r *RPCAddress) GetAddress() string {
-	return fmt.Sprintf("%s:%d", r.GetIP(), r.GetPort())
+func (a *RPCAddress) GetAddress() string {
+	return fmt.Sprintf("%s:%d", a.GetIP(), a.GetPort())
 }
 
-func (r *RPCAddress) GetRawAddress() int64 {
-	return r.address
+func (a *RPCAddress) GetRawAddress() int64 {
+	return a.address
+}
+
+func (a *RPCAddress) Equal(other *RPCAddress) bool {
+	return a.address == other.address
 }

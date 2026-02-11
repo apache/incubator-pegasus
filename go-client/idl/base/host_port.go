@@ -48,7 +48,7 @@ func NewHostPort(host string, port uint16) *HostPort {
 	}
 }
 
-func (r *HostPort) Read(iprot thrift.TProtocol) error {
+func (hp *HostPort) Read(iprot thrift.TProtocol) error {
 	host, err := iprot.ReadString()
 	if err != nil {
 		return err
@@ -62,43 +62,68 @@ func (r *HostPort) Read(iprot thrift.TProtocol) error {
 		return err
 	}
 
-	r.host = host
-	r.port = uint16(port)
-	r.hpType = HostPortType(hpType)
+	hp.host = host
+	hp.port = uint16(port)
+	hp.hpType = HostPortType(hpType)
 	return nil
 }
 
-func (r *HostPort) Write(oprot thrift.TProtocol) error {
-	err := oprot.WriteString(r.host)
+func (hp *HostPort) Write(oprot thrift.TProtocol) error {
+	err := oprot.WriteString(hp.host)
 	if err != nil {
 		return err
 	}
-	err = oprot.WriteI16(int16(r.port))
+	err = oprot.WriteI16(int16(hp.port))
 	if err != nil {
 		return err
 	}
-	err = oprot.WriteByte(int8(r.hpType))
+	err = oprot.WriteByte(int8(hp.hpType))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *HostPort) GetHost() string {
-	return r.host
+func (hp *HostPort) GetHost() string {
+	return hp.host
 }
 
-func (r *HostPort) GetPort() uint16 {
-	return r.port
+func (hp *HostPort) GetPort() uint16 {
+	return hp.port
 }
 
-func (r *HostPort) String() string {
-	if r == nil {
+func (hp *HostPort) String() string {
+	if hp == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("HostPort(%s:%d)", r.host, r.port)
+	return fmt.Sprintf("HostPort(%s:%d)", hp.host, hp.port)
 }
 
-func (r *HostPort) GetHostPort() string {
-	return fmt.Sprintf("%s:%d", r.host, r.port)
+func (hp *HostPort) GetHostPort() string {
+	return fmt.Sprintf("%s:%d", hp.host, hp.port)
+}
+
+func (hp *HostPort) Equal(other *HostPort) bool {
+	if hp == other {
+		return true
+	}
+
+	if hp == nil || other == nil {
+		return false
+	}
+
+	if hp.hpType != other.hpType {
+		return false
+	}
+
+	switch hp.hpType {
+	case HOST_TYPE_IPV4:
+		return hp.host == other.host &&
+			hp.port == other.port
+	case HOST_TYPE_GROUP:
+		// TODO(wangdan): support HOST_TYPE_GROUP.
+		return false
+	default:
+		return true
+	}
 }
