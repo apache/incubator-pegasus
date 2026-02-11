@@ -501,7 +501,7 @@ func (a *partitionAnalyzer) add(sample []hotspotPartitionStats) {
 	}
 
 	a.samples.PushBack(sample)
-	log.Debugf("appID=%d, samples=%v", a.appID, a.samples)
+	log.Debugf("appID=%d, partitionCount=%d, samples=%v", a.appID, a.partitionCount, a.samples)
 }
 
 func (a *partitionAnalyzer) analyse() {
@@ -522,8 +522,8 @@ func (a *partitionAnalyzer) analyseHotspots(operationType int) {
 
 	// TODO(wangdan): export the hotspot-related metrics for collection by monitoring
 	// systems such as Prometheus.
-	log.Infof("appID=%d, operationType=%d, hotspotPartitions=%d, scores=%v",
-		a.appID, operationType, hotspotCount, scores)
+	log.Infof("appID=%d, partitionCount=%d, operationType=%d, hotspotPartitions=%d, scores=%v",
+		a.appID, a.partitionCount, operationType, hotspotCount, scores)
 }
 
 // Calculates [Z-score](https://en.wikipedia.org/wiki/Standard_score) for each partition by
