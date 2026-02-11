@@ -276,6 +276,17 @@ function run_build()
     echo "Build start time: `date`"
     start_time=`date +%s`
 
+    case "$(uname)" in
+        Darwin)
+            echo "Currently, macOS does not support ${ROOT}/admin_tools/config_hdfs.sh"
+            ;;
+        *)
+            # The RocksDB HDFS plugin (rocksdb-hdfs-env) in thirdparty relies on ${HADOOP_HOME}
+            # environment variable to locate the libraries to link against.
+            source "${ROOT}"/admin_tools/config_hdfs.sh
+            ;;
+    esac
+
     if [[ ${SKIP_THIRDPARTY} == "YES" ]]; then
         echo "Skip building third-parties..."
     else
@@ -301,6 +312,8 @@ function run_build()
     fi
 
     CMAKE_OPTIONS="${CMAKE_OPTIONS}
+                   -DARCH_TYPE=${ARCH_TYPE}
+                   -DJAVA_HOME=${JAVA_HOME}
                    -DENABLE_GCOV=${ENABLE_GCOV}
                    -DENABLE_GPERF=${ENABLE_GPERF}
                    -DBoost_NO_BOOST_CMAKE=ON

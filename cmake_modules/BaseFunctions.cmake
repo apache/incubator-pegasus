@@ -325,6 +325,42 @@ function(dsn_setup_include_path)#TODO(huangwei5): remove this
   include_directories(${THIRDPARTY_INSTALL_DIR}/include)
 endfunction(dsn_setup_include_path)
 
+function(dsn_setup_java_libs)
+  if (NOT DEFINED ARCH_TYPE)
+    message(FATAL_ERROR "ARCH_TYPE is not defined. Please configure with -DARCH_TYPE=...")
+  endif()
+
+  if (NOT DEFINED JAVA_HOME)
+    message(FATAL_ERROR "JAVA_HOME is not defined. Please configure with -DJAVA_HOME=...")
+  endif()
+
+  if (NOT EXISTS "${JAVA_HOME}")
+    message(FATAL_ERROR "JAVA_HOME does not exist: ${JAVA_HOME}")
+  endif()
+
+  message(STATUS "JAVA_HOME = ${JAVA_HOME}")
+
+  if (APPLE)
+    if (NOT EXISTS "${JAVA_HOME}/lib/server/libjvm.dylib"
+        AND NOT EXISTS "${JAVA_HOME}/jre/lib/server/libjvm.dylib")
+      message(FATAL_ERROR "libjvm.dylib not found under JAVA_HOME: ${JAVA_HOME}")
+    endif()
+  else()
+    if (NOT EXISTS "${JAVA_HOME}/lib/server/libjvm.so"
+        AND NOT EXISTS "${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server/libjvm.so")
+      message(FATAL_ERROR "libjvm.so not found under JAVA_HOME: ${JAVA_HOME}")
+    endif()
+  endif()
+
+  # Provide directories to be searched for JVM libraries such as libjvm.so, libjava.so
+  # and libverify.so.
+  #
+  # Currently these directories are used by the RocksDB HDFS plugin (rocksdb-hdfs-env)
+  # in thirdparty to be searched while linking against JVM libraries for JNI.
+  link_directories(${JAVA_HOME}/jre/lib/${ARCH_TYPE}/server)
+  link_directories(${JAVA_HOME}/jre/lib/${ARCH_TYPE})
+endfunction(dsn_setup_java_libs)
+
 function(dsn_setup_thirdparty_libs)
   set(BOOST_ROOT ${THIRDPARTY_INSTALL_DIR})
   set(Boost_USE_MULTITHREADED ON)
@@ -360,10 +396,7 @@ function(dsn_setup_thirdparty_libs)
   endif()
   find_package(RocksDB REQUIRED)
 
-  # libhdfs
-  find_package(JNI REQUIRED)
-  message (STATUS "JAVA_JVM_LIBRARY=${JAVA_JVM_LIBRARY}")
-  link_libraries(${JAVA_JVM_LIBRARY})
+  dsn_setup_java_libs()
 
   find_package(OpenSSL REQUIRED)
   include_directories(${OPENSSL_INCLUDE_DIR})

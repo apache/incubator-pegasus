@@ -37,15 +37,18 @@ runs:
       # Build third-parties and leave some necessary libraries and source.
       run: |
         rm -f /root/thirdparties-src.zip
+        ../admin_tools/download_hadoop.sh hadoop-bin
+        rm -rf hadoop-bin/share/doc
+        mv hadoop-bin ..
+        # The RocksDB HDFS plugin (rocksdb-hdfs-env) in thirdparty relies on ${HADOOP_HOME}
+        # environment variable to locate the libraries to link against.
+        export HADOOP_HOME="$(dirname "$(pwd)")"/hadoop-bin
         mkdir build
         cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=1 -DUSE_JEMALLOC=${USE_JEMALLOC} -DENABLE_ASAN=${ENABLE_ASAN} -B build/
         cmake --build build/ -j $(nproc)
         rm -rf build/Build build/Download/[a-y]* build/Source/[a-g]* build/Source/[i-q]* build/Source/[s-z]*
         find ./ -name '*CMakeFiles*' -type d -exec rm -rf "{}" +
-        ../admin_tools/download_hadoop.sh hadoop-bin
         ../admin_tools/download_zk.sh zookeeper-bin
-        rm -rf hadoop-bin/share/doc
         rm -rf zookeeper-bin/docs
-        mv hadoop-bin ..
         mv zookeeper-bin ..
       shell: bash
