@@ -170,9 +170,8 @@ void replica_duplicator::start_dup_log()
     _load = std::make_unique<load_mutation>(this, _replica, _load_private.get());
 
     from(*_load).link(*_ship).link(*_load);
-    const dsn::task_code load_from_private_log_level = FLAGS_priority_dup_load_plog_task
-                                                           ? LPC_REPLICATION_LONG_COMMON
-                                                           : LPC_REPLICATION_LONG_LOW;
+    const dsn::task_code load_from_private_log_level =
+        FLAGS_priority_dup_load_plog_task ? LPC_REPLICATION_LONG_COMMON : LPC_REPLICATION_LONG_LOW;
     fork(*_load_private, load_from_private_log_level, 0).link(*_ship);
 
     run_pipeline();
