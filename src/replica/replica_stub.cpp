@@ -61,6 +61,7 @@
 #include "ranger/access_type.h"
 #include "remote_cmd/remote_command.h"
 #include "replica.h"
+#include "replica/duplication/replica_duplicator_manager.h"
 #include "replica/duplication/replica_follower.h"
 #include "replica/kms_key_provider.h"
 #include "replica/replica_context.h"
@@ -1723,6 +1724,15 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
     replica_ptr replica = get_replica(id);
     if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY &&
         replica->status() != partition_status::PS_PARTITION_SPLIT) {
+
+        // deal with unexpected close when duplication and balance function running at the same time
+        if (replica->status() == partition_status::PS_INACTIVE && replica->having_dup_loading()) {
+            LOG_DEBUG(
+                "%s: replica not exists on meta server,and still have dup on it. wait to close",
+                replica->name());
+            return;
+        }
+
         if (replica->status() == partition_status::PS_INACTIVE &&
             dsn_now_ms() - replica->create_time_milliseconds() <
                 FLAGS_gc_memory_replica_interval_ms) {
@@ -2436,6 +2446,8 @@ void replica_stub::close_replica(replica_ptr r)
     gpid id = r->get_gpid();
     std::string name = r->name();
 
+    // deal with duplication conflict with balance
+    r->get_duplication_manager()->remove_all_duplications();
     r->close();
 
     {
