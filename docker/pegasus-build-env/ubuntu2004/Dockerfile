@@ -78,9 +78,17 @@ RUN wget https://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz -P /opt/
     && make install \
     && ln -sf $OPENSSL_INSTALL_DIR/bin/openssl /usr/bin/openssl \
     && ln -sf $OPENSSL_INSTALL_DIR/include/openssl /usr/local/include/openssl \
+    && ln -sf $OPENSSL_INSTALL_DIR/lib64/libssl.so.3 /usr/lib/x86_64-linux-gnu/libssl.so \
+    && ln -sf $OPENSSL_INSTALL_DIR/libcrypto.so.3 /usr/lib/x86_64-linux-gnu/libcrypto.so \
     && echo "$OPENSSL_INSTALL_DIR/lib64" | tee /etc/ld.so.conf.d/openssl-3.0.conf \
-    && ldconfig -v
+    && cp -r /usr/local/ssl/include/openssl /usr/include/ \
+    && ldconfig
 
+ENV CMAKE_PREFIX_PATH="$OPENSSL_INSTALL_DIR:$CMAKE_PREFIX_PATH"
+ENV PKG_CONFIG_PATH="$OPENSSL_INSTALL_DIR/lib64/pkgconfig:$PKG_CONFIG_PATH"
+ENV LD_LIBRARY_PATH="$OPENSSL_INSTALL_DIR/lib64:$LD_LIBRARY_PATH"
+ENV LIBRARY_PATH="$OPENSSL_INSTALL_DIR/lib64:$LIBRARY_PATH"
+ENV CPATH="$OPENSSL_INSTALL_DIR/include:$CPATH"
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 ENV CLASSPATH=$JAVA_HOME/lib/
 ENV PATH=$JAVA_HOME/bin:$PATH

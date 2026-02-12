@@ -17,7 +17,20 @@
 
 ARG GITHUB_BRANCH=master
 ARG OS_VERSION=rockylinux9
-FROM apache/pegasus:build-env-${OS_VERSION}-${GITHUB_BRANCH} as builder
+FROM apache/pegasus:build-env-${OS_VERSION}-${GITHUB_BRANCH} AS base_image
+
+FROM base_image AS stage-ubuntu2004
+ENV OPENSSL_ROOT_DIR=/usr/local/ssl \
+    LIBRARY_PATH=/usr/local/ssl/lib64:/usr/local/ssl/lib:$LIBRARY_PATH \
+    LD_LIBRARY_PATH=/usr/local/ssl/lib64:/usr/local/ssl/lib:$LD_LIBRARY_PATH \
+    CMAKE_PREFIX_PATH=/usr/local/ssl:$CMAKE_PREFIX_PATH
+
+FROM base_image AS stage-rockylinux9
+FROM base_image AS stage-ubuntu2204
+FROM base_image AS stage-ubuntu1804
+
+FROM stage-${OS_VERSION} AS builder
+
 
 WORKDIR /root
 
