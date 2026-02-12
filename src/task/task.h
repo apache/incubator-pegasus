@@ -335,7 +335,6 @@ public:
         _cb = nullptr;
     }
 
-
     void exec() override
     {
         if (dsn_likely(_cb != nullptr)) {
@@ -350,10 +349,9 @@ protected:
         _cb = nullptr;
     }
 
-
 protected:
     task_handler _cb;
-    ::dsn::utils::ex_lock_nr  _lock;
+    ::dsn::utils::ex_lock_nr _lock;
 };
 
 //----------------- timer task -------------------------------------------------------
