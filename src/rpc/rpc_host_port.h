@@ -139,8 +139,7 @@ class TProtocol;
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
         _obj.field.clear();                                                                        \
-        _obj.hp_##field.clear();                                                                   \
-        _obj.__isset.hp_##field = false;                                                           \
+        _obj.__set.hp_##field({});                                                                 \
     } while (0)
 
 // Add 'addr' and 'hp' to the vector '<field>' and optional vector 'hp_<field>' of 'obj'. The types
