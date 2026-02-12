@@ -42,6 +42,7 @@ type PartitionDetector interface {
 
 type PartitionDetectorConfig struct {
 	MetaServers              []string
+	RetentionPeriod          time.Duration
 	RpcTimeout               time.Duration
 	DetectInterval           time.Duration
 	PullMetricsTimeout       time.Duration
@@ -54,6 +55,7 @@ type PartitionDetectorConfig struct {
 func LoadPartitionDetectorConfig() *PartitionDetectorConfig {
 	return &PartitionDetectorConfig{
 		MetaServers:              viper.GetStringSlice("meta_servers"),
+		RetentionPeriod:          viper.GetDuration("hotspot.retention_period"),
 		RpcTimeout:               viper.GetDuration("hotspot.rpc_timeout"),
 		DetectInterval:           viper.GetDuration("hotspot.partition_detect_interval"),
 		PullMetricsTimeout:       viper.GetDuration("hotspot.pull_metrics_timeout"),
@@ -67,6 +69,10 @@ func LoadPartitionDetectorConfig() *PartitionDetectorConfig {
 func NewPartitionDetector(cfg *PartitionDetectorConfig) (PartitionDetector, error) {
 	if len(cfg.MetaServers) == 0 {
 		return nil, fmt.Errorf("MetaServers should not be empty")
+	}
+
+	if cfg.RetentionPeriod <= 0 {
+		return nil, fmt.Errorf("RetentionPeriod(%d) must be > 0", cfg.RetentionPeriod)
 	}
 
 	if cfg.DetectInterval <= 0 {
@@ -111,6 +117,12 @@ type partitionDetectorImpl struct {
 }
 
 func (d *partitionDetectorImpl) Run(tom *tomb.Tomb) error {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go d.checkExpiration(ctx, &wg)
+
 	ticker := time.NewTicker(d.cfg.DetectInterval)
 	defer ticker.Stop()
 
@@ -119,9 +131,45 @@ func (d *partitionDetectorImpl) Run(tom *tomb.Tomb) error {
 		case <-ticker.C:
 			d.detect()
 		case <-tom.Dying():
+			cancel()
+			wg.Wait()
+
 			log.Info("Hotspot partition detector exited.")
 			return nil
 		}
+	}
+}
+
+func (d *partitionDetectorImpl) checkExpiration(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	ticker := time.NewTicker(d.cfg.RetentionPeriod)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			d.retireExpiredTables()
+
+		case <-ctx.Done():
+			log.Info("Expiration checker for hotspot exited.")
+			return
+		}
+	}
+}
+
+func (d *partitionDetectorImpl) retireExpiredTables() {
+	currentTimestampSeconds := time.Now().Unix()
+
+	d.mtx.Lock()
+	defer d.mtx.Unlock()
+
+	for key, analyzer := range d.analyzers {
+		if !analyzer.isExpired(currentTimestampSeconds) {
+			continue
+		}
+
+		delete(d.analyzers, key)
 	}
 }
 
@@ -439,6 +487,10 @@ func calculateHotspotStats(appMap appStatsMap) map[partitionAnalyzerKey][]hotspo
 func (d *partitionDetectorImpl) analyse(appMap appStatsMap) {
 	hotspotMap := calculateHotspotStats(appMap)
 
+	nowTime := time.Now()
+	expireTime := nowTime.Add(d.cfg.RetentionPeriod)
+	expireTimestampSeconds := expireTime.Unix()
+
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 
@@ -455,7 +507,7 @@ func (d *partitionDetectorImpl) analyse(appMap appStatsMap) {
 			d.analyzers[key] = analyzer
 		}
 
-		analyzer.add(value)
+		analyzer.add(value, expireTimestampSeconds)
 
 		// Perform the analysis asynchronously.
 		go analyzer.analyse()
@@ -489,12 +541,25 @@ type partitionAnalyzer struct {
 	appID                    int32
 	partitionCount           int32
 	mtx                      sync.RWMutex
+	expireTimestampSeconds   int64
 	samples                  deque.Deque[[]hotspotPartitionStats] // Each element is a sample of all partitions of the table
 }
 
-func (a *partitionAnalyzer) add(sample []hotspotPartitionStats) {
+func (a *partitionAnalyzer) isExpired(currentTimestampSeconds int64) bool {
+	a.mtx.RLock()
+	defer a.mtx.RUnlock()
+
+	return currentTimestampSeconds >= a.expireTimestampSeconds
+}
+
+func (a *partitionAnalyzer) add(
+	sample []hotspotPartitionStats,
+	expireTimestampSeconds int64,
+) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
+
+	a.expireTimestampSeconds = expireTimestampSeconds
 
 	for a.samples.Len() >= a.maxSampleSize {
 		a.samples.PopFront()
