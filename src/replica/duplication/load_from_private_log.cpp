@@ -187,7 +187,7 @@ void load_from_private_log::find_log_file_to_start()
         }
     }
 
-    find_log_file_to_start(std::move(new_file_map));
+    find_log_file_to_start(new_file_map);
 }
 
 void load_from_private_log::find_log_file_to_start(
