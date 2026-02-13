@@ -422,9 +422,7 @@ TEST(meta_data, construct_replica)
                       dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 10, 12},
                       dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 8, 10, 12},
                       dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 9, 11, 12}};
-        print_pc_cc("BEFORE construct_replica");
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-        print_pc_cc("AFTER construct_replica");
         dsn::host_port primary;
         GET_HOST_PORT(pc, primary, primary);
         ASSERT_EQ(node_list[4], primary);
