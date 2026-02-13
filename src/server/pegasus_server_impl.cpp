@@ -2750,7 +2750,9 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     update_rocksdb_iteration_threshold(envs);
     update_validate_partition_hash(envs);
     update_user_specified_compaction(envs);
-    _manual_compact_svc.start_manual_compact_if_needed(envs);
+    if(_db){
+        _manual_compact_svc.start_manual_compact_if_needed(envs);
+    }
     set_rocksdb_options_before_creating(envs);
 }
 
