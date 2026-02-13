@@ -39,11 +39,13 @@
 #include "duplication_internal_types.h"
 #include "gutil/map_util.h"
 #include "pegasus/client.h"
+#include "pegasus_rpc_types.h"
 #include "pegasus_key_schema.h"
 #include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
+#include "base/pegasus_utils.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
 #include "utils/chrono_literals.h"
@@ -64,6 +66,11 @@ METRIC_DEFINE_counter(replica,
                       dup_shipped_failed_requests,
                       dsn::metric_unit::kRequests,
                       "The number of failed DUPLICATE requests sent from client");
+
+METRIC_DEFINE_counter(replica,
+                      dup_retry_non_idempotent_duplicate_request,
+                      dsn::metric_unit::kRequests,
+                      "The number of Non-idempotent write when doing DUPLICATE which is Retried");
 
 namespace dsn {
 namespace replication {
@@ -114,6 +121,22 @@ using namespace dsn::literals::chrono_literals;
         dsn::from_blob_to_thrift(data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
+    if (tc == dsn::apps::RPC_RRDB_RRDB_INCR) {
+        dsn::apps::incr_request thrift_request;
+        dsn::from_blob_to_thrift(data, thrift_request);
+        return pegasus_hash_key_hash(thrift_request.key);
+    }
+    if (tc == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+        dsn::apps::check_and_set_request thrift_request;
+        dsn::from_blob_to_thrift(data, thrift_request);
+        return pegasus_hash_key_hash(thrift_request.hash_key);
+    }
+    if (tc == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+        dsn::apps::check_and_mutate_request thrift_request;
+        dsn::from_blob_to_thrift(data, thrift_request);
+        return pegasus_hash_key_hash(thrift_request.hash_key);
+    }
+
     LOG_FATAL("unexpected task code: {}", tc);
     __builtin_unreachable();
 }
@@ -124,7 +147,8 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
     : mutation_duplicator(r),
       _remote_cluster(remote_cluster),
       METRIC_VAR_INIT_replica(dup_shipped_successful_requests),
-      METRIC_VAR_INIT_replica(dup_shipped_failed_requests)
+      METRIC_VAR_INIT_replica(dup_shipped_failed_requests),
+      METRIC_VAR_INIT_replica(dup_retry_non_idempotent_duplicate_request)
 {
     // initialize pegasus-client when this class is first time used.
     static __attribute__((unused)) bool _dummy = pegasus_client_factory::initialize(nullptr);
@@ -218,6 +242,9 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
             // retry this rpc
             _inflights[hash].push_front(rpc);
             _env.schedule([hash, cb, this]() { send(hash, cb); }, 1_s);
+
+            log_non_idempotent_rpc_retry_if_need(rpc);
+
             return;
         }
         if (_inflights[hash].empty()) {
@@ -230,6 +257,60 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
             // start next rpc immediately
             _env.schedule([hash, cb, this]() { send(hash, cb); });
             return;
+        }
+    }
+}
+
+void pegasus_mutation_duplicator::log_non_idempotent_rpc_retry_if_need(duplicate_rpc &rpc)
+{
+
+    // there maybe more than one mutation in one dup rpc
+    if (FLAGS_duplication_unsafe_allow_non_idempotent) {
+        for (auto entry : rpc.request().entries) {
+            if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
+                entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
+                entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+
+                METRIC_VAR_INCREMENT(dup_retry_non_idempotent_duplicate_request);
+
+                dsn::message_ex *write =
+                    dsn::from_blob_to_received_msg(entry.task_code, entry.raw_message);
+
+                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
+                    auto incr = incr_rpc(write).request();
+                    LOG_DEBUG_PREFIX(
+                        "Non-indempotent write RPC_RRDB_RRDB_INCR has been retried when doing "
+                        "duplication,"
+                        "key is [{}]",
+                        pegasus::utils::c_escape_sensitive_string(incr.key));
+                    continue;
+                }
+
+                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+                    auto check_and_set = check_and_set_rpc(write).request();
+                    LOG_DEBUG_PREFIX(
+                        "Non-indempotent write RPC_RRDB_RRDB_CHECK_AND_SET has been retried "
+                        "when doing duplication,"
+                        "hash key [{}], check sort key [{}],"
+                        "set sort key [{}]",
+                        pegasus::utils::c_escape_sensitive_string(check_and_set.hash_key),
+                        pegasus::utils::c_escape_sensitive_string(check_and_set.check_sort_key),
+                        pegasus::utils::c_escape_sensitive_string(check_and_set.set_sort_key));
+                    continue;
+                }
+
+                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+                    auto check_and_mutate = check_and_mutate_rpc(write).request();
+                    LOG_DEBUG_PREFIX(
+                        "Non-indempotent write RPC_RRDB_RRDB_CHECK_AND_MUTATE has been "
+                        "retried when doing duplication,"
+                        "hash key [{}], check sort key [{}],"
+                        "set sort key [{}]",
+                        pegasus::utils::c_escape_sensitive_string(check_and_mutate.hash_key),
+                        pegasus::utils::c_escape_sensitive_string(check_and_mutate.check_sort_key));
+                    continue;
+                }
+            }
         }
     }
 }
