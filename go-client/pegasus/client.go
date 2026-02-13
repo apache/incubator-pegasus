@@ -64,7 +64,7 @@ func NewClient(cfg config.Config) Client {
 
 func newClientWithError(cfg config.Config) (Client, error) {
 	var err error
-	cfg.MetaServers, err = session.ResolveMetaAddr(cfg.MetaServers)
+	_, err = session.ResolveMetaAddr(cfg.MetaServers)
 	if err != nil {
 		return nil, err
 	}
