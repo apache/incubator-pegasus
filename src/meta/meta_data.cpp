@@ -148,7 +148,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
             break;
         }
         // similar to cc.drop_list, pc.last_drop is also a stack structure
-        HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(pc, last_drops, iter->node);
+        HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(pc, last_drops, iter->node, last_drops);
         LOG_INFO("construct for ({}), select {} into last_drops, ballot({}), "
                  "committed_decree({}), prepare_decree({})",
                  pid,

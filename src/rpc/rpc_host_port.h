@@ -215,15 +215,18 @@ class TProtocol;
 // Head insert 'hp' and its DNS resolved rpc_address to the optional vector 'hp_<field>' and vector
 // '<field>' of 'obj'. The types of the fields are std::vector<rpc_address> and
 // std::vector<host_port>, respectively.
-#define HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(obj, field, hp)                                        \
+#define HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(obj, field, hp, target)                                \
     do {                                                                                           \
         auto &_obj = (obj);                                                                        \
         const auto &_hp = (hp);                                                                    \
+        auto &_target = (target);                                                                  \
         _obj.field.insert(_obj.field.begin(), _hp.resolve());                                      \
         if (!_obj.__isset.hp_##field) {                                                            \
             _obj.__set_hp_##field({_hp});                                                          \
+            _target.emplace_back(_hp);                                                             \
         } else {                                                                                   \
             _obj.hp_##field.insert(_obj.hp_##field.begin(), _hp);                                  \
+            _target = _obj.hp_##field;                                                             \
         }                                                                                          \
         DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                      \
     } while (0)
