@@ -164,6 +164,8 @@ func (d *partitionDetectorImpl) retireExpiredTables() {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 
+	log.Info("check expired tables")
+
 	for key, analyzer := range d.analyzers {
 		if !analyzer.isExpired(currentTimestampSeconds) {
 			continue
@@ -417,10 +419,8 @@ func calculateStats(
 		}
 
 		// Only primary replica of a partition will be counted.
-		// TODO(wangdan): support Equal() for base.HostPort.
 		primary := stats.partitionConfigs[partitionID].HpPrimary
-		if primary.GetHost() != node.HpNode.GetHost() ||
-			primary.GetPort() != node.HpNode.GetPort() {
+		if !primary.Equal(node.HpNode) {
 			continue
 		}
 
