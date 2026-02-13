@@ -425,6 +425,12 @@ public:
         _tracker.cancel_outstanding_tasks();
     }
 
+    // Non-copyable and non-movable
+    mutation_log_private(const mutation_log_private &) = delete;
+    mutation_log_private &operator=(const mutation_log_private &) = delete;
+    mutation_log_private(mutation_log_private &&) = delete;
+    mutation_log_private &operator=(mutation_log_private &&) = delete;
+
     ::dsn::task_ptr append(mutation_ptr &mu,
                            dsn::task_code callback_code,
                            dsn::task_tracker *tracker,
