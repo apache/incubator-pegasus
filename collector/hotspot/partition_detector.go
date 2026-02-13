@@ -420,7 +420,7 @@ func calculateStats(
 
 		// Only primary replica of a partition will be counted.
 		primary := stats.partitionConfigs[partitionID].HpPrimary
-		if !primary.Equal(node.HpNode) {
+		if !node.HpNode.Equal(primary) {
 			continue
 		}
 
