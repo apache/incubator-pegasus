@@ -101,8 +101,7 @@ class proposal_actions
 private:
     bool from_balancer;
 
-    // used for track the learing process and check if abnormal situation
-    // happens
+    // used for track the learing process and check if abnormal situation happens
     bool learning_progress_abnormal_detected;
     replica_info current_learner;
 
@@ -131,20 +130,19 @@ public:
 };
 
 //
-// structure "dropped_replica" represents a replica which was downgraded to
-// inactive. there are 2 sources to get the dropped replica:
+// structure "dropped_replica" represents a replica which was downgraded to inactive.
+// there are 2 sources to get the dropped replica:
 //   1. by record the meta's update-cfg action
 //   2. by collect the inactive replicas reported from the replica servers
-// generally, we give a partitial order for the dropped_replica, in which a
-// higher order roughly means that the replica has MORE data.
+// generally, we give a partitial order for the dropped_replica, in which a higher order
+// roughly means that the replica has MORE data.
 //
-// a load balancer may record a list of dropped_replica to track the drop
-// history and use it to do the cure decision.
+// a load balancer may record a list of dropped_replica to track the drop history and use
+// it to do the cure decision.
 //
 
 // currently dropped_cmp depend on the dropped_replica::INVALID_TIMESTAMP is 0,
-// if you modify the dropped_replica::INVALID_TIMESTAMP, please modify the
-// dropped_cmp accordingly.
+// if you modify the dropped_replica::INVALID_TIMESTAMP, please modify the dropped_cmp accordingly.
 struct dropped_replica
 {
     dsn::host_port node;
@@ -184,8 +182,8 @@ inline int dropped_cmp(const dropped_replica &d1, const dropped_replica &d2)
     return 0;
 }
 
-// Represent a replica that is serving. Info in this structure can only from
-// config-sync of RS. Load balancer may use this to do balance decisions.
+// Represent a replica that is serving. Info in this structure can only from config-sync of RS.
+// Load balancer may use this to do balance decisions.
 struct serving_replica
 {
     dsn::host_port node;
@@ -236,8 +234,8 @@ public:
     // return true if put ok, false if the node has been in dropped
     bool record_drop_history(const dsn::host_port &node);
 
-    // Notice: please make sure whether node is actually an inactive or a
-    // serving replica ret:
+    // Notice: please make sure whether node is actually an inactive or a serving replica
+    // ret:
     //   1 => node has been in the dropped
     //   0 => insert the info to the dropped
     //  -1 => info is too staled to insert
@@ -256,8 +254,7 @@ public:
 
     void adjust_proposal(const dsn::host_port &node, const replica_info &info);
 
-    bool get_disk_tag(const host_port &node,
-                      /*out*/ std::string &disk_tag) const;
+    bool get_disk_tag(const host_port &node, /*out*/ std::string &disk_tag) const;
 
 public:
     // intialize to 4 statically.
@@ -299,11 +296,9 @@ struct restore_state
 {
     // restore_status:
     //      ERR_OK: restore haven't encounter some error
-    //      ERR_CORRUPTION : data on backup media is damaged and we can not skip
-    //      the damage data,
+    //      ERR_CORRUPTION : data on backup media is damaged and we can not skip the damage data,
     //                       so should restore rollback
-    //      ERR_IGNORE_DAMAGED_DATA : data on backup media is damaged but we can
-    //      skip the damage
+    //      ERR_IGNORE_DAMAGED_DATA : data on backup media is damaged but we can skip the damage
     //                                data, so skip the damaged partition
     dsn::error_code restore_status;
     int32_t progress;
@@ -312,10 +307,10 @@ struct restore_state
 };
 
 // app partition_split states
-// when starting partition split, `splitting_count` will be equal to
-// old_partition_count, <parent_partition_index, SPLITTING> will be inserted
-// into `status`. if partition[0] finish split, `splitting_count` will decrease
-// and <0, SPLITTING> will be removed in `status`.
+// when starting partition split, `splitting_count` will be equal to old_partition_count,
+// <parent_partition_index, SPLITTING> will be inserted into `status`.
+// if partition[0] finish split, `splitting_count` will decrease and <0, SPLITTING> will be removed
+// in `status`.
 struct split_state
 {
     int32_t splitting_count{0};
@@ -521,10 +516,8 @@ enum health_status
 {
     HS_DEAD = 0,     // (primary = 0 && secondary = 0)
     HS_UNREADABLE,   // (primary = 0 && secondary > 0)
-    HS_UNWRITABLE,   // (primary = 1 && primary + secondary <
-                     // mutation_2pc_min_replica_count)
-    HS_WRITABLE_ILL, // (primary = 1 && primary + secondary >=
-                     // mutation_2pc_min_replica_count
+    HS_UNWRITABLE,   // (primary = 1 && primary + secondary < mutation_2pc_min_replica_count)
+    HS_WRITABLE_ILL, // (primary = 1 && primary + secondary >= mutation_2pc_min_replica_count
                      //              && primary + secondary < max_replica_count)
     HS_HEALTHY,      // (primary = 1 && primary + secondary >= max_replica_count)
     HS_MAX_VALUE
@@ -598,8 +591,8 @@ void maintain_drops(/*inout*/ std::vector<T> &drops, const T &node, config_type:
 // Try to construct a replica-group by current replica-infos of a gpid
 // ret:
 //   if construct the replica successfully, return true.
-//   Notice: as long as we can construct something from current infos, we treat
-//   it as a success
+//   Notice: as long as we can construct something from current infos, we treat it as a
+//   success
 bool construct_replica(meta_view view, const gpid &pid, int max_replica_count);
 
 // When replica infos are collected from replica servers, meta-server

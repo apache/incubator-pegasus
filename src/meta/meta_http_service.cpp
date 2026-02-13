@@ -765,13 +765,12 @@ bool meta_http_service::redirect_if_not_primary(const http_request &req, http_re
     // which could be done by building Pegasus with tests by:
     //     ./run.sh build --test ...
     //
-    // If `_service->_balancer` is not null, it must has been initialized by
-    // mocking, in which case just returning true is ok.
+    // If `_service->_balancer` is not null, it must has been initialized by mocking, in which case
+    // just returning true is ok.
     //
-    // Otherwise, once `_service->_balancer` is null, which means this must be a
-    // standby meta server, returning true would lead to coredump due to null
-    // `_service->_balancer` while processing requests in
-    // `get_cluster_info_handler`. Thus it should go through the following
+    // Otherwise, once `_service->_balancer` is null, which means this must be a standby meta
+    // server, returning true would lead to coredump due to null `_service->_balancer` while
+    // processing requests in `get_cluster_info_handler`. Thus it should go through the following
     // normal process instead of just returning true.
     if (_service->_balancer) {
         return true;
