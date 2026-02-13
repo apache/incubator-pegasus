@@ -301,6 +301,9 @@ public:
 
     task_tracker *tracker() { return &_tracker; }
 
+    decree get_cleanable_decree() const;
+    void set_cleanable_decree(decree d);
+
 protected:
     // 'size' is data size to write; the '_global_end_offset' will be updated by 'size'.
     // can switch file only when create_new_log_if_needed = true;
@@ -400,9 +403,11 @@ private:
     // for plog. Since it is set with mutation.data.header.last_committed_decree, it must
     // be less than _plog_max_decree_on_disk.
     decree _plog_max_commit_on_disk;
+
+    decree _cleanable_decree; // for gc crush
 };
 
-typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
+using mutation_log_ptr = dsn::ref_ptr<mutation_log>;
 
 class mutation_log_private : public mutation_log, private replica_base
 {
@@ -420,12 +425,18 @@ public:
         _tracker.cancel_outstanding_tasks();
     }
 
+    // Non-copyable and non-movable
+    mutation_log_private(const mutation_log_private &) = delete;
+    mutation_log_private &operator=(const mutation_log_private &) = delete;
+    mutation_log_private(mutation_log_private &&) = delete;
+    mutation_log_private &operator=(mutation_log_private &&) = delete;
+
     ::dsn::task_ptr append(mutation_ptr &mu,
                            dsn::task_code callback_code,
                            dsn::task_tracker *tracker,
                            aio_handler &&callback,
-                           int hash = 0,
-                           int64_t *pending_size = nullptr) override;
+                           int hash,
+                           int64_t *pending_size) override;
 
     bool get_learn_state_in_memory(decree start_decree, binary_writer &writer) const override;
 
