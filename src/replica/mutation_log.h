@@ -435,8 +435,8 @@ public:
                            dsn::task_code callback_code,
                            dsn::task_tracker *tracker,
                            aio_handler &&callback,
-                           int hash = 0,
-                           int64_t *pending_size = nullptr) override;
+                           int hash,
+                           int64_t *pending_size) override;
 
     bool get_learn_state_in_memory(decree start_decree, binary_writer &writer) const override;
 

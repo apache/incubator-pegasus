@@ -84,7 +84,6 @@ public:
 private:
     void find_log_file_to_start(const mutation_log::log_file_map_by_index &log_file_map);
 
-private:
     friend class load_from_private_log_test;
     friend class load_fail_mode_test;
     FRIEND_TEST(load_fail_mode_test, fail_skip);
