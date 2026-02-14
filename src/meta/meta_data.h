@@ -28,11 +28,11 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
 #include <set>
-#include <stdint.h>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -316,7 +316,7 @@ struct split_state
     int32_t splitting_count{0};
     // partition_index -> split_status
     std::map<int32_t, split_status::type> status;
-    split_state() : splitting_count(0) {}
+    split_state() = default;
 };
 
 class app_state;
@@ -324,14 +324,13 @@ class app_state;
 class app_state_helper
 {
 public:
-    app_state *owner;
+    app_state *owner{nullptr};
     std::atomic_int partitions_in_progress{0};
     std::vector<config_context> contexts;
     dsn::message_ex *pending_response;
     std::vector<restore_state> restore_states;
     split_state split_states;
 
-public:
     app_state_helper() : owner(nullptr), partitions_in_progress(0)
     {
         contexts.clear();

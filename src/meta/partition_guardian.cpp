@@ -159,10 +159,26 @@ bool partition_guardian::from_proposals(meta_view &view,
     config_context &cc = *get_config_context(*(view.apps), gpid);
     bool is_action_valid;
 
+    auto handle_invalid_action = [&](std::string_view reason) {
+        LOG_INFO("proposal action({}) for gpid({}) is invalid, clear all proposal actions: {}",
+                 action, gpid, reason);
+        action.type = config_type::CT_INVALID;
+
+        while (!cc.lb_actions.empty()) {
+            configuration_proposal_action cpa = *cc.lb_actions.front();
+            if (!cc.lb_actions.is_from_balancer()) {
+                finish_cure_proposal(view, gpid, cpa);
+            }
+            cc.lb_actions.pop_front();
+        }
+        return false;
+    };
+
     if (cc.lb_actions.empty()) {
         action.type = config_type::CT_INVALID;
         return false;
     }
+
     action = *(cc.lb_actions.front());
     host_port target;
     host_port node;
@@ -170,27 +186,23 @@ bool partition_guardian::from_proposals(meta_view &view,
     std::string reason;
     host_port primary;
     GET_HOST_PORT(pc, primary, primary);
+
     if (!target) {
-        reason = "action target is invalid";
-        goto invalid_action;
+	return handle_invalid_action("action target is invalid");
     }
     if (!is_node_alive(*(view.nodes), target)) {
-        reason = fmt::format("action target({}) is not alive", target);
-        goto invalid_action;
+        return handle_invalid_action(fmt::format("action target({}) is not alive", target));
     }
     GET_HOST_PORT(action, node, node);
     if (!node) {
-        reason = "action node is invalid";
-        goto invalid_action;
+        return handle_invalid_action("action node is invalid");
     }
     if (!is_node_alive(*(view.nodes), node)) {
-        reason = fmt::format("action node({}) is not alive", node);
-        goto invalid_action;
+        return handle_invalid_action(fmt::format("action node({}) is not alive", node));
     }
 
     if (cc.lb_actions.is_abnormal_learning_proposal()) {
-        reason = "learning process abnormal";
-        goto invalid_action;
+        return handle_invalid_action("learning process abnormal");
     }
 
     switch (action.type) {
@@ -219,25 +231,9 @@ bool partition_guardian::from_proposals(meta_view &view,
 
     if (is_action_valid) {
         return true;
-    } else {
-        reason = "action is invalid";
     }
-
-invalid_action:
-    LOG_INFO("proposal action({}) for gpid({}) is invalid, clear all proposal actions: {}",
-             action,
-             gpid,
-             reason);
-    action.type = config_type::CT_INVALID;
-
-    while (!cc.lb_actions.empty()) {
-        configuration_proposal_action cpa = *cc.lb_actions.front();
-        if (!cc.lb_actions.is_from_balancer()) {
-            finish_cure_proposal(view, gpid, cpa);
-        }
-        cc.lb_actions.pop_front();
-    }
-    return false;
+    
+    return handle_invalid_action("action is invalid");
 }
 
 pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpid &gpid)
