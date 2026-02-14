@@ -46,7 +46,8 @@ TEST(meta_data, dropped_cmp)
 {
     host_port n;
 
-    dropped_replica d1, d2;
+    dropped_replica d1;
+    dropped_replica d2;
     // time not equal
     {
         d1 = {n, 10, 5, 5, 5};

@@ -327,15 +327,11 @@ public:
     app_state *owner{nullptr};
     std::atomic_int partitions_in_progress{0};
     std::vector<config_context> contexts;
-    dsn::message_ex *pending_response;
+    dsn::message_ex *pending_response{nullptr};
     std::vector<restore_state> restore_states;
     split_state split_states;
 
-    app_state_helper() : partitions_in_progress(0)
-    {
-        contexts.clear();
-        pending_response = nullptr;
-    }
+    app_state_helper() = default;
     void on_init_partitions();
     void clear_proposals()
     {
