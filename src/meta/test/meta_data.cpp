@@ -457,7 +457,7 @@ TEST(meta_data, construct_replica)
         host_port primary;
         GET_HOST_PORT(pc, primary, primary);
         ASSERT_EQ(node_list[2], primary);
-	
+
         std::vector<host_port> secondaries;
         GET_HOST_PORTS(pc, secondaries, secondaries);
         ASSERT_TRUE(secondaries.empty());

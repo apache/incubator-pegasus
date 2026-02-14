@@ -161,7 +161,9 @@ bool partition_guardian::from_proposals(meta_view &view,
 
     auto handle_invalid_action = [&](std::string_view reason) {
         LOG_INFO("proposal action({}) for gpid({}) is invalid, clear all proposal actions: {}",
-                 action, gpid, reason);
+                 action,
+                 gpid,
+                 reason);
         action.type = config_type::CT_INVALID;
 
         while (!cc.lb_actions.empty()) {
@@ -188,7 +190,7 @@ bool partition_guardian::from_proposals(meta_view &view,
     GET_HOST_PORT(pc, primary, primary);
 
     if (!target) {
-	return handle_invalid_action("action target is invalid");
+        return handle_invalid_action("action target is invalid");
     }
     if (!is_node_alive(*(view.nodes), target)) {
         return handle_invalid_action(fmt::format("action target({}) is not alive", target));
@@ -232,7 +234,7 @@ bool partition_guardian::from_proposals(meta_view &view,
     if (is_action_valid) {
         return true;
     }
-    
+
     return handle_invalid_action("action is invalid");
 }
 
