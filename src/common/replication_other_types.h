@@ -36,6 +36,7 @@
 #include "consensus_types.h"
 #include "replica_admin_types.h"
 #include "common/replication_enums.h"
+#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 
@@ -78,18 +79,33 @@ inline bool is_member(const partition_configuration &pc, const rpc_address &node
 inline bool is_partition_config_equal(const partition_configuration &pc1,
                                       const partition_configuration &pc2)
 {
-    // secondaries no need to be same order
-    for (const auto &pc1_secondary : pc1.hp_secondaries) {
+    if (pc1.ballot != pc2.ballot || pc1.pid != pc2.pid ||
+        pc1.max_replica_count != pc2.max_replica_count ||
+        pc1.last_committed_decree != pc2.last_committed_decree) {
+        return false;
+    }
+
+    host_port pc1_primary;
+    GET_HOST_PORT(pc1, primary, pc1_primary);
+    host_port pc2_primary;
+    GET_HOST_PORT(pc2, primary, pc2_primary);
+    if (pc1_primary != pc2_primary) {
+        return false;
+    }
+
+    // secondaries no need to be in the same order.
+    std::vector<host_port> pc1_secondaries;
+    GET_HOST_PORTS(pc1, secondaries, pc1_secondaries);
+    for (const auto &pc1_secondary : pc1_secondaries) {
         if (!is_secondary(pc2, pc1_secondary)) {
             return false;
         }
     }
+
+    std::vector<host_port> pc2_secondaries;
+    GET_HOST_PORTS(pc2, secondaries, pc2_secondaries);
     // last_drops is not considered into equality check
-    return pc1.ballot == pc2.ballot && pc1.pid == pc2.pid &&
-           pc1.max_replica_count == pc2.max_replica_count && pc1.primary == pc2.primary &&
-           pc1.hp_primary == pc2.hp_primary && pc1.secondaries.size() == pc2.secondaries.size() &&
-           pc1.hp_secondaries.size() == pc2.hp_secondaries.size() &&
-           pc1.last_committed_decree == pc2.last_committed_decree;
+    return pc1_secondaries.size() == pc2_secondaries.size();
 }
 
 class replica_helper

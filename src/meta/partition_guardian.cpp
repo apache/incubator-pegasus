@@ -20,12 +20,12 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 // IWYU pragma: no_include <ext/alloc_traits.h>
-#include <inttypes.h>
+#include <algorithm>
+#include <cinttypes>
+#include <cstdint>
+#include <cstdio>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
-#include <stdio.h>
-#include <algorithm>
-#include <cstdint>
 #include <ostream>
 #include <type_traits>
 #include <unordered_map>
@@ -85,12 +85,16 @@ pc_status partition_guardian::cure(meta_view view,
     CHECK(app->is_stateful, "");
     CHECK(acts.empty(), "");
 
-    pc_status status;
-    if (!pc.hp_primary) {
+    pc_status status{0};
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    if (!primary) {
         status = on_missing_primary(view, gpid);
-    } else if (static_cast<int>(pc.hp_secondaries.size()) + 1 < pc.max_replica_count) {
+    } else if (static_cast<int>(secondaries.size()) + 1 < pc.max_replica_count) {
         status = on_missing_secondary(view, gpid);
-    } else if (static_cast<int>(pc.hp_secondaries.size()) >= pc.max_replica_count) {
+    } else if (static_cast<int>(secondaries.size()) >= pc.max_replica_count) {
         status = on_redundant_secondary(view, gpid);
     } else {
         status = pc_status::healthy;
@@ -125,8 +129,8 @@ void partition_guardian::reconfig(meta_view view, const configuration_update_req
     // handle the dropped out servers
     if (request.type == config_type::CT_DROP_PARTITION) {
         cc->serving.clear();
-
-        const auto &last_drops = request.config.hp_last_drops;
+        std::vector<host_port> last_drops;
+        GET_HOST_PORTS(request.config, last_drops, last_drops);
         for (const auto &last_drop : last_drops) {
             cc->record_drop_history(last_drop);
         }
@@ -153,46 +157,62 @@ bool partition_guardian::from_proposals(meta_view &view,
 {
     const partition_configuration &pc = *get_config(*(view.apps), gpid);
     config_context &cc = *get_config_context(*(view.apps), gpid);
-    bool is_action_valid;
+    bool is_action_valid{false};
+
+    auto handle_invalid_action = [&](std::string_view reason) {
+        LOG_INFO("proposal action({}) for gpid({}) is invalid, clear all proposal actions: {}",
+                 action,
+                 gpid,
+                 reason);
+        action.type = config_type::CT_INVALID;
+
+        while (!cc.lb_actions.empty()) {
+            configuration_proposal_action cpa = *cc.lb_actions.front();
+            if (!cc.lb_actions.is_from_balancer()) {
+                finish_cure_proposal(view, gpid, cpa);
+            }
+            cc.lb_actions.pop_front();
+        }
+        return false;
+    };
 
     if (cc.lb_actions.empty()) {
         action.type = config_type::CT_INVALID;
         return false;
     }
+
     action = *(cc.lb_actions.front());
     host_port target;
     host_port node;
     GET_HOST_PORT(action, target, target);
     std::string reason;
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+
     if (!target) {
-        reason = "action target is invalid";
-        goto invalid_action;
+        return handle_invalid_action("action target is invalid");
     }
     if (!is_node_alive(*(view.nodes), target)) {
-        reason = fmt::format("action target({}) is not alive", target);
-        goto invalid_action;
+        return handle_invalid_action(fmt::format("action target({}) is not alive", target));
     }
     GET_HOST_PORT(action, node, node);
     if (!node) {
-        reason = "action node is invalid";
-        goto invalid_action;
+        return handle_invalid_action("action node is invalid");
     }
     if (!is_node_alive(*(view.nodes), node)) {
-        reason = fmt::format("action node({}) is not alive", node);
-        goto invalid_action;
+        return handle_invalid_action(fmt::format("action node({}) is not alive", node));
     }
 
     if (cc.lb_actions.is_abnormal_learning_proposal()) {
-        reason = "learning process abnormal";
-        goto invalid_action;
+        return handle_invalid_action("learning process abnormal");
     }
 
     switch (action.type) {
     case config_type::CT_ASSIGN_PRIMARY:
-        is_action_valid = (node == target && !pc.primary && !is_secondary(pc, node));
+        is_action_valid = (node == target && !primary && !is_secondary(pc, node));
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        is_action_valid = (node == target && !pc.primary && is_secondary(pc, node));
+        is_action_valid = (node == target && !primary && is_secondary(pc, node));
         break;
     case config_type::CT_ADD_SECONDARY:
     case config_type::CT_ADD_SECONDARY_FOR_LB:
@@ -213,25 +233,9 @@ bool partition_guardian::from_proposals(meta_view &view,
 
     if (is_action_valid) {
         return true;
-    } else {
-        reason = "action is invalid";
     }
 
-invalid_action:
-    LOG_INFO("proposal action({}) for gpid({}) is invalid, clear all proposal actions: {}",
-             action,
-             gpid,
-             reason);
-    action.type = config_type::CT_INVALID;
-
-    while (!cc.lb_actions.empty()) {
-        configuration_proposal_action cpa = *cc.lb_actions.front();
-        if (!cc.lb_actions.is_from_balancer()) {
-            finish_cure_proposal(view, gpid, cpa);
-        }
-        cc.lb_actions.pop_front();
-    }
-    return false;
+    return handle_invalid_action("action is invalid");
 }
 
 pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpid &gpid)
@@ -247,10 +251,14 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
 
     action.type = config_type::CT_INVALID;
     // try to upgrade a secondary to primary if the primary is missing
-    if (!pc.hp_secondaries.empty()) {
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    std::vector<host_port> last_drops;
+    GET_HOST_PORTS(pc, last_drops, last_drops);
+    if (!secondaries.empty()) {
         RESET_IP_AND_HOST_PORT(action, node);
-        for (const auto &secondary : pc.hp_secondaries) {
-            const auto ns = get_node_state(*(view.nodes), secondary, false);
+        for (const auto &secondary : secondaries) {
+            auto *const ns = get_node_state(*(view.nodes), secondary, false);
             CHECK_NOTNULL(ns, "invalid secondary: {}", secondary);
             if (dsn_unlikely(!ns->alive())) {
                 continue;
@@ -284,7 +292,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
     }
     // if nothing in the last_drops, it means that this is a newly created partition, so let's
     // just find a node and assign primary for it.
-    else if (pc.hp_last_drops.empty()) {
+    else if (last_drops.empty()) {
         dsn::host_port min_primary_server;
         newly_partitions *min_primary_server_np = nullptr;
 
@@ -338,10 +346,10 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                      dr.last_prepared_decree);
         }
 
-        for (int i = 0; i < pc.hp_last_drops.size(); ++i) {
+        for (int i = 0; i < last_drops.size(); ++i) {
             int dropped_index = -1;
             for (int k = 0; k < cc.dropped.size(); k++) {
-                if (cc.dropped[k].node == pc.hp_last_drops[i]) {
+                if (cc.dropped[k].node == last_drops[i]) {
                     dropped_index = k;
                     break;
                 }
@@ -353,13 +361,13 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                      dropped_index);
         }
 
-        if (pc.hp_last_drops.size() == 1) {
+        if (last_drops.size() == 1) {
             LOG_WARNING("{}: the only node({}) is dead, waiting it to come back",
                         gpid_name,
                         FMT_HOST_PORT_AND_IP(pc, last_drops.back()));
             SET_OBJ_IP_AND_HOST_PORT(action, node, pc, last_drops.back());
         } else {
-            std::vector<dsn::host_port> nodes(pc.hp_last_drops.end() - 2, pc.hp_last_drops.end());
+            std::vector<dsn::host_port> nodes(last_drops.end() - 2, last_drops.end());
             std::vector<dropped_replica> collected_info(2);
             bool ready = true;
 
@@ -559,7 +567,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
             gpid,
             oss.str(),
             cc.prefered_dropped);
-        if (cc.prefered_dropped < 0 || cc.prefered_dropped >= (int)cc.dropped.size()) {
+        if (cc.prefered_dropped < 0 || cc.prefered_dropped >= static_cast<int>(cc.dropped.size())) {
             LOG_INFO("gpid({}): prefered_dropped({}) is invalid according to drop_list(size {}), "
                      "reset it to {} (drop_list.size - 1)",
                      gpid,
@@ -668,9 +676,11 @@ pc_status partition_guardian::on_redundant_secondary(meta_view &view, const dsn:
     const node_mapper &nodes = *(view.nodes);
     const partition_configuration &pc = *get_config(*(view.apps), gpid);
     int target = 0;
-    int load = nodes.find(pc.hp_secondaries.front())->second.partition_count();
-    for (int i = 0; i != pc.hp_secondaries.size(); ++i) {
-        int l = nodes.find(pc.hp_secondaries[i])->second.partition_count();
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    int load = static_cast<int>(nodes.find(secondaries.front())->second.partition_count());
+    for (int i = 0; i != secondaries.size(); ++i) {
+        int l = static_cast<int>(nodes.find(secondaries[i])->second.partition_count());
         if (l > load) {
             load = l;
             target = i;

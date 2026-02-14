@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -265,12 +265,31 @@ public:
 struct partition_configuration_stateless
 {
     partition_configuration &pc;
-    partition_configuration_stateless(partition_configuration &_pc) : pc(_pc) {}
-    std::vector<dsn::host_port> &workers() { return pc.hp_last_drops; }
-    std::vector<dsn::host_port> &hosts() { return pc.hp_secondaries; }
-    bool is_host(const host_port &node) const { return utils::contains(pc.hp_secondaries, node); }
-    bool is_worker(const host_port &node) const { return utils::contains(pc.hp_last_drops, node); }
-    bool is_member(const host_port &node) const { return is_host(node) || is_worker(node); }
+    explicit partition_configuration_stateless(partition_configuration &_pc) : pc(_pc) {}
+    std::vector<dsn::host_port> &workers()
+    {
+        DCHECK(pc.__isset.hp_last_drops, "");
+        return pc.hp_last_drops;
+    }
+    std::vector<dsn::host_port> &hosts()
+    {
+        DCHECK(pc.__isset.hp_secondaries, "");
+        return pc.hp_secondaries;
+    }
+    [[nodiscard]] bool is_host(const host_port &node) const
+    {
+        DCHECK(pc.__isset.hp_secondaries, "");
+        return utils::contains(pc.hp_secondaries, node);
+    }
+    [[nodiscard]] bool is_worker(const host_port &node) const
+    {
+        DCHECK(pc.__isset.hp_last_drops, "");
+        return utils::contains(pc.hp_last_drops, node);
+    }
+    [[nodiscard]] bool is_member(const host_port &node) const
+    {
+        return is_host(node) || is_worker(node);
+    }
 };
 
 struct restore_state
@@ -294,10 +313,10 @@ struct restore_state
 // in `status`.
 struct split_state
 {
-    int32_t splitting_count;
+    int32_t splitting_count{0};
     // partition_index -> split_status
     std::map<int32_t, split_status::type> status;
-    split_state() : splitting_count(0) {}
+    split_state() = default;
 };
 
 class app_state;
@@ -305,19 +324,14 @@ class app_state;
 class app_state_helper
 {
 public:
-    app_state *owner;
-    std::atomic_int partitions_in_progress;
+    app_state *owner{nullptr};
+    std::atomic_int partitions_in_progress{0};
     std::vector<config_context> contexts;
-    dsn::message_ex *pending_response;
+    dsn::message_ex *pending_response{nullptr};
     std::vector<restore_state> restore_states;
     split_state split_states;
 
-public:
-    app_state_helper() : owner(nullptr), partitions_in_progress(0)
-    {
-        contexts.clear();
-        pending_response = nullptr;
-    }
+    app_state_helper() = default;
     void on_init_partitions();
     void clear_proposals()
     {
