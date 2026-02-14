@@ -331,7 +331,7 @@ public:
     std::vector<restore_state> restore_states;
     split_state split_states;
 
-    app_state_helper() : owner(nullptr), partitions_in_progress(0)
+    app_state_helper() : partitions_in_progress(0)
     {
         contexts.clear();
         pending_response = nullptr;

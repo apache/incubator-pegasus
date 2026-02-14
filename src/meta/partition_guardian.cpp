@@ -157,7 +157,7 @@ bool partition_guardian::from_proposals(meta_view &view,
 {
     const partition_configuration &pc = *get_config(*(view.apps), gpid);
     config_context &cc = *get_config_context(*(view.apps), gpid);
-    bool is_action_valid;
+    bool is_action_valid{false};
 
     auto handle_invalid_action = [&](std::string_view reason) {
         LOG_INFO("proposal action({}) for gpid({}) is invalid, clear all proposal actions: {}",
