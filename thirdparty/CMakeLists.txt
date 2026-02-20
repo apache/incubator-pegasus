@@ -120,10 +120,9 @@ ExternalProject_Get_property(googletest SOURCE_DIR)
 set(googletest_SRC ${SOURCE_DIR})
 
 ExternalProject_Add(gperftools
-        URL ${OSS_URL_PREFIX}/gperftools-2.13.tar.gz
-        https://github.com/gperftools/gperftools/releases/download/gperftools-2.13/gperftools-2.13.tar.gz
-        URL_MD5 4e218a40a354748c50d054c285caaae8
-        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT} --enable-static=no --enable-frame-pointers=yes
+        URL https://github.com/gperftools/gperftools/archive/36fa5ee9ef55103d9edc0a206270f487f2539465.zip
+        URL_MD5 885d2fd18123a17d879d0365a32e4ac8
+        CONFIGURE_COMMAND ./autogen.sh && ./configure --prefix=${TP_OUTPUT} --enable-static=no --enable-frame-pointers=yes
         BUILD_IN_SOURCE 1
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
