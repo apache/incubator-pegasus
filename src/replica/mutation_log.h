@@ -301,6 +301,9 @@ public:
 
     task_tracker *tracker() { return &_tracker; }
 
+    decree get_cleanable_decree() const;
+    void set_cleanable_decree(decree target);
+
 protected:
     // 'size' is data size to write; the '_global_end_offset' will be updated by 'size'.
     // can switch file only when create_new_log_if_needed = true;
@@ -400,6 +403,8 @@ private:
     // for plog. Since it is set with mutation.data.header.last_committed_decree, it must
     // be less than _plog_max_decree_on_disk.
     decree _plog_max_commit_on_disk;
+
+    decree _cleanable_decree; // To deal with gc conflict
 };
 
 typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
