@@ -87,6 +87,7 @@ func main() {
 func loadConfigs() {
 	var configFile string
 	flag.StringVar(&configFile, "config", "config.yml", "config file path")
+	flag.Parse()
 
 	viper.SetConfigFile(configFile)
 	viper.SetConfigType("yaml")
