@@ -164,12 +164,15 @@ func setupLog() {
 		MaxBackups: maxFileNumber,
 		LocalTime:  true,
 	})
+
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors:    true,
 		FullTimestamp:    true,
 		CallerPrettyfier: callerPrettifier,
 	})
+
 	log.SetReportCaller(true)
+
 	log.SetLevel(level)
 }
 
