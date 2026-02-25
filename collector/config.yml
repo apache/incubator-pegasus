@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# log
+# logging configurations.
 log:
   filename: collector.log
   max_file_size_mb: 64
