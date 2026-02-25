@@ -18,10 +18,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -36,51 +39,10 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
-// callerPrettifier simplifies the caller info
-func callerPrettifier(f *runtime.Frame) (function string, file string) {
-	function = f.Function[strings.LastIndex(f.Function, "/")+1:]
-	file = fmt.Sprint(f.File[strings.LastIndex(f.File, "/")+1:], ":", f.Line)
-	return function, file
-}
-
-// setupSignalHandler setup signal handler for collector
-func setupSignalHandler(shutdownFunc func()) {
-	closeSignalChan := make(chan os.Signal, 1)
-	signal.Notify(closeSignalChan,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT)
-
-	go func() {
-		sig := <-closeSignalChan
-		log.Infof("got signal %s to exit", sig.String())
-		shutdownFunc()
-	}()
-}
-
 func main() {
-	// initialize logging
-	log.SetFormatter(&log.TextFormatter{
-		DisableColors:    true,
-		FullTimestamp:    true,
-		CallerPrettyfier: callerPrettifier,
-	})
-	log.SetOutput(&lumberjack.Logger{ // rolling log
-		Filename:  "./pegasus.log",
-		MaxSize:   50, // MegaBytes
-		MaxAge:    2,  // days
-		LocalTime: true,
-	})
-	log.SetReportCaller(true)
+	loadConfigs()
 
-	// TODO(wutao1): use args[1] as config path
-	viper.SetConfigFile("config.yml")
-	viper.SetConfigType("yaml")
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatal("failed to read config: ", err)
-		return
-	}
+	setupLog()
 
 	registry := prometheus.NewRegistry()
 	webui.StartWebServer(registry)
@@ -120,4 +82,116 @@ func main() {
 	}
 
 	log.Info("Collector exited normally.")
+}
+
+func loadConfigs() {
+	var configFile string
+	flag.StringVar(&configFile, "config", "config.yml", "config file path")
+
+	viper.SetConfigFile(configFile)
+	viper.SetConfigType("yaml")
+
+	if err := viper.ReadInConfig(); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to read config file in %s: %v\n", configFile, err)
+		os.Exit(1)
+	}
+}
+
+func setupLog() {
+	options := viper.GetStringMapString("log")
+
+	filename, ok := options["filename"]
+	if !ok {
+		// The log file is saved by default in /tmp.
+		filename = filepath.Join(os.TempDir(), "collector.log")
+	}
+	if len(filename) == 0 {
+		fmt.Fprintln(os.Stderr, "log.filename should not be empty")
+		os.Exit(1)
+	}
+
+	maxFileSizeMBStr, ok := options["max_file_size_mb"]
+	if !ok {
+		// The max size of each log file is 64MB by default.
+		maxFileSizeMBStr = "64"
+	}
+
+	maxFileSizeMB, err := strconv.Atoi(maxFileSizeMBStr)
+	if err != nil || maxFileSizeMB <= 0 {
+		fmt.Fprintf(os.Stderr, "log.max_file_size_mb(%s) is invalid: %v", maxFileSizeMBStr, err)
+		os.Exit(1)
+	}
+
+	retentionDaysStr, ok := options["retention_days"]
+	if !ok {
+		// The log files are retained for 3 days by default.
+		retentionDaysStr = "3"
+	}
+
+	retentionDays, err := strconv.Atoi(retentionDaysStr)
+	if err != nil || retentionDays <= 0 {
+		fmt.Fprintf(os.Stderr, "log.retention_period(%s) is invalid: %v", retentionDaysStr, err)
+		os.Exit(1)
+	}
+
+	maxFileNumberStr, ok := options["max_file_number"]
+	if !ok {
+		// The max number of retained log files is 8 by default.
+		maxFileNumberStr = "8"
+	}
+
+	maxFileNumber, err := strconv.Atoi(maxFileNumberStr)
+	if err != nil || maxFileNumber <= 0 {
+		fmt.Fprintf(os.Stderr, "log.max_file_number(%s) is invalid: %v", maxFileNumberStr, err)
+		os.Exit(1)
+	}
+
+	levelStr, ok := options["level"]
+	if !ok {
+		levelStr = "info"
+	}
+
+	level, err := log.ParseLevel(levelStr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "log.level(%s) is invalid: %v", levelStr, err)
+		os.Exit(1)
+	}
+
+	log.SetOutput(&lumberjack.Logger{ // rolling log
+		Filename:   filename,
+		MaxSize:    maxFileSizeMB,
+		MaxAge:     retentionDays,
+		MaxBackups: maxFileNumber,
+		LocalTime:  true,
+	})
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors:    true,
+		FullTimestamp:    true,
+		CallerPrettyfier: callerPrettifier,
+	})
+	log.SetReportCaller(true)
+	log.SetLevel(level)
+}
+
+// callerPrettifier simplifies the caller info.
+func callerPrettifier(f *runtime.Frame) (function string, file string) {
+	function = f.Function[strings.LastIndex(f.Function, "/")+1:]
+	file = fmt.Sprint(f.File[strings.LastIndex(f.File, "/")+1:], ":", f.Line)
+	return function, file
+}
+
+// setupSignalHandler setups signal handler for collector.
+func setupSignalHandler(shutdownFunc func()) {
+	closeSignalChan := make(chan os.Signal, 1)
+	signal.Notify(closeSignalChan,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
+	go func() {
+		sig := <-closeSignalChan
+		log.Infof("got signal %s to exit", sig.String())
+		shutdownFunc()
+	}()
 }

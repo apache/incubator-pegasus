@@ -15,6 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# log
+log:
+  filename: collector.log
+  max_file_size_mb: 64
+  retention_days: 3
+  max_file_number: 8
+  level: debug
+
 # the cluster that this collector is binding
 cluster_name : "onebox"
 
