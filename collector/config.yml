@@ -21,7 +21,7 @@ log:
   max_file_size_mb: 64
   retention_days: 3
   max_file_number: 8
-  level: debug
+  level: info
 
 # the cluster that this collector is binding
 cluster_name : "onebox"
