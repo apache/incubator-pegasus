@@ -196,7 +196,7 @@ void replica_duplicator_manager::update_confirmed_decree_if_secondary(decree con
 void replica_duplicator_manager::METRIC_FUNC_NAME_SET(dup_pending_mutations)()
 {
     zauto_lock l(_lock);
-    int64_t total = 0;
+    uint64_t total = 0;
     for (const auto &dup : _duplications) {
         total += dup.second->get_pending_mutations_count();
     }
