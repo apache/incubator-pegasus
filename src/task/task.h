@@ -48,6 +48,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
 #include "utils/ports.h"
+#include "utils/synchronize.h"
 #include "utils/utils.h"
 
 namespace dsn {
@@ -348,8 +349,6 @@ protected:
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
         _cb = nullptr;
     }
-
-protected:
     task_handler _cb;
     ::dsn::utils::ex_lock_nr _lock;
 };
