@@ -76,8 +76,8 @@ RUN wget --progress=dot:giga https://www.openssl.org/source/openssl-${OPENSSL_VE
     ./config shared --prefix="${OPENSSL_INSTALL_DIR}" && \
     make -j$(nproc) && \
     make install && \
-    ln -sf ${OPENSSL_INSTALL_DIR}/bin/openssl /usr/bin/openssl && \
-    ln -sf ${OPENSSL_INSTALL_DIR}/include/openssl /usr/local/include/openssl && \
+    ln -sf "${OPENSSL_INSTALL_DIR}/bin/openssl" /usr/bin/openssl && \
+    ln -sf "${OPENSSL_INSTALL_DIR}/include/openssl" /usr/local/include/openssl && \
     echo "${OPENSSL_INSTALL_DIR}/lib64" > /etc/ld.so.conf.d/openssl-3.0.conf && \
     ldconfig -v
 
