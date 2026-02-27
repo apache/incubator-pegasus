@@ -70,7 +70,7 @@ RUN wget --progress=dot:giga https://archive.apache.org/dist/thrift/0.11.0/thrif
 ENV OPENSSL_VERSION="3.0.12"
 ENV OPENSSL_INSTALL_DIR="/usr/local/ssl"
 
-RUN wget --progress=dot:giga https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz -P /opt/openssl && \
+RUN wget --progress=dot:giga "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -P /opt/openssl && \
     cd /opt/openssl && \
     tar -xzvf "openssl-${OPENSSL_VERSION}.tar.gz" && \
     cd "openssl-${OPENSSL_VERSION}" && \
