@@ -906,6 +906,8 @@ function run_start_onebox()
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
         sed "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
             ${CONFIG_FILE} >${ROOT}/config-server.ini
+        # Force primary_interface to 'lo' to avoid reverse DNS resolution issues
+        sed -i 's/^\s*primary_interface.*/primary_interface = lo/g' ${ROOT}/config-server.ini
     fi
 
     OPTS=`echo $OPTS | xargs`
