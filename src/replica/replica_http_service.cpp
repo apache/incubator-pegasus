@@ -18,6 +18,7 @@
 #include "replica/replica_http_service.h"
 
 #include <fmt/core.h>
+#include <nlohmann/detail/json_ref.hpp>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <stdint.h>

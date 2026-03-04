@@ -32,6 +32,7 @@
 #include <nlohmann/json.hpp>
 #include <rapidjson/ostreamwrapper.h>
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -53,10 +54,11 @@
 #include "common/replication_enums.h"
 #include "disk_cleaner.h"
 #include "duplication/duplication_sync_timer.h"
+#include "gutil/map_util.h"
 #include "meta_admin_types.h"
 #include "mutation_log.h"
-#include "nfs/nfs_node.h"
 #include "nfs/nfs_code_definition.h"
+#include "nfs/nfs_node.h"
 #include "nfs_types.h"
 #include "ranger/access_type.h"
 #include "remote_cmd/remote_command.h"
