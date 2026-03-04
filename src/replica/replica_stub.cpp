@@ -1097,7 +1097,7 @@ std::string_view replica_stub::get_replica_status(gpid id) const
 
     const auto life_cycle = get_replica_life_cycle_unlocked(id);
     const auto idx = static_cast<uint32_t>(life_cycle);
-    return idx < kReplicaLifeCycleNames.size() ? kReplicaLifeCycleNames[idx] : kStatusUnknown;
+    return idx < kReplicaLifeCycleNames.size() ? kReplicaLifeCycleNames.at(idx) : kStatusUnknown;
 }
 
 replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle_unlocked(gpid id) const
@@ -1229,33 +1229,36 @@ void replica_stub::on_query_decree(query_replica_decree_rpc rpc)
 void replica_stub::on_query_replica_info(query_replica_info_rpc rpc)
 {
     query_replica_info_response &resp = rpc.response();
+
     std::set<gpid> visited_replicas;
     {
         zauto_read_lock l(_replicas_lock);
-        for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {
-            replica_ptr &r = it->second;
+        for (const auto &[_, rep] : _replicas) {
             replica_info info;
-            get_replica_info(r, info);
+            get_replica_info(rep, info);
             if (visited_replicas.find(info.pid) == visited_replicas.end()) {
                 visited_replicas.insert(info.pid);
                 resp.replicas.push_back(std::move(info));
             }
         }
-        for (auto it = _closing_replicas.begin(); it != _closing_replicas.end(); ++it) {
-            const replica_info &info = std::get<3>(it->second);
+
+        for (const auto &[_, rep] : _closing_replicas) {
+            const replica_info &info = std::get<3>(rep);
             if (visited_replicas.find(info.pid) == visited_replicas.end()) {
                 visited_replicas.insert(info.pid);
                 resp.replicas.push_back(info);
             }
         }
-        for (auto it = _closed_replicas.begin(); it != _closed_replicas.end(); ++it) {
-            const replica_info &info = it->second.second;
+
+        for (const auto &[_, rep] : _closed_replicas) {
+            const replica_info &info = rep.second;
             if (visited_replicas.find(info.pid) == visited_replicas.end()) {
                 visited_replicas.insert(info.pid);
                 resp.replicas.push_back(info);
             }
         }
     }
+
     resp.err = ERR_OK;
 }
 

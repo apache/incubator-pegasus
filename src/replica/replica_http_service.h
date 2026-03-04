@@ -62,7 +62,7 @@ public:
                          "Query the manual compaction status of an app.");
     }
 
-    ~replica_http_service()
+    ~replica_http_service() override
     {
         deregister_http_call("replica/duplication");
         deregister_http_call("replica/status");
@@ -70,7 +70,7 @@ public:
         deregister_http_call("replica/manual_compaction");
     }
 
-    std::string path() const override { return replication_options::kReplicaAppType; }
+    [[nodiscard]] std::string path() const override { return replication_options::kReplicaAppType; }
 
     void query_duplication_handler(const http_request &req, http_response &resp);
     void query_replica_status_handler(const http_request &req, http_response &resp);
@@ -89,7 +89,7 @@ public:
         case manual_compaction_status::FINISHED:
             return "finished";
         default:
-            CHECK(false, "invalid status({})", status);
+            CHECK(false, "invalid status({})", static_cast<size_t>(status));
             __builtin_unreachable();
         }
     }
