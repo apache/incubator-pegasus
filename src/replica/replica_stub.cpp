@@ -445,6 +445,19 @@ void register_flags_ctrl_command()
     });
 }
 
+void get_replica_info(const replica_ptr &r, replica_info &info)
+{
+    info.pid = r->get_gpid();
+    info.ballot = r->get_ballot();
+    info.status = r->status();
+    info.app_type = r->get_app_info()->app_type;
+    info.last_committed_decree = r->last_committed_decree();
+    info.last_prepared_decree = r->last_prepared_decree();
+    info.last_durable_decree = r->last_durable_decree();
+    info.disk_tag = r->get_dir_node()->tag;
+    info.__set_manual_compact_status(r->get_manual_compact_status());
+}
+
 } // anonymous namespace
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
@@ -902,10 +915,13 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     }
 
     // Attach `reps`.
+    {
+    zauto_write_lock l(_replicas_lock);
     _replicas = std::move(reps);
     METRIC_VAR_INCREMENT_BY(total_replicas, _replicas.size());
     for (const auto &[pid, rep] : _replicas) {
         _fs_manager.add_replica(pid, rep->dir());
+    }
     }
 
     _nfs = dsn::nfs_node::create();
@@ -1054,25 +1070,60 @@ std::vector<replica_ptr> replica_stub::get_all_primaries() const
 replica_ptr replica_stub::get_replica(gpid id) const
 {
     zauto_read_lock l(_replicas_lock);
-    auto it = _replicas.find(id);
-    if (it != _replicas.end())
-        return it->second;
-    else
-        return nullptr;
+
+    const auto iter = std::as_const(_replicas).find(id);
+    if (iter == _replicas.end()) {
+        return {};
+    }
+
+    return iter->second;
 }
 
-replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle(gpid id)
+std::string_view replica_stub::get_replica_status(gpid id) const
+{
+    static constexpr std::string_view kStatusLoading("LOADING");
+    static constexpr std::string_view kStatusNotFound("NOT_FOUND");
+
+    zauto_read_lock l(_replicas_lock);
+
+    if (_replicas.empty() && !_is_running) {
+        return kStatusLoading;
+    }
+
+    const auto life_cycle = get_replica_life_cycle_unlocked(id);
+    if (life_cycle == replica_stub::RL_invalid) {
+        return kStatusNotFound;
+    }
+
+    return enum_to_string(life_cycle);
+}
+
+replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle_unlocked(gpid id) const
+{
+    if (gutil::ContainsKey(_replicas, id)) {
+        return RL_serving;
+    }
+
+    if (gutil::ContainsKey(_opening_replicas, id)) {
+        return RL_creating;
+    }
+
+    if (gutil::ContainsKey(_closing_replicas, id)) {
+        return RL_closing;
+    }
+
+    if (gutil::ContainsKey(_closed_replicas, id)) {
+        return RL_closed;
+    }
+
+    return RL_invalid;
+}
+
+replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle(gpid id) const
 {
     zauto_read_lock l(_replicas_lock);
-    if (_opening_replicas.find(id) != _opening_replicas.end())
-        return replica_stub::RL_creating;
-    if (_replicas.find(id) != _replicas.end())
-        return replica_stub::RL_serving;
-    if (_closing_replicas.find(id) != _closing_replicas.end())
-        return replica_stub::RL_closing;
-    if (_closed_replicas.find(id) != _closed_replicas.end())
-        return replica_stub::RL_closed;
-    return replica_stub::RL_invalid;
+
+    return get_replica_life_cycle_unlocked(id);
 }
 
 void replica_stub::on_client_write(gpid id, dsn::message_ex *request)
@@ -1182,7 +1233,7 @@ void replica_stub::on_query_replica_info(query_replica_info_rpc rpc)
         for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {
             replica_ptr &r = it->second;
             replica_info info;
-            get_replica_info(info, r);
+            get_replica_info(r, info);
             if (visited_replicas.find(info.pid) == visited_replicas.end()) {
                 visited_replicas.insert(info.pid);
                 resp.replicas.push_back(std::move(info));
@@ -1484,44 +1535,32 @@ void replica_stub::on_remove(const replica_configuration &request)
     }
 }
 
-void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
-{
-    info.pid = r->get_gpid();
-    info.ballot = r->get_ballot();
-    info.status = r->status();
-    info.app_type = r->get_app_info()->app_type;
-    info.last_committed_decree = r->last_committed_decree();
-    info.last_prepared_decree = r->last_prepared_decree();
-    info.last_durable_decree = r->last_durable_decree();
-    info.disk_tag = r->get_dir_node()->tag;
-    info.__set_manual_compact_status(r->get_manual_compact_status());
-}
-
-void replica_stub::get_local_replicas(std::vector<replica_info> &replicas)
+void replica_stub::get_local_replicas(std::vector<replica_info> &replicas) const
 {
     zauto_read_lock l(_replicas_lock);
+
     // local_replicas = replicas + closing_replicas + closed_replicas
-    int total_replicas = _replicas.size() + _closing_replicas.size() + _closed_replicas.size();
+    const auto total_replicas = _replicas.size() + _closing_replicas.size() + _closed_replicas.size();
     replicas.reserve(total_replicas);
 
-    for (auto &pairs : _replicas) {
-        replica_ptr &rep = pairs.second;
+    for (const auto &[_, rep] : _replicas) {
         // child partition should not sync config from meta server
         // because it is not ready in meta view
         if (rep->status() == partition_status::PS_PARTITION_SPLIT) {
             continue;
         }
+
         replica_info info;
-        get_replica_info(info, rep);
+        get_replica_info(rep, info);
         replicas.push_back(std::move(info));
     }
 
-    for (auto &pairs : _closing_replicas) {
-        replicas.push_back(std::get<3>(pairs.second));
+    for (const auto &[_, rep] : _closing_replicas) {
+        replicas.push_back(std::get<3>(rep));
     }
 
-    for (auto &pairs : _closed_replicas) {
-        replicas.push_back(pairs.second.second);
+    for (const auto &[_, rep] : _closed_replicas) {
+        replicas.push_back(rep.second);
     }
 }
 
@@ -1849,9 +1888,12 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
     std::pair<app_info, replica_info> closed_info;
     {
         zauto_write_lock l(_replicas_lock);
-        auto iter = _closed_replicas.find(id);
-        if (iter == _closed_replicas.end())
+
+        const auto iter = _closed_replicas.find(id);
+        if (iter == _closed_replicas.end()) {
             return;
+        }
+
         closed_info = iter->second;
         _closed_replicas.erase(iter);
     }
@@ -2417,7 +2459,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
 
     app_info a_info = *(r->get_app_info());
     replica_info r_info;
-    get_replica_info(r_info, r);
+    get_replica_info(r, r_info);
     task_ptr task = tasking::enqueue(
         LPC_CLOSE_REPLICA,
         &_tracker,

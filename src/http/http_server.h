@@ -57,6 +57,11 @@ struct http_request
 
 struct http_response
 {
+void set_json_body(std::string str) {
+    body = std::move(str);
+    content_type = "application/json; charset=utf-8";
+}
+
     std::string body;
     http_status_code status_code{http_status_code::kOk};
     std::string content_type = "text/plain";

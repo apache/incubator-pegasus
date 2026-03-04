@@ -83,6 +83,38 @@ void replica_http_service::query_duplication_handler(const http_request &req, ht
     resp.body = json.dump();
 }
 
+void replica_http_service::query_replica_status_handler(const http_request &req,
+                                                          http_response &resp)
+{
+    const auto iter = req.query_args.find("app_id");
+    if (iter == req.query_args.end()) {
+        resp.body = "app_id should not be empty";
+        resp.status_code = http_status_code::kBadRequest;
+        return;
+    }
+
+    int32_t app_id = -1;
+    if (!buf2int32(iter->second, app_id) || app_id < 0) {
+        resp.body = fmt::format("invalid app_id={}", iter->second);
+        resp.status_code = http_status_code::kBadRequest;
+        return;
+    }
+
+    int32_t partition_index = -1;
+    if (!buf2int32(iter->second, partition_index) || partition_index < 0) {
+        resp.body = fmt::format("invalid partition_index={}", iter->second);
+        resp.status_code = http_status_code::kBadRequest;
+        return;
+    }
+
+    const gpid pid(app_id, partition_index);
+    const auto status = _stub->get_replica_status(pid);
+
+    const nlohmann::json json{{"status", status}};
+    resp.status_code = http_status_code::kOk;
+    resp.set_json_body(json.dump());
+}
+
 void replica_http_service::query_app_data_version_handler(const http_request &req,
                                                           http_response &resp)
 {

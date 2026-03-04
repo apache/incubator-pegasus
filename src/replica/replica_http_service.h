@@ -39,6 +39,13 @@ public:
                                    std::placeholders::_2),
                          "appid=<appid>",
                          "Query the duplication status of an app.");
+        register_handler("status",
+                         std::bind(&replica_http_service::query_replica_status_handler(,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2),
+                         "app_id=<app_id>&partition_index=<partition_index>",
+                         "Query the status of a replica.");
         register_handler("data_version",
                          std::bind(&replica_http_service::query_app_data_version_handler,
                                    this,
@@ -58,6 +65,7 @@ public:
     ~replica_http_service()
     {
         deregister_http_call("replica/duplication");
+        deregister_http_call("replica/status");
         deregister_http_call("replica/data_version");
         deregister_http_call("replica/manual_compaction");
     }
@@ -65,6 +73,7 @@ public:
     std::string path() const override { return replication_options::kReplicaAppType; }
 
     void query_duplication_handler(const http_request &req, http_response &resp);
+    void query_replica_status_handler(const http_request &req, http_response &resp);
     void query_app_data_version_handler(const http_request &req, http_response &resp);
     void query_manual_compaction_handler(const http_request &req, http_response &resp);
 
