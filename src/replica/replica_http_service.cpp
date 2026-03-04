@@ -84,7 +84,7 @@ void replica_http_service::query_duplication_handler(const http_request &req, ht
 }
 
 void replica_http_service::query_replica_status_handler(const http_request &req,
-                                                          http_response &resp)
+                                                        http_response &resp)
 {
     const auto iter = req.query_args.find("app_id");
     if (iter == req.query_args.end()) {

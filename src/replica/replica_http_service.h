@@ -40,7 +40,7 @@ public:
                          "appid=<appid>",
                          "Query the duplication status of an app.");
         register_handler("status",
-                         std::bind(&replica_http_service::query_replica_status_handler(,
+                         std::bind(&replica_http_service::query_replica_status_handler,
                                    this,
                                    std::placeholders::_1,
                                    std::placeholders::_2),

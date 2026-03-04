@@ -916,12 +916,12 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     // Attach `reps`.
     {
-    zauto_write_lock l(_replicas_lock);
-    _replicas = std::move(reps);
-    METRIC_VAR_INCREMENT_BY(total_replicas, _replicas.size());
-    for (const auto &[pid, rep] : _replicas) {
-        _fs_manager.add_replica(pid, rep->dir());
-    }
+        zauto_write_lock l(_replicas_lock);
+        _replicas = std::move(reps);
+        METRIC_VAR_INCREMENT_BY(total_replicas, _replicas.size());
+        for (const auto &[pid, rep] : _replicas) {
+            _fs_manager.add_replica(pid, rep->dir());
+        }
     }
 
     _nfs = dsn::nfs_node::create();
@@ -1082,7 +1082,12 @@ replica_ptr replica_stub::get_replica(gpid id) const
 std::string_view replica_stub::get_replica_status(gpid id) const
 {
     static constexpr std::string_view kStatusLoading("LOADING");
-    static constexpr std::string_view kStatusNotFound("NOT_FOUND");
+    static constexpr std::string_view kStatusUnknown("UNKNOWN");
+    static constexpr std::array kReplicaLifeCycleNames = {std::string_view("NOT_FOUND"),
+                                                          std::string_view("CREATING"),
+                                                          std::string_view("SERVING"),
+                                                          std::string_view("CLOSING"),
+                                                          std::string_view("CLOSED")};
 
     zauto_read_lock l(_replicas_lock);
 
@@ -1091,32 +1096,29 @@ std::string_view replica_stub::get_replica_status(gpid id) const
     }
 
     const auto life_cycle = get_replica_life_cycle_unlocked(id);
-    if (life_cycle == replica_stub::RL_invalid) {
-        return kStatusNotFound;
-    }
-
-    return enum_to_string(life_cycle);
+    const auto idx = static_cast<uint32_t>(life_cycle);
+    return idx < kReplicaLifeCycleNames.size() ? kReplicaLifeCycleNames[idx] : kStatusUnknown;
 }
 
 replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle_unlocked(gpid id) const
 {
     if (gutil::ContainsKey(_replicas, id)) {
-        return RL_serving;
+        return replica_life_cycle::kServing;
     }
 
     if (gutil::ContainsKey(_opening_replicas, id)) {
-        return RL_creating;
+        return replica_life_cycle::kCreating;
     }
 
     if (gutil::ContainsKey(_closing_replicas, id)) {
-        return RL_closing;
+        return replica_life_cycle::kClosing;
     }
 
     if (gutil::ContainsKey(_closed_replicas, id)) {
-        return RL_closed;
+        return replica_life_cycle::kClosed;
     }
 
-    return RL_invalid;
+    return replica_life_cycle::kInvalid;
 }
 
 replica_stub::replica_life_cycle replica_stub::get_replica_life_cycle(gpid id) const
@@ -1540,7 +1542,8 @@ void replica_stub::get_local_replicas(std::vector<replica_info> &replicas) const
     zauto_read_lock l(_replicas_lock);
 
     // local_replicas = replicas + closing_replicas + closed_replicas
-    const auto total_replicas = _replicas.size() + _closing_replicas.size() + _closed_replicas.size();
+    const auto total_replicas =
+        _replicas.size() + _closing_replicas.size() + _closed_replicas.size();
     replicas.reserve(total_replicas);
 
     for (const auto &[_, rep] : _replicas) {
@@ -1691,9 +1694,8 @@ void replica_stub::on_node_query_reply(error_code err,
 
         // handle the replicas which need to be gc
         if (resp.__isset.gc_replicas) {
-            for (replica_info &rep : resp.gc_replicas) {
-                replica_stub::replica_life_cycle lc = get_replica_life_cycle(rep.pid);
-                if (lc == replica_stub::RL_closed) {
+            for (const replica_info &rep : resp.gc_replicas) {
+                if (get_replica_life_cycle(rep.pid) == replica_life_cycle::kClosed) {
                     tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
                                      &_tracker,
                                      std::bind(&replica_stub::on_gc_replica, this, this, rep.pid),

@@ -337,21 +337,15 @@ private:
     };
     friend USER_DEFINED_ENUM_FORMATTER(replica_stub::replica_node_state);
 
-    enum replica_life_cycle
+    enum class replica_life_cycle : uint32_t
     {
-        RL_invalid,
-        RL_creating,
-        RL_serving,
-        RL_closing,
-        RL_closed
+        kInvalid,
+        kCreating,
+        kServing,
+        kClosing,
+        kClosed,
+        kCount
     };
-
-ENUM_BEGIN(replica_life_cycle, RL_invalid)
-ENUM_REG_WITH_CUSTOM_NAME(CREATING, RL_creating)
-ENUM_REG_WITH_CUSTOM_NAME(SERVING, RL_serving)
-ENUM_REG_WITH_CUSTOM_NAME(CLOSING, RL_closing)
-ENUM_REG_WITH_CUSTOM_NAME(CLOSED, RL_closed)
-ENUM_END(replica_life_cycle)
 
     void initialize_start();
     void query_configuration_by_node();
