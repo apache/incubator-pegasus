@@ -1085,6 +1085,14 @@ std::string_view replica_stub::get_replica_status(gpid id) const
 {
     static constexpr std::string_view kStatusLoading("LOADING");
     static constexpr std::string_view kStatusUnknown("UNKNOWN");
+
+    // Each item in the array corresponds one-to-one with an enumerator in the
+    // `replica_life_cycle` enum class, and is used to represent the replica status
+    // associated with each `replica_life_cycle` value.
+    //
+    // If `replica_life_cycle::kInvalid` is returned, it means the replica cannot be
+    // found anywhere, indicating that the replica does not exist, and it should therefore
+    // be marked as `NOT_FOUND`.
     static constexpr std::array kReplicaLifeCycleNames = {std::string_view("NOT_FOUND"),
                                                           std::string_view("CREATING"),
                                                           std::string_view("SERVING"),
@@ -1094,6 +1102,7 @@ std::string_view replica_stub::get_replica_status(gpid id) const
     zauto_read_lock l(_replicas_lock);
 
     if (_replicas.empty() && !_is_running) {
+        // The replica server is loading all replica data from disks.
         return kStatusLoading;
     }
 

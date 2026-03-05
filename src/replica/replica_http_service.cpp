@@ -21,7 +21,7 @@
 #include <nlohmann/detail/json_ref.hpp>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
-#include <stdint.h>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <unordered_map>
@@ -87,30 +87,38 @@ void replica_http_service::query_duplication_handler(const http_request &req, ht
 void replica_http_service::query_replica_status_handler(const http_request &req,
                                                         http_response &resp)
 {
-    const auto iter = req.query_args.find("app_id");
-    if (iter == req.query_args.end()) {
-        resp.body = "app_id should not be empty";
-        resp.status_code = http_status_code::kBadRequest;
+    // Check whether all required parameters in the query string are set.
+    std::string app_id_str;
+    if (!req.get_query_arg("app_id", app_id_str)) {
+        resp.as_missing_query_arg("app_id");
         return;
     }
 
+    std::string partition_index_str;
+    if (!req.get_query_arg("partition_index", partition_index_str)) {
+        resp.as_missing_query_arg("partition_index");
+        return;
+    }
+
+    // Verify that these required parameters are valid.
     int32_t app_id = -1;
-    if (!buf2int32(iter->second, app_id) || app_id < 0) {
-        resp.body = fmt::format("invalid app_id={}", iter->second);
-        resp.status_code = http_status_code::kBadRequest;
+    if (!buf2int32(app_id_str, app_id) || app_id < 0) {
+        resp.as_bad_request(fmt::format("invalid app_id={}", app_id_str));
         return;
     }
 
     int32_t partition_index = -1;
-    if (!buf2int32(iter->second, partition_index) || partition_index < 0) {
-        resp.body = fmt::format("invalid partition_index={}", iter->second);
-        resp.status_code = http_status_code::kBadRequest;
+    if (!buf2int32(partition_index_str, partition_index) || partition_index < 0) {
+        resp.as_bad_request(fmt::format("invalid partition_index={}", partition_index_str));
         return;
     }
 
+    // Retrieve the replica status.
     const gpid pid(app_id, partition_index);
     const auto status = _stub->get_replica_status(pid);
 
+    // Serialize the replica status into JSON format in preparation for responding to
+    // the HTTP request.
     const nlohmann::json json{{"status", status}};
     resp.status_code = http_status_code::kOk;
     resp.set_json_body(json.dump());
