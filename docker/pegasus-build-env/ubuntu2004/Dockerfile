@@ -70,16 +70,17 @@ RUN wget --progress=dot:giga https://archive.apache.org/dist/thrift/0.11.0/thrif
 ENV OPENSSL_VERSION="3.0.12"
 ENV OPENSSL_INSTALL_DIR="/usr/local/ssl"
 
-RUN wget https://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz -P /opt/openssl\
-    && cd /opt/openssl \ && tar -xzvf openssl-$OPENSSL_VERSION.tar.gz \
-    && cd openssl-$OPENSSL_VERSION \
-    && ./config shared --prefix=$OPENSSL_INSTALL_DIR \
-    && make -j$(nproc) \
-    && make install \
-    && ln -sf $OPENSSL_INSTALL_DIR/bin/openssl /usr/bin/openssl \
-    && ln -sf $OPENSSL_INSTALL_DIR/include/openssl /usr/local/include/openssl \
-    && echo "$OPENSSL_INSTALL_DIR/lib64" | tee /etc/ld.so.conf.d/openssl-3.0.conf \
-    && ldconfig -v
+RUN wget --progress=dot:giga https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz -P /opt/openssl && \
+    cd /opt/openssl && \
+    tar -xzvf "openssl-${OPENSSL_VERSION}.tar.gz" && \
+    cd "openssl-${OPENSSL_VERSION}" && \
+    ./config shared --prefix="${OPENSSL_INSTALL_DIR}" && \
+    make -j"$(nproc)" && \
+    make install && \
+    ln -sf "${OPENSSL_INSTALL_DIR}/bin/openssl" /usr/bin/openssl && \
+    ln -sf "${OPENSSL_INSTALL_DIR}/include/openssl" /usr/local/include/openssl && \
+    echo "${OPENSSL_INSTALL_DIR}/lib64" > /etc/ld.so.conf.d/openssl-3.0.conf && \
+    ldconfig -v
 
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 ENV CLASSPATH=$JAVA_HOME/lib/
