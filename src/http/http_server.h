@@ -82,9 +82,10 @@ struct http_response
         as_bad_request(fmt::format("{} should not be empty", key));
     }
 
-    void set_json_body(std::string str)
+    void as_ok_json(std::string str)
     {
         body = std::move(str);
+        status_code = http_status_code::kOk;
         content_type = "application/json; charset=utf-8";
     }
 

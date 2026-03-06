@@ -120,8 +120,7 @@ void replica_http_service::query_replica_status_handler(const http_request &req,
     // Serialize the replica status into JSON format in preparation for responding to
     // the HTTP request.
     const nlohmann::json json{{"status", status}};
-    resp.status_code = http_status_code::kOk;
-    resp.set_json_body(json.dump());
+    resp.as_ok_json(json.dump());
 }
 
 void replica_http_service::query_app_data_version_handler(const http_request &req,
