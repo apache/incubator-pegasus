@@ -75,7 +75,6 @@ private:
 
     void log_non_idempotent_rpc_retry_if_need(duplicate_rpc &rpc);
 
-private:
     friend class pegasus_mutation_duplicator_test;
 
     client::pegasus_client_impl *_client{nullptr};

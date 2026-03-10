@@ -266,7 +266,7 @@ void pegasus_mutation_duplicator::log_non_idempotent_rpc_retry_if_need(duplicate
 
     // there maybe more than one mutation in one dup rpc
     if (FLAGS_duplication_unsafe_allow_non_idempotent) {
-        for (auto entry : rpc.request().entries) {
+        for (const auto &entry : rpc.request().entries) {
             if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
                 entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
                 entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
