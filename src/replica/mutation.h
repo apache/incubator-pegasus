@@ -39,7 +39,6 @@
 #include <utility>
 #include <vector>
 
-#include "common/duplication_common.h"
 #include "common/replication_common.h"
 #include "common/replication_other_types.h"
 #include "consensus_types.h"
