@@ -37,11 +37,18 @@ namespace dsn {
 namespace dist {
 namespace block_service {
 
+const char *BLOCK_SERVICE_JUICEFS = "juicefs_service";
+
 block_service_registry::block_service_registry()
 {
     CHECK(utils::factory_store<block_filesystem>::register_factory(
               "hdfs_service", block_filesystem::create<hdfs_service>, PROVIDER_TYPE_MAIN),
           "register hdfs_service failed");
+
+    // juice_service use hdfs_service as default provider
+    CHECK(utils::factory_store<block_filesystem>::register_factory(
+              BLOCK_SERVICE_JUICEFS, block_filesystem::create<hdfs_service>, PROVIDER_TYPE_MAIN),
+          "register juice_service failed");
 
     CHECK(utils::factory_store<block_filesystem>::register_factory(
               "local_service", block_filesystem::create<local_service>, PROVIDER_TYPE_MAIN),
@@ -70,11 +77,17 @@ block_filesystem *block_service_manager::get_or_create_block_filesystem(const st
         return iter->second.get();
     }
 
-    const char *provider_type = dsn_config_get_value_string(
-        (std::string("block_service.") + provider).c_str(), "type", "", "block service type");
+    block_filesystem *fs = nullptr;
+    const char *provider_type = nullptr;
+    bool isJuicefs = is_juicefs_provider(provider);
 
-    block_filesystem *fs =
-        utils::factory_store<block_filesystem>::create(provider_type, PROVIDER_TYPE_MAIN);
+    if (isJuicefs) {
+        provider_type = BLOCK_SERVICE_JUICEFS;
+    } else {
+        provider_type = dsn_config_get_value_string(
+            (std::string("block_service.") + provider).c_str(), "type", "", "block service type");
+    }
+    fs = utils::factory_store<block_filesystem>::create(provider_type, PROVIDER_TYPE_MAIN);
     if (fs == nullptr) {
         LOG_ERROR("acquire block filesystem failed, provider = {}, provider_type = {}",
                   provider,
@@ -82,15 +95,25 @@ block_filesystem *block_service_manager::get_or_create_block_filesystem(const st
         return nullptr;
     }
 
-    const char *arguments = dsn_config_get_value_string(
-        (std::string("block_service.") + provider).c_str(), "args", "", "args for block_service");
-
     std::vector<std::string> args;
-    utils::split_args(arguments, args);
+    std::string args_for_log;
+    if (isJuicefs) {
+        // juicefs provider example: jfs://pegasus@ak-bigdata
+        args = {provider, "/"};
+        args_for_log = provider + " /";
+    } else {
+        const char *arguments = dsn_config_get_value_string(
+            (std::string("block_service.") + provider).c_str(),
+            "args",
+            "",
+            "args for block_service");
+        utils::split_args(arguments, args);
+        args_for_log = arguments;
+    }
     dsn::error_code err = fs->initialize(args);
 
     const auto provider_desc = fmt::format(
-        "provider = {}, provider_type = {}, args = {}", provider, provider_type, arguments);
+        "provider = {}, provider_type = {}, args = {}", provider, provider_type, args_for_log);
     if (dsn::ERR_OK == err) {
         LOG_INFO("create block filesystem ok for {}", provider_desc);
         _fs_map.emplace(provider, std::unique_ptr<block_filesystem>(fs));
