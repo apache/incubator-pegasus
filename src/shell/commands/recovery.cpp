@@ -166,18 +166,23 @@ bool recover(command_executor *e, shell_context *sc, arguments args)
 
 dsn::host_port diagnose_recommend(const dsn::replication::ddd_partition_info &pinfo)
 {
-    if (pinfo.config.hp_last_drops.size() < 2) {
+    std::vector<dsn::host_port> last_drops;
+    GET_HOST_PORTS(pinfo.config, last_drops, last_drops);
+
+    if (last_drops.size() < 2) {
         return dsn::host_port();
     }
 
-    std::vector<dsn::host_port> last_two_nodes(pinfo.config.hp_last_drops.end() - 2,
-                                               pinfo.config.hp_last_drops.end());
+    std::vector<dsn::host_port> last_two_nodes(last_drops.end() - 2, last_drops.end());
     std::vector<dsn::replication::ddd_node_info> last_dropped;
     for (const auto &node : last_two_nodes) {
-        const auto it = std::find_if(
-            pinfo.dropped.begin(),
-            pinfo.dropped.end(),
-            [&node](const dsn::replication::ddd_node_info &r) { return r.hp_node == node; });
+        const auto it = std::find_if(pinfo.dropped.begin(),
+                                     pinfo.dropped.end(),
+                                     [&node](const dsn::replication::ddd_node_info &r) {
+                                         dsn::host_port hp_node;
+                                         GET_HOST_PORT(r, node, hp_node);
+                                         return hp_node == node;
+                                     });
         if (it->is_alive && it->is_collected) {
             last_dropped.push_back(*it);
         }
@@ -186,7 +191,9 @@ dsn::host_port diagnose_recommend(const dsn::replication::ddd_partition_info &pi
     if (last_dropped.size() == 1) {
         const auto &ninfo = last_dropped.back();
         if (ninfo.last_committed_decree >= pinfo.config.last_committed_decree) {
-            return ninfo.hp_node;
+            dsn::host_port node;
+            GET_HOST_PORT(ninfo, node, node);
+            return node;
         }
     } else if (last_dropped.size() == 2) {
         const auto &secondary = last_dropped.front();
@@ -196,19 +203,24 @@ dsn::host_port diagnose_recommend(const dsn::replication::ddd_partition_info &pi
         //  - choose the node with the largest last committed decree
         //  - if last committed decree is the same, choose node with the largest ballot
 
+        dsn::host_port latest_node;
+        dsn::host_port secondary_node;
+        GET_HOST_PORT(latest, node, latest_node);
+        GET_HOST_PORT(secondary, node, secondary_node);
+
         if (latest.last_committed_decree == secondary.last_committed_decree &&
             latest.last_committed_decree >= pinfo.config.last_committed_decree) {
-            return latest.ballot >= secondary.ballot ? latest.hp_node : secondary.hp_node;
+            return latest.ballot >= secondary.ballot ? latest_node : secondary_node;
         }
 
         if (latest.last_committed_decree > secondary.last_committed_decree &&
             latest.last_committed_decree >= pinfo.config.last_committed_decree) {
-            return latest.hp_node;
+            return latest_node;
         }
 
         if (secondary.last_committed_decree > latest.last_committed_decree &&
             secondary.last_committed_decree >= pinfo.config.last_committed_decree) {
-            return secondary.hp_node;
+            return secondary_node;
         }
     }
 
@@ -293,43 +305,49 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
         out << "    config: ballot(" << pinfo.config.ballot << "), "
             << "last_committed(" << pinfo.config.last_committed_decree << ")" << std::endl;
         out << "    ----" << std::endl;
-        dsn::host_port latest_dropped, secondary_latest_dropped;
-        if (pinfo.config.hp_last_drops.size() > 0) {
-            latest_dropped = pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 1];
+
+        std::vector<dsn::host_port> last_drops;
+        GET_HOST_PORTS(pinfo.config, last_drops, last_drops);
+
+        dsn::host_port latest_dropped;
+        dsn::host_port secondary_latest_dropped;
+        if (!last_drops.empty()) {
+            latest_dropped = last_drops[last_drops.size() - 1];
         }
-        if (pinfo.config.hp_last_drops.size() > 1) {
-            secondary_latest_dropped =
-                pinfo.config.hp_last_drops[pinfo.config.hp_last_drops.size() - 2];
+        if (last_drops.size() > 1) {
+            secondary_latest_dropped = last_drops[last_drops.size() - 2];
         }
         int j = 0;
         for (const dsn::replication::ddd_node_info &n : pinfo.dropped) {
-            dsn::host_port hp_node;
-            GET_HOST_PORT(n, node, hp_node);
+            dsn::host_port node;
+            GET_HOST_PORT(n, node, node);
             char time_buf[30] = {0};
             ::dsn::utils::time_ms_to_string(n.drop_time_ms, time_buf);
             out << "    dropped[" << j++ << "]: "
-                << "node(" << hp_node << "), "
+                << "node(" << node << "), "
                 << "drop_time(" << time_buf << "), "
                 << "alive(" << (n.is_alive ? "true" : "false") << "), "
                 << "collected(" << (n.is_collected ? "true" : "false") << "), "
                 << "ballot(" << n.ballot << "), "
                 << "last_committed(" << n.last_committed_decree << "), "
                 << "last_prepared(" << n.last_prepared_decree << ")";
-            if (hp_node == latest_dropped)
+            if (node == latest_dropped) {
                 out << "  <== the latest";
-            else if (hp_node == secondary_latest_dropped)
+            } else if (node == secondary_latest_dropped) {
                 out << "  <== the secondary latest";
+            }
             out << std::endl;
         }
         out << "    ----" << std::endl;
         j = 0;
-        for (const auto &r : pinfo.config.hp_last_drops) {
+        for (const auto &r : last_drops) {
             out << "    last_drops[" << j++ << "]: "
                 << "node(" << r.to_string() << ")";
-            if (j == (int)pinfo.config.hp_last_drops.size() - 1)
+            if (j == static_cast<int>(last_drops.size()) - 1) {
                 out << "  <== the secondary latest";
-            else if (j == (int)pinfo.config.hp_last_drops.size())
+            } else if (j == static_cast<int>(last_drops.size())) {
                 out << "  <== the latest";
+            }
             out << std::endl;
         }
         out << "    ----" << std::endl;
