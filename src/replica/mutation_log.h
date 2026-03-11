@@ -47,6 +47,7 @@
 #include "task/task_code.h"
 #include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
+#include "utils/ports.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/zlocks.h"
@@ -404,7 +405,10 @@ private:
     // be less than _plog_max_decree_on_disk.
     decree _plog_max_commit_on_disk;
 
-    decree _cleanable_decree; // for gc crush
+    // The decree threshold for private log garbage collection. Mutations with decree <= this
+    // value are considered cleanable and their log files may be deleted by GC.
+    // Protected by _lock in get/set.
+    decree _cleanable_decree;
 };
 
 using mutation_log_ptr = dsn::ref_ptr<mutation_log>;
@@ -425,18 +429,12 @@ public:
         _tracker.cancel_outstanding_tasks();
     }
 
-    // Non-copyable and non-movable
-    mutation_log_private(const mutation_log_private &) = delete;
-    mutation_log_private &operator=(const mutation_log_private &) = delete;
-    mutation_log_private(mutation_log_private &&) = delete;
-    mutation_log_private &operator=(mutation_log_private &&) = delete;
-
     ::dsn::task_ptr append(mutation_ptr &mu,
                            dsn::task_code callback_code,
                            dsn::task_tracker *tracker,
                            aio_handler &&callback,
-                           int hash,
-                           int64_t *pending_size) override;
+                           int hash = 0,
+                           int64_t *pending_size = nullptr) override;
 
     bool get_learn_state_in_memory(decree start_decree, binary_writer &writer) const override;
 
@@ -449,6 +447,9 @@ public:
     void flush_once() override;
 
 private:
+    DISALLOW_COPY_AND_ASSIGN(mutation_log_private);
+    DISALLOW_MOVE_AND_ASSIGN(mutation_log_private);
+
     // async write pending mutations into log file
     // Preconditions:
     // - _pending_write != nullptr
