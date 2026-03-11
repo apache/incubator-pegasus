@@ -48,7 +48,6 @@
 #include "base/pegasus_utils.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
-#include "utils/chrono_literals.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
@@ -77,7 +76,7 @@ struct replica_base;
 
 DSN_DEFINE_uint64(replication,
                   dup_max_allowed_write_size,
-                  1ULL << 20,
+                  1ULL << 20U,
                   "The maximum piece of request can be add to "
                   "the duplication batch, 0 means no check");
 DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
@@ -94,47 +93,45 @@ DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
 
 namespace pegasus::server {
 
-using namespace dsn::literals::chrono_literals;
-
-/*extern*/ uint64_t get_hash_from_request(dsn::task_code tc, const dsn::blob &data)
+/*extern*/ uint64_t get_hash_from_request(dsn::task_code rpc_code, const dsn::blob &request_data)
 {
-    if (tc == dsn::apps::RPC_RRDB_RRDB_PUT) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
         dsn::apps::update_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+        dsn::from_blob_to_thrift(request_data, thrift_request);
         return pegasus_key_hash(thrift_request.key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
         dsn::blob raw_key;
-        dsn::from_blob_to_thrift(data, raw_key);
+        dsn::from_blob_to_thrift(request_data, raw_key);
         return pegasus_key_hash(raw_key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         dsn::apps::multi_put_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+        dsn::from_blob_to_thrift(request_data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
         dsn::apps::multi_remove_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+        dsn::from_blob_to_thrift(request_data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_INCR) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
         dsn::apps::incr_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+        dsn::from_blob_to_thrift(request_data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
         dsn::apps::check_and_set_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+        dsn::from_blob_to_thrift(request_data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
         dsn::apps::check_and_mutate_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+        dsn::from_blob_to_thrift(request_data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
 
-    LOG_FATAL("unexpected task code: {}", tc);
+    LOG_FATAL("unexpected task code: {}", rpc_code);
     __builtin_unreachable();
 }
 
@@ -238,7 +235,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
         if (perr != PERR_OK || err != dsn::ERR_OK) {
             // retry this rpc
             _inflights[hash].push_front(rpc);
-            _env.schedule([hash, cb, this]() { send(hash, cb); }, 1_s);
+            _env.schedule([hash, cb, this]() { send(hash, cb); }, std::chrono::seconds(1));
 
             log_non_idempotent_rpc_retry_if_need(rpc);
 
@@ -363,7 +360,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             uint64_t hash = get_hash_from_request(rpc_code, raw_message);
             duplicate_rpc rpc(std::move(batch_request),
                               dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
-                              100_s, // TODO(wutao1): configurable timeout.
+                              std::chrono::seconds(100), // TODO(wutao1): configurable timeout.
                               hash);
             _inflights[hash].push_back(std::move(rpc));
             batch_request = std::make_unique<dsn::apps::duplicate_request>();

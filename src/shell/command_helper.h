@@ -1760,27 +1760,25 @@ create_partition_aggregate_stats_calcs(const int32_t table_id,
 inline bool
 update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, double value)
 {
-    if (counter_name == "get_qps")
+    if (counter_name == "get_qps") {
         row.get_qps += value;
-    else if (counter_name == "multi_get_qps")
+    } else if (counter_name == "multi_get_qps") {
         row.multi_get_qps += value;
-    else if (counter_name == "batch_get_qps")
+    } else if (counter_name == "batch_get_qps") {
         row.batch_get_qps += value;
-    else if (counter_name == "put_qps")
+    } else if (counter_name == "put_qps") {
         row.put_qps += value;
-    else if (counter_name == "multi_put_qps")
+    } else if (counter_name == "multi_put_qps") {
         row.multi_put_qps += value;
-    else if (counter_name == "remove_qps")
+    } else if (counter_name == "remove_qps") {
         row.remove_qps += value;
-    else if (counter_name == "multi_remove_qps")
+    } else if (counter_name == "multi_remove_qps") {
         row.multi_remove_qps += value;
-    else if (counter_name == "incr_qps") {
+    } else if (counter_name == "incr_qps") {
         row.incr_qps += value;
-    }
-    else if (counter_name == "check_and_set_qps") {
+    } else if (counter_name == "check_and_set_qps") {
         row.check_and_set_qps += value;
-    }
-    else if (counter_name == "check_and_mutate_qps") {
+    } else if (counter_name == "check_and_mutate_qps") {
         row.check_and_mutate_qps += value;
     } else if (counter_name == "dup_unsafe_received_non_idempotent_duplicate_request") {
         row.dup_unsafe_received_non_idempotent_duplicate_request += value;
@@ -1796,100 +1794,97 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.dup_failed_shipping_ops += value;
     } else if (counter_name == "dup_recent_mutation_loss_count") {
         row.dup_recent_mutation_loss_count += value;
-    }
-    else if (counter_name == "recent.read.cu") {
+    } else if (counter_name == "recent.read.cu") {
         row.recent_read_cu += value;
-    }
-    else if (counter_name == "recent.write.cu") {
+    } else if (counter_name == "recent.write.cu") {
         row.recent_write_cu += value;
-    }
-    else if (counter_name == "recent.expire.count") {
+    } else if (counter_name == "recent.expire.count") {
         row.recent_expire_count += value;
-    }
-    else if (counter_name == "recent.filter.count")
+    } else if (counter_name == "recent.filter.count") {
         row.recent_filter_count += value;
-    else if (counter_name == "recent.abnormal.count")
+    } else if (counter_name == "recent.abnormal.count") {
         row.recent_abnormal_count += value;
-    else if (counter_name == "recent.write.throttling.delay.count")
+    } else if (counter_name == "recent.write.throttling.delay.count") {
         row.recent_write_throttling_delay_count += value;
-    else if (counter_name == "recent.write.throttling.reject.count")
+    } else if (counter_name == "recent.write.throttling.reject.count") {
         row.recent_write_throttling_reject_count += value;
-    else if (counter_name == "recent.read.throttling.delay.count")
+    } else if (counter_name == "recent.read.throttling.delay.count") {
         row.recent_read_throttling_delay_count += value;
-    else if (counter_name == "recent.read.throttling.reject.count")
+    } else if (counter_name == "recent.read.throttling.reject.count") {
         row.recent_read_throttling_reject_count += value;
-    else if (counter_name == "recent.backup.request.throttling.delay.count")
+    } else if (counter_name == "recent.backup.request.throttling.delay.count") {
         row.recent_backup_request_throttling_delay_count += value;
-    else if (counter_name == "recent.backup.request.throttling.reject.count")
+    } else if (counter_name == "recent.backup.request.throttling.reject.count") {
         row.recent_backup_request_throttling_reject_count += value;
-    else if (counter_name == "recent.write.splitting.reject.count")
+    } else if (counter_name == "recent.write.splitting.reject.count") {
         row.recent_write_splitting_reject_count += value;
-    else if (counter_name == "recent.read.splitting.reject.count")
+    } else if (counter_name == "recent.read.splitting.reject.count") {
         row.recent_read_splitting_reject_count += value;
-    else if (counter_name == "recent.write.bulk.load.ingestion.reject.count")
+    } else if (counter_name == "recent.write.bulk.load.ingestion.reject.count") {
         row.recent_write_bulk_load_ingestion_reject_count += value;
-    else if (counter_name == "disk.storage.sst(MB)")
+    } else if (counter_name == "disk.storage.sst(MB)") {
         row.storage_mb += value;
-    else if (counter_name == "disk.storage.sst.count")
+    } else if (counter_name == "disk.storage.sst.count") {
         row.storage_count += value;
-    else if (counter_name == "rdb.block_cache.hit_count")
+    } else if (counter_name == "rdb.block_cache.hit_count") {
         row.rdb_block_cache_hit_count += value;
-    else if (counter_name == "rdb.block_cache.total_count")
+    } else if (counter_name == "rdb.block_cache.total_count") {
         row.rdb_block_cache_total_count += value;
-    else if (counter_name == "rdb.index_and_filter_blocks.memory_usage")
+    } else if (counter_name == "rdb.index_and_filter_blocks.memory_usage") {
         row.rdb_index_and_filter_blocks_mem_usage += value;
-    else if (counter_name == "rdb.memtable.memory_usage")
+    } else if (counter_name == "rdb.memtable.memory_usage") {
         row.rdb_memtable_mem_usage += value;
-    else if (counter_name == "rdb.estimate_num_keys")
+    } else if (counter_name == "rdb.estimate_num_keys") {
         row.rdb_estimate_num_keys += value;
-    else if (counter_name == "rdb.bf_seek_negatives")
+    } else if (counter_name == "rdb.bf_seek_negatives") {
         row.rdb_bf_seek_negatives += value;
-    else if (counter_name == "rdb.bf_seek_total")
+    } else if (counter_name == "rdb.bf_seek_total") {
         row.rdb_bf_seek_total += value;
-    else if (counter_name == "rdb.bf_point_positive_true")
+    } else if (counter_name == "rdb.bf_point_positive_true") {
         row.rdb_bf_point_positive_true += value;
-    else if (counter_name == "rdb.bf_point_positive_total")
+    } else if (counter_name == "rdb.bf_point_positive_total") {
         row.rdb_bf_point_positive_total += value;
-    else if (counter_name == "rdb.bf_point_negatives")
+    } else if (counter_name == "rdb.bf_point_negatives") {
         row.rdb_bf_point_negatives += value;
-    else if (counter_name == "backup_request_qps")
+    } else if (counter_name == "backup_request_qps") {
         row.backup_request_qps += value;
-    else if (counter_name == "backup_request_bytes")
+    } else if (counter_name == "backup_request_bytes") {
         row.backup_request_bytes += value;
-    else if (counter_name == "get_bytes")
+    } else if (counter_name == "get_bytes") {
         row.get_bytes += value;
-    else if (counter_name == "multi_get_bytes")
+    } else if (counter_name == "multi_get_bytes") {
         row.multi_get_bytes += value;
-    else if (counter_name == "batch_get_bytes")
+    } else if (counter_name == "batch_get_bytes") {
         row.batch_get_bytes += value;
-    else if (counter_name == "scan_bytes")
+    } else if (counter_name == "scan_bytes") {
         row.scan_bytes += value;
-    else if (counter_name == "put_bytes")
+    } else if (counter_name == "put_bytes") {
         row.put_bytes += value;
-    else if (counter_name == "multi_put_bytes")
+    } else if (counter_name == "multi_put_bytes") {
         row.multi_put_bytes += value;
-    else if (counter_name == "check_and_set_bytes")
+    } else if (counter_name == "check_and_set_bytes") {
         row.check_and_set_bytes += value;
-    else if (counter_name == "check_and_mutate_bytes")
+    } else if (counter_name == "check_and_mutate_bytes") {
         row.check_and_mutate_bytes += value;
-    else if (counter_name == "recent_rdb_compaction_input_bytes")
+    } else if (counter_name == "recent_rdb_compaction_input_bytes") {
         row.recent_rdb_compaction_input_bytes += value;
-    else if (counter_name == "recent_rdb_compaction_output_bytes")
+    } else if (counter_name == "recent_rdb_compaction_output_bytes") {
         row.recent_rdb_compaction_output_bytes += value;
-    else if (counter_name == "rdb.read_l2andup_hit_count")
+    } else if (counter_name == "rdb.read_l2andup_hit_count") {
         row.rdb_read_l2andup_hit_count += value;
-    else if (counter_name == "rdb.read_l1_hit_count")
+    } else if (counter_name == "rdb.read_l1_hit_count") {
         row.rdb_read_l1_hit_count += value;
-    else if (counter_name == "rdb.read_l0_hit_count")
+    } else if (counter_name == "rdb.read_l0_hit_count") {
         row.rdb_read_l0_hit_count += value;
-    else if (counter_name == "rdb.read_memtable_hit_count")
+    } else if (counter_name == "rdb.read_memtable_hit_count") {
         row.rdb_read_memtable_hit_count += value;
-    else if (counter_name == "rdb.write_amplification")
+    } else if (counter_name == "rdb.write_amplification") {
         row.rdb_write_amplification += value;
-    else if (counter_name == "rdb.read_amplification")
+    } else if (counter_name == "rdb.read_amplification") {
         row.rdb_read_amplification += value;
-    else
+    } else {
         return false;
+    }
     return true;
 }
 

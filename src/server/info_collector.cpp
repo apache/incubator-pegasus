@@ -188,14 +188,14 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     if (find != _app_stat_counters.end()) {
         return find->second;
     }
-    app_stat_counters *counters = new app_stat_counters();
+    auto *counters = new app_stat_counters();
 
 #define INIT_COUNTER(name)                                                                         \
     do {                                                                                           \
-        std::string counter_name = fmt::format("app.stat." #name "#{}", app_name);                  \
-        std::string counter_desc = fmt::format("statistic the " #name " of app {}", app_name);      \
+        std::string counter_name = fmt::format("app.stat." #name "#{}", app_name);                 \
+        std::string counter_desc = fmt::format("statistic the " #name " of app {}", app_name);     \
         counters->name.init_app_counter(                                                           \
-            "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());        \
+            "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());       \
     } while (0)
 
     INIT_COUNTER(get_qps);
