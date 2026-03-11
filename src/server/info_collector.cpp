@@ -20,7 +20,6 @@
 #include "info_collector.h"
 
 #include <fmt/core.h>
-#include <stdio.h>
 #include <algorithm>
 #include <chrono>
 #include <utility>
@@ -191,14 +190,12 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     }
     app_stat_counters *counters = new app_stat_counters();
 
-    char counter_name[1024];
-    char counter_desc[1024];
 #define INIT_COUNTER(name)                                                                         \
     do {                                                                                           \
-        (void)std::snprintf(counter_name, sizeof(counter_name), "app.stat." #name "#%s", app_name.c_str()); \
-        (void)std::snprintf(counter_desc, sizeof(counter_desc), "statistic the " #name " of app %s", app_name.c_str()); \
+        std::string counter_name = fmt::format("app.stat." #name "#{}", app_name);                  \
+        std::string counter_desc = fmt::format("statistic the " #name " of app {}", app_name);      \
         counters->name.init_app_counter(                                                           \
-            "app.pegasus", counter_name, COUNTER_TYPE_NUMBER, counter_desc);                       \
+            "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());        \
     } while (0)
 
     INIT_COUNTER(get_qps);
