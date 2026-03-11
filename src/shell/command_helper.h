@@ -1774,10 +1774,12 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.remove_qps += value;
     else if (counter_name == "multi_remove_qps")
         row.multi_remove_qps += value;
-    else if (counter_name == "incr_qps")
+    else if (counter_name == "incr_qps") {
         row.incr_qps += value;
-    else if (counter_name == "check_and_set_qps")
+    }
+    else if (counter_name == "check_and_set_qps") {
         row.check_and_set_qps += value;
+    }
     else if (counter_name == "check_and_mutate_qps") {
         row.check_and_mutate_qps += value;
     } else if (counter_name == "dup_unsafe_received_non_idempotent_duplicate_request") {
@@ -1792,14 +1794,18 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.dup_retry_non_idempotent_duplicate_request += value;
     } else if (counter_name == "dup_failed_shipping_ops") {
         row.dup_failed_shipping_ops += value;
-    } else if (counter_name == "dup_recent_mutation_loss_count")
+    } else if (counter_name == "dup_recent_mutation_loss_count") {
         row.dup_recent_mutation_loss_count += value;
-    else if (counter_name == "recent.read.cu")
+    }
+    else if (counter_name == "recent.read.cu") {
         row.recent_read_cu += value;
-    else if (counter_name == "recent.write.cu")
+    }
+    else if (counter_name == "recent.write.cu") {
         row.recent_write_cu += value;
-    else if (counter_name == "recent.expire.count")
+    }
+    else if (counter_name == "recent.expire.count") {
         row.recent_expire_count += value;
+    }
     else if (counter_name == "recent.filter.count")
         row.recent_filter_count += value;
     else if (counter_name == "recent.abnormal.count")

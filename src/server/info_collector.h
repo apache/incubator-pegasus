@@ -57,28 +57,28 @@ public:
 
         void set(const row_data &row_stats)
         {
-            get_qps->set(row_stats.get_qps);
-            multi_get_qps->set(row_stats.multi_get_qps);
-            put_qps->set(row_stats.put_qps);
-            multi_put_qps->set(row_stats.multi_put_qps);
-            remove_qps->set(row_stats.remove_qps);
-            multi_remove_qps->set(row_stats.multi_remove_qps);
-            incr_qps->set(row_stats.incr_qps);
-            check_and_set_qps->set(row_stats.check_and_set_qps);
-            check_and_mutate_qps->set(row_stats.check_and_mutate_qps);
+            get_qps->set(static_cast<int64_t>(row_stats.get_qps));
+            multi_get_qps->set(static_cast<int64_t>(row_stats.multi_get_qps));
+            put_qps->set(static_cast<int64_t>(row_stats.put_qps));
+            multi_put_qps->set(static_cast<int64_t>(row_stats.multi_put_qps));
+            remove_qps->set(static_cast<int64_t>(row_stats.remove_qps));
+            multi_remove_qps->set(static_cast<int64_t>(row_stats.multi_remove_qps));
+            incr_qps->set(static_cast<int64_t>(row_stats.incr_qps));
+            check_and_set_qps->set(static_cast<int64_t>(row_stats.check_and_set_qps));
+            check_and_mutate_qps->set(static_cast<int64_t>(row_stats.check_and_mutate_qps));
             dup_unsafe_received_non_idempotent_duplicate_request->set(
-                row_stats.dup_unsafe_received_non_idempotent_duplicate_request);
-            scan_qps->set(row_stats.scan_qps);
-            duplicate_qps->set(row_stats.duplicate_qps);
-            dup_shipped_ops->set(row_stats.dup_shipped_ops);
+                static_cast<int64_t>(row_stats.dup_unsafe_received_non_idempotent_duplicate_request));
+            scan_qps->set(static_cast<int64_t>(row_stats.scan_qps));
+            duplicate_qps->set(static_cast<int64_t>(row_stats.duplicate_qps));
+            dup_shipped_ops->set(static_cast<int64_t>(row_stats.dup_shipped_ops));
             dup_retry_non_idempotent_duplicate_request->set(
-                row_stats.dup_retry_non_idempotent_duplicate_request);
-            dup_failed_shipping_ops->set(row_stats.dup_failed_shipping_ops);
-            dup_recent_mutation_loss_count->set(row_stats.dup_recent_mutation_loss_count);
-            recent_read_cu->set(row_stats.recent_read_cu);
-            recent_write_cu->set(row_stats.recent_write_cu);
-            recent_expire_count->set(row_stats.recent_expire_count);
-            recent_filter_count->set(row_stats.recent_filter_count);
+                static_cast<int64_t>(row_stats.dup_retry_non_idempotent_duplicate_request));
+            dup_failed_shipping_ops->set(static_cast<int64_t>(row_stats.dup_failed_shipping_ops));
+            dup_recent_mutation_loss_count->set(static_cast<int64_t>(row_stats.dup_recent_mutation_loss_count));
+            recent_read_cu->set(static_cast<int64_t>(row_stats.recent_read_cu));
+            recent_write_cu->set(static_cast<int64_t>(row_stats.recent_write_cu));
+            recent_expire_count->set(static_cast<int64_t>(row_stats.recent_expire_count));
+            recent_filter_count->set(static_cast<int64_t>(row_stats.recent_filter_count));
             recent_abnormal_count->set(row_stats.recent_abnormal_count);
             recent_write_throttling_delay_count->set(row_stats.recent_write_throttling_delay_count);
             recent_write_throttling_reject_count->set(

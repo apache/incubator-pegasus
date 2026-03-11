@@ -168,7 +168,7 @@ METRIC_DEFINE_counter(replica,
 
 DSN_DEFINE_int64(pegasus.server,
                  dup_lagging_write_threshold_ms,
-                 10 * 1000,
+                 static_cast<int64_t>(10) * 1000,
                  "If the duration that a write flows from master to slave is larger than this "
                  "threshold, the write is defined a lagging write.");
 

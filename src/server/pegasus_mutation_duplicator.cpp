@@ -72,13 +72,12 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of Non-idempotent write when doing DUPLICATE which is Retried");
 
-namespace dsn {
-namespace replication {
+namespace dsn::replication {
 struct replica_base;
 
 DSN_DEFINE_uint64(replication,
                   dup_max_allowed_write_size,
-                  1 << 20,
+                  1ULL << 20,
                   "The maximum piece of request can be add to "
                   "the duplication batch, 0 means no check");
 DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
@@ -91,11 +90,9 @@ DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
             return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
         };
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 using namespace dsn::literals::chrono_literals;
 
@@ -384,5 +381,4 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
     }
 }
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server
