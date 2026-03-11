@@ -158,8 +158,8 @@ void load_from_private_log::find_log_file_to_start()
     // is cleared once WAL replay finished. They are unable to read.
     mutation_log::log_file_map_by_index new_file_map;
 
-    const auto decree cleanable_decree = _private_log->get_cleanable_decree();
-    const auto decree max_decree_gpid = _private_log->max_decree(get_gpid());
+    const decree cleanable_decree = _private_log->get_cleanable_decree();
+    const decree max_decree_gpid = _private_log->max_decree(get_gpid());
 
     if (max_decree_gpid <= cleanable_decree) {
         LOG_ERROR_PREFIX("max_decree_gpid({}) should be > cleanable_decree({}) for plog",

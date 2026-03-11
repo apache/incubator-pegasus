@@ -469,9 +469,8 @@ private:
     // if count <= 0, means flush until all data is on disk
     void flush_internal(int max_count);
 
-private:
     // bufferring - only one concurrent write is allowed
-    typedef std::vector<mutation_ptr> mutations;
+    using mutations = std::vector<mutation_ptr>;
     std::atomic_bool _is_writing;
     // Writes that are emitted to `commit_log_block` but are not completely written.
     // The weak_ptr used here is a trick. Once the pointer freed, ie.
