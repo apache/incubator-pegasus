@@ -357,7 +357,7 @@ aggregate_replica_server_stats(const node_desc &node,
             {"splitting_replicas", &stats.splitting_replicas},
             {"rdb_block_cache_mem_usage_bytes", &stats.rdb_block_cache_mem_usage_bytes},
         }));
-    calcs->create_sums<table_aggregate_stats>(
+    calcs.create_sums<total_aggregate_stats>(
         "replica",
         stat_var_map({
             {"rdb_manual_compact_queued_tasks", &stats.rdb_manual_compact_queued_tasks},
