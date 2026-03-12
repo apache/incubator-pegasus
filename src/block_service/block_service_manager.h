@@ -18,8 +18,8 @@
 #pragma once
 
 #include <absl/strings/match.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
