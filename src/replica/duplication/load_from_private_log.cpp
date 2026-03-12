@@ -22,7 +22,6 @@
 #include <utility>
 
 #include "common/duplication_common.h"
-#include "common/gpid.h"
 #include "duplication_types.h"
 #include "load_from_private_log.h"
 #include "replica/duplication/mutation_batch.h"
