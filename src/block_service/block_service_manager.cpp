@@ -102,11 +102,11 @@ block_filesystem *block_service_manager::get_or_create_block_filesystem(const st
         args = {provider, "/"};
         args_for_log = provider + " /";
     } else {
-        const char *arguments = dsn_config_get_value_string(
-            (std::string("block_service.") + provider).c_str(),
-            "args",
-            "",
-            "args for block_service");
+        const char *arguments =
+            dsn_config_get_value_string((std::string("block_service.") + provider).c_str(),
+                                        "args",
+                                        "",
+                                        "args for block_service");
         utils::split_args(arguments, args);
         args_for_log = arguments;
     }

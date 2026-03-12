@@ -22,6 +22,8 @@
 #include <memory>
 #include <string>
 
+#include <absl/strings/match.h>
+
 #include "utils/error_code.h"
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
@@ -76,11 +78,11 @@ public:
                              /*out*/ uint64_t &download_file_size);
 
 private:
-    bool is_juicefs_provider(const std::string &provider)
+    static bool is_juicefs_provider(const std::string &provider)
     {
         // provider example: jfs://pegasus@ak-bigdata
         const std::string prefix = "jfs://";
-        if (provider.find(prefix) != 0) {
+        if (!absl::StartsWith(provider, prefix)) {
             return false;
         }
         std::string remaining = provider.substr(prefix.size());
@@ -90,10 +92,7 @@ private:
         }
         // check has ak-bigdata
         std::string host = remaining.substr(at_pos + 1);
-        if (host.empty()) {
-            return false;
-        }
-        return true;
+        return !host.empty();
     }
 
     block_service_registry &_registry_holder;
