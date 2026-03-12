@@ -246,16 +246,22 @@ dsn::metric_filters server_stat_filters()
     dsn::metric_filters filters;
     filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
     filters.entity_types = {"server"};
-    filters.entity_metrics = {"virtual_mem_usage_mb", "resident_mem_usage_mb"};
-    return filters;
-}
-
-struct meta_server_stats
-{
-    meta_server_stats() = default;
-
-    double virt_mem_mb{0.0};
-    double res_mem_mb{0.0};
+    filters.entity_metrics = {
+        "virtual_mem_usage_mb",
+        "resident_mem_usage_mb",
+        "total_replicas", 
+        "opening_replicas", 
+        "closing_replicas", 
+        "inactive_replicas",
+        "error_replicas", 
+        "primary_replicas", 
+        "secondary_replicas",
+        "learning_replicas",
+        "splitting_replicas", 
+        "rdb_block_cache_mem_usage_bytes",
+        "rdb_manual_compact_queued_tasks",
+        "rdb_manual_compact_running_tasks",
+    };
 
     DEFINE_JSON_SERIALIZATION(virt_mem_mb, res_mem_mb)
 };
@@ -299,6 +305,10 @@ struct replica_server_stats
     double learning_replicas{0.0};
     double splitting_replicas{0.0};
 
+    double rdb_block_cache_mem_usage_bytes{0.0};
+    double rdb_manual_compact_queued_tasks{0.0};
+    double rdb_manual_compact_running_tasks{0.0};
+
     DEFINE_JSON_SERIALIZATION(virt_mem_mb,
                               res_mem_mb,
                               total_replicas,
@@ -309,7 +319,10 @@ struct replica_server_stats
                               primary_replicas,
                               secondary_replicas,
                               learning_replicas,
-                              splitting_replicas)
+                              splitting_replicas,
+                              rdb_block_cache_mem_usage_bytes,
+                              rdb_manual_compact_queued_tasks,
+                              rdb_manual_compact_running_tasks)
 };
 
 std::pair<bool, std::string>
@@ -331,7 +344,15 @@ aggregate_replica_server_stats(const node_desc &node,
                       {"primary_replicas", &stats.primary_replicas},
                       {"secondary_replicas", &stats.secondary_replicas},
                       {"learning_replicas", &stats.learning_replicas},
-                      {"splitting_replicas", &stats.splitting_replicas}}));
+                      {"splitting_replicas", &stats.splitting_replicas},
+                      {"rdb_block_cache_mem_usage_bytes", &stats.rdb_block_cache_mem_usage_bytes},
+                      }));
+    calcs->create_sums<table_aggregate_stats>(
+            "replica",
+            stat_var_map({
+            {"rdb_manual_compact_queued_tasks", &stats.rdb_manual_compact_queued_tasks},
+            {"rdb_manual_compact_running_tasks",&stats.rdb_manual_compact_running_tasks},
+            }));
 
     const auto command_result = process_parse_metrics_result(
         calcs.aggregate_metrics(query_snapshot_start, query_snapshot_end),
