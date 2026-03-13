@@ -24,8 +24,8 @@
  * THE SOFTWARE.
  */
 
-#include <boost/lexical_cast.hpp>
 #include <algorithm>
+#include <boost/lexical_cast.hpp>
 #include <cstdint>
 #include <ostream>
 
@@ -134,13 +134,16 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     // we put max_replica_count-1 recent replicas to last_drops, in case of the DDD-state when the
     // only primary dead
     // when add node to pc.last_drops, we don't remove it from our cc.drop_list
-    CHECK(pc.hp_last_drops.empty(), "last_drops of partition({}) must be empty", pid);
+    std::vector<host_port> last_drops;
+    GET_HOST_PORTS(pc, last_drops, last_drops);
+    CHECK(last_drops.empty(), "last_drops of partition({}) must be empty", pid);
     for (auto iter = drop_list.rbegin(); iter != drop_list.rend(); ++iter) {
-        if (pc.hp_last_drops.size() + 1 >= max_replica_count) {
+        // hp_last_drops is added in the steps bellow.
+        if (last_drops.size() + 1 >= max_replica_count) {
             break;
         }
         // similar to cc.drop_list, pc.last_drop is also a stack structure
-        HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(pc, last_drops, iter->node);
+        HEAD_INSERT_IP_AND_HOST_PORT_BY_DNS(pc, last_drops, iter->node, last_drops);
         LOG_INFO("construct for ({}), select {} into last_drops, ballot({}), "
                  "committed_decree({}), prepare_decree({})",
                  pid,
@@ -537,6 +540,11 @@ app_state::app_state(const app_info &info) : app_info(info), helpers(new app_sta
     RESET_IP_AND_HOST_PORT(pc, primary);
     CLEAR_IP_AND_HOST_PORT(pc, secondaries);
     CLEAR_IP_AND_HOST_PORT(pc, last_drops);
+
+    // TODO(yujingwei): use marco simplify the code, and the logical may should
+    // change
+    pc.__set_hp_secondaries({});
+    pc.__set_hp_last_drops({});
 
     pcs.assign(app_info::partition_count, pc);
     for (int i = 0; i != app_info::partition_count; ++i) {
