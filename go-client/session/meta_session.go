@@ -21,6 +21,8 @@ package session
 
 import (
 	"context"
+	"net"
+	"strings"
 	"sync"
 
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
@@ -65,6 +67,7 @@ type MetaManager struct {
 	logger pegalog.Logger
 
 	metaIPAddrs   []string
+	metaDomain    string
 	metas         []*metaSession
 	currentLeader int // current leader of meta servers
 
@@ -73,6 +76,16 @@ type MetaManager struct {
 }
 
 func NewMetaManager(addrs []string, creator NodeSessionCreator) *MetaManager {
+	metaHostAddr := ""
+	if len(addrs) == 1 && isDomain(addrs[0]) {
+		metaHostAddr = addrs[0]
+	}
+
+	addrs, err := ResolveMetaAddr(addrs)
+	if err != nil {
+		return nil
+	}
+
 	metas := make([]*metaSession, len(addrs))
 	metaIPAddrs := make([]string, len(addrs))
 	for i, addr := range addrs {
@@ -87,9 +100,28 @@ func NewMetaManager(addrs []string, creator NodeSessionCreator) *MetaManager {
 		currentLeader: 0,
 		metas:         metas,
 		metaIPAddrs:   metaIPAddrs,
+		metaDomain:    metaHostAddr,
 		logger:        pegalog.GetLogger(),
 	}
 	return mm
+}
+
+func isDomain(s string) bool {
+	host := s
+	if idx := strings.LastIndex(host, ":"); idx != -1 {
+		host = host[:idx]
+	}
+
+	if ip := net.ParseIP(host); ip != nil {
+		return false
+	}
+
+	ips, err := net.LookupIP(host)
+	if err != nil || len(ips) == 0 {
+		return false
+	}
+
+	return true
 }
 
 func (m *MetaManager) call(ctx context.Context, callFunc metaCallFunc) (metaResponse, error) {
@@ -101,8 +133,45 @@ func (m *MetaManager) call(ctx context.Context, callFunc metaCallFunc) (metaResp
 		m.setNewMetas(call.metas)
 		m.setMetaIPAddrs(call.metaIPAddrs)
 		call.lock.RUnlock()
+	} else if m.metaDomain != "" {
+		if newAddrs, err := ResolveMetaAddr([]string{m.metaDomain}); err == nil {
+			m.mu.Lock()
+			m.logger.Printf("resolved meta list %s to %v", m.metaDomain, newAddrs)
+			anyNew := false
+			for _, addr := range newAddrs {
+				if addMetaSession(&m.metaIPAddrs, &m.metas, addr) {
+					anyNew = true
+				}
+			}
+			if anyNew {
+				m.currentLeader = len(m.metas) - 1
+			}
+			m.mu.Unlock()
+
+		}
 	}
 	return resp, err
+}
+
+func addMetaSession(metaIPAddrs *[]string, metas *[]*metaSession, addr string) bool {
+	found := false
+	for _, oldAddr := range *metaIPAddrs {
+		if oldAddr == addr {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		*metaIPAddrs = append(*metaIPAddrs, addr)
+		*metas = append(*metas, &metaSession{
+			NodeSession: newNodeSession(addr, NodeTypeMeta, DisableMetrics),
+			logger:      pegalog.GetLogger(),
+		})
+		return true
+	}
+
+	return false
 }
 
 // QueryConfig queries table configuration from the leader of meta servers. If the leader was changed,
