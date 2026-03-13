@@ -270,32 +270,33 @@ class MetaSessionManager(SessionManager):
     def get_host_type(self, ip_list):
         """
         Determines the host type based on the provided list of IP addresses.
-        
-        This function analyzes the IP version distribution in the given list to classify
-        the host as IPv4-only, IPv6-only, mixed (both IPv4 and IPv6), or invalid.
+        - kHostTypeIpv4: Single IPv4 address
+        - kHostTypeGroup: Multiple IPv4 addresses (a group/list)
+        - kHostTypeIpv6: IPv6 address (not currently supported in server)
+        - kHostTypeInvalid: Invalid or unsupported configuration
         """
-        has_ipv4 = False
+        ipv4_count = 0
         has_ipv6 = False
 
         for ip_str in ip_list:
             try:
                 ip = ipaddress.ip_address(ip_str)
                 if ip.version == 4:
-                    has_ipv4 = True
+                    ipv4_count += 1
                 elif ip.version == 6:
                     has_ipv6 = True
             except ValueError:
-                continue 
+                continue
 
-        if has_ipv4 and has_ipv6:
+        if has_ipv6:
+            return host_port_types.kHostTypeInvalid
+        if ipv4_count > 1:
             return host_port_types.kHostTypeGroup
-        elif has_ipv4:
+        elif ipv4_count == 1:
             return host_port_types.kHostTypeIpv4
-        elif has_ipv6:
-            return host_port_types.kHostTypeIpv6
         else:
             return host_port_types.kHostTypeInvalid
-    
+        
     def resolve_all_ips(self, hostname):
         """
         Resolves a hostname to all associated IP addresses (both A and AAAA records).
