@@ -17,7 +17,7 @@
 
 module github.com/apache/incubator-pegasus/pegic
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/apache/incubator-pegasus/go-client v0.0.0-20220526071020-be5634371701
@@ -46,6 +46,6 @@ require (
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apimachinery v0.16.13 // indirect
 )
