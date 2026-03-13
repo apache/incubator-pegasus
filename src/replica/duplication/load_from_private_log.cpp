@@ -156,17 +156,35 @@ void load_from_private_log::find_log_file_to_start()
     // Reopen the files. Because the internal file handle of `file_map`
     // is cleared once WAL replay finished. They are unable to read.
     mutation_log::log_file_map_by_index new_file_map;
-    for (const auto &pr : file_map) {
+
+    const decree cleanable_decree = _private_log->get_cleanable_decree();
+    const decree max_decree_gpid = _private_log->max_decree(get_gpid());
+
+    if (max_decree_gpid <= cleanable_decree) {
+        LOG_ERROR_PREFIX("max_decree_gpid({}) should be > cleanable_decree({}) for plog",
+                         max_decree_gpid,
+                         cleanable_decree);
+        return;
+    }
+
+    for (auto it = file_map.rbegin(); it != file_map.rend(); ++it) {
         log_file_ptr file;
-        error_s es = log_utils::open_read(pr.second->path(), file);
+        error_s es = log_utils::open_read(it->second->path(), file);
         if (!es.is_ok()) {
             LOG_ERROR_PREFIX("{}", es);
             return;
         }
-        new_file_map.emplace(pr.first, file);
+
+        new_file_map.emplace(it->first, file);
+
+        // If the max decree of a log file falls within `cleanable_decree`, the file may be deleted
+        // during the GC of plog files. Therefore, these files should be skipped here.
+        if (cleanable_decree >= file->previous_log_max_decree(get_gpid())) {
+            break;
+        }
     }
 
-    find_log_file_to_start(std::move(new_file_map));
+    find_log_file_to_start(new_file_map);
 }
 
 void load_from_private_log::find_log_file_to_start(
