@@ -39,14 +39,15 @@
 #include "duplication_internal_types.h"
 #include "gutil/map_util.h"
 #include "pegasus/client.h"
+#include "pegasus_rpc_types.h"
 #include "pegasus_key_schema.h"
 #include "rpc/rpc_message.h"
 #include "rrdb/rrdb.code.definition.h"
 #include "rrdb/rrdb_types.h"
 #include "runtime/message_utils.h"
+#include "base/pegasus_utils.h"
 #include "utils/autoref_ptr.h"
 #include "utils/blob.h"
-#include "utils/chrono_literals.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/flags.h"
@@ -65,13 +66,17 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kRequests,
                       "The number of failed DUPLICATE requests sent from client");
 
-namespace dsn {
-namespace replication {
+METRIC_DEFINE_counter(replica,
+                      dup_retry_non_idempotent_duplicate_request,
+                      dsn::metric_unit::kRequests,
+                      "The number of Non-idempotent write when doing DUPLICATE which is Retried");
+
+namespace dsn::replication {
 struct replica_base;
 
 DSN_DEFINE_uint64(replication,
                   dup_max_allowed_write_size,
-                  1 << 20,
+                  1ULL << 20U,
                   "The maximum piece of request can be add to "
                   "the duplication batch, 0 means no check");
 DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
@@ -84,37 +89,49 @@ DSN_TAG_VARIABLE(dup_max_allowed_write_size, FT_MUTABLE);
             return std::make_unique<pegasus::server::pegasus_mutation_duplicator>(r, remote, app);
         };
 
-} // namespace replication
-} // namespace dsn
+} // namespace dsn::replication
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
-using namespace dsn::literals::chrono_literals;
-
-/*extern*/ uint64_t get_hash_from_request(dsn::task_code tc, const dsn::blob &data)
+/*extern*/ uint64_t get_hash_from_request(dsn::task_code rpc_code, const dsn::blob &request_data)
 {
-    if (tc == dsn::apps::RPC_RRDB_RRDB_PUT) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
         dsn::apps::update_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+        dsn::from_blob_to_thrift(request_data, thrift_request);
         return pegasus_key_hash(thrift_request.key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
         dsn::blob raw_key;
-        dsn::from_blob_to_thrift(data, raw_key);
+        dsn::from_blob_to_thrift(request_data, raw_key);
         return pegasus_key_hash(raw_key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
         dsn::apps::multi_put_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+        dsn::from_blob_to_thrift(request_data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
-    if (tc == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
         dsn::apps::multi_remove_request thrift_request;
-        dsn::from_blob_to_thrift(data, thrift_request);
+        dsn::from_blob_to_thrift(request_data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
-    LOG_FATAL("unexpected task code: {}", tc);
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
+        dsn::apps::incr_request thrift_request;
+        dsn::from_blob_to_thrift(request_data, thrift_request);
+        return pegasus_hash_key_hash(thrift_request.key);
+    }
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+        dsn::apps::check_and_set_request thrift_request;
+        dsn::from_blob_to_thrift(request_data, thrift_request);
+        return pegasus_hash_key_hash(thrift_request.hash_key);
+    }
+    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+        dsn::apps::check_and_mutate_request thrift_request;
+        dsn::from_blob_to_thrift(request_data, thrift_request);
+        return pegasus_hash_key_hash(thrift_request.hash_key);
+    }
+
+    LOG_FATAL("unexpected task code: {}", rpc_code);
     __builtin_unreachable();
 }
 
@@ -124,7 +141,8 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
     : mutation_duplicator(r),
       _remote_cluster(remote_cluster),
       METRIC_VAR_INIT_replica(dup_shipped_successful_requests),
-      METRIC_VAR_INIT_replica(dup_shipped_failed_requests)
+      METRIC_VAR_INIT_replica(dup_shipped_failed_requests),
+      METRIC_VAR_INIT_replica(dup_retry_non_idempotent_duplicate_request)
 {
     // initialize pegasus-client when this class is first time used.
     static __attribute__((unused)) bool _dummy = pegasus_client_factory::initialize(nullptr);
@@ -217,7 +235,10 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
         if (perr != PERR_OK || err != dsn::ERR_OK) {
             // retry this rpc
             _inflights[hash].push_front(rpc);
-            _env.schedule([hash, cb, this]() { send(hash, cb); }, 1_s);
+            _env.schedule([hash, cb, this]() { send(hash, cb); }, std::chrono::seconds(1));
+
+            log_non_idempotent_rpc_retry_if_need(rpc);
+
             return;
         }
         if (_inflights[hash].empty()) {
@@ -230,6 +251,60 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
             // start next rpc immediately
             _env.schedule([hash, cb, this]() { send(hash, cb); });
             return;
+        }
+    }
+}
+
+void pegasus_mutation_duplicator::log_non_idempotent_rpc_retry_if_need(duplicate_rpc &rpc)
+{
+
+    // there maybe more than one mutation in one dup rpc
+    if (FLAGS_duplication_unsafe_allow_non_idempotent) {
+        for (const auto &entry : rpc.request().entries) {
+            if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
+                entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET ||
+                entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+
+                METRIC_VAR_INCREMENT(dup_retry_non_idempotent_duplicate_request);
+
+                dsn::message_ex *write =
+                    dsn::from_blob_to_received_msg(entry.task_code, entry.raw_message);
+
+                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
+                    auto incr = incr_rpc(write).request();
+                    LOG_DEBUG_PREFIX(
+                        "Non-indempotent write RPC_RRDB_RRDB_INCR has been retried when doing "
+                        "duplication,"
+                        "key is [{}]",
+                        pegasus::utils::c_escape_sensitive_string(incr.key));
+                    continue;
+                }
+
+                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
+                    auto check_and_set = check_and_set_rpc(write).request();
+                    LOG_DEBUG_PREFIX(
+                        "Non-indempotent write RPC_RRDB_RRDB_CHECK_AND_SET has been retried "
+                        "when doing duplication,"
+                        "hash key [{}], check sort key [{}],"
+                        "set sort key [{}]",
+                        pegasus::utils::c_escape_sensitive_string(check_and_set.hash_key),
+                        pegasus::utils::c_escape_sensitive_string(check_and_set.check_sort_key),
+                        pegasus::utils::c_escape_sensitive_string(check_and_set.set_sort_key));
+                    continue;
+                }
+
+                if (entry.task_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
+                    auto check_and_mutate = check_and_mutate_rpc(write).request();
+                    LOG_DEBUG_PREFIX(
+                        "Non-indempotent write RPC_RRDB_RRDB_CHECK_AND_MUTATE has been "
+                        "retried when doing duplication,"
+                        "hash key [{}], check sort key [{}],"
+                        "set sort key [{}]",
+                        pegasus::utils::c_escape_sensitive_string(check_and_mutate.hash_key),
+                        pegasus::utils::c_escape_sensitive_string(check_and_mutate.check_sort_key));
+                    continue;
+                }
+            }
         }
     }
 }
@@ -285,7 +360,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             uint64_t hash = get_hash_from_request(rpc_code, raw_message);
             duplicate_rpc rpc(std::move(batch_request),
                               dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
-                              100_s, // TODO(wutao1): configurable timeout.
+                              std::chrono::seconds(100), // TODO(wutao1): configurable timeout.
                               hash);
             _inflights[hash].push_back(std::move(rpc));
             batch_request = std::make_unique<dsn::apps::duplicate_request>();
@@ -303,5 +378,4 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
     }
 }
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server
