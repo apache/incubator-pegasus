@@ -168,6 +168,9 @@ if [ -n "$HADOOP_HOME" ]; then
     fi
     # Pack the jars.
     mkdir -p ${pack}/hadoop
+
+    wget -N https://github.com/juicedata/juicefs/releases/download/v1.3.1/juicefs-hadoop-1.3.1.jar
+    copy_file ./juicefs-hadoop-1.3.1.jar ${pack}/hadoop
     for f in ${HADOOP_HOME}/share/hadoop/common/lib/*.jar; do
         copy_file $f ${pack}/hadoop
     done

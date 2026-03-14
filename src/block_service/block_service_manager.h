@@ -17,11 +17,12 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <absl/strings/match.h>
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
-
 #include "utils/error_code.h"
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
@@ -76,6 +77,23 @@ public:
                              /*out*/ uint64_t &download_file_size);
 
 private:
+    static bool is_juicefs_provider(const std::string &provider)
+    {
+        // provider example: jfs://pegasus@ak-bigdata
+        const std::string prefix = "jfs://";
+        if (!absl::StartsWith(provider, prefix)) {
+            return false;
+        }
+        std::string remaining = provider.substr(prefix.size());
+        size_t at_pos = remaining.find('@');
+        if (at_pos == std::string::npos || at_pos == 0) {
+            return false;
+        }
+        // check has ak-bigdata
+        std::string host = remaining.substr(at_pos + 1);
+        return !host.empty();
+    }
+
     block_service_registry &_registry_holder;
 
     mutable zrwlock_nr _fs_lock;
