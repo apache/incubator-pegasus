@@ -20,7 +20,7 @@ module github.com/apache/incubator-pegasus/collector
 go 1.18
 
 require (
-	github.com/apache/incubator-pegasus/go-client v0.0.0-20260121121155-96868ed93b2a
+	github.com/apache/incubator-pegasus/go-client v0.0.0-20260211095029-022854b0259f
 	github.com/gammazero/deque v1.0.0
 	github.com/kataras/iris/v12 v12.2.0
 	github.com/prometheus/client_golang v1.18.0
