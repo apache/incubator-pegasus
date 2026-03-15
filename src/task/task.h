@@ -48,6 +48,7 @@
 #include "utils/fmt_logging.h"
 #include "utils/join_point.h"
 #include "utils/ports.h"
+#include "utils/synchronize.h"
 #include "utils/utils.h"
 
 namespace dsn {
@@ -329,6 +330,11 @@ public:
         : task(code, hash, node), _cb(std::move(cb))
     {
     }
+    ~raw_task() override
+    {
+        ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+        _cb = nullptr;
+    }
 
     void exec() override
     {
@@ -338,10 +344,13 @@ public:
     }
 
 protected:
-    void clear_non_trivial_on_task_end() override { _cb = nullptr; }
-
-protected:
+    void clear_non_trivial_on_task_end() override
+    {
+        ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_lock);
+        _cb = nullptr;
+    }
     task_handler _cb;
+    ::dsn::utils::ex_lock_nr _lock;
 };
 
 //----------------- timer task -------------------------------------------------------
