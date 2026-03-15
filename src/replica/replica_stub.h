@@ -213,6 +213,7 @@ public:
     std::vector<replica_ptr> get_all_replicas() const;
     std::vector<replica_ptr> get_all_primaries() const;
     replica_ptr get_replica(gpid id) const;
+    std::string_view get_replica_status(gpid id) const;
     replication_options &options() { return _options; }
     const replication_options &options() const { return _options; }
     bool is_connected() const { return NS_Connected == _state; }
@@ -336,13 +337,14 @@ private:
     };
     friend USER_DEFINED_ENUM_FORMATTER(replica_stub::replica_node_state);
 
-    enum replica_life_cycle
+    enum class replica_life_cycle : uint32_t
     {
-        RL_invalid,
-        RL_creating,
-        RL_serving,
-        RL_closing,
-        RL_closed
+        kInvalid,
+        kCreating,
+        kServing,
+        kClosing,
+        kClosed,
+        kCount
     };
 
     void initialize_start();
@@ -425,9 +427,9 @@ private:
 
     dsn::error_code on_kill_replica(gpid id);
 
-    void get_replica_info(/*out*/ replica_info &info, /*in*/ replica_ptr r);
-    void get_local_replicas(/*out*/ std::vector<replica_info> &replicas);
-    replica_life_cycle get_replica_life_cycle(gpid id);
+    void get_local_replicas(std::vector<replica_info> &replicas) const;
+    replica_life_cycle get_replica_life_cycle_unlocked(gpid id) const;
+    replica_life_cycle get_replica_life_cycle(gpid id) const;
     void on_gc_replica(replica_stub_ptr this_, gpid id);
 
     struct replica_stat_info
@@ -578,7 +580,7 @@ private:
     // replica decrypted key for rocksdb
     std::string _server_key;
 
-    bool _is_running;
+    std::atomic_bool _is_running;
 
     std::unique_ptr<dsn::security::access_controller> _access_controller;
 
