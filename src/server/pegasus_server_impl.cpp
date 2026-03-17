@@ -2751,9 +2751,9 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     update_validate_partition_hash(envs);
     update_user_specified_compaction(envs);
 
-    // When backup cluster creates an app via duplication, if source app has env parameters about manual compact,
+    // When backup cluster creates an app via duplication, if source app has parameters about manual compact,
     // incomplete replicas may start a manual compact. However, these replicas haven't opened rocksdb successfully yet,
-    // so we need to check if _db exists before starting manual compact to avoid coredump.
+    // so we need to check if _db exists before starting manual compact to avoid segmentation fault.
     if (_db != nullptr) {
         _manual_compact_svc.start_manual_compact_if_needed(envs);
     }
