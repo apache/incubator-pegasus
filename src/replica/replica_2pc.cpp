@@ -183,7 +183,13 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 
     if (FLAGS_reject_write_when_disk_insufficient &&
         (_dir_node->status != disk_status::NORMAL || _primary_states.secondary_disk_abnormal())) {
-        response_client_write(request, disk_status_to_error_code(_dir_node->status));
+        if (_dir_node->status != disk_status::NORMAL) {
+            // Primary replica disk is abnormal, return the corresponding error code
+            response_client_write(request, disk_status_to_error_code(_dir_node->status));
+        } else {
+            // Secondary replica disk is abnormal but primary is OK
+            response_client_write(request, ERR_SECONDARY_DISK_ABNORMAL);
+        }
         return;
     }
 
