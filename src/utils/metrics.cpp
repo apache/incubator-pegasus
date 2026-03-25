@@ -256,6 +256,7 @@ std::string metric_filters::to_query_string() const
     COMBINE_FIELD_PAIR(ids, entity_ids);
     COMBINE_FIELD_PAIR(attributes, entity_attrs);
     COMBINE_FIELD_PAIR(metrics, entity_metrics);
+    fields.push_back(fmt::format("as_value={}", as_value));                                                         
 
 #undef COMBINE_FIELD_PAIR
 
@@ -341,16 +342,17 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
     metric_filters filters;
     bool with_metric_fields = false;
     bool detail = false;
-    for (const auto &field : req.query_args) {
-        if (field.first == "with_metric_fields") {
-            parse_as(field.second, filters.with_metric_fields);
+    bool as_value = false;
+    for (const auto &[field,value] : req.query_args) {
+        if (field == "with_metric_fields") {
+            parse_as(value, filters.with_metric_fields);
             with_metric_fields = true;
-        } else if (field.first == "types") {
-            parse_as(field.second, filters.entity_types);
-        } else if (field.first == "ids") {
-            parse_as(field.second, filters.entity_ids);
-        } else if (field.first == "attributes") {
-            parse_as(field.second, filters.entity_attrs);
+        } else if (field == "types") {
+            parse_as(value, filters.entity_types);
+        } else if (field == "ids") {
+            parse_as(value, filters.entity_ids);
+        } else if (field == "attributes") {
+            parse_as(value, filters.entity_attrs);
             if ((filters.entity_attrs.size() & 1) != 0) {
                 resp.body =
                     encode_error_as_json("the number of arguments for attributes should be even, "
@@ -358,17 +360,24 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
                 resp.status_code = http_status_code::kBadRequest;
                 return;
             }
-        } else if (field.first == "metrics") {
-            parse_as(field.second, filters.entity_metrics);
-        } else if (field.first == "detail") {
-            if (!buf2bool(field.second, detail)) {
-                resp.body = encode_error_as_json("the value of detail should be a boolean value, "
+        } else if (field == "metrics") {
+            parse_as(value, filters.entity_metrics);
+        } else if (field == "detail") {
+            if (!buf2bool(value, detail)) {
+                resp.body = encode_error_as_json("the field `detail` should be a boolean value, "
+                                                 "i.e. true or false");
+                resp.status_code = http_status_code::kBadRequest;
+                return;
+            }
+        } else if (field == "as_value") {
+            if (!buf2bool(value, as_value)) {
+                resp.body = encode_error_as_json("the field `as_value` should be a boolean value, "
                                                  "i.e. true or false");
                 resp.status_code = http_status_code::kBadRequest;
                 return;
             }
         } else {
-            auto error_message = fmt::format("unknown field {}={}", field.first, field.second);
+            auto error_message = fmt::format("unknown field {}={}", field, value);
             resp.body = encode_error_as_json(error_message.c_str());
             resp.status_code = http_status_code::kBadRequest;
             return;
@@ -379,6 +388,19 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
     // specified, it will be considered firstly.
     if (!with_metric_fields && !detail) {
         filters.with_metric_fields = kBriefMetricFields;
+    }
+
+    if (as_value) {
+        int kth_count{0};
+        for (const auto &kth : kAllKthPercentiles) {
+            if (gutil::ContainsKey(filters.with_metric_fields, kth.name)) {
+                ++kth_count;
+            }
+        }
+
+        if (kth_count == 1) {
+            filters.as_value = true;
+        }
     }
 
     resp.body = take_snapshot_as_json(_registry, filters);

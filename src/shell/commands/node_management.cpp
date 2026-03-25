@@ -262,6 +262,7 @@ dsn::metric_filters server_stat_filters()
         "rdb_manual_compact_queued_tasks",
         "rdb_manual_compact_running_tasks",
     };
+    filters.as_value = true;
     return filters;
 }
 

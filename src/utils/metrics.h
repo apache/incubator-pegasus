@@ -480,7 +480,7 @@ struct metric_filters
                              const std::unordered_set<std::string> &white_list)
     {
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
-        return white_list.find(candidate) != white_list.end();
+        return gutil::ContainsKey(white_list, candidate);
     }
 
     // According to the parameters requested by client, this function will filter metric
@@ -536,6 +536,8 @@ struct metric_filters
     entity_attrs_type entity_attrs;
 
     entity_metrics_type entity_metrics;
+
+    bool as_value{false};
 };
 
 inline std::string encode_as_json(std::function<void(metric_json_writer &)> encoder)
@@ -960,6 +962,17 @@ protected:
     template <typename T>
     static inline void encode(metric_json_writer &writer,
                               const std::string &field_name,
+                              const T &value)
+    {
+        writer.Key(field_name.c_str());
+        json::json_encode(writer, value);
+    }
+
+    // Encode a metric field specified by `field_name` as json format. However, once the field
+    // are not chosen by `filters`, this function will do nothing.
+    template <typename T>
+    static inline void encode(metric_json_writer &writer,
+                              const std::string &field_name,
                               const T &value,
                               const metric_filters &filters)
     {
@@ -967,8 +980,7 @@ protected:
             return;
         }
 
-        writer.Key(field_name.c_str());
-        json::json_encode(writer, value);
+        encode(writer, field_name, value);
     }
 
     // Encode the metric type as json format, if it is chosen by `filters`.
@@ -1386,7 +1398,16 @@ public:
                 continue;
             }
 
-            encode(writer, kAllKthPercentiles[i].name, value(i), filters);
+            if (!filters.match_with_metric_field(field_name)) {
+                continue;
+            }
+
+            if (filters.as_value) {
+                encode(writer, kMetricSingleValueField, value(i));
+                break;
+            }
+
+            encode(writer, kAllKthPercentiles[i].name, value(i));
         }
 
         writer.EndObject();
