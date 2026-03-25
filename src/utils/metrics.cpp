@@ -256,7 +256,7 @@ std::string metric_filters::to_query_string() const
     COMBINE_FIELD_PAIR(ids, entity_ids);
     COMBINE_FIELD_PAIR(attributes, entity_attrs);
     COMBINE_FIELD_PAIR(metrics, entity_metrics);
-    fields.push_back(fmt::format("as_value={}", as_value));                                                         
+    fields.push_back(fmt::format("as_value={}", as_value));
 
 #undef COMBINE_FIELD_PAIR
 
@@ -343,7 +343,7 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
     bool with_metric_fields = false;
     bool detail = false;
     bool as_value = false;
-    for (const auto &[field,value] : req.query_args) {
+    for (const auto &[field, value] : req.query_args) {
         if (field == "with_metric_fields") {
             parse_as(value, filters.with_metric_fields);
             with_metric_fields = true;

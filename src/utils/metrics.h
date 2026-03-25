@@ -960,9 +960,8 @@ protected:
     // Encode a metric field specified by `field_name` as json format. However, once the field
     // are not chosen by `filters`, this function will do nothing.
     template <typename T>
-    static inline void encode(metric_json_writer &writer,
-                              const std::string &field_name,
-                              const T &value)
+    static inline void
+    encode(metric_json_writer &writer, const std::string &field_name, const T &value)
     {
         writer.Key(field_name.c_str());
         json::json_encode(writer, value);
@@ -1398,7 +1397,7 @@ public:
                 continue;
             }
 
-            if (!filters.match_with_metric_field(field_name)) {
+            if (!filters.match_with_metric_field(kAllKthPercentiles[i].name)) {
                 continue;
             }
 
