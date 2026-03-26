@@ -179,9 +179,9 @@ dsn::host_port diagnose_recommend(const dsn::replication::ddd_partition_info &pi
         const auto it = std::find_if(pinfo.dropped.begin(),
                                      pinfo.dropped.end(),
                                      [&node](const dsn::replication::ddd_node_info &r) {
-                                         dsn::host_port hp_node;
-                                         GET_HOST_PORT(r, node, hp_node);
-                                         return hp_node == node;
+                                         dsn::host_port hp_node_from_dropped;
+                                         GET_HOST_PORT(r, node, hp_node_from_dropped);
+                                         return hp_node_from_dropped == node;
                                      });
         if (it->is_alive && it->is_collected) {
             last_dropped.push_back(*it);
