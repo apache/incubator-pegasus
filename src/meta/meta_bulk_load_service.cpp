@@ -371,7 +371,10 @@ bool bulk_load_service::check_partition_status(
     }
 
     pc = app->pcs[pid.get_partition_index()];
-    if (!pc.hp_primary) {
+
+    host_port hp_primary;
+    GET_HOST_PORT(pc, primary, hp_primary);
+    if (!hp_primary) {
         LOG_WARNING("app({}) partition({}) primary is invalid, try it later", app_name, pid);
         tasking::enqueue(
             LPC_META_STATE_NORMAL,
@@ -382,7 +385,10 @@ bool bulk_load_service::check_partition_status(
         return false;
     }
 
-    if (pc.hp_secondaries.size() < pc.max_replica_count - 1) {
+    std::vector<host_port> hp_secondaries;
+    GET_HOST_PORTS(pc, secondaries, hp_secondaries);
+
+    if (hp_secondaries.size() < pc.max_replica_count - 1) {
         bulk_load_status::type p_status;
         {
             zauto_read_lock l(_lock);
@@ -434,7 +440,11 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
         const app_bulk_load_info &ainfo = _app_bulk_load_info[pid.get_app_id()];
         req->pid = pid;
         req->app_name = app_name;
-        SET_IP_AND_HOST_PORT(*req, primary, pc.primary, pc.hp_primary);
+
+        host_port hp_primary;
+        GET_HOST_PORT(pc, primary, hp_primary);
+        SET_IP_AND_HOST_PORT(*req, primary, pc.primary, hp_primary);
+
         req->remote_provider_name = ainfo.file_provider_type;
         req->cluster_name = ainfo.cluster_name;
         req->meta_bulk_load_status = get_partition_bulk_load_status_unlocked(pid);
@@ -616,7 +626,10 @@ void bulk_load_service::handle_app_downloading(const bulk_load_response &respons
         return;
     }
 
-    for (const auto &kv : response.hp_group_bulk_load_state) {
+    std::map<host_port, partition_bulk_load_state> hp_group_bulk_load_state;
+    GET_HOST_PORT_MAP(response, group_bulk_load_state, hp_group_bulk_load_state);
+
+    for (const auto &kv : hp_group_bulk_load_state) {
         const auto &bulk_load_states = kv.second;
         if (!bulk_load_states.__isset.download_progress ||
             !bulk_load_states.__isset.download_status) {
@@ -669,7 +682,7 @@ void bulk_load_service::handle_app_downloading(const bulk_load_response &respons
     {
         zauto_write_lock l(_lock);
         _partitions_total_download_progress[pid] = total_progress;
-        _partitions_bulk_load_state[pid] = response.hp_group_bulk_load_state;
+        _partitions_bulk_load_state[pid] = hp_group_bulk_load_state;
     }
 
     // update partition status to `downloaded` if all replica downloaded
@@ -697,7 +710,10 @@ void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
         return;
     }
 
-    for (const auto &kv : response.hp_group_bulk_load_state) {
+    std::map<host_port, partition_bulk_load_state> hp_group_bulk_load_state;
+    GET_HOST_PORT_MAP(response, group_bulk_load_state, hp_group_bulk_load_state);
+
+    for (const auto &kv : hp_group_bulk_load_state) {
         const auto &bulk_load_states = kv.second;
         if (!bulk_load_states.__isset.ingest_status) {
             LOG_WARNING("receive bulk load response from node({}) app({}) partition({}), "
@@ -728,7 +744,7 @@ void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
              response.is_group_ingestion_finished);
     {
         zauto_write_lock l(_lock);
-        _partitions_bulk_load_state[pid] = response.hp_group_bulk_load_state;
+        _partitions_bulk_load_state[pid] = hp_group_bulk_load_state;
     }
 
     if (response.is_group_ingestion_finished) {
@@ -755,7 +771,10 @@ void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &respon
         return;
     }
 
-    for (const auto &kv : response.hp_group_bulk_load_state) {
+    std::map<host_port, partition_bulk_load_state> hp_group_bulk_load_state;
+    GET_HOST_PORT_MAP(response, group_bulk_load_state, hp_group_bulk_load_state);
+
+    for (const auto &kv : hp_group_bulk_load_state) {
         if (!kv.second.__isset.is_cleaned_up) {
             LOG_WARNING("receive bulk load response from node({}) app({}), partition({}), "
                         "primary_status({}), but node({}) is_cleaned_up is not set",
@@ -793,7 +812,7 @@ void bulk_load_service::handle_bulk_load_finish(const bulk_load_response &respon
     {
         zauto_write_lock l(_lock);
         _partitions_cleaned_up[pid] = group_cleaned_up;
-        _partitions_bulk_load_state[pid] = response.hp_group_bulk_load_state;
+        _partitions_bulk_load_state[pid] = hp_group_bulk_load_state;
     }
 
     if (group_cleaned_up) {
@@ -836,7 +855,10 @@ void bulk_load_service::handle_app_pausing(const bulk_load_response &response,
         return;
     }
 
-    for (const auto &kv : response.hp_group_bulk_load_state) {
+    std::map<host_port, partition_bulk_load_state> hp_group_bulk_load_state;
+    GET_HOST_PORT_MAP(response, group_bulk_load_state, hp_group_bulk_load_state);
+
+    for (const auto &kv : hp_group_bulk_load_state) {
         if (!kv.second.__isset.is_paused) {
             LOG_WARNING("receive bulk load response from node({}) app({}), partition({}), "
                         "primary_status({}), but node({}) is_paused is not set",
@@ -859,7 +881,7 @@ void bulk_load_service::handle_app_pausing(const bulk_load_response &response,
              is_group_paused);
     {
         zauto_write_lock l(_lock);
-        _partitions_bulk_load_state[pid] = response.hp_group_bulk_load_state;
+        _partitions_bulk_load_state[pid] = hp_group_bulk_load_state;
     }
 
     if (is_group_paused) {
@@ -1204,9 +1226,15 @@ bool bulk_load_service::check_ever_ingestion_succeed(const partition_configurati
         return false;
     }
 
+    host_port hp_primary;
+    GET_HOST_PORT(pc, primary, hp_primary);
+
+    std::vector<host_port> hp_secondaries;
+    GET_HOST_PORTS(pc, secondaries, hp_secondaries);
+
     std::vector<host_port> current_nodes;
-    current_nodes.emplace_back(pc.hp_primary);
-    for (const auto &secondary : pc.hp_secondaries) {
+    current_nodes.emplace_back(hp_primary);
+    for (const auto &secondary : hp_secondaries) {
         current_nodes.emplace_back(secondary);
     }
 
@@ -1275,16 +1303,16 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
-    tasking::enqueue(LPC_BULK_LOAD_INGESTION,
-                     _meta_svc->tracker(),
-                     std::bind(&bulk_load_service::send_ingestion_request,
-                               this,
-                               app_name,
-                               pid,
-                               pc.hp_primary,
-                               pc.ballot),
-                     0,
-                     std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
+    host_port hp_primary;
+    GET_HOST_PORT(pc, primary, hp_primary);
+
+    tasking::enqueue(
+        LPC_BULK_LOAD_INGESTION,
+        _meta_svc->tracker(),
+        std::bind(
+            &bulk_load_service::send_ingestion_request, this, app_name, pid, hp_primary, pc.ballot),
+        0,
+        std::chrono::milliseconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT

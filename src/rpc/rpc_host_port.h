@@ -264,6 +264,26 @@ class TProtocol;
         SET_VALUE_FROM_IP_AND_HOST_PORT(obj, field, addr, __hp, value);                            \
     } while (0)
 
+// Get std::map<host_port, T> from 'obj', the result is filled in 'target', the source is from
+// std::map<host_port, T> type field 'hp_<field>' if it is set, otherwise, convert from the
+// std::map<rpc_address, T> '<field>' by resolving each rpc_address to host_port.
+#define GET_HOST_PORT_MAP(obj, field, target)                                                      \
+    do {                                                                                           \
+        const auto &_obj = (obj);                                                                  \
+        auto &_target = (target);                                                                  \
+        CHECK(_target.empty(), "target must be empty before GET_HOST_PORT_MAP");                   \
+        if (_obj.__isset.hp_##field) {                                                             \
+            _target = _obj.hp_##field;                                                             \
+        } else {                                                                                   \
+            for (const auto &kv : _obj.field) {                                                    \
+                auto hp = dsn::host_port::from_address(kv.first);                                  \
+                if (hp) {                                                                          \
+                    _target.emplace(hp, kv.second);                                                \
+                }                                                                                  \
+            }                                                                                      \
+        }                                                                                          \
+    } while (0)
+
 #define FMT_HOST_PORT_AND_IP(obj, field) fmt::format("{}({})", (obj).hp_##field, (obj).field)
 
 namespace dsn {
