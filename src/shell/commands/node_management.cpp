@@ -309,32 +309,36 @@ struct replica_server_stats
 
     std::string to_json_string() const
     {
-        nlohmann::json stats;
-        stats["virt_mem_mb"] = virt_mem_mb;
-        stats["res_mem_mb"] = res_mem_mb;
-        stats["total_replicas"] = total_replicas;
-        stats["opening_replicas"] = opening_replicas;
-        stats["closing_replicas"] = closing_replicas;
-        stats["inactive_replicas"] = inactive_replicas;
-        stats["error_replicas"] = error_replicas;
-        stats["primary_replicas"] = primary_replicas;
-        stats["secondary_replicas"] = secondary_replicas;
-        stats["learning_replicas"] = learning_replicas;
-        stats["splitting_replicas"] = splitting_replicas;
-        stats["rdb_block_cache_mem_usage_bytes"] = rdb_block_cache_mem_usage_bytes;
-        stats["rdb_manual_compact_queued_tasks"] = rdb_manual_compact_queued_tasks;
-        stats["rdb_manual_compact_running_tasks"] = rdb_manual_compact_running_tasks;
-        stats["get_qps"] = get_qps;
-        stats["get_p99"] = get_p99;
-        stats["multi_get_qps"] = multi_get_qps;
-        stats["multi_get_p99"] = multi_get_p99;
-        stats["batch_get_qps"] = batch_get_qps;
-        stats["batch_get_p99"] = batch_get_p99;
-        stats["put_qps"] = put_qps;
-        stats["put_p99"] = put_p99;
-        stats["multi_put_qps"] = multi_put_qps;
-        stats["multi_put_p99"] = multi_put_p99;
-        return stats.dump();
+        nlohmann::json rpc;
+        rpc["get_qps"] = get_qps;
+        rpc["get_p99(ms)"] = get_p99 / 1e6;
+        rpc["multi_get_qps"] = multi_get_qps;
+        rpc["multi_get_p99(ms)"] = multi_get_p99 / 1e6;
+        rpc["batch_get_qps"] = batch_get_qps;
+        rpc["batch_get_p99(ms)"] = batch_get_p99 / 1e6;
+        rpc["put_qps"] = put_qps;
+        rpc["put_p99(ms)"] = put_p99 / 1e6;
+        rpc["multi_put_qps"] = multi_put_qps;
+        rpc["multi_put_p99(ms)"] = multi_put_p99 / 1e6;
+
+        nlohmann::json result;
+        result["virt_mem_mb"] = virt_mem_mb;
+        result["res_mem_mb"] = res_mem_mb;
+        result["total_replicas"] = total_replicas;
+        result["opening_replicas"] = opening_replicas;
+        result["closing_replicas"] = closing_replicas;
+        result["inactive_replicas"] = inactive_replicas;
+        result["error_replicas"] = error_replicas;
+        result["primary_replicas"] = primary_replicas;
+        result["secondary_replicas"] = secondary_replicas;
+        result["learning_replicas"] = learning_replicas;
+        result["splitting_replicas"] = splitting_replicas;
+        result["rdb_block_cache_mem_usage_bytes"] = rdb_block_cache_mem_usage_bytes;
+        result["rdb_manual_compact_queued_tasks"] = rdb_manual_compact_queued_tasks;
+        result["rdb_manual_compact_running_tasks"] = rdb_manual_compact_running_tasks;
+        result["rpc"] = rpc;
+
+        return result.dump();
     }
 
     double virt_mem_mb{0.0};
