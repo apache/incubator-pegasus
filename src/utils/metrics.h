@@ -968,8 +968,7 @@ protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
 
-    // Encode a metric field specified by `field_name` as json format. However, once the field
-    // are not chosen by `filters`, this function will do nothing.
+    // Encode a metric field specified by `field_name` with `value` as json format.
     template <typename T>
     static inline void
     encode(metric_json_writer &writer, const std::string &field_name, const T &value)
@@ -978,8 +977,8 @@ protected:
         json::json_encode(writer, value);
     }
 
-    // Encode a metric field specified by `field_name` as json format. However, once the field
-    // are not chosen by `filters`, this function will do nothing.
+    // Encode a metric field specified by `field_name` with `value` as json format. However,
+    // once the field are not chosen by `filters`, this function will do nothing.
     template <typename T>
     static inline void encode(metric_json_writer &writer,
                               const std::string &field_name,
