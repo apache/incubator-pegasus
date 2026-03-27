@@ -245,7 +245,9 @@ dsn::metric_filters rw_requests_filters()
 dsn::metric_filters server_stat_filters()
 {
     dsn::metric_filters filters;
-    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
+    filters.with_metric_fields = {dsn::kMetricNameField,
+                                  dsn::kMetricSingleValueField,
+                                  dsn::kth_percentile_to_name(dsn::kth_percentile_type::P99)};
     filters.entity_types = {"server", "replica", "profiler"};
     filters.entity_metrics = {
         "virtual_mem_usage_mb",
