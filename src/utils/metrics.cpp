@@ -390,6 +390,11 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
         filters.with_metric_fields = kBriefMetricFields;
     }
 
+    // If the client specifies `as_value=true` in the HTTP request, it is necessary to
+    // check whether metrics in `with_metric_fields` that contain multiple values (such
+    // as percentiles) only need to return a single value to the client. If so, the
+    // server-side `as_value` should be set to true, so that the returned field name
+    // in the response is "value".
     if (as_value) {
         int kth_count{0};
         for (const auto &kth : kAllKthPercentiles) {

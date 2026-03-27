@@ -537,6 +537,17 @@ struct metric_filters
 
     entity_metrics_type entity_metrics;
 
+    // When the `as_value` field is used to construct the query string in an HTTP request,
+    // setting it to true means that for metrics with multiple values (such as percentiles),
+    // if the server determines that only a single value will be returned to the client, it
+    // should name that field "value" instead of something like "p99".
+    //
+    // When the `as_value` field is used on the HTTP server side to process a request, true
+    // means that for multi-value metrics (such as percentiles), only one value will be
+    // returned to the client, and this single returned field will be named "value".
+    //
+    // This parameter can greatly simplify the structured processing of JSON responses
+    // returned by the server.
     bool as_value{false};
 };
 
@@ -1401,6 +1412,10 @@ public:
                 continue;
             }
 
+            // If `as_value` is true, then for metrics with multiple values (such as
+            // percentiles), only one value needs to be returned to the client. Therefore,
+            // its field name is set to "value" and the loop is exited (since only a single
+            // value is required to be returned).
             if (filters.as_value) {
                 encode(writer, kMetricSingleValueField, value(i));
                 break;

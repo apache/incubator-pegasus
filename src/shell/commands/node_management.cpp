@@ -307,6 +307,10 @@ struct replica_server_stats
 {
     replica_server_stats() = default;
 
+    // `DEFINE_JSON_SERIALIZATION` is not used to encode the member variables of
+    // `replica_server_stats` into JSON because the number of its member variables
+    // is very large and far exceeds the parameter limit of this macro. Increasing
+    // the macro's parameter limit would make the code overly verbose.
     std::string to_json_string() const
     {
         nlohmann::json rpc;
