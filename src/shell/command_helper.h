@@ -1134,8 +1134,8 @@ protected:
 
     void calc_rates(double duration_s) override
     {
-        for (auto &stat_var : _my_stat_vars) {
-            *stat_var.second /= duration_s;
+        for (auto &[_, stat_var] : _my_stat_vars) {
+            *stat_var /= duration_s;
         }
     }
 
@@ -1178,13 +1178,13 @@ protected:
     {
         RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
 
-        int32_t metric_table_id;
+        int32_t metric_table_id{-1};
         RETURN_NULL_STAT_VARS_IF_NOT_OK(dsn::parse_metric_table_id(entity_attrs, metric_table_id));
 
         // Empty `_my_partitions` means there is no restriction; otherwise, the partition id
         // should be found in `_my_partitions`.
         if (!_my_partitions.empty()) {
-            int32_t metric_partition_id;
+            int32_t metric_partition_id{-1};
             RETURN_NULL_STAT_VARS_IF_NOT_OK(
                 dsn::parse_metric_partition_id(entity_attrs, metric_partition_id));
 
@@ -1192,7 +1192,7 @@ protected:
             RETURN_NULL_STAT_VARS_IF(_my_partitions.find(metric_pid) == _my_partitions.end());
         }
 
-        const auto &table_stat = _my_table_stats.find(metric_table_id);
+        const auto table_stat = _my_table_stats.find(metric_table_id);
         CHECK_TRUE(table_stat != _my_table_stats.end());
 
         *stat_vars = &table_stat->second;
@@ -1201,9 +1201,9 @@ protected:
 
     void calc_rates(double duration_s) override
     {
-        for (auto &table_stats : _my_table_stats) {
-            for (auto &stat_var : table_stats.second) {
-                *stat_var.second /= duration_s;
+        for (auto &[_, table_stat] : _my_table_stats) {
+            for (auto &[_, stat_var] : table_stat) {
+                *stat_var /= duration_s;
             }
         }
     }
@@ -1239,15 +1239,15 @@ protected:
     {
         RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
 
-        int32_t metric_table_id;
+        int32_t metric_table_id{-1};
         RETURN_NULL_STAT_VARS_IF_NOT_OK(dsn::parse_metric_table_id(entity_attrs, metric_table_id));
 
-        int32_t metric_partition_id;
+        int32_t metric_partition_id{-1};
         RETURN_NULL_STAT_VARS_IF_NOT_OK(
             dsn::parse_metric_partition_id(entity_attrs, metric_partition_id));
 
         dsn::gpid metric_pid(metric_table_id, metric_partition_id);
-        const auto &partition_stat = _my_partition_stats.find(metric_pid);
+        const auto partition_stat = _my_partition_stats.find(metric_pid);
         RETURN_NULL_STAT_VARS_IF(partition_stat == _my_partition_stats.end());
 
         *stat_vars = &partition_stat->second;
@@ -1256,9 +1256,9 @@ protected:
 
     void calc_rates(double duration_s) override
     {
-        for (auto &partition_stats : _my_partition_stats) {
-            for (auto &stat_var : partition_stats.second) {
-                *stat_var.second /= duration_s;
+        for (auto &[_, partition_stat] : _my_partition_stats) {
+            for (auto &[_, stat_var] : partition_stat) {
+                *stat_var /= duration_s;
             }
         }
     }
@@ -1268,6 +1268,54 @@ private:
 
     const std::string _my_entity_type;
     partition_stat_map _my_partition_stats;
+};
+
+using profiler_stat_map = std::unordered_map<std::string, stat_var_map>;
+
+// Profiler-level aggregation over the fetched metrics. There are 2 dimensions for the aggregation:
+// * the task name, the name of the RPC task, from the attributes of the metric entity;
+// * the metric name, which is also the key of `stat_var_map`.
+class profiler_aggregate_stats : public aggregate_stats
+{
+public:
+    profiler_aggregate_stats(const std::string &entity_type, profiler_stat_map &&profiler_stats)
+        : _my_entity_type(entity_type), _my_profiler_stats(std::move(profiler_stats))
+    {
+    }
+
+    ~profiler_aggregate_stats() override = default;
+
+protected:
+    dsn::error_s get_stat_vars(const std::string &entity_type,
+                               const dsn::metric_entity::attr_map &entity_attrs,
+                               stat_var_map **stat_vars) override
+    {
+        RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
+
+        const auto attr = std::as_const(entity_attrs).find("task_name");
+        RETURN_NULL_STAT_VARS_IF(attr == entity_attrs.end());
+
+        const auto profiler_stat = _my_profiler_stats.find(attr->second);
+        RETURN_NULL_STAT_VARS_IF(profiler_stat == _my_profiler_stats.end());
+
+        *stat_vars = &profiler_stat->second;
+        return dsn::error_s::ok();
+    }
+
+    void calc_rates(double duration_s) override
+    {
+        for (auto &[_, profiler_stat] : _my_profiler_stats) {
+            for (auto &[_, stat_var] : profiler_stat) {
+                *stat_var /= duration_s;
+            }
+        }
+    }
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(profiler_aggregate_stats);
+
+    const std::string _my_entity_type;
+    profiler_stat_map _my_profiler_stats;
 };
 
 inline std::vector<std::pair<bool, std::string>>
