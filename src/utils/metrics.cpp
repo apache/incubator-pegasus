@@ -353,7 +353,7 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
             parse_as(value, filters.entity_ids);
         } else if (field == "attributes") {
             parse_as(value, filters.entity_attrs);
-            if ((filters.entity_attrs.size() & 1) != 0) {
+            if ((filters.entity_attrs.size() & 1U) != 0) {
                 resp.body =
                     encode_error_as_json("the number of arguments for attributes should be even, "
                                          "since each attribute name always pairs with a value");

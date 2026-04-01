@@ -966,7 +966,7 @@ public:
 
 protected:
     explicit metric(const metric_prototype *prototype);
-    virtual ~metric() = default;
+    ~metric() override = default;
 
     // Encode a metric field specified by `field_name` with `value` as json format.
     template <typename T>

@@ -1141,6 +1141,7 @@ protected:
 
 private:
     DISALLOW_COPY_AND_ASSIGN(total_aggregate_stats);
+    DISALLOW_MOVE_AND_ASSIGN(total_aggregate_stats);
 
     const std::string _my_entity_type;
     stat_var_map _my_stat_vars;
@@ -1165,7 +1166,7 @@ public:
                           const std::unordered_set<dsn::gpid> &partitions)
         : _my_entity_type(entity_type),
           _my_table_stats(std::move(table_stats)),
-          _my_partitions(std::move(partitions))
+          _my_partitions(partitions)
     {
     }
 
@@ -1210,6 +1211,7 @@ protected:
 
 private:
     DISALLOW_COPY_AND_ASSIGN(table_aggregate_stats);
+    DISALLOW_MOVE_AND_ASSIGN(table_aggregate_stats);
 
     const std::string _my_entity_type;
     table_stat_map _my_table_stats;
@@ -1265,6 +1267,7 @@ protected:
 
 private:
     DISALLOW_COPY_AND_ASSIGN(partition_aggregate_stats);
+    DISALLOW_MOVE_AND_ASSIGN(partition_aggregate_stats);
 
     const std::string _my_entity_type;
     partition_stat_map _my_partition_stats;
@@ -1278,8 +1281,8 @@ using profiler_stat_map = std::unordered_map<std::string, stat_var_map>;
 class profiler_aggregate_stats : public aggregate_stats
 {
 public:
-    profiler_aggregate_stats(const std::string &entity_type, profiler_stat_map &&profiler_stats)
-        : _my_entity_type(entity_type), _my_profiler_stats(std::move(profiler_stats))
+    profiler_aggregate_stats(std::string entity_type, profiler_stat_map &&profiler_stats)
+        : _my_entity_type(std::move(entity_type)), _my_profiler_stats(std::move(profiler_stats))
     {
     }
 
@@ -1313,6 +1316,7 @@ protected:
 
 private:
     DISALLOW_COPY_AND_ASSIGN(profiler_aggregate_stats);
+    DISALLOW_MOVE_AND_ASSIGN(profiler_aggregate_stats);
 
     const std::string _my_entity_type;
     profiler_stat_map _my_profiler_stats;
