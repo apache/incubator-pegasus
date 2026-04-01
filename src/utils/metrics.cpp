@@ -256,7 +256,11 @@ std::string metric_filters::to_query_string() const
     COMBINE_FIELD_PAIR(ids, entity_ids);
     COMBINE_FIELD_PAIR(attributes, entity_attrs);
     COMBINE_FIELD_PAIR(metrics, entity_metrics);
-    fields.push_back(fmt::format("as_value={}", as_value));
+
+    // Only when `as_value` is true should it be inserted as a field into the query string.
+    if (as_value) {
+        fields.push_back("as_value=true");
+    }
 
 #undef COMBINE_FIELD_PAIR
 

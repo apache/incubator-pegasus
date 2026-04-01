@@ -35,6 +35,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -311,7 +312,7 @@ struct replica_server_stats
     // `replica_server_stats` into JSON because the number of its member variables
     // is very large and far exceeds the parameter limit of this macro. Increasing
     // the macro's parameter limit would make the code overly verbose.
-    std::string to_json_string() const
+    [[nodiscard]] std::string to_json_string() const
     {
         nlohmann::json rpc;
         rpc["get_qps"] = get_qps;
