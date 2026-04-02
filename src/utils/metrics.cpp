@@ -259,7 +259,7 @@ std::string metric_filters::to_query_string() const
 
     // Only when `as_value` is true should it be inserted as a field into the query string.
     if (as_value) {
-        fields.push_back("as_value=true");
+        fields.emplace_back("as_value=true");
     }
 
 #undef COMBINE_FIELD_PAIR

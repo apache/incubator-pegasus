@@ -1116,8 +1116,8 @@ private:
 class total_aggregate_stats : public aggregate_stats
 {
 public:
-    total_aggregate_stats(const std::string &entity_type, stat_var_map &&stat_vars)
-        : _my_entity_type(entity_type), _my_stat_vars(std::move(stat_vars))
+    total_aggregate_stats(std::string entity_type, stat_var_map &&stat_vars)
+        : _my_entity_type(std::move(entity_type)), _my_stat_vars(std::move(stat_vars))
     {
     }
 
@@ -1161,12 +1161,12 @@ using table_stat_map = std::unordered_map<int32_t, stat_var_map>;
 class table_aggregate_stats : public aggregate_stats
 {
 public:
-    table_aggregate_stats(const std::string &entity_type,
+    table_aggregate_stats(std::string entity_type,
                           table_stat_map &&table_stats,
-                          const std::unordered_set<dsn::gpid> &partitions)
-        : _my_entity_type(entity_type),
+                          std::unordered_set<dsn::gpid> partitions)
+        : _my_entity_type(std::move(entity_type)),
           _my_table_stats(std::move(table_stats)),
-          _my_partitions(partitions)
+          _my_partitions(std::move(partitions))
     {
     }
 
@@ -1227,8 +1227,8 @@ using partition_stat_map = std::unordered_map<dsn::gpid, stat_var_map>;
 class partition_aggregate_stats : public aggregate_stats
 {
 public:
-    partition_aggregate_stats(const std::string &entity_type, partition_stat_map &&partition_stats)
-        : _my_entity_type(entity_type), _my_partition_stats(std::move(partition_stats))
+    partition_aggregate_stats(std::string entity_type, partition_stat_map &&partition_stats)
+        : _my_entity_type(std::move(entity_type)), _my_partition_stats(std::move(partition_stats))
     {
     }
 
