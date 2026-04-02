@@ -2259,11 +2259,7 @@ public class PegasusTable implements PegasusTableInterface {
         message = " The replica server disk space is insufficient";
         break;
       case ERR_DISK_IO_ERROR:
-        message = " The replica server disk I/O error";
-        break;
-      case ERR_SECONDARY_DISK_ABNORMAL:
-        message =
-            " Write rejected: secondary replica disk is abnormal (insufficient space or I/O error)";
+        message = " The replica server encountered a disk I/O error";
         break;
       default:
         message = " Unknown error!";

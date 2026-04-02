@@ -188,7 +188,12 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
             response_client_write(request, disk_status_to_error_code(_dir_node->status));
         } else {
             // Secondary replica disk is abnormal but primary is OK
-            response_client_write(request, ERR_SECONDARY_DISK_ABNORMAL);
+            for (const auto &kv : _primary_states.secondary_disk_status) {
+                if (kv.second != disk_status::NORMAL) {
+                    response_client_write(request, disk_status_to_error_code(kv.second));
+                    break;
+                }
+            }
         }
         return;
     }

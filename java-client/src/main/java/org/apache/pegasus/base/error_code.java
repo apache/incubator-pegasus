@@ -125,7 +125,6 @@ public class error_code
     ERR_CHILD_NOT_READY,
     ERR_DISK_INSUFFICIENT,
     ERR_DISK_IO_ERROR,
-    ERR_SECONDARY_DISK_ABNORMAL,
 
     // ERROR_CODE defined by client
     ERR_SESSION_RESET,
