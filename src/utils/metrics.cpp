@@ -403,7 +403,9 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
         int kth_count{0};
         for (const auto &kth : kAllKthPercentiles) {
             if (gutil::ContainsKey(filters.with_metric_fields, kth.name)) {
-                ++kth_count;
+                if (++kth_count > 1) {
+                    break;
+                }
             }
         }
 
