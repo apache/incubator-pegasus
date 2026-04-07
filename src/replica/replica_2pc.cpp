@@ -181,21 +181,22 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    if (FLAGS_reject_write_when_disk_insufficient &&
-        (_dir_node->status != disk_status::NORMAL || _primary_states.secondary_disk_abnormal())) {
+    if (FLAGS_reject_write_when_disk_insufficient) {
         if (_dir_node->status != disk_status::NORMAL) {
             // Primary replica disk is abnormal, return the corresponding error code
             response_client_write(request, disk_status_to_error_code(_dir_node->status));
-        } else {
-            // Secondary replica disk is abnormal but primary is OK
-            for (const auto &kv : _primary_states.secondary_disk_status) {
-                if (kv.second != disk_status::NORMAL) {
-                    response_client_write(request, disk_status_to_error_code(kv.second));
-                    break;
-                }
+            return;
+        }
+        for (const auto &[addr, secondary_status] : _primary_states.secondary_disk_status) {
+            if (secondary_status != disk_status::NORMAL) {
+                LOG_INFO("partition[{}] secondary[{}] disk status is {}",
+                         _primary_states.pc.pid,
+                         addr,
+                         enum_to_string(secondary_status));
+                response_client_write(request, disk_status_to_error_code(secondary_status));
+                return;
             }
         }
-        return;
     }
 
     if (_is_bulk_load_ingestion) {
