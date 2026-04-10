@@ -48,7 +48,8 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - uses: "./.github/actions/build_pegasus"
       - uses: "./.github/actions/upload_artifact"
@@ -60,9 +61,11 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install nodejs
-        uses: actions/setup-node@v3
+        # actions/setup-node@v3.9.1
+        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610
         with:
           node-version: 16
       - name: Download artifact
