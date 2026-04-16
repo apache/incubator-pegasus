@@ -53,4 +53,18 @@ inline dsn::message_ex *create_incr_request(const dsn::apps::incr_request &reque
     return dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_INCR);
 }
 
+inline dsn::message_ex *
+create_check_and_set_request(const dsn::apps::check_and_set_request &request)
+{
+    return dsn::from_thrift_request_to_received_message(request,
+                                                        dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET);
+}
+
+inline dsn::message_ex *
+create_check_and_mutate_request(const dsn::apps::check_and_mutate_request &request)
+{
+    return dsn::from_thrift_request_to_received_message(request,
+                                                        dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE);
+}
+
 } // namespace pegasus

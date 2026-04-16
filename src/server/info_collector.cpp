@@ -20,7 +20,6 @@
 #include "info_collector.h"
 
 #include <fmt/core.h>
-#include <stdio.h>
 #include <algorithm>
 #include <chrono>
 #include <utility>
@@ -189,16 +188,14 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     if (find != _app_stat_counters.end()) {
         return find->second;
     }
-    app_stat_counters *counters = new app_stat_counters();
+    auto *counters = new app_stat_counters();
 
-    char counter_name[1024];
-    char counter_desc[1024];
 #define INIT_COUNTER(name)                                                                         \
     do {                                                                                           \
-        sprintf(counter_name, "app.stat." #name "#%s", app_name.c_str());                          \
-        sprintf(counter_desc, "statistic the " #name " of app %s", app_name.c_str());              \
+        std::string counter_name = fmt::format("app.stat." #name "#{}", app_name);                 \
+        std::string counter_desc = fmt::format("statistic the " #name " of app {}", app_name);     \
         counters->name.init_app_counter(                                                           \
-            "app.pegasus", counter_name, COUNTER_TYPE_NUMBER, counter_desc);                       \
+            "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());       \
     } while (0)
 
     INIT_COUNTER(get_qps);
@@ -210,9 +207,11 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(incr_qps);
     INIT_COUNTER(check_and_set_qps);
     INIT_COUNTER(check_and_mutate_qps);
+    INIT_COUNTER(dup_unsafe_received_non_idempotent_duplicate_request);
     INIT_COUNTER(scan_qps);
     INIT_COUNTER(duplicate_qps);
     INIT_COUNTER(dup_shipped_ops);
+    INIT_COUNTER(dup_retry_non_idempotent_duplicate_request);
     INIT_COUNTER(dup_failed_shipping_ops);
     INIT_COUNTER(dup_recent_mutation_loss_count);
     INIT_COUNTER(recent_read_cu);

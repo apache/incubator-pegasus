@@ -41,6 +41,7 @@
 #include "bulk_load_types.h"
 #include "common/fs_manager.h"
 #include "common/gpid.h"
+#include "common/duplication_common.h"
 #include "common/replication.codes.h"
 #include "common/replication_common.h"
 #include "common/replication_enums.h"
@@ -250,7 +251,7 @@ bool replica::need_reject_non_idempotent(const task_spec *spec) const
         return false;
     }
 
-    return !spec->rpc_request_is_write_idempotent;
+    return !spec->rpc_request_is_write_idempotent && !FLAGS_duplication_unsafe_allow_non_idempotent;
 }
 
 bool replica::need_make_idempotent(const task_spec *spec) const
