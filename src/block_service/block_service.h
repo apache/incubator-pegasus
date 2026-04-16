@@ -72,7 +72,7 @@ struct ls_entry
  *       ERR_OBJECT_NOT_FOUND: can't find the dir by ls_request.dir_name
  *       ERR_INVALID_PARAMETERS: the ls_request.dir_name is not a dir
  *       ERR_TIMEOUT: request timeout
- *       ERR_FS_INTERNAL: an internal error occured in the service implementation
+ *       ERR_FS_INTERNAL: an internal error occurred in the service implementation
  *          which we can't handle
  */
 struct ls_response
@@ -106,7 +106,7 @@ struct create_file_request
  * @brief The create_file_response struct
  *  err: ERR_OK: the file handle is successfully created.
  *       ERR_TIMEOUT: request timeout
- *       ERR_FS_INTERNAL: an internal error occured in the service implementation
+ *       ERR_FS_INTERNAL: an internal error occurred in the service implementation
  *          which we can't handle
  *  file_handle: the file_handle will not be null if err is ERR_OK.
  *               user can read/write the file by the handle, and get the metata(size, md5..).
@@ -171,10 +171,10 @@ struct read_request
  *          this happens when try to read a file handle which
  *          doesn't have a coressponding remote file
  *       ERR_TIMEOUT: request timeout
- *       ERR_FS_INTERNAL: an internal error occured in the service implementation
+ *       ERR_FS_INTERNAL: an internal error occurred in the service implementation
  *          which we can't handle
  *  buffer: the read data. The implementation can choose to return partially read data when
- *          error occured, or discard them and only return an empty buffer. But implementation
+ *          error occurred, or discard them and only return an empty buffer. But implementation
  *          should never return ERR_OK if partitial data got, otherwize the user can't tell
  *          whether partital data is transfered or reach the end of file with remote_length == -1.
  *          If ERR_OK returned but only partitial data got, means reach the end of file.
@@ -203,7 +203,7 @@ struct write_request
  * @brief The write_response struct
  *  err: ERR_OK: write succeed
  *       ERR_TIMEOUT: request timeout
- *       ERR_FS_INTERNAL: an internal error occured in the service implementation
+ *       ERR_FS_INTERNAL: an internal error occurred in the service implementation
  *          which we can't handle
  *  written_size: amount of bytes have been written.
  *
