@@ -17,13 +17,13 @@
 
 module github.com/apache/incubator-pegasus/pegic
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/apache/incubator-pegasus/go-client v0.0.0-20220526071020-be5634371701
 	github.com/desertbit/grumble v1.1.1
 	github.com/klauspost/compress v1.12.1
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.8.3
 	github.com/spf13/cobra v1.1.3
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
