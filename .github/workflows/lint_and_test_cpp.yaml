@@ -15,6 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# NOTE: Docker images use 'master' branch tag for release branches (e.g., v2.5)
+# that may not have prebuilt Docker images. Other branches use their own images.
+
 name: Cpp CI
 
 on:
@@ -65,7 +68,8 @@ jobs:
       USE_JEMALLOC: OFF
       ENABLE_ASAN: OFF
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
+      # Use master image for v2.5 branch (which lacks prebuilt images), others use their own
+      image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref == 'v2.5' && 'master' || github.base_ref }}
     steps:
       - name: Install Softwares
         run: |
@@ -93,7 +97,8 @@ jobs:
       USE_JEMALLOC: OFF
       ENABLE_ASAN: OFF
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
+      # Use master image for v2.5 branch (which lacks prebuilt images), others use their own
+      image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref == 'v2.5' && 'master' || github.base_ref }}
     steps:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -126,7 +131,8 @@ jobs:
       ARTIFACT_NAME: release
       BUILD_OPTIONS: -t release --test
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+      # Use master image for v2.5 branch (which lacks prebuilt images), others use their own
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref == 'v2.5' && 'master' || github.base_ref }}
     steps:
       - name: Clone code
         # actions/checkout@v4.3.1
@@ -197,7 +203,8 @@ jobs:
     env:
       ARTIFACT_NAME: release
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+      # Use master image for v2.5 branch (which lacks prebuilt images), others use their own
+      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref == 'v2.5' && 'master' || github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       # actions/checkout@v4.3.1
@@ -218,7 +225,8 @@ jobs:
       ARTIFACT_NAME: release_address
       BUILD_OPTIONS: --sanitizer address --disable_gperf --test
     container:
-      image: apache/pegasus:thirdparties-bin-test-asan-ubuntu2204-${{ github.base_ref }}
+      # Use master image for v2.5 branch (which lacks prebuilt images), others use their own
+      image: apache/pegasus:thirdparties-bin-test-asan-ubuntu2204-${{ github.base_ref == 'v2.5' && 'master' || github.base_ref }}
     steps:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -290,7 +298,8 @@ jobs:
     env:
       ARTIFACT_NAME: release_address
     container:
-      image: apache/pegasus:thirdparties-bin-test-asan-ubuntu2204-${{ github.base_ref }}
+      # Use master image for v2.5 branch (which lacks prebuilt images), others use their own
+      image: apache/pegasus:thirdparties-bin-test-asan-ubuntu2204-${{ github.base_ref == 'v2.5' && 'master' || github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       # actions/checkout@v4.3.1
@@ -403,7 +412,8 @@ jobs:
       ARTIFACT_NAME: release_jemalloc
       BUILD_OPTIONS: -t release --use_jemalloc --test
     container:
-      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
+      # Use master image for v2.5 branch (which lacks prebuilt images), others use their own
+      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref == 'v2.5' && 'master' || github.base_ref }}
     steps:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -427,7 +437,8 @@ jobs:
     env:
       ARTIFACT_NAME: release_jemalloc
     container:
-      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
+      # Use master image for v2.5 branch (which lacks prebuilt images), others use their own
+      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref == 'v2.5' && 'master' || github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       # actions/checkout@v4.3.1
@@ -485,7 +496,8 @@ jobs:
       BUILD_OPTIONS: -t debug --test --separate_servers
       PACK_OPTIONS: --separate_servers
     container:
-      image: apache/pegasus:thirdparties-bin-rockylinux9-${{ github.base_ref }}
+      # Use master image for v2.5 branch (which lacks prebuilt images), others use their own
+      image: apache/pegasus:thirdparties-bin-rockylinux9-${{ github.base_ref == 'v2.5' && 'master' || github.base_ref }}
     steps:
       - name: Clone code
         # actions/checkout@v3.6.0
