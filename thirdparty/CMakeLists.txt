@@ -56,6 +56,7 @@ message(STATUS "Setting up third-parties...")
 
 file(MAKE_DIRECTORY ${TP_OUTPUT}/include)
 file(MAKE_DIRECTORY ${TP_OUTPUT}/lib)
+file(MAKE_DIRECTORY ${TP_OUTPUT}/hadoop)
 
 option(ENABLE_ASAN "enable ASan" OFF)
 message(STATUS "ENABLE_ASAN = ${ENABLE_ASAN}")
@@ -77,6 +78,16 @@ ExternalProject_Add(boost
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
 )
+
+# JuiceFS Hadoop JAR -> output/hadoop/juicefs-hadoop-1.3.1.jar (match pack_server.sh)
+set(JUICEFS_JAR "output/hadoop/juicefs-hadoop-1.3.1.jar")
+set(JUICEFS_DL "${TP_DIR}/build/Download/juicefs-hadoop/juicefs-hadoop-1.3.1.jar")
+ExternalProject_Add(juicefs-hadoop
+    DOWNLOAD_COMMAND ${CMAKE_COMMAND} -E make_directory ${TP_DIR}/build/Download/juicefs-hadoop
+        COMMAND curl -L -o "${JUICEFS_DL}" "https://github.com/juicedata/juicefs/releases/download/v1.3.1/juicefs-hadoop-1.3.1.jar"
+    CONFIGURE_COMMAND "" BUILD_COMMAND ""
+    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy "${JUICEFS_DL}" "${TP_DIR}/${JUICEFS_JAR}"
+    DOWNLOAD_NO_PROGRESS true)
 
 # header-only
 file(MAKE_DIRECTORY ${TP_OUTPUT}/include/concurrentqueue)
