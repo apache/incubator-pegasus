@@ -126,6 +126,41 @@ METRIC_DEFINE_gauge_int64(replica,
                           "The total size of rocksdb sst files");
 
 METRIC_DEFINE_gauge_int64(replica,
+                          rdb_total_blob_size_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The total size of rocksdb blob files");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_live_blob_size_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The size of live rocksdb blob files");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_live_blob_garbage_size_mb,
+                          dsn::metric_unit::kMegaBytes,
+                          "The size of live rocksdb blob garbage");
+
+METRIC_DEFINE_gauge_double(replica,
+                           rdb_blob_garbage_ratio,
+                           dsn::metric_unit::kPercent,
+                           "The ratio of blob garbage to total blob size (0-1)");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_blob_cache_capacity_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The capacity of rocksdb blob cache");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_blob_cache_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The usage of rocksdb blob cache");
+
+METRIC_DEFINE_gauge_int64(replica,
+                          rdb_blob_cache_pinned_usage_bytes,
+                          dsn::metric_unit::kBytes,
+                          "The pinned usage of rocksdb blob cache");
+
+METRIC_DEFINE_gauge_int64(replica,
                           rdb_estimated_keys,
                           dsn::metric_unit::kKeys,
                           "The estimated number of rocksdb keys");
@@ -629,6 +664,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       METRIC_VAR_INIT_replica(throttling_rejected_read_requests),
       METRIC_VAR_INIT_replica(rdb_total_sst_files),
       METRIC_VAR_INIT_replica(rdb_total_sst_size_mb),
+      METRIC_VAR_INIT_replica(rdb_total_blob_size_mb),
+      METRIC_VAR_INIT_replica(rdb_live_blob_size_mb),
+      METRIC_VAR_INIT_replica(rdb_live_blob_garbage_size_mb),
+      METRIC_VAR_INIT_replica(rdb_blob_garbage_ratio),
+      METRIC_VAR_INIT_replica(rdb_blob_cache_capacity_bytes),
+      METRIC_VAR_INIT_replica(rdb_blob_cache_usage_bytes),
+      METRIC_VAR_INIT_replica(rdb_blob_cache_pinned_usage_bytes),
       METRIC_VAR_INIT_replica(rdb_estimated_keys),
       METRIC_VAR_INIT_replica(rdb_index_and_filter_blocks_mem_usage_bytes),
       METRIC_VAR_INIT_replica(rdb_memtable_mem_usage_bytes),
