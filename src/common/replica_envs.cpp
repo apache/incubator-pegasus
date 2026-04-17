@@ -107,8 +107,96 @@ const std::string replica_envs::UPDATE_MAX_REPLICA_COUNT("max_replica_count.upda
 const std::string replica_envs::ROCKSDB_WRITE_BUFFER_SIZE("rocksdb.write_buffer_size");
 const std::string replica_envs::ROCKSDB_NUM_LEVELS("rocksdb.num_levels");
 
+// RocksDB dynamic options for SetOptions()
+const std::string replica_envs::ROCKSDB_ENABLE_BLOB_FILES("rocksdb.enable_blob_files");
+const std::string
+    replica_envs::ROCKSDB_BLOB_FILE_STARTING_LEVEL("rocksdb.blob_file_starting_level");
+const std::string replica_envs::ROCKSDB_MIN_BLOB_SIZE("rocksdb.min_blob_size");
+const std::string replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_FORCE_THRESHOLD(
+    "rocksdb.blob_garbage_collection_force_threshold");
+const std::string replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_AGE_CUTOFF(
+    "rocksdb.blob_garbage_collection_age_cutoff");
+const std::string replica_envs::ROCKSDB_BLOB_FILE_SIZE("rocksdb.blob_file_size");
+const std::string replica_envs::ROCKSDB_LEVEL0_FILE_NUM_COMPACTION_TRIGGER(
+    "rocksdb.level0_file_num_compaction_trigger");
+const std::string
+    replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_MULTIPLIER("rocksdb.max_bytes_for_level_multiplier");
+const std::string
+    replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_BASE("rocksdb.max_bytes_for_level_base");
+const std::string replica_envs::ROCKSDB_TARGET_FILE_SIZE_BASE("rocksdb.target_file_size_base");
+const std::string replica_envs::ROCKSDB_MAX_WRITE_BUFFER_NUMBER("rocksdb.max_write_buffer_number");
+const std::string
+    replica_envs::ROCKSDB_LEVEL0_SLOWDOWN_WRITES_TRIGGER("rocksdb.level0_slowdown_writes_trigger");
+const std::string
+    replica_envs::ROCKSDB_LEVEL0_STOP_WRITES_TRIGGER("rocksdb.level0_stop_writes_trigger");
+const std::string replica_envs::ROCKSDB_ARENA_BLOCK_SIZE("rocksdb.arena_block_size");
+// Memtable related options
+const std::string
+    replica_envs::ROCKSDB_INPLACE_UPDATE_NUM_LOCKS("rocksdb.inplace_update_num_locks");
+const std::string replica_envs::ROCKSDB_MEMTABLE_PREFIX_BLOOM_SIZE_RATIO(
+    "rocksdb.memtable_prefix_bloom_size_ratio");
+const std::string
+    replica_envs::ROCKSDB_MEMTABLE_WHOLE_KEY_FILTERING("rocksdb.memtable_whole_key_filtering");
+const std::string replica_envs::ROCKSDB_MEMTABLE_HUGE_PAGE_SIZE("rocksdb.memtable_huge_page_size");
+// Compaction related options
+const std::string
+    replica_envs::ROCKSDB_TARGET_FILE_SIZE_MULTIPLIER("rocksdb.target_file_size_multiplier");
+const std::string replica_envs::ROCKSDB_MAX_COMPACTION_BYTES("rocksdb.max_compaction_bytes");
+const std::string replica_envs::ROCKSDB_IGNORE_MAX_COMPACTION_BYTES_FOR_INPUT(
+    "rocksdb.ignore_max_compaction_bytes_for_input");
+const std::string replica_envs::ROCKSDB_SOFT_PENDING_COMPACTION_BYTES_LIMIT(
+    "rocksdb.soft_pending_compaction_bytes_limit");
+const std::string replica_envs::ROCKSDB_HARD_PENDING_COMPACTION_BYTES_LIMIT(
+    "rocksdb.hard_pending_compaction_bytes_limit");
+// Blob file related options (additional)
+const std::string replica_envs::ROCKSDB_BLOB_COMPRESSION_TYPE("rocksdb.blob_compression_type");
+const std::string
+    replica_envs::ROCKSDB_ENABLE_BLOB_GARBAGE_COLLECTION("rocksdb.enable_blob_garbage_collection");
+const std::string
+    replica_envs::ROCKSDB_BLOB_COMPACTION_READAHEAD_SIZE("rocksdb.blob_compaction_readahead_size");
+const std::string replica_envs::ROCKSDB_PREPOPULATE_BLOB_CACHE("rocksdb.prepopulate_blob_cache");
+// Other options
+const std::string
+    replica_envs::ROCKSDB_PERIODIC_COMPACTION_SECONDS("rocksdb.periodic_compaction_seconds");
+const std::string replica_envs::ROCKSDB_BOTTOMMOST_TEMPERATURE("rocksdb.bottommost_temperature");
+const std::string replica_envs::ROCKSDB_LAST_LEVEL_TEMPERATURE("rocksdb.last_level_temperature");
+
 const std::set<std::string> replica_envs::ROCKSDB_DYNAMIC_OPTIONS = {
     replica_envs::ROCKSDB_WRITE_BUFFER_SIZE,
+    replica_envs::ROCKSDB_ENABLE_BLOB_FILES,
+    replica_envs::ROCKSDB_BLOB_FILE_STARTING_LEVEL,
+    replica_envs::ROCKSDB_MIN_BLOB_SIZE,
+    replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_FORCE_THRESHOLD,
+    replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_AGE_CUTOFF,
+    replica_envs::ROCKSDB_BLOB_FILE_SIZE,
+    replica_envs::ROCKSDB_LEVEL0_FILE_NUM_COMPACTION_TRIGGER,
+    replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_MULTIPLIER,
+    replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_BASE,
+    replica_envs::ROCKSDB_TARGET_FILE_SIZE_BASE,
+    replica_envs::ROCKSDB_MAX_WRITE_BUFFER_NUMBER,
+    replica_envs::ROCKSDB_LEVEL0_SLOWDOWN_WRITES_TRIGGER,
+    replica_envs::ROCKSDB_LEVEL0_STOP_WRITES_TRIGGER,
+    replica_envs::ROCKSDB_ARENA_BLOCK_SIZE,
+    // Memtable related options
+    replica_envs::ROCKSDB_INPLACE_UPDATE_NUM_LOCKS,
+    replica_envs::ROCKSDB_MEMTABLE_PREFIX_BLOOM_SIZE_RATIO,
+    replica_envs::ROCKSDB_MEMTABLE_WHOLE_KEY_FILTERING,
+    replica_envs::ROCKSDB_MEMTABLE_HUGE_PAGE_SIZE,
+    // Compaction related options
+    replica_envs::ROCKSDB_TARGET_FILE_SIZE_MULTIPLIER,
+    replica_envs::ROCKSDB_MAX_COMPACTION_BYTES,
+    replica_envs::ROCKSDB_IGNORE_MAX_COMPACTION_BYTES_FOR_INPUT,
+    replica_envs::ROCKSDB_SOFT_PENDING_COMPACTION_BYTES_LIMIT,
+    replica_envs::ROCKSDB_HARD_PENDING_COMPACTION_BYTES_LIMIT,
+    // Blob file related options (additional)
+    replica_envs::ROCKSDB_BLOB_COMPRESSION_TYPE,
+    replica_envs::ROCKSDB_ENABLE_BLOB_GARBAGE_COLLECTION,
+    replica_envs::ROCKSDB_BLOB_COMPACTION_READAHEAD_SIZE,
+    replica_envs::ROCKSDB_PREPOPULATE_BLOB_CACHE,
+    // Other options
+    replica_envs::ROCKSDB_PERIODIC_COMPACTION_SECONDS,
+    replica_envs::ROCKSDB_BOTTOMMOST_TEMPERATURE,
+    replica_envs::ROCKSDB_LAST_LEVEL_TEMPERATURE,
 };
 const std::set<std::string> replica_envs::ROCKSDB_STATIC_OPTIONS = {
     replica_envs::ROCKSDB_NUM_LEVELS,

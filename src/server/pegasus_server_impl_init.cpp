@@ -261,6 +261,10 @@ DSN_DEFINE_int64(
     500,
     "max rate of rocksdb flush and compaction(MB/s), if less than or equal to 0 means close limit");
 DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_max_background_jobs,
+                 30,
+                 "max number of concurrent background jobs (compactions and flushes)");
+DSN_DEFINE_int32(pegasus.server,
                  rocksdb_max_background_flushes,
                  4,
                  "Corresponding to RocksDB's options.max_background_flushes, the flush threads are "
@@ -490,6 +494,10 @@ DSN_DEFINE_uint64(pegasus.server,
                   "A warning log will be print if the key-value size of Get operation is larger "
                   "than this config, 0 means never print");
 DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_arena_block_size,
+                  8654848,
+                  "rocksdb options.arena_block_size");
+DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_abnormal_multi_get_size_threshold,
                   10000000,
                   "A warning log will be print if the total key-value size of Multi-Get operation "
@@ -578,6 +586,99 @@ DSN_DEFINE_string(pegasus.server,
                   "Bloom filter type, should be either 'common' or 'prefix'");
 DSN_DEFINE_validator(rocksdb_filter_type, [](const char *value) -> bool {
     return dsn::utils::equals(value, "common") || dsn::utils::equals(value, "prefix");
+});
+DSN_DEFINE_bool(pegasus.server,
+                rocksdb_enable_blob_files,
+                false,
+                "enable RocksDB blob files (key-value separation)");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_blob_file_starting_level,
+                 0,
+                 "the lowest LSM tree level at which blob files can be created");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_min_blob_size,
+                  4096,
+                  "values smaller than this are stored in SST files");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_blob_file_size,
+                  512ULL * 1024 * 1024,
+                  "maximum size (in bytes) of a blob file");
+DSN_DEFINE_double(pegasus.server,
+                  rocksdb_blob_garbage_collection_age_cutoff,
+                  0.25,
+                  "age cutoff of oldest blob files (as a fraction) to be considered in GC");
+DSN_DEFINE_double(pegasus.server,
+                  rocksdb_blob_garbage_collection_force_threshold,
+                  0.60,
+                  "threshold of garbage ratio in old blob files to force GC");
+DSN_DEFINE_string(pegasus.server,
+                  rocksdb_blob_compression_type,
+                  "lz4",
+                  "rocksdb blob compression type. Available: none, snappy, lz4, zstd");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_blob_compaction_readahead_size,
+                  0,
+                  "rocksdb options.blob_compaction_readahead_size, 0 means use default");
+DSN_DEFINE_string(pegasus.server,
+                  rocksdb_prepopulate_blob_cache,
+                  "kDisable",
+                  "rocksdb options.prepopulate_blob_cache. Available: kDisable, kFlushOnly");
+DSN_DEFINE_validator(rocksdb_prepopulate_blob_cache, [](const char *value) -> bool {
+    return dsn::utils::equals(value, "kDisable") || dsn::utils::equals(value, "kFlushOnly");
+});
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_inplace_update_num_locks,
+                 10000,
+                 "rocksdb options.inplace_update_num_locks");
+DSN_DEFINE_double(pegasus.server,
+                  rocksdb_memtable_prefix_bloom_size_ratio,
+                  0.1,
+                  "rocksdb options.memtable_prefix_bloom_size_ratio");
+DSN_DEFINE_bool(pegasus.server,
+                rocksdb_memtable_whole_key_filtering,
+                false,
+                "rocksdb options.memtable_whole_key_filtering");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_memtable_huge_page_size,
+                  0,
+                  "rocksdb options.memtable_huge_page_size, 0 means use default");
+DSN_DEFINE_bool(pegasus.server,
+                rocksdb_ignore_max_compaction_bytes_for_input,
+                false,
+                "rocksdb options.ignore_max_compaction_bytes_for_input");
+DSN_DEFINE_bool(pegasus.server,
+                rocksdb_level_compaction_dynamic_level_bytes,
+                true,
+                "rocksdb options.level_compaction_dynamic_level_bytes");
+DSN_DEFINE_bool(pegasus.server,
+                rocksdb_level_compaction_dynamic_file_size,
+                true,
+                "rocksdb options.level_compaction_dynamic_file_size");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_soft_pending_compaction_bytes_limit,
+                  64ULL * 1024 * 1024 * 1024,
+                  "rocksdb options.soft_pending_compaction_bytes_limit");
+DSN_DEFINE_uint64(pegasus.server,
+                  rocksdb_hard_pending_compaction_bytes_limit,
+                  256ULL * 1024 * 1024 * 1024,
+                  "rocksdb options.hard_pending_compaction_bytes_limit");
+DSN_DEFINE_string(
+    pegasus.server,
+    rocksdb_bottommost_temperature,
+    "kUnknown",
+    "rocksdb options.bottommost_temperature. Available: kUnknown, kHot, kWarm, kCold");
+DSN_DEFINE_validator(rocksdb_bottommost_temperature, [](const char *value) -> bool {
+    return dsn::utils::equals(value, "kUnknown") || dsn::utils::equals(value, "kHot") ||
+           dsn::utils::equals(value, "kWarm") || dsn::utils::equals(value, "kCold");
+});
+DSN_DEFINE_string(
+    pegasus.server,
+    rocksdb_last_level_temperature,
+    "kUnknown",
+    "rocksdb options.last_level_temperature. Available: kUnknown, kHot, kWarm, kCold");
+DSN_DEFINE_validator(rocksdb_last_level_temperature, [](const char *value) -> bool {
+    return dsn::utils::equals(value, "kUnknown") || dsn::utils::equals(value, "kHot") ||
+           dsn::utils::equals(value, "kWarm") || dsn::utils::equals(value, "kCold");
 });
 DSN_DEFINE_uint64(pegasus.server,
                   stats_dump_period_sec,
@@ -680,6 +781,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _db_opts.statistics = _statistics;
 
     _db_opts.listeners.emplace_back(new pegasus_event_listener(this));
+    _db_opts.max_background_jobs = FLAGS_rocksdb_max_background_jobs;
     _db_opts.max_background_flushes = FLAGS_rocksdb_max_background_flushes;
     _db_opts.max_background_compactions = FLAGS_rocksdb_max_background_compactions;
     _db_opts.stats_dump_period_sec = FLAGS_stats_dump_period_sec;
@@ -692,6 +794,58 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _data_cf_opts.target_file_size_multiplier = FLAGS_rocksdb_target_file_size_multiplier;
     _data_cf_opts.max_bytes_for_level_base = FLAGS_rocksdb_max_bytes_for_level_base;
     _data_cf_opts.max_bytes_for_level_multiplier = FLAGS_rocksdb_max_bytes_for_level_multiplier;
+    _data_cf_opts.arena_block_size = FLAGS_rocksdb_arena_block_size;
+
+    _data_cf_opts.enable_blob_files = FLAGS_rocksdb_enable_blob_files;
+    _data_cf_opts.blob_file_starting_level = FLAGS_rocksdb_blob_file_starting_level;
+    _data_cf_opts.min_blob_size = FLAGS_rocksdb_min_blob_size;
+    _data_cf_opts.blob_file_size = FLAGS_rocksdb_blob_file_size;
+    _data_cf_opts.blob_garbage_collection_age_cutoff =
+        FLAGS_rocksdb_blob_garbage_collection_age_cutoff;
+    _data_cf_opts.blob_garbage_collection_force_threshold =
+        FLAGS_rocksdb_blob_garbage_collection_force_threshold;
+    _data_cf_opts.blob_compaction_readahead_size = FLAGS_rocksdb_blob_compaction_readahead_size;
+    if (dsn::utils::equals(FLAGS_rocksdb_prepopulate_blob_cache, "kFlushOnly")) {
+        _data_cf_opts.prepopulate_blob_cache = rocksdb::PrepopulateBlobCache::kFlushOnly;
+    } else {
+        _data_cf_opts.prepopulate_blob_cache = rocksdb::PrepopulateBlobCache::kDisable;
+    }
+    rocksdb::CompressionType blob_compression_type = rocksdb::kNoCompression;
+    CHECK(compression_str_to_type(FLAGS_rocksdb_blob_compression_type, blob_compression_type),
+          "parse rocksdb_blob_compression_type failed.");
+    _data_cf_opts.blob_compression_type = blob_compression_type;
+
+    _data_cf_opts.inplace_update_num_locks = FLAGS_rocksdb_inplace_update_num_locks;
+    _data_cf_opts.memtable_whole_key_filtering = FLAGS_rocksdb_memtable_whole_key_filtering;
+    _data_cf_opts.memtable_huge_page_size = FLAGS_rocksdb_memtable_huge_page_size;
+    _data_cf_opts.level_compaction_dynamic_level_bytes =
+        FLAGS_rocksdb_level_compaction_dynamic_level_bytes;
+    _data_cf_opts.level_compaction_dynamic_file_size =
+        FLAGS_rocksdb_level_compaction_dynamic_file_size;
+    _data_cf_opts.ignore_max_compaction_bytes_for_input =
+        FLAGS_rocksdb_ignore_max_compaction_bytes_for_input;
+    _data_cf_opts.soft_pending_compaction_bytes_limit =
+        FLAGS_rocksdb_soft_pending_compaction_bytes_limit;
+    _data_cf_opts.hard_pending_compaction_bytes_limit =
+        FLAGS_rocksdb_hard_pending_compaction_bytes_limit;
+    if (dsn::utils::equals(FLAGS_rocksdb_bottommost_temperature, "kHot")) {
+        _data_cf_opts.bottommost_temperature = rocksdb::Temperature::kHot;
+    } else if (dsn::utils::equals(FLAGS_rocksdb_bottommost_temperature, "kWarm")) {
+        _data_cf_opts.bottommost_temperature = rocksdb::Temperature::kWarm;
+    } else if (dsn::utils::equals(FLAGS_rocksdb_bottommost_temperature, "kCold")) {
+        _data_cf_opts.bottommost_temperature = rocksdb::Temperature::kCold;
+    } else {
+        _data_cf_opts.bottommost_temperature = rocksdb::Temperature::kUnknown;
+    }
+    if (dsn::utils::equals(FLAGS_rocksdb_last_level_temperature, "kHot")) {
+        _data_cf_opts.last_level_temperature = rocksdb::Temperature::kHot;
+    } else if (dsn::utils::equals(FLAGS_rocksdb_last_level_temperature, "kWarm")) {
+        _data_cf_opts.last_level_temperature = rocksdb::Temperature::kWarm;
+    } else if (dsn::utils::equals(FLAGS_rocksdb_last_level_temperature, "kCold")) {
+        _data_cf_opts.last_level_temperature = rocksdb::Temperature::kCold;
+    } else {
+        _data_cf_opts.last_level_temperature = rocksdb::Temperature::kUnknown;
+    }
 
     // we need set max_compaction_bytes definitely because set_usage_scenario() depends on it.
     _data_cf_opts.max_compaction_bytes = _data_cf_opts.target_file_size_base * 25;
@@ -834,7 +988,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
         if (dsn::utils::equals(FLAGS_rocksdb_filter_type, "prefix")) {
             _data_cf_opts.prefix_extractor.reset(new HashkeyTransform());
-            _data_cf_opts.memtable_prefix_bloom_size_ratio = 0.1;
+            _data_cf_opts.memtable_prefix_bloom_size_ratio =
+                FLAGS_rocksdb_memtable_prefix_bloom_size_ratio;
 
             _data_cf_rd_opts.prefix_same_as_start = true;
         }

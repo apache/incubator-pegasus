@@ -308,6 +308,144 @@ void app_env_validator::register_all_validators()
           fmt::format("In range [{}, {}]", kMinLevel, kMaxLevel),
           "6",
           [](int64_t new_value) { return kMinLevel <= new_value && new_value <= kMaxLevel; }}},
+        // Memtable related options
+        {replica_envs::ROCKSDB_INPLACE_UPDATE_NUM_LOCKS,
+         {ValueType::kInt32, ">= 0", "10000", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_MEMTABLE_PREFIX_BLOOM_SIZE_RATIO,
+         {ValueType::kString,
+          "double in [0, 1]",
+          "0.1",
+          [](const std::string &v, std::string &hint) {
+              double d = 0;
+              if (!dsn::buf2double(v, d)) {
+                  hint = "invalid double value";
+                  return false;
+              }
+              return d >= 0 && d <= 1;
+          }}},
+        {replica_envs::ROCKSDB_MEMTABLE_WHOLE_KEY_FILTERING, {ValueType::kBool}},
+        {replica_envs::ROCKSDB_MEMTABLE_HUGE_PAGE_SIZE,
+         {ValueType::kInt64, ">= 0", "0", [](int64_t v) { return v >= 0; }}},
+        // Compaction related options
+        {replica_envs::ROCKSDB_TARGET_FILE_SIZE_MULTIPLIER,
+         {ValueType::kInt32, ">= 0", "1", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_MAX_COMPACTION_BYTES,
+         {ValueType::kInt64, ">= 0", "0", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_IGNORE_MAX_COMPACTION_BYTES_FOR_INPUT, {ValueType::kBool}},
+        {replica_envs::ROCKSDB_SOFT_PENDING_COMPACTION_BYTES_LIMIT,
+         {ValueType::kInt64, ">= 0", "0", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_HARD_PENDING_COMPACTION_BYTES_LIMIT,
+         {ValueType::kInt64, ">= 0", "0", [](int64_t v) { return v >= 0; }}},
+        // Blob file related options
+        {replica_envs::ROCKSDB_ENABLE_BLOB_FILES, {ValueType::kBool}},
+        {replica_envs::ROCKSDB_BLOB_FILE_STARTING_LEVEL,
+         {ValueType::kInt32, ">= 0", "0", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_MIN_BLOB_SIZE,
+         {ValueType::kInt64, ">= 0", "4096", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_FORCE_THRESHOLD,
+         {ValueType::kString,
+          "double in [0, 1]",
+          "0.6",
+          [](const std::string &v, std::string &hint) {
+              double d = 0;
+              if (!dsn::buf2double(v, d)) {
+                  hint = "invalid double value";
+                  return false;
+              }
+              return d >= 0 && d <= 1;
+          }}},
+        {replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_AGE_CUTOFF,
+         {ValueType::kString,
+          "double in [0, 1]",
+          "0.25",
+          [](const std::string &v, std::string &hint) {
+              double d = 0;
+              if (!dsn::buf2double(v, d)) {
+                  hint = "invalid double value";
+                  return false;
+              }
+              return d >= 0 && d <= 1;
+          }}},
+        {replica_envs::ROCKSDB_BLOB_FILE_SIZE,
+         {ValueType::kInt64, ">= 0", "536870912", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_BLOB_COMPRESSION_TYPE,
+         {ValueType::kString,
+          "kNoCompression|none|kSnappyCompression|snappy|kLZ4Compression|lz4|kZSTD|zstd",
+          "lz4",
+          [](const std::string &v, std::string &hint) {
+              static const std::set<std::string> valid = {"kNoCompression",
+                                                          "none",
+                                                          "kSnappyCompression",
+                                                          "snappy",
+                                                          "kLZ4Compression",
+                                                          "lz4",
+                                                          "kZSTD",
+                                                          "zstd"};
+              if (valid.count(v) == 0) {
+                  hint = "invalid blob compression type";
+                  return false;
+              }
+              return true;
+          }}},
+        {replica_envs::ROCKSDB_ENABLE_BLOB_GARBAGE_COLLECTION, {ValueType::kBool}},
+        {replica_envs::ROCKSDB_BLOB_COMPACTION_READAHEAD_SIZE,
+         {ValueType::kInt64, ">= 0", "0", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_PREPOPULATE_BLOB_CACHE,
+         {ValueType::kString,
+          "kDisable|0|kFlushOnly|1",
+          "kDisable",
+          [](const std::string &v, std::string &hint) {
+              static const std::set<std::string> valid = {"kDisable", "0", "kFlushOnly", "1"};
+              if (valid.count(v) == 0) {
+                  hint = "invalid prepopulate blob cache value";
+                  return false;
+              }
+              return true;
+          }}},
+        // Level compaction options
+        {replica_envs::ROCKSDB_LEVEL0_FILE_NUM_COMPACTION_TRIGGER,
+         {ValueType::kInt32, ">= 0", "4", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_MULTIPLIER,
+         {ValueType::kInt32, ">= 0", "10", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_BASE,
+         {ValueType::kInt64, ">= 0", "671088640", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_TARGET_FILE_SIZE_BASE,
+         {ValueType::kInt64, ">= 0", "67108864", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_MAX_WRITE_BUFFER_NUMBER,
+         {ValueType::kInt32, ">= 0", "3", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_LEVEL0_SLOWDOWN_WRITES_TRIGGER,
+         {ValueType::kInt32, ">= 0", "30", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_LEVEL0_STOP_WRITES_TRIGGER,
+         {ValueType::kInt32, ">= 0", "60", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_ARENA_BLOCK_SIZE,
+         {ValueType::kInt64, ">= 0", "1048576", [](int64_t v) { return v >= 0; }}},
+        // Other options
+        {replica_envs::ROCKSDB_PERIODIC_COMPACTION_SECONDS,
+         {ValueType::kInt64, ">= 0", "0", [](int64_t v) { return v >= 0; }}},
+        {replica_envs::ROCKSDB_BOTTOMMOST_TEMPERATURE,
+         {ValueType::kString,
+          "kUnknown|kHot|kWarm|kCold",
+          "kUnknown",
+          [](const std::string &v, std::string &hint) {
+              static const std::set<std::string> valid = {"kUnknown", "kHot", "kWarm", "kCold"};
+              if (valid.count(v) == 0) {
+                  hint = "invalid temperature value";
+                  return false;
+              }
+              return true;
+          }}},
+        {replica_envs::ROCKSDB_LAST_LEVEL_TEMPERATURE,
+         {ValueType::kString,
+          "kUnknown|kHot|kWarm|kCold",
+          "kUnknown",
+          [](const std::string &v, std::string &hint) {
+              static const std::set<std::string> valid = {"kUnknown", "kHot", "kWarm", "kCold"};
+              if (valid.count(v) == 0) {
+                  hint = "invalid temperature value";
+                  return false;
+              }
+              return true;
+          }}},
         {replica_envs::BUSINESS_INFO, {ValueType::kString}},
         {replica_envs::TABLE_LEVEL_DEFAULT_TTL,
          {ValueType::kInt32, ">= 0", "86400", [](int64_t new_value) { return new_value >= 0; }}},
