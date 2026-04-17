@@ -24,9 +24,8 @@ import (
 	"net"
 )
 
-// ResolveMetaAddr into a list of TCP4 addresses. Error is returned if the given `addrs` are not either
-// a list of valid TCP4 addresses, or a resolvable hostname.
-func ResolveMetaAddr(addrs []string) ([]string, error) {
+// resolveMetaAddrImpl is the actual implementation of ResolveMetaAddr
+func resolveMetaAddrImpl(addrs []string) ([]string, error) {
 	if len(addrs) == 0 {
 		return nil, fmt.Errorf("meta server list should not be empty")
 	}
@@ -54,3 +53,8 @@ func ResolveMetaAddr(addrs []string) ([]string, error) {
 
 	return nil, fmt.Errorf("illegal meta addresses: %s", addrs)
 }
+
+// ResolveMetaAddr into a list of TCP4 addresses. Error is returned if the given `addrs` are not either
+// a list of valid TCP4 addresses, or a resolvable hostname.
+// This is a function variable so it can be mocked in tests.
+var ResolveMetaAddr = resolveMetaAddrImpl
