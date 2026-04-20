@@ -17,6 +17,18 @@
  * under the License.
  */
 
+/**
+ * @file pegasus_client_factory_impl.h
+ * @brief Factory utilities for creating Pegasus C++ client instances.
+ *
+ * The factory hides the lifecycle management of client instances. All
+ * functions are annotated for Doxygen so that the C++ client documentation
+ * can be generated with `doxygen`.
+ *
+ * @addtogroup pegasus_cpp_client
+ * @{
+ */
+
 #pragma once
 
 #include <string>
@@ -32,11 +44,43 @@ class pegasus_client;
 namespace client {
 class pegasus_client_impl;
 
+/**
+ * @brief Implementation of Pegasus client factory.
+ *
+ * This class manages the lifecycle of Pegasus client instances and provides
+ * a centralized way to create and access client objects.
+ *
+ * Typical usage:
+ * @code
+ * pegasus::client::pegasus_client_factory::initialize("config.ini");
+ * auto *client = pegasus::client::pegasus_client_factory::get_client("cluster", "table");
+ * @endcode
+ */
 class pegasus_client_factory_impl
 {
 public:
+    /**
+     * @brief Initialize the client factory with configuration.
+     *
+     * Call this once before creating any clients when you need to override
+     * the default Pegasus configuration path.
+     *
+     * @param config_file Path to the configuration file.
+     * @return bool True if initialization succeeded, false otherwise.
+     */
     static bool initialize(const char *config_file);
 
+    /**
+     * @brief Get or create a Pegasus client instance.
+     *
+     * This method caches clients per cluster/app, so repeated calls return
+     * the same pointer.
+     *
+     * @param cluster_name Name of the Pegasus cluster.
+     * @param app_name Name of the Pegasus table (app).
+     * @return pegasus_client* Pointer to the client instance.
+     * @note The returned client is owned by the factory and must not be deleted.
+     */
     static pegasus_client *get_client(const char *cluster_name, const char *app_name);
 
 private:
@@ -47,3 +91,5 @@ private:
 };
 } // namespace client
 } // namespace pegasus
+
+/** @} */
