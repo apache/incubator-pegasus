@@ -350,3 +350,38 @@ thirdparty/output/
 
 #collector
 collector/collector
+
+# ================= #
+#   pegasus-spark   #
+# ================= #
+pegasus-spark/*.class
+# Log file
+pegasus-spark/*.log
+pegasus-spark/*.ctxt
+# Mobile Tools for Java (J2ME)
+pegasus-spark/.mtj.tmp/
+pegasus-spark/*.jar
+pegasus-spark/*.war
+pegasus-spark/*.nar
+pegasus-spark/*.ear
+pegasus-spark/*.zip
+pegasus-spark/*.tar.gz
+pegasus-spark/*.rar
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+pegasus-spark/hs_err_pid*
+pegasus-spark/core
+pegasus-spark/.idea
+pegasus-spark/Rocksdb.iml
+pegasus-spark/target
+pegasus-spark/*.iml
+pegasus-spark/dependency-reduced-pom.xml
+pegasus-spark/core-site.xml
+pegasus-spark/.classpath
+pegasus-spark/.factorypath
+pegasus-spark/.project
+pegasus-spark/.settings/
+pegasus-spark/scalafmt
+pegasus-spark/rolling_log
+pegasus-spark/.vscode
+pegasus-spark/.metals
+pegasus-spark/.bloop

@@ -76,6 +76,7 @@ Pegasus has support for several languages:
 - [Python](https://github.com/apache/incubator-pegasus/blob/master/python-client)
 - [Node.js](https://github.com/apache/incubator-pegasus/blob/master/nodejs-client)
 - [Scala](https://github.com/apache/incubator-pegasus/blob/master/scala-client)
+- [pegasus-spark](https://github.com/apache/incubator-pegasus/blob/master/pegasus-spark)
 
 ## Contact us
 
