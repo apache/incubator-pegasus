@@ -50,7 +50,10 @@ RUN apt-get update -y; \
                        libsasl2-dev \
                        libsasl2-modules \
                        maven \
-                       flex; \
+                       flex \
+                       libsnappy-dev \
+                       liblz4-dev \
+                       libzstd-dev; \
     rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository ppa:git-core/ppa -y; \
