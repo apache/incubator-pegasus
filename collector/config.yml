@@ -64,3 +64,5 @@ hotspot:
   max_sample_size: 128
   hotspot_partition_min_score: 3
   hotspot_partition_min_qps: 100
+  enable_detect_hotkey: false
+  occurrence_threshold: 3
