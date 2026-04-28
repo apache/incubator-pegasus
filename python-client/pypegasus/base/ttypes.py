@@ -320,7 +320,7 @@ class host_port_types(Enum):
     kHostTypeInvalid = 0
     kHostTypeIpv4 = 1
     kHostTypeGroup = 2
-
+    kHostTypeIpv6 = 3
 
 class host_port:
 
