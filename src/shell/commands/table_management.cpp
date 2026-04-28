@@ -341,11 +341,17 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
     double disk_used_for_all_replicas = 0;
     int all_replicas_count = 0;
     for (const auto &pc : pcs) {
+        dsn::host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
+
+        std::vector<dsn::host_port> secondaries;
+        GET_HOST_PORTS(pc, secondaries, secondaries);
+
         std::string primary_str("-");
-        if (pc.hp_primary) {
+        if (primary) {
             bool disk_found = false;
             double disk_value = 0;
-            auto f1 = disk_map.find(pc.hp_primary);
+            auto f1 = disk_map.find(primary);
             if (f1 != disk_map.end()) {
                 auto &sub_map = f1->second;
                 auto f2 = sub_map.find(pc.pid.get_partition_index());
@@ -360,7 +366,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             }
             bool count_found = false;
             double count_value = 0;
-            auto f3 = count_map.find(pc.hp_primary);
+            auto f3 = count_map.find(primary);
             if (f3 != count_map.end()) {
                 auto &sub_map = f3->second;
                 auto f4 = sub_map.find(pc.pid.get_partition_index());
@@ -372,7 +378,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
 
             // TODO(wangdan): refactor as format style.
             std::stringstream oss;
-            oss << pc.hp_primary.resolve(resolve_ip) << "(";
+            oss << primary.resolve(resolve_ip) << "(";
             if (disk_found) {
                 oss << disk_value;
             } else {
@@ -391,12 +397,12 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         {
             std::stringstream oss;
             oss << "[";
-            for (int j = 0; j < pc.hp_secondaries.size(); j++) {
+            for (int j = 0; j < secondaries.size(); j++) {
                 if (j != 0)
                     oss << ",";
                 bool found = false;
                 double value = 0;
-                auto f1 = disk_map.find(pc.hp_secondaries[j]);
+                auto f1 = disk_map.find(secondaries[j]);
                 if (f1 != disk_map.end()) {
                     auto &sub_map = f1->second;
                     auto f2 = sub_map.find(pc.pid.get_partition_index());
@@ -409,7 +415,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
                 bool count_found = false;
                 double count_value = 0;
-                auto f3 = count_map.find(pc.hp_secondaries[j]);
+                auto f3 = count_map.find(secondaries[j]);
                 if (f3 != count_map.end()) {
                     auto &sub_map = f3->second;
                     auto f3 = sub_map.find(pc.pid.get_partition_index());
@@ -420,7 +426,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
                 }
 
                 // TODO(wangdan): refactor as format style.
-                oss << pc.hp_secondaries[j].resolve(resolve_ip) << "(";
+                oss << secondaries[j].resolve(resolve_ip) << "(";
                 if (found) {
                     oss << value;
                 } else {
@@ -441,8 +447,8 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         if (detailed) {
             tp_details.add_row(std::to_string(pc.pid.get_partition_index()));
             tp_details.append_data(pc.ballot);
-            tp_details.append_data(fmt::format(
-                "{}/{}", pc.hp_secondaries.size() + (pc.hp_primary ? 1 : 0), pc.max_replica_count));
+            tp_details.append_data(
+                fmt::format("{}/{}", secondaries.size() + (primary ? 1 : 0), pc.max_replica_count));
             tp_details.append_data(primary_str);
             tp_details.append_data(secondary_str);
         }

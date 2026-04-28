@@ -73,7 +73,7 @@ class TProtocol;
         } else {                                                                                   \
             _target.reserve(_obj.field.size());                                                    \
             for (const auto &addr : _obj.field) {                                                  \
-                _target.emplace_back(host_port::from_address(addr));                               \
+                _target.emplace_back(dsn::host_port::from_address(addr));                          \
             }                                                                                      \
         }                                                                                          \
     } while (0)
