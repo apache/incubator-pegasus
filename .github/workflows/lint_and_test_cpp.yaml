@@ -58,7 +58,8 @@ jobs:
     container:
       image: apache/pegasus:clang-format-3.9
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: clang-format
         run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
@@ -69,11 +70,13 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
+      # dorny/paths-filter@v3.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         id: changes
         with:
           filters: |
@@ -116,9 +119,11 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        uses: actions/cache@v3
+        # actions/cache@v4.3.0
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
             /github/home/.ccache
@@ -126,7 +131,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
+      # dorny/paths-filter@v3.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         id: changes
         with:
           filters: |
@@ -183,7 +189,8 @@ jobs:
           rm -rf thirdparty
           tar -zcvhf release__builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        # actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release_artifact_${{ github.sha }}
           path: release__builder.tar
@@ -234,13 +241,15 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Unpack prebuilt third-parties
         run: |
           unzip /root/thirdparties-bin.zip -d ./thirdparty
           rm -f /root/thirdparties-bin.zip
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        # actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: release_artifact_${{ github.sha }}
           path: .
@@ -262,9 +271,11 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        uses: actions/cache@v3
+        # actions/cache@v4.3.0
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
             /github/home/.ccache
@@ -272,7 +283,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
+      # dorny/paths-filter@v3.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         id: changes
         with:
           filters: |
@@ -321,7 +333,8 @@ jobs:
           rm -rf thirdparty
           tar -zcvhf release_address_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        # actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release_address_artifact_${{ github.sha }}
           path: release_address_builder.tar
@@ -374,13 +387,15 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Unpack prebuilt third-parties
         run: |
           unzip /root/thirdparties-bin.zip -d ./thirdparty
           rm -f /root/thirdparties-bin.zip
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        # actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: release_address_artifact_${{ github.sha }}
           path: .
@@ -544,9 +559,11 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        uses: actions/cache@v3
+        # actions/cache@v4.3.0
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
             /github/home/.ccache
@@ -554,7 +571,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
+      # dorny/paths-filter@v3.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         id: changes
         with:
           filters: |
@@ -611,7 +629,8 @@ jobs:
           rm -rf thirdparty
           tar -zcvhf release_jemalloc_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        # actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release_jemalloc_artifact_${{ github.sha }}
           path: release_jemalloc_builder.tar
@@ -629,13 +648,15 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Unpack prebuilt third-parties
         run: |
           unzip /root/thirdparties-bin.zip -d ./thirdparty
           rm -f /root/thirdparties-bin.zip
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        # actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: release_jemalloc_artifact_${{ github.sha }}
           path: .
@@ -665,9 +686,11 @@ jobs:
           brew install lz4
           brew install zstd
           brew install openssl@1.1
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        uses: actions/cache@v3
+        # actions/cache@v4.3.0
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
             /Users/runner/Library/Caches/ccache
