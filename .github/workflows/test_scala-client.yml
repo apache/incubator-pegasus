@@ -22,7 +22,7 @@ on:
   pull_request:
     branches:
         - master
-        - 'v[0-9]+.*' # release branch
+        - 'v[0-9]*' # release branch
     paths:
         - scala-client/**
 
