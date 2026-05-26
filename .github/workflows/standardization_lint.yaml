@@ -24,7 +24,7 @@ on:
     types: [ synchronize, opened, reopened, edited ]
     branches:
       - master
-      - 'v[0-9]+.*' # release branch
+      - 'v[0-9]*' # release branch
       - ci-test # testing branch for github action
       - '*dev'
   # for manually triggering workflow

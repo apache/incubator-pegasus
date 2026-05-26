@@ -20,7 +20,7 @@ on:
   pull_request:
     branches:
       - master
-      - 'v[0-9]+.*' # release branch
+      - 'v[0-9]*' # release branch
     paths:
       - .github/actions/**
       - .github/workflows/lint_and_test_scala-client.yml

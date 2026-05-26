@@ -25,7 +25,7 @@ on:
     types: [ synchronize, reopened, opened ]
     branches:
       - master
-      - 'v[0-9]+.*' # release branch
+      - 'v[0-9]*' # release branch
       - ci-test # testing branch for github action
       - '*dev'
     paths:

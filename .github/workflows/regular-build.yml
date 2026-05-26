@@ -23,7 +23,7 @@ on:
       - '.github/workflows/regular-build.yml'
     branches:
       - master
-      - 'v[0-9]+.*' # release branch
+      - 'v[0-9]*' # release branch
       - ci-test # testing branch for github action
       - '*dev' # developing branch
 
