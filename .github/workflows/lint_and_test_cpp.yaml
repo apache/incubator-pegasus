@@ -71,10 +71,12 @@ jobs:
         run: |
           set -euo pipefail
           docker pull apache/pegasus:clang-format-3.9
+          # Resolve to the real binary path (clang-format-3.9 in this
+          # image is a relative symlink to ../lib/llvm-3.9/bin/clang-format).
           src=$(docker run --rm --entrypoint sh apache/pegasus:clang-format-3.9 \
-            -c 'command -v clang-format-3.9')
+            -c 'readlink -f "$(command -v clang-format-3.9)"')
           cid=$(docker create apache/pegasus:clang-format-3.9)
-          docker cp "${cid}:${src}" ./clang-format-3.9
+          docker cp -L "${cid}:${src}" ./clang-format-3.9
           docker rm "${cid}" >/dev/null
           sudo install -m 0755 ./clang-format-3.9 /usr/local/bin/clang-format-3.9
           rm -f ./clang-format-3.9
