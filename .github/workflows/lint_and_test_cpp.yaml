@@ -54,14 +54,31 @@ env:
 jobs:
   cpp_clang_format_linter:
     name: Lint
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:clang-format-3.9
+    # Run on the runner host (no `container:`) so that GitHub-injected
+    # Node 20 (used by actions/checkout v4+ and other JS actions) can
+    # execute. The previous `apache/pegasus:clang-format-3.9` image
+    # ships GLIBC < 2.28 and cannot run Node 20 binaries; pinning
+    # actions/checkout@v3 no longer helps because GitHub now runs v3
+    # on Node 20 as well.
+    runs-on: ubuntu-22.04
     steps:
-      # actions/checkout v3 (Node 16) is required here because the
-      # apache/pegasus:clang-format-3.9 container ships GLIBC < 2.28 and
-      # cannot run Node 20 binaries used by actions/checkout v4+.
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Install clang-format-3.9
+        # clang-format-3.9 is no longer packaged for ubuntu-22.04, so
+        # extract the binary from the apache/pegasus:clang-format-3.9
+        # image (used as a binary carrier, not as a job container).
+        run: |
+          set -euo pipefail
+          docker pull apache/pegasus:clang-format-3.9
+          src=$(docker run --rm --entrypoint sh apache/pegasus:clang-format-3.9 \
+            -c 'command -v clang-format-3.9')
+          cid=$(docker create apache/pegasus:clang-format-3.9)
+          docker cp "${cid}:${src}" ./clang-format-3.9
+          docker rm "${cid}" >/dev/null
+          sudo install -m 0755 ./clang-format-3.9 /usr/local/bin/clang-format-3.9
+          rm -f ./clang-format-3.9
+          clang-format-3.9 --version
       - name: clang-format
         run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
