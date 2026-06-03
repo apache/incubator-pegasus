@@ -294,6 +294,18 @@ jobs:
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
           ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== java -version ==="; java -version 2>&1 || true
+          echo "=== JAVA_HOME=$JAVA_HOME ==="
+          echo "=== ulimit ==="; ulimit -a || true
+          echo "=== ZK install dir ==="; ls -la .zk_install/zookeeper-bin/ 2>&1 || true
+          echo "=== zookeeper.out (logs/) ==="; cat .zk_install/zookeeper-bin/logs/zookeeper.out 2>&1 || true
+          echo "=== zookeeper.out (root) ==="; cat .zk_install/zookeeper-bin/zookeeper.out 2>&1 || true
+          echo "=== zookeeper.out (cwd) ==="; cat ./zookeeper.out 2>&1 || true
+          echo "=== zoo.cfg ==="; cat .zk_install/zookeeper-bin/conf/zoo.cfg 2>&1 || true
+          echo "=== ZK *.log/*.out ==="; find .zk_install -name '*.log' -o -name '*.out' 2>&1 || true
 
   build_ASAN:
     name: Build ASAN
@@ -440,6 +452,18 @@ jobs:
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
           ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== java -version ==="; java -version 2>&1 || true
+          echo "=== JAVA_HOME=$JAVA_HOME ==="
+          echo "=== ulimit ==="; ulimit -a || true
+          echo "=== ZK install dir ==="; ls -la .zk_install/zookeeper-bin/ 2>&1 || true
+          echo "=== zookeeper.out (logs/) ==="; cat .zk_install/zookeeper-bin/logs/zookeeper.out 2>&1 || true
+          echo "=== zookeeper.out (root) ==="; cat .zk_install/zookeeper-bin/zookeeper.out 2>&1 || true
+          echo "=== zookeeper.out (cwd) ==="; cat ./zookeeper.out 2>&1 || true
+          echo "=== zoo.cfg ==="; cat .zk_install/zookeeper-bin/conf/zoo.cfg 2>&1 || true
+          echo "=== ZK *.log/*.out ==="; find .zk_install -name '*.log' -o -name '*.out' 2>&1 || true
 
 # TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
 #                 when we are going to release a stable version. So we disable them in regular CI
