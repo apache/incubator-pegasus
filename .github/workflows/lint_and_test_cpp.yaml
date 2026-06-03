@@ -51,14 +51,46 @@ env:
   ONEBOX_OPTS: disk_min_available_space_ratio=5
   TEST_OPTS: disk_min_available_space_ratio=5,throttle_test_medium_value_kb=10,throttle_test_large_value_kb=25
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   cpp_clang_format_linter:
     name: Lint
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:clang-format-3.9
+    # Run on the runner host (no `container:`) so that GitHub-injected
+    # Node 20 (used by actions/checkout v4+ and other JS actions) can
+    # execute. The previous `apache/pegasus:clang-format-3.9` image
+    # ships GLIBC < 2.28 and cannot run Node 20 binaries; pinning
+    # actions/checkout@v3 no longer helps because GitHub now runs v3
+    # on Node 20 as well.
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Install clang-format-3.9 wrapper
+        # Run clang-format-3.9 inside the apache/pegasus:clang-format-3.9
+        # image instead of installing it on the runner host: the binary
+        # depends on libLLVM-3.9.so.1 which is no longer packaged for
+        # ubuntu-22.04. The wrapper mounts the workspace into the
+        # container and forwards arguments, so run-clang-format.py can
+        # invoke "clang-format-3.9" transparently.
+        run: |
+          set -euo pipefail
+          docker pull apache/pegasus:clang-format-3.9
+          tmp=$(mktemp)
+          printf '%s\n' \
+            '#!/usr/bin/env bash' \
+            'set -euo pipefail' \
+            'exec docker run --rm -i \' \
+            '  -v "${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE}" \' \
+            '  -w "${GITHUB_WORKSPACE}" \' \
+            '  --entrypoint clang-format-3.9 \' \
+            '  apache/pegasus:clang-format-3.9 "$@"' \
+            > "$tmp"
+          sudo install -m 0755 "$tmp" /usr/local/bin/clang-format-3.9
+          rm -f "$tmp"
+          clang-format-3.9 --version
       - name: clang-format
         run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
@@ -69,11 +101,13 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
+      # dorny/paths-filter@v3.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         id: changes
         with:
           filters: |
@@ -116,9 +150,11 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        uses: actions/cache@v3
+        # actions/cache@v4.3.0
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
             /github/home/.ccache
@@ -126,7 +162,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
+      # dorny/paths-filter@v3.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         id: changes
         with:
           filters: |
@@ -183,7 +220,8 @@ jobs:
           rm -rf thirdparty
           tar -zcvhf release__builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        # actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release_artifact_${{ github.sha }}
           path: release__builder.tar
@@ -234,13 +272,15 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Unpack prebuilt third-parties
         run: |
           unzip /root/thirdparties-bin.zip -d ./thirdparty
           rm -f /root/thirdparties-bin.zip
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        # actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: release_artifact_${{ github.sha }}
           path: .
@@ -254,6 +294,18 @@ jobs:
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
           ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== java -version ==="; java -version 2>&1 || true
+          echo "=== JAVA_HOME=$JAVA_HOME ==="
+          echo "=== ulimit ==="; ulimit -a || true
+          echo "=== ZK install dir ==="; ls -la .zk_install/zookeeper-bin/ 2>&1 || true
+          echo "=== zookeeper.out (logs/) ==="; cat .zk_install/zookeeper-bin/logs/zookeeper.out 2>&1 || true
+          echo "=== zookeeper.out (root) ==="; cat .zk_install/zookeeper-bin/zookeeper.out 2>&1 || true
+          echo "=== zookeeper.out (cwd) ==="; cat ./zookeeper.out 2>&1 || true
+          echo "=== zoo.cfg ==="; cat .zk_install/zookeeper-bin/conf/zoo.cfg 2>&1 || true
+          echo "=== ZK *.log/*.out ==="; find .zk_install -name '*.log' -o -name '*.out' 2>&1 || true
 
   build_ASAN:
     name: Build ASAN
@@ -262,9 +314,11 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        uses: actions/cache@v3
+        # actions/cache@v4.3.0
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
             /github/home/.ccache
@@ -272,7 +326,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
+      # dorny/paths-filter@v3.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         id: changes
         with:
           filters: |
@@ -321,7 +376,8 @@ jobs:
           rm -rf thirdparty
           tar -zcvhf release_address_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        # actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release_address_artifact_${{ github.sha }}
           path: release_address_builder.tar
@@ -374,13 +430,15 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Unpack prebuilt third-parties
         run: |
           unzip /root/thirdparties-bin.zip -d ./thirdparty
           rm -f /root/thirdparties-bin.zip
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        # actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: release_address_artifact_${{ github.sha }}
           path: .
@@ -394,6 +452,18 @@ jobs:
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
           ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== java -version ==="; java -version 2>&1 || true
+          echo "=== JAVA_HOME=$JAVA_HOME ==="
+          echo "=== ulimit ==="; ulimit -a || true
+          echo "=== ZK install dir ==="; ls -la .zk_install/zookeeper-bin/ 2>&1 || true
+          echo "=== zookeeper.out (logs/) ==="; cat .zk_install/zookeeper-bin/logs/zookeeper.out 2>&1 || true
+          echo "=== zookeeper.out (root) ==="; cat .zk_install/zookeeper-bin/zookeeper.out 2>&1 || true
+          echo "=== zookeeper.out (cwd) ==="; cat ./zookeeper.out 2>&1 || true
+          echo "=== zoo.cfg ==="; cat .zk_install/zookeeper-bin/conf/zoo.cfg 2>&1 || true
+          echo "=== ZK *.log/*.out ==="; find .zk_install -name '*.log' -o -name '*.out' 2>&1 || true
 
 # TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
 #                 when we are going to release a stable version. So we disable them in regular CI
@@ -544,9 +614,11 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        uses: actions/cache@v3
+        # actions/cache@v4.3.0
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
             /github/home/.ccache
@@ -554,7 +626,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      - uses: dorny/paths-filter@v2
+      # dorny/paths-filter@v3.0.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         id: changes
         with:
           filters: |
@@ -611,7 +684,8 @@ jobs:
           rm -rf thirdparty
           tar -zcvhf release_jemalloc_builder.tar build/latest/output build/latest/bin build/latest/src/server/test/config.ini hadoop-bin zookeeper-bin
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        # actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release_jemalloc_artifact_${{ github.sha }}
           path: release_jemalloc_builder.tar
@@ -629,13 +703,15 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Unpack prebuilt third-parties
         run: |
           unzip /root/thirdparties-bin.zip -d ./thirdparty
           rm -f /root/thirdparties-bin.zip
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        # actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: release_jemalloc_artifact_${{ github.sha }}
           path: .
@@ -665,9 +741,11 @@ jobs:
           brew install lz4
           brew install zstd
           brew install openssl@1.1
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        uses: actions/cache@v3
+        # actions/cache@v4.3.0
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
             /Users/runner/Library/Caches/ccache

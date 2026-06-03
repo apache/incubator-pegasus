@@ -43,8 +43,10 @@ jobs:
         # python-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
         # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
         run: sudo apt-get install -y thrift-compiler
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      # actions/setup-node@v5.0.0
+      - uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610
         with:
           node-version: 16
       - name: test

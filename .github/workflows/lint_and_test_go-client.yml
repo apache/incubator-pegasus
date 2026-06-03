@@ -45,20 +45,20 @@ jobs:
       # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
       run: sudo apt-get install -y thrift-compiler
     - name: Checkout
-      uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
     - name: Set up Go
-      uses: actions/setup-go@v2
+      # actions/setup-go@v6.0.0
+      uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4
       with:
         go-version: 1.14
     - name: Run Test
       run: ./test.sh
       working-directory: ./go-client
-    - uses: codecov/codecov-action@v2
-      with:
-        working-directory: ./go-client
     # because some files are generated after building, so lint after that at last
     - name: Lint
-      uses: golangci/golangci-lint-action@v3
+      # golangci/golangci-lint-action@v9.2.1
+      uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee
       with:
         version: v1.29
         working-directory: ./go-client
