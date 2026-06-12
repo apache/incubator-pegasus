@@ -150,8 +150,20 @@ public:
     [[nodiscard]] inline uint64_t duration_ns() const
     {
         auto now = dsn_now_ns();
-        CHECK_GE(now, _start_time_ns);
-
+        if (dsn_unlikely(now < _start_time_ns)) {
+            // In virtualized environments (e.g. Docker for Mac ARM64), high_resolution_clock
+            // may exhibit minor time regression. Return 0 instead of crashing when this occurs.
+            // Rate-limit the warning to avoid log flooding on hot paths.
+            static thread_local uint64_t last_warn_ns = 0;
+            if (now - last_warn_ns > 1'000'000'000ULL) { // 1s
+                last_warn_ns = now;
+                LOG_WARNING("clock regression detected: now={}, start={}, diff={}ns",
+                            now,
+                            _start_time_ns,
+                            _start_time_ns - now);
+            }
+            return 0;
+        }
         return now - _start_time_ns;
     }
 
