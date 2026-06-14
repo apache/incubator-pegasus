@@ -407,5 +407,56 @@ TEST_P(pegasus_mutation_duplicator_test, duplicate_duplicate)
     _tracker.wait_outstanding_tasks();
 }
 
+// Regression test for #2284: when the mutation with the highest timestamp (iterated LAST,
+// since mutation_tuple_set is sorted by timestamp) has an ignored rpc code (BULK_LOAD or
+// DUPLICATE), the trailing batch of valid mutations must still be flushed. Before the fix the
+// `continue` for ignored codes skipped the batch-flush check, so the in-progress batch was
+// dropped on the floor — yet the caller had already advanced last_decree past those mutations,
+// meaning they were never duplicated (silent data loss).
+TEST_P(pegasus_mutation_duplicator_test, duplicate_ignored_last_mutation)
+{
+    replica_base replica(dsn::gpid(1, 1), "fake_replica", "temp");
+    auto duplicator = new_mutation_duplicator(&replica, "onebox2", "temp");
+    duplicator->set_task_environment(&_env);
+
+    const std::string hash_key("hash");
+    mutation_tuple_set muts;
+    const int valid_count = 3;
+    for (int i = 0; i < valid_count; i++) {
+        dsn::apps::update_request request;
+        pegasus::pegasus_generate_key(request.key, hash_key, fmt::format("sort_{}", i));
+        dsn::message_ptr msg =
+            dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
+        auto data = dsn::move_message_to_blob(msg.get());
+        // timestamps 200, 201, 202
+        muts.insert(std::make_tuple(200 + i, dsn::apps::RPC_RRDB_RRDB_PUT, data));
+    }
+
+    // An ignored BULK_LOAD mutation with the HIGHEST timestamp (203), so it is iterated LAST.
+    // Its raw_message content is irrelevant: ignored codes are never parsed (and
+    // get_hash_from_request would LOG_FATAL on them).
+    {
+        dsn::apps::update_request request;
+        pegasus::pegasus_generate_key(request.key, hash_key, std::string("sort_bulkload"));
+        dsn::message_ptr msg =
+            dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_PUT);
+        auto data = dsn::move_message_to_blob(msg.get());
+        muts.insert(std::make_tuple(203, dsn::apps::RPC_RRDB_RRDB_BULK_LOAD, data));
+    }
+
+    RPC_MOCKING(duplicate_rpc)
+    {
+        duplicator->duplicate(muts, [](size_t) {});
+
+        // Before the fix, the trailing PUT batch was dropped: nothing would be shipped, so the
+        // mail_box would be empty. After the fix, the 3 PUTs are flushed as a single batch.
+        ASSERT_EQ(duplicate_rpc::mail_box().size(), 1u);
+
+        auto rpc = duplicate_rpc::mail_box().back();
+        ASSERT_EQ(rpc.request().entries.size(), static_cast<size_t>(valid_count));
+    }
+    _tracker.wait_outstanding_tasks();
+}
+
 } // namespace server
 } // namespace pegasus
