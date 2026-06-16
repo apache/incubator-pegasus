@@ -79,8 +79,8 @@ jobs:
         run: make build
       # because some files are generated after building, so lint after the build step
       - name: Lint
-        # golangci/golangci-lint-action@v3.7.0
-        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
+        # golangci/golangci-lint-action@v9.2.1
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee
         with:
           version: v1.56.2
           working-directory: ./go-client

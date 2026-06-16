@@ -104,8 +104,8 @@ jobs:
         run: make
         working-directory: ./go-client
       - name: Lint go-client
-        # golangci/golangci-lint-action@v3.7.0
-        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
+        # golangci/golangci-lint-action@v9.2.1
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee
         with:
           version: v1.56.2
           working-directory: ./go-client
@@ -113,8 +113,8 @@ jobs:
         run: make
         working-directory: ./collector
       - name: Lint collector
-        # golangci/golangci-lint-action@v3.7.0
-        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
+        # golangci/golangci-lint-action@v9.2.1
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee
         with:
           version: v1.56.2
           working-directory: ./collector
@@ -122,8 +122,8 @@ jobs:
         run: make
         working-directory: ./admin-cli
       - name: Lint admin-cli
-        # golangci/golangci-lint-action@v3.7.0
-        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
+        # golangci/golangci-lint-action@v9.2.1
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee
         with:
           version: v1.56.2
           working-directory: ./admin-cli
@@ -131,8 +131,8 @@ jobs:
         run: make
         working-directory: ./pegic
       - name: Lint pegic
-        # golangci/golangci-lint-action@v3.7.0
-        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
+        # golangci/golangci-lint-action@v9.2.1
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee
         with:
           version: v1.56.2
           working-directory: ./pegic
