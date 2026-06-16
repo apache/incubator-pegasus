@@ -223,11 +223,10 @@ class TProtocol;
         _obj.field.insert(_obj.field.begin(), _hp.resolve());                                      \
         if (!_obj.__isset.hp_##field) {                                                            \
             _obj.__set_hp_##field({_hp});                                                          \
-            _target.emplace_back(_hp);                                                             \
         } else {                                                                                   \
             _obj.hp_##field.insert(_obj.hp_##field.begin(), _hp);                                  \
-            _target = _obj.hp_##field;                                                             \
         }                                                                                          \
+        _target = _obj.hp_##field;                                                                 \
         DCHECK_EQ(_obj.field.size(), _obj.hp_##field.size());                                      \
     } while (0)
 

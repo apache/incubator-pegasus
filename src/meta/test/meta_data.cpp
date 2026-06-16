@@ -405,15 +405,8 @@ TEST(meta_data, construct_replica)
         CLEAR_ALL;
         cc.dropped = {dropped_replica{node_list[0], dropped_replica::INVALID_TIMESTAMP, 5, 10, 12}};
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-
-        host_port primary;
-        GET_HOST_PORT(pc, primary, primary);
-        ASSERT_EQ(node_list[0], primary);
-
-        std::vector<host_port> secondaries;
-        GET_HOST_PORTS(pc, secondaries, secondaries);
-        ASSERT_TRUE(secondaries.empty());
-
+        ASSERT_EQ(node_list[0], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
         ASSERT_TRUE(cc.dropped.empty());
         ASSERT_EQ(-1, cc.prefered_dropped);
     }
@@ -426,20 +419,11 @@ TEST(meta_data, construct_replica)
                       dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 8, 10, 12},
                       dropped_replica{node_list[4], dropped_replica::INVALID_TIMESTAMP, 9, 11, 12}};
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-
-        host_port primary;
-        GET_HOST_PORT(pc, primary, primary);
-        ASSERT_EQ(node_list[4], primary);
-
-        std::vector<host_port> secondaries;
-        GET_HOST_PORTS(pc, secondaries, secondaries);
-        ASSERT_TRUE(secondaries.empty());
+        ASSERT_EQ(node_list[4], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
 
         std::vector<host_port> nodes = {node_list[2], node_list[3]};
-        std::vector<host_port> last_drops;
-        GET_HOST_PORTS(pc, last_drops, last_drops);
-        ASSERT_EQ(nodes, last_drops);
-
+        ASSERT_EQ(nodes, pc.hp_last_drops);
         ASSERT_EQ(3, cc.dropped.size());
         ASSERT_EQ(2, cc.prefered_dropped);
     }
@@ -452,20 +436,11 @@ TEST(meta_data, construct_replica)
                       dropped_replica{node_list[2], dropped_replica::INVALID_TIMESTAMP, 7, 12, 12}};
 
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-
-        host_port primary;
-        GET_HOST_PORT(pc, primary, primary);
-        ASSERT_EQ(node_list[2], primary);
-
-        std::vector<host_port> secondaries;
-        GET_HOST_PORTS(pc, secondaries, secondaries);
-        ASSERT_TRUE(secondaries.empty());
+        ASSERT_EQ(node_list[2], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
 
         std::vector<host_port> nodes = {node_list[0], node_list[1]};
-        std::vector<host_port> last_drops;
-        GET_HOST_PORTS(pc, last_drops, last_drops);
-        ASSERT_EQ(nodes, last_drops);
-
+        ASSERT_EQ(nodes, pc.hp_last_drops);
         ASSERT_EQ(2, cc.dropped.size());
         ASSERT_EQ(1, cc.prefered_dropped);
     }
@@ -479,19 +454,11 @@ TEST(meta_data, construct_replica)
                       dropped_replica{node_list[3], dropped_replica::INVALID_TIMESTAMP, 7, 14, 14}};
 
         ASSERT_TRUE(construct_replica(view, rep.pid, 3));
-        host_port primary;
-        GET_HOST_PORT(pc, primary, primary);
-        ASSERT_EQ(node_list[3], primary);
-
-        std::vector<host_port> secondaries;
-        GET_HOST_PORTS(pc, secondaries, secondaries);
-        ASSERT_TRUE(secondaries.empty());
+        ASSERT_EQ(node_list[3], pc.hp_primary);
+        ASSERT_TRUE(pc.hp_secondaries.empty());
 
         std::vector<host_port> nodes = {node_list[1], node_list[2]};
-        std::vector<host_port> last_drops;
-        GET_HOST_PORTS(pc, last_drops, last_drops);
-        ASSERT_EQ(nodes, last_drops);
-
+        ASSERT_EQ(nodes, pc.hp_last_drops);
         ASSERT_EQ(3, cc.dropped.size());
         ASSERT_EQ(2, cc.prefered_dropped);
     }

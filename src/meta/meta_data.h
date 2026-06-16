@@ -266,24 +266,14 @@ struct partition_configuration_stateless
 {
     partition_configuration &pc;
     explicit partition_configuration_stateless(partition_configuration &_pc) : pc(_pc) {}
-    std::vector<dsn::host_port> &workers()
-    {
-        DCHECK(pc.__isset.hp_last_drops, "");
-        return pc.hp_last_drops;
-    }
-    std::vector<dsn::host_port> &hosts()
-    {
-        DCHECK(pc.__isset.hp_secondaries, "");
-        return pc.hp_secondaries;
-    }
+    std::vector<dsn::host_port> &workers() { return pc.hp_last_drops; }
+    std::vector<dsn::host_port> &hosts() { return pc.hp_secondaries; }
     [[nodiscard]] bool is_host(const host_port &node) const
     {
-        DCHECK(pc.__isset.hp_secondaries, "");
         return utils::contains(pc.hp_secondaries, node);
     }
     [[nodiscard]] bool is_worker(const host_port &node) const
     {
-        DCHECK(pc.__isset.hp_last_drops, "");
         return utils::contains(pc.hp_last_drops, node);
     }
     [[nodiscard]] bool is_member(const host_port &node) const

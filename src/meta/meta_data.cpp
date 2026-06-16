@@ -138,7 +138,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     GET_HOST_PORTS(pc, last_drops, last_drops);
     CHECK(last_drops.empty(), "last_drops of partition({}) must be empty", pid);
     for (auto iter = drop_list.rbegin(); iter != drop_list.rend(); ++iter) {
-        // hp_last_drops is added in the steps bellow.
+        // hp_last_drops is added in the steps below.
         if (last_drops.size() + 1 >= max_replica_count) {
             break;
         }
@@ -540,11 +540,6 @@ app_state::app_state(const app_info &info) : app_info(info), helpers(new app_sta
     RESET_IP_AND_HOST_PORT(pc, primary);
     CLEAR_IP_AND_HOST_PORT(pc, secondaries);
     CLEAR_IP_AND_HOST_PORT(pc, last_drops);
-
-    // TODO(yujingwei): use marco simplify the code, and the logical may should
-    // change
-    pc.__set_hp_secondaries({});
-    pc.__set_hp_last_drops({});
 
     pcs.assign(app_info::partition_count, pc);
     for (int i = 0; i != app_info::partition_count; ++i) {
