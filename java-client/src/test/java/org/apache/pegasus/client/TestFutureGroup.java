@@ -18,13 +18,23 @@
  */
 package org.apache.pegasus.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -99,5 +109,29 @@ public class TestFutureGroup {
       return;
     }
     fail();
+  }
+
+  @Test
+  public void testWaitAllCompleteHandlesNullCause(TestInfo testInfo) throws Exception {
+    // Reproduces #2152: a Future that is neither completed nor successful (e.g. its
+    // await timed out before it ever resolved) reports isSuccess()==false and
+    // cause()==null. waitAllComplete must not dereference the null cause.
+    @SuppressWarnings("unchecked")
+    Future<String> unfinished = mock(Future.class);
+    when(unfinished.await(anyLong())).thenReturn(false); // timed out, still not done
+    when(unfinished.isSuccess()).thenReturn(false);
+    when(unfinished.cause()).thenReturn(null);
+
+    FutureGroup<String> group = new FutureGroup<>(1);
+    group.add(unfinished);
+
+    List<Pair<PException, String>> results = new ArrayList<>();
+    // Before the fix this threw NullPointerException inside waitAllComplete.
+    group.waitAllComplete(results, 5000);
+
+    assertEquals(1, results.size());
+    assertNotNull(results.get(0).getLeft()); // a PException is reported
+    assertNull(results.get(0).getRight()); // no result
+    System.err.println(testInfo.getDisplayName() + ": " + results.get(0).getLeft().toString());
   }
 }
