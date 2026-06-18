@@ -70,6 +70,7 @@ pegasus_manual_compact_service::pegasus_manual_compact_service(pegasus_server_im
       _manual_compact_start_running_time_ms(0),
       _manual_compact_last_finish_time_ms(0),
       _manual_compact_last_time_used_ms(0),
+      _app_start_time_ms(dsn_now_ms()),
       METRIC_VAR_INIT_replica(rdb_manual_compact_queued_tasks),
       METRIC_VAR_INIT_replica(rdb_manual_compact_running_tasks)
 {
@@ -208,9 +209,18 @@ bool pegasus_manual_compact_service::check_periodic_compact(
     }
 
     auto now = static_cast<int64_t>(now_timestamp());
+    // For an app that has never been compacted (last_finish == 0) the lower bound
+    // would be 0, causing every trigger time that already passed today to
+    // retro-fire -- dangerous for a freshly-started duplication backup whose
+    // RocksDB is not fully initialized. Use the app start time as the floor in
+    // that case, so only triggers strictly after startup are honored. Apps that
+    // have already been compacted keep using last_finish and thus still catch up
+    // on a missed daily trigger after a restart. See #1564.
+    uint64_t last_finish = _manual_compact_last_finish_time_ms.load();
+    uint64_t lower_bound = last_finish == 0 ? _app_start_time_ms.load() : last_finish;
     for (auto t : trigger_time) {
         auto t_ms = t * 1000;
-        if (_manual_compact_last_finish_time_ms.load() < t_ms && t_ms < now) {
+        if (lower_bound < t_ms && t_ms < now) {
             return true;
         }
     }
