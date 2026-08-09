@@ -263,7 +263,7 @@ void replica::send_backup_request_to_secondary(const backup_request &request)
     for (const auto &secondary : secondaries) {
         // primary will send backup_request to secondary periodically
         // so, we shouldn't handle the response
-        rpc::call_one_way_typed(dsn::dns_resolver::instance().resolve_address(secondary),
+        rpc::call_one_way_typed(secondary.resolve(),
                                 RPC_COLD_BACKUP,
                                 request,
                                 get_gpid().thread_hash());

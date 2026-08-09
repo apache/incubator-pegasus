@@ -206,7 +206,7 @@ void replica_follower::copy_master_replica_checkpoint()
     dsn::marshall(msg, request);
     dsn::host_port primary;
     GET_HOST_PORT(_pc, primary, primary);
-    rpc::call(dsn::dns_resolver::instance().resolve_address(primary),
+    rpc::call(primary.resolve(),
               msg,
               &_tracker,
               [&](error_code err, learn_response &&resp) mutable {

@@ -240,7 +240,7 @@ void replica_backup_manager::send_clear_request_to_secondaries(const gpid &pid,
     std::vector<dsn::host_port> secondaries;
     GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, secondaries);
     for (const auto &secondary : secondaries) {
-        rpc::call_one_way_typed(dsn::dns_resolver::instance().resolve_address(secondary),
+        rpc::call_one_way_typed(secondary.resolve(),
                                 RPC_CLEAR_COLD_BACKUP,
                                 request,
                                 get_gpid().thread_hash());

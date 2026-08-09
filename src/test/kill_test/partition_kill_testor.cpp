@@ -93,7 +93,7 @@ void partition_kill_testor::run()
         dsn::host_port primary;
         GET_HOST_PORT(pc, primary, primary);
         tasks[i] = dsn::dist::cmd::async_call_remote(
-            dsn::dns_resolver::instance().resolve_address(primary),
+            primary.resolve(),
             "replica.kill_partition",
             arguments,
             callback,
