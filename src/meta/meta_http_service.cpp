@@ -251,11 +251,15 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             int read_unhealthy = 0;
             for (const auto &pc : response.partitions) {
                 int replica_count = 0;
-                if (pc.hp_primary) {
+                host_port primary;
+                GET_HOST_PORT(pc, primary, primary);
+                std::vector<host_port> secondaries;
+                GET_HOST_PORTS(pc, secondaries, secondaries);
+                if (primary) {
                     replica_count++;
                 }
-                replica_count += pc.hp_secondaries.size();
-                if (pc.hp_primary) {
+                replica_count += secondaries.size();
+                if (primary) {
                     if (replica_count >= pc.max_replica_count) {
                         fully_healthy++;
                     } else if (replica_count < 2) {
@@ -340,13 +344,17 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
             CHECK_EQ(app.partition_count, response_app.partition_count);
 
             for (const auto &pc : response_app.partitions) {
-                if (pc.hp_primary) {
-                    auto find = tmp_map.find(pc.hp_primary);
+                host_port primary;
+                GET_HOST_PORT(pc, primary, primary);
+                std::vector<host_port> secondaries;
+                GET_HOST_PORTS(pc, secondaries, secondaries);
+                if (primary) {
+                    auto find = tmp_map.find(primary);
                     if (find != tmp_map.end()) {
                         find->second.primary_count++;
                     }
                 }
-                for (const auto &secondary : pc.hp_secondaries) {
+                for (const auto &secondary : secondaries) {
                     auto find = tmp_map.find(secondary);
                     if (find != tmp_map.end()) {
                         find->second.secondary_count++;

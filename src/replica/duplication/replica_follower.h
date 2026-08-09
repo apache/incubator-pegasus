@@ -26,6 +26,7 @@
 #include "common/gpid.h"
 #include "dsn.layer2_types.h"
 #include "replica/replica_base.h"
+#include "rpc/dns_resolver.h" // IWYU pragma: keep
 #include "rpc/rpc_host_port.h"
 #include "task/task_tracker.h"
 #include "utils/error_code.h"
@@ -78,7 +79,9 @@ private:
     std::string master_replica_name()
     {
         std::string app_info = fmt::format("{}.{}", _master_cluster_name, _master_app_name);
-        if (_pc.hp_primary) {
+        dsn::host_port primary;
+        GET_HOST_PORT(_pc, primary, primary);
+        if (primary) {
             return fmt::format("{}({}|{})", app_info, FMT_HOST_PORT_AND_IP(_pc, primary), _pc.pid);
         }
         return app_info;

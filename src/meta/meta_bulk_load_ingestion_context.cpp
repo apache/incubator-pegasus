@@ -49,8 +49,12 @@ void ingestion_context::partition_node_info::create(const partition_configuratio
 {
     pid = pc.pid;
     std::unordered_set<host_port> current_nodes;
-    current_nodes.insert(pc.hp_primary);
-    for (const auto &secondary : pc.hp_secondaries) {
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    current_nodes.insert(primary);
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(pc, secondaries, secondaries);
+    for (const auto &secondary : secondaries) {
         current_nodes.insert(secondary);
     }
     for (const auto &node : current_nodes) {
