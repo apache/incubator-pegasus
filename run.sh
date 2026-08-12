@@ -112,7 +112,8 @@ function usage_build()
     echo "   --sanitizer <type>    build with sanitizer to check potential problems,
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
-    echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
+    echo "   --enable_rocksdb_portable [value]   build a portable rocksdb binary"
+    echo "                                         value: 0|1|haswell (optional, default 1)"
     echo "   --test                whether to build test binaries"
     echo "   --iwyu                specify the binary path of 'include-what-you-use' when build with IWYU"
     echo "   --cmake_only          whether to run cmake only, default no"
@@ -208,7 +209,13 @@ function run_build()
                 SKIP_THIRDPARTY=YES
                 ;;
             --enable_rocksdb_portable)
-                ROCKSDB_PORTABLE=1
+                # Check if next argument is a value (not starting with -) or another option
+                if [[ $# -gt 1 ]] && [[ ! "$2" =~ ^- ]]; then
+                    ROCKSDB_PORTABLE="$2"
+                    shift
+                else
+                    ROCKSDB_PORTABLE=1
+                fi
                 ;;
             --use_jemalloc)
                 ENABLE_GPERF=OFF
