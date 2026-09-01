@@ -664,6 +664,34 @@ static command_executor commands[] = {
         local_partition_split,
     },
     {
+        "local_replica_recover",
+        "Recover a damaged local Pegasus replica offline. Note:\n"
+        "  * Stop the replica servers before executing this command\n"
+        "  * <src_replica_dir> is the damaged replica directory, such as "
+        "    /data/replica/1.2.pegasus\n"
+        "  * <dst_replica_dir> is a new output replica directory, and must not exist\n"
+        "  * It first tries to recover from the RocksDB merged DB view; if opening the DB fails, "
+        "    it falls back to scanning each .sst file directly\n"
+        "  * --force_sst_scan forces direct .sst scanning and skips the DB-view phase\n"
+        "  * --verify_checksum verifies each .sst checksum before reading it\n"
+        "  * --pegasus_data_version can be used when metadata cannot be recovered automatically\n"
+        "  * The tool rebuilds both default/data and pegasus_meta_cf, and rewrites .app-info "
+        "    and .init-info for the new replica directory\n",
+        local_replica_recover_help.c_str(),
+        local_replica_recover,
+    },
+    {
+        "local_replica_check",
+        "Check whether a local Pegasus replica directory is structurally usable. Note:\n"
+        "  * Stop the replica servers before executing this command\n"
+        "  * <replica_dir> is the local replica directory, such as /data/replica/1.2.pegasus\n"
+        "  * It checks .app-info, .init-info, data/rdb, rocksdb column families, and meta cf\n"
+        "  * --verify_sst opens every .sst file one by one\n"
+        "  * --verify_checksum verifies each .sst checksum and implies --verify_sst\n",
+        local_replica_check_help.c_str(),
+        local_replica_check,
+    },
+    {
         "exit",
         "exit shell",
         "",
