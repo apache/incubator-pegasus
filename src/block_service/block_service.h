@@ -72,7 +72,7 @@ struct ls_entry
  *       ERR_OBJECT_NOT_FOUND: can't find the dir by ls_request.dir_name
  *       ERR_INVALID_PARAMETERS: the ls_request.dir_name is not a dir
  *       ERR_TIMEOUT: request timeout
- *       ERR_FS_INTERNAL: an internal error occured in the service implementation
+ *       ERR_FS_INTERNAL: an internal error occurred in the service implementation
  *          which we can't handle
  */
 struct ls_response
