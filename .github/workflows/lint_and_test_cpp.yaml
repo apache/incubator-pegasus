@@ -102,8 +102,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      # dorny/paths-filter@v3.0.2
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
+      # dorny/paths-filter@v4.0.3
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d
         id: changes
         with:
           filters: |
@@ -158,8 +158,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      # dorny/paths-filter@v3.0.2
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
+      # dorny/paths-filter@v4.0.3
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d
         id: changes
         with:
           filters: |
@@ -310,8 +310,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      # dorny/paths-filter@v3.0.2
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
+      # dorny/paths-filter@v4.0.3
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d
         id: changes
         with:
           filters: |
@@ -598,8 +598,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
-      # dorny/paths-filter@v3.0.2
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
+      # dorny/paths-filter@v4.0.3
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d
         id: changes
         with:
           filters: |
