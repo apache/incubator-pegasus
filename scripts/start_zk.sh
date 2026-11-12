@@ -61,6 +61,15 @@ echo "admin.enableServer=false" >> $ZOOKEEPER_HOME/conf/zoo.cfg
 echo "4lw.commands.whitelist=ruok" >> $ZOOKEEPER_HOME/conf/zoo.cfg
 
 mkdir -p $ZOOKEEPER_HOME/data
+
+# ZooKeeper 3.7.0 bundled in the thirdparties-bin-test image runs on JDK 8u382,
+# whose cgroup v2 metrics code throws NullPointerException on cgroup v2 hosts.
+# ZooKeeper enables JMX by default, so the JVM starts the local management agent,
+# hits that exception and aborts, making zkServer.sh report "FAILED TO START"
+# (seen on GitHub Actions runners). Disabling container support keeps the JVM
+# away from the broken cgroup v2 metrics.
+export SERVER_JVMFLAGS="${SERVER_JVMFLAGS} -XX:-UseContainerSupport"
+
 $ZOOKEEPER_HOME/bin/zkServer.sh start
 sleep 1
 
