@@ -39,7 +39,7 @@ jobs:
     name: Lint PR title
     runs-on: ubuntu-latest
     steps:
-      # amannn/action-semantic-pull-request@v6.0.0
+      # amannn/action-semantic-pull-request@v4.3.0
       - uses: amannn/action-semantic-pull-request@b4011711b945563fe63ffa9654c38d1782532528
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

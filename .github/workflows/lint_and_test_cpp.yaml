@@ -149,7 +149,7 @@ jobs:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        # actions/cache@v4.3.0
+        # actions/cache@v3.5.0
         uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
@@ -301,7 +301,7 @@ jobs:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        # actions/cache@v4.3.0
+        # actions/cache@v3.5.0
         uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
@@ -589,7 +589,7 @@ jobs:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        # actions/cache@v4.3.0
+        # actions/cache@v3.5.0
         uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
@@ -716,7 +716,7 @@ jobs:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        # actions/cache@v4.3.0
+        # actions/cache@v3.5.0
         uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
