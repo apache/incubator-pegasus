@@ -38,12 +38,22 @@ on:
 jobs:
   build:
     name: Test and Lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Install thrift
       # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
-      # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
-      run: sudo apt-get install -y thrift-compiler
+      # to generate code as well. The thrift-compiler version on ubuntu-22.04 is 0.16.0, so
+      # build and install thrift-compiler 0.13.0 manually.
+      run: |
+        export THRIFT_VERSION=0.13.0
+        wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/v${THRIFT_VERSION}.tar.gz
+        tar -xzf v${THRIFT_VERSION}.tar.gz
+        cd thrift-${THRIFT_VERSION}
+        ./bootstrap.sh
+        ./configure --enable-libs=no
+        make -j"$(nproc)"
+        sudo make install
+        cd - && rm -rf thrift-${THRIFT_VERSION} v${THRIFT_VERSION}.tar.gz
     - name: Checkout
       # actions/checkout@v4.3.1
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -57,8 +67,8 @@ jobs:
       working-directory: ./go-client
     # because some files are generated after building, so lint after that at last
     - name: Lint
-      # golangci/golangci-lint-action@v9.2.1
-      uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee
+      # golangci/golangci-lint-action@v3.7.0
+      uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
       with:
         version: v1.29
         working-directory: ./go-client

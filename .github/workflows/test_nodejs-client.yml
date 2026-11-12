@@ -37,12 +37,22 @@ defaults:
 jobs:
   test:
     name: test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Install thrift
-        # python-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
-        # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
-        run: sudo apt-get install -y thrift-compiler
+        # nodejs-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
+        # to generate code as well. The thrift-compiler version on ubuntu-22.04 is 0.16.0, so
+        # build and install thrift-compiler 0.13.0 manually.
+        run: |
+          export THRIFT_VERSION=0.13.0
+          wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/v${THRIFT_VERSION}.tar.gz
+          tar -xzf v${THRIFT_VERSION}.tar.gz
+          cd thrift-${THRIFT_VERSION}
+          ./bootstrap.sh
+          ./configure --enable-libs=no
+          make -j"$(nproc)"
+          sudo make install
+          cd - && rm -rf thrift-${THRIFT_VERSION} v${THRIFT_VERSION}.tar.gz
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       # actions/setup-node@v3.9.1
