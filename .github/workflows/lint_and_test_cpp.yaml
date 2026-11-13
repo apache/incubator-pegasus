@@ -412,7 +412,10 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
-      options: --cap-add=SYS_PTRACE
+      # `seccomp=unconfined` is required by the `setarch -R` prefix of the test
+      # command below; the default seccomp profile rejects the `personality`
+      # syscall that disables ASLR.
+      options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
     steps:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -431,11 +434,17 @@ jobs:
           tar -zxvf release_address_builder.tar
           rm -f release_address_builder.tar
       - name: Unit Testing
+        # This image ships gcc's libasan.so.6, which aborts at startup with
+        # "Shadow memory range interleaves with an existing memory mapping"
+        # as soon as the loader places a shared library in the ASan shadow
+        # range. Current runners randomize mmap addresses over 16TB
+        # (vm.mmap_rnd_bits=32), so this happens on most runs. Disabling ASLR
+        # for the test process tree keeps the shadow mapping usable.
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           . ./scripts/config_hdfs.sh
-          ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+          setarch $(uname -m) -R ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
 
 # TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
 #                 when we are going to release a stable version. So we disable them in regular CI
