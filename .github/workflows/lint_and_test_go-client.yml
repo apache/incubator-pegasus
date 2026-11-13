@@ -39,6 +39,11 @@ jobs:
   build:
     name: Test and Lint
     runs-on: ubuntu-22.04
+    # The onebox started by the client tests bundles a ZooKeeper whose JMX
+    # agent aborts on JDK 8 in cgroup v2 containers (same failure as
+    # scripts/start_zk.sh); zkServer.sh forwards SERVER_JVMFLAGS to it.
+    env:
+      SERVER_JVMFLAGS: -XX:-UseContainerSupport
     steps:
     - name: Install thrift
       # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0

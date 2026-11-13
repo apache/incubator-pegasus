@@ -39,6 +39,11 @@ jobs:
     strategy:
       matrix:
         java: [ '8', '11']
+    # The onebox started by the client tests bundles a ZooKeeper whose JMX
+    # agent aborts on JDK 8 in cgroup v2 containers (same failure as
+    # scripts/start_zk.sh); zkServer.sh forwards SERVER_JVMFLAGS to it.
+    env:
+      SERVER_JVMFLAGS: -XX:-UseContainerSupport
     steps:
       # actions/cache@v3.5.0
       - uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
@@ -53,6 +58,7 @@ jobs:
       - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
       - name: ci
         working-directory: scala-client
         run: ./scripts/ci-test.sh
