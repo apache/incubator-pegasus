@@ -134,8 +134,11 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     // we put max_replica_count-1 recent replicas to last_drops, in case of the DDD-state when the
     // only primary dead
     // when add node to pc.last_drops, we don't remove it from our cc.drop_list
-    CHECK(pc.hp_last_drops.empty(), "last_drops of partition({}) must be empty", pid);
+    std::vector<host_port> last_drops;
+    GET_HOST_PORTS(pc, last_drops, last_drops);
+    CHECK(last_drops.empty(), "last_drops of partition({}) must be empty", pid);
     for (auto iter = drop_list.rbegin(); iter != drop_list.rend(); ++iter) {
+        // hp_last_drops is added in the steps bellow.
         if (pc.hp_last_drops.size() + 1 >= max_replica_count) {
             break;
         }
@@ -542,7 +545,6 @@ app_state::app_state(const app_info &info) : app_info(info), helpers(new app_sta
     for (int i = 0; i != app_info::partition_count; ++i) {
         pcs[i].pid.set_partition_index(i);
     }
-
     helpers->on_init_partitions();
 }
 

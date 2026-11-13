@@ -2240,7 +2240,9 @@ create_rdb_estimated_keys_stats_calcs(const int32_t table_id,
 
     partition_stat_map sums;
     for (size_t i = 0; i < rows.size(); ++i) {
-        if (pcs[i].hp_primary != node) {
+        dsn::host_port primary;
+        GET_HOST_PORT(pcs[i], primary, primary);
+        if (primary != node) {
             // Ignore once the replica of the metrics is not the primary of the partition.
             continue;
         }
@@ -2885,9 +2887,12 @@ bool calculate_hash_value(command_executor *e, shell_context *sc, arguments args
         tp.add_row_name_and_data("partition_index", partition_index);
         if (pcs.size() > partition_index) {
             const auto &pc = pcs[partition_index];
-            tp.add_row_name_and_data("primary", pc.hp_primary.to_string());
-            tp.add_row_name_and_data("secondaries",
-                                     fmt::format("{}", fmt::join(pc.hp_secondaries, ",")));
+            dsn::host_port primary;
+            GET_HOST_PORT(pc, primary, primary);
+            std::vector<dsn::host_port> secondaries;
+            GET_HOST_PORTS(pc, secondaries, secondaries);
+            tp.add_row_name_and_data("primary", primary);
+            tp.add_row_name_and_data("secondaries", fmt::format("{}", fmt::join(secondaries, ",")));
         }
     }
     tp.output(std::cout);

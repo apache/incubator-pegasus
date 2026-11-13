@@ -111,18 +111,22 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
         LOG_DEBUG("access meta and query partition status success");
         for (const auto &pc : pcs) {
             int replica_count = 0;
-            if (pc.hp_primary) {
+            dsn::host_port primary;
+            GET_HOST_PORT(pc, primary, primary);
+            if (primary) {
                 replica_count++;
             }
-            replica_count += pc.hp_secondaries.size();
+            std::vector<dsn::host_port> secondaries;
+            GET_HOST_PORTS(pc, secondaries, secondaries);
+            replica_count += secondaries.size();
             if (replica_count == pc.max_replica_count) {
                 healthy_partition_cnt++;
             } else {
                 const auto &info =
                     fmt::format("gpid={}, primary={}, secondaries=[{}], last_committed_decree={}",
                                 pc.pid,
-                                pc.hp_primary,
-                                fmt::join(pc.hp_secondaries, ", "),
+                                primary,
+                                fmt::join(secondaries, ", "),
                                 pc.last_committed_decree);
                 if (debug_unhealthy) {
                     LOG_INFO("found unhealthy partition, {}", info);
