@@ -41,7 +41,18 @@ jobs:
     strategy:
       matrix:
         java: [ '8', '11']
+    env:
+      # The ZooKeeper bundled in pegasus-tools enables JMX, and JDK 8 aborts
+      # while starting the local management agent in cgroup v2 containers
+      # (same failure that scripts/start_zk.sh works around). Keep the JVM
+      # away from the container metrics.
+      SERVER_JVMFLAGS: -XX:-UseContainerSupport
     steps:
+      # ReplicaSessionTest kills a replica server by finding its pid with
+      # `netstat`, which current runner images no longer ship (master installs
+      # net-tools for the same reason).
+      - name: Install net-tools
+        run: sudo apt-get update && sudo apt-get install -y net-tools
       # actions/cache@v3.5.0
       - uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
