@@ -25,7 +25,6 @@
 #include "common/duplication_common.h"
 #include "common/replication.codes.h"
 #include "duplication_sync_timer.h"
-#include "metadata_types.h"
 #include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include "replica/replica.h"
