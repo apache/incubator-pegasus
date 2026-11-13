@@ -350,3 +350,17 @@ thirdparty/output/
 
 #collector
 collector/collector
+
+# aider
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v4/
+
+# codex
+.codex
+
+# local config
+config-server.ini
+
+# hadoop
+hadoop-bin/

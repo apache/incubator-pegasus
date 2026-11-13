@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <fmt/core.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <fmt/core.h>
 #include <functional>
 #include <map>
 #include <utility>
@@ -311,10 +311,12 @@ void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
     // TODO(yingchun): should use conference?
     auto child_pc = app->pcs[child_gpid.get_partition_index()];
     child_pc.secondaries = request.child_config.secondaries;
-    child_pc.__set_hp_secondaries(request.child_config.hp_secondaries);
+    std::vector<host_port> secondaries;
+    GET_HOST_PORTS(request.child_config, secondaries, secondaries);
+    child_pc.__set_hp_secondaries(secondaries);
     _state->update_configuration_locally(*app, update_child_request);
 
-    if (parent_context.msg) {
+    if (parent_context.msg != nullptr) {
         response.err = ERR_OK;
         response.app = *app;
         response.parent_config = app->pcs[parent_gpid.get_partition_index()];

@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <fmt/core.h>
-#include <rapidjson/ostreamwrapper.h>
 #include <algorithm>
 #include <cstddef>
+#include <fmt/core.h>
 #include <map>
 #include <memory>
+#include <rapidjson/ostreamwrapper.h>
 #include <set>
 #include <sstream>
 #include <string>
@@ -251,11 +251,15 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             int read_unhealthy = 0;
             for (const auto &pc : response.partitions) {
                 int replica_count = 0;
-                if (pc.hp_primary) {
+                host_port primary;
+                GET_HOST_PORT(pc, primary, primary);
+                if (primary) {
                     replica_count++;
                 }
-                replica_count += pc.hp_secondaries.size();
-                if (pc.hp_primary) {
+                std::vector<host_port> secondaries;
+                GET_HOST_PORTS(pc, secondaries, secondaries);
+                replica_count += static_cast<int>(secondaries.size());
+                if (primary) {
                     if (replica_count >= pc.max_replica_count) {
                         fully_healthy++;
                     } else if (replica_count < 2) {
