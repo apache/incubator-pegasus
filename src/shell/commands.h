@@ -280,3 +280,11 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args);
 // == local partition split (see 'commands/local_partition_split.cpp') == //
 extern const std::string local_partition_split_help;
 bool local_partition_split(command_executor *e, shell_context *sc, arguments args);
+
+// == local replica recover (see 'commands/local_replica_recover.cpp') == //
+extern const std::string local_replica_recover_help;
+bool local_replica_recover(command_executor *e, shell_context *sc, arguments args);
+
+// == local replica check (see 'commands/local_replica_check.cpp') == //
+extern const std::string local_replica_check_help;
+bool local_replica_check(command_executor *e, shell_context *sc, arguments args);
