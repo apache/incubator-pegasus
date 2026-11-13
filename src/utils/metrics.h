@@ -480,7 +480,7 @@ struct metric_filters
                              const std::unordered_set<std::string> &white_list)
     {
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
-        return white_list.find(candidate) != white_list.end();
+        return gutil::ContainsKey(white_list, candidate);
     }
 
     // According to the parameters requested by client, this function will filter metric
@@ -497,7 +497,7 @@ struct metric_filters
 
         // The size of container must be divisible by 2, since attribute name always pairs
         // with value in it.
-        CHECK_EQ(entity_attrs.size() & 1, 0);
+        CHECK_EQ(entity_attrs.size() & 1U, 0);
 
         for (entity_attrs_type::size_type i = 0; i < entity_attrs.size(); i += 2) {
             const auto &iter = candidates.find(entity_attrs[i]);
@@ -536,6 +536,19 @@ struct metric_filters
     entity_attrs_type entity_attrs;
 
     entity_metrics_type entity_metrics;
+
+    // When the `as_value` field is used to construct the query string in an HTTP request,
+    // setting it to true means that for metrics with multiple values (such as percentiles),
+    // if the server determines that only a single value will be returned to the client, it
+    // should name that field "value" instead of something like "p99".
+    //
+    // When the `as_value` field is used on the HTTP server side to process a request, true
+    // means that for multi-value metrics (such as percentiles), only one value will be
+    // returned to the client, and this single returned field will be named "value".
+    //
+    // This parameter can greatly simplify the structured processing of JSON responses
+    // returned by the server.
+    bool as_value{false};
 };
 
 inline std::string encode_as_json(std::function<void(metric_json_writer &)> encoder)
@@ -953,10 +966,19 @@ public:
 
 protected:
     explicit metric(const metric_prototype *prototype);
-    virtual ~metric() = default;
+    ~metric() override = default;
 
-    // Encode a metric field specified by `field_name` as json format. However, once the field
-    // are not chosen by `filters`, this function will do nothing.
+    // Encode a metric field specified by `field_name` with `value` as json format.
+    template <typename T>
+    static inline void
+    encode(metric_json_writer &writer, const std::string &field_name, const T &value)
+    {
+        writer.Key(field_name.c_str());
+        json::json_encode(writer, value);
+    }
+
+    // Encode a metric field specified by `field_name` with `value` as json format. However,
+    // once the field are not chosen by `filters`, this function will do nothing.
     template <typename T>
     static inline void encode(metric_json_writer &writer,
                               const std::string &field_name,
@@ -967,8 +989,7 @@ protected:
             return;
         }
 
-        writer.Key(field_name.c_str());
-        json::json_encode(writer, value);
+        encode(writer, field_name, value);
     }
 
     // Encode the metric type as json format, if it is chosen by `filters`.
@@ -1386,7 +1407,20 @@ public:
                 continue;
             }
 
-            encode(writer, kAllKthPercentiles[i].name, value(i), filters);
+            if (!filters.match_with_metric_field(kAllKthPercentiles[i].name)) {
+                continue;
+            }
+
+            // If `as_value` is true, then for metrics with multiple values (such as
+            // percentiles), only one value needs to be returned to the client. Therefore,
+            // its field name is set to "value" and the loop is exited (since only a single
+            // value is required to be returned).
+            if (filters.as_value) {
+                encode(writer, kMetricSingleValueField, value(i));
+                break;
+            }
+
+            encode(writer, kAllKthPercentiles[i].name, value(i));
         }
 
         writer.EndObject();

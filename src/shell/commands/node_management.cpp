@@ -22,11 +22,12 @@
 #include <getopt.h>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
-#include <stdint.h>
-#include <stdio.h>
 #include <algorithm>
+#include <array>
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <chrono>
+#include <cstdint>
+#include <cstdio>
 #include <initializer_list>
 #include <iostream>
 #include <map>
@@ -34,6 +35,7 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -244,8 +246,10 @@ dsn::metric_filters rw_requests_filters()
 dsn::metric_filters server_stat_filters()
 {
     dsn::metric_filters filters;
-    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
-    filters.entity_types = {"server", "replica"};
+    filters.with_metric_fields = {dsn::kMetricNameField,
+                                  dsn::kMetricSingleValueField,
+                                  dsn::kth_percentile_to_name(dsn::kth_percentile_type::P99)};
+    filters.entity_types = {"server", "replica", "profiler"};
     filters.entity_metrics = {
         "virtual_mem_usage_mb",
         "resident_mem_usage_mb",
@@ -261,7 +265,10 @@ dsn::metric_filters server_stat_filters()
         "rdb_block_cache_mem_usage_bytes",
         "rdb_manual_compact_queued_tasks",
         "rdb_manual_compact_running_tasks",
+        "profiler_executed_tasks",
+        "profiler_server_rpc_latency_ns",
     };
+    filters.as_value = true;
     return filters;
 }
 
@@ -301,6 +308,44 @@ struct replica_server_stats
 {
     replica_server_stats() = default;
 
+    // `DEFINE_JSON_SERIALIZATION` is not used to encode the member variables of
+    // `replica_server_stats` into JSON because the number of its member variables
+    // is very large and far exceeds the parameter limit of this macro. Increasing
+    // the macro's parameter limit would make the code overly verbose.
+    [[nodiscard]] std::string to_json_string() const
+    {
+        nlohmann::json rpc;
+        rpc["get_qps"] = get_qps;
+        rpc["get_p99(ms)"] = get_p99 / 1e6;
+        rpc["multi_get_qps"] = multi_get_qps;
+        rpc["multi_get_p99(ms)"] = multi_get_p99 / 1e6;
+        rpc["batch_get_qps"] = batch_get_qps;
+        rpc["batch_get_p99(ms)"] = batch_get_p99 / 1e6;
+        rpc["put_qps"] = put_qps;
+        rpc["put_p99(ms)"] = put_p99 / 1e6;
+        rpc["multi_put_qps"] = multi_put_qps;
+        rpc["multi_put_p99(ms)"] = multi_put_p99 / 1e6;
+
+        nlohmann::json result;
+        result["virt_mem_mb"] = virt_mem_mb;
+        result["res_mem_mb"] = res_mem_mb;
+        result["total_replicas"] = total_replicas;
+        result["opening_replicas"] = opening_replicas;
+        result["closing_replicas"] = closing_replicas;
+        result["inactive_replicas"] = inactive_replicas;
+        result["error_replicas"] = error_replicas;
+        result["primary_replicas"] = primary_replicas;
+        result["secondary_replicas"] = secondary_replicas;
+        result["learning_replicas"] = learning_replicas;
+        result["splitting_replicas"] = splitting_replicas;
+        result["rdb_block_cache_mem_usage_bytes"] = rdb_block_cache_mem_usage_bytes;
+        result["rdb_manual_compact_queued_tasks"] = rdb_manual_compact_queued_tasks;
+        result["rdb_manual_compact_running_tasks"] = rdb_manual_compact_running_tasks;
+        result["rpc"] = rpc;
+
+        return result.dump();
+    }
+
     double virt_mem_mb{0.0};
     double res_mem_mb{0.0};
 
@@ -318,30 +363,23 @@ struct replica_server_stats
     double rdb_manual_compact_queued_tasks{0.0};
     double rdb_manual_compact_running_tasks{0.0};
 
-    DEFINE_JSON_SERIALIZATION(virt_mem_mb,
-                              res_mem_mb,
-                              total_replicas,
-                              opening_replicas,
-                              closing_replicas,
-                              inactive_replicas,
-                              error_replicas,
-                              primary_replicas,
-                              secondary_replicas,
-                              learning_replicas,
-                              splitting_replicas,
-                              rdb_block_cache_mem_usage_bytes,
-                              rdb_manual_compact_queued_tasks,
-                              rdb_manual_compact_running_tasks)
+    double get_qps{0.0};
+    double get_p99{0.0};
+    double multi_get_qps{0.0};
+    double multi_get_p99{0.0};
+    double batch_get_qps{0.0};
+    double batch_get_p99{0.0};
+    double put_qps{0.0};
+    double put_p99{0.0};
+    double multi_put_qps{0.0};
+    double multi_put_p99{0.0};
 };
 
-std::pair<bool, std::string>
-aggregate_replica_server_stats(const node_desc &node,
-                               const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
-                               const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
+std::unique_ptr<aggregate_stats_calcs>
+create_replica_server_stats_total_calcs(replica_server_stats &stats)
 {
-    aggregate_stats_calcs calcs;
-    replica_server_stats stats;
-    calcs.create_assignments<total_aggregate_stats>(
+    auto calcs = std::make_unique<aggregate_stats_calcs>();
+    calcs->create_assignments<total_aggregate_stats>(
         "server",
         stat_var_map({
             {"virtual_mem_usage_mb", &stats.virt_mem_mb},
@@ -357,24 +395,81 @@ aggregate_replica_server_stats(const node_desc &node,
             {"splitting_replicas", &stats.splitting_replicas},
             {"rdb_block_cache_mem_usage_bytes", &stats.rdb_block_cache_mem_usage_bytes},
         }));
-    calcs.create_sums<total_aggregate_stats>(
+    calcs->create_sums<total_aggregate_stats>(
         "replica",
         stat_var_map({
             {"rdb_manual_compact_queued_tasks", &stats.rdb_manual_compact_queued_tasks},
             {"rdb_manual_compact_running_tasks", &stats.rdb_manual_compact_running_tasks},
         }));
 
-    const auto command_result = process_parse_metrics_result(
-        calcs.aggregate_metrics(query_snapshot_start, query_snapshot_end),
-        node,
-        "aggregate replica server stats");
-    if (!command_result) {
-        // Metrics failed to be aggregated.
-        return std::make_pair(false, command_result.description());
+    return calcs;
+}
+
+stat_var_map create_profiler_rpc_assignments(double *var)
+{
+    return stat_var_map({
+        {"profiler_server_rpc_latency_ns", var},
+    });
+}
+
+stat_var_map create_profiler_rpc_rates(double *var)
+{
+    return stat_var_map({
+        {"profiler_executed_tasks", var},
+    });
+}
+
+// Create all aggregations needed for the profiler-level stats.
+std::unique_ptr<aggregate_stats_calcs>
+create_replica_server_stats_profiler_calcs(replica_server_stats &stats)
+{
+    const std::array<std::tuple<std::string, double *, double *>, 5> tasks = {
+        {{"RPC_RRDB_RRDB_GET", &stats.get_qps, &stats.get_p99},
+         {"RPC_RRDB_RRDB_MULTI_GET", &stats.multi_get_qps, &stats.multi_get_p99},
+         {"RPC_RRDB_RRDB_BATCH_GET", &stats.batch_get_qps, &stats.batch_get_p99},
+         {"RPC_RRDB_RRDB_PUT", &stats.put_qps, &stats.put_p99},
+         {"RPC_RRDB_RRDB_MULTI_PUT", &stats.multi_put_qps, &stats.multi_put_p99}}};
+
+    profiler_stat_map assignments;
+    profiler_stat_map rates;
+    for (const auto &[name, qps, p99] : tasks) {
+        assignments.emplace(name, create_profiler_rpc_assignments(p99));
+        rates.emplace(name, create_profiler_rpc_rates(qps));
     }
 
-    return std::make_pair(
-        true, dsn::json::json_forwarder<replica_server_stats>::encode(stats).to_string());
+    auto calcs = std::make_unique<aggregate_stats_calcs>();
+    calcs->create_assignments<profiler_aggregate_stats>("profiler", std::move(assignments));
+    calcs->create_rates<profiler_aggregate_stats>("profiler", std::move(rates));
+    return calcs;
+}
+
+std::pair<bool, std::string>
+aggregate_replica_server_stats(const node_desc &node,
+                               const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
+                               const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
+{
+    replica_server_stats stats;
+
+#define AGGREGATE_SERVER_STATS(calcs, info)                                                        \
+    do {                                                                                           \
+        const auto command_result = process_parse_metrics_result(                                  \
+            calcs->aggregate_metrics(query_snapshot_start, query_snapshot_end),                    \
+            node,                                                                                  \
+            "aggregate total replica server stats");                                               \
+        if (!command_result) {                                                                     \
+            return std::make_pair(false, command_result.description());                            \
+        }                                                                                          \
+    } while (0)
+
+    auto total_calcs = create_replica_server_stats_total_calcs(stats);
+    AGGREGATE_SERVER_STATS(total_calcs, "aggregate total replica server stats");
+
+    auto profiler_calcs = create_replica_server_stats_profiler_calcs(stats);
+    AGGREGATE_SERVER_STATS(profiler_calcs, "aggregate profiler replica server stats");
+
+#undef AGGREGATE_SERVER_STATS
+
+    return std::make_pair(true, stats.to_json_string());
 }
 
 std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
