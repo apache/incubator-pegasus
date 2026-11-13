@@ -37,11 +37,35 @@ on:
 jobs:
   lint_cpp:
     name: Lint Cpp
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:clang-format-3.9
+    # Run on the runner host (no `container:`) so that GitHub-injected
+    # Node 20 (used by actions/checkout v4+) can execute. The
+    # apache/pegasus:clang-format-3.9 image ships GLIBC < 2.28 and cannot
+    # run Node 20 binaries, same as in lint_and_test_cpp.yaml.
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Install clang-format-3.9 wrapper
+        # Keep clang-format 3.9 as the formatter of record (v2.5 code is not
+        # formatted with a newer clang-format), but invoke it inside the
+        # apache/pegasus:clang-format-3.9 image through a wrapper: the binary
+        # depends on libLLVM-3.9.so.1, which ubuntu-22.04 no longer packages.
+        run: |
+          set -euo pipefail
+          docker pull apache/pegasus:clang-format-3.9
+          tmp=$(mktemp)
+          printf '%s\n' \
+            '#!/usr/bin/env bash' \
+            'set -euo pipefail' \
+            'exec docker run --rm -i \' \
+            '  -v "${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE}" \' \
+            '  -w "${GITHUB_WORKSPACE}" \' \
+            '  --entrypoint clang-format-3.9 \' \
+            '  apache/pegasus:clang-format-3.9 "$@"' \
+            > "$tmp"
+          sudo install -m 0755 "$tmp" /usr/local/bin/clang-format-3.9
+          rm -f "$tmp"
+          clang-format-3.9 --version
       - name: clang-format
         run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
@@ -99,23 +123,36 @@ jobs:
 
   build_and_lint_go:
     name: Build and Lint Golang
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Install thrift
         # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
-        # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
-        run: sudo apt-get install -y thrift-compiler
+        # to generate code as well. The thrift-compiler version on ubuntu-22.04 is 0.16.0, so
+        # build and install thrift-compiler 0.13.0 manually.
+        run: |
+          export THRIFT_VERSION=0.13.0
+          wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/v${THRIFT_VERSION}.tar.gz
+          tar -xzf v${THRIFT_VERSION}.tar.gz
+          cd thrift-${THRIFT_VERSION}
+          ./bootstrap.sh
+          ./configure --enable-libs=no
+          make -j"$(nproc)"
+          sudo make install
+          cd - && rm -rf thrift-${THRIFT_VERSION} v${THRIFT_VERSION}.tar.gz
       - name: Checkout
-        uses: actions/checkout@v3
+        # actions/checkout@v4.3.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up Go
-        uses: actions/setup-go@v2
+        # actions/setup-go@v4.3.0
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4
         with:
           go-version: 1.14
       - name: Build go-client
         run: make
         working-directory: ./go-client
       - name: Lint go-client
-        uses: golangci/golangci-lint-action@v3
+        # golangci/golangci-lint-action@v3.7.0
+        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
         with:
           version: v1.29
           working-directory: ./go-client
@@ -123,7 +160,8 @@ jobs:
         run: make
         working-directory: ./admin-cli
       - name: Lint admin-cli
-        uses: golangci/golangci-lint-action@v3
+        # golangci/golangci-lint-action@v3.7.0
+        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
         with:
           version: v1.29
           working-directory: ./admin-cli
@@ -131,7 +169,8 @@ jobs:
         run: make
         working-directory: ./pegic
       - name: Lint pegic
-        uses: golangci/golangci-lint-action@v3
+        # golangci/golangci-lint-action@v3.7.0
+        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
         with:
           version: v1.29
           working-directory: ./pegic
@@ -143,16 +182,20 @@ jobs:
       matrix:
         java: [ '8', '11']
     steps:
-      - uses: actions/cache@v2
+      # actions/cache@v3.5.0
+      - uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v1
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      # actions/setup-java@v4.8.0
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
       - name: Build
         working-directory: ./java-client
         run: |
