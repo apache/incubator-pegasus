@@ -112,10 +112,15 @@ public class FutureGroup<Result> {
       if (fu.isSuccess()) {
         results.add(Pair.of(null, fu.getNow()));
       } else {
+        // fu.cause() is null when the future never completed (e.g. await timed out),
+        // in which case dereferencing it throws a NullPointerException. Guard against
+        // that so a failing-but-incomplete task is reported instead of crashing the
+        // caller. See https://github.com/apache/incubator-pegasus/issues/2152.
+        Throwable cause = fu.cause();
+        String causeMsg =
+            cause != null ? cause.getMessage() : "unknown cause (future not completed)";
         results.add(
-            Pair.of(
-                new PException("async task #[" + i + "] await failed: " + fu.cause().getMessage()),
-                null));
+            Pair.of(new PException("async task #[" + i + "] await failed: " + causeMsg), null));
       }
     }
   }
