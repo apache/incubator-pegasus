@@ -32,6 +32,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -502,19 +503,31 @@ private:
                         bool enable_retry = true)
     {
         dsn::task_tracker tracker;
-        error_code err = ERR_UNKNOWN;
+        // The reply callback below is invoked concurrently on multiple IO threads (one per
+        // outstanding RPC), so all access to the shared `rpcs` and `resps` maps must be
+        // serialized. Without the lock, concurrent erase/emplace on the std::map corrupts
+        // its red-black tree, leading to crashes or infinite loops (see #1103).
+        std::mutex mtx;
         for (auto &rpc : rpcs) {
+            // Capture the key by value: capturing the range-for loop variable `rpc` by
+            // reference would alias every callback to the *last* element, because `rpc` is a
+            // single object reused across iterations and the callbacks fire later, during
+            // wait_outstanding_tasks().
+            const dsn::host_port hp = rpc.first;
             rpc.second.call(rpc.first.resolve(),
                             &tracker,
-                            [&err, &resps, &rpcs, &rpc](error_code code) mutable {
-                                err = code;
-                                if (err == dsn::ERR_OK) {
-                                    resps.emplace(rpc.first, std::move(rpc.second.response()));
-                                    rpcs.erase(rpc.first);
+                            [&mtx, &rpcs, &resps, hp](error_code code) {
+                                std::lock_guard<std::mutex> guard(mtx);
+                                if (code == dsn::ERR_OK) {
+                                    auto it = rpcs.find(hp);
+                                    if (it != rpcs.end()) {
+                                        resps.emplace(hp, std::move(it->second.response()));
+                                        rpcs.erase(it);
+                                    }
                                 } else {
-                                    resps.emplace(rpc.first,
-                                                  std::move(error_s::make(
-                                                      err, "unable to send rpc to server")));
+                                    resps.emplace(hp,
+                                                  error_s::make(
+                                                      code, "unable to send rpc to server"));
                                 }
                             });
         }
