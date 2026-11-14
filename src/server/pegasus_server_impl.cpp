@@ -1667,48 +1667,71 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             LOG_ERROR_PREFIX("check column families failed");
             return ec;
         }
-        CHECK_PREFIX_MSG(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
-        CHECK_PREFIX_MSG(!missing_data_cf, "Missing data column family");
 
-        // Load latest options from option file stored in the db directory.
-        rocksdb::DBOptions loaded_db_opt;
-        std::vector<rocksdb::ColumnFamilyDescriptor> loaded_cf_descs;
-        rocksdb::ColumnFamilyOptions loaded_data_cf_opts;
-        rocksdb::ConfigOptions config_options;
-        // Set `ignore_unknown_options` true for forward compatibility.
-        config_options.ignore_unknown_options = true;
-        config_options.env = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive);
-        auto status =
-            rocksdb::LoadLatestOptions(config_options, rdb_path, &loaded_db_opt, &loaded_cf_descs);
-        if (!status.ok()) {
-            // Here we ignore an invalid argument error related to `pegasus_data_version` and
-            // `pegasus_data` options, which were used in old version rocksdbs (before 2.1.0).
-            if (status.code() != rocksdb::Status::kInvalidArgument ||
-                status.ToString().find("pegasus_data") == std::string::npos) {
-                LOG_ERROR_PREFIX("load latest option file failed: {}.", status.ToString());
-                return dsn::ERR_LOCAL_APP_FAILURE;
-            }
-            has_incompatible_db_options = true;
+        if (missing_meta_cf || missing_data_cf) {
+            // The DB is incomplete/corrupted (e.g., process crashed during DB::Open,
+            // leaving a partial MANIFEST with only some column families). An incomplete
+            // DB is unusable since we cannot read decree, data version, etc. from it.
+            // Delete the corrupted rdb directory and fall through to create a new DB.
+            // The replica will re-sync data from the primary.
             LOG_WARNING_PREFIX(
-                "The latest option file has incompatible db options: {}, use default "
-                "options to open db.",
-                status.ToString());
+                "rdb is incomplete (missing_meta_cf={}, missing_data_cf={}), removing corrupted "
+                "rdb directory '{}' and will create a new DB. This may be caused by a previous "
+                "process crash during DB initialization.",
+                missing_meta_cf,
+                missing_data_cf,
+                rdb_path);
+
+            if (!dsn::utils::filesystem::remove_path(rdb_path)) {
+                LOG_ERROR_PREFIX("failed to remove corrupted rdb directory '{}'", rdb_path);
+                return dsn::ERR_FILE_OPERATION_FAILED;
+            }
+            LOG_INFO_PREFIX("successfully removed corrupted rdb directory '{}'", rdb_path);
+            db_exist = false;
         }
 
-        if (!has_incompatible_db_options) {
-            for (int i = 0; i < loaded_cf_descs.size(); ++i) {
-                if (loaded_cf_descs[i].name == meta_store::DATA_COLUMN_FAMILY_NAME) {
-                    loaded_data_cf_opts = loaded_cf_descs[i].options;
+        if (db_exist) {
+            // Load latest options from option file stored in the db directory.
+            rocksdb::DBOptions loaded_db_opt;
+            std::vector<rocksdb::ColumnFamilyDescriptor> loaded_cf_descs;
+            rocksdb::ColumnFamilyOptions loaded_data_cf_opts;
+            rocksdb::ConfigOptions config_options;
+            // Set `ignore_unknown_options` true for forward compatibility.
+            config_options.ignore_unknown_options = true;
+            config_options.env = dsn::utils::PegasusEnv(dsn::utils::FileDataType::kSensitive);
+            auto status = rocksdb::LoadLatestOptions(
+                config_options, rdb_path, &loaded_db_opt, &loaded_cf_descs);
+            if (!status.ok()) {
+                // Here we ignore an invalid argument error related to `pegasus_data_version` and
+                // `pegasus_data` options, which were used in old version rocksdbs (before 2.1.0).
+                if (status.code() != rocksdb::Status::kInvalidArgument ||
+                    status.ToString().find("pegasus_data") == std::string::npos) {
+                    LOG_ERROR_PREFIX("load latest option file failed: {}.", status.ToString());
+                    return dsn::ERR_LOCAL_APP_FAILURE;
                 }
+                has_incompatible_db_options = true;
+                LOG_WARNING_PREFIX(
+                    "The latest option file has incompatible db options: {}, use default "
+                    "options to open db.",
+                    status.ToString());
             }
-            // Reset usage scenario related options according to loaded_data_cf_opts.
-            // We don't use `loaded_data_cf_opts` directly because pointer-typed options will
-            // only be initialized with default values when calling 'LoadLatestOptions', see
-            // 'rocksdb/utilities/options_util.h'.
-            reset_rocksdb_options(
-                loaded_data_cf_opts, loaded_db_opt, envs, &_table_data_cf_opts, &_db_opts);
+
+            if (!has_incompatible_db_options) {
+                for (int i = 0; i < loaded_cf_descs.size(); ++i) {
+                    if (loaded_cf_descs[i].name == meta_store::DATA_COLUMN_FAMILY_NAME) {
+                        loaded_data_cf_opts = loaded_cf_descs[i].options;
+                    }
+                }
+                // Reset usage scenario related options according to loaded_data_cf_opts.
+                // We don't use `loaded_data_cf_opts` directly because pointer-typed options will
+                // only be initialized with default values when calling 'LoadLatestOptions', see
+                // 'rocksdb/utilities/options_util.h'.
+                reset_rocksdb_options(
+                    loaded_data_cf_opts, loaded_db_opt, envs, &_table_data_cf_opts, &_db_opts);
+            }
         }
-    } else {
+    }
+    if (!db_exist) {
         // When create new DB, we have to create a new column family to store meta data (meta column
         // family).
         _db_opts.create_missing_column_families = true;
