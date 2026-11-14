@@ -253,7 +253,6 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
         batch_count++;
         dsn::task_code rpc_code = std::get<1>(mut);
         dsn::blob raw_message = std::get<2>(mut);
-        auto dreq = std::make_unique<dsn::apps::duplicate_request>();
 
         if (gutil::ContainsKey(ingnored_rpc_code, rpc_code)) {
             // It it do not recommend to use bulkload and normal writing in the same app,
@@ -266,23 +265,34 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             if (rpc_code == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
                 LOG_DEBUG_PREFIX("Ignore sending bulkload rpc when doing duplication");
             }
-            continue;
+            // NOTE: do not `continue` here. The batch-flush check below must still run, otherwise
+            // if the LAST mutation in `muts` is an ignored code the trailing batch of valid
+            // mutations would be silently dropped — the caller has already advanced last_decree
+            // past them, so they would never be re-read and duplicated. See #2284.
+        } else {
+            dsn::apps::duplicate_entry entry;
+            entry.__set_raw_message(raw_message);
+            entry.__set_task_code(rpc_code);
+            entry.__set_timestamp(std::get<0>(mut));
+            entry.__set_cluster_id(dsn::replication::get_current_dup_cluster_id());
+            batch_request->entries.emplace_back(std::move(entry));
+            batch_bytes += raw_message.length();
         }
-
-        dsn::apps::duplicate_entry entry;
-        entry.__set_raw_message(raw_message);
-        entry.__set_task_code(rpc_code);
-        entry.__set_timestamp(std::get<0>(mut));
-        entry.__set_cluster_id(dsn::replication::get_current_dup_cluster_id());
-        batch_request->entries.emplace_back(std::move(entry));
-        batch_bytes += raw_message.length();
 
         if (batch_count == muts.size() || batch_bytes >= FLAGS_duplicate_log_batch_bytes ||
             batch_bytes >= dsn::replication::FLAGS_dup_max_allowed_write_size) {
+            if (batch_request->entries.empty()) {
+                // nothing to flush (e.g. this mutation was ignored and the batch is empty)
+                continue;
+            }
             // since all the plog's mutations of replica belong to same gpid though the hash of
             // mutation is different, use the last mutation of one batch to get and represents the
-            // current hash value, it will still send to remote correct replica
-            uint64_t hash = get_hash_from_request(rpc_code, raw_message);
+            // current hash value, it will still send to remote correct replica.
+            // The hash is computed from the last ENTRY in the batch, which is always a
+            // duplicatable rpc code (PUT/REMOVE/MULTI_*); ignored codes are never added to the
+            // batch, and get_hash_from_request would LOG_FATAL on them.
+            const auto &last_entry = batch_request->entries.back();
+            uint64_t hash = get_hash_from_request(last_entry.task_code, last_entry.raw_message);
             duplicate_rpc rpc(std::move(batch_request),
                               dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
                               100_s, // TODO(wutao1): configurable timeout.
