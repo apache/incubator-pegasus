@@ -49,6 +49,10 @@ public:
     {
         start();
         manual_compact_svc = std::make_unique<pegasus_manual_compact_service>(_server);
+        // _app_start_time_ms defaults to construction time; reset to 0 so existing
+        // tests (which set last_finish to fixed timestamps) are unaffected by the
+        // start-time floor. Tests that exercise the floor set it explicitly.
+        manual_compact_svc->_app_start_time_ms.store(0);
     }
 
     void set_compact_time(int64_t ts) const
@@ -60,6 +64,11 @@ public:
     void set_mock_now(uint64_t mock_now_sec) const
     {
         manual_compact_svc->_mock_now_timestamp = mock_now_sec * 1000;
+    }
+
+    void set_app_start_time(uint64_t app_start_sec) const
+    {
+        manual_compact_svc->_app_start_time_ms.store(app_start_sec * 1000);
     }
 
     void check_compact_disabled(const std::map<std::string, std::string> &envs, bool ok)
@@ -243,6 +252,33 @@ TEST_P(manual_compact_service_test, check_periodic_compact)
 
     set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("22:00"));
     check_periodic_compact(envs, false);
+}
+
+TEST_P(manual_compact_service_test, check_periodic_compact_never_compacted)
+{
+    // #1564: an app that has never been compacted (last_finish == 0) must not
+    // immediately fire periodic compaction just because today's trigger time
+    // already passed. The app start time is used as a floor, so only triggers
+    // strictly after startup are honored -- a freshly-started duplication backup
+    // whose RocksDB isn't fully initialized won't be crashed by a retro-trigger.
+    std::map<std::string, std::string> envs;
+
+    // app started at 14:00 today, never compacted (last_finish stays 0)
+    uint64_t start_14h = (uint64_t)dsn::utils::hh_mm_today_to_unix_sec("14:00");
+    set_app_start_time(start_14h);
+    set_mock_now(start_14h);
+
+    // trigger 01:00 already passed before startup -> must NOT trigger
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = "1:00";
+    check_periodic_compact(envs, false);
+
+    // trigger 18:00 not reached yet (now=14:00) -> must NOT trigger
+    envs[dsn::replica_envs::MANUAL_COMPACT_PERIODIC_TRIGGER_TIME] = "18:00";
+    check_periodic_compact(envs, false);
+
+    // advance now to 19:00: trigger 18:00 lies in (start=14:00, now=19:00) -> trigger
+    set_mock_now((uint64_t)dsn::utils::hh_mm_today_to_unix_sec("19:00"));
+    check_periodic_compact(envs, true);
 }
 
 TEST_P(manual_compact_service_test, extract_manual_compact_opts)

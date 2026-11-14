@@ -100,6 +100,11 @@ private:
     std::atomic<uint64_t> _manual_compact_last_finish_time_ms;
     std::atomic<uint64_t> _manual_compact_last_time_used_ms;
 
+    // Time the service was constructed. Used as a floor for the trigger-time
+    // checks so a never-compacted app (last_finish == 0) does not retro-fire on a
+    // trigger whose time already passed before startup. See #1564.
+    std::atomic<uint64_t> _app_start_time_ms;
+
     METRIC_VAR_DECLARE_gauge_int64(rdb_manual_compact_queued_tasks);
     METRIC_VAR_DECLARE_gauge_int64(rdb_manual_compact_running_tasks);
 };
