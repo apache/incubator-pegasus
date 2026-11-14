@@ -2660,6 +2660,8 @@ TEST(metrics_test, http_get_metrics)
     // - request percentile for default detail
     // - request percentile while detail=false
     // - request percentile while detail=true
+    // - request percentile with all percentile types while as_value=true
+    // - request percentile with only one percentile type while as_value=true
     struct test_case
     {
         std::string request_string;
@@ -2859,6 +2861,14 @@ TEST(metrics_test, http_get_metrics)
          http_status_code::kOk,
          {{"server_116", {"test_server_percentile_int64"}}},
          percentile_metric_fields},
+        {REQUEST_STRING(GET, "ids=server_116&as_value=true"),
+         http_status_code::kOk,
+         {{"server_116", {"test_server_percentile_int64"}}},
+         {kMetricNameField, "p95", "p99"}},
+        {REQUEST_STRING(GET, "ids=server_116&with_metric_fields=name,p99&as_value=true"),
+         http_status_code::kOk,
+         {{"server_116", {"test_server_percentile_int64"}}},
+         {kMetricNameField, kMetricSingleValueField}},
     };
 
 #undef REQUEST_STRING
@@ -2889,6 +2899,7 @@ struct metric_filters_query_string_case
     metric_filters::entity_ids_type entity_ids;
     metric_filters::entity_attrs_type entity_attrs;
     metric_filters::entity_metrics_type entity_metrics;
+    bool as_value;
     size_t expected_fields;
 };
 
@@ -2898,16 +2909,23 @@ class MetricFiltersQueryStringTest : public testing::TestWithParam<metric_filter
 
 const std::vector<metric_filters_query_string_case> metric_filters_query_string_tests = {
     // Empty query string.
-    {{}, {}, {}, {}, {}, 0},
+    {{}, {}, {}, {}, {}, false, 0},
     // Some fields were missing in the query string.
-    {{"name", "value"}, {"replica"}, {}, {}, {"rdb_total_sst_files", "rdb_total_sst_size_mb"}, 3},
+    {{"name", "value"},
+     {"replica"},
+     {},
+     {},
+     {"rdb_total_sst_files", "rdb_total_sst_size_mb"},
+     false,
+     3},
     // All fields were present.
     {{"name", "value"},
      {"replica"},
      {"replica5.2"},
      {"table_id", "partition_id"},
      {"rdb_total_sst_files", "rdb_total_sst_size_mb"},
-     5},
+     true,
+     6},
 };
 
 TEST_P(MetricFiltersQueryStringTest, BuildQueryString)
@@ -2924,6 +2942,7 @@ TEST_P(MetricFiltersQueryStringTest, BuildQueryString)
     COPY_CONTAINER(entity_ids);
     COPY_CONTAINER(entity_attrs);
     COPY_CONTAINER(entity_metrics);
+    COPY_CONTAINER(as_value);
 
 #undef COPY_CONTAINER
 
@@ -2968,6 +2987,11 @@ TEST_P(MetricFiltersQueryStringTest, BuildQueryString)
     CHECK_FIELD(ids, metric_filters::entity_ids_type, entity_ids);
     CHECK_FIELD(attributes, metric_filters::entity_attrs_type, entity_attrs);
     CHECK_FIELD(metrics, metric_filters::entity_metrics_type, entity_metrics);
+
+    if (query_string_case.as_value) {
+        ASSERT_LT(i, query_string_case.expected_fields);
+        ASSERT_STREQ("as_value=true", fields[i++].c_str());
+    }
 
 #undef CHECK_FIELD
 

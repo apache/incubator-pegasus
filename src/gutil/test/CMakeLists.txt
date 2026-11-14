@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME pgs_gutil_test)
+set(MY_PROJ_NAME gutil_test)
 set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS

@@ -35,12 +35,12 @@
 
 #include "meta_state_service_zookeeper.h"
 #include "runtime/service_app.h"
+#include "utils/blob.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
 #include "zookeeper/zookeeper_error.h"
 #include "zookeeper/zookeeper_session.h"
-#include "zookeeper/zookeeper_session_mgr.h"
 
 DSN_DECLARE_int32(timeout_ms);
 
@@ -159,8 +159,7 @@ meta_state_service_zookeeper::~meta_state_service_zookeeper()
 
 error_code meta_state_service_zookeeper::initialize(const std::vector<std::string> &)
 {
-    _session =
-        zookeeper_session_mgr::instance().get_session(service_app::current_service_app_info());
+    _session = get_zookeeper_session(service_app::current_service_app_info());
     _zoo_state = _session->attach(this,
                                   std::bind(&meta_state_service_zookeeper::on_zoo_session_evt,
                                             ref_this(this),
@@ -199,7 +198,7 @@ meta_state_service_zookeeper::new_transaction_entries(unsigned int capacity)
                                        tsk,                                                        \
                                        std::placeholders::_1);                                     \
     op->_optype = op_type;                                                                         \
-    input->_path = node;
+    input->_path = std::make_shared<std::string>(node)
 
 task_ptr meta_state_service_zookeeper::create_node(const std::string &node,
                                                    task_code cb_code,

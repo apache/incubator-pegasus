@@ -31,6 +31,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -132,7 +133,7 @@ std::string kv_map_to_string(const std::map<std::string, std::string> &kv_map,
 std::string
 replace_string(std::string subject, const std::string &search, const std::string &replace);
 
-std::string get_last_component(const std::string &input, const char splitters[]);
+std::string_view get_last_component(std::string_view str, std::string_view splitters);
 
 char *trim_string(char *s);
 

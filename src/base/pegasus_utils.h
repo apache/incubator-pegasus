@@ -20,15 +20,15 @@
 #pragma once
 
 #include <rocksdb/slice.h>
-#include <stdint.h>
-#include <time.h>
+#include <cstdint>
+#include <ctime>
 #include <functional>
 #include <list>
 #include <queue>
 #include <string>
+#include <string_view>
 #include <vector>
 
-#include <string_view>
 #include "utils/flags.h"
 
 DSN_DECLARE_bool(encrypt_data_at_rest);

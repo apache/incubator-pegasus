@@ -1,0 +1,80 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+#include <fmt/core.h>
+#include <utility>
+
+#include "atomic_write_test.h"
+#include "common/common.h"
+#include "common/replication_other_types.h"
+#include "gtest/gtest.h"
+#include "include/pegasus/client.h"
+#include "utils/error_code.h"
+
+namespace pegasus {
+
+const std::string AtomicWriteTest::kClusterName("onebox");
+const int32_t AtomicWriteTest::kPartitionCount{8};
+
+AtomicWriteTest::AtomicWriteTest(std::string table_name_prefix)
+    : _table_name_prefix(std::move(table_name_prefix))
+{
+}
+
+void AtomicWriteTest::SetUpTestSuite()
+{
+    // Initialize client lib.
+    ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
+}
+
+void AtomicWriteTest::SetUp()
+{
+    // Read meta server list from config file.
+    ASSERT_TRUE(dsn::replication::replica_helper::load_servers_from_config(
+        dsn::PEGASUS_CLUSTER_SECTION_NAME, kClusterName, _meta_list));
+    ASSERT_FALSE(_meta_list.empty());
+
+    // Initialize the DDL client to the meta server.
+    _ddl_client = std::make_unique<dsn::replication::replication_ddl_client>(_meta_list);
+    ASSERT_TRUE(_ddl_client);
+
+    _ddl_client->set_max_wait_app_ready_secs(120);
+    _ddl_client->set_meta_servers_leader();
+
+    // Generate the table name.
+    const auto &atomic_idempotent = GetParam();
+    _table_name =
+        fmt::format("{}{}_idempotent", _table_name_prefix, atomic_idempotent ? "" : "_non");
+
+    // Create the table with the name. Specify whether the table makes each atomic write
+    // idempotent.
+    ASSERT_EQ(
+        dsn::ERR_OK,
+        _ddl_client->create_app(_table_name, "pegasus", 8, 3, {}, false, false, atomic_idempotent));
+
+    // Get a client instance for the given cluster and table name.
+    _client = pegasus_client_factory::get_client(kClusterName.c_str(), _table_name.c_str());
+    ASSERT_TRUE(_client != nullptr);
+
+    // Generate the hash key.
+    const auto *test_info = testing::UnitTest::GetInstance()->current_test_info();
+    _hash_key = fmt::format("{}.{}", test_info->test_suite_name(), test_info->name());
+}
+
+void AtomicWriteTest::TearDown() { ASSERT_EQ(dsn::ERR_OK, _ddl_client->drop_app(_table_name, 0)); }
+
+} // namespace pegasus

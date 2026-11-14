@@ -27,10 +27,10 @@
 #include "meta/meta_server_failure_detector.h"
 
 #include <chrono>
+#include <string_view>
 #include <thread>
 #include <utility>
 
-#include <string_view>
 #include "fd_types.h"
 #include "meta/meta_options.h"
 #include "meta/meta_service.h"

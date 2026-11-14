@@ -47,6 +47,7 @@
 #include "task/task_code.h"
 #include "task/task_tracker.h"
 #include "utils/autoref_ptr.h"
+#include "utils/ports.h"
 #include "utils/error_code.h"
 #include "utils/errors.h"
 #include "utils/zlocks.h"
@@ -301,6 +302,9 @@ public:
 
     task_tracker *tracker() { return &_tracker; }
 
+    decree get_cleanable_decree() const;
+    void set_cleanable_decree(decree d);
+
 protected:
     // 'size' is data size to write; the '_global_end_offset' will be updated by 'size'.
     // can switch file only when create_new_log_if_needed = true;
@@ -400,9 +404,14 @@ private:
     // for plog. Since it is set with mutation.data.header.last_committed_decree, it must
     // be less than _plog_max_decree_on_disk.
     decree _plog_max_commit_on_disk;
+
+    // The decree threshold for private log garbage collection. Mutations with decree <= this
+    // value are considered cleanable and their log files may be deleted by GC.
+    // Protected by _lock in get/set.
+    decree _cleanable_decree;
 };
 
-typedef dsn::ref_ptr<mutation_log> mutation_log_ptr;
+using mutation_log_ptr = dsn::ref_ptr<mutation_log>;
 
 class mutation_log_private : public mutation_log, private replica_base
 {
@@ -438,6 +447,9 @@ public:
     void flush_once() override;
 
 private:
+    DISALLOW_COPY_AND_ASSIGN(mutation_log_private);
+    DISALLOW_MOVE_AND_ASSIGN(mutation_log_private);
+
     // async write pending mutations into log file
     // Preconditions:
     // - _pending_write != nullptr
@@ -457,9 +469,8 @@ private:
     // if count <= 0, means flush until all data is on disk
     void flush_internal(int max_count);
 
-private:
     // bufferring - only one concurrent write is allowed
-    typedef std::vector<mutation_ptr> mutations;
+    using mutations = std::vector<mutation_ptr>;
     std::atomic_bool _is_writing;
     // Writes that are emitted to `commit_log_block` but are not completely written.
     // The weak_ptr used here is a trick. Once the pointer freed, ie.

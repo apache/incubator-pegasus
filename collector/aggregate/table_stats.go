@@ -20,8 +20,8 @@ package aggregate
 import (
 	"time"
 
-	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 )
 
 // PartitionStats is a set of metrics retrieved from this partition.
@@ -59,7 +59,7 @@ type ClusterStats struct {
 	Stats map[string]float64
 }
 
-func newTableStats(info *admin.AppInfo) *TableStats {
+func newTableStats(info *replication.AppInfo) *TableStats {
 	tb := &TableStats{
 		TableName:  info.AppName,
 		AppID:      int(info.AppID),

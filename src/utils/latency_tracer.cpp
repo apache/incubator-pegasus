@@ -17,11 +17,11 @@
 
 #include "utils/latency_tracer.h"
 
-#include <string_view>
 #include <fmt/core.h>
 #include <cstdint>
 #include <iterator>
 #include <set>
+#include <string_view>
 #include <utility>
 
 #include "runtime/api_layer1.h"

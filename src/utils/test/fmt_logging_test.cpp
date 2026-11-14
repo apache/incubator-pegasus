@@ -26,8 +26,8 @@
 
 #include <fmt/core.h>
 #include <memory>
-
 #include <string_view>
+
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "gtest/gtest.h"

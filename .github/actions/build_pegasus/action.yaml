@@ -20,7 +20,8 @@ runs:
   using: composite
   steps:
     - name: Setup cache
-      uses: actions/cache@v3
+      # actions/cache@v3.5.0
+      uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
       with:
         path: |
           /github/home/.ccache

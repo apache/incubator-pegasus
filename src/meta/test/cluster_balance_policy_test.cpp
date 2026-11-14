@@ -23,6 +23,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -112,41 +113,52 @@ TEST(cluster_balance_policy, get_app_migration_info)
     meta_service svc;
     cluster_balance_policy policy(&svc);
 
-    int appid = 1;
-    std::string appname = "test";
+    constexpr int kAppId = 1;
+    constexpr std::string_view kAppName("test");
     const auto &hp = host_port("localhost", 10086);
+
     app_info info;
-    info.app_id = appid;
-    info.app_name = appname;
+    info.app_id = kAppId;
+    info.app_name = kAppName;
     info.partition_count = 1;
-    auto app = std::make_shared<app_state>(info);
+
+    const auto app = std::make_shared<app_state>(info);
     SET_IP_AND_HOST_PORT_BY_DNS(app->pcs[0], primary, hp);
 
     node_state ns;
     ns.set_hp(hp);
-    ns.put_partition(gpid(appid, 0), true);
+    ns.put_partition(gpid(kAppId, 0), true);
     node_mapper nodes;
     nodes[hp] = ns;
 
     cluster_balance_policy::app_migration_info migration_info;
+
     {
         app->pcs[0].max_replica_count = 100;
-        auto res =
+        const auto res =
             policy.get_app_migration_info(app, nodes, balance_type::COPY_PRIMARY, migration_info);
         ASSERT_FALSE(res);
     }
 
+    migration_info.partitions.emplace_back();
+    ASSERT_EQ(1, migration_info.partitions.size());
+
     {
         app->pcs[0].max_replica_count = 1;
-        auto res =
+        const auto res =
             policy.get_app_migration_info(app, nodes, balance_type::COPY_PRIMARY, migration_info);
         ASSERT_TRUE(res);
-        ASSERT_EQ(migration_info.app_id, appid);
-        ASSERT_EQ(migration_info.app_name, appname);
-        std::map<host_port, partition_status::type> pstatus_map;
-        pstatus_map[hp] = partition_status::type::PS_PRIMARY;
-        ASSERT_EQ(migration_info.partitions[0], pstatus_map);
-        ASSERT_EQ(migration_info.replicas_count[hp], 1);
+
+        ASSERT_EQ(kAppId, migration_info.app_id);
+        ASSERT_EQ(kAppName, migration_info.app_name);
+
+        ASSERT_EQ(1, migration_info.partitions.size());
+
+        std::map<host_port, partition_status::type> expected_status_map;
+        expected_status_map[hp] = partition_status::type::PS_PRIMARY;
+        ASSERT_EQ(expected_status_map, migration_info.partitions[0]);
+
+        ASSERT_EQ(1, migration_info.replicas_count[hp]);
     }
 }
 
@@ -180,13 +192,15 @@ TEST(cluster_balance_policy, get_node_migration_info)
 
     node_state ns;
     ns.set_hp(hp);
-    gpid pid = gpid(appid, 0);
+
+    const gpid pid(appid, 0);
     ns.put_partition(pid, true);
 
     cluster_balance_policy::node_migration_info migration_info;
     policy.get_node_migration_info(ns, all_apps, migration_info);
 
-    ASSERT_EQ(migration_info.hp, hp);
+    ASSERT_EQ(hp, migration_info.hp);
+
     const auto *ps = gutil::FindOrNull(migration_info.partitions, disk_tag);
     ASSERT_NE(ps, nullptr);
     ASSERT_EQ(1, ps->size());

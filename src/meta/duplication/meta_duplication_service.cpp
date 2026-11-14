@@ -25,8 +25,8 @@
 #include <string_view>
 #include <type_traits>
 
-#include "common/duplication_common.h"
 #include "common/common.h"
+#include "common/duplication_common.h"
 #include "common/gpid.h"
 #include "common/replication.codes.h"
 #include "common/replication_enums.h"
@@ -39,7 +39,6 @@
 #include "meta_admin_types.h"
 #include "meta_duplication_service.h"
 #include "metadata_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
@@ -591,10 +590,7 @@ void meta_duplication_service::do_create_follower_app_for_duplication(
              app->app_name,
              duplication_status_to_string(dup->status()));
 
-    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
-              msg,
-              _meta_svc->tracker(),
-              std::move(create_callback));
+    rpc::call(meta_servers.resolve(), msg, _meta_svc->tracker(), std::move(create_callback));
 }
 
 void meta_duplication_service::on_follower_app_creating_for_duplication(
@@ -747,7 +743,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
              duplication_status_to_string(dup->status()));
 
     rpc::call(
-        dsn::dns_resolver::instance().resolve_address(meta_servers),
+        meta_servers.resolve(),
         msg,
         _meta_svc->tracker(),
         [dup, this](error_code err, query_cfg_response &&resp) mutable {

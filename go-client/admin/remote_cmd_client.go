@@ -33,7 +33,7 @@ type RemoteCmdClient struct {
 // NewRemoteCmdClient returns an instance of RemoteCmdClient.
 func NewRemoteCmdClient(addr string, nodeType session.NodeType) *RemoteCmdClient {
 	return &RemoteCmdClient{
-		session: session.NewNodeSession(addr, nodeType),
+		session: session.NewNodeSession(addr, nodeType, session.DisableMetrics),
 	}
 }
 

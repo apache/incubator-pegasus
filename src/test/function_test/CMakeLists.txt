@@ -16,6 +16,7 @@
 # under the License.
 
 add_subdirectory(utils)
+add_subdirectory(atomic_write)
 add_subdirectory(backup_restore)
 add_subdirectory(base_api)
 add_subdirectory(bulk_load)

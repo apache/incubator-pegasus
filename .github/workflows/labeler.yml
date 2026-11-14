@@ -30,9 +30,11 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Assign GitHub labels
-        uses: actions/labeler@v5
+        # uses: actions/labeler@v5.0.0
+        uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/workflows/module_labeler_conf.yml

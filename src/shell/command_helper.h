@@ -19,29 +19,29 @@
 
 #pragma once
 
+#include <boost/algorithm/string.hpp>
+#include <fmt/color.h>
+#include <fmt/ostream.h>
+#include <geo/lib/geo_client.h>
 #include <getopt.h>
+#include <pegasus/error.h>
+#include <pegasus/git_commit.h>
+#include <pegasus/version.h>
+#include <rocksdb/db.h>
+#include <rocksdb/env.h>
+#include <rocksdb/sst_dump_tool.h>
+#include <rocksdb/statistics.h>
+#include <rrdb/rrdb.code.definition.h>
+#include <rrdb/rrdb_types.h>
+
 #include <fstream>
 #include <functional>
 #include <iomanip>
 #include <memory>
 #include <queue>
+#include <string_view>
 #include <thread>
 #include <utility>
-
-#include <boost/algorithm/string.hpp>
-#include <fmt/color.h>
-#include <fmt/ostream.h>
-#include <rocksdb/db.h>
-#include <rocksdb/env.h>
-#include <rocksdb/sst_dump_tool.h>
-#include <rocksdb/statistics.h>
-
-#include <geo/lib/geo_client.h>
-#include <pegasus/error.h>
-#include <pegasus/git_commit.h>
-#include <pegasus/version.h>
-#include <rrdb/rrdb.code.definition.h>
-#include <rrdb/rrdb_types.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
@@ -56,7 +56,6 @@
 #include "task/async_calls.h"
 #include "tools/mutation_log_tool.h"
 #include "utils/fmt_utils.h"
-#include <string_view>
 #include "utils/errors.h"
 #include "utils/metrics.h"
 #include "utils/ports.h"
@@ -1117,8 +1116,8 @@ private:
 class total_aggregate_stats : public aggregate_stats
 {
 public:
-    total_aggregate_stats(const std::string &entity_type, stat_var_map &&stat_vars)
-        : _my_entity_type(entity_type), _my_stat_vars(std::move(stat_vars))
+    total_aggregate_stats(std::string entity_type, stat_var_map &&stat_vars)
+        : _my_entity_type(std::move(entity_type)), _my_stat_vars(std::move(stat_vars))
     {
     }
 
@@ -1135,13 +1134,14 @@ protected:
 
     void calc_rates(double duration_s) override
     {
-        for (auto &stat_var : _my_stat_vars) {
-            *stat_var.second /= duration_s;
+        for (auto &[_, stat_var] : _my_stat_vars) {
+            *stat_var /= duration_s;
         }
     }
 
 private:
     DISALLOW_COPY_AND_ASSIGN(total_aggregate_stats);
+    DISALLOW_MOVE_AND_ASSIGN(total_aggregate_stats);
 
     const std::string _my_entity_type;
     stat_var_map _my_stat_vars;
@@ -1161,10 +1161,10 @@ using table_stat_map = std::unordered_map<int32_t, stat_var_map>;
 class table_aggregate_stats : public aggregate_stats
 {
 public:
-    table_aggregate_stats(const std::string &entity_type,
+    table_aggregate_stats(std::string entity_type,
                           table_stat_map &&table_stats,
-                          const std::unordered_set<dsn::gpid> &partitions)
-        : _my_entity_type(entity_type),
+                          std::unordered_set<dsn::gpid> partitions)
+        : _my_entity_type(std::move(entity_type)),
           _my_table_stats(std::move(table_stats)),
           _my_partitions(std::move(partitions))
     {
@@ -1179,13 +1179,13 @@ protected:
     {
         RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
 
-        int32_t metric_table_id;
+        int32_t metric_table_id{-1};
         RETURN_NULL_STAT_VARS_IF_NOT_OK(dsn::parse_metric_table_id(entity_attrs, metric_table_id));
 
         // Empty `_my_partitions` means there is no restriction; otherwise, the partition id
         // should be found in `_my_partitions`.
         if (!_my_partitions.empty()) {
-            int32_t metric_partition_id;
+            int32_t metric_partition_id{-1};
             RETURN_NULL_STAT_VARS_IF_NOT_OK(
                 dsn::parse_metric_partition_id(entity_attrs, metric_partition_id));
 
@@ -1193,7 +1193,7 @@ protected:
             RETURN_NULL_STAT_VARS_IF(_my_partitions.find(metric_pid) == _my_partitions.end());
         }
 
-        const auto &table_stat = _my_table_stats.find(metric_table_id);
+        const auto table_stat = _my_table_stats.find(metric_table_id);
         CHECK_TRUE(table_stat != _my_table_stats.end());
 
         *stat_vars = &table_stat->second;
@@ -1202,15 +1202,16 @@ protected:
 
     void calc_rates(double duration_s) override
     {
-        for (auto &table_stats : _my_table_stats) {
-            for (auto &stat_var : table_stats.second) {
-                *stat_var.second /= duration_s;
+        for (auto &[_, table_stat] : _my_table_stats) {
+            for (auto &[_, stat_var] : table_stat) {
+                *stat_var /= duration_s;
             }
         }
     }
 
 private:
     DISALLOW_COPY_AND_ASSIGN(table_aggregate_stats);
+    DISALLOW_MOVE_AND_ASSIGN(table_aggregate_stats);
 
     const std::string _my_entity_type;
     table_stat_map _my_table_stats;
@@ -1226,8 +1227,8 @@ using partition_stat_map = std::unordered_map<dsn::gpid, stat_var_map>;
 class partition_aggregate_stats : public aggregate_stats
 {
 public:
-    partition_aggregate_stats(const std::string &entity_type, partition_stat_map &&partition_stats)
-        : _my_entity_type(entity_type), _my_partition_stats(std::move(partition_stats))
+    partition_aggregate_stats(std::string entity_type, partition_stat_map &&partition_stats)
+        : _my_entity_type(std::move(entity_type)), _my_partition_stats(std::move(partition_stats))
     {
     }
 
@@ -1240,15 +1241,15 @@ protected:
     {
         RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
 
-        int32_t metric_table_id;
+        int32_t metric_table_id{-1};
         RETURN_NULL_STAT_VARS_IF_NOT_OK(dsn::parse_metric_table_id(entity_attrs, metric_table_id));
 
-        int32_t metric_partition_id;
+        int32_t metric_partition_id{-1};
         RETURN_NULL_STAT_VARS_IF_NOT_OK(
             dsn::parse_metric_partition_id(entity_attrs, metric_partition_id));
 
         dsn::gpid metric_pid(metric_table_id, metric_partition_id);
-        const auto &partition_stat = _my_partition_stats.find(metric_pid);
+        const auto partition_stat = _my_partition_stats.find(metric_pid);
         RETURN_NULL_STAT_VARS_IF(partition_stat == _my_partition_stats.end());
 
         *stat_vars = &partition_stat->second;
@@ -1257,18 +1258,68 @@ protected:
 
     void calc_rates(double duration_s) override
     {
-        for (auto &partition_stats : _my_partition_stats) {
-            for (auto &stat_var : partition_stats.second) {
-                *stat_var.second /= duration_s;
+        for (auto &[_, partition_stat] : _my_partition_stats) {
+            for (auto &[_, stat_var] : partition_stat) {
+                *stat_var /= duration_s;
             }
         }
     }
 
 private:
     DISALLOW_COPY_AND_ASSIGN(partition_aggregate_stats);
+    DISALLOW_MOVE_AND_ASSIGN(partition_aggregate_stats);
 
     const std::string _my_entity_type;
     partition_stat_map _my_partition_stats;
+};
+
+using profiler_stat_map = std::unordered_map<std::string, stat_var_map>;
+
+// Profiler-level aggregation over the fetched metrics. There are 2 dimensions for the aggregation:
+// * the task name, the name of the RPC task, from the attributes of the metric entity;
+// * the metric name, which is also the key of `stat_var_map`.
+class profiler_aggregate_stats : public aggregate_stats
+{
+public:
+    profiler_aggregate_stats(std::string entity_type, profiler_stat_map &&profiler_stats)
+        : _my_entity_type(std::move(entity_type)), _my_profiler_stats(std::move(profiler_stats))
+    {
+    }
+
+    ~profiler_aggregate_stats() override = default;
+
+protected:
+    dsn::error_s get_stat_vars(const std::string &entity_type,
+                               const dsn::metric_entity::attr_map &entity_attrs,
+                               stat_var_map **stat_vars) override
+    {
+        RETURN_NULL_STAT_VARS_IF(entity_type != _my_entity_type);
+
+        const auto attr = std::as_const(entity_attrs).find("task_name");
+        RETURN_NULL_STAT_VARS_IF(attr == entity_attrs.end());
+
+        const auto profiler_stat = _my_profiler_stats.find(attr->second);
+        RETURN_NULL_STAT_VARS_IF(profiler_stat == _my_profiler_stats.end());
+
+        *stat_vars = &profiler_stat->second;
+        return dsn::error_s::ok();
+    }
+
+    void calc_rates(double duration_s) override
+    {
+        for (auto &[_, profiler_stat] : _my_profiler_stats) {
+            for (auto &[_, stat_var] : profiler_stat) {
+                *stat_var /= duration_s;
+            }
+        }
+    }
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(profiler_aggregate_stats);
+    DISALLOW_MOVE_AND_ASSIGN(profiler_aggregate_stats);
+
+    const std::string _my_entity_type;
+    profiler_stat_map _my_profiler_stats;
 };
 
 inline std::vector<std::pair<bool, std::string>>
@@ -1292,11 +1343,7 @@ call_remote_command(shell_context *sc,
             }
         };
         tasks[i] = dsn::dist::cmd::async_call_remote(
-            dsn::dns_resolver::instance().resolve_address(nodes[i].hp),
-            cmd,
-            arguments,
-            callback,
-            std::chrono::milliseconds(5000));
+            nodes[i].hp.resolve(), cmd, arguments, callback, std::chrono::milliseconds(5000));
     }
     for (int i = 0; i < nodes.size(); ++i) {
         tasks[i]->wait();
@@ -2161,10 +2208,10 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
-        nodes_stat[i].node_address =
-            dsn::dns_resolver::instance().resolve_address(nodes[i].hp).to_string();
+        nodes_stat[i].node_address = nodes[i].hp.resolve().to_string();
         for (dsn::perf_counter_metric &m : info.counters) {
-            int32_t app_id, pidx;
+            int32_t app_id{0};
+            int32_t pidx{0};
             std::string counter_name;
             bool r = parse_app_pegasus_perf_counter_name(m.name, app_id, pidx, counter_name);
             CHECK(r, "name = {}", m.name);

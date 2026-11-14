@@ -18,16 +18,16 @@
 #pragma once
 
 #include <curl/curl.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iosfwd>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
-#include <string_view>
 #include "http/http_method.h"
 #include "http/http_status_code.h"
 #include "utils/enum_helper.h"

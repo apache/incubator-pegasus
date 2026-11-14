@@ -22,11 +22,12 @@
 #include <getopt.h>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
-#include <stdint.h>
-#include <stdio.h>
 #include <algorithm>
+#include <array>
 // IWYU pragma: no_include <bits/getopt_core.h>
 #include <chrono>
+#include <cstdint>
+#include <cstdio>
 #include <initializer_list>
 #include <iostream>
 #include <map>
@@ -34,6 +35,8 @@
 #include <set>
 #include <string>
 #include <thread>
+#include <tuple>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -243,9 +246,29 @@ dsn::metric_filters rw_requests_filters()
 dsn::metric_filters server_stat_filters()
 {
     dsn::metric_filters filters;
-    filters.with_metric_fields = {dsn::kMetricNameField, dsn::kMetricSingleValueField};
-    filters.entity_types = {"server"};
-    filters.entity_metrics = {"virtual_mem_usage_mb", "resident_mem_usage_mb"};
+    filters.with_metric_fields = {dsn::kMetricNameField,
+                                  dsn::kMetricSingleValueField,
+                                  dsn::kth_percentile_to_name(dsn::kth_percentile_type::P99)};
+    filters.entity_types = {"server", "replica", "profiler"};
+    filters.entity_metrics = {
+        "virtual_mem_usage_mb",
+        "resident_mem_usage_mb",
+        "total_replicas",
+        "opening_replicas",
+        "closing_replicas",
+        "inactive_replicas",
+        "error_replicas",
+        "primary_replicas",
+        "secondary_replicas",
+        "learning_replicas",
+        "splitting_replicas",
+        "rdb_block_cache_mem_usage_bytes",
+        "rdb_manual_compact_queued_tasks",
+        "rdb_manual_compact_running_tasks",
+        "profiler_executed_tasks",
+        "profiler_server_rpc_latency_ns",
+    };
+    filters.as_value = true;
     return filters;
 }
 
@@ -285,6 +308,44 @@ struct replica_server_stats
 {
     replica_server_stats() = default;
 
+    // `DEFINE_JSON_SERIALIZATION` is not used to encode the member variables of
+    // `replica_server_stats` into JSON because the number of its member variables
+    // is very large and far exceeds the parameter limit of this macro. Increasing
+    // the macro's parameter limit would make the code overly verbose.
+    [[nodiscard]] std::string to_json_string() const
+    {
+        nlohmann::json rpc;
+        rpc["get_qps"] = get_qps;
+        rpc["get_p99(ms)"] = get_p99 / 1e6;
+        rpc["multi_get_qps"] = multi_get_qps;
+        rpc["multi_get_p99(ms)"] = multi_get_p99 / 1e6;
+        rpc["batch_get_qps"] = batch_get_qps;
+        rpc["batch_get_p99(ms)"] = batch_get_p99 / 1e6;
+        rpc["put_qps"] = put_qps;
+        rpc["put_p99(ms)"] = put_p99 / 1e6;
+        rpc["multi_put_qps"] = multi_put_qps;
+        rpc["multi_put_p99(ms)"] = multi_put_p99 / 1e6;
+
+        nlohmann::json result;
+        result["virt_mem_mb"] = virt_mem_mb;
+        result["res_mem_mb"] = res_mem_mb;
+        result["total_replicas"] = total_replicas;
+        result["opening_replicas"] = opening_replicas;
+        result["closing_replicas"] = closing_replicas;
+        result["inactive_replicas"] = inactive_replicas;
+        result["error_replicas"] = error_replicas;
+        result["primary_replicas"] = primary_replicas;
+        result["secondary_replicas"] = secondary_replicas;
+        result["learning_replicas"] = learning_replicas;
+        result["splitting_replicas"] = splitting_replicas;
+        result["rdb_block_cache_mem_usage_bytes"] = rdb_block_cache_mem_usage_bytes;
+        result["rdb_manual_compact_queued_tasks"] = rdb_manual_compact_queued_tasks;
+        result["rdb_manual_compact_running_tasks"] = rdb_manual_compact_running_tasks;
+        result["rpc"] = rpc;
+
+        return result.dump();
+    }
+
     double virt_mem_mb{0.0};
     double res_mem_mb{0.0};
 
@@ -298,51 +359,117 @@ struct replica_server_stats
     double learning_replicas{0.0};
     double splitting_replicas{0.0};
 
-    DEFINE_JSON_SERIALIZATION(virt_mem_mb,
-                              res_mem_mb,
-                              total_replicas,
-                              opening_replicas,
-                              closing_replicas,
-                              inactive_replicas,
-                              error_replicas,
-                              primary_replicas,
-                              secondary_replicas,
-                              learning_replicas,
-                              splitting_replicas)
+    double rdb_block_cache_mem_usage_bytes{0.0};
+    double rdb_manual_compact_queued_tasks{0.0};
+    double rdb_manual_compact_running_tasks{0.0};
+
+    double get_qps{0.0};
+    double get_p99{0.0};
+    double multi_get_qps{0.0};
+    double multi_get_p99{0.0};
+    double batch_get_qps{0.0};
+    double batch_get_p99{0.0};
+    double put_qps{0.0};
+    double put_p99{0.0};
+    double multi_put_qps{0.0};
+    double multi_put_p99{0.0};
 };
+
+std::unique_ptr<aggregate_stats_calcs>
+create_replica_server_stats_total_calcs(replica_server_stats &stats)
+{
+    auto calcs = std::make_unique<aggregate_stats_calcs>();
+    calcs->create_assignments<total_aggregate_stats>(
+        "server",
+        stat_var_map({
+            {"virtual_mem_usage_mb", &stats.virt_mem_mb},
+            {"resident_mem_usage_mb", &stats.res_mem_mb},
+            {"total_replicas", &stats.total_replicas},
+            {"opening_replicas", &stats.opening_replicas},
+            {"closing_replicas", &stats.closing_replicas},
+            {"inactive_replicas", &stats.inactive_replicas},
+            {"error_replicas", &stats.error_replicas},
+            {"primary_replicas", &stats.primary_replicas},
+            {"secondary_replicas", &stats.secondary_replicas},
+            {"learning_replicas", &stats.learning_replicas},
+            {"splitting_replicas", &stats.splitting_replicas},
+            {"rdb_block_cache_mem_usage_bytes", &stats.rdb_block_cache_mem_usage_bytes},
+        }));
+    calcs->create_sums<total_aggregate_stats>(
+        "replica",
+        stat_var_map({
+            {"rdb_manual_compact_queued_tasks", &stats.rdb_manual_compact_queued_tasks},
+            {"rdb_manual_compact_running_tasks", &stats.rdb_manual_compact_running_tasks},
+        }));
+
+    return calcs;
+}
+
+stat_var_map create_profiler_rpc_assignments(double *var)
+{
+    return stat_var_map({
+        {"profiler_server_rpc_latency_ns", var},
+    });
+}
+
+stat_var_map create_profiler_rpc_rates(double *var)
+{
+    return stat_var_map({
+        {"profiler_executed_tasks", var},
+    });
+}
+
+// Create all aggregations needed for the profiler-level stats.
+std::unique_ptr<aggregate_stats_calcs>
+create_replica_server_stats_profiler_calcs(replica_server_stats &stats)
+{
+    const std::array<std::tuple<std::string, double *, double *>, 5> tasks = {
+        {{"RPC_RRDB_RRDB_GET", &stats.get_qps, &stats.get_p99},
+         {"RPC_RRDB_RRDB_MULTI_GET", &stats.multi_get_qps, &stats.multi_get_p99},
+         {"RPC_RRDB_RRDB_BATCH_GET", &stats.batch_get_qps, &stats.batch_get_p99},
+         {"RPC_RRDB_RRDB_PUT", &stats.put_qps, &stats.put_p99},
+         {"RPC_RRDB_RRDB_MULTI_PUT", &stats.multi_put_qps, &stats.multi_put_p99}}};
+
+    profiler_stat_map assignments;
+    profiler_stat_map rates;
+    for (const auto &[name, qps, p99] : tasks) {
+        assignments.emplace(name, create_profiler_rpc_assignments(p99));
+        rates.emplace(name, create_profiler_rpc_rates(qps));
+    }
+
+    auto calcs = std::make_unique<aggregate_stats_calcs>();
+    calcs->create_assignments<profiler_aggregate_stats>("profiler", std::move(assignments));
+    calcs->create_rates<profiler_aggregate_stats>("profiler", std::move(rates));
+    return calcs;
+}
 
 std::pair<bool, std::string>
 aggregate_replica_server_stats(const node_desc &node,
                                const dsn::metric_query_brief_value_snapshot &query_snapshot_start,
                                const dsn::metric_query_brief_value_snapshot &query_snapshot_end)
 {
-    aggregate_stats_calcs calcs;
     replica_server_stats stats;
-    calcs.create_assignments<total_aggregate_stats>(
-        "server",
-        stat_var_map({{"virtual_mem_usage_mb", &stats.virt_mem_mb},
-                      {"resident_mem_usage_mb", &stats.res_mem_mb},
-                      {"total_replicas", &stats.total_replicas},
-                      {"opening_replicas", &stats.opening_replicas},
-                      {"closing_replicas", &stats.closing_replicas},
-                      {"inactive_replicas", &stats.inactive_replicas},
-                      {"error_replicas", &stats.error_replicas},
-                      {"primary_replicas", &stats.primary_replicas},
-                      {"secondary_replicas", &stats.secondary_replicas},
-                      {"learning_replicas", &stats.learning_replicas},
-                      {"splitting_replicas", &stats.splitting_replicas}}));
 
-    const auto command_result = process_parse_metrics_result(
-        calcs.aggregate_metrics(query_snapshot_start, query_snapshot_end),
-        node,
-        "aggregate replica server stats");
-    if (!command_result) {
-        // Metrics failed to be aggregated.
-        return std::make_pair(false, command_result.description());
-    }
+#define AGGREGATE_SERVER_STATS(calcs, info)                                                        \
+    do {                                                                                           \
+        const auto command_result = process_parse_metrics_result(                                  \
+            calcs->aggregate_metrics(query_snapshot_start, query_snapshot_end),                    \
+            node,                                                                                  \
+            "aggregate total replica server stats");                                               \
+        if (!command_result) {                                                                     \
+            return std::make_pair(false, command_result.description());                            \
+        }                                                                                          \
+    } while (0)
 
-    return std::make_pair(
-        true, dsn::json::json_forwarder<replica_server_stats>::encode(stats).to_string());
+    auto total_calcs = create_replica_server_stats_total_calcs(stats);
+    AGGREGATE_SERVER_STATS(total_calcs, "aggregate total replica server stats");
+
+    auto profiler_calcs = create_replica_server_stats_profiler_calcs(stats);
+    AGGREGATE_SERVER_STATS(profiler_calcs, "aggregate profiler replica server stats");
+
+#undef AGGREGATE_SERVER_STATS
+
+    return std::make_pair(true, stats.to_json_string());
 }
 
 std::vector<std::pair<bool, std::string>> get_server_stats(const std::vector<node_desc> &nodes,
@@ -437,7 +564,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
                                            {"sample_interval_ms", required_argument, nullptr, 'i'},
                                            {nullptr, 0, nullptr, 0}};
 
-    std::string status;
+    std::string target_status_str;
     std::string output_file;
     uint32_t sample_interval_ms = FLAGS_nodes_sample_interval_ms;
     bool detailed = false;
@@ -476,7 +603,7 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
             json = true;
             break;
         case 's':
-            status = optarg;
+            target_status_str = optarg;
             break;
         case 'o':
             output_file = optarg;
@@ -490,10 +617,10 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
     }
 
     dsn::utils::multi_table_printer multi_printer;
-    if (!(status.empty() && output_file.empty())) {
+    if (!(target_status_str.empty() && output_file.empty())) {
         dsn::utils::table_printer tp("parameters");
-        if (!status.empty()) {
-            tp.add_row_name_and_data("status", status);
+        if (!target_status_str.empty()) {
+            tp.add_row_name_and_data("status", target_status_str);
         }
         if (!output_file.empty()) {
             tp.add_row_name_and_data("out_file", output_file);
@@ -501,18 +628,21 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         multi_printer.add(std::move(tp));
     }
 
-    ::dsn::replication::node_status::type s = ::dsn::replication::node_status::NS_INVALID;
-    if (!status.empty() && status != "all") {
-        s = type_from_string(dsn::replication::_node_status_VALUES_TO_NAMES,
-                             std::string("ns_") + status,
-                             ::dsn::replication::node_status::NS_INVALID);
-        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(s != ::dsn::replication::node_status::NS_INVALID,
+    ::dsn::replication::node_status::type target_status =
+        ::dsn::replication::node_status::NS_INVALID;
+    if (!target_status_str.empty() && target_status_str != "all") {
+        target_status = type_from_string(dsn::replication::_node_status_VALUES_TO_NAMES,
+                                         std::string("ns_") + target_status_str,
+                                         ::dsn::replication::node_status::NS_INVALID);
+        SHELL_PRINT_AND_RETURN_FALSE_IF_NOT(target_status !=
+                                                ::dsn::replication::node_status::NS_INVALID,
                                             "parse {} as node_status::type failed",
-                                            status);
+                                            target_status_str);
     }
 
     std::map<dsn::host_port, dsn::replication::node_status::type> status_by_hp;
-    auto r = sc->ddl_client->list_nodes(s, status_by_hp);
+    // TODO(wangdan): encapsulated as a macro.
+    auto r = sc->ddl_client->list_nodes(target_status, status_by_hp);
     if (r != dsn::ERR_OK) {
         fmt::println("list nodes failed, error={}", r);
         return true;
@@ -520,14 +650,14 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
 
     std::map<dsn::host_port, list_nodes_helper> tmp_map;
     int alive_node_count = 0;
-    for (auto &kv : status_by_hp) {
-        if (kv.second == dsn::replication::node_status::NS_ALIVE) {
+    for (const auto &[addr, status] : status_by_hp) {
+        if (status == dsn::replication::node_status::NS_ALIVE) {
             ++alive_node_count;
         }
 
-        const std::string status_str(dsn::enum_to_string(kv.second));
-        tmp_map.emplace(kv.first,
-                        list_nodes_helper(replication_ddl_client::node_name(kv.first, resolve_ip),
+        const std::string status_str(dsn::enum_to_string(status));
+        tmp_map.emplace(addr,
+                        list_nodes_helper(addr.resolve(resolve_ip),
                                           status_str.substr(status_str.find("NS_") + 3)));
     }
 
@@ -540,9 +670,11 @@ bool ls_nodes(command_executor *, shell_context *sc, arguments args)
         }
 
         for (auto &app : apps) {
-            int32_t app_id;
-            int32_t partition_count;
+            int32_t app_id{0};
+            int32_t partition_count{0};
             std::vector<dsn::partition_configuration> pcs;
+
+            // TODO(wangdan): encapsulated as a macro.
             r = sc->ddl_client->list_app(app.app_name, app_id, partition_count, pcs);
             if (r != dsn::ERR_OK) {
                 fmt::println("list app {} failed, error={}", app.app_name, r);
@@ -868,8 +1000,7 @@ bool remote_command(command_executor *e, shell_context *sc, arguments args)
         } else {
             failed++;
         }
-        info["details"].emplace(replication_ddl_client::node_name(nodes[i].hp, resolve_ip),
-                                node_info);
+        info["details"].emplace(nodes[i].hp.resolve(resolve_ip), node_info);
     }
     info["succeed_count"] = succeed;
     info["failed_count"] = failed;

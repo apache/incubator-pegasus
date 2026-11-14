@@ -43,13 +43,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # actions/checkout@v4.3.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup Go
-        uses: actions/setup-go@v4
+        # actions/setup-go@v4.3.0
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4
         with:
           go-version: 1.18
       - name: Lint
-        uses: golangci/golangci-lint-action@v3
+        # golangci/golangci-lint-action@v3.7.0
+        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc
         with:
           version: v1.56.2
           working-directory: ./admin-cli
@@ -59,9 +62,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # actions/checkout@v4.3.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup Go
-        uses: actions/setup-go@v4
+        # actions/setup-go@v4.3.0
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4
         with:
           go-version: 1.18
       - name: Compile

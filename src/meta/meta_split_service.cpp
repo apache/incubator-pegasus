@@ -248,19 +248,20 @@ dsn::task_ptr meta_split_service::add_child_on_remote_storage(register_child_rpc
                       std::placeholders::_1,
                       rpc,
                       create_new),
-            value);
-    } else {
-        return _meta_svc->get_remote_storage()->set_data(
-            partition_path,
             value,
-            LPC_META_STATE_HIGH,
-            std::bind(&meta_split_service::on_add_child_on_remote_storage_reply,
-                      this,
-                      std::placeholders::_1,
-                      rpc,
-                      create_new),
-            _meta_svc->tracker());
+            nullptr);
     }
+
+    return _meta_svc->get_remote_storage()->set_data(
+        partition_path,
+        value,
+        LPC_META_STATE_HIGH,
+        std::bind(&meta_split_service::on_add_child_on_remote_storage_reply,
+                  this,
+                  std::placeholders::_1,
+                  rpc,
+                  create_new),
+        _meta_svc->tracker());
 }
 
 void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,

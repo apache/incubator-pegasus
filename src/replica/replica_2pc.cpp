@@ -57,7 +57,6 @@
 #include "replica/replica_context.h"
 #include "replica/replication_app_base.h"
 #include "replica_stub.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
 #include "rpc/rpc_stream.h"
@@ -506,7 +505,7 @@ void replica::send_prepare_message(const host_port &hp,
     }
 
     mu->remote_tasks()[hp] = rpc::call(
-        dsn::dns_resolver::instance().resolve_address(hp),
+        hp.resolve(),
         msg,
         &_tracker,
         [=](error_code err, dsn::message_ex *request, dsn::message_ex *reply) {

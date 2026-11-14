@@ -20,30 +20,29 @@
 #pragma once
 
 #include <getopt.h>
-#include <thread>
-#include <iomanip>
-#include <fstream>
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+#include <pegasus/error.h>
+#include <pegasus/git_commit.h>
+#include <pegasus/version.h>
 #include <rocksdb/db.h>
+#include <rrdb/rrdb.code.definition.h>
+#include <rrdb/rrdb_types.h>
+
+#include <fstream>
+#include <iomanip>
+#include <string_view>
+#include <thread>
+
+#include "args.h"
+#include "client/replication_ddl_client.h"
+#include "command_executor.h"
+#include "command_helper.h"
+#include "tools/mutation_log_tool.h"
 #include "utils/filesystem.h"
 #include "utils/output_utils.h"
 #include "utils/string_conv.h"
-#include <string_view>
-#include "client/replication_ddl_client.h"
-#include "tools/mutation_log_tool.h"
 
-#include <rrdb/rrdb.code.definition.h>
-#include <rrdb/rrdb_types.h>
-#include <pegasus/version.h>
-#include <pegasus/git_commit.h>
-#include <pegasus/error.h>
-
-#include "command_executor.h"
-#include "command_helper.h"
-#include "args.h"
-
-using namespace dsn::replication;
 using tp_alignment = ::dsn::utils::table_printer::alignment;
 using tp_output_format = ::dsn::utils::table_printer::output_format;
 
@@ -281,3 +280,11 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args);
 // == local partition split (see 'commands/local_partition_split.cpp') == //
 extern const std::string local_partition_split_help;
 bool local_partition_split(command_executor *e, shell_context *sc, arguments args);
+
+// == local replica recover (see 'commands/local_replica_recover.cpp') == //
+extern const std::string local_replica_recover_help;
+bool local_replica_recover(command_executor *e, shell_context *sc, arguments args);
+
+// == local replica check (see 'commands/local_replica_check.cpp') == //
+extern const std::string local_replica_check_help;
+bool local_replica_check(command_executor *e, shell_context *sc, arguments args);

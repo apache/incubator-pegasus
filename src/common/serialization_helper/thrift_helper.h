@@ -26,57 +26,58 @@
 
 #pragma once
 
-#include "rpc/rpc_host_port.h"
-#include "rpc/rpc_stream.h"
-
+#include <thrift/TApplicationException.h>
 #include <thrift/Thrift.h>
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/protocol/TJSONProtocol.h>
 #include <thrift/protocol/TVirtualProtocol.h>
 #include <thrift/transport/TVirtualTransport.h>
-#include <thrift/TApplicationException.h>
+#include <string_view>
 #include <type_traits>
 
-#include <string_view>
+#include "rpc/rpc_host_port.h"
+#include "rpc/rpc_stream.h"
 
-using namespace ::apache::thrift::transport;
 namespace dsn {
 
-class binary_reader_transport : public TVirtualTransport<binary_reader_transport>
+class binary_reader_transport
+    : public apache::thrift::transport::TVirtualTransport<binary_reader_transport>
 {
 public:
-    binary_reader_transport(binary_reader &reader) : _reader(reader) {}
+    explicit binary_reader_transport(binary_reader &reader) : _reader(reader) {}
 
-    bool isOpen() { return true; }
+    bool isOpen() override { return true; }
 
-    void open() {}
+    void open() override {}
 
-    void close() {}
+    void close() override {}
 
     uint32_t read(uint8_t *buf, uint32_t len)
     {
-        int l = _reader.read((char *)buf, static_cast<int>(len));
-        if (dsn_unlikely(l <= 0)) {
-            throw TTransportException(TTransportException::END_OF_FILE,
-                                      "no more data to read after end-of-buffer");
+        const int read_len = _reader.read(reinterpret_cast<char *>(buf), static_cast<int>(len));
+        if (dsn_unlikely(read_len <= 0)) {
+            throw apache::thrift::transport::TTransportException(
+                apache::thrift::transport::TTransportException::END_OF_FILE,
+                "no more data to read after end-of-buffer");
         }
-        return (uint32_t)l;
+        return static_cast<uint32_t>(read_len);
     }
 
 private:
     binary_reader &_reader;
 };
 
-class binary_writer_transport : public TVirtualTransport<binary_writer_transport>
+class binary_writer_transport
+    : public apache::thrift::transport::TVirtualTransport<binary_writer_transport>
 {
 public:
-    binary_writer_transport(binary_writer &writer) : _writer(writer) {}
+    explicit binary_writer_transport(binary_writer &writer) : _writer(writer) {}
 
-    bool isOpen() { return true; }
+    bool isOpen() override { return true; }
 
-    void open() {}
+    void open() override {}
 
-    void close() {}
+    void close() override {}
 
     void write(const uint8_t *buf, uint32_t len)
     {

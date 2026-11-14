@@ -20,8 +20,6 @@
 #include "pegasus_server_impl.h"
 
 #include <fmt/core.h>
-#include <inttypes.h>
-#include <limits.h>
 #include <rocksdb/advanced_cache.h>
 #include <rocksdb/convenience.h>
 #include <rocksdb/db.h>
@@ -34,6 +32,8 @@
 #include <rocksdb/write_buffer_manager.h>
 #include <unistd.h> // IWYU pragma: keep
 #include <algorithm>
+#include <cinttypes>
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>

@@ -29,14 +29,13 @@
 // limitations under the License.
 
 #include <string>
+#include <string_view>
 
 #include "gtest/gtest.h"
 #include "utils/fail_point.h"
 #include "utils/fail_point_impl.h"
-#include <string_view>
 
-namespace dsn {
-namespace fail {
+namespace dsn::fail {
 
 TEST(fail_point, off)
 {
@@ -167,5 +166,4 @@ TEST(fail_point, return_void)
     teardown();
 }
 
-} // namespace fail
-} // namespace dsn
+} // namespace dsn::fail

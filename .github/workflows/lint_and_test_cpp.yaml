@@ -53,13 +53,17 @@ jobs:
     name: Format
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: clang-format
         run: ./build_tools/run-clang-format.py --clang-format-executable clang-format-14 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
   cpp_clang_tidy_linter:
     name: Tidy
     runs-on: ubuntu-22.04
+    env:
+      USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
     steps:
@@ -67,7 +71,8 @@ jobs:
         run: |
           apt-get update
           apt-get install clang-tidy -y
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
       - name: Rebuild thirdparty if needed
@@ -86,10 +91,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Free Disk Space (Ubuntu)
         run: |
           .github/workflows/free_disk_space.sh
@@ -115,13 +122,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
       ARTIFACT_NAME: release
       BUILD_OPTIONS: -t release --test
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
       - name: Clone code
-        uses: actions/checkout@v4
+        # actions/checkout@v4.3.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Rebuild thirdparty if needed
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: Build Pegasus
@@ -135,6 +144,7 @@ jobs:
       fail-fast: false
       matrix:
         test_module:
+          - atomic_write_test
           - backup_restore_test
           - base_api_test
           - base_test
@@ -170,9 +180,10 @@ jobs:
           - dsn_task_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
+          - gutil_test
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
           # it has been optimized.
-#          - partition_split_test
+          # - partition_split_test
           - pegasus_geo_test
           - pegasus_rproxy_test
           - pegasus_unit_test
@@ -180,6 +191,7 @@ jobs:
           - restore_test
           - security_test
           - throttle_test
+          - zookeeper_sasl_auth_test
     needs: build_Release
     runs-on: ubuntu-latest
     env:
@@ -188,7 +200,8 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Run server tests
@@ -201,12 +214,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: ON
       ARTIFACT_NAME: release_address
       BUILD_OPTIONS: --sanitizer address --disable_gperf --test
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-asan-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Rebuild thirdparty if needed
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: Build Pegasus
@@ -220,6 +235,7 @@ jobs:
       fail-fast: false
       matrix:
         test_module:
+          - atomic_write_test
           - backup_restore_test
           - base_api_test
           - base_test
@@ -255,9 +271,10 @@ jobs:
           - dsn_task_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
+          - gutil_test
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
           # it has been optimized.
-#          - partition_split_test
+          # - partition_split_test
           - pegasus_geo_test
           - pegasus_rproxy_test
           - pegasus_unit_test
@@ -266,16 +283,18 @@ jobs:
           - security_test
           # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
           # it has been optimized.
-#          - throttle_test
+          # - throttle_test
+          - zookeeper_sasl_auth_test
     needs: build_ASAN
     runs-on: ubuntu-latest
     env:
       ARTIFACT_NAME: release_address
     container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-asan-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Run server tests
@@ -291,12 +310,14 @@ jobs:
 #    runs-on: ubuntu-latest
 #    env:
 #      USE_JEMALLOC: OFF
+#      ENABLE_ASAN: OFF
 #      ARTIFACT_NAME: release_undefined
 #      BUILD_OPTIONS: --sanitizer undefined --disable_gperf --test
 #    container:
 #      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
 #    steps:
-#      - uses: actions/checkout@v4
+#      # actions/checkout@v4.3.1
+#      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 #      - name: Rebuild thirdparty if needed
 #        uses: "./.github/actions/rebuild_thirdparty_if_needed"
 #      - name: Build Pegasus
@@ -310,6 +331,7 @@ jobs:
 #      fail-fast: false
 #      matrix:
 #        test_module:
+#          - atomic_write_test
 #          - backup_restore_test
 #          - base_api_test
 #          - base_test
@@ -345,6 +367,7 @@ jobs:
 #          - dsn_task_tests
 #          - dsn_utils_tests
 #          - dsn.zookeeper.tests
+#          - gutil_test
 #          - partition_split_test
 #          - pegasus_geo_test
 #          - pegasus_rproxy_test
@@ -353,6 +376,7 @@ jobs:
 #          - restore_test
 #          - security_test
 #          - throttle_test
+#          - zookeeper_sasl_auth_test
 #    needs: build_UBSAN
 #    runs-on: ubuntu-latest
 #    env:
@@ -361,7 +385,8 @@ jobs:
 #      image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
 #      options: --cap-add=SYS_PTRACE
 #    steps:
-#      - uses: actions/checkout@v4
+#      # actions/checkout@v4.3.1
+#      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 #      - name: Download artifact
 #        uses: "./.github/actions/download_artifact"
 #      - name: Run server tests
@@ -374,12 +399,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: ON
+      ENABLE_ASAN: OFF
       ARTIFACT_NAME: release_jemalloc
       BUILD_OPTIONS: -t release --use_jemalloc --test
     container:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Rebuild thirdparty if needed
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       # TODO(yingchun): Append "-m dsn_utils_tests" to the command if not needed to pack server or tools, for example, the dependencies are static linked.
@@ -403,7 +430,8 @@ jobs:
       image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu2204-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Run server tests
@@ -420,9 +448,11 @@ jobs:
           # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-15-Readme.md
           brew install ccache
           brew install openssl@1.1
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache
-        uses: actions/cache@v3
+        # actions/cache@v3.5.0
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: |
             /Users/runner/Library/Caches/ccache
@@ -451,13 +481,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
       BUILD_OPTIONS: -t debug --test --separate_servers
       PACK_OPTIONS: --separate_servers
     container:
       image: apache/pegasus:thirdparties-bin-rockylinux9-${{ github.base_ref }}
     steps:
       - name: Clone code
-        uses: actions/checkout@v3
+        # actions/checkout@v3.6.0
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
       - name: Rebuild thirdparty if needed
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: Build Pegasus

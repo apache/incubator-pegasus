@@ -33,7 +33,6 @@
 #include "nfs/nfs_node.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/group_host_port.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
@@ -128,7 +127,7 @@ void replica_follower::async_duplicate_checkpoint_from_master_replica()
     dsn::message_ex *msg = dsn::message_ex::create_request(
         RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, get_gpid().thread_hash());
     dsn::marshall(msg, meta_config_request);
-    rpc::call(dsn::dns_resolver::instance().resolve_address(meta_servers),
+    rpc::call(meta_servers.resolve(),
               msg,
               &_tracker,
               [&](error_code err, query_cfg_response &&resp) mutable {

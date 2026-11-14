@@ -19,10 +19,10 @@
 
 #include "rocksdb_wrapper.h"
 
-#include <string_view>
 #include <rocksdb/db.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/status.h>
+#include <string_view>
 
 #include "base/meta_store.h"
 #include "base/pegasus_value_schema.h"

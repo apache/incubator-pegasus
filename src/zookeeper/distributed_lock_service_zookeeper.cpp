@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <fmt/core.h>
 #include <zookeeper/zookeeper.h>
 #include <functional>
 #include <memory>
@@ -38,7 +39,6 @@
 #include "utils/strings.h"
 #include "zookeeper/lock_struct.h"
 #include "zookeeper/lock_types.h"
-#include "zookeeper/zookeeper_session_mgr.h"
 #include "zookeeper_error.h"
 #include "zookeeper_session.h"
 
@@ -93,8 +93,7 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
     }
     const char *lock_root = args[0].c_str();
 
-    _session =
-        zookeeper_session_mgr::instance().get_session(service_app::current_service_app_info());
+    _session = get_zookeeper_session(service_app::current_service_app_info());
     _zoo_state = _session->attach(this,
                                   std::bind(&distributed_lock_service_zookeeper::on_zoo_session_evt,
                                             lock_srv_ptr(this),
@@ -110,14 +109,14 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
 
     std::vector<std::string> slices;
     utils::split_args(lock_root, slices, '/');
-    std::string current = "";
-    for (auto &str : slices) {
+    std::string current;
+    for (const auto &str : slices) {
         utils::notify_event e;
-        int zerr;
-        current = current + "/" + str;
+        int zerr{0};
+        current += fmt::format("/{}", str);
         zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
         op->_optype = zookeeper_session::ZOO_CREATE;
-        op->_input._path = current;
+        op->_input._path = std::make_shared<std::string>(current);
         op->_callback_function = [&e, &zerr](zookeeper_session::zoo_opcontext *op) mutable {
             zerr = op->_output.error;
             e.notify();

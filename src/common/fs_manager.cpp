@@ -29,9 +29,9 @@
 #include <fmt/std.h> // IWYU pragma: keep
 #include <algorithm>
 #include <cstdint>
+#include <string_view>
 #include <utility>
 
-#include <string_view>
 #include "common/gpid.h"
 #include "common/replication_enums.h"
 #include "fmt/core.h"

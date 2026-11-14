@@ -19,10 +19,10 @@
 
 #include "pegasus_event_listener.h"
 
-#include <string_view>
 #include <rocksdb/compaction_job_stats.h>
 #include <rocksdb/table_properties.h>
 #include <rocksdb/types.h>
+#include <string_view>
 
 #include "utils/autoref_ptr.h"
 #include "utils/fmt_logging.h"

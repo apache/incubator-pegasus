@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -29,10 +30,8 @@
 #include "replica/replica_base.h"
 #include "replica_admin_types.h"
 #include "utils/blob.h"
-#include <string_view>
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 class hotkey_coarse_data_collector;
 class hotkey_empty_data_collector;
@@ -193,5 +192,4 @@ private:
     friend class fine_collector_test;
 };
 
-} // namespace server
-} // namespace pegasus
+} // namespace pegasus::server

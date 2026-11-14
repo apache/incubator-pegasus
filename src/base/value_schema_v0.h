@@ -22,10 +22,10 @@
 #include <rocksdb/slice.h>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "pegasus_value_schema.h"
 #include "utils/blob.h"
-#include <string_view>
 #include "value_field.h"
 
 namespace pegasus {

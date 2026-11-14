@@ -17,6 +17,7 @@
 
 #include "meta/meta_bulk_load_ingestion_context.h"
 
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -26,7 +27,6 @@
 #include "utils/fail_point.h"
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
-#include <string_view>
 
 DSN_DEFINE_uint32(meta_server,
                   bulk_load_node_max_ingesting_count,

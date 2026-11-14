@@ -21,11 +21,12 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <fmt/core.h>
-#include <stdint.h>
 #include <sys/types.h>
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <cstdint>
+#include <string_view>
 
 #include "common/fs_manager.h"
 #include "metadata_types.h"
@@ -36,11 +37,10 @@
 #include "utils/fmt_logging.h"
 #include "utils/macros.h"
 #include "utils/string_conv.h"
-#include <string_view>
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_error_replica_interval_seconds,
-                  7 * 24 * 3600,
+                  7UL * 24UL * 3600UL,
                   "The interval in seconds to GC error replicas, which are in directories "
                   "suffixed with '.err'");
 DSN_TAG_VARIABLE(gc_disk_error_replica_interval_seconds, FT_MUTABLE);
@@ -48,20 +48,20 @@ DSN_TAG_VARIABLE(gc_disk_error_replica_interval_seconds, FT_MUTABLE);
 DSN_DEFINE_uint64(
     replication,
     gc_disk_garbage_replica_interval_seconds,
-    24 * 3600 /*1day*/,
+    24UL * 3600UL /*1day*/,
     "Duration of garbaged replica being removed, which is in a directory with '.gar' suffixed");
 DSN_TAG_VARIABLE(gc_disk_garbage_replica_interval_seconds, FT_MUTABLE);
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_migration_tmp_replica_interval_seconds,
-                  24 * 3600 /*1day*/,
+                  24UL * 3600UL /*1day*/,
                   "Duration of disk-migration tmp replica being removed, which is in a directory "
                   "with '.tmp' suffixed");
 DSN_TAG_VARIABLE(gc_disk_migration_tmp_replica_interval_seconds, FT_MUTABLE);
 
 DSN_DEFINE_uint64(replication,
                   gc_disk_migration_origin_replica_interval_seconds,
-                  7 * 24 * 3600 /*7day*/,
+                  7UL * 24UL * 3600UL /*7day*/,
                   "Duration of disk-migration origin replica being removed, which is in a "
                   "directory with '.ori' suffixed");
 DSN_TAG_VARIABLE(gc_disk_migration_origin_replica_interval_seconds, FT_MUTABLE);

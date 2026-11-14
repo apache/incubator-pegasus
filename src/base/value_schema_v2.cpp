@@ -19,11 +19,11 @@
 
 #include "value_schema_v2.h"
 
-#include <string_view>
-#include <stdint.h>
-#include <string.h>
 #include <algorithm>
 #include <array>
+#include <cstdint>
+#include <cstring>
+#include <string_view>
 #include <utility>
 #include <vector>
 

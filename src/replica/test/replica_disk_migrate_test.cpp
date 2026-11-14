@@ -165,7 +165,9 @@ TEST_P(replica_disk_migrate_test, on_migrate_replica)
     request.origin_disk = "tag_1";
     request.target_disk = "tag_2";
     stub->on_disk_migrate(fake_migrate_rpc);
-    get_replica(request.pid)->tracker()->wait_outstanding_tasks();
+    auto rep = get_replica(request.pid);
+    ASSERT_TRUE(rep != nullptr);
+    rep->tracker()->wait_outstanding_tasks();
     ASSERT_EQ(response.err, ERR_OK);
 }
 

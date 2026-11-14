@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/metrics"
 	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/go-client/rpc"
 	"gopkg.in/tomb.v2"
@@ -47,6 +48,9 @@ const (
 
 	// LatencyTracingThreshold means RPC's latency higher than the threshold (1000ms) will be traced
 	LatencyTracingThreshold = time.Millisecond * 1000
+
+	// DisableMetrics controls whether to collect RPC message size metrics.
+	DisableMetrics = false
 )
 
 // NodeSession represents the network session to a node
@@ -68,7 +72,7 @@ type NodeSession interface {
 // NodeSessionCreator creates an instance of NodeSession,
 // receiving argument `string` as host address, `NodeType`
 // as the type of the node.
-type NodeSessionCreator func(string, NodeType) NodeSession
+type NodeSessionCreator func(string, NodeType, bool) NodeSession
 
 // An implementation of NodeSession.
 type nodeSession struct {
@@ -95,6 +99,8 @@ type nodeSession struct {
 
 	unresponsiveHandler UnresponsiveHandler
 	lastWriteTime       int64
+
+	enableMetrics bool
 }
 
 // withUnresponsiveHandler enables the session to handle the event when a network connection becomes unresponsive.
@@ -111,16 +117,17 @@ type requestListener struct {
 	call *PegasusRpcCall
 }
 
-func newNodeSessionAddr(addr string, ntype NodeType) *nodeSession {
+func newNodeSessionAddr(addr string, ntype NodeType, enableMetrics bool) *nodeSession {
 	return &nodeSession{
-		logger:      pegalog.GetLogger(),
-		ntype:       ntype,
-		seqId:       0,
-		codec:       NewPegasusCodec(),
-		pendingResp: make(map[int32]*requestListener),
-		reqc:        make(chan *requestListener),
-		addr:        addr,
-		tom:         &tomb.Tomb{},
+		logger:        pegalog.GetLogger(),
+		ntype:         ntype,
+		seqId:         0,
+		codec:         NewPegasusCodec(),
+		pendingResp:   make(map[int32]*requestListener),
+		reqc:          make(chan *requestListener),
+		addr:          addr,
+		tom:           &tomb.Tomb{},
+		enableMetrics: enableMetrics,
 
 		//
 		redialc: make(chan bool, 1),
@@ -130,14 +137,14 @@ func newNodeSessionAddr(addr string, ntype NodeType) *nodeSession {
 // NewNodeSession always returns a non-nil value even when the
 // connection attempt failed.
 // Each nodeSession corresponds to an RpcConn.
-func NewNodeSession(addr string, ntype NodeType) NodeSession {
-	return newNodeSession(addr, ntype)
+func NewNodeSession(addr string, ntype NodeType, enableMetrics bool) NodeSession {
+	return newNodeSession(addr, ntype, enableMetrics)
 }
 
-func newNodeSession(addr string, ntype NodeType) *nodeSession {
+func newNodeSession(addr string, ntype NodeType, enableMetrics bool) *nodeSession {
 	logger := pegalog.GetLogger()
 
-	n := newNodeSessionAddr(addr, ntype)
+	n := newNodeSessionAddr(addr, ntype, enableMetrics)
 	logger.Printf("create session with %s", n)
 
 	n.conn = rpc.NewRpcConn(addr)
@@ -345,7 +352,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		if !ready {
 			//return error directly so that it can be recognized in `handleReplicaError`
 			n.logger.Printf("session %s is unable to connect (used %dms), the context error: %s", n, time.Since(dialStart)/time.Millisecond, ctx.Err())
-			return ctx.Err()
+			return base.ERR_SESSION_RESET
 		}
 	}
 	return nil
@@ -400,6 +407,10 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, partiti
 }
 
 func (n *nodeSession) writeRequest(r *PegasusRpcCall) error {
+	if n.enableMetrics {
+		metrics.PegasusClientRpcSizeSummary.Observe([]string{r.Name}, float64(len(r.RawReq)))
+	}
+
 	return n.conn.Write(r.RawReq)
 }
 

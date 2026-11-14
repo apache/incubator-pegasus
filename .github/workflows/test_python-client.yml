@@ -43,11 +43,13 @@ jobs:
     runs-on: ubuntu-latest
     env:
       USE_JEMALLOC: OFF
+      ENABLE_ASAN: OFF
       BUILD_OPTIONS: -t release
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - uses: "./.github/actions/build_pegasus"
       - uses: "./.github/actions/upload_artifact"
@@ -59,15 +61,19 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      # actions/setup-python@v5.6.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
-          python-version: '3.11'
+          python-version: '3.11.12'
       # python-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
       # to generate code as well. The thrift-compiler version on ubuntu-22.04 is 0.16.0, so
       # build and install thrift-compiler 0.13.0 manually.
       - name: Install thrift
         run: |
+          apt-get update
+          apt-get install python3-dev -y
           export THRIFT_VERSION=0.13.0
           wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/v${THRIFT_VERSION}.tar.gz
           tar -xzf v${THRIFT_VERSION}.tar.gz

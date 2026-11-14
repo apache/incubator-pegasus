@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/incubator-pegasus/go-client/config"
 	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/pegasus"
@@ -32,9 +33,10 @@ import (
 )
 
 const (
-	replicaCount   = 3
-	maxWaitSeconds = 600
-	reserveSeconds = 1
+	partitionCount int32 = 16
+	replicaCount   int32 = 3
+	maxWaitSeconds int32 = 600
+	reserveSeconds int64 = 1
 )
 
 func defaultConfig() Config {
@@ -83,6 +85,28 @@ func TestAdmin_Table(t *testing.T) {
 	_, err = c.CreateTable("admin_table_test", 16, replicaCount, make(map[string]string), maxWaitSeconds)
 	assert.Nil(t, err)
 
+	_, pCount, partitions, err := c.QueryConfig("admin_table_test")
+	assert.Nil(t, err)
+	assert.Equal(t, partitionCount, pCount)
+	assert.Equal(t, int(partitionCount), len(partitions))
+	for _, partition := range partitions {
+		assert.Equal(t, replicaCount, partition.MaxReplicaCount)
+		assert.NotNil(t, partition.Primary)
+		assert.NotZero(t, partition.Primary.GetRawAddress())
+		assert.NotNil(t, partition.HpPrimary)
+		assert.NotEmpty(t, partition.HpPrimary.GetHost())
+		assert.NotZero(t, partition.HpPrimary.GetPort())
+		assert.Equal(t, 2, len(partition.Secondaries))
+		assert.Equal(t, 2, len(partition.HpSecondaries))
+		for i := 0; i < 2; i++ {
+			assert.NotNil(t, partition.Secondaries[i])
+			assert.NotZero(t, partition.Secondaries[i].GetRawAddress())
+			assert.NotNil(t, partition.HpSecondaries[i])
+			assert.NotEmpty(t, partition.HpSecondaries[i].GetHost())
+			assert.NotZero(t, partition.HpSecondaries[i].GetPort())
+		}
+	}
+
 	tables, err = c.ListTables()
 	assert.Nil(t, err)
 	assert.True(t, hasTable(tables, "admin_table_test"))
@@ -110,7 +134,7 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	}
 
 	// ensures the created table must be available for read and write
-	rwClient := pegasus.NewClient(pegasus.Config{
+	rwClient := pegasus.NewClient(config.Config{
 		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
 	})
 	defer func() {
@@ -122,8 +146,9 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 	retries := 0
 	for { // retry for timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
 		tb, err = rwClient.OpenTable(ctx, tableName)
+		cancel()
+
 		if err != nil && strings.Contains(err.Error(), "context deadline exceeded") && retries <= 3 {
 			retries++
 			continue

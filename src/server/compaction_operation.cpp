@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include <string_view>
 #include <cstdint>
+#include <string_view>
 
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"

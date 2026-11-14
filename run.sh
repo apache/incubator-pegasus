@@ -276,6 +276,17 @@ function run_build()
     echo "Build start time: `date`"
     start_time=`date +%s`
 
+    case "$(uname)" in
+        Darwin)
+            echo "Currently, macOS does not support ${ROOT}/admin_tools/config_hdfs.sh"
+            ;;
+        *)
+            # The RocksDB HDFS plugin (rocksdb-hdfs-env) in thirdparty relies on ${HADOOP_HOME}
+            # environment variable to locate the libraries to link against.
+            source "${ROOT}"/admin_tools/config_hdfs.sh
+            ;;
+    esac
+
     if [[ ${SKIP_THIRDPARTY} == "YES" ]]; then
         echo "Skip building third-parties..."
     else
@@ -288,6 +299,10 @@ function run_build()
         echo "Start building third-parties..."
         mkdir -p build
         pushd build
+        if [[ "${SANITIZER}" == *address* ]]; then
+            echo "ASan for third-parties is enabled"
+            CMAKE_OPTIONS="${CMAKE_OPTIONS} -DENABLE_ASAN=ON"
+        fi
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE}"
         cmake .. ${CMAKE_OPTIONS}
         make -j$JOB_NUM
@@ -297,6 +312,8 @@ function run_build()
     fi
 
     CMAKE_OPTIONS="${CMAKE_OPTIONS}
+                   -DARCH_TYPE=${ARCH_TYPE}
+                   -DJAVA_HOME=${JAVA_HOME}
                    -DENABLE_GCOV=${ENABLE_GCOV}
                    -DENABLE_GPERF=${ENABLE_GPERF}
                    -DBoost_NO_BOOST_CMAKE=ON
@@ -402,6 +419,7 @@ function run_test()
     local clear_flags="1"
     local enable_gcov="no"
     local all_tests=(
+      atomic_write_test
       backup_restore_test
       base_api_test
       base_test
@@ -433,6 +451,7 @@ function run_test()
       dsn_runtime_tests
       dsn_utils_tests
       dsn.zookeeper.tests
+      gutil_test
       partition_split_test
       pegasus_geo_test
       pegasus_rproxy_test
@@ -440,6 +459,7 @@ function run_test()
       recovery_test
       restore_test
       throttle_test
+      zookeeper_sasl_auth_test
     )
     local onebox_opts=""
     local test_opts=""
@@ -495,6 +515,7 @@ function run_test()
         echo "====================== run $module =========================="
         # The tests which need start onebox.
         local need_onebox_tests=(
+          atomic_write_test
           backup_restore_test
           base_api_test
           bulk_load_test
@@ -536,20 +557,26 @@ function run_test()
         else
             # Restart ZK in what ever case.
             run_stop_zk
-            run_start_zk
+
+            if [ "${module}" == "zookeeper_sasl_auth_test" ]; then
+                run_start_zk --sasl_auth
+            else
+                run_start_zk
+            fi
         fi
 
         # Run server test.
         pushd ${BUILD_LATEST_DIR}/bin/${module}
         local function_tests=(
-	      backup_restore_test
-	      recovery_test
-	      restore_test
-	      base_api_test
-	      throttle_test
-	      bulk_load_test
-	      detect_hotspot_test
-	      partition_split_test
+          atomic_write_test
+          backup_restore_test
+          base_api_test
+          bulk_load_test
+          detect_hotspot_test
+          partition_split_test
+          recovery_test
+          restore_test
+          throttle_test
         )
         # function_tests need client used meta_server_list to connect
         if [[ "${function_tests[@]}"  =~ "${module}" ]]; then
@@ -602,6 +629,7 @@ function usage_start_zk()
     echo "                     zookeeper install directory,"
     echo "                     if not set, then default is './.zk_install'"
     echo "   -p|--port <port>  listen port of zookeeper, default is 22181"
+    echo "   -s|--sasl_auth    start zookeeper with SASL Auth, default no"
 }
 
 function run_start_zk()
@@ -615,6 +643,7 @@ function run_start_zk()
 
     INSTALL_DIR=`pwd`/.zk_install
     PORT=22181
+    SASL_AUTH=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -629,6 +658,9 @@ function run_start_zk()
             -p|--port)
                 PORT=$2
                 shift
+                ;;
+            -s|--sasl_auth)
+                SASL_AUTH=YES
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -657,7 +689,7 @@ function run_start_zk()
         fi
     fi
 
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/admin_tools/start_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" SASL_AUTH="$SASL_AUTH" $ROOT/admin_tools/start_zk.sh
 }
 
 #####################

@@ -21,9 +21,9 @@ import pypegasus
 setup(
     name='pypegasus3',
     version=pypegasus.__version__,
-    install_requires=['Twisted==21.2.0', 'aenum==3.0.0', 'thrift==0.13.0', 'pyOpenSSL==24.2.1','cryptography==43.0.1'],
+    install_requires=['Twisted==24.7.0', 'aenum==3.0.0', 'thrift==0.13.0', 'pyOpenSSL==24.2.1', 'cryptography==43.0.1', 'PyYAML>=5.1'],
     packages=find_packages(),
-    package_data={'': ['logger.conf']},
+    package_data={'': ['logger.yaml']},
     platforms='any',
     url='https://github.com/apache/incubator-pegasus/python-client',
     license='Apache License 2.0',

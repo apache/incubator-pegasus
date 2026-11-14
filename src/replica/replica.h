@@ -237,6 +237,8 @@ public:
     decree last_prepared_decree() const;
     decree last_durable_decree() const;
 
+    manual_compaction_status::type get_manual_compact_status() const;
+
     // Encode current progress of decrees into json, including both local writes and duplications
     // of this replica.
     template <typename TWriter>
@@ -647,8 +649,6 @@ private:
     // TODO(clang-tidy): remove this interface and only expose the http interface
     // now this remote commend will be used by `admin_tools/pegasus_manual_compact.sh`
     std::string query_manual_compact_state() const;
-
-    manual_compaction_status::type get_manual_compact_status() const;
 
     void on_detect_hotkey(const detect_hotkey_request &req, /*out*/ detect_hotkey_response &resp);
 

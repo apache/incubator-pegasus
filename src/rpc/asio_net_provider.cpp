@@ -348,19 +348,6 @@ void asio_udp_provider::do_receive()
                 return;
             }
 
-            // Get the remote endpoint of the socket.
-            boost::system::error_code ec;
-            auto remote = _socket->remote_endpoint(ec);
-            if (ec) {
-                LOG_ERROR("failed to get the remote endpoint: {}", ec.message());
-                do_receive();
-                return;
-            }
-
-            auto ip = remote.address().to_v4().to_ulong();
-            auto port = remote.port();
-            const auto &remote_addr = ::dsn::rpc_address(ip, port);
-
             auto hdr_format = message_parser::get_header_type(_recv_reader._buffer.data());
             if (NET_HDR_INVALID == hdr_format) {
                 LOG_ERROR("{}: asio udp read failed: invalid header type '{}'",
@@ -382,23 +369,6 @@ void asio_udp_provider::do_receive()
                 LOG_ERROR("{}: asio udp read failed: invalid udp packet", _address);
                 do_receive();
                 return;
-            }
-
-            if (msg->header->from_address != remote_addr) {
-                if (!msg->header->context.u.is_forwarded) {
-                    msg->header->from_address = remote_addr;
-                    LOG_DEBUG("{}: message's from_address {} is not equal to socket's remote_addr "
-                              "{}, assign it to remote_addr.",
-                              _address,
-                              msg->header->from_address,
-                              remote_addr);
-                } else {
-                    LOG_DEBUG("{}: message's from_address {} is not equal to socket's remote_addr "
-                              "{}, but it's forwarded message, ignore it!.",
-                              _address,
-                              msg->header->from_address,
-                              remote_addr);
-                }
             }
 
             msg->to_address = _address;

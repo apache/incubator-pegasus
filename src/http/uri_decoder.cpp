@@ -17,7 +17,7 @@
 
 #include "uri_decoder.h"
 
-#include <stddef.h>
+#include <cstddef>
 
 #include "fmt/core.h"
 #include "utils/error_code.h"

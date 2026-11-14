@@ -19,11 +19,12 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <map>
 #include <string>
+#include <string_view>
 
 #include "replica/duplication/mutation_duplicator.h"
 #include "rrdb/rrdb.client.h"
@@ -31,7 +32,6 @@
 #include "task/task_code.h"
 #include "task/task_tracker.h"
 #include "utils/chrono_literals.h"
-#include <string_view>
 #include "utils/metrics.h"
 #include "utils/zlocks.h"
 

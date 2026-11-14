@@ -63,7 +63,6 @@
 #include "meta_bulk_load_service.h"
 #include "metadata_types.h"
 #include "replica_admin_types.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_address.h"
 #include "rpc/rpc_host_port.h"
 #include "rpc/rpc_message.h"
@@ -530,7 +529,8 @@ error_code server_state::sync_apps_to_remote_storage()
         apps_path,
         LPC_META_CALLBACK,
         [&err](error_code ec) { err = ec; },
-        blob(lock_state, 0, strlen(lock_state)));
+        blob(lock_state, 0, strlen(lock_state)),
+        nullptr);
     t->wait();
 
     if (err != ERR_NODE_ALREADY_EXIST && err != ERR_OK) {
@@ -581,10 +581,12 @@ error_code server_state::sync_apps_to_remote_storage()
     }
 
     tracker.wait_outstanding_tasks();
-    t = _meta_svc->get_remote_storage()->set_data(_apps_root,
-                                                  blob(unlock_state, 0, strlen(unlock_state)),
-                                                  LPC_META_STATE_HIGH,
-                                                  [&err](dsn::error_code e) { err = e; });
+    t = _meta_svc->get_remote_storage()->set_data(
+        _apps_root,
+        blob(unlock_state, 0, strlen(unlock_state)),
+        LPC_META_STATE_HIGH,
+        [&err](dsn::error_code e) { err = e; },
+        nullptr);
     t->wait();
     if (dsn::ERR_OK == err) {
         LOG_INFO("set {} to unlock state in remote storage", _apps_root);
@@ -725,18 +727,21 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
 
     std::string transaction_state;
     storage
-        ->get_data(_apps_root,
-                   LPC_META_CALLBACK,
-                   [&err, &transaction_state](error_code ec, const blob &value) {
-                       err = ec;
-                       if (ec == dsn::ERR_OK) {
-                           transaction_state.assign(value.data(), value.length());
-                       }
-                   })
+        ->get_data(
+            _apps_root,
+            LPC_META_CALLBACK,
+            [&err, &transaction_state](error_code ec, const blob &value) {
+                err = ec;
+                if (ec == dsn::ERR_OK) {
+                    transaction_state.assign(value.data(), value.length());
+                }
+            },
+            nullptr)
         ->wait();
 
-    if (ERR_OBJECT_NOT_FOUND == err)
+    if (ERR_OBJECT_NOT_FOUND == err) {
         return err;
+    }
     CHECK_EQ_MSG(ERR_OK, err, "can't handle this error");
     CHECK(transaction_state == std::string(unlock_state) || transaction_state.empty(),
           "invalid transaction state({})",
@@ -1105,7 +1110,7 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
     std::string app_partition_path = get_partition_path(*app, pidx);
     dsn::blob value = dsn::json::json_forwarder<partition_configuration>::encode(app->pcs[pidx]);
     _meta_svc->get_remote_storage()->create_node(
-        app_partition_path, LPC_META_STATE_HIGH, on_create_app_partition, value);
+        app_partition_path, LPC_META_STATE_HIGH, on_create_app_partition, value, nullptr);
 }
 
 void server_state::get_allowed_partitions(dsn::message_ex *msg,
@@ -1150,7 +1155,7 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
     std::string app_dir = get_app_path(*app);
     blob value = app->to_json(app_status::AS_AVAILABLE);
     _meta_svc->get_remote_storage()->create_node(
-        app_dir, LPC_META_STATE_HIGH, on_create_app_root, value);
+        app_dir, LPC_META_STATE_HIGH, on_create_app_root, value, nullptr);
 }
 
 void server_state::create_app(dsn::message_ex *msg)
@@ -1443,7 +1448,7 @@ void server_state::do_app_drop(std::shared_ptr<app_state> &app)
     blob json_app = app->to_json(app_status::AS_DROPPED);
     std::string app_path = get_app_path(*app);
     _meta_svc->get_remote_storage()->set_data(
-        app_path, json_app, LPC_META_STATE_HIGH, after_mark_app_dropped);
+        app_path, json_app, LPC_META_STATE_HIGH, after_mark_app_dropped, nullptr);
 }
 
 void server_state::drop_app(dsn::message_ex *msg)
@@ -1593,7 +1598,7 @@ void server_state::do_app_recall(std::shared_ptr<app_state> &app)
     std::string app_path = get_app_path(*app);
     blob value = app->to_json(app_status::AS_AVAILABLE);
     _meta_svc->get_remote_storage()->set_data(
-        app_path, value, LPC_META_STATE_HIGH, after_recall_app);
+        app_path, value, LPC_META_STATE_HIGH, after_recall_app, nullptr);
 }
 
 void server_state::recall_app(dsn::message_ex *msg)
@@ -2079,7 +2084,7 @@ void server_state::recall_partition(std::shared_ptr<app_state> &app, int pidx)
     blob json_partition = dsn::json::json_forwarder<partition_configuration>::encode(pc);
     std::string partition_path = get_partition_path(pc.pid);
     _meta_svc->get_remote_storage()->set_data(
-        partition_path, json_partition, LPC_META_STATE_HIGH, on_recall_partition);
+        partition_path, json_partition, LPC_META_STATE_HIGH, on_recall_partition, nullptr);
 }
 
 void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
@@ -2182,25 +2187,26 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
                                                    int pidx,
                                                    const host_port &node)
 {
-    partition_configuration &pc = app->pcs[pidx];
-    config_context &cc = app->helpers->contexts[pidx];
-
+    const partition_configuration &pc = app->pcs[pidx];
     CHECK(pc.hp_primary, "this shouldn't be called if the primary is invalid");
-    if (config_status::pending_remote_sync != cc.stage) {
-        configuration_update_request request;
-        request.info = *app;
-        request.config = pc;
-        request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
-        SET_IP_AND_HOST_PORT_BY_DNS(request, node, node);
-        host_port primary;
-        GET_HOST_PORT(pc, primary, primary);
-        send_proposal(primary, request);
-    } else {
+
+    if (config_status::pending_remote_sync == app->helpers->contexts[pidx].stage) {
         LOG_INFO("gpid({}.{}) is syncing with remote storage, ignore the remove seconary({})",
                  app->app_id,
                  pidx,
                  node);
+        return;
     }
+
+    configuration_update_request request;
+    request.info = *app;
+    request.config = pc;
+    request.type = config_type::CT_DOWNGRADE_TO_INACTIVE;
+    SET_IP_AND_HOST_PORT_BY_DNS(request, node, node);
+
+    host_port primary;
+    GET_HOST_PORT(pc, primary, primary);
+    send_proposal(primary, request);
 }
 
 void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
@@ -2210,7 +2216,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
     auto req = std::make_shared<configuration_update_request>();
     req->info = *app;
     req->type = config_type::CT_REMOVE;
-    req->host_node = dsn::dns_resolver::instance().resolve_address(node);
+    req->host_node = node.resolve();
     RESET_IP_AND_HOST_PORT(*req, node);
     req->config = app->pcs[pidx];
 
@@ -2347,7 +2353,7 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
         return;
     }
 
-    CHECK(is_secondary(pc, node), "");
+    CHECK(is_secondary(pc, node), "no primary/secondary on this node: node = {}", node);
     LOG_INFO("gpid({}): secondary({}) is down, ignored it due to no primary for this partition "
              "available",
              pc.pid,
@@ -2572,34 +2578,32 @@ error_code server_state::construct_partitions(
                              pc.pid.get_partition_index(),
                              boost::lexical_cast<std::string>(pc));
                     if (pc.hp_last_drops.size() + 1 < pc.max_replica_count) {
-                        hint_message += fmt::format("WARNING: partition({}.{}) only collects {}/{} "
-                                                    "of replicas, may lost data",
+                        hint_message += fmt::format("WARNING: partition({}.{}) only collects "
+                                                    "{}/{} of replicas, may lost data\n",
                                                     app->app_id,
                                                     pc.pid.get_partition_index(),
                                                     pc.hp_last_drops.size() + 1,
                                                     pc.max_replica_count);
                     }
-                    succeed_count++;
+                    ++succeed_count;
                 } else {
                     LOG_WARNING("construct partition({}.{}) failed",
                                 app->app_id,
                                 pc.pid.get_partition_index());
-                    std::ostringstream oss;
                     if (skip_lost_partitions) {
-                        oss << "WARNING: partition(" << app->app_id << "."
-                            << pc.pid.get_partition_index()
-                            << ") has no replica collected, force "
-                               "recover the lost partition to empty"
-                            << std::endl;
+                        hint_message +=
+                            fmt::format("WARNING: partition({}.{}) has no replica collected, "
+                                        "force recover the lost partition to empty\n",
+                                        app->app_id,
+                                        pc.pid.get_partition_index());
                     } else {
-                        oss << "ERROR: partition(" << app->app_id << "."
-                            << pc.pid.get_partition_index()
-                            << ") has no replica collected, you can force recover it by set "
-                               "skip_lost_partitions option"
-                            << std::endl;
+                        hint_message += fmt::format("ERROR: partition({}.{}) has no replica "
+                                                    "collected, you can force recover it by "
+                                                    "set skip_lost_partitions option\n",
+                                                    app->app_id,
+                                                    pc.pid.get_partition_index());
                     }
-                    hint_message += oss.str();
-                    failed_count++;
+                    ++failed_count;
                 }
             }
         }
@@ -2638,7 +2642,7 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::host_port> &re
         SET_IP_AND_HOST_PORT(
             *app_query_req, meta_server, dsn_primary_address(), dsn_primary_host_port());
         query_app_info_rpc app_rpc(std::move(app_query_req), RPC_QUERY_APP_INFO);
-        const auto addr = dsn::dns_resolver::instance().resolve_address(replica_nodes[i]);
+        const auto addr = replica_nodes[i].resolve();
         app_rpc.call(addr,
                      &tracker,
                      [app_rpc, i, &replica_nodes, &query_app_errors, &query_app_responses](

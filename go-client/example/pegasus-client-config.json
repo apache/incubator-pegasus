@@ -3,5 +3,11 @@
     "127.0.0.1:34601",
     "127.0.0.1:34602",
     "127.0.0.1:34603"
-  ]
+  ],
+  "prometheus_const_labels": {
+    "k1": "v1",
+    "k2": "v2"
+  },
+  "enable_prometheus": false,
+  "prometheus_port": 9090
 }

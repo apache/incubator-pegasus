@@ -32,6 +32,7 @@
 
 #include "client/replication_ddl_client.h"
 #include "common/common.h"
+#include "common/gpid.h"
 #include "common/replication_other_types.h"
 #include "fmt/core.h"
 #include "gtest/gtest.h"
@@ -99,11 +100,16 @@ void test_util::SetUp()
     client_ = pegasus_client_factory::get_client(kClusterName.c_str(), table_name_.c_str());
     ASSERT_TRUE(client_ != nullptr);
 
-    int32_t partition_count;
+    int32_t partition_count{0};
     ASSERT_EQ(dsn::ERR_OK, ddl_client_->list_app(table_name_, table_id_, partition_count, pcs_));
     ASSERT_NE(0, table_id_);
     ASSERT_EQ(partition_count_, partition_count);
     ASSERT_EQ(partition_count_, pcs_.size());
+
+    int32_t partition_index{0};
+    for (const auto &pc : pcs_) {
+        ASSERT_EQ(dsn::gpid(table_id_, partition_index++), pc.pid);
+    }
 }
 
 void test_util::run_cmd_from_project_root(const std::string &cmd)

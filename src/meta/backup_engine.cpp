@@ -35,7 +35,6 @@
 #include "meta/meta_backup_service.h"
 #include "meta/meta_data.h"
 #include "meta/meta_service.h"
-#include "rpc/dns_resolver.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
 #include "runtime/api_layer1.h"
@@ -216,7 +215,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
              pid,
              partition_primary);
     backup_rpc rpc(std::move(req), RPC_COLD_BACKUP, 10000_ms, 0, pid.thread_hash());
-    rpc.call(dsn::dns_resolver::instance().resolve_address(partition_primary),
+    rpc.call(partition_primary.resolve(),
              &_tracker,
              [this, rpc, pid, partition_primary](error_code err) mutable {
                  on_backup_reply(err, rpc.response(), pid, partition_primary);
