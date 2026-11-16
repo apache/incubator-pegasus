@@ -75,7 +75,7 @@ void duplication_sync_timer::run()
         if (!confirmed.empty()) {
             req->confirm_list[r->get_gpid()] = std::move(confirmed);
         }
-        pending_muts_cnt += r->get_duplication_manager()->get_pending_mutations_count();
+        pending_muts_cnt += dup_mgr->get_pending_mutations_count();
     }
     _stub->_counter_dup_pending_mutations_count->set(pending_muts_cnt);
 
