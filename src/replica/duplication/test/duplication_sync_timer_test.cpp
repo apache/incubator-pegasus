@@ -26,6 +26,7 @@
 #include <ostream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "common/duplication_common.h"
 #include "common/replication.codes.h"
