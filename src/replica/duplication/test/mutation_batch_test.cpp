@@ -15,11 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <algorithm>
-
 // IWYU pragma: no_include <gtest/gtest-message.h>
 // IWYU pragma: no_include <gtest/gtest-test-part.h>
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <atomic>
 #include <iterator>
 #include <memory>
@@ -37,6 +36,7 @@
 #include "replica/prepare_list.h"
 #include "runtime/task/task_code.h"
 #include "utils/autoref_ptr.h"
+#include "utils/errors.h"
 
 namespace dsn {
 namespace replication {
