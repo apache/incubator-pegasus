@@ -28,6 +28,7 @@
 #include "replica/duplication/replica_duplicator.h"
 #include "replica/mutation_log.h"
 #include "replica/replica.h"
+#include "replica/replication_app_base.h"
 #include "runtime/rpc/rpc_holder.h"
 #include "utils/autoref_ptr.h"
 #include "utils/errors.h"
@@ -57,7 +58,8 @@ void load_mutation::run()
 
     // Load the mutations from plog that have been committed recently, if any.
     const auto max_plog_committed_decree =
-        std::min(_replica->private_log()->max_decree_on_disk(), _replica->last_applied_decree());
+        std::min(_replica->private_log()->max_decree_on_disk(),
+                 _replica->get_app()->last_committed_decree());
     if (_start_decree > max_plog_committed_decree) {
         // wait 100ms for next try if no mutation was added.
         repeat(100_ms);

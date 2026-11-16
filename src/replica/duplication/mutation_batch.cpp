@@ -30,6 +30,7 @@
 #include "perf_counter/perf_counter.h"
 #include "replica_duplicator.h"
 #include "replica/replica.h"
+#include "replica/replication_app_base.h"
 #include "runtime/task/task_code.h"
 #include "runtime/task/task_spec.h"
 #include "utils/autoref_ptr.h"
@@ -128,7 +129,7 @@ error_s mutation_batch::add(mutation_ptr mu)
             _start_decree);
     }
 
-    if (mu->get_decree() <= _replica->last_applied_decree()) {
+    if (mu->get_decree() <= _replica->get_app()->last_committed_decree()) {
         // Once this mutation has been applied into rocksdb memtable, commit it for duplication;
         // otherwise, this mutation would be delayed at least several minutes to be duplicated to
         // the remote cluster. It would not be duplicated until some new mutations (such as empty
