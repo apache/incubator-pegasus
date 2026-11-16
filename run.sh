@@ -112,7 +112,8 @@ function usage_build()
     echo "   --sanitizer <type>    build with sanitizer to check potential problems,
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
-    echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
+    echo "   --enable_rocksdb_portable [arch]  build a portable rocksdb binary, optionally specifying target CPU arch"
+    echo "   --rocksdb_portable_arch <arch>    specify RocksDB target CPU architecture for portable build (e.g. haswell)"
     echo "   --test                whether to build test binaries"
     echo "   --iwyu                specify the binary path of 'include-what-you-use' when build with IWYU"
     echo "   --cmake_only          whether to run cmake only, default no"
@@ -208,7 +209,22 @@ function run_build()
                 SKIP_THIRDPARTY=YES
                 ;;
             --enable_rocksdb_portable)
-                ROCKSDB_PORTABLE=1
+                if [[ $# -gt 1 && ! "$2" =~ ^- ]]; then
+                    ROCKSDB_PORTABLE="$2"
+                    shift
+                else
+                    ROCKSDB_PORTABLE=1
+                fi
+                ;;
+            --rocksdb_portable_arch|--rocksdb_portable)
+                if [[ -z "$2" || "$2" =~ ^- ]]; then
+                    echo "ERROR: target CPU architecture not specified for $key"
+                    echo
+                    usage_build
+                    exit 1
+                fi
+                ROCKSDB_PORTABLE="$2"
+                shift
                 ;;
             --use_jemalloc)
                 ENABLE_GPERF=OFF
@@ -267,6 +283,8 @@ function run_build()
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSANITIZER=${SANITIZER}"
         echo "ASAN_OPTIONS=$ASAN_OPTIONS"
     fi
+
+    echo "ROCKSDB_PORTABLE=$ROCKSDB_PORTABLE"
 
     MAKE_OPTIONS="-j$JOB_NUM"
     if [ "$RUN_VERBOSE" == "YES" ]; then
