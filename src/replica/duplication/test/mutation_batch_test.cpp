@@ -81,37 +81,37 @@ TEST_F(mutation_batch_test, prepare_mutation)
 
     auto mu1 = create_test_mutation(1, 0, "first mutation");
     set_last_applied_decree(1);
-    ASSERT_TRUE(batcher.add(mu1));
+    ASSERT_TRUE(batcher.add(mu1).is_ok());
     ASSERT_EQ(1, batcher.last_decree());
 
     auto mu2 = create_test_mutation(2, 1, "abcde");
     set_last_applied_decree(2);
-    ASSERT_TRUE(batcher.add(mu2));
+    ASSERT_TRUE(batcher.add(mu2).is_ok());
     ASSERT_EQ(2, batcher.last_decree());
 
     auto mu3 = create_test_mutation(3, 2, "hello world");
-    ASSERT_TRUE(batcher.add(mu3));
+    ASSERT_TRUE(batcher.add(mu3).is_ok());
 
     // The last decree has not been updated.
     ASSERT_EQ(2, batcher.last_decree());
 
     auto mu4 = create_test_mutation(4, 2, "foo bar");
-    ASSERT_TRUE(batcher.add(mu4));
+    ASSERT_TRUE(batcher.add(mu4).is_ok());
     ASSERT_EQ(2, batcher.last_decree());
 
     // The committed mutation would be ignored.
     auto mu2_another = create_test_mutation(2, 1, "another second mutation");
-    ASSERT_TRUE(batcher.add(mu2_another));
+    ASSERT_TRUE(batcher.add(mu2_another).is_ok());
     ASSERT_EQ(2, batcher.last_decree());
 
     // The mutation with duplicate decree would be ignored.
     auto mu3_another = create_test_mutation(3, 2, "123 xyz");
-    ASSERT_TRUE(batcher.add(mu3_another));
+    ASSERT_TRUE(batcher.add(mu3_another).is_ok());
     ASSERT_EQ(2, batcher.last_decree());
 
     auto mu5 = create_test_mutation(5, 2, "5th mutation");
     set_last_applied_decree(5);
-    ASSERT_TRUE(batcher.add(mu5));
+    ASSERT_TRUE(batcher.add(mu5).is_ok());
     ASSERT_EQ(5, batcher.last_decree());
 
     check_mutation_contents({"first mutation", "abcde", "hello world", "foo bar", "5th mutation"},
