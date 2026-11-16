@@ -74,9 +74,7 @@ public:
     }
 };
 
-INSTANTIATE_TEST_SUITE_P(, mutation_batch_test, ::testing::Values(false, true));
-
-TEST_P(mutation_batch_test, prepare_mutation)
+TEST_F(mutation_batch_test, prepare_mutation)
 {
     auto duplicator = create_test_duplicator(0);
     mutation_batch batcher(duplicator.get());
@@ -120,7 +118,7 @@ TEST_P(mutation_batch_test, prepare_mutation)
                             batcher);
 }
 
-TEST_P(mutation_batch_test, add_mutation_if_valid)
+TEST_F(mutation_batch_test, add_mutation_if_valid)
 {
     auto duplicator = create_test_duplicator(0);
     mutation_batch batcher(duplicator.get());
