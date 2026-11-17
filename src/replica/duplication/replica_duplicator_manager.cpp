@@ -102,14 +102,13 @@ replica_duplicator_manager::get_duplication_confirms_to_update() const
 
 void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
 {
+    zauto_lock l(_lock);
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it == ent.progress.end()) {
         // Inconsistent with the meta server.
         _duplications.erase(ent.dupid);
         return;
     }
-
-    zauto_lock l(_lock);
 
     dupid_t dupid = ent.dupid;
     duplication_status::type next_status = ent.status;
@@ -183,7 +182,6 @@ void replica_duplicator_manager::update_confirmed_decree_if_secondary(decree con
         return;
     }
 
-    zauto_lock l(_lock);
     remove_all_duplications();
     if (confirmed >= 0) { // duplication ongoing
         // confirmed decree never decreases
@@ -197,6 +195,7 @@ void replica_duplicator_manager::update_confirmed_decree_if_secondary(decree con
 
 void replica_duplicator_manager::METRIC_FUNC_NAME_SET(dup_pending_mutations)()
 {
+    zauto_lock l(_lock);
     int64_t total = 0;
     for (const auto &dup : _duplications) {
         total += dup.second->get_pending_mutations_count();
@@ -227,6 +226,7 @@ replica_duplicator_manager::get_dup_states() const
 
 void replica_duplicator_manager::remove_all_duplications()
 {
+    zauto_lock l(_lock);
     // fast path
     if (_duplications.empty()) {
         return;
