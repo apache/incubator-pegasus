@@ -17,7 +17,7 @@
 
 module github.com/apache/incubator-pegasus/admin-cli
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/apache/incubator-pegasus/collector v0.0.0-20250103031858-1091da5fbec8
@@ -28,7 +28,7 @@ require (
 	github.com/go-resty/resty/v2 v2.6.0
 	github.com/go-zookeeper/zk v1.0.2
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.8.3
 	github.com/stretchr/testify v1.8.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
