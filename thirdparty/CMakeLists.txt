@@ -514,7 +514,7 @@ ExternalProject_Add(rocksdb
         COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/hdfs
         COMMAND git clone -b master --depth=1 https://github.com/riversand963/rocksdb-hdfs-env.git ${TP_DIR}/build/Source/rocksdb/plugin/hdfs
         COMMAND cd ${TP_DIR}/build/Source/rocksdb/plugin/hdfs && patch -p1 < ${TP_DIR}/fix_rocksdb-plugin-hdfs.patch
-        DEPENDS googletest jemalloc lz4 snappy zstd
+        DEPENDS googletest jemalloc lz4 snappy zstd hadoop
         CMAKE_ARGS ${ROCKSDB_OPTIONS}
         DOWNLOAD_EXTRACT_TIMESTAMP true
         DOWNLOAD_NO_PROGRESS true
