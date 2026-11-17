@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -95,15 +96,23 @@ public:
         }
         writer.EndArray();
     }
+    bool check_still_have_dup_pipeline_loading()
+    {
+        for (auto &kv : _duplications) {
+            if (kv.second->get_loading_private_log_state()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    // called by close replica also
+    void remove_all_duplications();
 
 private:
     void sync_duplication(const duplication_entry &ent);
 
     void remove_non_existed_duplications(const std::map<dupid_t, duplication_entry> &);
 
-    void remove_all_duplications();
-
-private:
     friend class duplication_sync_timer_test;
     friend class duplication_test_base;
     friend class replica_duplicator_manager_test;
