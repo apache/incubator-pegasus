@@ -32,11 +32,24 @@ namespace cpp dsn.replication
 
 struct mutation_header
 {
+    // The partition that this mutation belongs to.
     1:dsn.gpid             pid;
+
+    // The ID of the membership configuration that this mutation belongs to,
+    // increasing monotonically.
     2:i64                  ballot;
+
+    // The decree of this mutation.
     3:i64                  decree;
+
+    // The start offset of this mutation in the whole mutation log.
     4:i64                  log_offset;
+
+    // The max of the decrees that have been committed before this mutation
+    // is prepared.
     5:i64                  last_committed_decree;
+
+    // The unique timestamp that increases monotonically in microsecond.
     6:i64                  timestamp;
 }
 
