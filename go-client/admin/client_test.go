@@ -52,7 +52,7 @@ func defaultReplicaServerPorts() []int {
 
 func timeoutConfig() Config {
 	return Config{
-		MetaServers: []string{"0.0.0.0:123456"},
+		MetaServers: []string{"0.0.0.0:12345"},
 		Timeout:     500 * time.Millisecond,
 	}
 }

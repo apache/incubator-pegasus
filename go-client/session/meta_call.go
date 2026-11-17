@@ -27,7 +27,6 @@ import (
 
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/incubator-pegasus/go-client/idl/replication"
-	"github.com/apache/incubator-pegasus/go-client/pegalog"
 )
 
 type metaCallFunc func(context.Context, *metaSession) (metaResponse, error)
@@ -127,28 +126,15 @@ func (c *metaCall) issueSingleMeta(ctx context.Context, curLeader int) bool {
 		}
 
 		addr := forwardAddr.GetAddress()
-		found := false
 		c.lock.Lock()
-		for i := range c.metaIPAddrs {
-			if addr == c.metaIPAddrs[i] {
-				found = true
-				break
-			}
-		}
-		c.lock.Unlock()
-
-		if !found {
-			c.lock.Lock()
-			c.metaIPAddrs = append(c.metaIPAddrs, addr)
-			c.metas = append(c.metas, &metaSession{
-				NodeSession: newNodeSession(addr, NodeTypeMeta, DisableMetrics),
-				logger:      pegalog.GetLogger(),
-			})
+		found := addMetaSession(&c.metaIPAddrs, &c.metas, addr)
+		if found {
 			curLeader = len(c.metas) - 1
 			meta = c.metas[curLeader]
 			meta.logger.Printf("add forward address %s as meta server", addr)
-			c.lock.Unlock()
-
+		}
+		c.lock.Unlock()
+		if found {
 			resp, err = c.callFunc(ctx, meta)
 		}
 	}
