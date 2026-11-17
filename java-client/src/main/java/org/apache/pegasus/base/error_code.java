@@ -124,6 +124,7 @@ public class error_code
     ERR_PARENT_PARTITION_MISUSED,
     ERR_CHILD_NOT_READY,
     ERR_DISK_INSUFFICIENT,
+    ERR_DISK_IO_ERROR,
 
     // ERROR_CODE defined by client
     ERR_SESSION_RESET,
