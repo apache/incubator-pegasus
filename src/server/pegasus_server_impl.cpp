@@ -1918,6 +1918,13 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         }
         METRIC_VAR_SET(rdb_total_sst_files, 0);
         METRIC_VAR_SET(rdb_total_sst_size_mb, 0);
+        METRIC_VAR_SET(rdb_total_blob_size_mb, 0);
+        METRIC_VAR_SET(rdb_live_blob_size_mb, 0);
+        METRIC_VAR_SET(rdb_live_blob_garbage_size_mb, 0);
+        METRIC_VAR_SET(rdb_blob_garbage_ratio, 0.0);
+        METRIC_VAR_SET(rdb_blob_cache_capacity_bytes, 0);
+        METRIC_VAR_SET(rdb_blob_cache_usage_bytes, 0);
+        METRIC_VAR_SET(rdb_blob_cache_pinned_usage_bytes, 0);
         METRIC_VAR_SET(rdb_index_and_filter_blocks_mem_usage_bytes, 0);
         METRIC_VAR_SET(rdb_memtable_mem_usage_bytes, 0);
         METRIC_VAR_SET(rdb_block_cache_hit_count, 0);
@@ -2523,11 +2530,45 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     }
     METRIC_VAR_SET(rdb_total_sst_files, val);
 
+    static uint64_t bytes_per_mb = 1U << 20U;
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kTotalSstFilesSize, &str_val) &&
         dsn::buf2uint64(str_val, val)) {
-        static uint64_t bytes_per_mb = 1U << 20U;
         METRIC_VAR_SET(rdb_total_sst_size_mb, val / bytes_per_mb);
     }
+
+    // Update blob metrics (RocksDB provides these when blob files are enabled)
+    uint64_t live_blob_file_size = 0;
+    _db->GetIntProperty(_data_cf, rocksdb::DB::Properties::kLiveBlobFileSize, &live_blob_file_size);
+    METRIC_VAR_SET(rdb_live_blob_size_mb, live_blob_file_size / bytes_per_mb);
+
+    uint64_t live_blob_file_garbage_size = 0;
+    _db->GetIntProperty(
+        _data_cf, rocksdb::DB::Properties::kLiveBlobFileGarbageSize, &live_blob_file_garbage_size);
+    METRIC_VAR_SET(rdb_live_blob_garbage_size_mb, live_blob_file_garbage_size / bytes_per_mb);
+
+    uint64_t total_blob_file_size = 0;
+    _db->GetIntProperty(
+        _data_cf, rocksdb::DB::Properties::kTotalBlobFileSize, &total_blob_file_size);
+    METRIC_VAR_SET(rdb_total_blob_size_mb, total_blob_file_size / bytes_per_mb);
+
+    if (total_blob_file_size > 0) {
+        METRIC_VAR_SET(rdb_blob_garbage_ratio,
+                       1.0 * live_blob_file_garbage_size / total_blob_file_size);
+    }
+
+    uint64_t blob_cache_capacity = 0;
+    _db->GetIntProperty(
+        _data_cf, rocksdb::DB::Properties::kBlobCacheCapacity, &blob_cache_capacity);
+    METRIC_VAR_SET(rdb_blob_cache_capacity_bytes, blob_cache_capacity);
+
+    uint64_t blob_cache_usage = 0;
+    _db->GetIntProperty(_data_cf, rocksdb::DB::Properties::kBlobCacheUsage, &blob_cache_usage);
+    METRIC_VAR_SET(rdb_blob_cache_usage_bytes, blob_cache_usage);
+
+    uint64_t blob_cache_pinned_usage = 0;
+    _db->GetIntProperty(
+        _data_cf, rocksdb::DB::Properties::kBlobCachePinnedUsage, &blob_cache_pinned_usage);
+    METRIC_VAR_SET(rdb_blob_cache_pinned_usage_bytes, blob_cache_pinned_usage);
 
     std::map<std::string, std::string> props;
     if (_db->GetMapProperty(_data_cf, "rocksdb.cfstats", &props)) {

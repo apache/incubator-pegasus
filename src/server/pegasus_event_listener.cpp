@@ -52,6 +52,16 @@ METRIC_DEFINE_counter(replica,
                       dsn::metric_unit::kBytes,
                       "The size of rocksdb compaction output in bytes");
 
+METRIC_DEFINE_counter(replica,
+                      rdb_compaction_input_blob_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size of rocksdb compaction input blob in bytes");
+
+METRIC_DEFINE_counter(replica,
+                      rdb_compaction_output_blob_bytes,
+                      dsn::metric_unit::kBytes,
+                      "The size of rocksdb compaction output blob in bytes");
+
 METRIC_DEFINE_counter(
     replica,
     rdb_changed_delayed_writes,
@@ -78,6 +88,8 @@ pegasus_event_listener::pegasus_event_listener(replica_base *r)
       METRIC_VAR_INIT_replica(rdb_compaction_completed_count),
       METRIC_VAR_INIT_replica(rdb_compaction_input_bytes),
       METRIC_VAR_INIT_replica(rdb_compaction_output_bytes),
+      METRIC_VAR_INIT_replica(rdb_compaction_input_blob_bytes),
+      METRIC_VAR_INIT_replica(rdb_compaction_output_blob_bytes),
       METRIC_VAR_INIT_replica(rdb_changed_delayed_writes),
       METRIC_VAR_INIT_replica(rdb_changed_stopped_writes)
 {
@@ -86,15 +98,23 @@ pegasus_event_listener::pegasus_event_listener(replica_base *r)
 void pegasus_event_listener::OnFlushCompleted(rocksdb::DB *db, const rocksdb::FlushJobInfo &info)
 {
     METRIC_VAR_INCREMENT(rdb_flush_completed_count);
-    METRIC_VAR_INCREMENT_BY(rdb_flush_output_bytes, info.table_properties.data_size);
+    uint64_t total_output_bytes = info.table_properties.data_size;
+    for (const auto &blob_info : info.blob_file_addition_infos) {
+        total_output_bytes += blob_info.total_blob_bytes;
+    }
+    METRIC_VAR_INCREMENT_BY(rdb_flush_output_bytes, total_output_bytes);
 }
 
 void pegasus_event_listener::OnCompactionCompleted(rocksdb::DB *db,
                                                    const rocksdb::CompactionJobInfo &info)
 {
     METRIC_VAR_INCREMENT(rdb_compaction_completed_count);
-    METRIC_VAR_INCREMENT_BY(rdb_compaction_input_bytes, info.stats.total_input_bytes);
-    METRIC_VAR_INCREMENT_BY(rdb_compaction_output_bytes, info.stats.total_output_bytes);
+    METRIC_VAR_INCREMENT_BY(rdb_compaction_input_bytes,
+                            info.stats.total_input_bytes + info.stats.total_blob_bytes_read);
+    METRIC_VAR_INCREMENT_BY(rdb_compaction_output_bytes,
+                            info.stats.total_output_bytes + info.stats.total_output_bytes_blob);
+    METRIC_VAR_INCREMENT_BY(rdb_compaction_input_blob_bytes, info.stats.total_blob_bytes_read);
+    METRIC_VAR_INCREMENT_BY(rdb_compaction_output_blob_bytes, info.stats.total_output_bytes_blob);
 }
 
 void pegasus_event_listener::OnStallConditionsChanged(const rocksdb::WriteStallInfo &info)

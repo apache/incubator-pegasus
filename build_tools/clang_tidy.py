@@ -103,7 +103,6 @@ def run_tidy(sha="HEAD", is_rev_range=False):
                            "-readability-magic-numbers,"
                            "-readability-named-parameter,"
                            "-readability-suspicious-call-argument",
-                   "-extra-arg=-language=c++",
                    "-extra-arg=-std=c++17",
                    "-extra-arg=-Ithirdparty/output/include"]
         return subprocess.check_output(
