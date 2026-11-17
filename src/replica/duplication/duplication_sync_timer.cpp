@@ -109,7 +109,7 @@ void duplication_sync_timer::on_duplication_sync_reply(error_code err,
 void duplication_sync_timer::update_duplication_map(
     const std::map<int32_t, std::map<int32_t, duplication_entry>> &dup_map)
 {
-    for (const replica_ptr &r : _stub->get_all_replicas()) {
+    for (replica_ptr &r : _stub->get_all_replicas()) {
         auto dup_mgr = r->get_duplication_manager();
         if (!dup_mgr) {
             continue;
@@ -208,6 +208,5 @@ duplication_sync_timer::get_dup_states(int app_id, /*out*/ bool *app_found)
     }
     return result;
 }
-
 } // namespace replication
 } // namespace dsn
