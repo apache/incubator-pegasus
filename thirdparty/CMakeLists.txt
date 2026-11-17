@@ -474,7 +474,7 @@ ExternalProject_Add(lz4
         DOWNLOAD_NO_PROGRESS true
 )
 
-option(ROCKSDB_PORTABLE "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU" 0)
+set(ROCKSDB_PORTABLE 0 CACHE STRING "Minimum CPU arch to support, or 0 = current CPU, 1 = baseline CPU, or specify CPU architecture such as haswell/skylake")
 set(ROCKSDB_OPTIONS
         -DFAIL_ON_WARNINGS=OFF
         -DWITH_BENCHMARK_TOOLS=OFF

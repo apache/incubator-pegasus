@@ -51,7 +51,7 @@ jobs:
         run: |
           curl -s "https://get.sdkman.io" | bash
           source "${HOME}/.sdkman/bin/sdkman-init.sh"
-          sdk install sbt
+          sdk install sbt 1.8.3
           sbt -V
       - name: Check format with sbt
         working-directory: ./scala-client
@@ -105,7 +105,7 @@ jobs:
         run: |
           curl -s "https://get.sdkman.io" | bash
           source "${HOME}/.sdkman/bin/sdkman-init.sh"
-          sdk install sbt
+          sdk install sbt 1.8.3
           sbt -V
       - name: Download thrift
         working-directory: ./java-client/scripts

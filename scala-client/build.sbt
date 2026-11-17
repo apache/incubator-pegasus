@@ -54,6 +54,11 @@ credentials += Credentials(
 
 libraryDependencies ++= Seq(
   "com.google.guava" % "guava" % "21.0",
-  "org.apache.pegasus" % "pegasus-client" % "2.6.0-SNAPSHOT",
+  // Exclude problematic Netty native libraries from pegasus-client transitive dependencies
+  ("org.apache.pegasus" % "pegasus-client" % "2.6.0-SNAPSHOT")
+    .exclude("io.netty", "netty-tcnative-boringssl-static")
+    .exclude("io.netty", "netty-transport-native-epoll")
+    .exclude("io.netty", "netty-transport-native-kqueue")
+    .exclude("io.netty", "netty-transport-native-unix-common"),
   "org.scalatest" %% "scalatest" % "3.0.3" % Test
 )
