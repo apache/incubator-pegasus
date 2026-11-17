@@ -123,21 +123,26 @@ TEST_F(mutation_batch_test, add_mutation_if_valid)
     auto duplicator = create_test_duplicator(0);
     mutation_batch batcher(duplicator.get());
 
+    // NOTE: a mutation must not be passed to add_mutation_if_valid() twice, since its payload
+    // would be moved out of mu->data.updates. Unlike master, the blob in v2.5 has no move
+    // constructor that nullifies the source, so the moved-from mutation would still hold a
+    // dangling data() pointer and reusing it would read freed memory. Hence every mutation
+    // below is created once and used once.
+    auto mu0 = create_test_mutation(1, "hi");
+    // mu0 would be ignored, since its decree is less than the start decree.
+    batcher.add_mutation_if_valid(mu0, 2);
+
     auto mu1 = create_test_mutation(1, "hello");
     batcher.add_mutation_if_valid(mu1, 0);
-    check_mutation_contents({"hello"}, batcher);
 
+    // mu2 would be accepted, since its decree equals to the start decree.
     auto mu2 = create_test_mutation(2, "world");
-    batcher.add_mutation_if_valid(mu2, 0);
-    check_mutation_contents({"world"}, batcher);
-
-    // mu1 would be ignored, since its decree is less than the start decree.
-    batcher.add_mutation_if_valid(mu1, 2);
     batcher.add_mutation_if_valid(mu2, 2);
 
-    auto mu3 = create_test_mutation(1, "hi");
+    auto mu3 = create_test_mutation(3, "ok");
     batcher.add_mutation_if_valid(mu3, 1);
-    check_mutation_contents({"hi", "world"}, batcher);
+
+    check_mutation_contents({"hello", "world", "ok"}, batcher);
 }
 
 TEST_F(mutation_batch_test, ignore_non_idempotent_write)
