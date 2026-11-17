@@ -188,7 +188,10 @@ void replica_bulk_loader::broadcast_group_bulk_load(const bulk_load_request &met
 
     LOG_INFO_PREFIX("start to broadcast group bulk load");
 
-    for (const auto &secondary : _replica->_primary_states.pc.hp_secondaries) {
+    std::vector<host_port> hp_secondaries;
+    GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, hp_secondaries);
+
+    for (const auto &secondary : hp_secondaries) {
         if (secondary == _stub->primary_host_port()) {
             continue;
         }
@@ -282,13 +285,16 @@ void replica_bulk_loader::on_group_bulk_load_reply(error_code err,
         return;
     }
 
-    _replica->_primary_states.group_bulk_load_pending_replies.erase(req.hp_target);
+    host_port hp_target;
+    GET_HOST_PORT(req, target, hp_target);
+
+    _replica->_primary_states.group_bulk_load_pending_replies.erase(hp_target);
 
     if (err != ERR_OK) {
         LOG_ERROR_PREFIX("failed to receive group_bulk_load_reply from {}, error = {}",
                          FMT_HOST_PORT_AND_IP(req, target),
                          err);
-        _replica->_primary_states.reset_node_bulk_load_states(req.hp_target);
+        _replica->_primary_states.reset_node_bulk_load_states(hp_target);
         return;
     }
 
@@ -296,7 +302,7 @@ void replica_bulk_loader::on_group_bulk_load_reply(error_code err,
         LOG_ERROR_PREFIX("receive group_bulk_load response from {} failed, error = {}",
                          FMT_HOST_PORT_AND_IP(req, target),
                          resp.err);
-        _replica->_primary_states.reset_node_bulk_load_states(req.hp_target);
+        _replica->_primary_states.reset_node_bulk_load_states(hp_target);
         return;
     }
 
@@ -306,11 +312,11 @@ void replica_bulk_loader::on_group_bulk_load_reply(error_code err,
                          FMT_HOST_PORT_AND_IP(req, target),
                          req.config.ballot,
                          get_ballot());
-        _replica->_primary_states.reset_node_bulk_load_states(req.hp_target);
+        _replica->_primary_states.reset_node_bulk_load_states(hp_target);
         return;
     }
 
-    _replica->_primary_states.secondary_bulk_load_states[req.hp_target] = resp.bulk_load_state;
+    _replica->_primary_states.secondary_bulk_load_states[hp_target] = resp.bulk_load_state;
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -748,7 +754,10 @@ void replica_bulk_loader::handle_bulk_load_finish(bulk_load_status::type new_sta
     }
 
     if (status() == partition_status::PS_PRIMARY) {
-        for (const auto &secondary : _replica->_primary_states.pc.hp_secondaries) {
+        std::vector<host_port> hp_secondaries;
+        GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, hp_secondaries);
+
+        for (const auto &secondary : hp_secondaries) {
             _replica->_primary_states.reset_node_bulk_load_states(secondary);
         }
     }
@@ -948,7 +957,11 @@ void replica_bulk_loader::report_group_download_progress(/*out*/ bulk_load_respo
                     primary_state.download_status);
 
     int32_t total_progress = primary_state.download_progress;
-    for (const auto &secondary : _replica->_primary_states.pc.hp_secondaries) {
+
+    std::vector<host_port> hp_secondaries;
+    GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, hp_secondaries);
+
+    for (const auto &secondary : hp_secondaries) {
         const auto &secondary_state =
             _replica->_primary_states.secondary_bulk_load_states[secondary];
         int32_t s_progress =
@@ -990,11 +1003,13 @@ void replica_bulk_loader::report_group_ingestion_status(/*out*/ bulk_load_respon
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),
                     enum_to_string(primary_state.ingest_status));
 
+    std::vector<host_port> hp_secondaries;
+    GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, hp_secondaries);
+
     bool is_group_ingestion_finish =
         (primary_state.ingest_status == ingestion_status::IS_SUCCEED) &&
-        (_replica->_primary_states.pc.hp_secondaries.size() + 1 ==
-         _replica->_primary_states.pc.max_replica_count);
-    for (const auto &secondary : _replica->_primary_states.pc.hp_secondaries) {
+        (hp_secondaries.size() + 1 == _replica->_primary_states.pc.max_replica_count);
+    for (const auto &secondary : hp_secondaries) {
         const auto &secondary_state =
             _replica->_primary_states.secondary_bulk_load_states[secondary];
         ingestion_status::type ingest_status = secondary_state.__isset.ingest_status
@@ -1039,10 +1054,12 @@ void replica_bulk_loader::report_group_cleaned_up(bulk_load_response &response)
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),
                     primary_state.is_cleaned_up);
 
-    bool group_flag =
-        (primary_state.is_cleaned_up) && (_replica->_primary_states.pc.hp_secondaries.size() + 1 ==
-                                          _replica->_primary_states.pc.max_replica_count);
-    for (const auto &secondary : _replica->_primary_states.pc.hp_secondaries) {
+    std::vector<host_port> hp_secondaries;
+    GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, hp_secondaries);
+
+    bool group_flag = (primary_state.is_cleaned_up) &&
+                      (hp_secondaries.size() + 1 == _replica->_primary_states.pc.max_replica_count);
+    for (const auto &secondary : hp_secondaries) {
         const auto &secondary_state =
             _replica->_primary_states.secondary_bulk_load_states[secondary];
         bool is_cleaned_up = secondary_state.__isset.is_cleaned_up ? secondary_state.is_cleaned_up
@@ -1080,10 +1097,13 @@ void replica_bulk_loader::report_group_is_paused(bulk_load_response &response)
                     FMT_HOST_PORT_AND_IP(_replica->_primary_states.pc, primary),
                     primary_state.is_paused);
 
+    std::vector<host_port> hp_secondaries;
+    GET_HOST_PORTS(_replica->_primary_states.pc, secondaries, hp_secondaries);
+
     bool group_is_paused =
-        primary_state.is_paused && (_replica->_primary_states.pc.hp_secondaries.size() + 1 ==
-                                    _replica->_primary_states.pc.max_replica_count);
-    for (const auto &secondary : _replica->_primary_states.pc.hp_secondaries) {
+        primary_state.is_paused &&
+        (hp_secondaries.size() + 1 == _replica->_primary_states.pc.max_replica_count);
+    for (const auto &secondary : hp_secondaries) {
         partition_bulk_load_state secondary_state =
             _replica->_primary_states.secondary_bulk_load_states[secondary];
         bool is_paused = secondary_state.__isset.is_paused ? secondary_state.is_paused : false;
