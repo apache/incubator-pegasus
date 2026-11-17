@@ -165,6 +165,296 @@ const std::unordered_map<std::string, cf_opts_setter> cf_opts_setters = {
          option.num_levels = val;
          return true;
      }},
+    {dsn::replica_envs::ROCKSDB_ENABLE_BLOB_FILES,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         bool val = false;
+         if (!dsn::buf2bool(str, val)) {
+             return false;
+         }
+         option.enable_blob_files = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_FILE_STARTING_LEVEL,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.blob_file_starting_level = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_MIN_BLOB_SIZE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.min_blob_size = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_FORCE_THRESHOLD,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         double val = 0.0;
+         if (!dsn::buf2double(str, val)) {
+             return false;
+         }
+         option.blob_garbage_collection_force_threshold = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_AGE_CUTOFF,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         double val = 0.0;
+         if (!dsn::buf2double(str, val)) {
+             return false;
+         }
+         option.blob_garbage_collection_age_cutoff = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_FILE_SIZE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.blob_file_size = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_LEVEL0_FILE_NUM_COMPACTION_TRIGGER,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.level0_file_num_compaction_trigger = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_MULTIPLIER,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.max_bytes_for_level_multiplier = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_BASE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.max_bytes_for_level_base = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_TARGET_FILE_SIZE_BASE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.target_file_size_base = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_MAX_WRITE_BUFFER_NUMBER,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.max_write_buffer_number = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_LEVEL0_SLOWDOWN_WRITES_TRIGGER,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.level0_slowdown_writes_trigger = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_LEVEL0_STOP_WRITES_TRIGGER,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.level0_stop_writes_trigger = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_ARENA_BLOCK_SIZE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.arena_block_size = static_cast<size_t>(val);
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_INPLACE_UPDATE_NUM_LOCKS,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.inplace_update_num_locks = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_MEMTABLE_PREFIX_BLOOM_SIZE_RATIO,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         double val = 0.0;
+         if (!dsn::buf2double(str, val)) {
+             return false;
+         }
+         option.memtable_prefix_bloom_size_ratio = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_MEMTABLE_WHOLE_KEY_FILTERING,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         bool val = false;
+         if (!dsn::buf2bool(str, val)) {
+             return false;
+         }
+         option.memtable_whole_key_filtering = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_MEMTABLE_HUGE_PAGE_SIZE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.memtable_huge_page_size = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_TARGET_FILE_SIZE_MULTIPLIER,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         int32_t val = 0;
+         if (!dsn::buf2int32(str, val)) {
+             return false;
+         }
+         option.target_file_size_multiplier = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_MAX_COMPACTION_BYTES,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.max_compaction_bytes = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_IGNORE_MAX_COMPACTION_BYTES_FOR_INPUT,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         bool val = false;
+         if (!dsn::buf2bool(str, val)) {
+             return false;
+         }
+         option.ignore_max_compaction_bytes_for_input = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_SOFT_PENDING_COMPACTION_BYTES_LIMIT,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.soft_pending_compaction_bytes_limit = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_HARD_PENDING_COMPACTION_BYTES_LIMIT,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.hard_pending_compaction_bytes_limit = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_COMPRESSION_TYPE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         if (str == "kNoCompression" || str == "none") {
+             option.blob_compression_type = rocksdb::kNoCompression;
+         } else if (str == "kSnappyCompression" || str == "snappy") {
+             option.blob_compression_type = rocksdb::kSnappyCompression;
+         } else if (str == "kLZ4Compression" || str == "lz4") {
+             option.blob_compression_type = rocksdb::kLZ4Compression;
+         } else if (str == "kZSTD" || str == "zstd") {
+             option.blob_compression_type = rocksdb::kZSTD;
+         } else {
+             return false;
+         }
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_ENABLE_BLOB_GARBAGE_COLLECTION,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         bool val = false;
+         if (!dsn::buf2bool(str, val)) {
+             return false;
+         }
+         option.enable_blob_garbage_collection = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_COMPACTION_READAHEAD_SIZE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.blob_compaction_readahead_size = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_PREPOPULATE_BLOB_CACHE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         if (str == "kDisable" || str == "0") {
+             option.prepopulate_blob_cache = rocksdb::PrepopulateBlobCache::kDisable;
+         } else if (str == "kFlushOnly" || str == "1") {
+             option.prepopulate_blob_cache = rocksdb::PrepopulateBlobCache::kFlushOnly;
+         } else {
+             return false;
+         }
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_PERIODIC_COMPACTION_SECONDS,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         uint64_t val = 0;
+         if (!dsn::buf2uint64(str, val)) {
+             return false;
+         }
+         option.periodic_compaction_seconds = val;
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_BOTTOMMOST_TEMPERATURE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         if (str == "kUnknown") {
+             option.bottommost_temperature = rocksdb::Temperature::kUnknown;
+         } else if (str == "kHot") {
+             option.bottommost_temperature = rocksdb::Temperature::kHot;
+         } else if (str == "kWarm") {
+             option.bottommost_temperature = rocksdb::Temperature::kWarm;
+         } else if (str == "kCold") {
+             option.bottommost_temperature = rocksdb::Temperature::kCold;
+         } else {
+             return false;
+         }
+         return true;
+     }},
+    {dsn::replica_envs::ROCKSDB_LAST_LEVEL_TEMPERATURE,
+     [](const std::string &str, rocksdb::ColumnFamilyOptions &option) -> bool {
+         if (str == "kUnknown") {
+             option.last_level_temperature = rocksdb::Temperature::kUnknown;
+         } else if (str == "kHot") {
+             option.last_level_temperature = rocksdb::Temperature::kHot;
+         } else if (str == "kWarm") {
+             option.last_level_temperature = rocksdb::Temperature::kWarm;
+         } else if (str == "kCold") {
+             option.last_level_temperature = rocksdb::Temperature::kCold;
+         } else {
+             return false;
+         }
+         return true;
+     }},
 };
 
 using cf_opts_getter =
@@ -177,6 +467,164 @@ const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters = {
     {dsn::replica_envs::ROCKSDB_NUM_LEVELS,
      [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
          str = std::to_string(option.num_levels);
+     }},
+    {dsn::replica_envs::ROCKSDB_ENABLE_BLOB_FILES,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = option.enable_blob_files ? "true" : "false";
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_FILE_STARTING_LEVEL,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.blob_file_starting_level);
+     }},
+    {dsn::replica_envs::ROCKSDB_MIN_BLOB_SIZE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.min_blob_size);
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_FORCE_THRESHOLD,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.blob_garbage_collection_force_threshold);
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_GARBAGE_COLLECTION_AGE_CUTOFF,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.blob_garbage_collection_age_cutoff);
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_FILE_SIZE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.blob_file_size);
+     }},
+    {dsn::replica_envs::ROCKSDB_LEVEL0_FILE_NUM_COMPACTION_TRIGGER,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.level0_file_num_compaction_trigger);
+     }},
+    {dsn::replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_MULTIPLIER,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.max_bytes_for_level_multiplier);
+     }},
+    {dsn::replica_envs::ROCKSDB_MAX_BYTES_FOR_LEVEL_BASE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.max_bytes_for_level_base);
+     }},
+    {dsn::replica_envs::ROCKSDB_TARGET_FILE_SIZE_BASE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.target_file_size_base);
+     }},
+    {dsn::replica_envs::ROCKSDB_MAX_WRITE_BUFFER_NUMBER,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.max_write_buffer_number);
+     }},
+    {dsn::replica_envs::ROCKSDB_LEVEL0_SLOWDOWN_WRITES_TRIGGER,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.level0_slowdown_writes_trigger);
+     }},
+    {dsn::replica_envs::ROCKSDB_LEVEL0_STOP_WRITES_TRIGGER,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.level0_stop_writes_trigger);
+     }},
+    {dsn::replica_envs::ROCKSDB_ARENA_BLOCK_SIZE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.arena_block_size);
+     }},
+    {dsn::replica_envs::ROCKSDB_INPLACE_UPDATE_NUM_LOCKS,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.inplace_update_num_locks);
+     }},
+    {dsn::replica_envs::ROCKSDB_MEMTABLE_PREFIX_BLOOM_SIZE_RATIO,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.memtable_prefix_bloom_size_ratio);
+     }},
+    {dsn::replica_envs::ROCKSDB_MEMTABLE_WHOLE_KEY_FILTERING,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = option.memtable_whole_key_filtering ? "true" : "false";
+     }},
+    {dsn::replica_envs::ROCKSDB_MEMTABLE_HUGE_PAGE_SIZE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.memtable_huge_page_size);
+     }},
+    {dsn::replica_envs::ROCKSDB_TARGET_FILE_SIZE_MULTIPLIER,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.target_file_size_multiplier);
+     }},
+    {dsn::replica_envs::ROCKSDB_MAX_COMPACTION_BYTES,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.max_compaction_bytes);
+     }},
+    {dsn::replica_envs::ROCKSDB_IGNORE_MAX_COMPACTION_BYTES_FOR_INPUT,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = option.ignore_max_compaction_bytes_for_input ? "true" : "false";
+     }},
+    {dsn::replica_envs::ROCKSDB_SOFT_PENDING_COMPACTION_BYTES_LIMIT,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.soft_pending_compaction_bytes_limit);
+     }},
+    {dsn::replica_envs::ROCKSDB_HARD_PENDING_COMPACTION_BYTES_LIMIT,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.hard_pending_compaction_bytes_limit);
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_COMPRESSION_TYPE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         if (option.blob_compression_type == rocksdb::kNoCompression) {
+             str = "kNoCompression";
+         } else if (option.blob_compression_type == rocksdb::kSnappyCompression) {
+             str = "kSnappyCompression";
+         } else if (option.blob_compression_type == rocksdb::kLZ4Compression) {
+             str = "kLZ4Compression";
+         } else if (option.blob_compression_type == rocksdb::kZSTD) {
+             str = "kZSTD";
+         } else {
+             str = "kUnknown";
+         }
+     }},
+    {dsn::replica_envs::ROCKSDB_ENABLE_BLOB_GARBAGE_COLLECTION,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = option.enable_blob_garbage_collection ? "true" : "false";
+     }},
+    {dsn::replica_envs::ROCKSDB_BLOB_COMPACTION_READAHEAD_SIZE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.blob_compaction_readahead_size);
+     }},
+    {dsn::replica_envs::ROCKSDB_PREPOPULATE_BLOB_CACHE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = option.prepopulate_blob_cache == rocksdb::PrepopulateBlobCache::kFlushOnly
+                   ? "kFlushOnly"
+                   : "kDisable";
+     }},
+    {dsn::replica_envs::ROCKSDB_PERIODIC_COMPACTION_SECONDS,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         str = std::to_string(option.periodic_compaction_seconds);
+     }},
+    {dsn::replica_envs::ROCKSDB_BOTTOMMOST_TEMPERATURE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         switch (option.bottommost_temperature) {
+         case rocksdb::Temperature::kHot:
+             str = "kHot";
+             break;
+         case rocksdb::Temperature::kWarm:
+             str = "kWarm";
+             break;
+         case rocksdb::Temperature::kCold:
+             str = "kCold";
+             break;
+         default:
+             str = "kUnknown";
+             break;
+         }
+     }},
+    {dsn::replica_envs::ROCKSDB_LAST_LEVEL_TEMPERATURE,
+     [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
+         switch (option.last_level_temperature) {
+         case rocksdb::Temperature::kHot:
+             str = "kHot";
+             break;
+         case rocksdb::Temperature::kWarm:
+             str = "kWarm";
+             break;
+         case rocksdb::Temperature::kCold:
+             str = "kCold";
+             break;
+         default:
+             str = "kUnknown";
+             break;
+         }
      }},
 };
 
@@ -2770,17 +3218,22 @@ void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::stri
         CHECK_TRUE(getter != cf_opts_getters.end());
         std::string option_val;
         getter->second(desc.options, option_val);
-        envs[option] = option_val;
+        if (!option_val.empty()) {
+            envs[option] = option_val;
+        }
     }
     for (const auto &option : dsn::replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
-        if (option.compare(dsn::replica_envs::ROCKSDB_WRITE_BUFFER_SIZE) == 0) {
+        if (option == dsn::replica_envs::ROCKSDB_WRITE_BUFFER_SIZE) {
             continue;
         }
         auto getter = cf_opts_getters.find(option);
         CHECK_TRUE(getter != cf_opts_getters.end());
         std::string option_val;
         getter->second(desc.options, option_val);
-        envs[option] = option_val;
+        // Skip options with empty values (placeholders for complex types)
+        if (!option_val.empty()) {
+            envs[option] = option_val;
+        }
     }
 }
 
