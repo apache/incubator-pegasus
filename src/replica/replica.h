@@ -263,6 +263,8 @@ public:
         _is_duplication_plog_checking.store(checking);
     }
 
+    void update_app_duplication_status(bool duplicating);
+
     //
     // Backup
     //
