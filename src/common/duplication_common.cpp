@@ -40,6 +40,14 @@ DSN_DEFINE_uint32(replication,
                   "send mutation log batch bytes size per rpc");
 DSN_TAG_VARIABLE(duplicate_log_batch_bytes, FT_MUTABLE);
 
+DSN_DEFINE_bool(replication,
+                duplication_unsafe_allow_non_idempotent,
+                false,
+                "Allow receiving client non-idempotent write requests (incr, check_and_set, "
+                "check_and_mutate) and sending them to backup cluster when doing duplication. "
+                "UNSAFE: retries or duplicate delivery may cause data inconsistency on backup.");
+DSN_TAG_VARIABLE(duplication_unsafe_allow_non_idempotent, FT_MUTABLE);
+
 // While many clusters are duplicated to a target cluster, we have to add many cluster
 // ids to the `*.ini` file of the target cluster, and the target cluster might be restarted
 // very frequently.

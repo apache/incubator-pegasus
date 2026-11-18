@@ -57,82 +57,94 @@ public:
 
         void set(const row_data &row_stats)
         {
-            get_qps->set(row_stats.get_qps);
-            multi_get_qps->set(row_stats.multi_get_qps);
-            put_qps->set(row_stats.put_qps);
-            multi_put_qps->set(row_stats.multi_put_qps);
-            remove_qps->set(row_stats.remove_qps);
-            multi_remove_qps->set(row_stats.multi_remove_qps);
-            incr_qps->set(row_stats.incr_qps);
-            check_and_set_qps->set(row_stats.check_and_set_qps);
-            check_and_mutate_qps->set(row_stats.check_and_mutate_qps);
-            scan_qps->set(row_stats.scan_qps);
-            duplicate_qps->set(row_stats.duplicate_qps);
-            dup_shipped_ops->set(row_stats.dup_shipped_ops);
-            dup_failed_shipping_ops->set(row_stats.dup_failed_shipping_ops);
-            dup_recent_mutation_loss_count->set(row_stats.dup_recent_mutation_loss_count);
-            recent_read_cu->set(row_stats.recent_read_cu);
-            recent_write_cu->set(row_stats.recent_write_cu);
-            recent_expire_count->set(row_stats.recent_expire_count);
-            recent_filter_count->set(row_stats.recent_filter_count);
-            recent_abnormal_count->set(row_stats.recent_abnormal_count);
-            recent_write_throttling_delay_count->set(row_stats.recent_write_throttling_delay_count);
+            get_qps->set(static_cast<int64_t>(row_stats.get_qps));
+            multi_get_qps->set(static_cast<int64_t>(row_stats.multi_get_qps));
+            put_qps->set(static_cast<int64_t>(row_stats.put_qps));
+            multi_put_qps->set(static_cast<int64_t>(row_stats.multi_put_qps));
+            remove_qps->set(static_cast<int64_t>(row_stats.remove_qps));
+            multi_remove_qps->set(static_cast<int64_t>(row_stats.multi_remove_qps));
+            incr_qps->set(static_cast<int64_t>(row_stats.incr_qps));
+            check_and_set_qps->set(static_cast<int64_t>(row_stats.check_and_set_qps));
+            check_and_mutate_qps->set(static_cast<int64_t>(row_stats.check_and_mutate_qps));
+            dup_unsafe_received_non_idempotent_duplicate_request->set(static_cast<int64_t>(
+                row_stats.dup_unsafe_received_non_idempotent_duplicate_request));
+            scan_qps->set(static_cast<int64_t>(row_stats.scan_qps));
+            duplicate_qps->set(static_cast<int64_t>(row_stats.duplicate_qps));
+            dup_shipped_ops->set(static_cast<int64_t>(row_stats.dup_shipped_ops));
+            dup_retry_non_idempotent_duplicate_request->set(
+                static_cast<int64_t>(row_stats.dup_retry_non_idempotent_duplicate_request));
+            dup_failed_shipping_ops->set(static_cast<int64_t>(row_stats.dup_failed_shipping_ops));
+            dup_recent_mutation_loss_count->set(
+                static_cast<int64_t>(row_stats.dup_recent_mutation_loss_count));
+            recent_read_cu->set(static_cast<int64_t>(row_stats.recent_read_cu));
+            recent_write_cu->set(static_cast<int64_t>(row_stats.recent_write_cu));
+            recent_expire_count->set(static_cast<int64_t>(row_stats.recent_expire_count));
+            recent_filter_count->set(static_cast<int64_t>(row_stats.recent_filter_count));
+            recent_abnormal_count->set(static_cast<int64_t>(row_stats.recent_abnormal_count));
+            recent_write_throttling_delay_count->set(
+                static_cast<int64_t>(row_stats.recent_write_throttling_delay_count));
             recent_write_throttling_reject_count->set(
-                row_stats.recent_write_throttling_reject_count);
-            recent_read_throttling_delay_count->set(row_stats.recent_read_throttling_delay_count);
-            recent_read_throttling_reject_count->set(row_stats.recent_read_throttling_reject_count);
+                static_cast<int64_t>(row_stats.recent_write_throttling_reject_count));
+            recent_read_throttling_delay_count->set(
+                static_cast<int64_t>(row_stats.recent_read_throttling_delay_count));
+            recent_read_throttling_reject_count->set(
+                static_cast<int64_t>(row_stats.recent_read_throttling_reject_count));
             recent_backup_request_throttling_delay_count->set(
-                row_stats.recent_backup_request_throttling_delay_count);
+                static_cast<int64_t>(row_stats.recent_backup_request_throttling_delay_count));
             recent_backup_request_throttling_reject_count->set(
-                row_stats.recent_backup_request_throttling_reject_count);
-            recent_write_splitting_reject_count->set(row_stats.recent_write_splitting_reject_count);
-            recent_read_splitting_reject_count->set(row_stats.recent_read_splitting_reject_count);
+                static_cast<int64_t>(row_stats.recent_backup_request_throttling_reject_count));
+            recent_write_splitting_reject_count->set(
+                static_cast<int64_t>(row_stats.recent_write_splitting_reject_count));
+            recent_read_splitting_reject_count->set(
+                static_cast<int64_t>(row_stats.recent_read_splitting_reject_count));
             recent_write_bulk_load_ingestion_reject_count->set(
-                row_stats.recent_write_bulk_load_ingestion_reject_count);
-            storage_mb->set(row_stats.storage_mb);
-            storage_count->set(row_stats.storage_count);
-            rdb_block_cache_hit_rate->set(convert_to_1M_ratio(
-                row_stats.rdb_block_cache_hit_count, row_stats.rdb_block_cache_total_count));
+                static_cast<int64_t>(row_stats.recent_write_bulk_load_ingestion_reject_count));
+            storage_mb->set(static_cast<int64_t>(row_stats.storage_mb));
+            storage_count->set(static_cast<int64_t>(row_stats.storage_count));
+            rdb_block_cache_hit_rate->set(static_cast<int64_t>(convert_to_1M_ratio(
+                row_stats.rdb_block_cache_hit_count, row_stats.rdb_block_cache_total_count)));
             rdb_index_and_filter_blocks_mem_usage->set(
-                row_stats.rdb_index_and_filter_blocks_mem_usage);
-            rdb_memtable_mem_usage->set(row_stats.rdb_memtable_mem_usage);
-            rdb_estimate_num_keys->set(row_stats.rdb_estimate_num_keys);
-            rdb_bf_seek_negatives_rate->set(
-                convert_to_1M_ratio(row_stats.rdb_bf_seek_negatives, row_stats.rdb_bf_seek_total));
-            rdb_bf_point_negatives_rate->set(convert_to_1M_ratio(
+                static_cast<int64_t>(row_stats.rdb_index_and_filter_blocks_mem_usage));
+            rdb_memtable_mem_usage->set(static_cast<int64_t>(row_stats.rdb_memtable_mem_usage));
+            rdb_estimate_num_keys->set(static_cast<int64_t>(row_stats.rdb_estimate_num_keys));
+            rdb_bf_seek_negatives_rate->set(static_cast<int64_t>(
+                convert_to_1M_ratio(row_stats.rdb_bf_seek_negatives, row_stats.rdb_bf_seek_total)));
+            rdb_bf_point_negatives_rate->set(static_cast<int64_t>(convert_to_1M_ratio(
                 row_stats.rdb_bf_point_negatives,
-                row_stats.rdb_bf_point_negatives + row_stats.rdb_bf_point_positive_total));
-            rdb_bf_point_false_positive_rate->set(convert_to_1M_ratio(
+                row_stats.rdb_bf_point_negatives + row_stats.rdb_bf_point_positive_total)));
+            rdb_bf_point_false_positive_rate->set(static_cast<int64_t>(convert_to_1M_ratio(
                 row_stats.rdb_bf_point_positive_total - row_stats.rdb_bf_point_positive_true,
                 (row_stats.rdb_bf_point_positive_total - row_stats.rdb_bf_point_positive_true) +
-                    row_stats.rdb_bf_point_negatives));
-            read_qps->set(row_stats.get_total_read_qps());
-            write_qps->set(row_stats.get_total_write_qps());
-            backup_request_qps->set(row_stats.backup_request_qps);
-            backup_request_bytes->set(row_stats.backup_request_bytes);
-            get_bytes->set(row_stats.get_bytes);
-            multi_get_bytes->set(row_stats.multi_get_bytes);
-            scan_bytes->set(row_stats.scan_bytes);
-            put_bytes->set(row_stats.put_bytes);
-            multi_put_bytes->set(row_stats.multi_put_bytes);
-            check_and_set_bytes->set(row_stats.check_and_set_bytes);
-            check_and_mutate_bytes->set(row_stats.check_and_mutate_bytes);
-            read_bytes->set(row_stats.get_total_read_bytes());
-            write_bytes->set(row_stats.get_total_write_bytes());
-            recent_rdb_compaction_input_bytes->set(row_stats.recent_rdb_compaction_input_bytes);
-            recent_rdb_compaction_output_bytes->set(row_stats.recent_rdb_compaction_output_bytes);
-            rdb_read_l2andup_hit_rate->set(convert_to_1M_ratio(
-                row_stats.rdb_read_l2andup_hit_count, row_stats.rdb_block_cache_total_count));
-            rdb_read_l1_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l1_hit_count,
-                                                          row_stats.rdb_block_cache_total_count));
-            rdb_read_l0_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l0_hit_count,
-                                                          row_stats.rdb_block_cache_total_count));
-            rdb_read_memtable_hit_rate->set(convert_to_1M_ratio(
-                row_stats.rdb_read_memtable_hit_count, row_stats.rdb_block_cache_total_count));
-            rdb_write_amplification->set(row_stats.rdb_write_amplification /
-                                         row_stats.partition_count);
-            rdb_read_amplification->set(row_stats.rdb_read_amplification /
-                                        row_stats.partition_count);
+                    row_stats.rdb_bf_point_negatives)));
+            read_qps->set(static_cast<int64_t>(row_stats.get_total_read_qps()));
+            write_qps->set(static_cast<int64_t>(row_stats.get_total_write_qps()));
+            backup_request_qps->set(static_cast<int64_t>(row_stats.backup_request_qps));
+            backup_request_bytes->set(static_cast<int64_t>(row_stats.backup_request_bytes));
+            get_bytes->set(static_cast<int64_t>(row_stats.get_bytes));
+            multi_get_bytes->set(static_cast<int64_t>(row_stats.multi_get_bytes));
+            scan_bytes->set(static_cast<int64_t>(row_stats.scan_bytes));
+            put_bytes->set(static_cast<int64_t>(row_stats.put_bytes));
+            multi_put_bytes->set(static_cast<int64_t>(row_stats.multi_put_bytes));
+            check_and_set_bytes->set(static_cast<int64_t>(row_stats.check_and_set_bytes));
+            check_and_mutate_bytes->set(static_cast<int64_t>(row_stats.check_and_mutate_bytes));
+            read_bytes->set(static_cast<int64_t>(row_stats.get_total_read_bytes()));
+            write_bytes->set(static_cast<int64_t>(row_stats.get_total_write_bytes()));
+            recent_rdb_compaction_input_bytes->set(
+                static_cast<int64_t>(row_stats.recent_rdb_compaction_input_bytes));
+            recent_rdb_compaction_output_bytes->set(
+                static_cast<int64_t>(row_stats.recent_rdb_compaction_output_bytes));
+            rdb_read_l2andup_hit_rate->set(static_cast<int64_t>(convert_to_1M_ratio(
+                row_stats.rdb_read_l2andup_hit_count, row_stats.rdb_block_cache_total_count)));
+            rdb_read_l1_hit_rate->set(static_cast<int64_t>(convert_to_1M_ratio(
+                row_stats.rdb_read_l1_hit_count, row_stats.rdb_block_cache_total_count)));
+            rdb_read_l0_hit_rate->set(static_cast<int64_t>(convert_to_1M_ratio(
+                row_stats.rdb_read_l0_hit_count, row_stats.rdb_block_cache_total_count)));
+            rdb_read_memtable_hit_rate->set(static_cast<int64_t>(convert_to_1M_ratio(
+                row_stats.rdb_read_memtable_hit_count, row_stats.rdb_block_cache_total_count)));
+            rdb_write_amplification->set(static_cast<int64_t>(row_stats.rdb_write_amplification /
+                                                              row_stats.partition_count));
+            rdb_read_amplification->set(
+                static_cast<int64_t>(row_stats.rdb_read_amplification / row_stats.partition_count));
         }
 
         ::dsn::perf_counter_wrapper get_qps;
@@ -144,10 +156,12 @@ public:
         ::dsn::perf_counter_wrapper incr_qps;
         ::dsn::perf_counter_wrapper check_and_set_qps;
         ::dsn::perf_counter_wrapper check_and_mutate_qps;
+        ::dsn::perf_counter_wrapper dup_unsafe_received_non_idempotent_duplicate_request;
         ::dsn::perf_counter_wrapper scan_qps;
         ::dsn::perf_counter_wrapper duplicate_qps;
         ::dsn::perf_counter_wrapper dup_shipped_ops;
         ::dsn::perf_counter_wrapper dup_failed_shipping_ops;
+        ::dsn::perf_counter_wrapper dup_retry_non_idempotent_duplicate_request;
         ::dsn::perf_counter_wrapper dup_recent_mutation_loss_count;
         ::dsn::perf_counter_wrapper recent_read_cu;
         ::dsn::perf_counter_wrapper recent_write_cu;
