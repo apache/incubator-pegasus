@@ -810,7 +810,8 @@ bool local_replica_recover(command_executor *e, shell_context *sc, arguments arg
     dsn::app_info app_info;
     dsn::gpid pid;
     std::string hint_message;
-    if (!replica_stub::validate_replica_dir(opts.src_replica_dir, app_info, pid, hint_message)) {
+    if (!dsn::replication::replica_stub::validate_replica_dir(
+            opts.src_replica_dir, app_info, pid, hint_message)) {
         fmt::print(stderr,
                    "ERROR: invalid source replica dir '{}': {}\n",
                    opts.src_replica_dir,
