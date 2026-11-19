@@ -115,6 +115,20 @@ jobs:
         run: |
           mvn clean package -DskipTests -Dcheckstyle.skip=true
           mvn clean install -DskipTests -Dcheckstyle.skip=true
+      - name: Prefetch Scala client dependencies
+        # `sbt test` resolves pegasus-client from the local Maven repository, and
+        # coursier then looks for its dependencies' artifacts there as well. Building
+        # java-client only downloaded the POMs of netty's native modules, not their
+        # per-platform classifier jars, so `sbt update` fails with:
+        #   file:///root/.m2/repository/io/netty/netty-tcnative-boringssl-static/
+        #   2.0.70.Final/netty-tcnative-boringssl-static-2.0.70.Final-linux-x86_64.jar:
+        #   not found
+        # Resolve the whole dependency tree with Maven, which does reach Maven Central,
+        # so that the jars are already in the local repository when sbt runs.
+        working-directory: ./scala-client
+        run: |
+          mvn -q dependency:get -Dartifact=org.apache.pegasus:pegasus-client:2.6.0-SNAPSHOT \
+            -Dtransitive=true
       - name: Download artifact
         uses: "./.github/actions/download_artifact"
       - name: Start Pegasus cluster
