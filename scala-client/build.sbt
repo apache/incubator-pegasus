@@ -32,8 +32,16 @@ publishMavenStyle := true
 scalafmtOnCompile := true
 
 //custom repository
+// NOTE: as soon as `resolvers` is non-empty, sbt uses it *instead of* its default
+// resolver list (see Resolver.combineDefaultResolvers), so Maven Central has to be
+// listed explicitly. Without it only the local Maven repository is consulted, and
+// any artifact that the preceding `mvn install` of java-client did not put there —
+// e.g. netty's native classifier jars such as
+// netty-tcnative-boringssl-static-2.0.70.Final-linux-x86_64.jar — fails with
+// "not found", which makes `sbt update` (and therefore `sbt test`) fail.
 resolvers ++= Seq(
   //"Remote Maven Repository" at "http://your-url/",
+  Resolver.mavenCentral,
   "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
 )
 
