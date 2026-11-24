@@ -642,8 +642,7 @@ TEST(proxy, connection)
         // fixed expectation would survive a retry. Each attempt therefore
         // rewrites fo2 first, so the expected remaining time is 9999 again
         // (9998 if the second ticked between the write and the TTL).
-        const char *setex_req =
-            "*4\r\n$5\r\nSETEX\r\n$3\r\nfo2\r\n$4\r\n9999\r\n$3\r\nbar\r\n";
+        const char *setex_req = "*4\r\n$5\r\nSETEX\r\n$3\r\nfo2\r\n$4\r\n9999\r\n$3\r\nbar\r\n";
         const char *req = "*2\r\n$3\r\nTTL\r\n$3\r\nfo2\r\n"
                           "*2\r\n$3\r\nTTL\r\n$3\r\nfo3\r\n"
                           "*2\r\n$3\r\nTTL\r\n$3\r\nfo4\r\n";
