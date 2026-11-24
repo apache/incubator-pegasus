@@ -539,7 +539,7 @@ TEST_F(proxy_test, test_parse_parameters)
 static bool read_resp_reply(ip::tcp::socket &socket, std::string &reply)
 {
     reply.clear();
-    char c;
+    char c = 0;
     // The first line carries the reply type and, for bulk strings, the length.
     do {
         if (boost::asio::read(socket, boost::asio::buffer(&c, 1)) != 1) {
@@ -552,7 +552,7 @@ static bool read_resp_reply(ip::tcp::socket &socket, std::string &reply)
         return true;
     }
     // Bulk string: "$<len>\r\n<data>\r\n".
-    int len = atoi(reply.c_str() + 1);
+    int len = static_cast<int>(strtol(reply.c_str() + 1, nullptr, 10));
     if (len < 0) {
         // Null bulk string, e.g. "$-1\r\n": done.
         return true;
@@ -660,19 +660,22 @@ TEST(proxy, connection)
         std::string got;
         bool found = false;
         for (int i = 0; i < 60 && !found; ++i) {
-            boost::asio::write(client_socket,
-                               boost::asio::buffer(setex_req, strlen(setex_req)));
+            boost::asio::write(client_socket, boost::asio::buffer(setex_req, strlen(setex_req)));
             std::string ack;
             ASSERT_TRUE(read_resp_reply(client_socket, ack));
             ASSERT_EQ(ack, "+OK\r\n");
 
             boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
 
-            std::string r1, r2, r3;
+            std::string r1;
+            std::string r2;
+            std::string r3;
             ASSERT_TRUE(read_resp_reply(client_socket, r1));
             ASSERT_TRUE(read_resp_reply(client_socket, r2));
             ASSERT_TRUE(read_resp_reply(client_socket, r3));
-            got = r1 + r2 + r3;
+            got = r1;
+            got += r2;
+            got += r3;
             found = (got == resps1 || got == resps2);
             if (!found) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -698,11 +701,15 @@ TEST(proxy, connection)
         for (int i = 0; i < 60 && !found; ++i) {
             boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
 
-            std::string r1, r2, r3;
+            std::string r1;
+            std::string r2;
+            std::string r3;
             ASSERT_TRUE(read_resp_reply(client_socket, r1));
             ASSERT_TRUE(read_resp_reply(client_socket, r2));
             ASSERT_TRUE(read_resp_reply(client_socket, r3));
-            got = r1 + r2 + r3;
+            got = r1;
+            got += r2;
+            got += r3;
             found = (got == resps);
             if (!found) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
