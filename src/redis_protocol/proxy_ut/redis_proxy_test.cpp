@@ -534,6 +534,8 @@ TEST_F(proxy_test, test_parse_parameters)
 // "$-1\r\n" or "$4\r\nbar3\r\n", and appends it to `reply`. Reads byte by byte,
 // so a shorter-than-expected reply (e.g. a null bulk string where a written
 // value was expected) can never leave the stream misaligned for the next read.
+// Array replies ("*...") are not handled: the proxy answers every command this
+// test sends with a single simple or bulk-string reply.
 static bool read_resp_reply(ip::tcp::socket &socket, std::string &reply)
 {
     reply.clear();
@@ -635,6 +637,13 @@ TEST(proxy, connection)
     }
 
     {
+        // TTL fo2 answers with the seconds remaining of the 9999s expiry set
+        // by the SETEX above, i.e. the value decays by one per second and no
+        // fixed expectation would survive a retry. Each attempt therefore
+        // rewrites fo2 first, so the expected remaining time is 9999 again
+        // (9998 if the second ticked between the write and the TTL).
+        const char *setex_req =
+            "*4\r\n$5\r\nSETEX\r\n$3\r\nfo2\r\n$4\r\n9999\r\n$3\r\nbar\r\n";
         const char *req = "*2\r\n$3\r\nTTL\r\n$3\r\nfo2\r\n"
                           "*2\r\n$3\r\nTTL\r\n$3\r\nfo3\r\n"
                           "*2\r\n$3\r\nTTL\r\n$3\r\nfo4\r\n";
@@ -644,13 +653,19 @@ TEST(proxy, connection)
         const std::string resps2 = ":9998\r\n"
                                    ":-1\r\n"
                                    ":-2\r\n";
-        // A TTL routed to a secondary that has not applied the SET fo2 above
-        // yet would answer :-2, and the replies would not even fill a
-        // fixed-length read, so read one reply at a time and retry the triple
-        // until the expected replies come back (see the comment above).
+        // A TTL routed to a secondary that has not applied the SETEX fo2 yet
+        // would answer :-2, and the replies would not even fill a fixed-length
+        // read, so read one reply at a time and retry the triple until the
+        // expected replies come back (see the comment above).
         std::string got;
         bool found = false;
         for (int i = 0; i < 60 && !found; ++i) {
+            boost::asio::write(client_socket,
+                               boost::asio::buffer(setex_req, strlen(setex_req)));
+            std::string ack;
+            ASSERT_TRUE(read_resp_reply(client_socket, ack));
+            ASSERT_EQ(ack, "+OK\r\n");
+
             boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
 
             std::string r1, r2, r3;
