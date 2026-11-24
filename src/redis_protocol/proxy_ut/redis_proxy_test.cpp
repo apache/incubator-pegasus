@@ -579,8 +579,7 @@ TEST(proxy, connection)
                            "$4\r\nbar3\r\n";
         size_t got_length =
             boost::asio::read(client_socket, boost::asio::buffer(got_reply, strlen(resp)));
-        got_reply[got_length] = 0;
-        ASSERT_STREQ(resp, got_reply);
+        ASSERT_TRUE(dsn::utils::equals(got_reply, resp, got_length));
     }
 
     // then ttl test of set key
