@@ -37,6 +37,7 @@
 #include <boost/system/detail/error_code.hpp>
 #include <gtest/gtest_prod.h>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <set>
@@ -529,6 +530,40 @@ TEST_F(proxy_test, test_parse_parameters)
     }
 }
 
+// Reads one complete RESP reply from the socket, e.g. "+OK\r\n", ":9999\r\n",
+// "$-1\r\n" or "$4\r\nbar3\r\n", and appends it to `reply`. Reads byte by byte,
+// so a shorter-than-expected reply (e.g. a null bulk string where a written
+// value was expected) can never leave the stream misaligned for the next read.
+static bool read_resp_reply(ip::tcp::socket &socket, std::string &reply)
+{
+    reply.clear();
+    char c;
+    // The first line carries the reply type and, for bulk strings, the length.
+    do {
+        if (boost::asio::read(socket, boost::asio::buffer(&c, 1)) != 1) {
+            return false;
+        }
+        reply += c;
+    } while (c != '\n');
+    if (reply[0] != '$') {
+        // Simple reply ("+OK\r\n", "-ERR ...\r\n" or ":9999\r\n"): done.
+        return true;
+    }
+    // Bulk string: "$<len>\r\n<data>\r\n".
+    int len = atoi(reply.c_str() + 1);
+    if (len < 0) {
+        // Null bulk string, e.g. "$-1\r\n": done.
+        return true;
+    }
+    for (int i = 0; i < len + 2; i++) { // data + trailing "\r\n"
+        if (boost::asio::read(socket, boost::asio::buffer(&c, 1)) != 1) {
+            return false;
+        }
+        reply += c;
+    }
+    return true;
+}
+
 TEST(proxy, connection)
 {
     const auto redis_address = dsn::rpc_address::from_ip_port("127.0.0.1", 12345);
@@ -558,16 +593,29 @@ TEST(proxy, connection)
         ASSERT_STREQ(resps, got_reply);
     }
 
-    // then let's get the value
+    // then let's get the value. The pipelined SETs above are acked as soon as
+    // the primary replica commits; replication to secondaries is asynchronous,
+    // so a GET that the proxy routes to a secondary may still see an older
+    // value for a while: read-your-write is only eventually consistent here.
+    // Retry the GET until the last written value is visible; a genuine proxy
+    // failure still fails the assertion once the budget is exhausted.
     {
         const char *req = "*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n";
-        boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
+        const std::string resp = "$4\r\nbar3\r\n";
+        std::string last_reply;
+        bool found = false;
+        for (int i = 0; i < 60 && !found; ++i) {
+            boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
 
-        const char *resp = "$4\r\nbar3\r\n";
-        size_t got_length =
-            boost::asio::read(client_socket, boost::asio::buffer(got_reply, strlen(resp)));
-        got_reply[got_length] = 0;
-        ASSERT_STREQ(resp, got_reply);
+            std::string reply;
+            ASSERT_TRUE(read_resp_reply(client_socket, reply));
+            last_reply = reply;
+            found = (reply == resp);
+            if (!found) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            }
+        }
+        ASSERT_TRUE(found) << "unexpected reply: " << last_reply;
     }
 
     // then ttl test of set key
@@ -590,20 +638,32 @@ TEST(proxy, connection)
         const char *req = "*2\r\n$3\r\nTTL\r\n$3\r\nfo2\r\n"
                           "*2\r\n$3\r\nTTL\r\n$3\r\nfo3\r\n"
                           "*2\r\n$3\r\nTTL\r\n$3\r\nfo4\r\n";
-        boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
+        const std::string resps1 = ":9999\r\n"
+                                   ":-1\r\n"
+                                   ":-2\r\n";
+        const std::string resps2 = ":9998\r\n"
+                                   ":-1\r\n"
+                                   ":-2\r\n";
+        // A TTL routed to a secondary that has not applied the SET fo2 above
+        // yet would answer :-2, and the replies would not even fill a
+        // fixed-length read, so read one reply at a time and retry the triple
+        // until the expected replies come back (see the comment above).
+        std::string got;
+        bool found = false;
+        for (int i = 0; i < 60 && !found; ++i) {
+            boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
 
-        const char *resps1 = ":9999\r\n"
-                             ":-1\r\n"
-                             ":-2\r\n";
-        const char *resps2 = ":9998\r\n"
-                             ":-1\r\n"
-                             ":-2\r\n";
-        size_t got_length =
-            boost::asio::read(client_socket, boost::asio::buffer(got_reply, strlen(resps1)));
-        got_reply[got_length] = 0;
-        ASSERT_EQ(got_length, strlen(resps1));
-        ASSERT_TRUE(dsn::utils::equals(got_reply, resps1, got_length) ||
-                    dsn::utils::equals(got_reply, resps2, got_length));
+            std::string r1, r2, r3;
+            ASSERT_TRUE(read_resp_reply(client_socket, r1));
+            ASSERT_TRUE(read_resp_reply(client_socket, r2));
+            ASSERT_TRUE(read_resp_reply(client_socket, r3));
+            got = r1 + r2 + r3;
+            found = (got == resps1 || got == resps2);
+            if (!found) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            }
+        }
+        ASSERT_TRUE(found) << "unexpected replies: " << got;
     }
 
     {
@@ -611,15 +671,29 @@ TEST(proxy, connection)
         const char *req = "*2\r\n$3\r\nGET\r\n$3\r\nfo1\r\n"
                           "*2\r\n$3\r\nGET\r\n$3\r\nfo2\r\n"
                           "*2\r\n$3\r\nGET\r\n$3\r\nfo3\r\n";
-        boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
+        const std::string resps = "$-1\r\n"
+                                  "$3\r\nbar\r\n"
+                                  "$3\r\nbar\r\n";
+        // fo1 has expired (TTL 2s): every replica that has applied its SET
+        // reports nil, and so does one that has not. fo2/fo3, however, may be
+        // briefly invisible on a secondary for the same reason as above, so
+        // retry the triple until all three replies match.
+        std::string got;
+        bool found = false;
+        for (int i = 0; i < 60 && !found; ++i) {
+            boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
 
-        const char *resps = "$-1\r\n"
-                            "$3\r\nbar\r\n"
-                            "$3\r\nbar\r\n";
-        size_t got_length =
-            boost::asio::read(client_socket, boost::asio::buffer(got_reply, strlen(resps)));
-        got_reply[got_length] = 0;
-        ASSERT_STREQ(resps, got_reply);
+            std::string r1, r2, r3;
+            ASSERT_TRUE(read_resp_reply(client_socket, r1));
+            ASSERT_TRUE(read_resp_reply(client_socket, r2));
+            ASSERT_TRUE(read_resp_reply(client_socket, r3));
+            got = r1 + r2 + r3;
+            found = (got == resps);
+            if (!found) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            }
+        }
+        ASSERT_TRUE(found) << "unexpected replies: " << got;
     }
 
     // let's send partitial message then close the socket
