@@ -194,6 +194,7 @@ jobs:
           - zookeeper_sasl_auth_test
     needs: build_Release
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     env:
       ARTIFACT_NAME: release
     container:
@@ -287,11 +288,16 @@ jobs:
           - zookeeper_sasl_auth_test
     needs: build_ASAN
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     env:
       ARTIFACT_NAME: release_address
     container:
       image: apache/pegasus:thirdparties-bin-test-asan-ubuntu2204-${{ github.base_ref }}
-      options: --cap-add=SYS_PTRACE
+      # Docker's default seccomp profile denies personality(ADDR_NO_RANDOMIZE), which
+      # is what `setarch -R` needs, so the ASLR workaround below fails with
+      # "setarch: failed to set personality to x86_64: Operation not permitted"
+      # unless seccomp is unconfined. v2.5's ASAN test job does the same.
+      options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
     steps:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -299,6 +305,8 @@ jobs:
         uses: "./.github/actions/download_artifact"
       - name: Run server tests
         uses: "./.github/actions/run_server_tests"
+        with:
+          disable_aslr: "true"
 
 # TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
 #                 when we are going to release a stable version. So we disable them in regular CI
@@ -447,7 +455,13 @@ jobs:
         run: |
           # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-15-Readme.md
           brew install ccache
-          brew install openssl@1.1
+          # openssl@1.1 has been removed from Homebrew (installing it fails with
+          # "No such keg: /opt/homebrew/Cellar/openssl@1.1"), so use openssl@3 and
+          # point both the thirdparty and the pegasus builds at it: it is keg-only,
+          # so CMake does not find it on its own.
+          brew install openssl@3
+          echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Setup cache

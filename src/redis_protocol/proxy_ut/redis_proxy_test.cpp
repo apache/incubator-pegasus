@@ -541,11 +541,33 @@ TEST(proxy, connection)
     ASSERT_TRUE(!client_socket.connect(redis_endpoint, ec));
 
     char got_reply[1024];
-    // basic pipeline
+    // basic pipeline.
+    //
+    // ============================ IMPORTANT =============================
+    // The proxy does NOT execute the commands of a pipeline in request order.
+    // Every command of a pipeline becomes its own entry in
+    // redis_parser::pending_response and is dispatched as an independent RPC,
+    // so a command's ordering with respect to its siblings is undefined: for
+    // pipelined writes to the SAME key, the final value is decided by
+    // whichever RPC happens to land last.
+    //
+    // The ONLY ordering guarantee is on the replies: reply_all_ready() flushes
+    // the completed prefix of the pipeline, so replies always come back in
+    // request order even though execution is concurrent.
+    //
+    // This is a deliberate deviation from single-server Redis, where
+    // pipelined commands run strictly sequentially. The three SETs below
+    // therefore use three different keys: the original test wrote
+    // foo=bar1/bar2/bar3 in one pipeline and expected GET foo to return
+    // bar3, which holds on real Redis but is undefined here (the GET could
+    // legally observe bar1 or bar2), and it occasionally failed CI for
+    // exactly that reason. With every key written exactly once, the
+    // expected replies are exact.
+    // ====================================================================
     {
-        const char *reqs = "*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$4\r\nbar1\r\n"
-                           "*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$4\r\nbar2\r\n"
-                           "*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$4\r\nbar3\r\n";
+        const char *reqs = "*3\r\n$3\r\nSET\r\n$4\r\nfoo1\r\n$4\r\nbar1\r\n"
+                           "*3\r\n$3\r\nSET\r\n$4\r\nfoo2\r\n$4\r\nbar2\r\n"
+                           "*3\r\n$3\r\nSET\r\n$4\r\nfoo3\r\n$4\r\nbar3\r\n";
 
         boost::asio::write(client_socket, boost::asio::buffer(reqs, strlen(reqs)));
 
@@ -558,16 +580,21 @@ TEST(proxy, connection)
         ASSERT_STREQ(resps, got_reply);
     }
 
-    // then let's get the value
+    // then let's get the values. Each key was written once and its +OK has
+    // been read above, and the proxy flushes the replies of a pipeline in
+    // request order, so the replies are deterministic.
     {
-        const char *req = "*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n";
+        const char *req = "*2\r\n$3\r\nGET\r\n$4\r\nfoo1\r\n"
+                          "*2\r\n$3\r\nGET\r\n$4\r\nfoo2\r\n"
+                          "*2\r\n$3\r\nGET\r\n$4\r\nfoo3\r\n";
         boost::asio::write(client_socket, boost::asio::buffer(req, strlen(req)));
 
-        const char *resp = "$4\r\nbar3\r\n";
+        const char *resp = "$4\r\nbar1\r\n"
+                           "$4\r\nbar2\r\n"
+                           "$4\r\nbar3\r\n";
         size_t got_length =
             boost::asio::read(client_socket, boost::asio::buffer(got_reply, strlen(resp)));
-        got_reply[got_length] = 0;
-        ASSERT_STREQ(resp, got_reply);
+        ASSERT_TRUE(dsn::utils::equals(got_reply, resp, got_length));
     }
 
     // then ttl test of set key

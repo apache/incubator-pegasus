@@ -31,20 +31,20 @@ jobs:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up QEMU
-        # docker/setup-qemu-action@v1.2.0
-        uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        # docker/setup-buildx-action@v1.7.0
-        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        # docker/login-action@1.14.1
-        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        # docker/build-push-action@v2.10.0
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-src/Dockerfile
@@ -72,20 +72,20 @@ jobs:
       # actions/checkout@v3.6.0
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
       - name: Set up QEMU
-        # docker/setup-qemu-action@v1.2.0
-        uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        # docker/setup-buildx-action@v1.7.0
-        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        # docker/login-action@1.14.1
-        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for production
-        # docker/build-push-action@v2.10.0
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile
@@ -113,20 +113,20 @@ jobs:
       # actions/checkout@v3.6.0
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
       - name: Set up QEMU
-        # docker/setup-qemu-action@v1.2.0
-        uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        # docker/setup-buildx-action@v1.7.0
-        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        # docker/login-action@1.14.1
-        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for production with jemalloc
-        # docker/build-push-action@v2.10.0
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile
@@ -147,20 +147,20 @@ jobs:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up QEMU
-        # docker/setup-qemu-action@v1.2.0
-        uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        # docker/setup-buildx-action@v1.7.0
-        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        # docker/login-action@1.14.1
-        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for test
-        # docker/build-push-action@v2.10.0
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile
@@ -181,20 +181,20 @@ jobs:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up QEMU
-        # docker/setup-qemu-action@v1.2.0
-        uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        # docker/setup-buildx-action@v1.7.0
-        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        # docker/login-action@1.14.1
-        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for test asan
-        # docker/build-push-action@v2.10.0
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile
@@ -216,20 +216,20 @@ jobs:
       # actions/checkout@v4.3.1
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up QEMU
-        # docker/setup-qemu-action@v1.2.0
-        uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        # docker/setup-buildx-action@v1.7.0
-        uses: docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        # docker/login-action@1.14.1
-        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for test with jemalloc
-        # docker/build-push-action@v2.10.0
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile
