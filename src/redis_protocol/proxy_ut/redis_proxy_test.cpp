@@ -541,14 +541,29 @@ TEST(proxy, connection)
     ASSERT_TRUE(!client_socket.connect(redis_endpoint, ec));
 
     char got_reply[1024];
-    // basic pipeline. The three SETs are written in one go to exercise the
-    // proxy's pipelined request parsing, but they use three different keys on
-    // purpose: the proxy dispatches the commands of a pipeline concurrently,
-    // so writing one single key three times would leave its final value
-    // depend on the order in which the writes happen to be applied, and the
-    // GET below could observe bar1 or bar2 just as legally as bar3 (this
-    // occasionally failed the old test that wrote foo three times and read it
-    // back expecting bar3).
+    // basic pipeline.
+    //
+    // ============================ IMPORTANT =============================
+    // The proxy does NOT execute the commands of a pipeline in request order.
+    // Every command of a pipeline becomes its own entry in
+    // redis_parser::pending_response and is dispatched as an independent RPC,
+    // so a command's ordering with respect to its siblings is undefined: for
+    // pipelined writes to the SAME key, the final value is decided by
+    // whichever RPC happens to land last.
+    //
+    // The ONLY ordering guarantee is on the replies: reply_all_ready() flushes
+    // the completed prefix of the pipeline, so replies always come back in
+    // request order even though execution is concurrent.
+    //
+    // This is a deliberate deviation from single-server Redis, where
+    // pipelined commands run strictly sequentially. The three SETs below
+    // therefore use three different keys: the original test wrote
+    // foo=bar1/bar2/bar3 in one pipeline and expected GET foo to return
+    // bar3, which holds on real Redis but is undefined here (the GET could
+    // legally observe bar1 or bar2), and it occasionally failed CI for
+    // exactly that reason. With every key written exactly once, the
+    // expected replies are exact.
+    // ====================================================================
     {
         const char *reqs = "*3\r\n$3\r\nSET\r\n$4\r\nfoo1\r\n$4\r\nbar1\r\n"
                            "*3\r\n$3\r\nSET\r\n$4\r\nfoo2\r\n$4\r\nbar2\r\n"
