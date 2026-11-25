@@ -72,6 +72,38 @@ public:
 
 INSTANTIATE_TEST_SUITE_P(, block_service_manager_test, ::testing::Values(false, true));
 
+TEST(is_juicefs_provider_test, valid_provider)
+{
+    EXPECT_TRUE(block_service_manager::is_juicefs_provider("jfs://volume@cluster_name"));
+    EXPECT_TRUE(block_service_manager::is_juicefs_provider("jfs://pegasus@ak-bigdata"));
+    EXPECT_TRUE(block_service_manager::is_juicefs_provider("jfs://admin@192.168.1.1"));
+}
+
+TEST(is_juicefs_provider_test, no_volume)
+{
+    EXPECT_FALSE(block_service_manager::is_juicefs_provider("jfs://@cluster_name"));
+    EXPECT_FALSE(block_service_manager::is_juicefs_provider("jfs://@"));
+}
+
+TEST(is_juicefs_provider_test, no_cluster_name)
+{
+    EXPECT_FALSE(block_service_manager::is_juicefs_provider("jfs://volume@"));
+}
+
+TEST(is_juicefs_provider_test, no_at_symbol)
+{
+    EXPECT_FALSE(block_service_manager::is_juicefs_provider("jfs://volumecluster"));
+    EXPECT_FALSE(block_service_manager::is_juicefs_provider("jfs://"));
+}
+
+TEST(is_juicefs_provider_test, wrong_prefix)
+{
+    EXPECT_FALSE(block_service_manager::is_juicefs_provider("dfs://volume@cluster_name"));
+    EXPECT_FALSE(block_service_manager::is_juicefs_provider("hdfs://volume@cluster_name"));
+    EXPECT_FALSE(block_service_manager::is_juicefs_provider(""));
+    EXPECT_FALSE(block_service_manager::is_juicefs_provider("jfs:/volume@cluster_name"));
+}
+
 TEST_P(block_service_manager_test, remote_file_not_exist)
 {
     utils::filesystem::remove_path(LOCAL_DIR);

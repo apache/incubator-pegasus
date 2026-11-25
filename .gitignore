@@ -89,6 +89,7 @@ java/target
 java/test-libs
 java/*.log
 java/include/org_rocksdb_*.h
+juicefs-hadoop-1.3.1.jar
 
 .idea/
 *.iml
