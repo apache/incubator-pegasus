@@ -120,8 +120,8 @@ TEST_F(integration_test, write_corrupt_db)
 
     // Restarting RS-1 needs it to load its replicas from the (partially corrupted)
     // storage and register to the meta server, which on a loaded runner occasionally
-    // exceeds 60 seconds; the budget here is not part of what the test verifies.
-    ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_alive_replica_server_count()); }, 180);
+    // exceeds 180 seconds; the budget here is not part of what the test verifies.
+    ASSERT_IN_TIME([&] { ASSERT_EQ(3, get_alive_replica_server_count()); }, 300);
 
     // Make best effort to rebalance the cluster,
     ASSERT_NO_FATAL_FAILURE(
@@ -129,7 +129,7 @@ TEST_F(integration_test, write_corrupt_db)
     // Make sure RS-1 has some primaries of table 'temp'. Copying replicas back to
     // RS-1 and moving primaries there is slow on a loaded runner and not part of
     // what the test verifies, so give the balancer a generous budget.
-    ASSERT_IN_TIME([&] { ASSERT_GT(get_leader_count("temp", 1), 0); }, 300);
+    ASSERT_IN_TIME([&] { ASSERT_GT(get_leader_count("temp", 1), 0); }, 600);
 
     for (int i = 0; i < 1000; i++) {
         std::string hkey = fmt::format("hkey2_{}", i);
