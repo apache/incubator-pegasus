@@ -40,10 +40,18 @@ jobs:
     name: Spotless
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      # actions/setup-java@v4.8.0
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
-          java-version: 8
+          # The bare major version resolves to Temurin's *latest* JDK 8 release,
+          # and the release assets of the current latest (8.0.514+1, jdk8u514-b01)
+          # are broken: setup-java downloads them in ~40ms and `tar xz` then dies
+          # with "gzip: stdin: not in gzip format". Pin the previous release,
+          # whose x64 Linux tarball was verified to download and decompress
+          # cleanly; unpin once 8.0.514+1 is republished.
+          java-version: '8.0.512+9'
           distribution: temurin
       - name: spotless
         working-directory: ./java-client
@@ -61,7 +69,8 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Rebuild thirdparty if needed
         uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - name: Build Pegasus
@@ -80,16 +89,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ '8', '11', '17' ]
+        # '8.0.512+9' instead of '8': see the comment at the spotless job's
+        # setup-java step — the latest Temurin 8 release has broken assets.
+        java: [ '8.0.512+9', '11', '17' ]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v3
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      # actions/cache@v3.5.0
+      - uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - uses: actions/setup-java@v4
+      # actions/setup-java@v4.8.0
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
         with:
           java-version: ${{ matrix.java }}
           distribution: temurin

@@ -22,6 +22,8 @@
 #include <functional>
 #include <mutex>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
@@ -47,6 +49,17 @@ struct http_request
 {
     static error_with<http_request> parse(dsn::message_ex *m);
 
+    bool get_query_arg(const std::string &key, std::string &value) const
+    {
+        const auto iter = std::as_const(query_args).find(key);
+        if (iter == query_args.end()) {
+            return false;
+        }
+
+        value = iter->second;
+        return true;
+    }
+
     std::string path;
     // <args_name, args_val>
     std::unordered_map<std::string, std::string> query_args;
@@ -57,9 +70,28 @@ struct http_request
 
 struct http_response
 {
+    void as_bad_request(std::string msg)
+    {
+        body = std::move(msg);
+        status_code = http_status_code::kBadRequest;
+        content_type = "text/plain; charset=utf-8";
+    }
+
+    void as_missing_query_arg(std::string_view key)
+    {
+        as_bad_request(fmt::format("{} should not be empty", key));
+    }
+
+    void as_ok_json(std::string str)
+    {
+        body = std::move(str);
+        status_code = http_status_code::kOk;
+        content_type = "application/json; charset=utf-8";
+    }
+
     std::string body;
     http_status_code status_code{http_status_code::kOk};
-    std::string content_type = "text/plain";
+    std::string content_type{"text/plain; charset=utf-8"};
     std::string location;
 };
 
