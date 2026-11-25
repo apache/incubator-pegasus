@@ -28,18 +28,23 @@ jobs:
   build_push_src_docker_images:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v2.10.0
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-src/Dockerfile
@@ -64,18 +69,23 @@ jobs:
     steps:
       # The glibc version on ubuntu1804 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
-      - uses: actions/checkout@v3
+      # actions/checkout@v3.6.0
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for production
-        uses: docker/build-push-action@v2.10.0
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile
@@ -100,18 +110,23 @@ jobs:
     steps:
       # The glibc version on ubuntu1804 is lower than the actions/checkout@v4 required, so
       # we need to force to use actions/checkout@v3.
-      - uses: actions/checkout@v3
+      # actions/checkout@v3.6.0
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for production with jemalloc
-        uses: docker/build-push-action@v2.10.0
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile
@@ -129,18 +144,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_push_src_docker_images
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for test
-        uses: docker/build-push-action@v2.10.0
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile
@@ -158,18 +178,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_push_src_docker_images
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for test asan
-        uses: docker/build-push-action@v2.10.0
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile
@@ -188,18 +213,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_push_src_docker_images
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        # docker/setup-qemu-action@v4.4.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        # docker/setup-buildx-action@v4.4.1
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        # docker/login-action@v4.8.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push for test with jemalloc
-        uses: docker/build-push-action@v2.10.0
+        # docker/build-push-action@v7.4.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: ./docker/thirdparties-bin/Dockerfile

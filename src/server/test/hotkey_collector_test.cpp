@@ -138,7 +138,11 @@ TEST_P(coarse_collector_test, coarse_collector)
             coarse_collector.capture_data(hash_key, 1);
         });
     }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    // Analyse only after all captures are done: analyse_data consumes the buckets,
+    // and on a partially captured sample the empirical outlier rule can misfire in
+    // either direction (a random bucket looking hot, or the hot bucket not looking
+    // hot yet), which is timing dependent and flaky under sanitizers.
+    _tracker.wait_outstanding_tasks();
     coarse_collector.analyse_data(result);
     ASSERT_NE(result.coarse_bucket_index, -1);
     _tracker.wait_outstanding_tasks();
@@ -153,6 +157,7 @@ TEST_P(coarse_collector_test, coarse_collector)
             coarse_collector.capture_data(hash_key, 1);
         });
     }
+    _tracker.wait_outstanding_tasks();
     coarse_collector.analyse_data(result);
     _tracker.wait_outstanding_tasks();
     ASSERT_EQ(result.coarse_bucket_index, -1);
