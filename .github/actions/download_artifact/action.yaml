@@ -22,7 +22,8 @@ runs:
     - name: Unpack prebuilt third-parties
       uses: "./.github/actions/unpack_prebuilt_thirdparties"
     - name: Download tarball
-      uses: actions/download-artifact@v4
+      # actions/download-artifact@v4.3.0
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
       with:
         name: ${{ env.ARTIFACT_NAME }}_artifact_${{ github.sha }}
         path: .

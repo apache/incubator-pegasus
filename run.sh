@@ -769,6 +769,25 @@ function run_clear_zk()
 #####################
 ## start_onebox
 #####################
+# Print the server process that was just started once it shows up in `ps`.
+#
+# The server is forked with `&` and checked immediately, but on a busy machine `ps`
+# can still catch the forked shell: the command line only becomes
+# "/pegasus_server config.ini ..." after exec. Give it a few seconds instead of
+# treating that as a start failure.
+function wait_server_started()
+{
+    local pid=$1
+    local i
+    for i in $(seq 1 10); do
+        if ps -ef | grep '/pegasus_server config.ini' | grep -q "\<$pid\>"; then
+            break
+        fi
+        sleep 1
+    done
+    ps -ef | grep '/pegasus_server config.ini' | grep "\<$pid\>"
+}
+
 function usage_start_onebox()
 {
     echo "Options for subcommand 'start_onebox':"
@@ -948,7 +967,7 @@ function run_start_onebox()
         sed "s/@META_PORT@/$meta_port/;s/@REPLICA_PORT@/34800/;s/@PROMETHEUS_PORT@/$prometheus_port/" ${ROOT}/config-server.ini >config.ini
         $PWD/pegasus_server config.ini -app_list meta &>result &
         PID=$!
-        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+        wait_server_started $PID
         cd ..
     done
     for j in $(seq ${REPLICA_COUNT})
@@ -961,7 +980,7 @@ function run_start_onebox()
         sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/$replica_port/;s/@PROMETHEUS_PORT@/$prometheus_port/" ${ROOT}/config-server.ini >config.ini
         $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
-        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+        wait_server_started $PID
         cd ..
     done
     if [ $COLLECTOR_COUNT -eq 1 ]
@@ -972,7 +991,7 @@ function run_start_onebox()
         sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/34800/;s/@PROMETHEUS_PORT@/9091/" ${ROOT}/config-server.ini >config.ini
         $PWD/pegasus_server config.ini -app_list collector &>result &
         PID=$!
-        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+        wait_server_started $PID
         cd ..
     fi
 
@@ -1148,7 +1167,7 @@ function run_start_onebox_instance()
         cd $dir
         $PWD/pegasus_server config.ini -app_list meta &>result &
         PID=$!
-        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+        wait_server_started $PID
         cd ..
         echo "INFO: meta@$META_ID started"
     fi
@@ -1165,7 +1184,7 @@ function run_start_onebox_instance()
         cd $dir
         $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
-        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+        wait_server_started $PID
         cd ..
         echo "INFO: replica@$REPLICA_ID started"
     fi
@@ -1182,7 +1201,7 @@ function run_start_onebox_instance()
         cd $dir
         $PWD/pegasus_server config.ini -app_list collector &>result &
         PID=$!
-        ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
+        wait_server_started $PID
         cd ..
         echo "INFO: collector started"
     fi

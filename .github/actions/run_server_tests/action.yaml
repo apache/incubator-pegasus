@@ -16,12 +16,29 @@
 # under the License.
 
 name: Run server tests
+inputs:
+  disable_aslr:
+    description: |
+      Disable address space layout randomization for the whole test process tree.
+      Required by the ASAN build: the image ships gcc's libasan.so.6, which aborts
+      at startup with "AddressSanitizer failed to deallocate ... unable to unmap"
+      once the loader places a shared library inside the shadow memory range,
+      because the runners randomize mmap addresses over 16TB (vm.mmap_rnd_bits=32).
+      The same workaround is used by v2.5's ASAN test job.
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
     - name: Unit Testing
+      env:
+        DISABLE_ASLR: ${{ inputs.disable_aslr }}
       run: |
         export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
         ulimit -s unlimited
-        ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
+        prefix=""
+        if [ "${DISABLE_ASLR}" = "true" ]; then
+          prefix="setarch $(uname -m) -R"
+        fi
+        ${prefix} ./run.sh test --onebox_opts "$ONEBOX_OPTS" --test_opts "$TEST_OPTS" -m ${{ matrix.test_module }}
       shell: bash

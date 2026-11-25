@@ -48,7 +48,8 @@ jobs:
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - uses: "./.github/actions/rebuild_thirdparty_if_needed"
       - uses: "./.github/actions/build_pegasus"
       - uses: "./.github/actions/upload_artifact"
@@ -57,12 +58,16 @@ jobs:
     name: Test NodeJS client
     needs: build_server
     runs-on: ubuntu-latest
+    # The cluster wait below has no timeout of its own, so bound the job.
+    timeout-minutes: 30
     container:
       image: apache/pegasus:thirdparties-bin-test-ubuntu2204-${{ github.base_ref }}
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install nodejs
-        uses: actions/setup-node@v3
+        # actions/setup-node@v3.9.1
+        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610
         with:
           node-version: 16
       - name: Download artifact
@@ -71,7 +76,11 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=$(pwd)/thirdparty/output/lib:${JAVA_HOME}/jre/lib/amd64/server
           ulimit -s unlimited
-          ./run.sh start_onebox
+          # Wait until every partition has a serving replica. The client caches the
+          # routing table it gets from the meta server and does not refresh it when a
+          # partition has no primary yet, so starting the tests too early makes them
+          # address 0.0.0.0:0 and fail with ERR_SESSION_RESET.
+          ./run.sh start_onebox -w
       - name: Run NodeJS client tests
         working-directory: ./nodejs-client
         run: |
