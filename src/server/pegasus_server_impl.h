@@ -575,6 +575,13 @@ private:
     // Replica-level metrics for rocksdb.
     METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_files);
     METRIC_VAR_DECLARE_gauge_int64(rdb_total_sst_size_mb);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_total_blob_size_mb);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_live_blob_size_mb);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_live_blob_garbage_size_mb);
+    METRIC_VAR_DECLARE_gauge_double(rdb_blob_garbage_ratio);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_blob_cache_capacity_bytes);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_blob_cache_usage_bytes);
+    METRIC_VAR_DECLARE_gauge_int64(rdb_blob_cache_pinned_usage_bytes);
     METRIC_VAR_DECLARE_gauge_int64(rdb_estimated_keys);
 
     METRIC_VAR_DECLARE_gauge_int64(rdb_index_and_filter_blocks_mem_usage_bytes);

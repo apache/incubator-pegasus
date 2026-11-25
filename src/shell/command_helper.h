@@ -1587,6 +1587,7 @@ inline dsn::metric_filters row_data_filters()
         "bulk_load_ingestion_rejected_write_requests",
         "rdb_total_sst_size_mb",
         "rdb_total_sst_files",
+        "rdb_total_blob_size_mb",
         "rdb_block_cache_hit_count",
         "rdb_block_cache_total_count",
         "rdb_index_and_filter_blocks_mem_usage_bytes",
@@ -1636,6 +1637,7 @@ inline stat_var_map create_sums(row_data &row)
     return stat_var_map({
         BIND_ROW(dup_recent_lost_mutations, dup_recent_mutation_loss_count),
         BIND_ROW(rdb_total_sst_size_mb, storage_mb),
+        BIND_ROW(rdb_total_blob_size_mb, storage_mb),
         BIND_ROW(rdb_total_sst_files, storage_count),
         BIND_ROW(rdb_block_cache_hit_count, rdb_block_cache_hit_count),
         BIND_ROW(rdb_block_cache_total_count, rdb_block_cache_total_count),
@@ -1837,92 +1839,95 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.recent_read_cu += value;
     else if (counter_name == "recent.write.cu")
         row.recent_write_cu += value;
-    else if (counter_name == "recent.expire.count")
+    else if (counter_name == "recent.expire.count") {
         row.recent_expire_count += value;
-    else if (counter_name == "recent.filter.count")
+    } else if (counter_name == "recent.filter.count") {
         row.recent_filter_count += value;
-    else if (counter_name == "recent.abnormal.count")
+    } else if (counter_name == "recent.abnormal.count") {
         row.recent_abnormal_count += value;
-    else if (counter_name == "recent.write.throttling.delay.count")
+    } else if (counter_name == "recent.write.throttling.delay.count") {
         row.recent_write_throttling_delay_count += value;
-    else if (counter_name == "recent.write.throttling.reject.count")
+    } else if (counter_name == "recent.write.throttling.reject.count") {
         row.recent_write_throttling_reject_count += value;
-    else if (counter_name == "recent.read.throttling.delay.count")
+    } else if (counter_name == "recent.read.throttling.delay.count") {
         row.recent_read_throttling_delay_count += value;
-    else if (counter_name == "recent.read.throttling.reject.count")
+    } else if (counter_name == "recent.read.throttling.reject.count") {
         row.recent_read_throttling_reject_count += value;
-    else if (counter_name == "recent.backup.request.throttling.delay.count")
+    } else if (counter_name == "recent.backup.request.throttling.delay.count") {
         row.recent_backup_request_throttling_delay_count += value;
-    else if (counter_name == "recent.backup.request.throttling.reject.count")
+    } else if (counter_name == "recent.backup.request.throttling.reject.count") {
         row.recent_backup_request_throttling_reject_count += value;
-    else if (counter_name == "recent.write.splitting.reject.count")
+    } else if (counter_name == "recent.write.splitting.reject.count") {
         row.recent_write_splitting_reject_count += value;
-    else if (counter_name == "recent.read.splitting.reject.count")
+    } else if (counter_name == "recent.read.splitting.reject.count") {
         row.recent_read_splitting_reject_count += value;
-    else if (counter_name == "recent.write.bulk.load.ingestion.reject.count")
+    } else if (counter_name == "recent.write.bulk.load.ingestion.reject.count") {
         row.recent_write_bulk_load_ingestion_reject_count += value;
-    else if (counter_name == "disk.storage.sst(MB)")
+    } else if (counter_name == "disk.storage.sst(MB)" || counter_name == "rdb_total_sst_size_mb" ||
+               counter_name == "disk.storage.blob(MB)" ||
+               counter_name == "rdb_total_blob_size_mb") {
         row.storage_mb += value;
-    else if (counter_name == "disk.storage.sst.count")
+    } else if (counter_name == "disk.storage.sst.count") {
         row.storage_count += value;
-    else if (counter_name == "rdb.block_cache.hit_count")
+    } else if (counter_name == "rdb.block_cache.hit_count") {
         row.rdb_block_cache_hit_count += value;
-    else if (counter_name == "rdb.block_cache.total_count")
+    } else if (counter_name == "rdb.block_cache.total_count") {
         row.rdb_block_cache_total_count += value;
-    else if (counter_name == "rdb.index_and_filter_blocks.memory_usage")
+    } else if (counter_name == "rdb.index_and_filter_blocks.memory_usage") {
         row.rdb_index_and_filter_blocks_mem_usage += value;
-    else if (counter_name == "rdb.memtable.memory_usage")
+    } else if (counter_name == "rdb.memtable.memory_usage") {
         row.rdb_memtable_mem_usage += value;
-    else if (counter_name == "rdb.estimate_num_keys")
+    } else if (counter_name == "rdb.estimate_num_keys") {
         row.rdb_estimate_num_keys += value;
-    else if (counter_name == "rdb.bf_seek_negatives")
+    } else if (counter_name == "rdb.bf_seek_negatives") {
         row.rdb_bf_seek_negatives += value;
-    else if (counter_name == "rdb.bf_seek_total")
+    } else if (counter_name == "rdb.bf_seek_total") {
         row.rdb_bf_seek_total += value;
-    else if (counter_name == "rdb.bf_point_positive_true")
+    } else if (counter_name == "rdb.bf_point_positive_true") {
         row.rdb_bf_point_positive_true += value;
-    else if (counter_name == "rdb.bf_point_positive_total")
+    } else if (counter_name == "rdb.bf_point_positive_total") {
         row.rdb_bf_point_positive_total += value;
-    else if (counter_name == "rdb.bf_point_negatives")
+    } else if (counter_name == "rdb.bf_point_negatives") {
         row.rdb_bf_point_negatives += value;
-    else if (counter_name == "backup_request_qps")
+    } else if (counter_name == "backup_request_qps") {
         row.backup_request_qps += value;
-    else if (counter_name == "backup_request_bytes")
+    } else if (counter_name == "backup_request_bytes") {
         row.backup_request_bytes += value;
-    else if (counter_name == "get_bytes")
+    } else if (counter_name == "get_bytes") {
         row.get_bytes += value;
-    else if (counter_name == "multi_get_bytes")
+    } else if (counter_name == "multi_get_bytes") {
         row.multi_get_bytes += value;
-    else if (counter_name == "batch_get_bytes")
+    } else if (counter_name == "batch_get_bytes") {
         row.batch_get_bytes += value;
-    else if (counter_name == "scan_bytes")
+    } else if (counter_name == "scan_bytes") {
         row.scan_bytes += value;
-    else if (counter_name == "put_bytes")
+    } else if (counter_name == "put_bytes") {
         row.put_bytes += value;
-    else if (counter_name == "multi_put_bytes")
+    } else if (counter_name == "multi_put_bytes") {
         row.multi_put_bytes += value;
-    else if (counter_name == "check_and_set_bytes")
+    } else if (counter_name == "check_and_set_bytes") {
         row.check_and_set_bytes += value;
-    else if (counter_name == "check_and_mutate_bytes")
+    } else if (counter_name == "check_and_mutate_bytes") {
         row.check_and_mutate_bytes += value;
-    else if (counter_name == "recent_rdb_compaction_input_bytes")
+    } else if (counter_name == "recent_rdb_compaction_input_bytes") {
         row.recent_rdb_compaction_input_bytes += value;
-    else if (counter_name == "recent_rdb_compaction_output_bytes")
+    } else if (counter_name == "recent_rdb_compaction_output_bytes") {
         row.recent_rdb_compaction_output_bytes += value;
-    else if (counter_name == "rdb.read_l2andup_hit_count")
+    } else if (counter_name == "rdb.read_l2andup_hit_count") {
         row.rdb_read_l2andup_hit_count += value;
-    else if (counter_name == "rdb.read_l1_hit_count")
+    } else if (counter_name == "rdb.read_l1_hit_count") {
         row.rdb_read_l1_hit_count += value;
-    else if (counter_name == "rdb.read_l0_hit_count")
+    } else if (counter_name == "rdb.read_l0_hit_count") {
         row.rdb_read_l0_hit_count += value;
-    else if (counter_name == "rdb.read_memtable_hit_count")
+    } else if (counter_name == "rdb.read_memtable_hit_count") {
         row.rdb_read_memtable_hit_count += value;
-    else if (counter_name == "rdb.write_amplification")
+    } else if (counter_name == "rdb.write_amplification") {
         row.rdb_write_amplification += value;
-    else if (counter_name == "rdb.read_amplification")
+    } else if (counter_name == "rdb.read_amplification") {
         row.rdb_read_amplification += value;
-    else
+    } else {
         return false;
+    }
     return true;
 }
 
@@ -2039,8 +2044,8 @@ inline bool get_app_partition_stat(shell_context *sc,
                     update_app_pegasus_perf_counter(row, counter_name, m.value);
                 }
             } else if (parse_app_perf_counter_name(m.name, app_name, counter_name)) {
-                // if the app_name from perf-counter isn't existed(maybe the app was dropped), it
-                // will be ignored.
+                // if the app_name from perf-counter isn't existed(maybe the app was dropped),
+                // it will be ignored.
                 if (app_name_id.find(app_name) == app_name_id.end()) {
                     continue;
                 }
@@ -2264,8 +2269,14 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         }
     }
 
-    std::vector<std::pair<bool, std::string>> results = call_remote_command(
-        sc, nodes, "perf-counters-by-prefix", {"replica*app.pegasus*disk.storage.sst(MB)"});
+    std::vector<std::pair<bool, std::string>> results =
+        call_remote_command(sc,
+                            nodes,
+                            "perf-counters-by-prefix",
+                            {"replica*app.pegasus*disk.storage.sst(MB)",
+                             "replica*app.pegasus*disk.storage.blob(MB)",
+                             "replica*app.pegasus*rdb_total_sst_size_mb",
+                             "replica*app.pegasus*rdb_total_blob_size_mb"});
 
     for (int i = 0; i < nodes.size(); ++i) {
         dsn::perf_counter_info info;
@@ -2279,23 +2290,28 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
             bool parse_ret = parse_app_pegasus_perf_counter_name(
                 m.name, app_id_x, partition_index_x, counter_name);
             CHECK(parse_ret, "name = {}", m.name);
-            if (counter_name != "disk.storage.sst(MB)")
+            if (counter_name != "disk.storage.sst(MB)" && counter_name != "disk.storage.blob(MB)" &&
+                counter_name != "rdb_total_sst_size_mb" &&
+                counter_name != "rdb_total_blob_size_mb") {
                 continue;
+            }
             auto find = pcs_by_appid.find(app_id_x);
-            if (find == pcs_by_appid.end()) // app id not found
+            if (find == pcs_by_appid.end()) { // app id not found
                 continue;
+            }
             auto &pc = find->second[partition_index_x];
-            if (pc.hp_primary != nodes[i].hp) // not primary replica
+            if (pc.hp_primary != nodes[i].hp) { // not primary replica
                 continue;
-            if (pc.partition_flags != 0) // already calculated
-                continue;
-            pc.partition_flags = 1;
-            int64_t app_partition_count = find->second.size();
+            }
+            auto app_partition_count = static_cast<int64_t>(find->second.size());
             auto st_it = st_stat.st_value_by_app
                              .emplace(app_id_x, std::vector<int64_t>{app_partition_count, 0, 0})
                              .first;
-            st_it->second[1]++;          // stat_partition_count
-            st_it->second[2] += m.value; // storage_size_in_mb
+            if (pc.partition_flags == 0) {
+                pc.partition_flags = 1;
+                st_it->second[1]++; // stat_partition_count (once per partition)
+            }
+            st_it->second[2] += static_cast<int64_t>(m.value); // storage_size_in_mb (sst + blob)
         }
     }
 

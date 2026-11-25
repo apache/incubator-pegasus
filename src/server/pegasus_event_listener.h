@@ -50,6 +50,8 @@ private:
     METRIC_VAR_DECLARE_counter(rdb_compaction_completed_count);
     METRIC_VAR_DECLARE_counter(rdb_compaction_input_bytes);
     METRIC_VAR_DECLARE_counter(rdb_compaction_output_bytes);
+    METRIC_VAR_DECLARE_counter(rdb_compaction_input_blob_bytes);
+    METRIC_VAR_DECLARE_counter(rdb_compaction_output_blob_bytes);
 
     METRIC_VAR_DECLARE_counter(rdb_changed_delayed_writes);
     METRIC_VAR_DECLARE_counter(rdb_changed_stopped_writes);
