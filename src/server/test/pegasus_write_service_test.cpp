@@ -24,9 +24,11 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "base/pegasus_key_schema.h"
+#include "base/pegasus_value_schema.h"
 #include "common/gpid.h"
 #include "duplication_internal_types.h"
 #include "gtest/gtest.h"
@@ -43,9 +45,9 @@
 #include "task/task_code.h"
 #include "utils/blob.h"
 #include "utils/fail_point.h"
+#include "utils/string_conv.h"
 
-namespace pegasus {
-namespace server {
+namespace pegasus::server {
 
 class pegasus_write_service_test : public pegasus_server_test_base
 {
@@ -219,6 +221,32 @@ public:
         ASSERT_EQ(_write_svc->_impl->_rocksdb_wrapper->_write_batch->Count(), 0);
         ASSERT_EQ(_write_svc->_impl->_update_responses.size(), 0);
     }
+
+    void db_get(const dsn::blob &raw_key, db_get_context *get_ctx)
+    {
+        ASSERT_EQ(rocksdb::Status::kOk,
+                  _write_svc->_impl->_rocksdb_wrapper->get(raw_key.to_string_view(), get_ctx));
+    }
+
+    void get_value_from_db(const dsn::blob &raw_key, std::string &user_value)
+    {
+        db_get_context get_ctx;
+        db_get(raw_key, &get_ctx);
+        ASSERT_TRUE(get_ctx.found) << "key not found in DB";
+        ASSERT_FALSE(get_ctx.expired) << "key expired in DB";
+        dsn::blob data;
+        pegasus_extract_user_data(_write_svc->_impl->_rocksdb_wrapper->_pegasus_data_version,
+                                  std::move(get_ctx.raw_value),
+                                  data);
+        user_value = data.to_string();
+    }
+
+    void get_value_from_db(const dsn::blob &raw_key, int64_t &user_value)
+    {
+        std::string data;
+        get_value_from_db(raw_key, data);
+        ASSERT_TRUE(dsn::buf2int64(data, user_value));
+    }
 };
 
 INSTANTIATE_TEST_SUITE_P(, pegasus_write_service_test, ::testing::Values(false, true));
@@ -338,5 +366,183 @@ TEST_P(pegasus_write_service_test, illegal_duplicate_request)
     ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);
 }
 
-} // namespace server
-} // namespace pegasus
+TEST_P(pegasus_write_service_test, duplicate_incr)
+{
+    std::string hash_key = "dup_incr_hash";
+    std::string sort_key = "dup_incr_sort";
+    dsn::blob raw_key;
+    pegasus::pegasus_generate_key(raw_key, hash_key, sort_key);
+
+    dsn::apps::duplicate_request duplicate;
+    dsn::apps::duplicate_entry entry;
+    entry.timestamp = 1000;
+    entry.cluster_id = 2;
+    dsn::apps::duplicate_response resp;
+
+    // First put base value "0" via duplicate
+    {
+        dsn::apps::update_request put_req;
+        put_req.key = raw_key;
+        put_req.value = dsn::blob::create_from_bytes("0");
+        dsn::message_ptr put_msg = pegasus::create_put_request(put_req);
+        entry.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+        entry.raw_message = dsn::move_message_to_blob(put_msg.get());
+        duplicate.entries.clear();
+        duplicate.entries.emplace_back(entry);
+        _write_svc->duplicate(1, duplicate, resp);
+        ASSERT_EQ(resp.error, rocksdb::Status::kOk);
+    }
+
+    // Then duplicate INCR with increment=1
+    {
+        dsn::apps::incr_request incr_req;
+        incr_req.key = raw_key;
+        incr_req.increment = 1;
+        incr_req.expire_ts_seconds = 0;
+        dsn::message_ptr incr_msg = pegasus::create_incr_request(incr_req);
+        entry.task_code = dsn::apps::RPC_RRDB_RRDB_INCR;
+        entry.raw_message = dsn::move_message_to_blob(incr_msg.get());
+        duplicate.entries.clear();
+        duplicate.entries.emplace_back(entry);
+        _write_svc->duplicate(2, duplicate, resp);
+        ASSERT_EQ(resp.error, rocksdb::Status::kOk);
+    }
+
+    int64_t value_after_incr = 0;
+    get_value_from_db(raw_key, value_after_incr);
+    ASSERT_EQ(value_after_incr, 1);
+}
+
+TEST_P(pegasus_write_service_test, duplicate_check_and_set)
+{
+    std::string hash_key = "dup_cas_hash";
+    std::string sort_key = "dup_cas_sort";
+    std::string check_sort_key = sort_key;
+    std::string set_sort_key = sort_key;
+    dsn::blob hash_key_blob;
+    dsn::blob check_sort_key_blob;
+    dsn::blob set_sort_key_blob;
+    dsn::blob check_operand;
+    dsn::blob set_value;
+    hash_key_blob.assign(hash_key.data(), 0, hash_key.size());
+    check_sort_key_blob.assign(check_sort_key.data(), 0, check_sort_key.size());
+    set_sort_key_blob.assign(set_sort_key.data(), 0, set_sort_key.size());
+    check_operand.assign("old", 0, 3);
+    set_value.assign("new", 0, 3);
+
+    dsn::blob raw_key;
+    pegasus::pegasus_generate_key(raw_key, hash_key, sort_key);
+
+    dsn::apps::duplicate_request duplicate;
+    dsn::apps::duplicate_entry entry;
+    entry.timestamp = 1000;
+    entry.cluster_id = 2;
+    dsn::apps::duplicate_response resp;
+
+    // First put "old" via duplicate
+    {
+        dsn::apps::update_request put_req;
+        put_req.key = raw_key;
+        put_req.value = dsn::blob::create_from_bytes("old");
+        dsn::message_ptr put_msg = pegasus::create_put_request(put_req);
+        entry.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+        entry.raw_message = dsn::move_message_to_blob(put_msg.get());
+        duplicate.entries.clear();
+        duplicate.entries.emplace_back(entry);
+        _write_svc->duplicate(1, duplicate, resp);
+        ASSERT_EQ(resp.error, rocksdb::Status::kOk);
+    }
+
+    // Then duplicate CHECK_AND_SET: check value=="old", set to "new"
+    {
+        dsn::apps::check_and_set_request cas_req;
+        cas_req.hash_key = hash_key_blob;
+        cas_req.check_sort_key = check_sort_key_blob;
+        cas_req.check_type = dsn::apps::cas_check_type::CT_VALUE_BYTES_EQUAL;
+        cas_req.check_operand = check_operand;
+        cas_req.set_diff_sort_key = false;
+        cas_req.set_value = set_value;
+        cas_req.set_expire_ts_seconds = 0;
+        cas_req.return_check_value = false;
+        dsn::message_ptr cas_msg = pegasus::create_check_and_set_request(cas_req);
+        entry.task_code = dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET;
+        entry.raw_message = dsn::move_message_to_blob(cas_msg.get());
+        duplicate.entries.clear();
+        duplicate.entries.emplace_back(entry);
+        _write_svc->duplicate(2, duplicate, resp);
+        ASSERT_EQ(resp.error, rocksdb::Status::kOk);
+    }
+
+    std::string value_after_cas;
+    get_value_from_db(raw_key, value_after_cas);
+    ASSERT_EQ(value_after_cas, "new");
+}
+
+TEST_P(pegasus_write_service_test, duplicate_check_and_mutate)
+{
+    std::string hash_key = "dup_cam_hash";
+    std::string sort_key = "dup_cam_sort";
+    dsn::blob hash_key_blob;
+    dsn::blob check_sort_key_blob;
+    dsn::blob check_operand;
+    dsn::blob mutate_sort_key;
+    dsn::blob mutate_value;
+    hash_key_blob.assign(hash_key.data(), 0, hash_key.size());
+    check_sort_key_blob.assign(sort_key.data(), 0, sort_key.size());
+    check_operand.assign("old", 0, 3);
+    mutate_sort_key.assign(sort_key.data(), 0, sort_key.size());
+    mutate_value.assign("new", 0, 3);
+
+    dsn::blob raw_key;
+    pegasus::pegasus_generate_key(raw_key, hash_key, sort_key);
+
+    dsn::apps::duplicate_request duplicate;
+    dsn::apps::duplicate_entry entry;
+    entry.timestamp = 1000;
+    entry.cluster_id = 2;
+    dsn::apps::duplicate_response resp;
+
+    // First put "old" via duplicate
+    {
+        dsn::apps::update_request put_req;
+        put_req.key = raw_key;
+        put_req.value = dsn::blob::create_from_bytes("old");
+        dsn::message_ptr put_msg = pegasus::create_put_request(put_req);
+        entry.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+        entry.raw_message = dsn::move_message_to_blob(put_msg.get());
+        duplicate.entries.clear();
+        duplicate.entries.emplace_back(entry);
+        _write_svc->duplicate(1, duplicate, resp);
+        ASSERT_EQ(resp.error, rocksdb::Status::kOk);
+    }
+
+    // Then duplicate CHECK_AND_MUTATE: check value=="old", mutate with MO_PUT to "new"
+    {
+        dsn::apps::mutate mutate_op;
+        mutate_op.operation = dsn::apps::mutate_operation::MO_PUT;
+        mutate_op.sort_key = mutate_sort_key;
+        mutate_op.value = mutate_value;
+        mutate_op.set_expire_ts_seconds = 0;
+
+        dsn::apps::check_and_mutate_request cam_req;
+        cam_req.hash_key = hash_key_blob;
+        cam_req.check_sort_key = check_sort_key_blob;
+        cam_req.check_type = dsn::apps::cas_check_type::CT_VALUE_BYTES_EQUAL;
+        cam_req.check_operand = check_operand;
+        cam_req.mutate_list = {mutate_op};
+        cam_req.return_check_value = false;
+        dsn::message_ptr cam_msg = pegasus::create_check_and_mutate_request(cam_req);
+        entry.task_code = dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE;
+        entry.raw_message = dsn::move_message_to_blob(cam_msg.get());
+        duplicate.entries.clear();
+        duplicate.entries.emplace_back(entry);
+        _write_svc->duplicate(2, duplicate, resp);
+        ASSERT_EQ(resp.error, rocksdb::Status::kOk);
+    }
+
+    std::string value_after_cam;
+    get_value_from_db(raw_key, value_after_cam);
+    ASSERT_EQ(value_after_cam, "new");
+}
+
+} // namespace pegasus::server

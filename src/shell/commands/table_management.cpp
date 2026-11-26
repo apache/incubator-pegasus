@@ -543,6 +543,8 @@ bool app_stat(command_executor *, shell_context *sc, arguments args)
         sum.incr_qps += row.incr_qps;
         sum.check_and_set_qps += row.check_and_set_qps;
         sum.check_and_mutate_qps += row.check_and_mutate_qps;
+        sum.dup_unsafe_received_non_idempotent_duplicate_request +=
+            row.dup_unsafe_received_non_idempotent_duplicate_request;
         sum.scan_qps += row.scan_qps;
         sum.recent_read_cu += row.recent_read_cu;
         sum.recent_write_cu += row.recent_write_cu;
@@ -602,6 +604,7 @@ bool app_stat(command_executor *, shell_context *sc, arguments args)
         tp.add_column("INCR", tp_alignment::kRight);
         tp.add_column("CAS", tp_alignment::kRight);
         tp.add_column("CAM", tp_alignment::kRight);
+        tp.add_column("DUP_UNSAFE", tp_alignment::kRight);
         tp.add_column("SCAN", tp_alignment::kRight);
         tp.add_column("RCU", tp_alignment::kRight);
         tp.add_column("WCU", tp_alignment::kRight);
@@ -639,6 +642,7 @@ bool app_stat(command_executor *, shell_context *sc, arguments args)
             tp.append_data(row.incr_qps);
             tp.append_data(row.check_and_set_qps);
             tp.append_data(row.check_and_mutate_qps);
+            tp.append_data(row.dup_unsafe_received_non_idempotent_duplicate_request);
             tp.append_data(row.scan_qps);
             tp.append_data(row.recent_read_cu);
             tp.append_data(row.recent_write_cu);
