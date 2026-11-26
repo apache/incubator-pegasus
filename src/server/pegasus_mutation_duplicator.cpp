@@ -69,7 +69,8 @@ METRIC_DEFINE_counter(replica,
 METRIC_DEFINE_counter(replica,
                       dup_retry_non_idempotent_duplicate_request,
                       dsn::metric_unit::kRequests,
-                      "The number of Non-idempotent write when doing DUPLICATE which is Retried");
+                      "The number of non-idempotent write requests retried when duplicating "
+                      "to the remote cluster");
 
 namespace dsn::replication {
 struct replica_base;
@@ -118,7 +119,7 @@ namespace pegasus::server {
     if (tc == dsn::apps::RPC_RRDB_RRDB_INCR) {
         dsn::apps::incr_request thrift_request;
         dsn::from_blob_to_thrift(data, thrift_request);
-        return pegasus_hash_key_hash(thrift_request.key);
+        return pegasus_key_hash(thrift_request.key);
     }
     if (tc == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
         dsn::apps::check_and_set_request thrift_request;

@@ -335,6 +335,33 @@ TEST_P(pegasus_mutation_duplicator_test, get_hash_from_request)
         auto data = dsn::move_message_to_blob(msg.get());
         ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_REMOVE, data));
     }
+
+    {
+        dsn::apps::incr_request request;
+        pegasus::pegasus_generate_key(request.key, hash_key, sort_key);
+        dsn::message_ptr msg =
+            dsn::from_thrift_request_to_received_message(request, dsn::apps::RPC_RRDB_RRDB_INCR);
+        auto data = dsn::move_message_to_blob(msg.get());
+        ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_INCR, data));
+    }
+
+    {
+        dsn::apps::check_and_set_request request;
+        request.hash_key.assign(hash_key.data(), 0, hash_key.length());
+        dsn::message_ptr msg = dsn::from_thrift_request_to_received_message(
+            request, dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET);
+        auto data = dsn::move_message_to_blob(msg.get());
+        ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET, data));
+    }
+
+    {
+        dsn::apps::check_and_mutate_request request;
+        request.hash_key.assign(hash_key.data(), 0, hash_key.length());
+        dsn::message_ptr msg = dsn::from_thrift_request_to_received_message(
+            request, dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE);
+        auto data = dsn::move_message_to_blob(msg.get());
+        ASSERT_EQ(hash, get_hash_from_request(dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE, data));
+    }
 }
 
 // Verifies that calls on `get_hash_key_from_request` won't make

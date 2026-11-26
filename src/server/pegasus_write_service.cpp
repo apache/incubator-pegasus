@@ -164,7 +164,8 @@ METRIC_DEFINE_counter(
 METRIC_DEFINE_counter(replica,
                       dup_unsafe_received_non_idempotent_duplicate_request,
                       dsn::metric_unit::kRequests,
-                      "statistic the those no idempotent qps of DUPLICATE requests Force received");
+                      "The number of non-idempotent duplicate requests received from the "
+                      "master cluster");
 
 DSN_DEFINE_int64(pegasus.server,
                  dup_lagging_write_threshold_ms,

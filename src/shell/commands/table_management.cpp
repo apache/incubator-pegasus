@@ -604,6 +604,7 @@ bool app_stat(command_executor *, shell_context *sc, arguments args)
         tp.add_column("INCR", tp_alignment::kRight);
         tp.add_column("CAS", tp_alignment::kRight);
         tp.add_column("CAM", tp_alignment::kRight);
+        tp.add_column("DUP_UNSAFE", tp_alignment::kRight);
         tp.add_column("SCAN", tp_alignment::kRight);
         tp.add_column("RCU", tp_alignment::kRight);
         tp.add_column("WCU", tp_alignment::kRight);
