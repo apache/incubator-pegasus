@@ -178,8 +178,9 @@ void server_load_balancer::register_proposals(meta_view view,
         if (act.target) {
             continue;
         }
-
-        if (!pc.hp_primary) {
+        host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
+        if (!primary) {
             resp.err = ERR_INVALID_PARAMETERS;
             return;
         }

@@ -413,14 +413,18 @@ void partition_resolver_simple::handle_pending_requests(std::deque<request_conte
 host_port partition_resolver_simple::get_host_port(const partition_configuration &pc) const
 {
     if (_app_is_stateful) {
-        return pc.hp_primary;
+        host_port primary;
+        GET_HOST_PORT(pc, primary, primary);
+        return primary;
     }
 
-    if (pc.hp_last_drops.empty()) {
+    std::vector<host_port> last_drops;
+    GET_HOST_PORTS(pc, last_drops, last_drops);
+    if (last_drops.empty()) {
         return host_port();
     }
 
-    return pc.hp_last_drops[rand::next_u32(0, pc.last_drops.size() - 1)];
+    return last_drops[rand::next_u32(0, last_drops.size() - 1)];
 }
 
 error_code partition_resolver_simple::get_host_port(int partition_index, /*out*/ host_port &hp)
